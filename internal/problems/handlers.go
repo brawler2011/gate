@@ -3,15 +3,13 @@ package problems
 import (
 	"context"
 	"io"
-	"log/slog"
 
 	testerv1 "github.com/gate149/contracts/core/v1"
+	"github.com/gate149/core/internal/middleware"
 	"github.com/gate149/core/internal/models"
-	"github.com/gate149/core/internal/permissions"
 	"github.com/gate149/core/pkg"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	ory "github.com/ory/client-go"
 )
 
 type UC interface {
@@ -19,101 +17,65 @@ type UC interface {
 	GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error)
 	DownloadTestsArchive(ctx context.Context, id uuid.UUID) (string, error)
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
-	ListProblems(ctx context.Context, filter models.ProblemsFilter) (*models.ProblemsList, error)
+	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate *models.ProblemUpdate) error
 	UploadProblem(ctx context.Context, id uuid.UUID, r io.ReaderAt, size int64) error
 }
 
 type PermissionsUC interface {
-	CreatePermission(ctx context.Context, resourceType string, resourceID uuid.UUID, userID uuid.UUID, relation string) error
-	CanViewProblem(ctx context.Context, userID uuid.UUID, problem *models.Problem) (bool, error)
-	CanEditProblem(ctx context.Context, userID uuid.UUID, problemID uuid.UUID) (bool, error)
-	CanAdminProblem(ctx context.Context, userID uuid.UUID, problemID uuid.UUID) (bool, error)
-}
-
-type UsersUC interface {
-	ReadUserByKratosId(ctx context.Context, kratosId string) (*models.User, error)
+	GetProblemPermissions(ctx context.Context, p *models.ProblemPermissionGet) (*models.ProblemPermissions, error)
 }
 
 type ProblemsHandlers struct {
 	problemsUC    UC
 	permissionsUC PermissionsUC
-	usersUC       UsersUC
-	jwtSecret     string
 }
 
-func getUserFromSession(c *fiber.Ctx) (string, error) {
-	session := c.Locals("session")
-	if session == nil {
-		return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "no session in context")
-	}
-
-	s, ok := session.(*ory.Session)
-	if !ok {
-		return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "invalid session type")
-	}
-
-	if !*s.Active {
-		return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "session is not active")
-	}
-
-	return s.Identity.Id, nil
-}
-
-// getUserID gets the user's database ID from Kratos session
-func (h *ProblemsHandlers) getUserID(c *fiber.Ctx) (uuid.UUID, error) {
-	kratosID, err := getUserFromSession(c)
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	user, err := h.usersUC.ReadUserByKratosId(c.Context(), kratosID)
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	return user.Id, nil
-}
-
-func NewHandlers(problemsUC UC, permissionsUC PermissionsUC, usersUC UsersUC) *ProblemsHandlers {
+func NewHandlers(problemsUC UC, permissionsUC PermissionsUC) *ProblemsHandlers {
 	return &ProblemsHandlers{
 		problemsUC:    problemsUC,
 		permissionsUC: permissionsUC,
-		usersUC:       usersUC,
 	}
 }
 
 func (h *ProblemsHandlers) ListProblems(c *fiber.Ctx, params testerv1.ListProblemsParams) error {
-	const op = "ProblemsHandlers.ListProblems"
 	ctx := c.Context()
 
-	// Build filter
-	filter := models.ProblemsFilter{
-		Page:     params.Page,
-		PageSize: params.PageSize,
-		Title:    params.Title,
-		Search:   params.Search,
-		Order:    params.Order,
+	filter := &models.ProblemsFilter{
+		Page:       params.Page,
+		PageSize:   params.PageSize,
+		Search:     params.Search,
+		Descending: false,
 	}
 
-	// Add owner filter if provided (for user's private problems)
-	if params.Owner != nil && *params.Owner == "me" {
-		// For owner filter, we need authenticated user
-		userID, err := h.getUserID(c)
+	if params.PageSize <= 0 || params.PageSize > 100 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "", "page_size parameter must be between 1 and 100")
+	}
+
+	if params.Page < 1 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "", "page parameter must be >= 1")
+	}
+
+	if params.Descending != nil {
+		filter.Descending = *params.Descending
+	}
+
+	if params.Owner != nil {
+		user, err := middleware.GetUser(ctx)
 		if err != nil {
 			return err
 		}
-		filter.OwnerId = &userID
+
+		filter.OwnerId = &user.Id
 	}
 
-	// List problems
 	problemsList, err := h.problemsUC.ListProblems(ctx, filter)
 	if err != nil {
 		return err
 	}
 
-	resp := testerv1.ListProblemsResponse{
-		Problems:   make([]testerv1.ProblemsListItem, len(problemsList.Problems)),
+	resp := testerv1.ListProblemsResponseModel{
+		Problems:   make([]testerv1.ProblemsListItemModel, len(problemsList.Problems)),
 		Pagination: PaginationDTO(problemsList.Pagination),
 	}
 
@@ -127,30 +89,25 @@ func (h *ProblemsHandlers) CreateProblem(c *fiber.Ctx, params testerv1.CreatePro
 	const op = "ProblemsHandlers.CreateProblem"
 	ctx := c.Context()
 
-	// Get user database ID
-	userID, err := h.getUserID(c)
+	session, err := middleware.GetSession(ctx)
 	if err != nil {
 		return err
+	}
+
+	if session == nil {
+		return pkg.Wrap(pkg.NoPermission, nil, op, "no session found")
 	}
 
 	if params.Title == "" {
 		return pkg.Wrap(pkg.ErrBadInput, nil, op, "empty title")
 	}
 
-	// Create problem
 	problemID, err := h.problemsUC.CreateProblem(ctx, params.Title)
 	if err != nil {
 		return err
 	}
 
-	// Set user as owner of the problem
-	err = h.permissionsUC.CreatePermission(ctx, permissions.ResourceProblem, problemID, userID, permissions.RelationOwner)
-	if err != nil {
-		// Note: This is a permission setup step, not critical for creation
-		// The error is logged by the CreatePermission method internally
-	}
-
-	return c.JSON(&testerv1.CreationResponse{Id: problemID})
+	return c.JSON(&testerv1.CreationResponseModel{Id: problemID})
 }
 
 func (h *ProblemsHandlers) DeleteProblem(c *fiber.Ctx, id uuid.UUID) error {
@@ -158,17 +115,24 @@ func (h *ProblemsHandlers) DeleteProblem(c *fiber.Ctx, id uuid.UUID) error {
 	ctx := c.Context()
 
 	// Get user database ID
-	userID, err := h.getUserID(c)
+	user, err := middleware.GetUser(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Only admin can delete problem
-	canAdmin, err := h.permissionsUC.CanAdminProblem(ctx, userID, id)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, op, "failed to check admin permission")
+	if user == nil {
+		return pkg.Wrap(pkg.NoPermission, nil, op, "no session found")
 	}
-	if !canAdmin {
+
+	permissions, err := h.permissionsUC.GetProblemPermissions(ctx, &models.ProblemPermissionGet{
+		ProblemId: id,
+		UserId:    user.Id,
+	})
+	if err != nil {
+		return err
+	}
+
+	if !permissions.AdminProblem {
 		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to delete problem")
 	}
 
@@ -184,70 +148,61 @@ func (h *ProblemsHandlers) GetProblem(c *fiber.Ctx, id uuid.UUID) error {
 	const op = "ProblemsHandlers.GetProblem"
 	ctx := c.Context()
 
-	// Get user database ID
-	userID, err := h.getUserID(c)
+	user, err := middleware.GetUser(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Get problem
+	if user == nil {
+		return pkg.Wrap(pkg.NoPermission, nil, op, "no session found")
+	}
+
+	permissions, err := h.permissionsUC.GetProblemPermissions(ctx, &models.ProblemPermissionGet{
+		ProblemId: id,
+		UserId:    user.Id,
+	})
+	if err != nil {
+		return err
+	}
+
+	if !permissions.ViewProblem {
+		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to view problem")
+	}
+
 	problem, err := h.problemsUC.GetProblemById(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	// Check if user can view this problem (considering is_private)
-	canView, err := h.permissionsUC.CanViewProblem(ctx, userID, problem)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, op, "failed to check view permission")
-	}
-	if !canView {
-		return pkg.Wrap(pkg.NoPermission, nil, op, "cannot view this problem")
-	}
-
-	return c.JSON(
-		testerv1.GetProblemResponse{Problem: *ProblemDTO(problem)},
-	)
+	return c.JSON(&testerv1.GetProblemResponseModel{Problem: *ProblemDTO(problem)})
 }
 
 func (h *ProblemsHandlers) UpdateProblem(c *fiber.Ctx, id uuid.UUID) error {
 	const op = "ProblemsHandlers.UpdateProblem"
 	ctx := c.Context()
 
-	// Get logger safely
-	var logger *slog.Logger
-	loggerVal := c.Locals("logger")
-	if loggerVal != nil {
-		if l, ok := loggerVal.(*slog.Logger); ok {
-			logger = l
-		}
-	}
-
-	// Get user database ID
-	userID, err := h.getUserID(c)
+	user, err := middleware.GetUser(ctx)
 	if err != nil {
-		if logger != nil {
-			logger.Error("failed to get user ID", slog.Any("error", err))
-		}
 		return err
 	}
 
-	// Check if user can edit this problem
-	canEdit, err := h.permissionsUC.CanEditProblem(ctx, userID, id)
-	if err != nil {
-		if logger != nil {
-			logger.Error("failed to check edit permission", slog.Any("error", err))
-		}
-		return pkg.Wrap(pkg.ErrInternal, err, op, "failed to check edit permission")
+	if user == nil {
+		return pkg.Wrap(pkg.NoPermission, nil, op, "no session found")
 	}
-	if !canEdit {
-		if logger != nil {
-			logger.Info("user does not have edit permission", slog.String("user_id", userID.String()))
-		}
+
+	permissions, err := h.permissionsUC.GetProblemPermissions(ctx, &models.ProblemPermissionGet{
+		ProblemId: id,
+		UserId:    user.Id,
+	})
+	if err != nil {
+		return err
+	}
+
+	if !permissions.EditProblem {
 		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to update problem")
 	}
 
-	var req testerv1.UpdateProblemRequest
+	var req testerv1.UpdateProblemRequestModel
 
 	err = c.BodyParser(&req)
 	if err != nil {
@@ -258,7 +213,7 @@ func (h *ProblemsHandlers) UpdateProblem(c *fiber.Ctx, id uuid.UUID) error {
 		Title:       req.Title,
 		MemoryLimit: req.MemoryLimit,
 		TimeLimit:   req.TimeLimit,
-		IsPrivate:   req.IsPrivate,
+		Visibility:  req.Visibility,
 
 		Legend:       req.Legend,
 		InputFormat:  req.InputFormat,
@@ -278,17 +233,24 @@ func (h *ProblemsHandlers) UploadProblem(c *fiber.Ctx, id uuid.UUID) error {
 	const op = "ProblemsHandlers.UploadProblem"
 	ctx := c.Context()
 
-	// Get user database ID
-	userID, err := h.getUserID(c)
+	user, err := middleware.GetUser(ctx)
 	if err != nil {
 		return err
 	}
 
-	canEdit, err := h.permissionsUC.CanEditProblem(ctx, userID, id)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, op, "failed to check edit permission")
+	if user == nil {
+		return pkg.Wrap(pkg.NoPermission, nil, op, "no session found")
 	}
-	if !canEdit {
+
+	permissions, err := h.permissionsUC.GetProblemPermissions(ctx, &models.ProblemPermissionGet{
+		ProblemId: id,
+		UserId:    user.Id,
+	})
+	if err != nil {
+		return err
+	}
+
+	if !permissions.EditProblem {
 		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to upload problem archive")
 	}
 
@@ -315,15 +277,15 @@ func (h *ProblemsHandlers) UploadProblem(c *fiber.Ctx, id uuid.UUID) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func PaginationDTO(p models.Pagination) testerv1.Pagination {
-	return testerv1.Pagination{
+func PaginationDTO(p models.Pagination) testerv1.PaginationModel {
+	return testerv1.PaginationModel{
 		Page:  p.Page,
 		Total: p.Total,
 	}
 }
 
-func ProblemsListItemDTO(p models.ProblemsListItem) testerv1.ProblemsListItem {
-	return testerv1.ProblemsListItem{
+func ProblemsListItemDTO(p models.ProblemsListItem) testerv1.ProblemsListItemModel {
+	return testerv1.ProblemsListItemModel{
 		Id:          p.Id,
 		Title:       p.Title,
 		MemoryLimit: p.MemoryLimit,
@@ -333,8 +295,8 @@ func ProblemsListItemDTO(p models.ProblemsListItem) testerv1.ProblemsListItem {
 	}
 }
 
-func ProblemDTO(p *models.Problem) *testerv1.Problem {
-	return &testerv1.Problem{
+func ProblemDTO(p *models.Problem) *testerv1.ProblemModel {
+	return &testerv1.ProblemModel{
 		Id:          p.Id,
 		Title:       p.Title,
 		TimeLimit:   p.TimeLimit,
@@ -352,16 +314,7 @@ func ProblemDTO(p *models.Problem) *testerv1.Problem {
 		NotesHtml:        p.NotesHtml,
 		ScoringHtml:      p.ScoringHtml,
 
-		//Meta:    MetaDTO(p.Meta),
-		//Samples: SamplesDTO(p.Samples),
-
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
 	}
 }
-
-//func MetaDTO(m models.Meta) testerv1.Meta {
-//	return testerv1.Meta{
-//		Author: m.Author,
-//	}
-//}

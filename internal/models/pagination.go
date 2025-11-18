@@ -1,11 +1,11 @@
 package models
 
 type Pagination struct {
-	Page  int32 `json:"page"`
-	Total int32 `json:"total"`
+	Page  int64 `json:"page"`
+	Total int64 `json:"total"`
 }
 
-func Total(count int32, pageSize int32) int32 {
+func Total(count int64, pageSize int64) int64 {
 	if count%pageSize == 0 {
 		return count / pageSize
 	}

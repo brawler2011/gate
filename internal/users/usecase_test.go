@@ -1,75 +1,212 @@
-package users
+package users_test
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/gate149/core/internal/models"
+	"github.com/gate149/core/internal/users"
+	"github.com/gate149/core/internal/users/mock"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
-// MockRepo is a mock implementation of Repo
-type MockRepo struct {
-	CreatedUsers []*models.UserCreation
-	CreateError  error
-}
+func TestUsersUseCase_CreateUser(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-func (m *MockRepo) CreateUser(ctx context.Context, user *models.UserCreation) (uuid.UUID, error) {
-	if m.CreateError != nil {
-		return uuid.Nil, m.CreateError
-	}
-	m.CreatedUsers = append(m.CreatedUsers, user)
-	return user.Id, nil
-}
+	repo := usersmock.NewMockRepo(ctrl)
+	uc := users.NewUseCase(repo)
 
-func (m *MockRepo) GetUserById(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	return nil, nil
-}
-
-func (m *MockRepo) GetUserByKratosId(ctx context.Context, kratosId string) (*models.User, error) {
-	return nil, nil
-}
-
-func (m *MockRepo) ListUsers(ctx context.Context, page, pageSize int) ([]*models.User, int, error) {
-	return nil, 0, nil
-}
-
-func (m *MockRepo) SearchUsers(ctx context.Context, searchQuery, role string, page, pageSize int) ([]*models.User, int, error) {
-	return nil, 0, nil
-}
-
-func TestCreateUser(t *testing.T) {
-	// Setup
-	mockRepo := &MockRepo{}
-	useCase := NewUseCase(mockRepo)
-
-	// Test data
-	userCreation := &models.UserCreation{
-		Id:       uuid.New(),
-		Username: "testuser",
-		Role:     "user",
-		KratosId: stringPtr("kratos-123"),
-	}
-
-	// Execute
 	ctx := context.Background()
-	id, err := useCase.CreateUser(ctx, userCreation)
-
-	// Assert
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
+	input := &models.UserCreation{
+		Username: "john",
+		Role:     models.RoleUser,
 	}
+	outID := uuid.New()
 
-	if id != userCreation.Id {
-		t.Fatalf("Expected ID %v, got %v", userCreation.Id, id)
-	}
+	repo.EXPECT().
+		CreateUser(ctx, input).
+		Return(outID, nil)
 
-	// Check that user was created in repo
-	if len(mockRepo.CreatedUsers) != 1 {
-		t.Fatalf("Expected 1 user created in repo, got %d", len(mockRepo.CreatedUsers))
-	}
+	id, err := uc.CreateUser(ctx, input)
+	require.NoError(t, err)
+	require.Equal(t, outID, id)
 }
 
-func stringPtr(s string) *string {
-	return &s
+func TestUsersUseCase_CreateUser_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := usersmock.NewMockRepo(ctrl)
+	uc := users.NewUseCase(repo)
+
+	ctx := context.Background()
+	input := &models.UserCreation{
+		Username: "john",
+		Role:     models.RoleUser,
+	}
+
+	repo.EXPECT().
+		CreateUser(ctx, input).
+		Return(uuid.Nil, errors.New("db error"))
+
+	_, err := uc.CreateUser(ctx, input)
+	require.Error(t, err)
+}
+
+func TestUsersUseCase_GetUserById(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := usersmock.NewMockRepo(ctrl)
+	uc := users.NewUseCase(repo)
+
+	ctx := context.Background()
+	id := uuid.New()
+
+	user := &models.User{
+		Id:        id,
+		Username:  "john",
+		Role:      models.RoleUser,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	repo.EXPECT().
+		GetUserById(ctx, id).
+		Return(user, nil)
+
+	res, err := uc.GetUserById(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, user, res)
+}
+
+func TestUsersUseCase_GetUserById_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := usersmock.NewMockRepo(ctrl)
+	uc := users.NewUseCase(repo)
+
+	ctx := context.Background()
+	id := uuid.New()
+
+	repo.EXPECT().
+		GetUserById(ctx, id).
+		Return(nil, errors.New("not found"))
+
+	res, err := uc.GetUserById(ctx, id)
+	require.Nil(t, res)
+	require.Error(t, err)
+}
+
+func TestUsersUseCase_GetUserByKratosId(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := usersmock.NewMockRepo(ctrl)
+	uc := users.NewUseCase(repo)
+
+	ctx := context.Background()
+	kratosID := "kratos-123"
+
+	user := &models.User{
+		Id:        uuid.New(),
+		Username:  "alice",
+		KratosId:  &kratosID,
+		Role:      models.RoleUser,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	repo.EXPECT().
+		GetUserByKratosId(ctx, kratosID).
+		Return(user, nil)
+
+	res, err := uc.GetUserByKratosId(ctx, kratosID)
+	require.NoError(t, err)
+	require.Equal(t, user, res)
+}
+
+func TestUsersUseCase_GetUserByKratosId_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := usersmock.NewMockRepo(ctrl)
+	uc := users.NewUseCase(repo)
+
+	ctx := context.Background()
+	kratosID := "kratos-123"
+
+	repo.EXPECT().
+		GetUserByKratosId(ctx, kratosID).
+		Return(nil, errors.New("not found"))
+
+	res, err := uc.GetUserByKratosId(ctx, kratosID)
+	require.Error(t, err)
+	require.Nil(t, res)
+}
+
+func TestUsersUseCase_SearchUsers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := usersmock.NewMockRepo(ctrl)
+	uc := users.NewUseCase(repo)
+
+	ctx := context.Background()
+
+	search := &models.UsersSearch{
+		Page:     1,
+		PageSize: 20,
+		Search:   "bob",
+		Role:     models.RoleUser,
+	}
+
+	result := &models.UsersList{
+		Users: []*models.User{
+			{
+				Id:        uuid.New(),
+				Username:  "bob",
+				Role:      models.RoleUser,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+		},
+		Pagination: models.Pagination{
+			Page:  1,
+			Total: 1,
+		},
+	}
+
+	repo.EXPECT().
+		SearchUsers(ctx, search).
+		Return(result, nil)
+
+	res, err := uc.SearchUsers(ctx, search)
+	require.NoError(t, err)
+	require.Equal(t, result, res)
+}
+
+func TestUsersUseCase_SearchUsers_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := usersmock.NewMockRepo(ctrl)
+	uc := users.NewUseCase(repo)
+
+	ctx := context.Background()
+	search := &models.UsersSearch{}
+
+	repo.EXPECT().
+		SearchUsers(ctx, search).
+		Return(nil, errors.New("db error"))
+
+	res, err := uc.SearchUsers(ctx, search)
+	require.Error(t, err)
+	require.Nil(t, res)
 }

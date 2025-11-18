@@ -1,3 +1,3 @@
 SELECT COUNT(*)
-FROM contest_user
-WHERE contest_id = $1
+FROM contest_members
+WHERE contest_id = $1 AND role = 'participant'

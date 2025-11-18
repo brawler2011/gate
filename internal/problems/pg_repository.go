@@ -13,35 +13,22 @@ import (
 )
 
 type Repository struct {
-	_db *sqlx.DB
+	db *sqlx.DB
 }
 
 func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{
-		_db: db,
+		db: db,
 	}
-}
-
-func (r *Repository) BeginTx(ctx context.Context) (Tx, error) {
-	tx, err := r._db.BeginTxx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return tx, nil
-}
-
-func (r *Repository) DB() Querier {
-	return r._db
 }
 
 //go:embed sql/create_problem.sql
 var CreateProblemQuery string
 
-func (r *Repository) CreateProblem(ctx context.Context, q Querier, title string) (uuid.UUID, error) {
+func (r *Repository) CreateProblem(ctx context.Context, title string) (uuid.UUID, error) {
 	const op = "Repository.CreateProblem"
 
-	rows, err := q.QueryxContext(ctx, CreateProblemQuery, title)
+	rows, err := r.db.QueryxContext(ctx, CreateProblemQuery, title)
 	if err != nil {
 		return uuid.Nil, pkg.HandlePgErr(err, op)
 	}
@@ -60,11 +47,11 @@ func (r *Repository) CreateProblem(ctx context.Context, q Querier, title string)
 //go:embed sql/get_problem_by_id.sql
 var GetProblemByIdQuery string
 
-func (r *Repository) GetProblemById(ctx context.Context, q Querier, id uuid.UUID) (*models.Problem, error) {
+func (r *Repository) GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error) {
 	const op = "Repository.ReadProblemById"
 
 	var problem models.Problem
-	err := q.GetContext(ctx, &problem, GetProblemByIdQuery, id)
+	err := r.db.GetContext(ctx, &problem, GetProblemByIdQuery, id)
 	if err != nil {
 		return nil, pkg.HandlePgErr(err, op)
 	}
@@ -75,10 +62,10 @@ func (r *Repository) GetProblemById(ctx context.Context, q Querier, id uuid.UUID
 //go:embed sql/delete_problem.sql
 var DeleteProblemQuery string
 
-func (r *Repository) DeleteProblem(ctx context.Context, q Querier, id uuid.UUID) error {
+func (r *Repository) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	const op = "Repository.DeleteProblem"
 
-	_, err := q.ExecContext(ctx, DeleteProblemQuery, id)
+	_, err := r.db.ExecContext(ctx, DeleteProblemQuery, id)
 	if err != nil {
 		return pkg.HandlePgErr(err, op)
 	}
@@ -92,29 +79,23 @@ var ListProblemsQuery string
 //go:embed sql/count_problems.sql
 var CountProblemsQuery string
 
-func (r *Repository) ListProblems(ctx context.Context, q Querier, filter models.ProblemsFilter) (*models.ProblemsList, error) {
+func (r *Repository) ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error) {
 	const op = "ContestRepository.ListProblems"
 
-	var title *string
-	if filter.Title != nil && *filter.Title != "" {
-		title = filter.Title
-	}
-
-	var order int = 0
-	if filter.Order != nil {
-		order = int(*filter.Order)
-	}
-
-	// Get count
-	var count int32
-	err := q.GetContext(ctx, &count, CountProblemsQuery, filter.OwnerId, title)
+	var total int64
+	err := r.db.GetContext(ctx, &total, CountProblemsQuery, filter.OwnerId, filter.Search)
 	if err != nil {
 		return nil, pkg.HandlePgErr(err, op)
 	}
 
-	// Get problems list
 	list := make([]*models.ProblemsListItem, 0)
-	err = q.SelectContext(ctx, &list, ListProblemsQuery, filter.OwnerId, title, order, filter.PageSize, filter.Offset())
+	err = r.db.SelectContext(ctx, &list, ListProblemsQuery,
+		filter.OwnerId,
+		filter.Search,
+		filter.Descending,
+		filter.PageSize,
+		filter.Offset(),
+	)
 	if err != nil {
 		return nil, pkg.HandlePgErr(err, op)
 	}
@@ -122,7 +103,7 @@ func (r *Repository) ListProblems(ctx context.Context, q Querier, filter models.
 	return &models.ProblemsList{
 		Problems: list,
 		Pagination: models.Pagination{
-			Total: models.Total(count, filter.PageSize),
+			Total: models.Total(total, filter.PageSize),
 			Page:  filter.Page,
 		},
 	}, nil
@@ -131,15 +112,15 @@ func (r *Repository) ListProblems(ctx context.Context, q Querier, filter models.
 //go:embed sql/update_problem.sql
 var UpdateProblemQuery string
 
-func (r *Repository) UpdateProblem(ctx context.Context, q Querier, id uuid.UUID, problem *models.ProblemUpdate) error {
+func (r *Repository) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
 	const op = "Repository.UpdateProblem"
 
-	_, err := q.ExecContext(ctx, UpdateProblemQuery,
+	_, err := r.db.ExecContext(ctx, UpdateProblemQuery,
 		id,
 		problem.Title,
 		problem.TimeLimit,
 		problem.MemoryLimit,
-		problem.IsPrivate,
+		problem.Visibility,
 		problem.Legend,
 		problem.InputFormat,
 		problem.OutputFormat,
@@ -150,12 +131,25 @@ func (r *Repository) UpdateProblem(ctx context.Context, q Querier, id uuid.UUID,
 		problem.OutputFormatHtml,
 		problem.NotesHtml,
 		problem.ScoringHtml,
-		problem.Meta,
-		problem.Samples,
 	)
 	if err != nil {
 		return pkg.HandlePgErr(err, op)
 	}
 
 	return nil
+}
+
+//go:embed sql/get_problem_member.sql
+var GetProblemMemberQuery string
+
+func (r *Repository) GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (*models.ProblemMember, error) {
+	const op = "Repository.GetProblemMember"
+
+	var member models.ProblemMember
+	err := r.db.GetContext(ctx, &member, GetProblemMemberQuery, problemId, userId)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err, op)
+	}
+
+	return &member, nil
 }

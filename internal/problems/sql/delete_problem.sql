@@ -1,2 +1,3 @@
-DELETE FROM problems
+DELETE
+FROM problems
 WHERE id = $1

@@ -67,14 +67,11 @@ github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/r
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
-github.com/gate149/contracts v0.0.0-20251108231033-8e8765019477 h1:cg/ffx626XQG+mcYdvP9S9va6uL51CH/fEMGla6vNWM=
-github.com/gate149/contracts v0.0.0-20251108231033-8e8765019477/go.mod h1:tNNvBeDhLMBNvzCp5dyZTTjePL6E+66YQU0L+REBfmo=
-github.com/gate149/contracts v0.0.0-20251109175551-d7a32e41015a h1:j5L7wheqdP3vk+QGH2lIHR/TY2Y7keXuscA2PrYrr50=
-github.com/gate149/contracts v0.0.0-20251109175551-d7a32e41015a/go.mod h1:tNNvBeDhLMBNvzCp5dyZTTjePL6E+66YQU0L+REBfmo=
-github.com/gate149/contracts v0.0.0-20251109175817-cacc1ea9fc53 h1:yVNdXgDuxkh4BbqajMt4XvkQfjympSAZ/PdNTUx/CKM=
-github.com/gate149/contracts v0.0.0-20251109175817-cacc1ea9fc53/go.mod h1:tNNvBeDhLMBNvzCp5dyZTTjePL6E+66YQU0L+REBfmo=
-github.com/gate149/contracts v0.0.0-20251109180110-a577082c4de2 h1:Cz+A6PIBFDCCiiZudCNRmZh595URR/HCRcJA7L0b1dg=
 github.com/gate149/contracts v0.0.0-20251109180110-a577082c4de2/go.mod h1:tNNvBeDhLMBNvzCp5dyZTTjePL6E+66YQU0L+REBfmo=
+github.com/gate149/contracts v0.0.0-20251113132037-ec7543a3a487 h1:mQTUi+rjZG0unWkijmmGFt+cWbW5lfW9+NTli04aBBY=
+github.com/gate149/contracts v0.0.0-20251113132037-ec7543a3a487/go.mod h1:tNNvBeDhLMBNvzCp5dyZTTjePL6E+66YQU0L+REBfmo=
+github.com/gate149/judge0-go-sdk v0.0.0-20251106191720-f413b24b83ea h1:5IVucvJHt4vXb3XqR8a27ho+CAXu7T5+AjxNecLhlng=
+github.com/gate149/judge0-go-sdk v0.0.0-20251106191720-f413b24b83ea/go.mod h1:Zz2WmGkPs+3UeEO2Faacs7pnejf2F16KANDDhodJCrw=
 github.com/go-sql-driver/mysql v1.8.1/go.mod h1:wEBSXgmK//2ZFJyE+qWnIsVGmvmEKlqwuVSjsCm7DZg=
 github.com/go-sql-driver/mysql v1.9.3 h1:U/N249h2WzJ3Ukj8SowVFjdtZKfu9vlLZxjPXV1aweo=
 github.com/go-sql-driver/mysql v1.9.3/go.mod h1:qn46aNg1333BRMNU69Lq93t8du/dwxI64Gl8i5p1WMU=
@@ -163,6 +160,8 @@ github.com/valyala/fasthttp v1.68.0 h1:v12Nx16iepr8r9ySOwqI+5RBJ/DqTxhOy1HrHoDFn
 github.com/valyala/fasthttp v1.68.0/go.mod h1:5EXiRfYQAoiO/khu4oU9VISC/eVY6JqmSpPJoHCKsz4=
 github.com/xyproto/randomstring v1.0.5 h1:YtlWPoRdgMu3NZtP45drfy1GKoojuR7hmRcnhZqKjWU=
 github.com/xyproto/randomstring v1.0.5/go.mod h1:rgmS5DeNXLivK7YprL0pY+lTuhNQW3iGxZ18UQApw/E=
+go.uber.org/mock v0.6.0 h1:hyF9dfmbgIX5EfOdasqLsWD6xqpNZlXblLB/Dbnwv3Y=
+go.uber.org/mock v0.6.0/go.mod h1:KiVJ4BqZJaMj4svdfmHM0AUx4NJYO8ZNpPnZn1Z+BBU=
 go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=
 go.uber.org/multierr v1.11.0/go.mod h1:20+QtiLqy0Nd6FdQB9TLXag12DsQkrbs3htMFfDN80Y=
 golang.org/x/crypto v0.43.0 h1:dduJYIi3A3KOfdGOHX8AVZ/jGiyPa3IbBozJ5kNuE04=

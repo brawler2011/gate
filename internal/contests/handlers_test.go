@@ -288,7 +288,7 @@ func TestCreateContest_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	var response testerv1.CreationResponse
+	var response testerv1.CreationResponseModel
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &response)
 
@@ -389,7 +389,7 @@ func TestGetContest_Success(t *testing.T) {
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
 	mockContestsUC.On("GetContest", mock.Anything, contestID).Return(contest, nil)
-	mockPermissionsUC.On("CanViewContest", mock.Anything, userID, contest).Return(true, nil)
+	mockPermissionsUC.On("ContestPermissionGet", mock.Anything, userID, contest).Return(true, nil)
 	mockContestsUC.On("GetContestProblems", mock.Anything, contestID).Return(problems, nil)
 
 	app.Get("/contests/:id", func(c *fiber.Ctx) error {
@@ -403,7 +403,7 @@ func TestGetContest_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	var response testerv1.GetContestResponse
+	var response testerv1.GetContestResponseModel
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &response)
 
@@ -433,7 +433,7 @@ func TestGetContest_NoPermission(t *testing.T) {
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
 	mockContestsUC.On("GetContest", mock.Anything, contestID).Return(contest, nil)
-	mockPermissionsUC.On("CanViewContest", mock.Anything, userID, contest).Return(false, nil)
+	mockPermissionsUC.On("ContestPermissionGet", mock.Anything, userID, contest).Return(false, nil)
 
 	app.Get("/contests/:id", func(c *fiber.Ctx) error {
 		c.Locals(sessionKey, createMockSession(kratosID))
@@ -472,12 +472,12 @@ func TestUpdateContest_Success(t *testing.T) {
 	monitorEnabled := false
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
-	mockPermissionsUC.On("CanEditContest", mock.Anything, userID, contestID).Return(true, nil)
+	mockPermissionsUC.On("EditContest", mock.Anything, userID, contestID).Return(true, nil)
 	mockContestsUC.On("UpdateContest", mock.Anything, contestID, mock.MatchedBy(func(update models.ContestUpdate) bool {
 		return *update.Title == newTitle && *update.IsPrivate == isPrivate && *update.MonitorEnabled == monitorEnabled
 	})).Return(nil)
 
-	reqBody := testerv1.UpdateContestRequest{
+	reqBody := testerv1.UpdateContestRequestModel{
 		Title:          &newTitle,
 		IsPrivate:      &isPrivate,
 		MonitorEnabled: &monitorEnabled,
@@ -520,9 +520,9 @@ func TestUpdateContest_NoPermission(t *testing.T) {
 	newTitle := "Updated Contest"
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
-	mockPermissionsUC.On("CanEditContest", mock.Anything, userID, contestID).Return(false, nil)
+	mockPermissionsUC.On("EditContest", mock.Anything, userID, contestID).Return(false, nil)
 
-	reqBody := testerv1.UpdateContestRequest{
+	reqBody := testerv1.UpdateContestRequestModel{
 		Title: &newTitle,
 	}
 
@@ -562,7 +562,7 @@ func TestDeleteContest_Success(t *testing.T) {
 	user := createTestUser(userID, kratosID)
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
-	mockPermissionsUC.On("CanAdminContest", mock.Anything, userID, contestID).Return(true, nil)
+	mockPermissionsUC.On("AdminContest", mock.Anything, userID, contestID).Return(true, nil)
 	mockContestsUC.On("DeleteContest", mock.Anything, contestID).Return(nil)
 
 	app.Delete("/contests/:id", func(c *fiber.Ctx) error {
@@ -627,7 +627,7 @@ func TestListContests_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	var response testerv1.ListContestsResponse
+	var response testerv1.ListContestsResponseModel
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &response)
 
@@ -702,8 +702,8 @@ func TestCreateContestProblem_Success(t *testing.T) {
 	user := createTestUser(userID, kratosID)
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
-	mockPermissionsUC.On("CanEditContest", mock.Anything, userID, contestID).Return(true, nil)
-	mockContestsUC.On("CreateContestProblem", mock.Anything, contestID, problemID).Return(nil)
+	mockPermissionsUC.On("EditContest", mock.Anything, userID, contestID).Return(true, nil)
+	mockContestsUC.On("ContestProblemCreation", mock.Anything, contestID, problemID).Return(nil)
 
 	params := testerv1.CreateContestProblemParams{
 		ProblemId: problemID,
@@ -754,7 +754,7 @@ func TestGetContestProblem_Success(t *testing.T) {
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
 	mockContestsUC.On("GetContest", mock.Anything, contestID).Return(contest, nil)
-	mockPermissionsUC.On("CanViewContest", mock.Anything, userID, contest).Return(true, nil)
+	mockPermissionsUC.On("ContestPermissionGet", mock.Anything, userID, contest).Return(true, nil)
 	mockContestsUC.On("GetContestProblem", mock.Anything, contestID, problemID).Return(contestProblem, nil)
 
 	app.Get("/contests/:contest_id/problems/:problem_id", func(c *fiber.Ctx) error {
@@ -768,7 +768,7 @@ func TestGetContestProblem_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	var response testerv1.GetContestProblemResponse
+	var response testerv1.GetContestProblemResponseModel
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &response)
 
@@ -797,7 +797,7 @@ func TestDeleteContestProblem_Success(t *testing.T) {
 	user := createTestUser(userID, kratosID)
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
-	mockPermissionsUC.On("CanEditContest", mock.Anything, userID, contestID).Return(true, nil)
+	mockPermissionsUC.On("EditContest", mock.Anything, userID, contestID).Return(true, nil)
 	mockContestsUC.On("DeleteContestProblem", mock.Anything, contestID, problemID).Return(nil)
 
 	app.Delete("/contests/:contest_id/problems/:problem_id", func(c *fiber.Ctx) error {
@@ -834,7 +834,7 @@ func TestCreateParticipant_Success(t *testing.T) {
 	user := createTestUser(userID, kratosID)
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
-	mockPermissionsUC.On("CanEditContest", mock.Anything, userID, contestID).Return(true, nil)
+	mockPermissionsUC.On("EditContest", mock.Anything, userID, contestID).Return(true, nil)
 	mockPermissionsUC.On("CreatePermission", mock.Anything, permissions.ResourceContest, contestID, participantID, permissions.RelationParticipant).Return(nil)
 
 	params := testerv1.CreateParticipantParams{
@@ -874,7 +874,7 @@ func TestDeleteParticipant_Success(t *testing.T) {
 	user := createTestUser(userID, kratosID)
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
-	mockPermissionsUC.On("CanEditContest", mock.Anything, userID, contestID).Return(true, nil)
+	mockPermissionsUC.On("EditContest", mock.Anything, userID, contestID).Return(true, nil)
 	mockPermissionsUC.On("DeletePermission", mock.Anything, permissions.ResourceContest, contestID, participantID, permissions.RelationParticipant).Return(nil)
 
 	params := testerv1.DeleteParticipantParams{
@@ -925,7 +925,7 @@ func TestListParticipants_Success(t *testing.T) {
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
 	mockContestsUC.On("GetContest", mock.Anything, contestID).Return(contest, nil)
-	mockPermissionsUC.On("CanViewContest", mock.Anything, userID, contest).Return(true, nil)
+	mockPermissionsUC.On("ContestPermissionGet", mock.Anything, userID, contest).Return(true, nil)
 	mockContestsUC.On("ListParticipants", mock.Anything, mock.MatchedBy(func(filter models.ParticipantsFilter) bool {
 		return filter.ContestId == contestID && filter.Page == 1 && filter.PageSize == 10
 	})).Return(participantsList, nil)
@@ -946,7 +946,7 @@ func TestListParticipants_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	var response testerv1.ListUsersResponse
+	var response testerv1.ListUsersResponseModel
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &response)
 
@@ -1005,7 +1005,7 @@ func TestGetMonitor_Success(t *testing.T) {
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
 	mockContestsUC.On("GetContest", mock.Anything, contestID).Return(contest, nil)
-	mockPermissionsUC.On("CanViewMonitor", mock.Anything, userID, contest).Return(true, nil)
+	mockPermissionsUC.On("ViewMonitor", mock.Anything, userID, contest).Return(true, nil)
 	mockContestsUC.On("GetMonitor", mock.Anything, contestID).Return(monitor, nil)
 
 	app.Get("/contests/:contest_id/monitor", func(c *fiber.Ctx) error {
@@ -1019,7 +1019,7 @@ func TestGetMonitor_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	var response testerv1.GetMonitorResponse
+	var response testerv1.GetMonitorResponseModel
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &response)
 
@@ -1051,7 +1051,7 @@ func TestGetMonitor_NoPermission(t *testing.T) {
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
 	mockContestsUC.On("GetContest", mock.Anything, contestID).Return(contest, nil)
-	mockPermissionsUC.On("CanViewMonitor", mock.Anything, userID, contest).Return(false, nil)
+	mockPermissionsUC.On("ViewMonitor", mock.Anything, userID, contest).Return(false, nil)
 
 	app.Get("/contests/:contest_id/monitor", func(c *fiber.Ctx) error {
 		c.Locals(sessionKey, createMockSession(kratosID))

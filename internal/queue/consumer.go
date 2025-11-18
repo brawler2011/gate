@@ -3,8 +3,9 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/gate149/core/internal/models"
@@ -32,35 +33,35 @@ func NewConsumer(redisClient *redis.Client, usersUC *users.UsersUseCase) *Consum
 }
 
 func (c *Consumer) StartConsuming(ctx context.Context, queueName string) {
-	log.Printf("Starting to consume queue: %s", queueName)
+	slog.Info("Starting to consume queue: %s", queueName)
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Stopping queue consumer")
+			slog.Info("Stopping queue consumer")
 			return
 		default:
 			// Blocking pop from Redis queue
 			result, err := c.redisClient.BLPop(ctx, 1*time.Second, queueName).Result()
 			if err != nil {
-				if err == redis.Nil {
+				if errors.Is(err, redis.Nil) {
 					// No messages in queue, continue
 					continue
 				}
-				log.Printf("Error reading from queue: %v", err)
+				slog.Error("Error reading from queue", "error", err)
 				continue
 			}
 
 			if len(result) < 2 {
-				log.Printf("Invalid queue result: %v", result)
+				slog.Error("Invalid queue result", "result", result)
 				continue
 			}
 
 			messageData := result[1]
 			if err := c.processMessage(ctx, messageData); err != nil {
-				log.Printf("Error processing message: %v", err)
+				slog.Error("Error processing message", "error", err)
 				if retryErr := c.handleFailedMessage(ctx, queueName, messageData, err); retryErr != nil {
-					log.Printf("Failed to handle failed message: %v", retryErr)
+					slog.Error("Failed to handle failed message", "error", retryErr)
 				}
 			}
 		}
@@ -73,13 +74,13 @@ func (c *Consumer) processMessage(ctx context.Context, messageData string) error
 		return fmt.Errorf("failed to unmarshal message: %w", err)
 	}
 
-	log.Printf("Processing message: %+v", message)
+	slog.Debug("Processing message", "msg", message)
 
 	switch message.Type {
 	case "user_created":
 		return c.handleUserCreated(ctx, message)
 	default:
-		log.Printf("Unknown message type: %s", message.Type)
+		slog.Error("Unknown message type", "type", message.Type)
 		return nil
 	}
 }
@@ -109,7 +110,7 @@ func (c *Consumer) handleUserCreated(ctx context.Context, message QueueMessage) 
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	log.Printf("Successfully created user with Kratos ID: %s", kratosPayload.UserId)
+	slog.Info("Successfully created user with Kratos ID", "kratosID", kratosPayload.UserId)
 	return nil
 }
 
@@ -137,6 +138,6 @@ func (c *Consumer) handleFailedMessage(ctx context.Context, queueName, messageDa
 		return fmt.Errorf("failed to push to dead letter queue: %w", err)
 	}
 
-	log.Printf("Message moved to dead letter queue: %s", deadLetterQueue)
+	slog.Warn("Message moved to dead letter queue: %s", deadLetterQueue)
 	return nil
 }

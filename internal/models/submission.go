@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type LanguageName int32
+type LanguageName int64
 
 const (
 	Golang LanguageName = 10
@@ -26,7 +26,7 @@ func (n LanguageName) Valid() error {
 	}
 }
 
-type State int32
+type State int64
 
 const (
 	Saved State = 1 // saved to db
@@ -41,25 +41,25 @@ const (
 	Accepted State = 200 // accepted
 )
 
-type Solution struct {
+type Submission struct {
 	Id uuid.UUID `db:"id"`
 
-	UserId   uuid.UUID `db:"user_id"`
-	Username string    `db:"username"`
+	CreatedBy uuid.UUID `db:"created_by"`
+	Username  string    `db:"username"`
 
-	Solution string `db:"solution"`
+	Submission string `db:"submission"`
 
 	State      State        `db:"state"`
-	Score      int32        `db:"score"`
-	Penalty    int32        `db:"penalty"`
-	TimeStat   int32        `db:"time_stat"`
-	MemoryStat int32        `db:"memory_stat"`
+	Score      int64        `db:"score"`
+	Penalty    int64        `db:"penalty"`
+	TimeStat   int64        `db:"time_stat"`
+	MemoryStat int64        `db:"memory_stat"`
 	Language   LanguageName `db:"language"`
 
 	ProblemId    uuid.UUID `db:"problem_id"`
 	ProblemTitle string    `db:"problem_title"`
 
-	Position int32 `db:"position"`
+	Position int64 `db:"position"`
 
 	ContestId    uuid.UUID `db:"contest_id"`
 	ContestTitle string    `db:"contest_title"`
@@ -68,39 +68,39 @@ type Solution struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
-type SolutionUpdate struct {
+type SubmissionUpdate struct {
 	State      State
-	Score      int32
-	TimeStat   int32
-	MemoryStat int32
+	Score      int64
+	TimeStat   int64
+	MemoryStat int64
 }
 
-type SolutionCreation struct {
+type SubmissionCreation struct {
 	Solution  string
 	ProblemId uuid.UUID
 	ContestId uuid.UUID
 	UserId    uuid.UUID
 	Language  LanguageName
-	Penalty   int32
+	Penalty   int64
 }
 
-type SolutionsListItem struct {
+type SubmissionListItem struct {
 	Id uuid.UUID `db:"id"`
 
-	UserId   uuid.UUID `db:"user_id"`
-	Username string    `db:"username"`
+	CreatedBy uuid.UUID `db:"created_by"`
+	Username  string    `db:"username"`
 
 	State      State        `db:"state"`
-	Score      int32        `db:"score"`
-	Penalty    int32        `db:"penalty"`
-	TimeStat   int32        `db:"time_stat"`
-	MemoryStat int32        `db:"memory_stat"`
+	Score      int64        `db:"score"`
+	Penalty    int64        `db:"penalty"`
+	TimeStat   int64        `db:"time_stat"`
+	MemoryStat int64        `db:"memory_stat"`
 	Language   LanguageName `db:"language"`
 
 	ProblemId    uuid.UUID `db:"problem_id"`
 	ProblemTitle string    `db:"problem_title"`
 
-	Position int32 `db:"position"`
+	Position int64 `db:"position"`
 
 	ContestId    uuid.UUID `db:"contest_id"`
 	ContestTitle string    `db:"contest_title"`
@@ -110,21 +110,21 @@ type SolutionsListItem struct {
 }
 
 type SolutionsList struct {
-	Solutions  []*SolutionsListItem
+	Solutions  []*SubmissionListItem
 	Pagination Pagination
 }
 
 type SolutionsFilter struct {
-	Page      int32
-	PageSize  int32
+	Page      int64
+	PageSize  int64
 	ContestId *uuid.UUID
 	UserId    *uuid.UUID
 	ProblemId *uuid.UUID
 	Language  *LanguageName
 	State     *State
-	Order     *int32
+	Order     *int64
 }
 
-func (f SolutionsFilter) Offset() int32 {
+func (f SolutionsFilter) Offset() int64 {
 	return (f.Page - 1) * f.PageSize
 }

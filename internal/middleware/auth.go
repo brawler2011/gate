@@ -2,60 +2,50 @@ package middleware
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 
 	"github.com/gate149/core/pkg"
 	"github.com/gofiber/fiber/v2"
 	ory "github.com/ory/client-go"
 )
 
-const sessionKey = "session"
-const userIDKey = "user_id"
+const (
+	sessionKey              = "session"
+	kratosSessionCookieName = "ory_kratos_session"
+)
 
-// OathkeeperMiddleware extracts user ID from X-User-ID header set by Oathkeeper
-func OathkeeperMiddleware() fiber.Handler {
+// AuthMiddleware checks for a valid Kratos session cookie and retrieves the session
+func AuthMiddleware(frontendAPI ory.FrontendAPI) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Oathkeeper should set X-User-ID header after validating session
-		userID := c.Get("X-User-ID")
+		var ctx = c.Context()
 
-		if userID != "" {
-			c.Locals(userIDKey, userID)
-			// Create a minimal session object for compatibility
-			active := true
-			session := &ory.Session{
-				Identity: &ory.Identity{
-					Id: userID,
-				},
-				Active: &active,
-			}
-			c.Locals(sessionKey, session)
+		cookie := c.Cookies(kratosSessionCookieName, "")
+		if cookie == "" {
+			slog.Debug("no kratos session cookie found, skipping auth middleware")
+			return c.Next()
 		}
+
+		session, _, err := frontendAPI.
+			ToSession(ctx).
+			Cookie(fmt.Sprintf("%s=%s", kratosSessionCookieName, cookie)).
+			Execute()
+		if err != nil {
+			slog.Error("kratos session cookie found, but failed to get session", "error", err)
+			return c.Next()
+		}
+
+		c.Locals(sessionKey, session)
 
 		return c.Next()
 	}
 }
 
+// GetSession extracts Kratos session from context
 func GetSession(ctx context.Context) (*ory.Session, error) {
 	u, ok := ctx.Value(sessionKey).(*ory.Session)
 	if !ok {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "no session in ctx")
 	}
 	return u, nil
-}
-
-// GetUserID extracts user ID from context
-func GetUserID(ctx context.Context) (string, error) {
-	if userID, ok := ctx.Value(userIDKey).(string); ok && userID != "" {
-		return userID, nil
-	}
-
-	session, err := GetSession(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	if session.Identity != nil && session.Identity.Id != "" {
-		return session.Identity.Id, nil
-	}
-
-	return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "no user ID found")
 }

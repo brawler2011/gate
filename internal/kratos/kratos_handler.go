@@ -1,12 +1,12 @@
 package kratos
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/gate149/core/internal/models"
-	"github.com/gate149/core/internal/users"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
@@ -24,15 +24,18 @@ type KratosWebhookResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
-type KratosHandler struct {
-	usersUC users.UsersUC
-	logger  *slog.Logger
+type UsersUC interface {
+	GetUserByKratosId(ctx context.Context, kratosId string) (*models.User, error)
+	CreateUser(ctx context.Context, user *models.UserCreation) (uuid.UUID, error)
 }
 
-func NewKratosHandler(usersUC users.UsersUC, logger *slog.Logger) *KratosHandler {
+type KratosHandler struct {
+	usersUC UsersUC
+}
+
+func NewKratosHandler(usersUC UsersUC) *KratosHandler {
 	return &KratosHandler{
 		usersUC: usersUC,
-		logger:  logger,
 	}
 }
 
@@ -40,7 +43,7 @@ func NewKratosHandler(usersUC users.UsersUC, logger *slog.Logger) *KratosHandler
 func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 	ctx := c.Context()
 
-	h.logger.Info("Received webhook from Kratos",
+	slog.Info("Received webhook from Kratos",
 		slog.String("method", c.Method()),
 		slog.String("path", c.Path()),
 		slog.String("content_type", c.Get("Content-Type")),
@@ -48,21 +51,21 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 
 	var req KratosWebhookRequest
 	if err := c.BodyParser(&req); err != nil {
-		h.logger.Error("Failed to parse webhook body", slog.Any("error", err))
+		slog.Error("Failed to parse webhook body", slog.Any("error", err))
 		return c.Status(http.StatusBadRequest).JSON(KratosWebhookResponse{
 			Success: false,
 			Error:   "Invalid request body",
 		})
 	}
 
-	h.logger.Info("Processing webhook",
+	slog.Info("Processing webhook",
 		slog.String("user_id", req.UserId),
 		slog.String("username", req.Username),
 	)
 
 	// Validate required fields
 	if req.UserId == "" || req.Username == "" {
-		h.logger.Error("Missing required fields in webhook")
+		slog.Error("Missing required fields in webhook")
 		return c.Status(http.StatusBadRequest).JSON(KratosWebhookResponse{
 			Success: false,
 			Error:   "Missing required fields: userId and username",
@@ -70,9 +73,9 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 	}
 
 	// Check if user already exists
-	existingUser, err := h.usersUC.ReadUserByKratosId(ctx, req.UserId)
+	existingUser, err := h.usersUC.GetUserByKratosId(ctx, req.UserId)
 	if err == nil && existingUser != nil {
-		h.logger.Info("User already exists", slog.String("kratos_id", req.UserId))
+		slog.Info("User already exists", slog.String("kratos_id", req.UserId))
 		return c.Status(http.StatusOK).JSON(KratosWebhookResponse{
 			Success: true,
 			Message: "User already exists",
@@ -89,7 +92,7 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 
 	_, err = h.usersUC.CreateUser(ctx, userCreation)
 	if err != nil {
-		h.logger.Error("Failed to create user",
+		slog.Error("Failed to create user",
 			slog.Any("error", err),
 			slog.String("kratos_id", req.UserId),
 			slog.String("username", req.Username),
@@ -100,7 +103,7 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 		})
 	}
 
-	h.logger.Info("Successfully created user",
+	slog.Info("Successfully created user",
 		slog.String("kratos_id", req.UserId),
 		slog.String("username", req.Username),
 	)

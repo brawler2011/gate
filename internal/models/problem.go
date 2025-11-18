@@ -1,63 +1,25 @@
 package models
 
 import (
-	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type Meta struct {
-	Count int      `json:"count"`
-	Names []string `json:"names"` // e.g "01", "02", "03"
-}
-
-func (m *Meta) Scan(src interface{}) error {
-	if src == nil {
-		*m = Meta{}
-		return nil
-	}
-
-	// Expect src to be []byte (JSONB data)
-	data, ok := src.([]byte)
-	if !ok {
-		return fmt.Errorf("expected []byte for JSONB, got %T", src)
-	}
-
-	// Unmarshal JSON into Meta
-	return json.Unmarshal(data, m)
-}
-
-type Sample struct {
-	Input  string `json:"input"`
-	Output string `json:"output"`
-}
-
-type Samples []Sample
-
-func (s *Samples) Scan(src interface{}) error {
-	if src == nil {
-		*s = nil
-		return nil
-	}
-
-	// Expect src to be []byte (JSONB data)
-	data, ok := src.([]byte)
-	if !ok {
-		return fmt.Errorf("expected []byte for JSONB, got %T", src)
-	}
-
-	// Unmarshal JSON into []Sample
-	return json.Unmarshal(data, s)
-}
+const (
+	ProblemVisibilityPublic  = "public"
+	ProblemVisibilityPrivate = "private"
+)
 
 type Problem struct {
-	Id          uuid.UUID `db:"id"`
-	Title       string    `db:"title"`
-	TimeLimit   int32     `db:"time_limit"`
-	MemoryLimit int32     `db:"memory_limit"`
-	IsPrivate   bool      `db:"is_private"`
+	Id        uuid.UUID `db:"id"`
+	CreatedBy uuid.UUID `db:"created_by"`
+
+	Visibility string `db:"visibility"`
+
+	Title       string `db:"title"`
+	TimeLimit   int64  `db:"time_limit"`
+	MemoryLimit int64  `db:"memory_limit"`
 
 	Legend       string `db:"legend"`
 	InputFormat  string `db:"input_format"`
@@ -71,9 +33,6 @@ type Problem struct {
 	NotesHtml        string `db:"notes_html"`
 	ScoringHtml      string `db:"scoring_html"`
 
-	Meta    Meta    `db:"meta"`    // JSONB field
-	Samples Samples `db:"samples"` // JSONB field
-
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
 }
@@ -81,8 +40,8 @@ type Problem struct {
 type ProblemsListItem struct {
 	Id          uuid.UUID `db:"id"`
 	Title       string    `db:"title"`
-	MemoryLimit int32     `db:"memory_limit"`
-	TimeLimit   int32     `db:"time_limit"`
+	MemoryLimit int64     `db:"memory_limit"`
+	TimeLimit   int64     `db:"time_limit"`
 	CreatedAt   time.Time `db:"created_at"`
 	UpdatedAt   time.Time `db:"updated_at"`
 }
@@ -93,23 +52,24 @@ type ProblemsList struct {
 }
 
 type ProblemsFilter struct {
-	Page     int32
-	PageSize int32
-	OwnerId  *uuid.UUID // Filter by owner to get user's private problems
-	Title    *string    // Legacy filter for database trigram search
-	Search   *string    // Typesense full-text search
-	Order    *int32
+	Page       int64
+	PageSize   int64
+	OwnerId    *uuid.UUID
+	Search     *string
+	Descending bool
 }
 
-func (f ProblemsFilter) Offset() int32 {
+func (f ProblemsFilter) Offset() int64 {
 	return (f.Page - 1) * f.PageSize
 }
 
 type ProblemUpdate struct {
+	Id uuid.UUID `db:"id"`
+
 	Title       *string `db:"title"`
-	MemoryLimit *int32  `db:"memory_limit"`
-	TimeLimit   *int32  `db:"time_limit"`
-	IsPrivate   *bool   `db:"is_private"`
+	MemoryLimit *int64  `db:"memory_limit"`
+	TimeLimit   *int64  `db:"time_limit"`
+	Visibility  *string `db:"visibility"`
 
 	Legend       *string `db:"legend"`
 	InputFormat  *string `db:"input_format"`
@@ -122,9 +82,6 @@ type ProblemUpdate struct {
 	OutputFormatHtml *string `db:"output_format_html"`
 	NotesHtml        *string `db:"notes_html"`
 	ScoringHtml      *string `db:"scoring_html"`
-
-	Meta    *Meta     `db:"meta"`    // JSONB field
-	Samples *[]Sample `db:"samples"` // JSONB field
 }
 
 type ProblemStatement struct {
@@ -141,4 +98,44 @@ type Html5ProblemStatement struct {
 	OutputFormatHtml string `db:"output_format_html"`
 	NotesHtml        string `db:"notes_html"`
 	ScoringHtml      string `db:"scoring_html"`
+}
+
+type ProblemSample struct {
+	Id        uuid.UUID `db:"id"`
+	ProblemId uuid.UUID `db:"problem_id"`
+	Ordinal   int64     `db:"ordinal"`
+	Input     string    `db:"input"`
+	Output    string    `db:"output"`
+}
+
+type ProblemSamples []ProblemSample
+
+type ProblemPermissions struct {
+	ViewProblem  bool
+	EditProblem  bool
+	AdminProblem bool
+}
+
+const (
+	ProblemRoleOwner     = "owner"
+	ProblemRoleModerator = "moderator"
+)
+
+type ProblemMember struct {
+	ProblemId uuid.UUID `db:"problem_id"`
+	UserId    uuid.UUID `db:"user_id"`
+	Role      string    `db:"role"`
+}
+
+func (m *ProblemMember) IsOwner() bool {
+	return m.Role == ProblemRoleOwner
+}
+
+func (m *ProblemMember) IsModerator() bool {
+	return m.Role == ProblemRoleModerator
+}
+
+type ProblemPermissionGet struct {
+	ProblemId uuid.UUID
+	UserId    uuid.UUID
 }

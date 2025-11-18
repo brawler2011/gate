@@ -1,4 +1,4 @@
-package solutions_test
+package submissions_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gate149/core/internal/models"
-	"github.com/gate149/core/internal/solutions"
+	"github.com/gate149/core/internal/submissions"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +26,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 	db, mock := setupTestDB(t)
 	defer db.Close()
 
-	repo := solutions.NewRepository(db)
+	repo := submissions.NewRepository(db)
 
 	t.Run("success", func(t *testing.T) {
 		ctx := context.Background()
@@ -36,7 +36,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 		problemID := uuid.New()
 		userID := uuid.New()
 
-		creation := &models.SolutionCreation{
+		creation := &models.SubmissionCreation{
 			ContestId: contestID,
 			ProblemId: problemID,
 			UserId:    userID,
@@ -45,7 +45,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 			Penalty:   20,
 		}
 
-		mock.ExpectQuery(solutions.CreateSolutionQuery).
+		mock.ExpectQuery(submissions.CreateSolutionQuery).
 			WithArgs(
 				creation.ContestId,
 				creation.ProblemId,
@@ -56,7 +56,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 			).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(solutionID))
 
-		id, err := repo.CreateSolution(ctx, creation)
+		id, err := repo.CreateSubmission(ctx, creation)
 		assert.NoError(t, err)
 		assert.Equal(t, solutionID, id)
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -65,7 +65,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 	t.Run("query error", func(t *testing.T) {
 		ctx := context.Background()
 
-		creation := &models.SolutionCreation{
+		creation := &models.SubmissionCreation{
 			ContestId: uuid.New(),
 			ProblemId: uuid.New(),
 			UserId:    uuid.New(),
@@ -74,7 +74,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 			Penalty:   0,
 		}
 
-		mock.ExpectQuery(solutions.CreateSolutionQuery).
+		mock.ExpectQuery(submissions.CreateSolutionQuery).
 			WithArgs(
 				creation.ContestId,
 				creation.ProblemId,
@@ -85,7 +85,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 			).
 			WillReturnError(sql.ErrConnDone)
 
-		id, err := repo.CreateSolution(ctx, creation)
+		id, err := repo.CreateSubmission(ctx, creation)
 		assert.Error(t, err)
 		assert.Equal(t, uuid.Nil, id)
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -94,7 +94,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 	t.Run("scan error", func(t *testing.T) {
 		ctx := context.Background()
 
-		creation := &models.SolutionCreation{
+		creation := &models.SubmissionCreation{
 			ContestId: uuid.New(),
 			ProblemId: uuid.New(),
 			UserId:    uuid.New(),
@@ -103,7 +103,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 			Penalty:   0,
 		}
 
-		mock.ExpectQuery(solutions.CreateSolutionQuery).
+		mock.ExpectQuery(submissions.CreateSolutionQuery).
 			WithArgs(
 				creation.ContestId,
 				creation.ProblemId,
@@ -114,7 +114,7 @@ func TestRepository_CreateSolution(t *testing.T) {
 			).
 			WillReturnRows(sqlmock.NewRows([]string{"wrong_column"}))
 
-		id, err := repo.CreateSolution(ctx, creation)
+		id, err := repo.CreateSubmission(ctx, creation)
 		assert.Error(t, err)
 		assert.Equal(t, uuid.Nil, id)
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -125,7 +125,7 @@ func TestRepository_GetSolution(t *testing.T) {
 	db, mock := setupTestDB(t)
 	defer db.Close()
 
-	repo := solutions.NewRepository(db)
+	repo := submissions.NewRepository(db)
 
 	t.Run("success", func(t *testing.T) {
 		ctx := context.Background()
@@ -136,7 +136,7 @@ func TestRepository_GetSolution(t *testing.T) {
 		userID := uuid.New()
 		now := time.Now()
 
-		expected := &models.Solution{
+		expected := &models.Submission{
 			Id:           solutionID,
 			UserId:       userID,
 			Username:     "testuser",
@@ -176,7 +176,7 @@ func TestRepository_GetSolution(t *testing.T) {
 			"created_at",
 		}
 
-		mock.ExpectQuery(solutions.GetSolutionQuery).
+		mock.ExpectQuery(submissions.GetSolutionQuery).
 			WithArgs(solutionID).
 			WillReturnRows(sqlmock.NewRows(columns).
 				AddRow(
@@ -199,7 +199,7 @@ func TestRepository_GetSolution(t *testing.T) {
 					expected.CreatedAt,
 				))
 
-		solution, err := repo.GetSolution(ctx, solutionID)
+		solution, err := repo.GetSubmissions(ctx, solutionID)
 		assert.NoError(t, err)
 		assert.EqualExportedValues(t, expected, solution)
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -210,11 +210,11 @@ func TestRepository_GetSolution(t *testing.T) {
 
 		solutionID := uuid.New()
 
-		mock.ExpectQuery(solutions.GetSolutionQuery).
+		mock.ExpectQuery(submissions.GetSolutionQuery).
 			WithArgs(solutionID).
 			WillReturnError(sql.ErrNoRows)
 
-		solution, err := repo.GetSolution(ctx, solutionID)
+		solution, err := repo.GetSubmissions(ctx, solutionID)
 		assert.Error(t, err)
 		assert.Nil(t, solution)
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -225,11 +225,11 @@ func TestRepository_GetSolution(t *testing.T) {
 
 		solutionID := uuid.New()
 
-		mock.ExpectQuery(solutions.GetSolutionQuery).
+		mock.ExpectQuery(submissions.GetSolutionQuery).
 			WithArgs(solutionID).
 			WillReturnError(sql.ErrConnDone)
 
-		solution, err := repo.GetSolution(ctx, solutionID)
+		solution, err := repo.GetSubmissions(ctx, solutionID)
 		assert.Error(t, err)
 		assert.Nil(t, solution)
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -240,20 +240,20 @@ func TestRepository_UpdateSolution(t *testing.T) {
 	db, mock := setupTestDB(t)
 	defer db.Close()
 
-	repo := solutions.NewRepository(db)
+	repo := submissions.NewRepository(db)
 
 	t.Run("success", func(t *testing.T) {
 		ctx := context.Background()
 
 		solutionID := uuid.New()
-		update := &models.SolutionUpdate{
+		update := &models.SubmissionUpdate{
 			State:      models.Accepted,
 			Score:      100,
 			TimeStat:   150,
 			MemoryStat: 2048,
 		}
 
-		mock.ExpectExec(solutions.UpdateSolutionQuery).
+		mock.ExpectExec(submissions.UpdateSolutionQuery).
 			WithArgs(
 				update.State,
 				update.Score,
@@ -263,7 +263,7 @@ func TestRepository_UpdateSolution(t *testing.T) {
 			).
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
-		err := repo.UpdateSolution(ctx, solutionID, update)
+		err := repo.UpdateSubmission(ctx, solutionID, update)
 		assert.NoError(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -272,14 +272,14 @@ func TestRepository_UpdateSolution(t *testing.T) {
 		ctx := context.Background()
 
 		solutionID := uuid.New()
-		update := &models.SolutionUpdate{
+		update := &models.SubmissionUpdate{
 			State:      models.GotWA,
 			Score:      0,
 			TimeStat:   0,
 			MemoryStat: 0,
 		}
 
-		mock.ExpectExec(solutions.UpdateSolutionQuery).
+		mock.ExpectExec(submissions.UpdateSolutionQuery).
 			WithArgs(
 				update.State,
 				update.Score,
@@ -289,7 +289,7 @@ func TestRepository_UpdateSolution(t *testing.T) {
 			).
 			WillReturnResult(sqlmock.NewResult(0, 0))
 
-		err := repo.UpdateSolution(ctx, solutionID, update)
+		err := repo.UpdateSubmission(ctx, solutionID, update)
 		assert.NoError(t, err) // Update with 0 rows affected is not an error
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -298,14 +298,14 @@ func TestRepository_UpdateSolution(t *testing.T) {
 		ctx := context.Background()
 
 		solutionID := uuid.New()
-		update := &models.SolutionUpdate{
+		update := &models.SubmissionUpdate{
 			State:      models.GotCE,
 			Score:      0,
 			TimeStat:   0,
 			MemoryStat: 0,
 		}
 
-		mock.ExpectExec(solutions.UpdateSolutionQuery).
+		mock.ExpectExec(submissions.UpdateSolutionQuery).
 			WithArgs(
 				update.State,
 				update.Score,
@@ -315,7 +315,7 @@ func TestRepository_UpdateSolution(t *testing.T) {
 			).
 			WillReturnError(sql.ErrConnDone)
 
-		err := repo.UpdateSolution(ctx, solutionID, update)
+		err := repo.UpdateSubmission(ctx, solutionID, update)
 		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -325,7 +325,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 	db, mock := setupTestDB(t)
 	defer db.Close()
 
-	repo := solutions.NewRepository(db)
+	repo := submissions.NewRepository(db)
 
 	t.Run("success with filters", func(t *testing.T) {
 		ctx := context.Background()
@@ -349,7 +349,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 		}
 
 		now := time.Now()
-		solution1 := &models.SolutionsListItem{
+		solution1 := &models.SubmissionListItem{
 			Id:           uuid.New(),
 			UserId:       userID,
 			Username:     "user1",
@@ -368,7 +368,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 			UpdatedAt:    now,
 		}
 
-		solution2 := &models.SolutionsListItem{
+		solution2 := &models.SubmissionListItem{
 			Id:           uuid.New(),
 			UserId:       userID,
 			Username:     "user1",
@@ -390,7 +390,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 		var totalCount int32 = 2
 
 		// Mock count query
-		mock.ExpectQuery(solutions.CountSolutionsQuery).
+		mock.ExpectQuery(submissions.CountSolutionsQuery).
 			WithArgs(
 				filter.ContestId,
 				filter.UserId,
@@ -420,7 +420,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 			"created_at",
 		}
 
-		mock.ExpectQuery(solutions.ListSolutionsQuery).
+		mock.ExpectQuery(submissions.ListSolutionsQuery).
 			WithArgs(
 				filter.ContestId,
 				filter.UserId,
@@ -489,7 +489,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 		var totalCount int32 = 0
 
 		// Mock count query
-		mock.ExpectQuery(solutions.CountSolutionsQuery).
+		mock.ExpectQuery(submissions.CountSolutionsQuery).
 			WithArgs(
 				filter.ContestId,
 				filter.UserId,
@@ -519,7 +519,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 			"created_at",
 		}
 
-		mock.ExpectQuery(solutions.ListSolutionsQuery).
+		mock.ExpectQuery(submissions.ListSolutionsQuery).
 			WithArgs(
 				filter.ContestId,
 				filter.UserId,
@@ -549,7 +549,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 			PageSize: 10,
 		}
 
-		mock.ExpectQuery(solutions.CountSolutionsQuery).
+		mock.ExpectQuery(submissions.CountSolutionsQuery).
 			WithArgs(
 				filter.ContestId,
 				filter.UserId,
@@ -576,7 +576,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 		var totalCount int32 = 5
 
 		// Mock count query
-		mock.ExpectQuery(solutions.CountSolutionsQuery).
+		mock.ExpectQuery(submissions.CountSolutionsQuery).
 			WithArgs(
 				filter.ContestId,
 				filter.UserId,
@@ -587,7 +587,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(totalCount))
 
 		// Mock list query error
-		mock.ExpectQuery(solutions.ListSolutionsQuery).
+		mock.ExpectQuery(submissions.ListSolutionsQuery).
 			WithArgs(
 				filter.ContestId,
 				filter.UserId,
@@ -617,7 +617,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 		var totalCount int32 = 12
 
 		// Mock count query
-		mock.ExpectQuery(solutions.CountSolutionsQuery).
+		mock.ExpectQuery(submissions.CountSolutionsQuery).
 			WithArgs(
 				filter.ContestId,
 				filter.UserId,
@@ -647,7 +647,7 @@ func TestRepository_ListSolutions(t *testing.T) {
 			"created_at",
 		}
 
-		mock.ExpectQuery(solutions.ListSolutionsQuery).
+		mock.ExpectQuery(submissions.ListSolutionsQuery).
 			WithArgs(
 				filter.ContestId,
 				filter.UserId,

@@ -1,4 +1,4 @@
-package solutions
+package submissions
 
 import (
 	"context"
@@ -8,13 +8,12 @@ import (
 	"github.com/gate149/core/pkg"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	ory "github.com/ory/client-go"
 )
 
 type SolutionsUC interface {
-	GetSolution(ctx context.Context, id uuid.UUID) (*models.Solution, error)
-	CreateSolution(ctx context.Context, creation *models.SolutionCreation) (uuid.UUID, error)
-	UpdateSolution(ctx context.Context, id uuid.UUID, update *models.SolutionUpdate) error
+	GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error)
+	CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error)
+	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
 	ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*models.SolutionsList, error)
 }
 
@@ -29,19 +28,15 @@ type ContestsUC interface {
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]*models.ContestProblemsListItem, error)
 	DeleteContestProblem(ctx context.Context, contestId, problemId uuid.UUID) error
 	CreateParticipant(ctx context.Context, contestId, userId uuid.UUID) error
-	IsParticipant(ctx context.Context, contestId, userId uuid.UUID) (bool, error)
 	DeleteParticipant(ctx context.Context, contestId, userId uuid.UUID) error
-	//ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*models.UsersList, error)
-	GetMonitor(ctx context.Context, contestId uuid.UUID) (*models.Monitor, error)
 }
 
 type PermissionsUC interface {
-	CanViewContest(ctx context.Context, userID uuid.UUID, contest *models.Contest) (bool, error)
-	CanCreateSolution(ctx context.Context, userID uuid.UUID, contest *models.Contest) (bool, error)
+	GetContestPermissions(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestPermissions, error)
 }
 
 type UsersUC interface {
-	ReadUserByKratosId(ctx context.Context, kratosId string) (*models.User, error)
+	GetUserByKratosId(ctx context.Context, kratosId string) (*models.User, error)
 }
 
 type SolutionsHandlers struct {
@@ -57,7 +52,7 @@ func getUserID(h *SolutionsHandlers, c *fiber.Ctx) (uuid.UUID, error) {
 		return uuid.Nil, err
 	}
 
-	user, err := h.usersUC.ReadUserByKratosId(c.Context(), kratosID)
+	user, err := h.usersUC.GetUserByKratosId(c.Context(), kratosID)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -85,26 +80,8 @@ const (
 	maxSolutionSize int64 = 10 * 1024 * 1024 // 10 MB
 )
 
-func getUserFromSession(c *fiber.Ctx) (string, error) {
-	session := c.Locals("session")
-	if session == nil {
-		return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "no session in context")
-	}
-
-	s, ok := session.(*ory.Session)
-	if !ok {
-		return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "invalid session type")
-	}
-
-	if !*s.Active {
-		return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "session is not active")
-	}
-
-	return s.Identity.Id, nil
-}
-
-func (h *SolutionsHandlers) CreateSolution(c *fiber.Ctx, params testerv1.CreateSolutionParams) error {
-	const op = "SolutionsHandlers.CreateSolution"
+func (h *SolutionsHandlers) CreateSolution(c *fiber.Ctx, params testerv1.CreateSubmissionParams) error {
+	const op = "SolutionsHandlers.CreateSubmission"
 	ctx := c.Context()
 
 	userID, err := getUserID(h, c)
@@ -112,18 +89,16 @@ func (h *SolutionsHandlers) CreateSolution(c *fiber.Ctx, params testerv1.CreateS
 		return err
 	}
 
-	// Get contest to check permissions
-	contest, err := h.contestsUC.GetContest(ctx, params.ContestId)
+	// Check if user can create solution in this contest
+	permissions, err := h.permissionsUC.GetContestPermissions(ctx, &models.ContestPermissionGet{
+		ContestId: params.ContestId,
+		UserId:    userID,
+	})
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, op, "failed to get contest")
+		return err
 	}
 
-	// Check if user can create solution in this contest
-	canCreate, err := h.permissionsUC.CanCreateSolution(ctx, userID, contest)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, op, "failed to check create permission")
-	}
-	if !canCreate {
+	if !permissions {
 		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to create solution")
 	}
 
@@ -155,7 +130,7 @@ func (h *SolutionsHandlers) CreateSolution(c *fiber.Ctx, params testerv1.CreateS
 		return pkg.Wrap(pkg.ErrBadInput, err, op, "invalid language")
 	}
 
-	solutionCreation := &models.SolutionCreation{
+	solutionCreation := &models.SubmissionCreation{
 		UserId:    userID,
 		ProblemId: params.ProblemId,
 		ContestId: params.ContestId,
@@ -164,16 +139,16 @@ func (h *SolutionsHandlers) CreateSolution(c *fiber.Ctx, params testerv1.CreateS
 		Penalty:   20,
 	}
 
-	solutionID, err := h.solutionsUC.CreateSolution(ctx, solutionCreation)
+	solutionID, err := h.solutionsUC.CreateSubmission(ctx, solutionCreation)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(testerv1.CreationResponse{Id: solutionID})
+	return c.JSON(testerv1.CreationResponseModel{Id: solutionID})
 }
 
 func (h *SolutionsHandlers) GetSolution(c *fiber.Ctx, id uuid.UUID) error {
-	const op = "SolutionsHandlers.GetSolution"
+	const op = "SolutionsHandlers.GetSubmissions"
 	ctx := c.Context()
 
 	userID, err := getUserID(h, c)
@@ -181,20 +156,20 @@ func (h *SolutionsHandlers) GetSolution(c *fiber.Ctx, id uuid.UUID) error {
 		return err
 	}
 
-	solution, err := h.solutionsUC.GetSolution(ctx, id)
+	submission, err := h.solutionsUC.GetSubmissions(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	// User can only view their own solution (simplified for now)
-	if solution.UserId != userID {
-		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to view this solution")
+	// User can only view their own submission (simplified for now)
+	if submission.CreatedBy != userID {
+		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to view this submission")
 	}
 
-	return c.JSON(testerv1.GetSolutionResponse{Solution: SolutionDTO(*solution)})
+	return c.JSON(testerv1.GetSubmissionResponseModel{Submission: SolutionDTO(*submission)})
 }
 
-func (h *SolutionsHandlers) ListSolutions(c *fiber.Ctx, params testerv1.ListSolutionsParams) error {
+func (h *SolutionsHandlers) ListSolutions(c *fiber.Ctx, params testerv1.ListSubmissionsParams) error {
 	const op = "SolutionsHandlers.ListSolutions"
 	ctx := c.Context()
 
@@ -203,28 +178,28 @@ func (h *SolutionsHandlers) ListSolutions(c *fiber.Ctx, params testerv1.ListSolu
 		return err
 	}
 
-	if params.ContestId == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, op, "contest id is required")
-	}
-
-	// Get contest to check permissions
-	contest, err := h.contestsUC.GetContest(ctx, *params.ContestId)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, op, "failed to get contest")
-	}
-
-	// Check if user can view contest
-	canView, err := h.permissionsUC.CanViewContest(ctx, userID, contest)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, op, "failed to check contest view permission")
-	}
-	if !canView {
-		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to view contest solutions")
-	}
-
 	filter := ListSolutionsParamsDTO(params)
 
-	// Users can only view their own solutions (simplified)
+	// If contestId is provided, check permissions for that contest
+	if params.ContestId != nil {
+		// Get contest to check permissions
+		contest, err := h.contestsUC.GetContest(ctx, *params.ContestId)
+		if err != nil {
+			return pkg.Wrap(pkg.ErrInternal, err, op, "failed to get contest")
+		}
+
+		// Check if user can view contest
+		canView, err := h.permissionsUC.CanViewContest(ctx, userID, contest)
+		if err != nil {
+			return pkg.Wrap(pkg.ErrInternal, err, op, "failed to check contest view permission")
+		}
+		if !canView {
+			return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to view contest submissions")
+		}
+	}
+
+	// Users can only view their own submissions (simplified)
+	// For admin/teacher users, they can see all submissions if no userId specified
 	if params.UserId == nil || *params.UserId != userID {
 		filter.UserId = &userID
 	}
@@ -237,7 +212,7 @@ func (h *SolutionsHandlers) ListSolutions(c *fiber.Ctx, params testerv1.ListSolu
 	return c.JSON(ListSolutionsResponseDTO(solutionsList))
 }
 
-func ListSolutionsParamsDTO(params testerv1.ListSolutionsParams) models.SolutionsFilter {
+func ListSolutionsParamsDTO(params testerv1.ListSubmissionsParams) models.SolutionsFilter {
 	var langName *models.LanguageName = nil
 	if params.Language != nil {
 		t := models.LanguageName(*params.Language)
@@ -254,7 +229,6 @@ func ListSolutionsParamsDTO(params testerv1.ListSolutionsParams) models.Solution
 		ContestId: params.ContestId,
 		Page:      params.Page,
 		PageSize:  params.PageSize,
-		// UserId:    params.UserId,
 		ProblemId: params.ProblemId,
 		Language:  langName,
 		Order:     params.Order,
@@ -262,39 +236,38 @@ func ListSolutionsParamsDTO(params testerv1.ListSolutionsParams) models.Solution
 	}
 }
 
-func ListSolutionsResponseDTO(solutionsList *models.SolutionsList) *testerv1.ListSolutionsResponse {
-	resp := testerv1.ListSolutionsResponse{
-		Solutions:  make([]testerv1.SolutionsListItem, len(solutionsList.Solutions)),
-		Pagination: PaginationDTO(solutionsList.Pagination),
+func ListSolutionsResponseDTO(solutionsList *models.SolutionsList) *testerv1.ListSubmissionsResponseModel {
+	resp := testerv1.ListSubmissionsResponseModel{
+		Submissions: make([]testerv1.SubmissionsListItemModel, len(solutionsList.Solutions)),
+		Pagination:  PaginationDTO(solutionsList.Pagination),
 	}
 
 	for i, solution := range solutionsList.Solutions {
-		resp.Solutions[i] = SolutionsListItemDTO(*solution)
+		resp.Submissions[i] = SubmissionListItemDTO(*solution)
 	}
 
 	return &resp
 }
 
-func PaginationDTO(p models.Pagination) testerv1.Pagination {
-	return testerv1.Pagination{
+func PaginationDTO(p models.Pagination) testerv1.PaginationModel {
+	return testerv1.PaginationModel{
 		Page:  p.Page,
 		Total: p.Total,
 	}
 }
 
-func SolutionsListItemDTO(s models.SolutionsListItem) testerv1.SolutionsListItem {
-	return testerv1.SolutionsListItem{
+func SubmissionListItemDTO(s models.SubmissionListItem) testerv1.SubmissionsListItemModel {
+	return testerv1.SubmissionsListItemModel{
 		Id: s.Id,
 
-		// UserId:   s.UserId,
 		Username: s.Username,
 
-		State:      int32(s.State),
+		State:      int64(s.State),
 		Score:      s.Score,
 		Penalty:    s.Penalty,
 		TimeStat:   s.TimeStat,
 		MemoryStat: s.MemoryStat,
-		Language:   int32(s.Language),
+		Language:   int64(s.Language),
 
 		ProblemId:    s.ProblemId,
 		ProblemTitle: s.ProblemTitle,
@@ -309,21 +282,20 @@ func SolutionsListItemDTO(s models.SolutionsListItem) testerv1.SolutionsListItem
 	}
 }
 
-func SolutionDTO(s models.Solution) testerv1.Solution {
-	return testerv1.Solution{
+func SolutionDTO(s models.Submission) testerv1.SubmissionModel {
+	return testerv1.SubmissionModel{
 		Id: s.Id,
 
-		// UserId:   s.UserId,
 		Username: s.Username,
 
-		Solution: s.Solution,
+		Submission: s.Submission,
 
-		State:      int32(s.State),
+		State:      int64(s.State),
 		Score:      s.Score,
 		Penalty:    s.Penalty,
 		TimeStat:   s.TimeStat,
 		MemoryStat: s.MemoryStat,
-		Language:   int32(s.Language),
+		Language:   int64(s.Language),
 
 		ProblemId:    s.ProblemId,
 		ProblemTitle: s.ProblemTitle,

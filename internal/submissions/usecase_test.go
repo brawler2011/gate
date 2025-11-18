@@ -1,4 +1,4 @@
-package solutions
+package submissions
 
 import (
 	"context"
@@ -15,20 +15,20 @@ type MockRepo struct {
 	mock.Mock
 }
 
-func (m *MockRepo) GetSolution(ctx context.Context, id uuid.UUID) (*models.Solution, error) {
+func (m *MockRepo) GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*models.Solution), args.Error(1)
+	return args.Get(0).(*models.Submission), args.Error(1)
 }
 
-func (m *MockRepo) CreateSolution(ctx context.Context, creation *models.SolutionCreation) (uuid.UUID, error) {
+func (m *MockRepo) CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error) {
 	args := m.Called(ctx, creation)
 	return args.Get(0).(uuid.UUID), args.Error(1)
 }
 
-func (m *MockRepo) UpdateSolution(ctx context.Context, id uuid.UUID, update *models.SolutionUpdate) error {
+func (m *MockRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
 	args := m.Called(ctx, id, update)
 	return args.Error(0)
 }
@@ -77,20 +77,20 @@ func TestUseCase_GetSolution(t *testing.T) {
 	mockProblemsUC := new(MockProblemsUC)
 	mockPub := new(MockPublisher)
 
-	uc := NewUseCase(mockRepo, mockProblemsUC, mockPub)
+	uc := NewUseCase(mockRepo, mockProblemsUC, mockPub, nil, "test-queue")
 	ctx := context.Background()
 	id := uuid.New()
 
-	expectedSolution := &models.Solution{
+	expectedSolution := &models.Submission{
 		Id:       id,
 		UserId:   uuid.New(),
 		Solution: "test solution",
 		State:    models.Saved,
 	}
 
-	mockRepo.On("GetSolution", ctx, id).Return(expectedSolution, nil)
+	mockRepo.On("GetSubmissions", ctx, id).Return(expectedSolution, nil)
 
-	solution, err := uc.GetSolution(ctx, id)
+	solution, err := uc.GetSubmissions(ctx, id)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedSolution, solution)
 	mockRepo.AssertExpectations(t)
@@ -101,11 +101,11 @@ func TestUseCase_CreateSolution(t *testing.T) {
 	mockProblemsUC := new(MockProblemsUC)
 	mockPub := new(MockPublisher)
 
-	uc := NewUseCase(mockRepo, mockProblemsUC, mockPub)
+	uc := NewUseCase(mockRepo, mockProblemsUC, mockPub, nil, "test-queue")
 	ctx := context.Background()
 
 	problemID := uuid.New()
-	creation := &models.SolutionCreation{
+	creation := &models.SubmissionCreation{
 		UserId:    uuid.New(),
 		ProblemId: problemID,
 		ContestId: uuid.New(),
@@ -115,7 +115,7 @@ func TestUseCase_CreateSolution(t *testing.T) {
 	}
 
 	expectedID := uuid.New()
-	mockRepo.On("CreateSolution", ctx, creation).Return(expectedID, nil)
+	mockRepo.On("CreateSubmission", ctx, creation).Return(expectedID, nil)
 
 	// Mock the goroutine calls
 	mockProblemsUC.On("GetProblemById", mock.Anything, problemID).Return(&models.Problem{
@@ -125,9 +125,9 @@ func TestUseCase_CreateSolution(t *testing.T) {
 			Count: 0, // No tests, will result in immediate acceptance
 		},
 	}, nil)
-	mockRepo.On("UpdateSolution", mock.Anything, expectedID, mock.AnythingOfType("*models.SolutionUpdate")).Return(nil)
+	mockRepo.On("UpdateSubmission", mock.Anything, expectedID, mock.AnythingOfType("*models.SubmissionUpdate")).Return(nil)
 
-	id, err := uc.CreateSolution(ctx, creation)
+	id, err := uc.CreateSubmission(ctx, creation)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedID, id)
 
@@ -143,18 +143,18 @@ func TestUseCase_UpdateSolution(t *testing.T) {
 	mockProblemsUC := new(MockProblemsUC)
 	mockPub := new(MockPublisher)
 
-	uc := NewUseCase(mockRepo, mockProblemsUC, mockPub)
+	uc := NewUseCase(mockRepo, mockProblemsUC, mockPub, nil, "test-queue")
 	ctx := context.Background()
 
 	id := uuid.New()
-	update := &models.SolutionUpdate{
+	update := &models.SubmissionUpdate{
 		State: models.Accepted,
 		Score: 100,
 	}
 
-	mockRepo.On("UpdateSolution", ctx, id, update).Return(nil)
+	mockRepo.On("UpdateSubmission", ctx, id, update).Return(nil)
 
-	err := uc.UpdateSolution(ctx, id, update)
+	err := uc.UpdateSubmission(ctx, id, update)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
@@ -164,7 +164,7 @@ func TestUseCase_ListSolutions(t *testing.T) {
 	mockProblemsUC := new(MockProblemsUC)
 	mockPub := new(MockPublisher)
 
-	uc := NewUseCase(mockRepo, mockProblemsUC, mockPub)
+	uc := NewUseCase(mockRepo, mockProblemsUC, mockPub, nil, "test-queue")
 	ctx := context.Background()
 
 	contestID := uuid.New()
@@ -175,7 +175,7 @@ func TestUseCase_ListSolutions(t *testing.T) {
 	}
 
 	expectedList := &models.SolutionsList{
-		Solutions: []*models.SolutionsListItem{
+		Solutions: []*models.SubmissionListItem{
 			{
 				Id:     uuid.New(),
 				UserId: uuid.New(),

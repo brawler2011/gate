@@ -1,4 +1,4 @@
-package solutions
+package submissions
 
 import (
 	"bytes"
@@ -22,20 +22,20 @@ type MockSolutionsUC struct {
 	mock.Mock
 }
 
-func (m *MockSolutionsUC) GetSolution(ctx context.Context, id uuid.UUID) (*models.Solution, error) {
+func (m *MockSolutionsUC) GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*models.Solution), args.Error(1)
+	return args.Get(0).(*models.Submission), args.Error(1)
 }
 
-func (m *MockSolutionsUC) CreateSolution(ctx context.Context, creation *models.SolutionCreation) (uuid.UUID, error) {
+func (m *MockSolutionsUC) CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error) {
 	args := m.Called(ctx, creation)
 	return args.Get(0).(uuid.UUID), args.Error(1)
 }
 
-func (m *MockSolutionsUC) UpdateSolution(ctx context.Context, id uuid.UUID, update *models.SolutionUpdate) error {
+func (m *MockSolutionsUC) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
 	args := m.Called(ctx, id, update)
 	return args.Error(0)
 }
@@ -241,7 +241,7 @@ func TestGetSolution_Success(t *testing.T) {
 		Username: "testuser",
 	}
 
-	expectedSolution := &models.Solution{
+	expectedSolution := &models.Submission{
 		Id:       solutionID,
 		UserId:   userID,
 		Solution: "test solution",
@@ -249,20 +249,20 @@ func TestGetSolution_Success(t *testing.T) {
 	}
 
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(expectedUser, nil)
-	mockSolutionsUC.On("GetSolution", mock.Anything, solutionID).Return(expectedSolution, nil)
+	mockSolutionsUC.On("GetSubmissions", mock.Anything, solutionID).Return(expectedSolution, nil)
 
-	app.Get("/solutions/:solution_id", func(c *fiber.Ctx) error {
+	app.Get("/submissions/:solution_id", func(c *fiber.Ctx) error {
 		c.Locals("session", createMockSession(kratosID))
 		return handlers.GetSolution(c, solutionID)
 	})
 
-	req := httptest.NewRequest("GET", "/solutions/"+solutionID.String(), nil)
+	req := httptest.NewRequest("GET", "/submissions/"+solutionID.String(), nil)
 	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	var response testerv1.GetSolutionResponse
+	var response testerv1.GetSolutionResponseModel
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &response)
 
@@ -300,7 +300,7 @@ func TestCreateSolution_Success(t *testing.T) {
 	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(expectedUser, nil)
 	mockContestsUC.On("GetContest", mock.Anything, contestID).Return(expectedContest, nil)
 	mockPermissions.On("CanCreateSolution", mock.Anything, userID, expectedContest).Return(true, nil)
-	mockSolutionsUC.On("CreateSolution", mock.Anything, mock.AnythingOfType("*models.SolutionCreation")).Return(solutionID, nil)
+	mockSolutionsUC.On("CreateSubmission", mock.Anything, mock.AnythingOfType("*models.SubmissionCreation")).Return(solutionID, nil)
 
 	params := testerv1.CreateSolutionParams{
 		ProblemId: problemID,
@@ -308,7 +308,7 @@ func TestCreateSolution_Success(t *testing.T) {
 		Language:  int32(models.Cpp),
 	}
 
-	app.Post("/solutions", func(c *fiber.Ctx) error {
+	app.Post("/submissions", func(c *fiber.Ctx) error {
 		c.Locals("session", createMockSession(kratosID))
 		return handlers.CreateSolution(c, params)
 	})
@@ -319,7 +319,7 @@ func TestCreateSolution_Success(t *testing.T) {
 	part.Write([]byte("#include <iostream>\nint main() { return 0; }"))
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/solutions", body)
+	req := httptest.NewRequest("POST", "/submissions", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	resp, err := app.Test(req)
 

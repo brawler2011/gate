@@ -6,6 +6,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	RoleAdmin = "admin"
+	RoleUser  = "user"
+)
+
 type User struct {
 	Id        uuid.UUID `db:"id"`
 	Username  string    `db:"username"`
@@ -16,7 +21,11 @@ type User struct {
 }
 
 func (u User) IsAdmin() bool {
-	return u.Role == "admin"
+	return u.Role == RoleAdmin
+}
+
+func (u User) IsUser() bool {
+	return u.Role == RoleUser
 }
 
 type UserCreation struct {
@@ -29,4 +38,11 @@ type UserCreation struct {
 type UsersList struct {
 	Users      []*User
 	Pagination Pagination
+}
+
+type UsersSearch struct {
+	Page     int64
+	PageSize int64
+	Search   string
+	Role     string
 }

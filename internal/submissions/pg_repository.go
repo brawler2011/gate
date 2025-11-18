@@ -1,4 +1,4 @@
-package solutions
+package submissions
 
 import (
 	"context"
@@ -24,10 +24,10 @@ func NewRepository(db *sqlx.DB) *PgRepository {
 //go:embed sql/get_solution.sql
 var GetSolutionQuery string
 
-func (r *PgRepository) GetSolution(ctx context.Context, id uuid.UUID) (*models.Solution, error) {
-	const op = "Repository.GetSolution"
+func (r *PgRepository) GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error) {
+	const op = "Repository.GetSubmissions"
 
-	var solution models.Solution
+	var solution models.Submission
 	err := r.db.GetContext(ctx, &solution, GetSolutionQuery, id)
 	if err != nil {
 		return nil, pkg.HandlePgErr(err, op)
@@ -39,8 +39,8 @@ func (r *PgRepository) GetSolution(ctx context.Context, id uuid.UUID) (*models.S
 //go:embed sql/create_solution.sql
 var CreateSolutionQuery string
 
-func (r *PgRepository) CreateSolution(ctx context.Context, creation *models.SolutionCreation) (uuid.UUID, error) {
-	const op = "Repository.CreateSolution"
+func (r *PgRepository) CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error) {
+	const op = "Repository.CreateSubmission"
 
 	rows, err := r.db.QueryxContext(ctx,
 		CreateSolutionQuery,
@@ -69,8 +69,8 @@ func (r *PgRepository) CreateSolution(ctx context.Context, creation *models.Solu
 //go:embed sql/update_solution.sql
 var UpdateSolutionQuery string
 
-func (r *PgRepository) UpdateSolution(ctx context.Context, id uuid.UUID, update *models.SolutionUpdate) error {
-	const op = "Repository.UpdateSolution"
+func (r *PgRepository) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
+	const op = "Repository.UpdateSubmission"
 
 	_, err := r.db.ExecContext(ctx, UpdateSolutionQuery, update.State, update.Score, update.TimeStat, update.MemoryStat, id)
 	if err != nil {
@@ -95,7 +95,7 @@ func (r *PgRepository) ListSolutions(ctx context.Context, filter models.Solution
 	}
 
 	// Get count
-	var totalCount int32
+	var totalCount int64
 	err := r.db.GetContext(ctx, &totalCount, CountSolutionsQuery,
 		filter.ContestId,
 		filter.UserId,
@@ -107,8 +107,8 @@ func (r *PgRepository) ListSolutions(ctx context.Context, filter models.Solution
 		return nil, pkg.HandlePgErr(err, op)
 	}
 
-	// Get solutions list
-	solutions := make([]*models.SolutionsListItem, 0)
+	// Get submissions list
+	solutions := make([]*models.SubmissionListItem, 0)
 	err = r.db.SelectContext(ctx, &solutions, ListSolutionsQuery,
 		filter.ContestId,
 		filter.UserId,

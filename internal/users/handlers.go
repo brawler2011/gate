@@ -2,20 +2,19 @@ package users
 
 import (
 	"context"
+	"unicode/utf8"
 
 	testerv1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/internal/models"
 	"github.com/gate149/core/pkg"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	ory "github.com/ory/client-go"
 )
 
 type UsersUC interface {
 	CreateUser(ctx context.Context, user *models.UserCreation) (uuid.UUID, error)
-	ReadUserById(ctx context.Context, id uuid.UUID) (*models.User, error)
-	ReadUserByKratosId(ctx context.Context, kratosId string) (*models.User, error)
-	SearchUsers(ctx context.Context, searchQuery, role string, page, pageSize int) ([]*models.User, int, error)
+	GetUserById(ctx context.Context, id uuid.UUID) (*models.User, error)
+	SearchUsers(ctx context.Context, search *models.UsersSearch) (*models.UsersList, error)
 }
 
 type UsersHandlers struct {
@@ -28,149 +27,110 @@ func NewHandlers(usersUC UsersUC) *UsersHandlers {
 	}
 }
 
-func getUserFromSession(c *fiber.Ctx) (string, error) {
-	session := c.Locals("session")
-	if session == nil {
-		return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "no session in context")
-	}
-
-	s, ok := session.(*ory.Session)
-	if !ok {
-		return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "invalid session type")
-	}
-
-	if !*s.Active {
-		return "", pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "session is not active")
-	}
-
-	return s.Identity.Id, nil
-}
-
-// TODO: Implement UpdateUser and DeleteUser methods when they are added to API
-// These methods should check:
-// - If userID == targetUserID: allow (user can edit themselves)
-// - If userID != targetUserID: only allow if userID is global admin
-// Example:
-/*
-func (h *UsersHandlers) UpdateUser(c *fiber.Ctx, id uuid.UUID) error {
-	const op = "UsersHandlers.UpdateUser"
-	ctx := c.Context()
-
-	userID, err := getUserFromSession(c)
-	if err != nil {
-		return err
-	}
-
-	targetUserID := id.String()
-
-	// Only global admin can edit others
-	if userID != targetUserID {
-		isAdmin, err := h.keto.IsGlobalAdmin(ctx, userID)
-		if err != nil {
-			return pkg.Wrap(pkg.ErrInternal, err, op, "failed to check admin status")
-		}
-		if !isAdmin {
-			return pkg.Wrap(pkg.NoPermission, nil, op, "only admin can edit other users")
-		}
-	}
-
-	// ... rest of update logic
-}
-*/
-
-func (h *UsersHandlers) GetMe(c *fiber.Ctx) error {
-	session := c.Locals("session")
-	if session == nil {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "no session in ctx")
-	}
-
-	s, ok := session.(*ory.Session)
-	if !ok {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "invalid session type")
-	}
-
-	// Use Kratos ID directly from session
-	currentUserKratosID := s.Identity.Id
-
-	// Find user by Kratos ID
-	user, err := h.usersUC.ReadUserByKratosId(c.Context(), currentUserKratosID)
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(testerv1.GetUserResponse{
-		User: UserDTO(*user),
-	})
-}
-
 func (h *UsersHandlers) GetUser(c *fiber.Ctx, id uuid.UUID) error {
 	ctx := c.Context()
 
-	user, err := h.usersUC.ReadUserByKratosId(ctx, id.String())
+	user, err := h.usersUC.GetUserById(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	userDTO := UserDTO(*user)
-
-	return c.JSON(testerv1.GetUserResponse{
-		User: userDTO,
+	return c.JSON(testerv1.GetUserResponseModel{
+		User: userDTO(*user),
 	})
+}
+
+func CheckLength(s string, min, max int) bool {
+	length := utf8.RuneCountInString(s)
+	return length >= min && length <= max
+}
+
+func UserOrAdmin(s string) bool {
+	return s == models.RoleUser || s == models.RoleAdmin
+}
+
+func ValidateGetUsersParams(params testerv1.GetUsersParams) (*models.UsersSearch, error) {
+	search := &models.UsersSearch{
+		Page:     params.Page,
+		PageSize: params.PageSize,
+		Search:   "",
+		Role:     models.RoleUser,
+	}
+
+	if params.PageSize <= 0 || params.PageSize > 100 {
+		return nil, pkg.Wrap(pkg.ErrBadInput,
+			nil,
+			"",
+			"page_size parameter must be between 1 and 100")
+	}
+
+	if params.Page < 0 {
+		return nil, pkg.Wrap(pkg.ErrBadInput,
+			nil,
+			"",
+			"page parameter must be >= 0")
+	}
+
+	if params.Search != nil {
+		if !CheckLength(*params.Search, 0, 50) {
+			return nil, pkg.Wrap(pkg.ErrBadInput,
+				nil,
+				"",
+				"search parameter length must be between 0 and 50 characters")
+		}
+		search.Search = *params.Search
+	}
+
+	if params.Role != nil {
+		if !UserOrAdmin(*params.Role) {
+			return nil, pkg.Wrap(pkg.ErrBadInput,
+				nil,
+				"",
+				"role parameter must be either 'user' or 'admin'")
+		}
+		search.Role = *params.Role
+	}
+
+	return search, nil
 }
 
 func (h *UsersHandlers) GetUsers(c *fiber.Ctx, params testerv1.GetUsersParams) error {
 	ctx := c.Context()
 
-	// Extract parameters from the params object
-	page := int(params.Page)
-	pageSize := int(params.PageSize)
-
-	// Handle optional string pointers
-	searchQuery := ""
-	if params.Search != nil {
-		searchQuery = *params.Search
-	}
-
-	role := ""
-	if params.Role != nil {
-		role = *params.Role
-	}
-
-	// Validate parameters
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
-	}
-
-	// Search users
-	users, total, err := h.usersUC.SearchUsers(ctx, searchQuery, role, page, pageSize)
+	search, err := ValidateGetUsersParams(params)
 	if err != nil {
 		return err
 	}
 
-	// Convert to DTOs
-	userDTOs := make([]testerv1.User, len(users))
-	for i, user := range users {
-		userDTOs[i] = UserDTO(*user)
+	users, err := h.usersUC.SearchUsers(ctx, search)
+	if err != nil {
+		return err
 	}
 
-	return c.JSON(testerv1.ListUsersResponse{
-		Users: userDTOs,
-		Pagination: testerv1.Pagination{
-			Page:  params.Page,
-			Total: int32(total),
-		},
-	})
+	return c.JSON(usersListDTO(users))
 }
 
-func UserDTO(u models.User) testerv1.User {
-	return testerv1.User{
+func userDTO(u models.User) testerv1.UserModel {
+	return testerv1.UserModel{
 		Id:        u.Id,
 		Username:  u.Username,
 		Role:      u.Role,
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,
+	}
+}
+
+func usersListDTO(ul *models.UsersList) testerv1.ListUsersResponseModel {
+	userDTOs := make([]testerv1.UserModel, len(ul.Users))
+	for i, user := range ul.Users {
+		userDTOs[i] = userDTO(*user)
+	}
+
+	return testerv1.ListUsersResponseModel{
+		Users: userDTOs,
+		Pagination: testerv1.PaginationModel{
+			Page:  ul.Pagination.Page,
+			Total: ul.Pagination.Total,
+		},
 	}
 }

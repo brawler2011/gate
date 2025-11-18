@@ -1,14 +1,14 @@
-package solutions
+package submissions
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/gate149/core/internal/models"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type Publisher interface {
@@ -16,9 +16,9 @@ type Publisher interface {
 }
 
 type Repo interface {
-	GetSolution(ctx context.Context, id uuid.UUID) (*models.Solution, error)
-	CreateSolution(ctx context.Context, creation *models.SolutionCreation) (uuid.UUID, error)
-	UpdateSolution(ctx context.Context, id uuid.UUID, update *models.SolutionUpdate) error
+	GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error)
+	CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error)
+	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
 	ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*models.SolutionsList, error)
 }
 
@@ -32,83 +32,72 @@ type UseCase struct {
 	solutionsRepo Repo
 	problemsUC    ProblemsUC
 	pub           Publisher
+	redisClient   *redis.Client
+	judgeQueue    string
 }
 
 func NewUseCase(
 	solutionsRepo Repo,
 	problemsUC ProblemsUC,
 	pub Publisher,
+	redisClient *redis.Client,
+	judgeQueue string,
 ) *UseCase {
 	return &UseCase{
 		solutionsRepo: solutionsRepo,
 		problemsUC:    problemsUC,
 		pub:           pub,
+		redisClient:   redisClient,
+		judgeQueue:    judgeQueue,
 	}
 }
 
-func (uc *UseCase) GetSolution(ctx context.Context, id uuid.UUID) (*models.Solution, error) {
-	return uc.solutionsRepo.GetSolution(ctx, id)
+func (uc *UseCase) GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error) {
+	return uc.solutionsRepo.GetSubmissions(ctx, id)
 }
 
-func (uc *UseCase) CreateSolution(ctx context.Context, creation *models.SolutionCreation) (uuid.UUID, error) {
-	solutionId, err := uc.solutionsRepo.CreateSolution(ctx, creation)
+func (uc *UseCase) CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error) {
+	solutionId, err := uc.solutionsRepo.CreateSubmission(ctx, creation)
 	if err != nil {
 		return uuid.Nil, err
 	}
 
-	go uc.performTesting(context.Background(), solutionId, creation)
+	// Enqueue solution for testing
+	if err := uc.enqueueSolutionForTesting(ctx, solutionId); err != nil {
+		// Log error but don't fail the request
+		// The solution was created successfully, just failed to queue
+		fmt.Printf("Failed to enqueue solution for testing: %v\n", err)
+	}
 
 	return solutionId, nil
 }
 
-func (uc *UseCase) UpdateSolution(ctx context.Context, id uuid.UUID, update *models.SolutionUpdate) error {
-	return uc.solutionsRepo.UpdateSolution(ctx, id, update)
+// enqueueSolutionForTesting adds a solution to the judge queue
+func (uc *UseCase) enqueueSolutionForTesting(ctx context.Context, solutionID uuid.UUID) error {
+	job := map[string]interface{}{
+		"solution_id": solutionID.String(),
+		"priority":    0,
+	}
+
+	jobJSON, err := json.Marshal(job)
+	if err != nil {
+		return fmt.Errorf("failed to marshal job: %w", err)
+	}
+
+	// Add to queue (RPUSH for FIFO)
+	if err := uc.redisClient.RPush(ctx, uc.judgeQueue, jobJSON).Err(); err != nil {
+		return fmt.Errorf("failed to push to queue: %w", err)
+	}
+
+	return nil
+}
+
+func (uc *UseCase) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
+	return uc.solutionsRepo.UpdateSubmission(ctx, id, update)
 }
 
 func (uc *UseCase) ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*models.SolutionsList, error) {
 	return uc.solutionsRepo.ListSolutions(ctx, filter)
-}
-
-func (uc *UseCase) publish(contestId int32, msg *Message) error {
-	b, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
-	return uc.pub.Publish(fmt.Sprintf("contest-%d-solutions", contestId), b)
-}
-
-func (uc *UseCase) performTesting(ctx context.Context, solutionId uuid.UUID, creation *models.SolutionCreation) {
-	// FIXME:
-
-	problem, err := uc.problemsUC.GetProblemById(ctx, creation.ProblemId)
-	if err != nil {
-		return
-	}
-
-	if problem.Meta.Count == 0 {
-		uc.solutionsRepo.UpdateSolution(ctx, solutionId, &models.SolutionUpdate{
-			State:      models.Accepted,
-			Score:      100,
-			TimeStat:   0,
-			MemoryStat: 0,
-		})
-		return
-	}
-
-	archivePath, err := uc.problemsUC.DownloadTestsArchive(ctx, creation.ProblemId)
-	if err != nil {
-		return
-	}
-
-	defer os.Remove(archivePath)
-
-	_, err = uc.problemsUC.UnarchiveTestsArchive(ctx, archivePath, solutionId.String())
-	if err != nil {
-		return
-	}
-
-	return
 }
 
 const (

@@ -1,373 +1,214 @@
-package users
+package users_test
 
 import (
-	"context"
 	"encoding/json"
-	"io"
+	"errors"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	testerv1 "github.com/gate149/contracts/core/v1"
+	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/internal/models"
-	"github.com/gate149/core/pkg"
+	"github.com/gate149/core/internal/users"
+	"github.com/gate149/core/internal/users/mock"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	ory "github.com/ory/client-go"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
-// Mock implementations
+func TestGetUser_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-type MockUsersUC struct {
-	mock.Mock
-}
+	mock := usersmock.NewMockUsersUC(ctrl)
+	h := users.NewHandlers(mock)
 
-func (m *MockUsersUC) CreateUser(ctx context.Context, user *models.UserCreation) (uuid.UUID, error) {
-	args := m.Called(ctx, user)
-	return args.Get(0).(uuid.UUID), args.Error(1)
-}
+	app := fiber.New()
 
-func (m *MockUsersUC) ReadUserById(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.User), args.Error(1)
-}
+	id := uuid.New()
 
-func (m *MockUsersUC) ReadUserByKratosId(ctx context.Context, kratosId string) (*models.User, error) {
-	args := m.Called(ctx, kratosId)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.User), args.Error(1)
-}
-
-func (m *MockUsersUC) SearchUsers(ctx context.Context, searchQuery, role string, page, pageSize int) ([]*models.User, int, error) {
-	args := m.Called(ctx, searchQuery, role, page, pageSize)
-	if args.Get(0) == nil {
-		return nil, args.Int(1), args.Error(2)
-	}
-	return args.Get(0).([]*models.User), args.Int(1), args.Error(2)
-}
-
-func (m *MockUsersUC) UpdateUserInIndex(ctx context.Context, user *models.User) error {
-	args := m.Called(ctx, user)
-	return args.Error(0)
-}
-
-// Helper functions
-
-func setupFiberApp() *fiber.App {
-	app := fiber.New(fiber.Config{
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			statusCode := pkg.ToREST(err)
-			return c.Status(statusCode).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		},
-	})
-	return app
-}
-
-func createMockSession(userID string) *ory.Session {
-	active := true
-	identity := &ory.Identity{
-		Id: userID,
-	}
-	session := ory.Session{
-		Active:   &active,
-		Identity: identity,
-	}
-	return (*ory.Session)(&session)
-}
-
-func createTestUser(id uuid.UUID, kratosId string) *models.User {
-	return &models.User{
+	user := &models.User{
 		Id:        id,
-		Username:  "testuser",
-		Role:      "user",
-		KratosId:  &kratosId,
+		Username:  "john",
+		Role:      models.RoleUser,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-}
 
-const sessionKey = "session"
-
-// Tests
-
-func TestGetMe_Success(t *testing.T) {
-	app := setupFiberApp()
-	mockUsersUC := new(MockUsersUC)
-
-	handlers := NewHandlers(mockUsersUC)
-
-	userID := uuid.New()
-	userIDStr := userID.String()
-	kratosID := "kratos-" + userIDStr
-
-	user := createTestUser(userID, kratosID)
-
-	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
-
-	app.Get("/me", func(c *fiber.Ctx) error {
-		c.Locals(sessionKey, createMockSession(kratosID))
-		return handlers.GetMe(c)
-	})
-
-	req := httptest.NewRequest("GET", "/me", nil)
-	resp, err := app.Test(req)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
-
-	var response testerv1.GetUserResponse
-	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &response)
-
-	assert.Equal(t, userID, response.User.Id)
-	assert.Equal(t, "testuser", response.User.Username)
-	mockUsersUC.AssertExpectations(t)
-}
-
-func TestGetMe_NoSession(t *testing.T) {
-	app := setupFiberApp()
-	mockUsersUC := new(MockUsersUC)
-
-	handlers := NewHandlers(mockUsersUC)
-
-	app.Get("/me", func(c *fiber.Ctx) error {
-		// No session in context
-		return handlers.GetMe(c)
-	})
-
-	req := httptest.NewRequest("GET", "/me", nil)
-	resp, err := app.Test(req)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 401, resp.StatusCode)
-
-	mockUsersUC.AssertNotCalled(t, "ReadUserByKratosId")
-}
-
-func TestGetUser_Success(t *testing.T) {
-	app := setupFiberApp()
-	mockUsersUC := new(MockUsersUC)
-
-	handlers := NewHandlers(mockUsersUC)
-
-	userID := uuid.New()
-	userIDStr := userID.String()
-	kratosID := userIDStr // GetUser uses the UUID as kratosID
-
-	user := createTestUser(userID, kratosID)
-
-	mockUsersUC.On("ReadUserByKratosId", mock.Anything, kratosID).Return(user, nil)
+	mock.EXPECT().
+		GetUserById(gomock.Any(), id).
+		Return(user, nil)
 
 	app.Get("/users/:id", func(c *fiber.Ctx) error {
-		return handlers.GetUser(c, userID)
+		return h.GetUser(c, id)
 	})
 
-	req := httptest.NewRequest("GET", "/users/"+userIDStr, nil)
+	req := httptest.NewRequest("GET", "/users/"+id.String(), nil)
 	resp, err := app.Test(req)
+	require.NoError(t, err)
+	require.Equal(t, 200, resp.StatusCode)
 
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	var body corev1.GetUserResponseModel
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 
-	var response testerv1.GetUserResponse
-	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &response)
-
-	assert.Equal(t, userID, response.User.Id)
-	assert.Equal(t, "testuser", response.User.Username)
-	mockUsersUC.AssertExpectations(t)
+	require.Equal(t, user.Id, body.User.Id)
+	require.Equal(t, user.Username, body.User.Username)
 }
 
-func TestGetUsers_Success(t *testing.T) {
-	app := setupFiberApp()
-	mockUsersUC := new(MockUsersUC)
+func TestGetUser_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	handlers := NewHandlers(mockUsersUC)
+	mock := usersmock.NewMockUsersUC(ctrl)
+	h := users.NewHandlers(mock)
 
-	user1 := createTestUser(uuid.New(), "kratos-1")
-	user2 := createTestUser(uuid.New(), "kratos-2")
+	app := fiber.New()
 
-	users := []*models.User{user1, user2}
-	totalPages := 1
+	id := uuid.New()
 
-	mockUsersUC.On("SearchUsers", mock.Anything, "", "", 1, 10).Return(users, totalPages, nil)
+	mock.EXPECT().
+		GetUserById(gomock.Any(), id).
+		Return(nil, errors.New("not found"))
 
-	params := testerv1.GetUsersParams{
-		Page:     1,
-		PageSize: 10,
-	}
-
-	app.Get("/users", func(c *fiber.Ctx) error {
-		return handlers.GetUsers(c, params)
+	app.Get("/users/:id", func(c *fiber.Ctx) error {
+		return h.GetUser(c, id)
 	})
 
-	req := httptest.NewRequest("GET", "/users?page=1&page_size=10", nil)
+	req := httptest.NewRequest("GET", "/users/"+id.String(), nil)
 	resp, err := app.Test(req)
+	require.NoError(t, err)
 
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
-
-	var response testerv1.ListUsersResponse
-	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &response)
-
-	assert.Equal(t, 2, len(response.Users))
-	assert.Equal(t, int32(1), response.Pagination.Page)
-	assert.Equal(t, int32(1), response.Pagination.Total)
-	mockUsersUC.AssertExpectations(t)
+	require.Equal(t, 500, resp.StatusCode)
 }
 
-func TestGetUsers_WithSearchQuery(t *testing.T) {
-	app := setupFiberApp()
-	mockUsersUC := new(MockUsersUC)
+func TestValidateGetUsersParams_Success(t *testing.T) {
+	search := "John"
+	role := models.RoleAdmin
 
-	handlers := NewHandlers(mockUsersUC)
-
-	user := createTestUser(uuid.New(), "kratos-1")
-	users := []*models.User{user}
-	totalPages := 1
-
-	searchQuery := "testuser"
-	mockUsersUC.On("SearchUsers", mock.Anything, searchQuery, "", 1, 10).Return(users, totalPages, nil)
-
-	params := testerv1.GetUsersParams{
-		Page:     1,
+	params := corev1.GetUsersParams{
+		Page:     0,
 		PageSize: 10,
-		Search:   &searchQuery,
-	}
-
-	app.Get("/users", func(c *fiber.Ctx) error {
-		return handlers.GetUsers(c, params)
-	})
-
-	req := httptest.NewRequest("GET", "/users?page=1&page_size=10&search=testuser", nil)
-	resp, err := app.Test(req)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
-
-	var response testerv1.ListUsersResponse
-	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &response)
-
-	assert.Equal(t, 1, len(response.Users))
-	assert.Equal(t, "testuser", response.Users[0].Username)
-	mockUsersUC.AssertExpectations(t)
-}
-
-func TestGetUsers_WithRoleFilter(t *testing.T) {
-	app := setupFiberApp()
-	mockUsersUC := new(MockUsersUC)
-
-	handlers := NewHandlers(mockUsersUC)
-
-	adminUser := &models.User{
-		Id:        uuid.New(),
-		Username:  "admin",
-		Role:      "admin",
-		KratosId:  sp("kratos-admin"),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-	users := []*models.User{adminUser}
-	totalPages := 1
-
-	role := "admin"
-	mockUsersUC.On("SearchUsers", mock.Anything, "", role, 1, 10).Return(users, totalPages, nil)
-
-	params := testerv1.GetUsersParams{
-		Page:     1,
-		PageSize: 10,
+		Search:   &search,
 		Role:     &role,
 	}
 
-	app.Get("/users", func(c *fiber.Ctx) error {
-		return handlers.GetUsers(c, params)
-	})
+	res, err := users.ValidateGetUsersParams(params)
+	require.NoError(t, err)
 
-	req := httptest.NewRequest("GET", "/users?page=1&page_size=10&role=admin", nil)
-	resp, err := app.Test(req)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
-
-	var response testerv1.ListUsersResponse
-	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &response)
-
-	assert.Equal(t, 1, len(response.Users))
-	assert.Equal(t, "admin", response.Users[0].Role)
-	mockUsersUC.AssertExpectations(t)
+	require.Equal(t, search, res.Search)
+	require.Equal(t, role, res.Role)
+	require.Equal(t, int64(10), res.PageSize)
 }
 
-func TestGetUsers_InvalidPage(t *testing.T) {
-	app := setupFiberApp()
-	mockUsersUC := new(MockUsersUC)
+func TestValidateGetUsersParams_InvalidPageSize(t *testing.T) {
+	params := corev1.GetUsersParams{PageSize: 0}
 
-	handlers := NewHandlers(mockUsersUC)
+	_, err := users.ValidateGetUsersParams(params)
+	require.Error(t, err)
+}
 
-	// Page defaults to 1 when < 1
-	users := []*models.User{}
-	totalPages := 0
+func TestValidateGetUsersParams_InvalidRole(t *testing.T) {
+	invalidRole := "superadmin"
 
-	mockUsersUC.On("SearchUsers", mock.Anything, "", "", 1, 10).Return(users, totalPages, nil)
-
-	params := testerv1.GetUsersParams{
-		Page:     0, // Invalid page
+	params := corev1.GetUsersParams{
 		PageSize: 10,
+		Role:     &invalidRole,
+	}
+
+	_, err := users.ValidateGetUsersParams(params)
+	require.Error(t, err)
+}
+
+func TestGetUsers_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mock := usersmock.NewMockUsersUC(ctrl)
+	h := users.NewHandlers(mock)
+	app := fiber.New()
+	
+	searchStr := "john"
+	params := corev1.GetUsersParams{
+		Page:     0,
+		PageSize: 20,
+		Search:   &searchStr,
+	}
+
+	expectedSearch := &models.UsersSearch{
+		Page:     0,
+		PageSize: 20,
+		Search:   "john",
+		Role:     models.RoleUser,
+	}
+
+	user := &models.User{
+		Id:        uuid.New(),
+		Username:  "john",
+		Role:      models.RoleUser,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	userList := &models.UsersList{
+		Users: []*models.User{user},
+		Pagination: models.Pagination{
+			Page:  0,
+			Total: 1,
+		},
+	}
+
+	mock.
+		EXPECT().
+		SearchUsers(gomock.Any(), expectedSearch).
+		Return(userList, nil)
+
+	app.Get("/users", func(c *fiber.Ctx) error {
+		return h.GetUsers(c, params)
+	})
+
+	req := httptest.NewRequest("GET", "/users", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	require.Equal(t, 200, resp.StatusCode)
+
+	var body corev1.ListUsersResponseModel
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+
+	require.Len(t, body.Users, 1)
+	require.Equal(t, user.Username, body.Users[0].Username)
+}
+
+func TestGetUsers_ValidationError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mock := usersmock.NewMockUsersUC(ctrl)
+	h := users.NewHandlers(mock)
+	app := fiber.New()
+
+	params := corev1.GetUsersParams{
+		PageSize: -1,
 	}
 
 	app.Get("/users", func(c *fiber.Ctx) error {
-		return handlers.GetUsers(c, params)
+		return h.GetUsers(c, params)
 	})
 
-	req := httptest.NewRequest("GET", "/users?page=0&page_size=10", nil)
+	req := httptest.NewRequest("GET", "/users", nil)
 	resp, err := app.Test(req)
+	require.NoError(t, err)
 
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode) // Should still succeed with defaulted page
-
-	mockUsersUC.AssertExpectations(t)
+	require.Equal(t, 500, resp.StatusCode)
 }
 
-func TestGetUsers_InvalidPageSize(t *testing.T) {
-	app := setupFiberApp()
-	mockUsersUC := new(MockUsersUC)
-
-	handlers := NewHandlers(mockUsersUC)
-
-	// PageSize defaults to 10 when invalid
-	users := []*models.User{}
-	totalPages := 0
-
-	mockUsersUC.On("SearchUsers", mock.Anything, "", "", 1, 10).Return(users, totalPages, nil)
-
-	params := testerv1.GetUsersParams{
-		Page:     1,
-		PageSize: 200, // Invalid page size (> 100)
-	}
-
-	app.Get("/users", func(c *fiber.Ctx) error {
-		return handlers.GetUsers(c, params)
-	})
-
-	req := httptest.NewRequest("GET", "/users?page=1&page_size=200", nil)
-	resp, err := app.Test(req)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode) // Should still succeed with defaulted page size
-
-	mockUsersUC.AssertExpectations(t)
+func TestCheckLength(t *testing.T) {
+	require.True(t, users.CheckLength("abc", 1, 3))
+	require.False(t, users.CheckLength("abcd", 1, 3))
 }
 
-func sp(s string) *string {
-	return &s
+func TestUserOrAdmin(t *testing.T) {
+	require.True(t, users.UserOrAdmin("user"))
+	require.True(t, users.UserOrAdmin("admin"))
+	require.False(t, users.UserOrAdmin("superadmin"))
 }

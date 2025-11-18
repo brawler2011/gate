@@ -61,6 +61,7 @@ func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (*models.Use
 	if err != nil {
 		return nil, pkg.HandlePgErr(err, op)
 	}
+
 	return &user, nil
 }
 
@@ -75,35 +76,8 @@ func (r *Repository) GetUserByKratosId(ctx context.Context, kratosId string) (*m
 	if err != nil {
 		return nil, pkg.HandlePgErr(err, op)
 	}
+
 	return &user, nil
-}
-
-//go:embed sql/list_users.sql
-var ListUsersQuery string
-
-//go:embed sql/count_users.sql
-var CountUsersQuery string
-
-func (r *Repository) ListUsers(ctx context.Context, page, pageSize int) ([]*models.User, int, error) {
-	const op = "UsersRepository.ListUsers"
-
-	offset := (page - 1) * pageSize
-
-	// Get total count
-	var total int
-	err := r.db.GetContext(ctx, &total, CountUsersQuery)
-	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err, op)
-	}
-
-	// Get users
-	var users []*models.User
-	err = r.db.SelectContext(ctx, &users, ListUsersQuery, pageSize, offset)
-	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err, op)
-	}
-
-	return users, total, nil
 }
 
 //go:embed sql/search_users.sql
@@ -113,24 +87,28 @@ var SearchUsersQuery string
 var CountSearchUsersQuery string
 
 // SearchUsers searches users by search query and role with pagination using PostgreSQL trigram
-func (r *Repository) SearchUsers(ctx context.Context, searchQuery, role string, page, pageSize int) ([]*models.User, int, error) {
+func (r *Repository) SearchUsers(ctx context.Context, search *models.UsersSearch) (*models.UsersList, error) {
 	const op = "UsersRepository.SearchUsers"
 
-	offset := (page - 1) * pageSize
+	offset := (search.Page - 1) * search.Page
 
-	// Get total count
-	var total int
-	err := r.db.GetContext(ctx, &total, CountSearchUsersQuery, searchQuery, role)
+	var total int64
+	err := r.db.GetContext(ctx, &total, CountSearchUsersQuery, search.Search, search.Role)
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err, op)
 	}
 
-	// Get users
 	var users []*models.User
-	err = r.db.SelectContext(ctx, &users, SearchUsersQuery, searchQuery, role, pageSize, offset)
+	err = r.db.SelectContext(ctx, &users, SearchUsersQuery, search.Search, search.Role, search.Page, offset)
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err, op)
 	}
 
-	return users, total, nil
+	return &models.UsersList{
+		Users: users,
+		Pagination: models.Pagination{
+			Total: total,
+			Page:  search.Page,
+		},
+	}, nil
 }

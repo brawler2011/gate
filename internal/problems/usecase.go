@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,32 +16,16 @@ import (
 	"github.com/gate149/core/internal/models"
 	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 	"github.com/microcosm-cc/bluemonday"
 )
 
-type Querier interface {
-	Rebind(query string) string
-	QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
-	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-}
-
-type Tx interface {
-	Querier
-	Commit() error
-	Rollback() error
-}
-
 type Repo interface {
-	BeginTx(ctx context.Context) (Tx, error)
-	DB() Querier
-	CreateProblem(ctx context.Context, q Querier, title string) (uuid.UUID, error)
-	GetProblemById(ctx context.Context, q Querier, id uuid.UUID) (*models.Problem, error)
-	DeleteProblem(ctx context.Context, q Querier, id uuid.UUID) error
-	ListProblems(ctx context.Context, q Querier, filter models.ProblemsFilter) (*models.ProblemsList, error)
-	UpdateProblem(ctx context.Context, q Querier, id uuid.UUID, heading *models.ProblemUpdate) error
+	CreateProblem(ctx context.Context, title string) (uuid.UUID, error)
+	GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error)
+	DeleteProblem(ctx context.Context, id uuid.UUID) error
+	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
+	UpdateProblem(ctx context.Context, id uuid.UUID, heading *models.ProblemUpdate) error
+	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (*models.ProblemMember, error)
 }
 
 type S3Repo interface {
@@ -77,11 +60,11 @@ func NewUseCase(
 }
 
 func (u *UseCase) CreateProblem(ctx context.Context, title string) (uuid.UUID, error) {
-	return u.problemRepo.CreateProblem(ctx, u.problemRepo.DB(), title)
+	return u.problemRepo.CreateProblem(ctx, title)
 }
 
 func (u *UseCase) GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error) {
-	return u.problemRepo.GetProblemById(ctx, u.problemRepo.DB(), id)
+	return u.problemRepo.GetProblemById(ctx, id)
 }
 
 func (u *UseCase) DownloadTestsArchive(ctx context.Context, id uuid.UUID) (string, error) {
@@ -160,11 +143,11 @@ func (u *UseCase) UnarchiveTestsArchive(_ context.Context, zipPath string, destD
 }
 
 func (u *UseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
-	return u.problemRepo.DeleteProblem(ctx, u.problemRepo.DB(), id)
+	return u.problemRepo.DeleteProblem(ctx, id)
 }
 
-func (u *UseCase) ListProblems(ctx context.Context, filter models.ProblemsFilter) (*models.ProblemsList, error) {
-	return u.problemRepo.ListProblems(ctx, u.problemRepo.DB(), filter)
+func (u *UseCase) ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error) {
+	return u.problemRepo.ListProblems(ctx, filter)
 }
 
 func (u *UseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate *models.ProblemUpdate) error {
@@ -172,14 +155,9 @@ func (u *UseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate
 		return pkg.Wrap(pkg.ErrBadInput, nil, "UpdateProblem", "empty problem update")
 	}
 
-	tx, err := u.problemRepo.BeginTx(ctx)
+	problem, err := u.problemRepo.GetProblemById(ctx, id)
 	if err != nil {
 		return err
-	}
-
-	problem, err := u.problemRepo.GetProblemById(ctx, tx, id)
-	if err != nil {
-		return errors.Join(err, tx.Rollback())
 	}
 
 	statement := models.ProblemStatement{
@@ -208,7 +186,7 @@ func (u *UseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate
 
 	builtStatement, err := build(ctx, u.pandocClient, trimSpaces(statement))
 	if err != nil {
-		return errors.Join(err, tx.Rollback())
+		return err
 	}
 
 	problemUpdate.LegendHtml = &builtStatement.LegendHtml
@@ -217,14 +195,9 @@ func (u *UseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate
 	problemUpdate.NotesHtml = &builtStatement.NotesHtml
 	problemUpdate.ScoringHtml = &builtStatement.ScoringHtml
 
-	err = u.problemRepo.UpdateProblem(ctx, tx, id, problemUpdate)
+	err = u.problemRepo.UpdateProblem(ctx, id, problemUpdate)
 	if err != nil {
-		return errors.Join(err, tx.Rollback())
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return err
+		return errors.Join(err)
 	}
 
 	return nil
@@ -241,17 +214,6 @@ type ProblemProperties struct {
 	Notes        *string `json:"notes"`
 	OutputFormat *string `json:"output"`
 	InputFormat  *string `json:"input"`
-
-	Meta *models.Meta
-
-	//Tutorial    *string      `json:"tutorial"`
-	//InputFile   string       `json:"inputFile"`
-	//OutputFile  string       `json:"outputFile"`
-	//AuthorName  string       `json:"authorName"`
-	//Language    string       `json:"language"`
-	//SampleTests []SampleTest `json:"sampleTests"`
-	//Interaction *string      `json:"interaction"`
-	//AuthorLogin string       `json:"authorLogin"`
 }
 
 func (u *UseCase) UploadProblem(ctx context.Context, id uuid.UUID, r io.ReaderAt, size int64) error {
@@ -273,16 +235,14 @@ func (u *UseCase) UploadProblem(ctx context.Context, id uuid.UUID, r io.ReaderAt
 	problemUpdate := &models.ProblemUpdate{
 		Title: &properties.Title,
 
-		TimeLimit:   int32p(int32(properties.TimeLimit)),
-		MemoryLimit: int32p(int32(properties.MemoryLimit)),
+		TimeLimit:   &properties.TimeLimit,
+		MemoryLimit: &properties.MemoryLimit,
 
 		Legend:       properties.Legend,
 		InputFormat:  properties.InputFormat,
 		OutputFormat: properties.OutputFormat,
 		Notes:        properties.Notes,
 		Scoring:      properties.Scoring,
-
-		Meta: properties.Meta,
 	}
 
 	if err := u.UpdateProblem(ctx, id, problemUpdate); err != nil {
@@ -300,13 +260,15 @@ func (u *UseCase) UploadProblem(ctx context.Context, id uuid.UUID, r io.ReaderAt
 func processZipContents(_ context.Context, zipReader *zip.Reader) (*ProblemProperties, *bytes.Buffer, error) {
 	const op = "processZipContents"
 
+	panic("unimplemented")
+
 	const locale = "russian"
 
 	testsBuffer := &bytes.Buffer{}
 	testsArchive := zip.NewWriter(testsBuffer)
 
 	var properties *ProblemProperties
-	var meta models.Meta
+	//var meta models.Meta
 	testInputs := make(map[string]bool)
 	testOutputs := make(map[string]bool)
 
@@ -351,10 +313,10 @@ func processZipContents(_ context.Context, zipReader *zip.Reader) (*ProblemPrope
 	for input := range testInputs {
 		names = append(names, input)
 	}
-	meta.Names = names
-	meta.Count = len(meta.Names)
+	//meta.Names = names
+	//meta.Count = len(meta.Names)
 	properties.MemoryLimit /= 1024 * 1024 // Convert bytes to MB
-	properties.Meta = &meta
+	//properties.Meta = &meta
 
 	if err := testsArchive.Close(); err != nil {
 		return nil, nil, err
@@ -524,6 +486,6 @@ func build(ctx context.Context, pandocClient pkg.PandocClient, p models.ProblemS
 	return sanitizedStatement, nil
 }
 
-func int32p(v int32) *int32 {
-	return &v
+func (u *UseCase) GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (*models.ProblemMember, error) {
+	return u.problemRepo.GetProblemMember(ctx, problemId, userId)
 }
