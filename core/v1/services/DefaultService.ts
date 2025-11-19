@@ -2,26 +2,20 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { CheckPermissionRequestModel } from '../models/CheckPermissionRequestModel';
-import type { CheckPermissionResponseModel } from '../models/CheckPermissionResponseModel';
-import type { CreateSolutionRequestModel } from '../models/CreateSolutionRequestModel';
+import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
 import type { CreationResponseModel } from '../models/CreationResponseModel';
 import type { GetContestProblemResponseModel } from '../models/GetContestProblemResponseModel';
 import type { GetContestResponseModel } from '../models/GetContestResponseModel';
-import type { GetMonitorResponseModel } from '../models/GetMonitorResponseModel';
+import type { GetHealthResponseModel } from '../models/GetHealthResponseModel';
 import type { GetProblemResponseModel } from '../models/GetProblemResponseModel';
-import type { GetSolutionResponseModel } from '../models/GetSolutionResponseModel';
-import type { GetTestResultsResponseModel } from '../models/GetTestResultsResponseModel';
+import type { GetSubmissionResponseModel } from '../models/GetSubmissionResponseModel';
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
-import type { GrantPermissionRequestModel } from '../models/GrantPermissionRequestModel';
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
 import type { ListProblemsResponseModel } from '../models/ListProblemsResponseModel';
-import type { ListSolutionsResponseModel } from '../models/ListSolutionsResponseModel';
+import type { ListSubmissionsResponseModel } from '../models/ListSubmissionsResponseModel';
 import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
-import type { RevokePermissionRequestModel } from '../models/RevokePermissionRequestModel';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
 import type { UpdateProblemRequestModel } from '../models/UpdateProblemRequestModel';
-import type { UploadProblemRequestModel } from '../models/UploadProblemRequestModel';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class DefaultService {
@@ -33,23 +27,15 @@ export class DefaultService {
     public listProblems({
         page,
         pageSize,
-        title,
         search,
-        order,
+        descending,
         owner,
     }: {
         page: number,
         pageSize: number,
-        title?: string,
-        /**
-         * Search problems by title using Typesense (full-text search with typo tolerance)
-         */
         search?: string,
-        order?: number,
-        /**
-         * Filter by owner. Use 'me' to get user's private problems
-         */
-        owner?: string,
+        descending?: boolean,
+        owner?: boolean,
     }): CancelablePromise<ListProblemsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
@@ -57,9 +43,8 @@ export class DefaultService {
             query: {
                 'page': page,
                 'pageSize': pageSize,
-                'title': title,
                 'search': search,
-                'order': order,
+                'descending': descending,
                 'owner': owner,
             },
         });
@@ -137,47 +122,20 @@ export class DefaultService {
         });
     }
     /**
-     * @returns any OK
-     * @throws ApiError
-     */
-    public uploadProblem({
-        id,
-        formData,
-    }: {
-        id: string,
-        formData: UploadProblemRequestModel,
-    }): CancelablePromise<any> {
-        return this.httpRequest.request({
-            method: 'POST',
-            url: '/problems/{id}',
-            path: {
-                'id': id,
-            },
-            formData: formData,
-            mediaType: 'multipart/form-data',
-        });
-    }
-    /**
      * @returns ListContestsResponseModel OK
      * @throws ApiError
      */
     public listContests({
         page,
         pageSize,
-        title,
+        search,
         owner,
         descending = false,
     }: {
         page: number,
         pageSize: number,
-        title?: string,
-        /**
-         * Filter by owner. Use 'me' to get user's private contests
-         */
-        owner?: string,
-        /**
-         * Sort order by creation date. true = newest first (DESC), false = oldest first (ASC)
-         */
+        search?: string,
+        owner?: boolean,
         descending?: boolean,
     }): CancelablePromise<ListContestsResponseModel> {
         return this.httpRequest.request({
@@ -186,7 +144,7 @@ export class DefaultService {
             query: {
                 'page': page,
                 'pageSize': pageSize,
-                'title': title,
+                'search': search,
                 'owner': owner,
                 'descending': descending,
             },
@@ -399,34 +357,34 @@ export class DefaultService {
      * @returns CreationResponseModel OK
      * @throws ApiError
      */
-    public createSolution({
+    public createSubmission({
         problemId,
         contestId,
         language,
-        formData,
+        requestBody,
     }: {
         problemId: string,
         contestId: string,
         language: number,
-        formData: CreateSolutionRequestModel,
+        requestBody: CreateSubmissionRequestModel,
     }): CancelablePromise<CreationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/solutions',
+            url: '/submissions',
             query: {
                 'problem_id': problemId,
                 'contest_id': contestId,
                 'language': language,
             },
-            formData: formData,
-            mediaType: 'multipart/form-data',
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**
-     * @returns ListSolutionsResponseModel OK
+     * @returns ListSubmissionsResponseModel OK
      * @throws ApiError
      */
-    public listSolutions({
+    public listSubmissions({
         page,
         pageSize,
         contestId,
@@ -444,10 +402,10 @@ export class DefaultService {
         state?: number,
         order?: number,
         language?: number,
-    }): CancelablePromise<ListSolutionsResponseModel> {
+    }): CancelablePromise<ListSubmissionsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/solutions',
+            url: '/submissions',
             query: {
                 'page': page,
                 'pageSize': pageSize,
@@ -461,84 +419,37 @@ export class DefaultService {
         });
     }
     /**
-     * @returns GetSolutionResponseModel OK
+     * @returns GetSubmissionResponseModel OK
      * @throws ApiError
      */
-    public getSolution({
-        solutionId,
+    public getSubmission({
+        submissionId,
     }: {
-        solutionId: string,
-    }): CancelablePromise<GetSolutionResponseModel> {
+        submissionId: string,
+    }): CancelablePromise<GetSubmissionResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/solutions/{solution_id}',
+            url: '/submissions/{submission_id}',
             path: {
-                'solution_id': solutionId,
+                'submission_id': submissionId,
             },
         });
     }
     /**
-     * @returns GetTestResultsResponseModel OK
+     * @returns GetHealthResponseModel OK
      * @throws ApiError
      */
-    public getTestResults({
-        solutionId,
-    }: {
-        solutionId: string,
-    }): CancelablePromise<GetTestResultsResponseModel> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/solutions/{solution_id}/test-results',
-            path: {
-                'solution_id': solutionId,
-            },
-        });
-    }
-    /**
-     * @returns GetMonitorResponseModel OK
-     * @throws ApiError
-     */
-    public getMonitor({
-        contestId,
-    }: {
-        contestId: string,
-    }): CancelablePromise<GetMonitorResponseModel> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/contests/{contest_id}/monitor',
-            path: {
-                'contest_id': contestId,
-            },
-        });
-    }
-    /**
-     * @returns any OK
-     * @throws ApiError
-     */
-    public getHealth(): CancelablePromise<{
-        status?: string;
-        message?: string;
-    }> {
+    public getHealth(): CancelablePromise<GetHealthResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/health',
         });
     }
     /**
-     * @returns GetUserResponseModel OK
-     * @throws ApiError
-     */
-    public getMe(): CancelablePromise<GetUserResponseModel> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/users/me',
-        });
-    }
-    /**
      * @returns ListUsersResponseModel OK
      * @throws ApiError
      */
-    public getUsers({
+    public listUsers({
         page,
         pageSize,
         search,
@@ -575,54 +486,6 @@ export class DefaultService {
             path: {
                 'id': id,
             },
-        });
-    }
-    /**
-     * @returns CheckPermissionResponseModel OK
-     * @throws ApiError
-     */
-    public checkPermission({
-        requestBody,
-    }: {
-        requestBody: CheckPermissionRequestModel,
-    }): CancelablePromise<CheckPermissionResponseModel> {
-        return this.httpRequest.request({
-            method: 'POST',
-            url: '/permissions/check',
-            body: requestBody,
-            mediaType: 'application/json',
-        });
-    }
-    /**
-     * @returns any OK
-     * @throws ApiError
-     */
-    public grantPermission({
-        requestBody,
-    }: {
-        requestBody: GrantPermissionRequestModel,
-    }): CancelablePromise<any> {
-        return this.httpRequest.request({
-            method: 'POST',
-            url: '/permissions/grant',
-            body: requestBody,
-            mediaType: 'application/json',
-        });
-    }
-    /**
-     * @returns any OK
-     * @throws ApiError
-     */
-    public revokePermission({
-        requestBody,
-    }: {
-        requestBody: RevokePermissionRequestModel,
-    }): CancelablePromise<any> {
-        return this.httpRequest.request({
-            method: 'POST',
-            url: '/permissions/revoke',
-            body: requestBody,
-            mediaType: 'application/json',
         });
     }
 }

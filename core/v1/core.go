@@ -13,41 +13,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// CheckPermissionRequestModel defines model for CheckPermissionRequestModel.
-type CheckPermissionRequestModel struct {
-	// Permission Permission to check (view, edit, admin)
-	Permission string `json:"permission"`
-
-	// ResourceId ID of the resource
-	ResourceId openapi_types.UUID `json:"resource_id"`
-
-	// ResourceType Type of resource (contest, problem, etc.)
-	ResourceType string `json:"resource_type"`
-}
-
-// CheckPermissionResponseModel defines model for CheckPermissionResponseModel.
-type CheckPermissionResponseModel struct {
-	// Allowed Whether the user has the requested permission
-	Allowed bool `json:"allowed"`
-}
-
 // ContestModel defines model for ContestModel.
 type ContestModel struct {
-	CreatedAt      time.Time          `json:"created_at"`
-	Id             openapi_types.UUID `json:"id"`
-	IsPrivate      bool               `json:"is_private"`
-	MonitorEnabled bool               `json:"monitor_enabled"`
-	Title          string             `json:"title"`
-	UpdatedAt      time.Time          `json:"updated_at"`
+	CreatedAt              time.Time          `json:"created_at"`
+	CreatedBy              openapi_types.UUID `json:"created_by"`
+	Description            string             `json:"description"`
+	Id                     openapi_types.UUID `json:"id"`
+	MonitorScope           string             `json:"monitor_scope"`
+	SubmissionsListScope   string             `json:"submissions_list_scope"`
+	SubmissionsReviewScope string             `json:"submissions_review_scope"`
+	Title                  string             `json:"title"`
+	UpdatedAt              time.Time          `json:"updated_at"`
+	Visibility             string             `json:"visibility"`
 }
 
 // ContestProblemListItemModel defines model for ContestProblemListItemModel.
 type ContestProblemListItemModel struct {
 	CreatedAt   time.Time          `json:"created_at"`
-	MemoryLimit int32              `json:"memory_limit"`
-	Position    int32              `json:"position"`
+	MemoryLimit int64              `json:"memory_limit"`
+	Position    int64              `json:"position"`
 	ProblemId   openapi_types.UUID `json:"problem_id"`
-	TimeLimit   int32              `json:"time_limit"`
+	TimeLimit   int64              `json:"time_limit"`
 	Title       string             `json:"title"`
 	UpdatedAt   time.Time          `json:"updated_at"`
 }
@@ -57,20 +43,20 @@ type ContestProblemModel struct {
 	CreatedAt        time.Time          `json:"created_at"`
 	InputFormatHtml  string             `json:"input_format_html"`
 	LegendHtml       string             `json:"legend_html"`
-	MemoryLimit      int32              `json:"memory_limit"`
+	MemoryLimit      int64              `json:"memory_limit"`
 	NotesHtml        string             `json:"notes_html"`
 	OutputFormatHtml string             `json:"output_format_html"`
-	Position         int32              `json:"position"`
+	Position         int64              `json:"position"`
 	ProblemId        openapi_types.UUID `json:"problem_id"`
 	ScoringHtml      string             `json:"scoring_html"`
-	TimeLimit        int32              `json:"time_limit"`
+	TimeLimit        int64              `json:"time_limit"`
 	Title            string             `json:"title"`
 	UpdatedAt        time.Time          `json:"updated_at"`
 }
 
-// CreateSolutionRequestModel defines model for CreateSolutionRequestModel.
-type CreateSolutionRequestModel struct {
-	Solution openapi_types.File `json:"solution"`
+// CreateSubmissionRequestModel defines model for CreateSubmissionRequestModel.
+type CreateSubmissionRequestModel struct {
+	Submission string `json:"submission"`
 }
 
 // CreationResponseModel defines model for CreationResponseModel.
@@ -89,10 +75,10 @@ type GetContestResponseModel struct {
 	Problems []ContestProblemListItemModel `json:"problems"`
 }
 
-// GetMonitorResponseModel defines model for GetMonitorResponseModel.
-type GetMonitorResponseModel struct {
-	Participants []ParticipantsStatModel   `json:"participants"`
-	Summary      []ProblemStatSummaryModel `json:"summary"`
+// GetHealthResponseModel defines model for GetHealthResponseModel.
+type GetHealthResponseModel struct {
+	Message string `json:"message"`
+	Status  string `json:"status"`
 }
 
 // GetProblemResponseModel defines model for GetProblemResponseModel.
@@ -100,34 +86,14 @@ type GetProblemResponseModel struct {
 	Problem ProblemModel `json:"problem"`
 }
 
-// GetSolutionResponseModel defines model for GetSolutionResponseModel.
-type GetSolutionResponseModel struct {
-	Solution SolutionModel `json:"solution"`
-}
-
-// GetTestResultsResponseModel defines model for GetTestResultsResponseModel.
-type GetTestResultsResponseModel struct {
-	TestResults []TestResultModel `json:"test_results"`
+// GetSubmissionResponseModel defines model for GetSubmissionResponseModel.
+type GetSubmissionResponseModel struct {
+	Submission SubmissionModel `json:"submission"`
 }
 
 // GetUserResponseModel defines model for GetUserResponseModel.
 type GetUserResponseModel struct {
 	User UserModel `json:"user"`
-}
-
-// GrantPermissionRequestModel defines model for GrantPermissionRequestModel.
-type GrantPermissionRequestModel struct {
-	// Relation Relation/role to grant (owner, editor, viewer)
-	Relation string `json:"relation"`
-
-	// ResourceId ID of the resource
-	ResourceId openapi_types.UUID `json:"resource_id"`
-
-	// ResourceType Type of resource (contest, problem, etc.)
-	ResourceType string `json:"resource_type"`
-
-	// UserId ID of the user to grant permission to
-	UserId openapi_types.UUID `json:"user_id"`
 }
 
 // ListContestsResponseModel defines model for ListContestsResponseModel.
@@ -142,11 +108,11 @@ type ListProblemsResponseModel struct {
 	Problems   []ProblemsListItemModel `json:"problems"`
 }
 
-// ListSolutionsResponseModel defines model for ListSolutionsResponseModel.
-type ListSolutionsResponseModel struct {
-	AccessToken *string                  `json:"access-token,omitempty"`
-	Pagination  PaginationModel          `json:"pagination"`
-	Solutions   []SolutionsListItemModel `json:"solutions"`
+// ListSubmissionsResponseModel defines model for ListSubmissionsResponseModel.
+type ListSubmissionsResponseModel struct {
+	AccessToken *string                    `json:"access-token,omitempty"`
+	Pagination  PaginationModel            `json:"pagination"`
+	Submissions []SubmissionsListItemModel `json:"submissions"`
 }
 
 // ListUsersResponseModel defines model for ListUsersResponseModel.
@@ -157,169 +123,105 @@ type ListUsersResponseModel struct {
 
 // PaginationModel defines model for PaginationModel.
 type PaginationModel struct {
-	Page  int32 `json:"page"`
-	Total int32 `json:"total"`
-}
-
-// ParticipantsStatModel defines model for ParticipantsStatModel.
-type ParticipantsStatModel struct {
-	Attempts []ProblemAttemptsModel `json:"attempts"`
-	Penalty  int32                  `json:"penalty"`
-	Solved   int32                  `json:"solved"`
-	UserId   openapi_types.UUID     `json:"user_id"`
-	Username string                 `json:"username"`
-}
-
-// ProblemAttemptsModel defines model for ProblemAttemptsModel.
-type ProblemAttemptsModel struct {
-	FailedAttempts int32              `json:"failed_attempts"`
-	Position       int32              `json:"position"`
-	ProblemId      openapi_types.UUID `json:"problem_id"`
-	State          *int32             `json:"state"`
+	Page  int64 `json:"page"`
+	Total int64 `json:"total"`
 }
 
 // ProblemModel defines model for ProblemModel.
 type ProblemModel struct {
 	CreatedAt        time.Time          `json:"created_at"`
+	CreatedBy        openapi_types.UUID `json:"created_by"`
 	Id               openapi_types.UUID `json:"id"`
 	InputFormat      string             `json:"input_format"`
 	InputFormatHtml  string             `json:"input_format_html"`
 	IsPrivate        *bool              `json:"is_private,omitempty"`
 	Legend           string             `json:"legend"`
 	LegendHtml       string             `json:"legend_html"`
-	MemoryLimit      int32              `json:"memory_limit"`
+	MemoryLimit      int64              `json:"memory_limit"`
 	Notes            string             `json:"notes"`
 	NotesHtml        string             `json:"notes_html"`
 	OutputFormat     string             `json:"output_format"`
 	OutputFormatHtml string             `json:"output_format_html"`
 	Scoring          string             `json:"scoring"`
 	ScoringHtml      string             `json:"scoring_html"`
-	TimeLimit        int32              `json:"time_limit"`
+	TimeLimit        int64              `json:"time_limit"`
 	Title            string             `json:"title"`
 	UpdatedAt        time.Time          `json:"updated_at"`
-}
-
-// ProblemStatSummaryModel defines model for ProblemStatSummaryModel.
-type ProblemStatSummaryModel struct {
-	FAttempts int32              `json:"f_attempts"`
-	Position  int32              `json:"position"`
-	ProblemId openapi_types.UUID `json:"problem_id"`
-	SAttempts int32              `json:"s_attempts"`
-	TAttempts int32              `json:"t_attempts"`
+	Visibility       string             `json:"visibility"`
 }
 
 // ProblemsListItemModel defines model for ProblemsListItemModel.
 type ProblemsListItemModel struct {
 	CreatedAt   time.Time          `json:"created_at"`
 	Id          openapi_types.UUID `json:"id"`
-	MemoryLimit int32              `json:"memory_limit"`
-	TimeLimit   int32              `json:"time_limit"`
+	MemoryLimit int64              `json:"memory_limit"`
+	TimeLimit   int64              `json:"time_limit"`
 	Title       string             `json:"title"`
 	UpdatedAt   time.Time          `json:"updated_at"`
 }
 
-// RevokePermissionRequestModel defines model for RevokePermissionRequestModel.
-type RevokePermissionRequestModel struct {
-	// Relation Relation/role to revoke (owner, editor, viewer)
-	Relation string `json:"relation"`
-
-	// ResourceId ID of the resource
-	ResourceId openapi_types.UUID `json:"resource_id"`
-
-	// ResourceType Type of resource (contest, problem, etc.)
-	ResourceType string `json:"resource_type"`
-
-	// UserId ID of the user to revoke permission from
-	UserId openapi_types.UUID `json:"user_id"`
-}
-
-// SolutionModel defines model for SolutionModel.
-type SolutionModel struct {
+// SubmissionModel defines model for SubmissionModel.
+type SubmissionModel struct {
 	ContestId    openapi_types.UUID `json:"contest_id"`
 	ContestTitle string             `json:"contest_title"`
 	CreatedAt    time.Time          `json:"created_at"`
 	Id           openapi_types.UUID `json:"id"`
-	Language     int32              `json:"language"`
-	MemoryStat   int32              `json:"memory_stat"`
-	Penalty      int32              `json:"penalty"`
-	Position     int32              `json:"position"`
+	Language     int64              `json:"language"`
+	MemoryStat   int64              `json:"memory_stat"`
+	Penalty      int64              `json:"penalty"`
+	Position     int64              `json:"position"`
 	ProblemId    openapi_types.UUID `json:"problem_id"`
 	ProblemTitle string             `json:"problem_title"`
-	Score        int32              `json:"score"`
-	Solution     string             `json:"solution"`
-	State        int32              `json:"state"`
-	TimeStat     int32              `json:"time_stat"`
+	Score        int64              `json:"score"`
+	State        int64              `json:"state"`
+	Submission   string             `json:"submission"`
+	TimeStat     int64              `json:"time_stat"`
 	UpdatedAt    time.Time          `json:"updated_at"`
 	UserId       openapi_types.UUID `json:"user_id"`
 	Username     string             `json:"username"`
 }
 
-// SolutionsListItemModel defines model for SolutionsListItemModel.
-type SolutionsListItemModel struct {
+// SubmissionsListItemModel defines model for SubmissionsListItemModel.
+type SubmissionsListItemModel struct {
 	ContestId    openapi_types.UUID `json:"contest_id"`
 	ContestTitle string             `json:"contest_title"`
 	CreatedAt    time.Time          `json:"created_at"`
 	Id           openapi_types.UUID `json:"id"`
-	Language     int32              `json:"language"`
-	MemoryStat   int32              `json:"memory_stat"`
-	Penalty      int32              `json:"penalty"`
-	Position     int32              `json:"position"`
+	Language     int64              `json:"language"`
+	MemoryStat   int64              `json:"memory_stat"`
+	Penalty      int64              `json:"penalty"`
+	Position     int64              `json:"position"`
 	ProblemId    openapi_types.UUID `json:"problem_id"`
 	ProblemTitle string             `json:"problem_title"`
-	Score        int32              `json:"score"`
-	State        int32              `json:"state"`
-	TimeStat     int32              `json:"time_stat"`
+	Score        int64              `json:"score"`
+	State        int64              `json:"state"`
+	TimeStat     int64              `json:"time_stat"`
 	UpdatedAt    time.Time          `json:"updated_at"`
 	UserId       openapi_types.UUID `json:"user_id"`
 	Username     string             `json:"username"`
-}
-
-// TestResultModel defines model for TestResultModel.
-type TestResultModel struct {
-	CompileOutput *string            `json:"compile_output"`
-	CreatedAt     time.Time          `json:"created_at"`
-	GroupId       *int32             `json:"group_id"`
-	GroupName     *string            `json:"group_name"`
-	Id            openapi_types.UUID `json:"id"`
-
-	// MemoryKb Memory usage in kilobytes
-	MemoryKb   int32              `json:"memory_kb"`
-	Message    *string            `json:"message"`
-	Passed     bool               `json:"passed"`
-	SolutionId openapi_types.UUID `json:"solution_id"`
-	Stderr     *string            `json:"stderr"`
-	Stdout     *string            `json:"stdout"`
-	TestName   string             `json:"test_name"`
-	TestNumber int32              `json:"test_number"`
-
-	// TimeMs Execution time in milliseconds
-	TimeMs  int32 `json:"time_ms"`
-	Verdict int32 `json:"verdict"`
 }
 
 // UpdateContestRequestModel defines model for UpdateContestRequestModel.
 type UpdateContestRequestModel struct {
-	IsPrivate      *bool   `json:"is_private,omitempty"`
-	MonitorEnabled *bool   `json:"monitor_enabled,omitempty"`
-	Title          *string `json:"title,omitempty"`
+	Description            *string `json:"description,omitempty"`
+	MonitorScope           *string `json:"monitor_scope,omitempty"`
+	SubmissionsListScope   *string `json:"submissions_list_scope,omitempty"`
+	SubmissionsReviewScope *string `json:"submissions_review_scope,omitempty"`
+	Title                  *string `json:"title,omitempty"`
+	Visibility             *string `json:"visibility,omitempty"`
 }
 
 // UpdateProblemRequestModel defines model for UpdateProblemRequestModel.
 type UpdateProblemRequestModel struct {
 	InputFormat  *string `json:"input_format,omitempty"`
-	IsPrivate    *bool   `json:"is_private,omitempty"`
 	Legend       *string `json:"legend,omitempty"`
-	MemoryLimit  *int32  `json:"memory_limit,omitempty"`
+	MemoryLimit  *int64  `json:"memory_limit,omitempty"`
 	Notes        *string `json:"notes,omitempty"`
 	OutputFormat *string `json:"output_format,omitempty"`
 	Scoring      *string `json:"scoring,omitempty"`
-	TimeLimit    *int32  `json:"time_limit,omitempty"`
+	TimeLimit    *int64  `json:"time_limit,omitempty"`
 	Title        *string `json:"title,omitempty"`
-}
-
-// UploadProblemRequestModel defines model for UploadProblemRequestModel.
-type UploadProblemRequestModel struct {
-	Archive openapi_types.File `json:"archive"`
+	Visibility   *string `json:"visibility,omitempty"`
 }
 
 // UserModel defines model for UserModel.
@@ -333,15 +235,11 @@ type UserModel struct {
 
 // ListContestsParams defines parameters for ListContests.
 type ListContestsParams struct {
-	Page     int32   `form:"page" json:"page"`
-	PageSize int32   `form:"pageSize" json:"pageSize"`
-	Title    *string `form:"title,omitempty" json:"title,omitempty"`
-
-	// Owner Filter by owner. Use 'me' to get user's private contests
-	Owner *string `form:"owner,omitempty" json:"owner,omitempty"`
-
-	// Descending Sort order by creation date. true = newest first (DESC), false = oldest first (ASC)
-	Descending *bool `form:"descending,omitempty" json:"descending,omitempty"`
+	Page       int64   `form:"page" json:"page"`
+	PageSize   int64   `form:"pageSize" json:"pageSize"`
+	Search     *string `form:"search,omitempty" json:"search,omitempty"`
+	Owner      *bool   `form:"owner,omitempty" json:"owner,omitempty"`
+	Descending *bool   `form:"descending,omitempty" json:"descending,omitempty"`
 }
 
 // CreateContestParams defines parameters for CreateContest.
@@ -356,8 +254,8 @@ type DeleteParticipantParams struct {
 
 // ListParticipantsParams defines parameters for ListParticipants.
 type ListParticipantsParams struct {
-	Page     int32 `form:"page" json:"page"`
-	PageSize int32 `form:"pageSize" json:"pageSize"`
+	Page     int64 `form:"page" json:"page"`
+	PageSize int64 `form:"pageSize" json:"pageSize"`
 }
 
 // CreateParticipantParams defines parameters for CreateParticipant.
@@ -372,16 +270,11 @@ type CreateContestProblemParams struct {
 
 // ListProblemsParams defines parameters for ListProblems.
 type ListProblemsParams struct {
-	Page     int32   `form:"page" json:"page"`
-	PageSize int32   `form:"pageSize" json:"pageSize"`
-	Title    *string `form:"title,omitempty" json:"title,omitempty"`
-
-	// Search Search problems by title using Typesense (full-text search with typo tolerance)
-	Search *string `form:"search,omitempty" json:"search,omitempty"`
-	Order  *int32  `form:"order,omitempty" json:"order,omitempty"`
-
-	// Owner Filter by owner. Use 'me' to get user's private problems
-	Owner *string `form:"owner,omitempty" json:"owner,omitempty"`
+	Page       int64   `form:"page" json:"page"`
+	PageSize   int64   `form:"pageSize" json:"pageSize"`
+	Search     *string `form:"search,omitempty" json:"search,omitempty"`
+	Descending *bool   `form:"descending,omitempty" json:"descending,omitempty"`
+	Owner      *bool   `form:"owner,omitempty" json:"owner,omitempty"`
 }
 
 // CreateProblemParams defines parameters for CreateProblem.
@@ -389,29 +282,29 @@ type CreateProblemParams struct {
 	Title string `form:"title" json:"title"`
 }
 
-// ListSolutionsParams defines parameters for ListSolutions.
-type ListSolutionsParams struct {
-	Page      int32               `form:"page" json:"page"`
-	PageSize  int32               `form:"pageSize" json:"pageSize"`
+// ListSubmissionsParams defines parameters for ListSubmissions.
+type ListSubmissionsParams struct {
+	Page      int64               `form:"page" json:"page"`
+	PageSize  int64               `form:"pageSize" json:"pageSize"`
 	ContestId *openapi_types.UUID `form:"contestId,omitempty" json:"contestId,omitempty"`
 	UserId    *openapi_types.UUID `form:"userId,omitempty" json:"userId,omitempty"`
 	ProblemId *openapi_types.UUID `form:"problemId,omitempty" json:"problemId,omitempty"`
-	State     *int32              `form:"state,omitempty" json:"state,omitempty"`
-	Order     *int32              `form:"order,omitempty" json:"order,omitempty"`
-	Language  *int32              `form:"language,omitempty" json:"language,omitempty"`
+	State     *int64              `form:"state,omitempty" json:"state,omitempty"`
+	Order     *int64              `form:"order,omitempty" json:"order,omitempty"`
+	Language  *int64              `form:"language,omitempty" json:"language,omitempty"`
 }
 
-// CreateSolutionParams defines parameters for CreateSolution.
-type CreateSolutionParams struct {
+// CreateSubmissionParams defines parameters for CreateSubmission.
+type CreateSubmissionParams struct {
 	ProblemId openapi_types.UUID `form:"problem_id" json:"problem_id"`
 	ContestId openapi_types.UUID `form:"contest_id" json:"contest_id"`
-	Language  int32              `form:"language" json:"language"`
+	Language  int64              `form:"language" json:"language"`
 }
 
-// GetUsersParams defines parameters for GetUsers.
-type GetUsersParams struct {
-	Page     int32   `form:"page" json:"page"`
-	PageSize int32   `form:"pageSize" json:"pageSize"`
+// ListUsersParams defines parameters for ListUsers.
+type ListUsersParams struct {
+	Page     int64   `form:"page" json:"page"`
+	PageSize int64   `form:"pageSize" json:"pageSize"`
 	Search   *string `form:"search,omitempty" json:"search,omitempty"`
 	Role     *string `form:"role,omitempty" json:"role,omitempty"`
 }
@@ -419,23 +312,11 @@ type GetUsersParams struct {
 // UpdateContestJSONRequestBody defines body for UpdateContest for application/json ContentType.
 type UpdateContestJSONRequestBody = UpdateContestRequestModel
 
-// CheckPermissionJSONRequestBody defines body for CheckPermission for application/json ContentType.
-type CheckPermissionJSONRequestBody = CheckPermissionRequestModel
-
-// GrantPermissionJSONRequestBody defines body for GrantPermission for application/json ContentType.
-type GrantPermissionJSONRequestBody = GrantPermissionRequestModel
-
-// RevokePermissionJSONRequestBody defines body for RevokePermission for application/json ContentType.
-type RevokePermissionJSONRequestBody = RevokePermissionRequestModel
-
 // UpdateProblemJSONRequestBody defines body for UpdateProblem for application/json ContentType.
 type UpdateProblemJSONRequestBody = UpdateProblemRequestModel
 
-// UploadProblemMultipartRequestBody defines body for UploadProblem for multipart/form-data ContentType.
-type UploadProblemMultipartRequestBody = UploadProblemRequestModel
-
-// CreateSolutionMultipartRequestBody defines body for CreateSolution for multipart/form-data ContentType.
-type CreateSolutionMultipartRequestBody = CreateSolutionRequestModel
+// CreateSubmissionJSONRequestBody defines body for CreateSubmission for application/json ContentType.
+type CreateSubmissionJSONRequestBody = CreateSubmissionRequestModel
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -454,9 +335,6 @@ type ServerInterface interface {
 
 	// (PATCH /contests/{contest_id})
 	UpdateContest(c *fiber.Ctx, contestId openapi_types.UUID) error
-
-	// (GET /contests/{contest_id}/monitor)
-	GetMonitor(c *fiber.Ctx, contestId openapi_types.UUID) error
 
 	// (DELETE /contests/{contest_id}/participants)
 	DeleteParticipant(c *fiber.Ctx, contestId openapi_types.UUID, params DeleteParticipantParams) error
@@ -479,15 +357,6 @@ type ServerInterface interface {
 	// (GET /health)
 	GetHealth(c *fiber.Ctx) error
 
-	// (POST /permissions/check)
-	CheckPermission(c *fiber.Ctx) error
-
-	// (POST /permissions/grant)
-	GrantPermission(c *fiber.Ctx) error
-
-	// (POST /permissions/revoke)
-	RevokePermission(c *fiber.Ctx) error
-
 	// (GET /problems)
 	ListProblems(c *fiber.Ctx, params ListProblemsParams) error
 
@@ -503,26 +372,17 @@ type ServerInterface interface {
 	// (PATCH /problems/{id})
 	UpdateProblem(c *fiber.Ctx, id openapi_types.UUID) error
 
-	// (POST /problems/{id})
-	UploadProblem(c *fiber.Ctx, id openapi_types.UUID) error
+	// (GET /submissions)
+	ListSubmissions(c *fiber.Ctx, params ListSubmissionsParams) error
 
-	// (GET /solutions)
-	ListSolutions(c *fiber.Ctx, params ListSolutionsParams) error
+	// (POST /submissions)
+	CreateSubmission(c *fiber.Ctx, params CreateSubmissionParams) error
 
-	// (POST /solutions)
-	CreateSolution(c *fiber.Ctx, params CreateSolutionParams) error
-
-	// (GET /solutions/{solution_id})
-	GetSolution(c *fiber.Ctx, solutionId openapi_types.UUID) error
-
-	// (GET /solutions/{solution_id}/test-results)
-	GetTestResults(c *fiber.Ctx, solutionId openapi_types.UUID) error
+	// (GET /submissions/{submission_id})
+	GetSubmission(c *fiber.Ctx, submissionId openapi_types.UUID) error
 
 	// (GET /users)
-	GetUsers(c *fiber.Ctx, params GetUsersParams) error
-
-	// (GET /users/me)
-	GetMe(c *fiber.Ctx) error
+	ListUsers(c *fiber.Ctx, params ListUsersParams) error
 
 	// (GET /users/{id})
 	GetUser(c *fiber.Ctx, id openapi_types.UUID) error
@@ -579,11 +439,11 @@ func (siw *ServerInterfaceWrapper) ListContests(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter pageSize: %w", err).Error())
 	}
 
-	// ------------- Optional query parameter "title" -------------
+	// ------------- Optional query parameter "search" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "title", query, &params.Title)
+	err = runtime.BindQueryParameter("form", true, false, "search", query, &params.Search)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter title: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter search: %w", err).Error())
 	}
 
 	// ------------- Optional query parameter "owner" -------------
@@ -681,22 +541,6 @@ func (siw *ServerInterfaceWrapper) UpdateContest(c *fiber.Ctx) error {
 	}
 
 	return siw.Handler.UpdateContest(c, contestId)
-}
-
-// GetMonitor operation middleware
-func (siw *ServerInterfaceWrapper) GetMonitor(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "contest_id" -------------
-	var contestId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
-	}
-
-	return siw.Handler.GetMonitor(c, contestId)
 }
 
 // DeleteParticipant operation middleware
@@ -928,24 +772,6 @@ func (siw *ServerInterfaceWrapper) GetHealth(c *fiber.Ctx) error {
 	return siw.Handler.GetHealth(c)
 }
 
-// CheckPermission operation middleware
-func (siw *ServerInterfaceWrapper) CheckPermission(c *fiber.Ctx) error {
-
-	return siw.Handler.CheckPermission(c)
-}
-
-// GrantPermission operation middleware
-func (siw *ServerInterfaceWrapper) GrantPermission(c *fiber.Ctx) error {
-
-	return siw.Handler.GrantPermission(c)
-}
-
-// RevokePermission operation middleware
-func (siw *ServerInterfaceWrapper) RevokePermission(c *fiber.Ctx) error {
-
-	return siw.Handler.RevokePermission(c)
-}
-
 // ListProblems operation middleware
 func (siw *ServerInterfaceWrapper) ListProblems(c *fiber.Ctx) error {
 
@@ -990,13 +816,6 @@ func (siw *ServerInterfaceWrapper) ListProblems(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter pageSize: %w", err).Error())
 	}
 
-	// ------------- Optional query parameter "title" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "title", query, &params.Title)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter title: %w", err).Error())
-	}
-
 	// ------------- Optional query parameter "search" -------------
 
 	err = runtime.BindQueryParameter("form", true, false, "search", query, &params.Search)
@@ -1004,11 +823,11 @@ func (siw *ServerInterfaceWrapper) ListProblems(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter search: %w", err).Error())
 	}
 
-	// ------------- Optional query parameter "order" -------------
+	// ------------- Optional query parameter "descending" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "order", query, &params.Order)
+	err = runtime.BindQueryParameter("form", true, false, "descending", query, &params.Descending)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter order: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter descending: %w", err).Error())
 	}
 
 	// ------------- Optional query parameter "owner" -------------
@@ -1101,29 +920,13 @@ func (siw *ServerInterfaceWrapper) UpdateProblem(c *fiber.Ctx) error {
 	return siw.Handler.UpdateProblem(c, id)
 }
 
-// UploadProblem operation middleware
-func (siw *ServerInterfaceWrapper) UploadProblem(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
-	}
-
-	return siw.Handler.UploadProblem(c, id)
-}
-
-// ListSolutions operation middleware
-func (siw *ServerInterfaceWrapper) ListSolutions(c *fiber.Ctx) error {
+// ListSubmissions operation middleware
+func (siw *ServerInterfaceWrapper) ListSubmissions(c *fiber.Ctx) error {
 
 	var err error
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListSolutionsParams
+	var params ListSubmissionsParams
 
 	var query url.Values
 	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
@@ -1203,16 +1006,16 @@ func (siw *ServerInterfaceWrapper) ListSolutions(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter language: %w", err).Error())
 	}
 
-	return siw.Handler.ListSolutions(c, params)
+	return siw.Handler.ListSubmissions(c, params)
 }
 
-// CreateSolution operation middleware
-func (siw *ServerInterfaceWrapper) CreateSolution(c *fiber.Ctx) error {
+// CreateSubmission operation middleware
+func (siw *ServerInterfaceWrapper) CreateSubmission(c *fiber.Ctx) error {
 
 	var err error
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params CreateSolutionParams
+	var params CreateSubmissionParams
 
 	var query url.Values
 	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
@@ -1265,48 +1068,32 @@ func (siw *ServerInterfaceWrapper) CreateSolution(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter language: %w", err).Error())
 	}
 
-	return siw.Handler.CreateSolution(c, params)
+	return siw.Handler.CreateSubmission(c, params)
 }
 
-// GetSolution operation middleware
-func (siw *ServerInterfaceWrapper) GetSolution(c *fiber.Ctx) error {
+// GetSubmission operation middleware
+func (siw *ServerInterfaceWrapper) GetSubmission(c *fiber.Ctx) error {
 
 	var err error
 
-	// ------------- Path parameter "solution_id" -------------
-	var solutionId openapi_types.UUID
+	// ------------- Path parameter "submission_id" -------------
+	var submissionId openapi_types.UUID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "solution_id", c.Params("solution_id"), &solutionId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "submission_id", c.Params("submission_id"), &submissionId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter solution_id: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter submission_id: %w", err).Error())
 	}
 
-	return siw.Handler.GetSolution(c, solutionId)
+	return siw.Handler.GetSubmission(c, submissionId)
 }
 
-// GetTestResults operation middleware
-func (siw *ServerInterfaceWrapper) GetTestResults(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "solution_id" -------------
-	var solutionId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "solution_id", c.Params("solution_id"), &solutionId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter solution_id: %w", err).Error())
-	}
-
-	return siw.Handler.GetTestResults(c, solutionId)
-}
-
-// GetUsers operation middleware
-func (siw *ServerInterfaceWrapper) GetUsers(c *fiber.Ctx) error {
+// ListUsers operation middleware
+func (siw *ServerInterfaceWrapper) ListUsers(c *fiber.Ctx) error {
 
 	var err error
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params GetUsersParams
+	var params ListUsersParams
 
 	var query url.Values
 	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
@@ -1358,13 +1145,7 @@ func (siw *ServerInterfaceWrapper) GetUsers(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter role: %w", err).Error())
 	}
 
-	return siw.Handler.GetUsers(c, params)
-}
-
-// GetMe operation middleware
-func (siw *ServerInterfaceWrapper) GetMe(c *fiber.Ctx) error {
-
-	return siw.Handler.GetMe(c)
+	return siw.Handler.ListUsers(c, params)
 }
 
 // GetUser operation middleware
@@ -1414,8 +1195,6 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Patch(options.BaseURL+"/contests/:contest_id", wrapper.UpdateContest)
 
-	router.Get(options.BaseURL+"/contests/:contest_id/monitor", wrapper.GetMonitor)
-
 	router.Delete(options.BaseURL+"/contests/:contest_id/participants", wrapper.DeleteParticipant)
 
 	router.Get(options.BaseURL+"/contests/:contest_id/participants", wrapper.ListParticipants)
@@ -1430,12 +1209,6 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Get(options.BaseURL+"/health", wrapper.GetHealth)
 
-	router.Post(options.BaseURL+"/permissions/check", wrapper.CheckPermission)
-
-	router.Post(options.BaseURL+"/permissions/grant", wrapper.GrantPermission)
-
-	router.Post(options.BaseURL+"/permissions/revoke", wrapper.RevokePermission)
-
 	router.Get(options.BaseURL+"/problems", wrapper.ListProblems)
 
 	router.Post(options.BaseURL+"/problems", wrapper.CreateProblem)
@@ -1446,19 +1219,13 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Patch(options.BaseURL+"/problems/:id", wrapper.UpdateProblem)
 
-	router.Post(options.BaseURL+"/problems/:id", wrapper.UploadProblem)
+	router.Get(options.BaseURL+"/submissions", wrapper.ListSubmissions)
 
-	router.Get(options.BaseURL+"/solutions", wrapper.ListSolutions)
+	router.Post(options.BaseURL+"/submissions", wrapper.CreateSubmission)
 
-	router.Post(options.BaseURL+"/solutions", wrapper.CreateSolution)
+	router.Get(options.BaseURL+"/submissions/:submission_id", wrapper.GetSubmission)
 
-	router.Get(options.BaseURL+"/solutions/:solution_id", wrapper.GetSolution)
-
-	router.Get(options.BaseURL+"/solutions/:solution_id/test-results", wrapper.GetTestResults)
-
-	router.Get(options.BaseURL+"/users", wrapper.GetUsers)
-
-	router.Get(options.BaseURL+"/users/me", wrapper.GetMe)
+	router.Get(options.BaseURL+"/users", wrapper.ListUsers)
 
 	router.Get(options.BaseURL+"/users/:id", wrapper.GetUser)
 

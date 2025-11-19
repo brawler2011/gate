@@ -12,37 +12,29 @@ paths:
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 10
-        - name: title
-          in: query
-          schema:
-            type: string
         - name: search
           in: query
           schema:
             type: string
           example: "Fibonacci"
-          description: "Search problems by title using Typesense (full-text search with typo tolerance)"
-        - name: order
+        - name: descending
           in: query
           schema:
-            type: integer
-            format: int32
-            example: 1
+            type: boolean
         - name: owner
           in: query
           schema:
-            type: string
-          example: "me"
-          description: "Filter by owner. Use 'me' to get user's private problems"
+            type: boolean
+          example: true
       responses:
         "200":
           description: OK
@@ -115,26 +107,6 @@ paths:
         "200":
           description: OK
           content: {}
-    post:
-      operationId: UploadProblem
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              $ref: "#/components/schemas/UploadProblemRequestModel"
-      responses:
-        "200":
-          description: OK
-          content: {}
-
   /contests:
     get:
       operationId: ListContests
@@ -144,16 +116,16 @@ paths:
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 10
-        - name: title
+        - name: search
           in: query
           schema:
             type: string
@@ -161,16 +133,13 @@ paths:
         - name: owner
           in: query
           schema:
-            type: string
-          example: "me"
-          description: "Filter by owner. Use 'me' to get user's private contests"
+            type: boolean
         - name: descending
           in: query
           schema:
             type: boolean
             default: false
           example: false
-          description: "Sort order by creation date. true = newest first (DESC), false = oldest first (ASC)"
       responses:
         "200":
           description: OK
@@ -320,14 +289,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 10
       responses:
         "200":
@@ -376,9 +345,9 @@ paths:
       responses:
         "200":
           description: OK
-  /solutions:
+  /submissions:
     post:
-      operationId: CreateSolution
+      operationId: CreateSubmission
       parameters:
         - name: problem_id
           in: query
@@ -397,14 +366,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 1
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              $ref: "#/components/schemas/CreateSolutionRequestModel"
+              $ref: "#/components/schemas/CreateSubmissionRequestModel"
       responses:
         "200":
           description: OK
@@ -413,21 +382,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/CreationResponseModel"
     get:
-      operationId: ListSolutions
+      operationId: ListSubmissions
       parameters:
         - name: page
           in: query
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 10
         - name: contestId
           in: query
@@ -448,19 +417,19 @@ paths:
           in: query
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 1
         - name: order
           in: query
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 1
         - name: language
           in: query
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 1
       responses:
         "200":
@@ -468,12 +437,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListSolutionsResponseModel"
-  /solutions/{solution_id}:
+                $ref: "#/components/schemas/ListSubmissionsResponseModel"
+  /submissions/{submission_id}:
     get:
-      operationId: GetSolution
+      operationId: GetSubmission
       parameters:
-        - name: solution_id
+        - name: submission_id
           in: path
           required: true
           schema:
@@ -485,41 +454,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetSolutionResponseModel"
-  /solutions/{solution_id}/test-results:
-    get:
-      operationId: GetTestResults
-      parameters:
-        - name: solution_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetTestResultsResponseModel"
-  /contests/{contest_id}/monitor:
-    get:
-      operationId: GetMonitor
-      parameters:
-        - name: contest_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetMonitorResponseModel"
+                $ref: "#/components/schemas/GetSubmissionResponseModel"
   /health:
     get:
       operationId: GetHealth
@@ -529,41 +464,24 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "ok"
-                  message:
-                    type: string
-                    example: "Backend is running"
-  /users/me:
-    get:
-      operationId: GetMe
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetUserResponseModel"
+                $ref: "#/components/schemas/GetHealthResponseModel"
   /users:
     get:
-      operationId: GetUsers
+      operationId: ListUsers
       parameters:
         - name: page
           in: query
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int32
+            format: int64
           example: 10
         - name: search
           in: query
@@ -599,46 +517,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetUserResponseModel"
-  /permissions/check:
-    post:
-      operationId: CheckPermission
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CheckPermissionRequestModel"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CheckPermissionResponseModel"
-  /permissions/grant:
-    post:
-      operationId: GrantPermission
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/GrantPermissionRequestModel"
-      responses:
-        "200":
-          description: OK
-  /permissions/revoke:
-    post:
-      operationId: RevokePermission
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RevokePermissionRequestModel"
-      responses:
-        "200":
-          description: OK
 components:
   schemas:
     CreationResponseModel:
@@ -657,16 +535,20 @@ components:
       properties:
         page:
           type: integer
-          format: int32
+          format: int64
           example: 1
         total:
           type: integer
-          format: int32
+          format: int64
           example: 10
     ProblemModel:
       type: object
       required:
         - id
+        - created_by
+
+        - visibility
+
         - title
         - time_limit
         - memory_limit
@@ -689,16 +571,21 @@ components:
         id:
           type: string
           format: uuid
+        created_by:
+          type: string
+          format: uuid
+        visibility:
+          type: string
         title:
           type: string
           example: "Test problem"
         time_limit:
           type: integer
-          format: int32
+          format: int64
           example: 1000
         memory_limit:
           type: integer
-          format: int32
+          format: int64
           example: 256
 
         legend:
@@ -750,10 +637,10 @@ components:
           type: string
         memory_limit:
           type: integer
-          format: int32
+          format: int64
         time_limit:
           type: integer
-          format: int32
+          format: int64
         created_at:
           type: string
           format: date-time
@@ -806,16 +693,16 @@ components:
           example: "Test problem"
         time_limit:
           type: integer
-          format: int32
+          format: int64
           example: 1000
         memory_limit:
           type: integer
-          format: int32
+          format: int64
           example: 256
 
         position:
           type: integer
-          format: int32
+          format: int64
 
         legend_html:
           type: string
@@ -846,8 +733,12 @@ components:
       required:
         - id
         - title
-        - is_private
-        - monitor_enabled
+        - description
+        - visibility
+        - monitor_scope
+        - submissions_list_scope
+        - submissions_review_scope
+        - created_by
         - created_at
         - updated_at
       properties:
@@ -857,12 +748,19 @@ components:
         title:
           type: string
           example: "Test contest"
-        is_private:
-          type: boolean
-          example: true
-        monitor_enabled:
-          type: boolean
-          example: false
+        description:
+          type: string
+        visibility:
+          type: string
+        monitor_scope:
+          type: string
+        submissions_list_scope:
+          type: string
+        submissions_review_scope:
+          type: string
+        created_by:
+          type: string
+          format: uuid
         created_at:
           type: string
           format: date-time
@@ -897,17 +795,17 @@ components:
           format: uuid
         position:
           type: integer
-          format: int32
+          format: int64
         title:
           type: string
           example: "Test task"
         memory_limit:
           type: integer
-          format: int32
+          format: int64
           example: 256
         time_limit:
           type: integer
-          format: int32
+          format: int64
           example: 1000
         created_at:
           type: string
@@ -945,58 +843,57 @@ components:
           type: string
         memory_limit:
           type: integer
-          format: int32
+          format: int64
           example: 256
         time_limit:
           type: integer
-          format: int32
+          format: int64
           example: 1000
-        is_private:
-          type: boolean
-          example: true
-    UploadProblemRequestModel:
-      type: object
-      required:
-        - archive
-      properties:
-        archive:
+        visibility:
           type: string
-          format: binary
+          example: private
     UpdateContestRequestModel:
       type: object
       properties:
         title:
           type: string
           example: "Test contest"
-        is_private:
-          type: boolean
-          example: true
-        monitor_enabled:
-          type: boolean
-          example: false
-    CreateSolutionRequestModel:
-      type: object
-      required:
-        - solution
-      properties:
-        solution:
+        description:
           type: string
-          format: binary
-    ListSolutionsResponseModel:
+        visibility:
+          type: string
+          example: "private"
+        monitor_scope:
+          type: string
+          example: "participant"
+        submissions_list_scope:
+          type: string
+          example: "moderator"
+        submissions_review_scope:
+          type: string
+          example: "admin"
+    CreateSubmissionRequestModel:
       type: object
       required:
-        - solutions
+        - submission
+      properties:
+        submission:
+          type: string
+    ListSubmissionsResponseModel:
+      type: object
+      required:
+        - submissions
         - pagination
       properties:
         access-token:
           type: string
-        solutions:
+        submissions:
           type: array
           items:
-            $ref: "#/components/schemas/SolutionsListItemModel"
+            $ref: "#/components/schemas/SubmissionsListItemModel"
         pagination:
           $ref: "#/components/schemas/PaginationModel"
-    SolutionsListItemModel:
+    SubmissionsListItemModel:
       type: object
       required:
         - id
@@ -1035,27 +932,27 @@ components:
 
         state:
           type: integer
-          format: int32
+          format: int64
           example: 1
         score:
           type: integer
-          format: int32
+          format: int64
           example: 100
         penalty:
           type: integer
-          format: int32
+          format: int64
           example: 28
         time_stat:
           type: integer
-          format: int32
+          format: int64
           example: 1000
         memory_stat:
           type: integer
-          format: int32
+          format: int64
           example: 256
         language:
           type: integer
-          format: int32
+          format: int64
           example: 1
 
         problem_id:
@@ -1067,7 +964,7 @@ components:
 
         position:
           type: integer
-          format: int32
+          format: int64
           example: 1
 
         contest_id:
@@ -1083,7 +980,7 @@ components:
         created_at:
           type: string
           format: date-time
-    SolutionModel:
+    SubmissionModel:
       type: object
       required:
         - id
@@ -1091,7 +988,7 @@ components:
         - user_id
         - username
 
-        - solution
+        - submission
 
         - state
         - score
@@ -1122,33 +1019,33 @@ components:
           type: string
           example: "user123"
 
-        solution:
+        submission:
           type: string
           example: 'print("Hello, world!")'
 
         state:
           type: integer
-          format: int32
+          format: int64
           example: 1
         score:
           type: integer
-          format: int32
+          format: int64
           example: 100
         penalty:
           type: integer
-          format: int32
+          format: int64
           example: 28
         time_stat:
           type: integer
-          format: int32
+          format: int64
           example: 1000
         memory_stat:
           type: integer
-          format: int32
+          format: int64
           example: 256
         language:
           type: integer
-          format: int32
+          format: int64
           example: 1
 
         problem_id:
@@ -1160,7 +1057,7 @@ components:
 
         position:
           type: integer
-          format: int32
+          format: int64
           example: 1
 
         contest_id:
@@ -1176,107 +1073,13 @@ components:
         created_at:
           type: string
           format: date-time
-    GetSolutionResponseModel:
+    GetSubmissionResponseModel:
       type: object
       required:
-        - solution
+        - submission
       properties:
-        solution:
-          $ref: "#/components/schemas/SolutionModel"
-    GetMonitorResponseModel:
-      type: object
-      required:
-        - participants
-        - summary
-      properties:
-        participants:
-          type: array
-          items:
-            $ref: "#/components/schemas/ParticipantsStatModel"
-        summary:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProblemStatSummaryModel"
-    ProblemStatSummaryModel:
-      type: object
-      required:
-        - problem_id
-        - position
-        - s_attempts
-        - f_attempts
-        - t_attempts
-      properties:
-        problem_id:
-          type: string
-          format: uuid
-        position:
-          type: integer
-          format: int32
-          example: 1
-        s_attempts:
-          type: integer
-          format: int32
-          example: 1
-        f_attempts:
-          type: integer
-          format: int32
-          example: 1
-        t_attempts:
-          type: integer
-          format: int32
-          example: 1
-    ParticipantsStatModel:
-      type: object
-      required:
-        - user_id
-        - username
-        - solved
-        - penalty
-        - attempts
-      properties:
-        user_id:
-          type: string
-          format: uuid
-        username:
-          type: string
-          example: "user123"
-        solved:
-          type: integer
-          format: int32
-          example: 1
-        penalty:
-          type: integer
-          format: int32
-          example: 28
-        attempts:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProblemAttemptsModel"
-    ProblemAttemptsModel:
-      type: object
-      required:
-        - problem_id
-        - failed_attempts
-        - state
-        - position
-      properties:
-        problem_id:
-          type: string
-          format: uuid
-          example: 1
-        position:
-          type: integer
-          format: int32
-          example: 1
-        failed_attempts:
-          type: integer
-          format: int32
-          example: 1
-        state:
-          type: integer
-          format: int32
-          nullable: true
-          example: 1
+        submission:
+          $ref: "#/components/schemas/SubmissionModel"
     GetUserResponseModel:
       type: object
       required:
@@ -1319,152 +1122,15 @@ components:
             $ref: "#/components/schemas/UserModel"
         pagination:
           $ref: "#/components/schemas/PaginationModel"
-    TestResultModel:
+    GetHealthResponseModel:
       type: object
       required:
-        - id
-        - solution_id
-        - test_name
-        - test_number
-        - passed
-        - verdict
-        - time_ms
-        - memory_kb
-        - created_at
+        - status
+        - message
       properties:
-        id:
+        status:
           type: string
-          format: uuid
-        solution_id:
-          type: string
-          format: uuid
-        test_name:
-          type: string
-          example: "01"
-        test_number:
-          type: integer
-          format: int32
-          example: 1
-        passed:
-          type: boolean
-        verdict:
-          type: integer
-          format: int32
-          example: 200
-        time_ms:
-          type: integer
-          format: int32
-          example: 150
-          description: "Execution time in milliseconds"
-        memory_kb:
-          type: integer
-          format: int32
-          example: 2048
-          description: "Memory usage in kilobytes"
-        stdout:
-          type: string
-          nullable: true
-        stderr:
-          type: string
-          nullable: true
-        compile_output:
-          type: string
-          nullable: true
+          example: "ok"
         message:
           type: string
-          nullable: true
-        group_id:
-          type: integer
-          format: int32
-          nullable: true
-        group_name:
-          type: string
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-    GetTestResultsResponseModel:
-      type: object
-      required:
-        - test_results
-      properties:
-        test_results:
-          type: array
-          items:
-            $ref: "#/components/schemas/TestResultModel"
-    CheckPermissionRequestModel:
-      type: object
-      required:
-        - resource_type
-        - resource_id
-        - permission
-      properties:
-        resource_type:
-          type: string
-          example: "contest"
-          description: "Type of resource (contest, problem, etc.)"
-        resource_id:
-          type: string
-          format: uuid
-          description: "ID of the resource"
-        permission:
-          type: string
-          example: "view"
-          description: "Permission to check (view, edit, admin)"
-    CheckPermissionResponseModel:
-      type: object
-      required:
-        - allowed
-      properties:
-        allowed:
-          type: boolean
-          example: true
-          description: "Whether the user has the requested permission"
-    GrantPermissionRequestModel:
-      type: object
-      required:
-        - resource_type
-        - resource_id
-        - user_id
-        - relation
-      properties:
-        resource_type:
-          type: string
-          example: "contest"
-          description: "Type of resource (contest, problem, etc.)"
-        resource_id:
-          type: string
-          format: uuid
-          description: "ID of the resource"
-        user_id:
-          type: string
-          format: uuid
-          description: "ID of the user to grant permission to"
-        relation:
-          type: string
-          example: "owner"
-          description: "Relation/role to grant (owner, editor, viewer)"
-    RevokePermissionRequestModel:
-      type: object
-      required:
-        - resource_type
-        - resource_id
-        - user_id
-        - relation
-      properties:
-        resource_type:
-          type: string
-          example: "contest"
-          description: "Type of resource (contest, problem, etc.)"
-        resource_id:
-          type: string
-          format: uuid
-          description: "ID of the resource"
-        user_id:
-          type: string
-          format: uuid
-          description: "ID of the user to revoke permission from"
-        relation:
-          type: string
-          example: "owner"
-          description: "Relation/role to revoke (owner, editor, viewer)"
+          example: "Backend is running"
