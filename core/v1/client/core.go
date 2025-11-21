@@ -18,6 +18,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ListContestSubmissionsParamsSortOrder.
+const (
+	ListContestSubmissionsParamsSortOrderAsc  ListContestSubmissionsParamsSortOrder = "asc"
+	ListContestSubmissionsParamsSortOrderDesc ListContestSubmissionsParamsSortOrder = "desc"
+)
+
+// Defines values for ListSubmissionsParamsSortOrder.
+const (
+	ListSubmissionsParamsSortOrderAsc  ListSubmissionsParamsSortOrder = "asc"
+	ListSubmissionsParamsSortOrderDesc ListSubmissionsParamsSortOrder = "desc"
+)
+
+// Defines values for ListUserSubmissionsParamsSortOrder.
+const (
+	Asc  ListUserSubmissionsParamsSortOrder = "asc"
+	Desc ListUserSubmissionsParamsSortOrder = "desc"
+)
+
 // ContestMemberModel defines model for ContestMemberModel.
 type ContestMemberModel struct {
 	ContestId   openapi_types.UUID `json:"contest_id"`
@@ -296,6 +314,20 @@ type CreateContestProblemParams struct {
 	ProblemId openapi_types.UUID `form:"problem_id" json:"problem_id"`
 }
 
+// ListContestSubmissionsParams defines parameters for ListContestSubmissions.
+type ListContestSubmissionsParams struct {
+	Page      int64                                  `form:"page" json:"page"`
+	PageSize  int64                                  `form:"pageSize" json:"pageSize"`
+	UserId    *openapi_types.UUID                    `form:"userId,omitempty" json:"userId,omitempty"`
+	ProblemId *openapi_types.UUID                    `form:"problemId,omitempty" json:"problemId,omitempty"`
+	State     *int64                                 `form:"state,omitempty" json:"state,omitempty"`
+	SortOrder *ListContestSubmissionsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+	Language  *int64                                 `form:"language,omitempty" json:"language,omitempty"`
+}
+
+// ListContestSubmissionsParamsSortOrder defines parameters for ListContestSubmissions.
+type ListContestSubmissionsParamsSortOrder string
+
 // ListProblemsParams defines parameters for ListProblems.
 type ListProblemsParams struct {
 	Page       int64   `form:"page" json:"page"`
@@ -312,15 +344,18 @@ type CreateProblemParams struct {
 
 // ListSubmissionsParams defines parameters for ListSubmissions.
 type ListSubmissionsParams struct {
-	Page      int64               `form:"page" json:"page"`
-	PageSize  int64               `form:"pageSize" json:"pageSize"`
-	ContestId *openapi_types.UUID `form:"contestId,omitempty" json:"contestId,omitempty"`
-	UserId    *openapi_types.UUID `form:"userId,omitempty" json:"userId,omitempty"`
-	ProblemId *openapi_types.UUID `form:"problemId,omitempty" json:"problemId,omitempty"`
-	State     *int64              `form:"state,omitempty" json:"state,omitempty"`
-	Order     *int64              `form:"order,omitempty" json:"order,omitempty"`
-	Language  *int64              `form:"language,omitempty" json:"language,omitempty"`
+	Page      int64                           `form:"page" json:"page"`
+	PageSize  int64                           `form:"pageSize" json:"pageSize"`
+	ContestId *openapi_types.UUID             `form:"contestId,omitempty" json:"contestId,omitempty"`
+	UserId    *openapi_types.UUID             `form:"userId,omitempty" json:"userId,omitempty"`
+	ProblemId *openapi_types.UUID             `form:"problemId,omitempty" json:"problemId,omitempty"`
+	State     *int64                          `form:"state,omitempty" json:"state,omitempty"`
+	SortOrder *ListSubmissionsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+	Language  *int64                          `form:"language,omitempty" json:"language,omitempty"`
 }
+
+// ListSubmissionsParamsSortOrder defines parameters for ListSubmissions.
+type ListSubmissionsParamsSortOrder string
 
 // CreateSubmissionParams defines parameters for CreateSubmission.
 type CreateSubmissionParams struct {
@@ -336,6 +371,19 @@ type ListUsersParams struct {
 	Search   *string `form:"search,omitempty" json:"search,omitempty"`
 	Role     *string `form:"role,omitempty" json:"role,omitempty"`
 }
+
+// ListUserSubmissionsParams defines parameters for ListUserSubmissions.
+type ListUserSubmissionsParams struct {
+	Page      int64                               `form:"page" json:"page"`
+	PageSize  int64                               `form:"pageSize" json:"pageSize"`
+	ContestId *openapi_types.UUID                 `form:"contestId,omitempty" json:"contestId,omitempty"`
+	ProblemId *openapi_types.UUID                 `form:"problemId,omitempty" json:"problemId,omitempty"`
+	State     *int64                              `form:"state,omitempty" json:"state,omitempty"`
+	SortOrder *ListUserSubmissionsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+}
+
+// ListUserSubmissionsParamsSortOrder defines parameters for ListUserSubmissions.
+type ListUserSubmissionsParamsSortOrder string
 
 // UpdateContestJSONRequestBody defines body for UpdateContest for application/json ContentType.
 type UpdateContestJSONRequestBody = UpdateContestRequestModel
@@ -457,6 +505,9 @@ type ClientInterface interface {
 	// GetContestProblem request
 	GetContestProblem(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListContestSubmissions request
+	ListContestSubmissions(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetHealth request
 	GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -493,6 +544,9 @@ type ClientInterface interface {
 
 	// GetUser request
 	GetUser(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListUserSubmissions request
+	ListUserSubmissions(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) ListContests(ctx context.Context, params *ListContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -651,6 +705,18 @@ func (c *Client) GetContestProblem(ctx context.Context, contestId openapi_types.
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListContestSubmissions(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListContestSubmissionsRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetHealthRequest(c.Server)
 	if err != nil {
@@ -797,6 +863,18 @@ func (c *Client) ListUsers(ctx context.Context, params *ListUsersParams, reqEdit
 
 func (c *Client) GetUser(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetUserRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListUserSubmissions(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListUserSubmissionsRequest(c.Server, userId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1408,6 +1486,150 @@ func NewGetContestProblemRequest(server string, contestId openapi_types.UUID, pr
 	return req, nil
 }
 
+// NewListContestSubmissionsRequest generates requests for ListContestSubmissions
+func NewListContestSubmissionsRequest(server string, contestId openapi_types.UUID, params *ListContestSubmissionsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/submissions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.UserId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "userId", runtime.ParamLocationQuery, *params.UserId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ProblemId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "problemId", runtime.ParamLocationQuery, *params.ProblemId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.State != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "state", runtime.ParamLocationQuery, *params.State); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Language != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "language", runtime.ParamLocationQuery, *params.Language); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetHealthRequest generates requests for GetHealth
 func NewGetHealthRequest(server string) (*http.Request, error) {
 	var err error
@@ -1810,9 +2032,9 @@ func NewListSubmissionsRequest(server string, params *ListSubmissionsParams) (*h
 
 		}
 
-		if params.Order != nil {
+		if params.SortOrder != nil {
 
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "order", runtime.ParamLocationQuery, *params.Order); err != nil {
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -2092,6 +2314,134 @@ func NewGetUserRequest(server string, id openapi_types.UUID) (*http.Request, err
 	return req, nil
 }
 
+// NewListUserSubmissionsRequest generates requests for ListUserSubmissions
+func NewListUserSubmissionsRequest(server string, userId openapi_types.UUID, params *ListUserSubmissionsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "user_id", runtime.ParamLocationPath, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/users/%s/submissions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.ContestId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "contestId", runtime.ParamLocationQuery, *params.ContestId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ProblemId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "problemId", runtime.ParamLocationQuery, *params.ProblemId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.State != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "state", runtime.ParamLocationQuery, *params.State); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -2173,6 +2523,9 @@ type ClientWithResponsesInterface interface {
 	// GetContestProblemWithResponse request
 	GetContestProblemWithResponse(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetContestProblemResponse, error)
 
+	// ListContestSubmissionsWithResponse request
+	ListContestSubmissionsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*ListContestSubmissionsResponse, error)
+
 	// GetHealthWithResponse request
 	GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error)
 
@@ -2209,6 +2562,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetUserWithResponse request
 	GetUserWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetUserResponse, error)
+
+	// ListUserSubmissionsWithResponse request
+	ListUserSubmissionsWithResponse(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*ListUserSubmissionsResponse, error)
 }
 
 type ListContestsResponse struct {
@@ -2471,6 +2827,28 @@ func (r GetContestProblemResponse) StatusCode() int {
 	return 0
 }
 
+type ListContestSubmissionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListSubmissionsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListContestSubmissionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListContestSubmissionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetHealthResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -2711,6 +3089,28 @@ func (r GetUserResponse) StatusCode() int {
 	return 0
 }
 
+type ListUserSubmissionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListSubmissionsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListUserSubmissionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListUserSubmissionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 // ListContestsWithResponse request returning *ListContestsResponse
 func (c *ClientWithResponses) ListContestsWithResponse(ctx context.Context, params *ListContestsParams, reqEditors ...RequestEditorFn) (*ListContestsResponse, error) {
 	rsp, err := c.ListContests(ctx, params, reqEditors...)
@@ -2827,6 +3227,15 @@ func (c *ClientWithResponses) GetContestProblemWithResponse(ctx context.Context,
 	return ParseGetContestProblemResponse(rsp)
 }
 
+// ListContestSubmissionsWithResponse request returning *ListContestSubmissionsResponse
+func (c *ClientWithResponses) ListContestSubmissionsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*ListContestSubmissionsResponse, error) {
+	rsp, err := c.ListContestSubmissions(ctx, contestId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListContestSubmissionsResponse(rsp)
+}
+
 // GetHealthWithResponse request returning *GetHealthResponse
 func (c *ClientWithResponses) GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error) {
 	rsp, err := c.GetHealth(ctx, reqEditors...)
@@ -2940,6 +3349,15 @@ func (c *ClientWithResponses) GetUserWithResponse(ctx context.Context, id openap
 		return nil, err
 	}
 	return ParseGetUserResponse(rsp)
+}
+
+// ListUserSubmissionsWithResponse request returning *ListUserSubmissionsResponse
+func (c *ClientWithResponses) ListUserSubmissionsWithResponse(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*ListUserSubmissionsResponse, error) {
+	rsp, err := c.ListUserSubmissions(ctx, userId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListUserSubmissionsResponse(rsp)
 }
 
 // ParseListContestsResponse parses an HTTP response from a ListContestsWithResponse call
@@ -3214,6 +3632,32 @@ func ParseGetContestProblemResponse(rsp *http.Response) (*GetContestProblemRespo
 	return response, nil
 }
 
+// ParseListContestSubmissionsResponse parses an HTTP response from a ListContestSubmissionsWithResponse call
+func ParseListContestSubmissionsResponse(rsp *http.Response) (*ListContestSubmissionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListContestSubmissionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListSubmissionsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetHealthResponse parses an HTTP response from a GetHealthWithResponse call
 func ParseGetHealthResponse(rsp *http.Response) (*GetHealthResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -3470,6 +3914,32 @@ func ParseGetUserResponse(rsp *http.Response) (*GetUserResponse, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest GetUserResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListUserSubmissionsResponse parses an HTTP response from a ListUserSubmissionsWithResponse call
+func ParseListUserSubmissionsResponse(rsp *http.Response) (*ListUserSubmissionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListUserSubmissionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListSubmissionsResponseModel
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

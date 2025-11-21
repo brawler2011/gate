@@ -373,6 +373,46 @@ export class DefaultService {
         });
     }
     /**
+     * @returns ListSubmissionsResponseModel OK
+     * @throws ApiError
+     */
+    public listContestSubmissions({
+        contestId,
+        page,
+        pageSize,
+        userId,
+        problemId,
+        state,
+        sortOrder,
+        language,
+    }: {
+        contestId: string,
+        page: number,
+        pageSize: number,
+        userId?: string,
+        problemId?: string,
+        state?: number,
+        sortOrder?: 'asc' | 'desc',
+        language?: number,
+    }): CancelablePromise<ListSubmissionsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/contests/{contest_id}/submissions',
+            path: {
+                'contest_id': contestId,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'userId': userId,
+                'problemId': problemId,
+                'state': state,
+                'sortOrder': sortOrder,
+                'language': language,
+            },
+        });
+    }
+    /**
      * @returns CreationResponseModel OK
      * @throws ApiError
      */
@@ -410,7 +450,7 @@ export class DefaultService {
         userId,
         problemId,
         state,
-        order,
+        sortOrder,
         language,
     }: {
         page: number,
@@ -419,7 +459,7 @@ export class DefaultService {
         userId?: string,
         problemId?: string,
         state?: number,
-        order?: number,
+        sortOrder?: 'asc' | 'desc',
         language?: number,
     }): CancelablePromise<ListSubmissionsResponseModel> {
         return this.httpRequest.request({
@@ -432,7 +472,7 @@ export class DefaultService {
                 'userId': userId,
                 'problemId': problemId,
                 'state': state,
-                'order': order,
+                'sortOrder': sortOrder,
                 'language': language,
             },
         });
@@ -504,6 +544,43 @@ export class DefaultService {
             url: '/users/{id}',
             path: {
                 'id': id,
+            },
+        });
+    }
+    /**
+     * @returns ListSubmissionsResponseModel OK
+     * @throws ApiError
+     */
+    public listUserSubmissions({
+        userId,
+        page,
+        pageSize,
+        contestId,
+        problemId,
+        state,
+        sortOrder,
+    }: {
+        userId: string,
+        page: number,
+        pageSize: number,
+        contestId?: string,
+        problemId?: string,
+        state?: number,
+        sortOrder?: 'asc' | 'desc',
+    }): CancelablePromise<ListSubmissionsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/users/{user_id}/submissions',
+            path: {
+                'user_id': userId,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'contestId': contestId,
+                'problemId': problemId,
+                'state': state,
+                'sortOrder': sortOrder,
             },
         });
     }

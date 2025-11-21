@@ -13,6 +13,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ListContestSubmissionsParamsSortOrder.
+const (
+	ListContestSubmissionsParamsSortOrderAsc  ListContestSubmissionsParamsSortOrder = "asc"
+	ListContestSubmissionsParamsSortOrderDesc ListContestSubmissionsParamsSortOrder = "desc"
+)
+
+// Defines values for ListSubmissionsParamsSortOrder.
+const (
+	ListSubmissionsParamsSortOrderAsc  ListSubmissionsParamsSortOrder = "asc"
+	ListSubmissionsParamsSortOrderDesc ListSubmissionsParamsSortOrder = "desc"
+)
+
+// Defines values for ListUserSubmissionsParamsSortOrder.
+const (
+	Asc  ListUserSubmissionsParamsSortOrder = "asc"
+	Desc ListUserSubmissionsParamsSortOrder = "desc"
+)
+
 // ContestMemberModel defines model for ContestMemberModel.
 type ContestMemberModel struct {
 	ContestId   openapi_types.UUID `json:"contest_id"`
@@ -291,6 +309,20 @@ type CreateContestProblemParams struct {
 	ProblemId openapi_types.UUID `form:"problem_id" json:"problem_id"`
 }
 
+// ListContestSubmissionsParams defines parameters for ListContestSubmissions.
+type ListContestSubmissionsParams struct {
+	Page      int64                                  `form:"page" json:"page"`
+	PageSize  int64                                  `form:"pageSize" json:"pageSize"`
+	UserId    *openapi_types.UUID                    `form:"userId,omitempty" json:"userId,omitempty"`
+	ProblemId *openapi_types.UUID                    `form:"problemId,omitempty" json:"problemId,omitempty"`
+	State     *int64                                 `form:"state,omitempty" json:"state,omitempty"`
+	SortOrder *ListContestSubmissionsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+	Language  *int64                                 `form:"language,omitempty" json:"language,omitempty"`
+}
+
+// ListContestSubmissionsParamsSortOrder defines parameters for ListContestSubmissions.
+type ListContestSubmissionsParamsSortOrder string
+
 // ListProblemsParams defines parameters for ListProblems.
 type ListProblemsParams struct {
 	Page       int64   `form:"page" json:"page"`
@@ -307,15 +339,18 @@ type CreateProblemParams struct {
 
 // ListSubmissionsParams defines parameters for ListSubmissions.
 type ListSubmissionsParams struct {
-	Page      int64               `form:"page" json:"page"`
-	PageSize  int64               `form:"pageSize" json:"pageSize"`
-	ContestId *openapi_types.UUID `form:"contestId,omitempty" json:"contestId,omitempty"`
-	UserId    *openapi_types.UUID `form:"userId,omitempty" json:"userId,omitempty"`
-	ProblemId *openapi_types.UUID `form:"problemId,omitempty" json:"problemId,omitempty"`
-	State     *int64              `form:"state,omitempty" json:"state,omitempty"`
-	Order     *int64              `form:"order,omitempty" json:"order,omitempty"`
-	Language  *int64              `form:"language,omitempty" json:"language,omitempty"`
+	Page      int64                           `form:"page" json:"page"`
+	PageSize  int64                           `form:"pageSize" json:"pageSize"`
+	ContestId *openapi_types.UUID             `form:"contestId,omitempty" json:"contestId,omitempty"`
+	UserId    *openapi_types.UUID             `form:"userId,omitempty" json:"userId,omitempty"`
+	ProblemId *openapi_types.UUID             `form:"problemId,omitempty" json:"problemId,omitempty"`
+	State     *int64                          `form:"state,omitempty" json:"state,omitempty"`
+	SortOrder *ListSubmissionsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+	Language  *int64                          `form:"language,omitempty" json:"language,omitempty"`
 }
+
+// ListSubmissionsParamsSortOrder defines parameters for ListSubmissions.
+type ListSubmissionsParamsSortOrder string
 
 // CreateSubmissionParams defines parameters for CreateSubmission.
 type CreateSubmissionParams struct {
@@ -331,6 +366,19 @@ type ListUsersParams struct {
 	Search   *string `form:"search,omitempty" json:"search,omitempty"`
 	Role     *string `form:"role,omitempty" json:"role,omitempty"`
 }
+
+// ListUserSubmissionsParams defines parameters for ListUserSubmissions.
+type ListUserSubmissionsParams struct {
+	Page      int64                               `form:"page" json:"page"`
+	PageSize  int64                               `form:"pageSize" json:"pageSize"`
+	ContestId *openapi_types.UUID                 `form:"contestId,omitempty" json:"contestId,omitempty"`
+	ProblemId *openapi_types.UUID                 `form:"problemId,omitempty" json:"problemId,omitempty"`
+	State     *int64                              `form:"state,omitempty" json:"state,omitempty"`
+	SortOrder *ListUserSubmissionsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+}
+
+// ListUserSubmissionsParamsSortOrder defines parameters for ListUserSubmissions.
+type ListUserSubmissionsParamsSortOrder string
 
 // UpdateContestJSONRequestBody defines body for UpdateContest for application/json ContentType.
 type UpdateContestJSONRequestBody = UpdateContestRequestModel
@@ -380,6 +428,9 @@ type ServerInterface interface {
 	// (GET /contests/{contest_id}/problems/{problem_id})
 	GetContestProblem(c *fiber.Ctx, contestId openapi_types.UUID, problemId openapi_types.UUID) error
 
+	// (GET /contests/{contest_id}/submissions)
+	ListContestSubmissions(c *fiber.Ctx, contestId openapi_types.UUID, params ListContestSubmissionsParams) error
+
 	// (GET /health)
 	GetHealth(c *fiber.Ctx) error
 
@@ -412,6 +463,9 @@ type ServerInterface interface {
 
 	// (GET /users/{id})
 	GetUser(c *fiber.Ctx, id openapi_types.UUID) error
+
+	// (GET /users/{user_id}/submissions)
+	ListUserSubmissions(c *fiber.Ctx, userId openapi_types.UUID, params ListUserSubmissionsParams) error
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -808,6 +862,96 @@ func (siw *ServerInterfaceWrapper) GetContestProblem(c *fiber.Ctx) error {
 	return siw.Handler.GetContestProblem(c, contestId, problemId)
 }
 
+// ListContestSubmissions operation middleware
+func (siw *ServerInterfaceWrapper) ListContestSubmissions(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListContestSubmissionsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "page" -------------
+
+	if paramValue := c.Query("page"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument page is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "page", query, &params.Page)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter page: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "pageSize" -------------
+
+	if paramValue := c.Query("pageSize"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument pageSize is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "pageSize", query, &params.PageSize)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter pageSize: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "userId" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "userId", query, &params.UserId)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter userId: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "problemId" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "problemId", query, &params.ProblemId)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter problemId: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "state", query, &params.State)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter state: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "sortOrder" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "sortOrder", query, &params.SortOrder)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter sortOrder: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "language" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "language", query, &params.Language)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter language: %w", err).Error())
+	}
+
+	return siw.Handler.ListContestSubmissions(c, contestId, params)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *fiber.Ctx) error {
 
@@ -1034,11 +1178,11 @@ func (siw *ServerInterfaceWrapper) ListSubmissions(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter state: %w", err).Error())
 	}
 
-	// ------------- Optional query parameter "order" -------------
+	// ------------- Optional query parameter "sortOrder" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "order", query, &params.Order)
+	err = runtime.BindQueryParameter("form", true, false, "sortOrder", query, &params.SortOrder)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter order: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter sortOrder: %w", err).Error())
 	}
 
 	// ------------- Optional query parameter "language" -------------
@@ -1206,6 +1350,89 @@ func (siw *ServerInterfaceWrapper) GetUser(c *fiber.Ctx) error {
 	return siw.Handler.GetUser(c, id)
 }
 
+// ListUserSubmissions operation middleware
+func (siw *ServerInterfaceWrapper) ListUserSubmissions(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "user_id" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_id", c.Params("user_id"), &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter user_id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListUserSubmissionsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "page" -------------
+
+	if paramValue := c.Query("page"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument page is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "page", query, &params.Page)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter page: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "pageSize" -------------
+
+	if paramValue := c.Query("pageSize"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument pageSize is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "pageSize", query, &params.PageSize)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter pageSize: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "contestId" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "contestId", query, &params.ContestId)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contestId: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "problemId" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "problemId", query, &params.ProblemId)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter problemId: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "state", query, &params.State)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter state: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "sortOrder" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "sortOrder", query, &params.SortOrder)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter sortOrder: %w", err).Error())
+	}
+
+	return siw.Handler.ListUserSubmissions(c, userId, params)
+}
+
 // FiberServerOptions provides options for the Fiber server.
 type FiberServerOptions struct {
 	BaseURL     string
@@ -1251,6 +1478,8 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Get(options.BaseURL+"/contests/:contest_id/problems/:problem_id", wrapper.GetContestProblem)
 
+	router.Get(options.BaseURL+"/contests/:contest_id/submissions", wrapper.ListContestSubmissions)
+
 	router.Get(options.BaseURL+"/health", wrapper.GetHealth)
 
 	router.Get(options.BaseURL+"/problems", wrapper.ListProblems)
@@ -1272,5 +1501,7 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Get(options.BaseURL+"/users", wrapper.ListUsers)
 
 	router.Get(options.BaseURL+"/users/:id", wrapper.GetUser)
+
+	router.Get(options.BaseURL+"/users/:user_id/submissions", wrapper.ListUserSubmissions)
 
 }

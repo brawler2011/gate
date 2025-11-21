@@ -362,6 +362,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetMyContestRoleResponseModel"
+  /contests/{contest_id}/submissions:
+    get:
+      operationId: ListContestSubmissions
+      parameters:
+        - name: contest_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 10
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: problemId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: state
+          in: query
+          schema:
+            type: integer
+            format: int64
+          example: 1
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          example: "asc"
+        - name: language
+          in: query
+          schema:
+            type: integer
+            format: int64
+          example: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListSubmissionsResponseModel"
   /submissions:
     post:
       operationId: CreateSubmission
@@ -436,12 +497,14 @@ paths:
             type: integer
             format: int64
           example: 1
-        - name: order
+        - name: sortOrder
           in: query
           schema:
-            type: integer
-            format: int64
-          example: 1
+            type: string
+            enum:
+              - asc
+              - desc
+          example: "asc"
         - name: language
           in: query
           schema:
@@ -534,6 +597,61 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetUserResponseModel"
+  /users/{user_id}/submissions:
+    get:
+      operationId: ListUserSubmissions
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 10
+        - name: contestId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: problemId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: state
+          in: query
+          schema:
+            type: integer
+            format: int64
+          example: 1
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          example: "asc"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListSubmissionsResponseModel"
 components:
   schemas:
     CreationResponseModel:
