@@ -1,8 +1,8 @@
-INSERT INTO solutions (
+INSERT INTO submissions (
         contest_id,
         problem_id,
-        user_id,
-        solution,
+        created_by,
+        submission,
         language,
         penalty
     )

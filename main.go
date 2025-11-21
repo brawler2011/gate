@@ -93,7 +93,7 @@ func main() {
 	logger.Info("successfully initialized permissions system")
 
 	solutionsRepo := submissions.NewRepository(db)
-	solutionsUC := submissions.NewUseCase(solutionsRepo)
+	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsRepo, problemsRepo)
 
 	server := fiber.New()
 

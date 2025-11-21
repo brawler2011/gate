@@ -1,4 +1,4 @@
-UPDATE solutions
+UPDATE submissions
 SET state = $1,
     score = $2,
     time_stat = $3,

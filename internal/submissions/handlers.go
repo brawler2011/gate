@@ -84,28 +84,18 @@ func (h *SolutionsHandlers) CreateSubmission(c *fiber.Ctx, params testerv1.Creat
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to create solution")
 	}
 
-	s, err := c.FormFile("solution")
+	// Parse request body
+	var req testerv1.CreateSubmissionRequestModel
+	err = c.BodyParser(&req)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to get solution file")
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to parse request body")
 	}
 
-	if s.Size == 0 || s.Size > maxSolutionSize {
+	// Validate solution size
+	solutionSize := int64(len(req.Submission))
+	if solutionSize == 0 || solutionSize > maxSolutionSize {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid solution size")
 	}
-
-	f, err := s.Open()
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to open solution file")
-	}
-	defer f.Close()
-
-	b := make([]byte, s.Size)
-	_, err = f.Read(b)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to read solution file")
-	}
-
-	solution := string(b)
 
 	langName := models.LanguageName(params.Language)
 	if err := langName.Valid(); err != nil {
@@ -117,7 +107,7 @@ func (h *SolutionsHandlers) CreateSubmission(c *fiber.Ctx, params testerv1.Creat
 		ProblemId: params.ProblemId,
 		ContestId: params.ContestId,
 		Language:  langName,
-		Solution:  solution,
+		Solution:  req.Submission,
 		Penalty:   20,
 	}
 
