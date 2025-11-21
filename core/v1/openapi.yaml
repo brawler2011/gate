@@ -304,7 +304,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListUsersResponseModel"
+                $ref: "#/components/schemas/ListContestMembersResponseModel"
     post:
       operationId: CreateContestMember
       parameters:

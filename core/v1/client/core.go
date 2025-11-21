@@ -18,6 +18,18 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// ContestMemberModel defines model for ContestMemberModel.
+type ContestMemberModel struct {
+	ContestId   openapi_types.UUID `json:"contest_id"`
+	ContestRole string             `json:"contest_role"`
+	CreatedAt   time.Time          `json:"created_at"`
+	KratosId    string             `json:"kratos_id"`
+	Role        string             `json:"role"`
+	UpdatedAt   time.Time          `json:"updated_at"`
+	UserId      openapi_types.UUID `json:"user_id"`
+	Username    string             `json:"username"`
+}
+
 // ContestModel defines model for ContestModel.
 type ContestModel struct {
 	CreatedAt              time.Time          `json:"created_at"`
@@ -104,6 +116,12 @@ type GetSubmissionResponseModel struct {
 // GetUserResponseModel defines model for GetUserResponseModel.
 type GetUserResponseModel struct {
 	User UserModel `json:"user"`
+}
+
+// ListContestMembersResponseModel defines model for ListContestMembersResponseModel.
+type ListContestMembersResponseModel struct {
+	Members    []ContestMemberModel `json:"members"`
+	Pagination PaginationModel      `json:"pagination"`
 }
 
 // ListContestsResponseModel defines model for ListContestsResponseModel.
@@ -2325,7 +2343,7 @@ func (r DeleteContestMemberResponse) StatusCode() int {
 type ListContestMembersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *ListUsersResponseModel
+	JSON200      *ListContestMembersResponseModel
 }
 
 // Status returns HTTPResponse.Status
@@ -3065,7 +3083,7 @@ func ParseListContestMembersResponse(rsp *http.Response) (*ListContestMembersRes
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ListUsersResponseModel
+		var dest ListContestMembersResponseModel
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

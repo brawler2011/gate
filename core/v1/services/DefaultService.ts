@@ -11,6 +11,7 @@ import type { GetMyContestRoleResponseModel } from '../models/GetMyContestRoleRe
 import type { GetProblemResponseModel } from '../models/GetProblemResponseModel';
 import type { GetSubmissionResponseModel } from '../models/GetSubmissionResponseModel';
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
+import type { ListContestMembersResponseModel } from '../models/ListContestMembersResponseModel';
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
 import type { ListProblemsResponseModel } from '../models/ListProblemsResponseModel';
 import type { ListSubmissionsResponseModel } from '../models/ListSubmissionsResponseModel';
@@ -286,7 +287,7 @@ export class DefaultService {
         });
     }
     /**
-     * @returns ListUsersResponseModel OK
+     * @returns ListContestMembersResponseModel OK
      * @throws ApiError
      */
     public listContestMembers({
@@ -297,7 +298,7 @@ export class DefaultService {
         contestId: string,
         page: number,
         pageSize: number,
-    }): CancelablePromise<ListUsersResponseModel> {
+    }): CancelablePromise<ListContestMembersResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/contests/{contest_id}/members',
