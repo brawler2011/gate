@@ -274,9 +274,9 @@ paths:
       responses:
         "200":
           description: OK
-  /contests/{contest_id}/participants:
+  /contests/{contest_id}/members:
     get:
-      operationId: ListParticipants
+      operationId: ListContestMembers
       parameters:
         - name: contest_id
           in: path
@@ -306,7 +306,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ListUsersResponseModel"
     post:
-      operationId: CreateParticipant
+      operationId: CreateContestMember
       parameters:
         - name: contest_id
           in: path
@@ -328,7 +328,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CreationResponseModel"
     delete:
-      operationId: DeleteParticipant
+      operationId: DeleteContestMember
       parameters:
         - name: user_id
           in: query
@@ -345,6 +345,23 @@ paths:
       responses:
         "200":
           description: OK
+  /contests/{contest_id}/my-role:
+    get:
+      operationId: GetMyContestRole
+      parameters:
+        - name: contest_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetMyContestRoleResponseModel"
   /submissions:
     post:
       operationId: CreateSubmission
@@ -1122,6 +1139,18 @@ components:
             $ref: "#/components/schemas/UserModel"
         pagination:
           $ref: "#/components/schemas/PaginationModel"
+    ListContestMembersResponseModel:
+      type: object
+      required:
+        - members
+        - pagination
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContestMemberModel"
+        pagination:
+          $ref: "#/components/schemas/PaginationModel"
     GetHealthResponseModel:
       type: object
       required:
@@ -1134,3 +1163,45 @@ components:
         message:
           type: string
           example: "Backend is running"
+    ContestMemberModel:
+      type: object
+      required:
+        - user_id
+        - contest_id
+        - username
+        - role
+        - contest_role
+        - kratos_id
+        - created_at
+        - updated_at
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          example: "user123"
+        role:
+          type: string
+        contest_role:
+          type: string
+        kratos_id:
+          type: string
+          example: "user123"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    GetMyContestRoleResponseModel:
+      type: object
+      required:
+        - role
+      properties:
+        role:
+          type: string
+          example: "owner"

@@ -86,6 +86,11 @@ type GetHealthResponseModel struct {
 	Status  string `json:"status"`
 }
 
+// GetMyContestRoleResponseModel defines model for GetMyContestRoleResponseModel.
+type GetMyContestRoleResponseModel struct {
+	Role string `json:"role"`
+}
+
 // GetProblemResponseModel defines model for GetProblemResponseModel.
 type GetProblemResponseModel struct {
 	Problem ProblemModel `json:"problem"`
@@ -252,19 +257,19 @@ type CreateContestParams struct {
 	Title string `form:"title" json:"title"`
 }
 
-// DeleteParticipantParams defines parameters for DeleteParticipant.
-type DeleteParticipantParams struct {
+// DeleteContestMemberParams defines parameters for DeleteContestMember.
+type DeleteContestMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
 }
 
-// ListParticipantsParams defines parameters for ListParticipants.
-type ListParticipantsParams struct {
+// ListContestMembersParams defines parameters for ListContestMembers.
+type ListContestMembersParams struct {
 	Page     int64 `form:"page" json:"page"`
 	PageSize int64 `form:"pageSize" json:"pageSize"`
 }
 
-// CreateParticipantParams defines parameters for CreateParticipant.
-type CreateParticipantParams struct {
+// CreateContestMemberParams defines parameters for CreateContestMember.
+type CreateContestMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
 }
 
@@ -413,14 +418,17 @@ type ClientInterface interface {
 
 	UpdateContest(ctx context.Context, contestId openapi_types.UUID, body UpdateContestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteParticipant request
-	DeleteParticipant(ctx context.Context, contestId openapi_types.UUID, params *DeleteParticipantParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// DeleteContestMember request
+	DeleteContestMember(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListParticipants request
-	ListParticipants(ctx context.Context, contestId openapi_types.UUID, params *ListParticipantsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ListContestMembers request
+	ListContestMembers(ctx context.Context, contestId openapi_types.UUID, params *ListContestMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateParticipant request
-	CreateParticipant(ctx context.Context, contestId openapi_types.UUID, params *CreateParticipantParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// CreateContestMember request
+	CreateContestMember(ctx context.Context, contestId openapi_types.UUID, params *CreateContestMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetMyContestRole request
+	GetMyContestRole(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateContestProblem request
 	CreateContestProblem(ctx context.Context, contestId openapi_types.UUID, params *CreateContestProblemParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -541,8 +549,8 @@ func (c *Client) UpdateContest(ctx context.Context, contestId openapi_types.UUID
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteParticipant(ctx context.Context, contestId openapi_types.UUID, params *DeleteParticipantParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteParticipantRequest(c.Server, contestId, params)
+func (c *Client) DeleteContestMember(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteContestMemberRequest(c.Server, contestId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -553,8 +561,8 @@ func (c *Client) DeleteParticipant(ctx context.Context, contestId openapi_types.
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListParticipants(ctx context.Context, contestId openapi_types.UUID, params *ListParticipantsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListParticipantsRequest(c.Server, contestId, params)
+func (c *Client) ListContestMembers(ctx context.Context, contestId openapi_types.UUID, params *ListContestMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListContestMembersRequest(c.Server, contestId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -565,8 +573,20 @@ func (c *Client) ListParticipants(ctx context.Context, contestId openapi_types.U
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateParticipant(ctx context.Context, contestId openapi_types.UUID, params *CreateParticipantParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateParticipantRequest(c.Server, contestId, params)
+func (c *Client) CreateContestMember(ctx context.Context, contestId openapi_types.UUID, params *CreateContestMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateContestMemberRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetMyContestRole(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetMyContestRoleRequest(c.Server, contestId)
 	if err != nil {
 		return nil, err
 	}
@@ -1034,8 +1054,8 @@ func NewUpdateContestRequestWithBody(server string, contestId openapi_types.UUID
 	return req, nil
 }
 
-// NewDeleteParticipantRequest generates requests for DeleteParticipant
-func NewDeleteParticipantRequest(server string, contestId openapi_types.UUID, params *DeleteParticipantParams) (*http.Request, error) {
+// NewDeleteContestMemberRequest generates requests for DeleteContestMember
+func NewDeleteContestMemberRequest(server string, contestId openapi_types.UUID, params *DeleteContestMemberParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1050,7 +1070,7 @@ func NewDeleteParticipantRequest(server string, contestId openapi_types.UUID, pa
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/contests/%s/participants", pathParam0)
+	operationPath := fmt.Sprintf("/contests/%s/members", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1086,8 +1106,8 @@ func NewDeleteParticipantRequest(server string, contestId openapi_types.UUID, pa
 	return req, nil
 }
 
-// NewListParticipantsRequest generates requests for ListParticipants
-func NewListParticipantsRequest(server string, contestId openapi_types.UUID, params *ListParticipantsParams) (*http.Request, error) {
+// NewListContestMembersRequest generates requests for ListContestMembers
+func NewListContestMembersRequest(server string, contestId openapi_types.UUID, params *ListContestMembersParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1102,7 +1122,7 @@ func NewListParticipantsRequest(server string, contestId openapi_types.UUID, par
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/contests/%s/participants", pathParam0)
+	operationPath := fmt.Sprintf("/contests/%s/members", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1150,8 +1170,8 @@ func NewListParticipantsRequest(server string, contestId openapi_types.UUID, par
 	return req, nil
 }
 
-// NewCreateParticipantRequest generates requests for CreateParticipant
-func NewCreateParticipantRequest(server string, contestId openapi_types.UUID, params *CreateParticipantParams) (*http.Request, error) {
+// NewCreateContestMemberRequest generates requests for CreateContestMember
+func NewCreateContestMemberRequest(server string, contestId openapi_types.UUID, params *CreateContestMemberParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1166,7 +1186,7 @@ func NewCreateParticipantRequest(server string, contestId openapi_types.UUID, pa
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/contests/%s/participants", pathParam0)
+	operationPath := fmt.Sprintf("/contests/%s/members", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1195,6 +1215,40 @@ func NewCreateParticipantRequest(server string, contestId openapi_types.UUID, pa
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetMyContestRoleRequest generates requests for GetMyContestRole
+func NewGetMyContestRoleRequest(server string, contestId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/my-role", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2080,14 +2134,17 @@ type ClientWithResponsesInterface interface {
 
 	UpdateContestWithResponse(ctx context.Context, contestId openapi_types.UUID, body UpdateContestJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateContestResponse, error)
 
-	// DeleteParticipantWithResponse request
-	DeleteParticipantWithResponse(ctx context.Context, contestId openapi_types.UUID, params *DeleteParticipantParams, reqEditors ...RequestEditorFn) (*DeleteParticipantResponse, error)
+	// DeleteContestMemberWithResponse request
+	DeleteContestMemberWithResponse(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*DeleteContestMemberResponse, error)
 
-	// ListParticipantsWithResponse request
-	ListParticipantsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListParticipantsParams, reqEditors ...RequestEditorFn) (*ListParticipantsResponse, error)
+	// ListContestMembersWithResponse request
+	ListContestMembersWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListContestMembersParams, reqEditors ...RequestEditorFn) (*ListContestMembersResponse, error)
 
-	// CreateParticipantWithResponse request
-	CreateParticipantWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateParticipantParams, reqEditors ...RequestEditorFn) (*CreateParticipantResponse, error)
+	// CreateContestMemberWithResponse request
+	CreateContestMemberWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateContestMemberParams, reqEditors ...RequestEditorFn) (*CreateContestMemberResponse, error)
+
+	// GetMyContestRoleWithResponse request
+	GetMyContestRoleWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetMyContestRoleResponse, error)
 
 	// CreateContestProblemWithResponse request
 	CreateContestProblemWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateContestProblemParams, reqEditors ...RequestEditorFn) (*CreateContestProblemResponse, error)
@@ -2244,13 +2301,13 @@ func (r UpdateContestResponse) StatusCode() int {
 	return 0
 }
 
-type DeleteParticipantResponse struct {
+type DeleteContestMemberResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 }
 
 // Status returns HTTPResponse.Status
-func (r DeleteParticipantResponse) Status() string {
+func (r DeleteContestMemberResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -2258,21 +2315,21 @@ func (r DeleteParticipantResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r DeleteParticipantResponse) StatusCode() int {
+func (r DeleteContestMemberResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type ListParticipantsResponse struct {
+type ListContestMembersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *ListUsersResponseModel
 }
 
 // Status returns HTTPResponse.Status
-func (r ListParticipantsResponse) Status() string {
+func (r ListContestMembersResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -2280,21 +2337,21 @@ func (r ListParticipantsResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ListParticipantsResponse) StatusCode() int {
+func (r ListContestMembersResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type CreateParticipantResponse struct {
+type CreateContestMemberResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *CreationResponseModel
 }
 
 // Status returns HTTPResponse.Status
-func (r CreateParticipantResponse) Status() string {
+func (r CreateContestMemberResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -2302,7 +2359,29 @@ func (r CreateParticipantResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r CreateParticipantResponse) StatusCode() int {
+func (r CreateContestMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetMyContestRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetMyContestRoleResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetMyContestRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetMyContestRoleResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -2667,31 +2746,40 @@ func (c *ClientWithResponses) UpdateContestWithResponse(ctx context.Context, con
 	return ParseUpdateContestResponse(rsp)
 }
 
-// DeleteParticipantWithResponse request returning *DeleteParticipantResponse
-func (c *ClientWithResponses) DeleteParticipantWithResponse(ctx context.Context, contestId openapi_types.UUID, params *DeleteParticipantParams, reqEditors ...RequestEditorFn) (*DeleteParticipantResponse, error) {
-	rsp, err := c.DeleteParticipant(ctx, contestId, params, reqEditors...)
+// DeleteContestMemberWithResponse request returning *DeleteContestMemberResponse
+func (c *ClientWithResponses) DeleteContestMemberWithResponse(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*DeleteContestMemberResponse, error) {
+	rsp, err := c.DeleteContestMember(ctx, contestId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseDeleteParticipantResponse(rsp)
+	return ParseDeleteContestMemberResponse(rsp)
 }
 
-// ListParticipantsWithResponse request returning *ListParticipantsResponse
-func (c *ClientWithResponses) ListParticipantsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListParticipantsParams, reqEditors ...RequestEditorFn) (*ListParticipantsResponse, error) {
-	rsp, err := c.ListParticipants(ctx, contestId, params, reqEditors...)
+// ListContestMembersWithResponse request returning *ListContestMembersResponse
+func (c *ClientWithResponses) ListContestMembersWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListContestMembersParams, reqEditors ...RequestEditorFn) (*ListContestMembersResponse, error) {
+	rsp, err := c.ListContestMembers(ctx, contestId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseListParticipantsResponse(rsp)
+	return ParseListContestMembersResponse(rsp)
 }
 
-// CreateParticipantWithResponse request returning *CreateParticipantResponse
-func (c *ClientWithResponses) CreateParticipantWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateParticipantParams, reqEditors ...RequestEditorFn) (*CreateParticipantResponse, error) {
-	rsp, err := c.CreateParticipant(ctx, contestId, params, reqEditors...)
+// CreateContestMemberWithResponse request returning *CreateContestMemberResponse
+func (c *ClientWithResponses) CreateContestMemberWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateContestMemberParams, reqEditors ...RequestEditorFn) (*CreateContestMemberResponse, error) {
+	rsp, err := c.CreateContestMember(ctx, contestId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateParticipantResponse(rsp)
+	return ParseCreateContestMemberResponse(rsp)
+}
+
+// GetMyContestRoleWithResponse request returning *GetMyContestRoleResponse
+func (c *ClientWithResponses) GetMyContestRoleWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetMyContestRoleResponse, error) {
+	rsp, err := c.GetMyContestRole(ctx, contestId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetMyContestRoleResponse(rsp)
 }
 
 // CreateContestProblemWithResponse request returning *CreateContestProblemResponse
@@ -2946,15 +3034,15 @@ func ParseUpdateContestResponse(rsp *http.Response) (*UpdateContestResponse, err
 	return response, nil
 }
 
-// ParseDeleteParticipantResponse parses an HTTP response from a DeleteParticipantWithResponse call
-func ParseDeleteParticipantResponse(rsp *http.Response) (*DeleteParticipantResponse, error) {
+// ParseDeleteContestMemberResponse parses an HTTP response from a DeleteContestMemberWithResponse call
+func ParseDeleteContestMemberResponse(rsp *http.Response) (*DeleteContestMemberResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &DeleteParticipantResponse{
+	response := &DeleteContestMemberResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -2962,15 +3050,15 @@ func ParseDeleteParticipantResponse(rsp *http.Response) (*DeleteParticipantRespo
 	return response, nil
 }
 
-// ParseListParticipantsResponse parses an HTTP response from a ListParticipantsWithResponse call
-func ParseListParticipantsResponse(rsp *http.Response) (*ListParticipantsResponse, error) {
+// ParseListContestMembersResponse parses an HTTP response from a ListContestMembersWithResponse call
+func ParseListContestMembersResponse(rsp *http.Response) (*ListContestMembersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ListParticipantsResponse{
+	response := &ListContestMembersResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -2988,15 +3076,15 @@ func ParseListParticipantsResponse(rsp *http.Response) (*ListParticipantsRespons
 	return response, nil
 }
 
-// ParseCreateParticipantResponse parses an HTTP response from a CreateParticipantWithResponse call
-func ParseCreateParticipantResponse(rsp *http.Response) (*CreateParticipantResponse, error) {
+// ParseCreateContestMemberResponse parses an HTTP response from a CreateContestMemberWithResponse call
+func ParseCreateContestMemberResponse(rsp *http.Response) (*CreateContestMemberResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &CreateParticipantResponse{
+	response := &CreateContestMemberResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -3004,6 +3092,32 @@ func ParseCreateParticipantResponse(rsp *http.Response) (*CreateParticipantRespo
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest CreationResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetMyContestRoleResponse parses an HTTP response from a GetMyContestRoleWithResponse call
+func ParseGetMyContestRoleResponse(rsp *http.Response) (*GetMyContestRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetMyContestRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetMyContestRoleResponseModel
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

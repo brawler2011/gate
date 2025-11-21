@@ -7,6 +7,7 @@ import type { CreationResponseModel } from '../models/CreationResponseModel';
 import type { GetContestProblemResponseModel } from '../models/GetContestProblemResponseModel';
 import type { GetContestResponseModel } from '../models/GetContestResponseModel';
 import type { GetHealthResponseModel } from '../models/GetHealthResponseModel';
+import type { GetMyContestRoleResponseModel } from '../models/GetMyContestRoleResponseModel';
 import type { GetProblemResponseModel } from '../models/GetProblemResponseModel';
 import type { GetSubmissionResponseModel } from '../models/GetSubmissionResponseModel';
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
@@ -288,7 +289,7 @@ export class DefaultService {
      * @returns ListUsersResponseModel OK
      * @throws ApiError
      */
-    public listParticipants({
+    public listContestMembers({
         contestId,
         page,
         pageSize,
@@ -299,7 +300,7 @@ export class DefaultService {
     }): CancelablePromise<ListUsersResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/contests/{contest_id}/participants',
+            url: '/contests/{contest_id}/members',
             path: {
                 'contest_id': contestId,
             },
@@ -313,7 +314,7 @@ export class DefaultService {
      * @returns CreationResponseModel OK
      * @throws ApiError
      */
-    public createParticipant({
+    public createContestMember({
         contestId,
         userId,
     }: {
@@ -322,7 +323,7 @@ export class DefaultService {
     }): CancelablePromise<CreationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/contests/{contest_id}/participants',
+            url: '/contests/{contest_id}/members',
             path: {
                 'contest_id': contestId,
             },
@@ -335,7 +336,7 @@ export class DefaultService {
      * @returns any OK
      * @throws ApiError
      */
-    public deleteParticipant({
+    public deleteContestMember({
         userId,
         contestId,
     }: {
@@ -344,12 +345,29 @@ export class DefaultService {
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'DELETE',
-            url: '/contests/{contest_id}/participants',
+            url: '/contests/{contest_id}/members',
             path: {
                 'contest_id': contestId,
             },
             query: {
                 'user_id': userId,
+            },
+        });
+    }
+    /**
+     * @returns GetMyContestRoleResponseModel OK
+     * @throws ApiError
+     */
+    public getMyContestRole({
+        contestId,
+    }: {
+        contestId: string,
+    }): CancelablePromise<GetMyContestRoleResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/contests/{contest_id}/my-role',
+            path: {
+                'contest_id': contestId,
             },
         });
     }
