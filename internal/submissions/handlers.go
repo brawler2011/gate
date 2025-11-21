@@ -4,7 +4,9 @@ import (
 	"context"
 
 	testerv1 "github.com/gate149/contracts/core/v1"
+	"github.com/gate149/core/internal/middleware"
 	"github.com/gate149/core/internal/models"
+	"github.com/gate149/core/internal/permissions"
 	"github.com/gate149/core/pkg"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -17,22 +19,8 @@ type SolutionsUC interface {
 	ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*models.SolutionsList, error)
 }
 
-type ContestsUC interface {
-	CreateContest(ctx context.Context, creation models.ContestCreation) (uuid.UUID, error)
-	GetContest(ctx context.Context, id uuid.UUID) (*models.Contest, error)
-	ListContests(ctx context.Context, filter models.ContestsFilter) (*models.ContestsList, error)
-	UpdateContest(ctx context.Context, id uuid.UUID, contestUpdate models.ContestUpdate) error
-	DeleteContest(ctx context.Context, id uuid.UUID) error
-	CreateContestProblem(ctx context.Context, contestId, problemId uuid.UUID) error
-	GetContestProblem(ctx context.Context, contestId, problemId uuid.UUID) (*models.ContestProblem, error)
-	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]*models.ContestProblemsListItem, error)
-	DeleteContestProblem(ctx context.Context, contestId, problemId uuid.UUID) error
-	CreateParticipant(ctx context.Context, contestId, userId uuid.UUID) error
-	DeleteParticipant(ctx context.Context, contestId, userId uuid.UUID) error
-}
-
 type PermissionsUC interface {
-	GetContestPermissions(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestPermissions, error)
+	HasContestPermission(ctx context.Context, contestID uuid.UUID, userID uuid.UUID, action permissions.ContestAction, opts ...permissions.PermissionOption) (bool, error)
 }
 
 type UsersUC interface {
@@ -41,18 +29,19 @@ type UsersUC interface {
 
 type SolutionsHandlers struct {
 	solutionsUC   SolutionsUC
-	contestsUC    ContestsUC
 	permissionsUC PermissionsUC
 	usersUC       UsersUC
 }
 
 func getUserID(h *SolutionsHandlers, c *fiber.Ctx) (uuid.UUID, error) {
-	kratosID, err := getUserFromSession(c)
+	ctx := c.UserContext()
+
+	session, err := middleware.GetSession(ctx)
 	if err != nil {
 		return uuid.Nil, err
 	}
 
-	user, err := h.usersUC.GetUserByKratosId(c.Context(), kratosID)
+	user, err := h.usersUC.GetUserByKratosId(ctx, session.Identity.Id)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -62,13 +51,11 @@ func getUserID(h *SolutionsHandlers, c *fiber.Ctx) (uuid.UUID, error) {
 
 func NewHandlers(
 	solutionsUC SolutionsUC,
-	contestsUC ContestsUC,
 	permissionsUC PermissionsUC,
 	usersUC UsersUC,
 ) *SolutionsHandlers {
 	handlers := &SolutionsHandlers{
 		solutionsUC:   solutionsUC,
-		contestsUC:    contestsUC,
 		permissionsUC: permissionsUC,
 		usersUC:       usersUC,
 	}
@@ -80,8 +67,7 @@ const (
 	maxSolutionSize int64 = 10 * 1024 * 1024 // 10 MB
 )
 
-func (h *SolutionsHandlers) CreateSolution(c *fiber.Ctx, params testerv1.CreateSubmissionParams) error {
-	const op = "SolutionsHandlers.CreateSubmission"
+func (h *SolutionsHandlers) CreateSubmission(c *fiber.Ctx, params testerv1.CreateSubmissionParams) error {
 	ctx := c.Context()
 
 	userID, err := getUserID(h, c)
@@ -90,44 +76,40 @@ func (h *SolutionsHandlers) CreateSolution(c *fiber.Ctx, params testerv1.CreateS
 	}
 
 	// Check if user can create solution in this contest
-	permissions, err := h.permissionsUC.GetContestPermissions(ctx, &models.ContestPermissionGet{
-		ContestId: params.ContestId,
-		UserId:    userID,
-	})
+	canCreate, err := h.permissionsUC.HasContestPermission(ctx, params.ContestId, userID, permissions.ActionCreateSubmission)
 	if err != nil {
 		return err
 	}
-
-	if !permissions {
-		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to create solution")
+	if !canCreate {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to create solution")
 	}
 
 	s, err := c.FormFile("solution")
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, op, "failed to get solution file")
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to get solution file")
 	}
 
 	if s.Size == 0 || s.Size > maxSolutionSize {
-		return pkg.Wrap(pkg.ErrBadInput, nil, op, "invalid solution size")
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid solution size")
 	}
 
 	f, err := s.Open()
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, op, "failed to open solution file")
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to open solution file")
 	}
 	defer f.Close()
 
 	b := make([]byte, s.Size)
 	_, err = f.Read(b)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, op, "failed to read solution file")
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to read solution file")
 	}
 
 	solution := string(b)
 
 	langName := models.LanguageName(params.Language)
 	if err := langName.Valid(); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, op, "invalid language")
+		return pkg.Wrap(pkg.ErrBadInput, err, "invalid language")
 	}
 
 	solutionCreation := &models.SubmissionCreation{
@@ -147,8 +129,7 @@ func (h *SolutionsHandlers) CreateSolution(c *fiber.Ctx, params testerv1.CreateS
 	return c.JSON(testerv1.CreationResponseModel{Id: solutionID})
 }
 
-func (h *SolutionsHandlers) GetSolution(c *fiber.Ctx, id uuid.UUID) error {
-	const op = "SolutionsHandlers.GetSubmissions"
+func (h *SolutionsHandlers) GetSubmission(c *fiber.Ctx, id uuid.UUID) error {
 	ctx := c.Context()
 
 	userID, err := getUserID(h, c)
@@ -163,46 +144,32 @@ func (h *SolutionsHandlers) GetSolution(c *fiber.Ctx, id uuid.UUID) error {
 
 	// User can only view their own submission (simplified for now)
 	if submission.CreatedBy != userID {
-		return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to view this submission")
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
 	}
 
 	return c.JSON(testerv1.GetSubmissionResponseModel{Submission: SolutionDTO(*submission)})
 }
 
-func (h *SolutionsHandlers) ListSolutions(c *fiber.Ctx, params testerv1.ListSubmissionsParams) error {
-	const op = "SolutionsHandlers.ListSolutions"
+func (h *SolutionsHandlers) ListSubmissions(c *fiber.Ctx, params testerv1.ListSubmissionsParams) error {
 	ctx := c.Context()
 
-	userID, err := getUserID(h, c)
+	// Get the current user
+	session, err := middleware.GetSession(ctx)
 	if err != nil {
 		return err
 	}
 
+	user, err := h.usersUC.GetUserByKratosId(ctx, session.Identity.Id)
+	if err != nil {
+		return err
+	}
+
+	// Only admins can list submissions
+	if !user.IsAdmin() {
+		return pkg.Wrap(pkg.NoPermission, nil, "only admins can list submissions")
+	}
+
 	filter := ListSolutionsParamsDTO(params)
-
-	// If contestId is provided, check permissions for that contest
-	if params.ContestId != nil {
-		// Get contest to check permissions
-		contest, err := h.contestsUC.GetContest(ctx, *params.ContestId)
-		if err != nil {
-			return pkg.Wrap(pkg.ErrInternal, err, op, "failed to get contest")
-		}
-
-		// Check if user can view contest
-		canView, err := h.permissionsUC.CanViewContest(ctx, userID, contest)
-		if err != nil {
-			return pkg.Wrap(pkg.ErrInternal, err, op, "failed to check contest view permission")
-		}
-		if !canView {
-			return pkg.Wrap(pkg.NoPermission, nil, op, "insufficient permissions to view contest submissions")
-		}
-	}
-
-	// Users can only view their own submissions (simplified)
-	// For admin/teacher users, they can see all submissions if no userId specified
-	if params.UserId == nil || *params.UserId != userID {
-		filter.UserId = &userID
-	}
 
 	solutionsList, err := h.solutionsUC.ListSolutions(ctx, filter)
 	if err != nil {
@@ -225,13 +192,25 @@ func ListSolutionsParamsDTO(params testerv1.ListSubmissionsParams) models.Soluti
 		state = &t
 	}
 
+	// Convert sortOrder string to integer: -1 for desc, 0 for asc
+	var order *int64 = nil
+	if params.SortOrder != nil {
+		var orderVal int64
+		if *params.SortOrder == testerv1.ListSubmissionsParamsSortOrderDesc {
+			orderVal = -1
+		} else {
+			orderVal = 0
+		}
+		order = &orderVal
+	}
+
 	return models.SolutionsFilter{
 		ContestId: params.ContestId,
 		Page:      params.Page,
 		PageSize:  params.PageSize,
 		ProblemId: params.ProblemId,
 		Language:  langName,
-		Order:     params.Order,
+		Order:     order,
 		State:     state,
 	}
 }

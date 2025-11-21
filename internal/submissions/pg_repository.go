@@ -25,12 +25,10 @@ func NewRepository(db *sqlx.DB) *PgRepository {
 var GetSolutionQuery string
 
 func (r *PgRepository) GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error) {
-	const op = "Repository.GetSubmissions"
-
 	var solution models.Submission
 	err := r.db.GetContext(ctx, &solution, GetSolutionQuery, id)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 
 	return &solution, nil
@@ -40,8 +38,6 @@ func (r *PgRepository) GetSubmissions(ctx context.Context, id uuid.UUID) (*model
 var CreateSolutionQuery string
 
 func (r *PgRepository) CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error) {
-	const op = "Repository.CreateSubmission"
-
 	rows, err := r.db.QueryxContext(ctx,
 		CreateSolutionQuery,
 		creation.ContestId,
@@ -52,7 +48,7 @@ func (r *PgRepository) CreateSubmission(ctx context.Context, creation *models.Su
 		creation.Penalty,
 	)
 	if err != nil {
-		return uuid.Nil, pkg.HandlePgErr(err, op)
+		return uuid.Nil, pkg.HandlePgErr(err)
 	}
 
 	defer rows.Close()
@@ -60,7 +56,7 @@ func (r *PgRepository) CreateSubmission(ctx context.Context, creation *models.Su
 	rows.Next()
 	err = rows.Scan(&id)
 	if err != nil {
-		return uuid.Nil, pkg.HandlePgErr(err, op)
+		return uuid.Nil, pkg.HandlePgErr(err)
 	}
 
 	return id, nil
@@ -70,11 +66,9 @@ func (r *PgRepository) CreateSubmission(ctx context.Context, creation *models.Su
 var UpdateSolutionQuery string
 
 func (r *PgRepository) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
-	const op = "Repository.UpdateSubmission"
-
 	_, err := r.db.ExecContext(ctx, UpdateSolutionQuery, update.State, update.Score, update.TimeStat, update.MemoryStat, id)
 	if err != nil {
-		return pkg.HandlePgErr(err, op)
+		return pkg.HandlePgErr(err)
 	}
 
 	return nil
@@ -87,8 +81,6 @@ var ListSolutionsQuery string
 var CountSolutionsQuery string
 
 func (r *PgRepository) ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*models.SolutionsList, error) {
-	const op = "ContestRepository.ListSolutions"
-
 	var order int = 0
 	if filter.Order != nil {
 		order = int(*filter.Order)
@@ -104,7 +96,7 @@ func (r *PgRepository) ListSolutions(ctx context.Context, filter models.Solution
 		filter.State,
 	)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 
 	// Get submissions list
@@ -120,7 +112,7 @@ func (r *PgRepository) ListSolutions(ctx context.Context, filter models.Solution
 		filter.Offset(),
 	)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 
 	return &models.SolutionsList{

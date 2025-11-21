@@ -1,10 +1,12 @@
 package pkg
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strings"
 
 	"github.com/jackc/pgerrcode"
@@ -21,22 +23,25 @@ var (
 )
 
 type CustomError struct {
-	Basic   error  // Basic error (ErrInternal, ErrBadInput etc.) is used to map to HTTP status
-	Cause   error  // Extra error (cause) is used for logging
-	Op      string // Operation during which the error occurred
-	Message string // Message
+	Basic   error
+	Cause   error
+	Message string
+	Op      string
 }
 
 func (e *CustomError) Error() string {
 	var parts []string
+	if e.Op != "" {
+		parts = append(parts, e.Op)
+	}
 	if e.Basic != nil {
 		parts = append(parts, e.Basic.Error())
 	}
+	if e.Message != "" {
+		parts = append(parts, e.Message)
+	}
 	if e.Cause != nil {
 		parts = append(parts, e.Cause.Error())
-	}
-	if e.Op != "" && e.Message != "" {
-		parts = append(parts, fmt.Sprintf("during %s: %s", e.Op, e.Message))
 	}
 	return strings.Join(parts, ": ")
 }
@@ -45,12 +50,21 @@ func (e *CustomError) Unwrap() []error {
 	return []error{e.Basic, e.Cause}
 }
 
-func Wrap(basic error, err error, op string, msg string) error {
+func getCallerInfo() string {
+	pc, _, line, ok := runtime.Caller(2)
+	if !ok {
+		return ""
+	}
+	fn := runtime.FuncForPC(pc)
+	return fmt.Sprintf("%s:%d", fn.Name(), line)
+}
+
+func Wrap(basic error, err error, msg string) error {
 	return &CustomError{
 		Basic:   basic,
 		Cause:   err,
-		Op:      op,
 		Message: msg,
+		Op:      getCallerInfo(),
 	}
 }
 
@@ -71,19 +85,33 @@ func ToREST(err error) int {
 	return http.StatusInternalServerError
 }
 
-func HandlePgErr(err error, op string) error {
+func HandleContextErr(err error) error {
+	if errors.Is(err, context.Canceled) {
+		return Wrap(ErrInternal, err, "context canceled")
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return Wrap(ErrInternal, err, "context deadline exceeded")
+	}
+	return nil
+}
+
+func HandlePgErr(err error) error {
+	if ctxErr := HandleContextErr(err); ctxErr != nil {
+		return ctxErr
+	}
+
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return Wrap(ErrBadInput, err, op, "integrity constraint violation")
+			return Wrap(ErrBadInput, err, "integrity constraint violation")
 		}
 
-		return Wrap(ErrUnhandled, err, op, "unexpected postgres error")
+		return Wrap(ErrUnhandled, err, "unexpected postgres error")
 	}
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return Wrap(ErrNotFound, err, op, "no rows found")
+		return Wrap(ErrNotFound, err, "no rows found")
 	}
 
-	return Wrap(ErrUnhandled, err, op, "unexpected error")
+	return Wrap(ErrUnhandled, err, "unexpected error")
 }

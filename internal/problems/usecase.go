@@ -1,16 +1,9 @@
 package problems
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/gate149/core/internal/models"
@@ -20,126 +13,63 @@ import (
 )
 
 type Repo interface {
-	CreateProblem(ctx context.Context, title string) (uuid.UUID, error)
+	CreateProblem(ctx context.Context, params *models.CreateProblemParams) error
 	GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error)
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
 	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, heading *models.ProblemUpdate) error
 	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (*models.ProblemMember, error)
+	CreateProblemMember(ctx context.Context, params *models.CreateProblemMemberParams) error
 }
 
-type S3Repo interface {
-	UploadTestsFile(ctx context.Context, id uuid.UUID, reader io.Reader) (string, error)
-	DownloadTestsFile(ctx context.Context, id uuid.UUID) (io.ReadCloser, error)
+type Pandoc interface {
+	ConvertLatexToHtml5(ctx context.Context, text string) (string, error)
+	BatchConvertLatexToHtml5(ctx context.Context, texts []string) ([]string, error)
 }
 
 type UseCase struct {
 	problemRepo  Repo
-	pandocClient pkg.PandocClient
-	s3Repo       S3Repo
-	cacheDir     string
+	pandocClient Pandoc
 }
 
 func NewUseCase(
 	problemRepo Repo,
-	pandocClient pkg.PandocClient,
-	s3Repo S3Repo,
-	cacheDir string,
+	pandocClient Pandoc,
 ) (*UseCase, error) {
-	archiveDir := path.Join(cacheDir, "archives")
-	if err := os.MkdirAll(archiveDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create archive directory: %w", err)
-	}
-
 	return &UseCase{
 		problemRepo:  problemRepo,
 		pandocClient: pandocClient,
-		s3Repo:       s3Repo,
-		cacheDir:     cacheDir,
 	}, nil
 }
 
-func (u *UseCase) CreateProblem(ctx context.Context, title string) (uuid.UUID, error) {
-	return u.problemRepo.CreateProblem(ctx, title)
+func (u *UseCase) CreateProblem(ctx context.Context, input *models.CreateProblemInput) (uuid.UUID, error) {
+	params := &models.CreateProblemParams{
+		Id:     uuid.New(),
+		Title:  input.Title,
+		UserId: input.UserId,
+	}
+
+	// FIXME: use transaction here
+
+	err := u.problemRepo.CreateProblem(ctx, params)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	err = u.problemRepo.CreateProblemMember(ctx, &models.CreateProblemMemberParams{
+		ProblemId: params.Id,
+		UserId:    input.UserId,
+		Role:      models.ProblemRoleOwner,
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return params.Id, nil
 }
 
 func (u *UseCase) GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error) {
 	return u.problemRepo.GetProblemById(ctx, id)
-}
-
-func (u *UseCase) DownloadTestsArchive(ctx context.Context, id uuid.UUID) (string, error) {
-	rc, err := u.s3Repo.DownloadTestsFile(ctx, id)
-	if err != nil {
-		return "", err
-	}
-	defer rc.Close()
-
-	tempFile, err := os.CreateTemp("", fmt.Sprintf("tests-archive-%s-*.zip", id))
-	if err != nil {
-		return "", err
-	}
-
-	defer tempFile.Close()
-
-	_, err = io.Copy(tempFile, rc)
-	if err != nil {
-		return "", err
-	}
-
-	return tempFile.Name(), nil
-}
-
-func (u *UseCase) UnarchiveTestsArchive(_ context.Context, zipPath string, destDirName string) (string, error) {
-	_, err := os.Stat(zipPath)
-	if err != nil {
-		return "", err
-	}
-
-	reader, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return "", err
-	}
-	defer reader.Close()
-
-	testsPath := path.Join(u.cacheDir, "tests", destDirName)
-	err = os.MkdirAll(testsPath, 0755)
-	if err != nil {
-		return "", err
-	}
-
-	for _, file := range reader.File {
-		filePath := filepath.Join(testsPath, file.Name)
-
-		if file.FileInfo().IsDir() {
-			if err := os.MkdirAll(filePath, file.Mode()); err != nil {
-				return "", err
-			}
-			continue
-		}
-
-		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-			return "", err
-		}
-
-		fileReader, err := file.Open()
-		if err != nil {
-			return "", err
-		}
-		defer fileReader.Close()
-
-		targetFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
-		if err != nil {
-			return "", err
-		}
-		defer targetFile.Close()
-
-		_, err = io.Copy(targetFile, fileReader)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	return testsPath, nil
 }
 
 func (u *UseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
@@ -152,7 +82,7 @@ func (u *UseCase) ListProblems(ctx context.Context, filter *models.ProblemsFilte
 
 func (u *UseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate *models.ProblemUpdate) error {
 	if isEmpty(*problemUpdate) {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "UpdateProblem", "empty problem update")
+		return pkg.Wrap(pkg.ErrBadInput, nil, "empty problem update")
 	}
 
 	problem, err := u.problemRepo.GetProblemById(ctx, id)
@@ -216,170 +146,6 @@ type ProblemProperties struct {
 	InputFormat  *string `json:"input"`
 }
 
-func (u *UseCase) UploadProblem(ctx context.Context, id uuid.UUID, r io.ReaderAt, size int64) error {
-	const op = "UseCase.UploadProblem"
-
-	// Initialize zip reader
-	zipReader, err := zip.NewReader(r, size)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, op, "failed to open zip")
-	}
-
-	// Process zip contents
-	properties, testsBuffer, err := processZipContents(ctx, zipReader)
-	if err != nil {
-		return err
-	}
-
-	// Update problem properties
-	problemUpdate := &models.ProblemUpdate{
-		Title: &properties.Title,
-
-		TimeLimit:   &properties.TimeLimit,
-		MemoryLimit: &properties.MemoryLimit,
-
-		Legend:       properties.Legend,
-		InputFormat:  properties.InputFormat,
-		OutputFormat: properties.OutputFormat,
-		Notes:        properties.Notes,
-		Scoring:      properties.Scoring,
-	}
-
-	if err := u.UpdateProblem(ctx, id, problemUpdate); err != nil {
-		return err
-	}
-
-	// Upload tests to S3
-	if _, err := u.s3Repo.UploadTestsFile(ctx, id, bytes.NewReader(testsBuffer.Bytes())); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func processZipContents(_ context.Context, zipReader *zip.Reader) (*ProblemProperties, *bytes.Buffer, error) {
-	const op = "processZipContents"
-
-	panic("unimplemented")
-
-	const locale = "russian"
-
-	testsBuffer := &bytes.Buffer{}
-	testsArchive := zip.NewWriter(testsBuffer)
-
-	var properties *ProblemProperties
-	//var meta models.Meta
-	testInputs := make(map[string]bool)
-	testOutputs := make(map[string]bool)
-
-	for _, file := range zipReader.File {
-		if file.FileInfo().IsDir() || isInvalidTestFile(file.Name) {
-			continue
-		}
-
-		if file.Name == fmt.Sprintf("statements/%s/problem-properties.json", locale) {
-			var err error
-			properties, err = readProperties(file)
-			if err != nil {
-				return nil, nil, pkg.Wrap(pkg.ErrBadInput, err,
-					op, "failed to read problem-properties.json")
-			}
-			continue
-		}
-
-		if strings.HasPrefix(file.Name, "tests/") && filepath.Dir(file.Name) == "tests" {
-			fileName := filepath.Base(file.Name)
-			if strings.HasSuffix(fileName, ".a") {
-				testOutputs[strings.TrimSuffix(fileName, ".a")] = true
-			} else {
-				testInputs[fileName] = true
-			}
-
-			if err := copyTestFile(file, testsArchive); err != nil {
-				return nil, nil, pkg.Wrap(pkg.ErrBadInput, err, op, "failed to copy test file")
-			}
-		}
-	}
-
-	if properties == nil {
-		return nil, nil, pkg.Wrap(pkg.ErrBadInput, nil, op, "problem-properties.json not found")
-	}
-
-	if err := validateTests(testInputs, testOutputs); err != nil {
-		return nil, nil, err
-	}
-
-	names := make([]string, 0, len(testInputs))
-	for input := range testInputs {
-		names = append(names, input)
-	}
-	//meta.Names = names
-	//meta.Count = len(meta.Names)
-	properties.MemoryLimit /= 1024 * 1024 // Convert bytes to MB
-	//properties.Meta = &meta
-
-	if err := testsArchive.Close(); err != nil {
-		return nil, nil, err
-	}
-
-	return properties, testsBuffer, nil
-}
-
-func isInvalidTestFile(name string) bool {
-	fileName := filepath.Base(name)
-	return fileName == "" || strings.HasPrefix(fileName, ".")
-}
-
-func copyTestFile(src *zip.File, dst *zip.Writer) error {
-	srcReader, err := src.Open()
-	if err != nil {
-		return fmt.Errorf("failed to open test file: %w", err)
-	}
-	defer srcReader.Close()
-
-	dstWriter, err := dst.Create(src.Name)
-	if err != nil {
-		return fmt.Errorf("failed to create test file in archive: %w", err)
-	}
-
-	if _, err := io.Copy(dstWriter, srcReader); err != nil {
-		return fmt.Errorf("failed to copy test file: %w", err)
-	}
-
-	return nil
-}
-
-func validateTests(inputs, outputs map[string]bool) error {
-	for input := range inputs {
-		if !outputs[input] {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "validateTests",
-				"missing output file for test input "+input)
-		}
-	}
-	for output := range outputs {
-		if !inputs[output] {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "validateTests",
-				"missing input file for test output "+output)
-		}
-	}
-	return nil
-}
-
-func readProperties(f *zip.File) (*ProblemProperties, error) {
-	file, err := f.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var properties ProblemProperties
-	if err := json.NewDecoder(file).Decode(&properties); err != nil {
-		return nil, err
-	}
-
-	return &properties, nil
-}
-
 func isEmpty(p models.ProblemUpdate) bool {
 	return p.Title == nil &&
 		p.Legend == nil &&
@@ -437,7 +203,7 @@ func sanitize(statement models.Html5ProblemStatement) models.Html5ProblemStateme
 	return statement
 }
 
-func build(ctx context.Context, pandocClient pkg.PandocClient, p models.ProblemStatement) (models.Html5ProblemStatement, error) {
+func build(ctx context.Context, pandocClient Pandoc, p models.ProblemStatement) (models.Html5ProblemStatement, error) {
 	p = trimSpaces(p)
 
 	latex := models.ProblemStatement{}

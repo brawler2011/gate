@@ -1,153 +1,118 @@
 package pkg
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
+
+	"github.com/gate149/pandoc-go-sdk"
 )
 
 type Client struct {
-	client  *http.Client
-	address string
+	client *pandoc.ClientWithResponses
 }
 
-type PandocClient interface {
-	ConvertLatexToHtml5(ctx context.Context, text string) (string, error)
-	BatchConvertLatexToHtml5(ctx context.Context, texts []string) ([]string, error)
-}
-
-func NewPandocClient(client *http.Client, address string) *Client {
+func NewPandocClient(httpClient *http.Client, address string) *Client {
+	c, err := pandoc.NewClientWithResponses(address, pandoc.WithHTTPClient(httpClient))
+	if err != nil {
+		panic(fmt.Errorf("failed to create pandoc client: %w", err))
+	}
 	return &Client{
-		client:  client,
-		address: address,
+		client: c,
 	}
 }
 
-type conversation struct {
-	Text string `json:"text"`
-	From string `json:"from"`
-	To   string `json:"to"`
-	Math string `json:"html-math-method"`
-}
+func (c *Client) ConvertLatexToHtml5(ctx context.Context, text string) (string, error) {
+	from := "latex"
+	to := "html5"
+	math := pandoc.Katex
 
-type message struct {
-	Message   string `json:"message"`
-	Verbosity string `json:"verbosity"`
-}
-
-type output struct {
-	Error    string    `json:"error"`
-	Output   string    `json:"output"`
-	Base64   bool      `json:"base64"`
-	Messages []message `json:"messages"`
-}
-
-func (client *Client) sendRaw(ctx context.Context, path string, body []byte) ([]byte, error) {
-	path, err := url.JoinPath(client.address, path)
-	if err != nil {
-		return nil, err
+	body := pandoc.ConversionRequest{
+		From:           &from,
+		To:             &to,
+		Text:           text,
+		HtmlMathMethod: &math,
 	}
 
-	buf := bytes.NewBuffer(body)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, path, buf)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
-}
-
-func (client *Client) convert(ctx context.Context, text, from, to, math string) (string, error) {
-	body, err := json.Marshal(conversation{
-		Text: text,
-		From: from,
-		To:   to,
-		Math: math,
-	})
+	resp, err := c.client.PostWithResponse(ctx, body)
 	if err != nil {
 		return "", err
 	}
 
-	resp, err := client.sendRaw(ctx, "/", body)
-	if err != nil {
-		return "", err
+	if resp.StatusCode() != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
-	return string(resp), nil
+	var errResp pandoc.ErrorResponse
+	if err := json.Unmarshal(resp.Body, &errResp); err == nil && errResp.Error != "" {
+		return "", errors.New(errResp.Error)
+	}
+
+	var successResp pandoc.SuccessResponse
+	if err := json.Unmarshal(resp.Body, &successResp); err == nil {
+		return successResp.Output, nil
+	}
+
+	return "", errors.New("failed to parse response")
 }
 
-func (client *Client) batchConvert(ctx context.Context, texts []string, from, to, math string) ([]string, error) {
-	list := make([]conversation, len(texts))
+func (c *Client) BatchConvertLatexToHtml5(ctx context.Context, texts []string) ([]string, error) {
+	from := "latex"
+	to := "html5"
+	math := pandoc.Katex
+
+	reqs := make([]pandoc.ConversionRequest, len(texts))
 	for i, text := range texts {
-		list[i] = conversation{
-			Text: text,
-			From: from,
-			To:   to,
-			Math: math,
+		reqs[i] = pandoc.ConversionRequest{
+			From:           &from,
+			To:             &to,
+			Text:           text,
+			HtmlMathMethod: &math,
 		}
 	}
 
-	body, err := json.Marshal(list)
+	resp, err := c.client.PostBatchWithResponse(ctx, reqs)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.sendRaw(ctx, "/batch", body)
-	if err != nil {
-		return nil, err
+	if resp.StatusCode() != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
-	var result []output
-	err = json.Unmarshal(resp, &result)
-	if err != nil {
-		return nil, err
+	var results []json.RawMessage
+	if err := json.Unmarshal(resp.Body, &results); err != nil {
+		return nil, fmt.Errorf("failed to parse batch response: %w", err)
 	}
 
-	if len(result) != len(texts) {
-		return nil, fmt.Errorf("wrong number of fieilds returned: %d", len(result))
+	if len(results) != len(texts) {
+		return nil, fmt.Errorf("wrong number of fields returned: %d", len(results))
 	}
 
-	err = nil
-	for _, o := range result {
-		if o.Error != "" {
-			err = errors.Join(err, errors.New(o.Error))
+	outputs := make([]string, len(texts))
+	var errs error
+
+	for i, raw := range results {
+		var errResp pandoc.ErrorResponse
+		if err := json.Unmarshal(raw, &errResp); err == nil && errResp.Error != "" {
+			errs = errors.Join(errs, errors.New(errResp.Error))
+			continue
 		}
+
+		var successResp pandoc.SuccessResponse
+		if err := json.Unmarshal(raw, &successResp); err == nil {
+			outputs[i] = successResp.Output
+			continue
+		}
+
+		errs = errors.Join(errs, errors.New("failed to parse item response"))
 	}
 
-	if err != nil {
-		return nil, Wrap(ErrBadInput, err, "BatchConvertLatexToHtml5", "invalid input")
+	if errs != nil {
+		return nil, Wrap(ErrBadInput, errs, "invalid input")
 	}
 
-	res := make([]string, len(result))
-	for i, o := range result {
-		res[i] = o.Output
-	}
-
-	return res, nil
-}
-
-func (client *Client) ConvertLatexToHtml5(ctx context.Context, text string) (string, error) {
-	return client.convert(ctx, text, "latex", "html5", "katex")
-}
-
-func (client *Client) BatchConvertLatexToHtml5(ctx context.Context, texts []string) ([]string, error) {
-	return client.batchConvert(ctx, texts, "latex", "html5", "katex")
+	return outputs, nil
 }

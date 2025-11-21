@@ -16,13 +16,11 @@ const (
 )
 
 func (n LanguageName) Valid() error {
-	const op = "LanguageName.Valid"
-
 	switch n {
 	case Golang, Cpp, Python:
 		return nil
 	default:
-		return pkg.Wrap(pkg.ErrBadInput, nil, op, "invalid language")
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid language")
 	}
 }
 

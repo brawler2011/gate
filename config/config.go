@@ -23,11 +23,9 @@ type Config struct {
 
 	NatsUrl string `env:"NATS_URL" env-default:"nats://localhost:4222"`
 
-	KratosURl string `env:"KRATOS_URL" env-default:"http://localhost:4433"`
+	KratosURl      string `env:"KRATOS_URL" env-default:"http://localhost:4433"`
+	KratosAdminURL string `env:"KRATOS_ADMIN_URL" env-default:"http://localhost:4434"`
 
 	RedisAddr     string `env:"REDIS_ADDR" env-default:"localhost:6379"`
 	RedisPassword string `env:"REDIS_PASSWORD" required:"true"`
-
-	TypesenseURL    string `env:"TYPESENSE_URL" env-default:"http://steins.ru:8108"`
-	TypesenseAPIKey string `env:"TYPESENSE_API_KEY" required:"true"`
 }

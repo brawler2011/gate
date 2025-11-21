@@ -10,15 +10,17 @@ import (
 	ory "github.com/ory/client-go"
 )
 
+type contextKey string
+
 const (
-	sessionKey              = "session"
-	kratosSessionCookieName = "ory_kratos_session"
+	sessionKey              contextKey = "session"
+	kratosSessionCookieName            = "ory_kratos_session"
 )
 
 // AuthMiddleware checks for a valid Kratos session cookie and retrieves the session
 func AuthMiddleware(frontendAPI ory.FrontendAPI) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var ctx = c.Context()
+		ctx := c.UserContext()
 
 		cookie := c.Cookies(kratosSessionCookieName, "")
 		if cookie == "" {
@@ -35,7 +37,18 @@ func AuthMiddleware(frontendAPI ory.FrontendAPI) fiber.Handler {
 			return c.Next()
 		}
 
-		c.Locals(sessionKey, session)
+		if session == nil {
+			slog.Error("kratos session cookie found, but session is nil")
+			return c.Next()
+		}
+
+		if !*session.Active {
+			slog.Error("kratos session cookie found, but session is not active")
+			return c.Next()
+		}
+
+		ctx = context.WithValue(ctx, sessionKey, session)
+		c.SetUserContext(ctx)
 
 		return c.Next()
 	}
@@ -43,9 +56,9 @@ func AuthMiddleware(frontendAPI ory.FrontendAPI) fiber.Handler {
 
 // GetSession extracts Kratos session from context
 func GetSession(ctx context.Context) (*ory.Session, error) {
-	u, ok := ctx.Value(sessionKey).(*ory.Session)
+	session, ok := ctx.Value(sessionKey).(*ory.Session)
 	if !ok {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "no session in ctx")
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "no session in context")
 	}
-	return u, nil
+	return session, nil
 }

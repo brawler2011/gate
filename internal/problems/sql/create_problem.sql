@@ -1,3 +1,3 @@
-INSERT INTO problems (title)
-VALUES ($1)
+INSERT INTO problems (id, title, created_by)
+VALUES ($1, $2, $3)
 RETURNING id

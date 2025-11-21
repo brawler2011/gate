@@ -14,12 +14,12 @@ type UsersUC interface {
 }
 
 const (
-	userKey = "user"
+	userKey contextKey = "user"
 )
 
 func UsersMiddleware(usersUC UsersUC) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var ctx = c.Context()
+		ctx := c.UserContext()
 
 		session, err := GetSession(ctx)
 		if err != nil {
@@ -33,7 +33,8 @@ func UsersMiddleware(usersUC UsersUC) fiber.Handler {
 			return c.Next()
 		}
 
-		c.Locals(userKey, user)
+		ctx = context.WithValue(ctx, userKey, user)
+		c.SetUserContext(ctx)
 
 		return c.Next()
 	}
@@ -43,7 +44,7 @@ func UsersMiddleware(usersUC UsersUC) fiber.Handler {
 func GetUser(ctx context.Context) (*models.User, error) {
 	u, ok := ctx.Value(userKey).(*models.User)
 	if !ok {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "", "no user in ctx")
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "no user in context")
 	}
 	return u, nil
 }

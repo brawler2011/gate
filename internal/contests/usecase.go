@@ -9,7 +9,7 @@ import (
 )
 
 type ContestRepo interface {
-	CreateContest(ctx context.Context, c models.ContestCreation) (uuid.UUID, error)
+	CreateContest(ctx context.Context, c *models.CreateContestParams) error
 	GetContest(ctx context.Context, id uuid.UUID) (*models.Contest, error)
 	ListContests(ctx context.Context, filter models.ContestsFilter) (*models.ContestsList, error)
 	UpdateContest(ctx context.Context, c models.ContestUpdate) error
@@ -20,11 +20,11 @@ type ContestRepo interface {
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]*models.ContestProblemsListItem, error)
 	DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error
 
-	CreateParticipant(ctx context.Context, c models.ParticipantCreation) error
-	DeleteParticipant(ctx context.Context, c models.ParticipantDeletion) error
-	ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*models.UsersList, error)
+	ListContestMembers(ctx context.Context, filter models.ParticipantsFilter) (*models.ParticipantsList, error)
 
-	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMember, error)
+	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMemberRecord, error)
+	CreateContestMember(ctx context.Context, c *models.ContestMemberParams) error
+	DeleteContestMember(ctx context.Context, userId uuid.UUID, contestId uuid.UUID) error
 }
 
 type UseCase struct {
@@ -41,16 +41,29 @@ func NewContestUseCase(
 
 func (uc *UseCase) CreateContest(
 	ctx context.Context,
-	creation models.ContestCreation,
+	c *models.CreateContestInput,
 ) (uuid.UUID, error) {
-	const op = "UseCase.CreateContest"
-
-	id, err := uc.contestRepo.CreateContest(ctx, creation)
-	if err != nil {
-		return uuid.Nil, pkg.Wrap(nil, err, op, "can't create contest")
+	params := &models.CreateContestParams{
+		Id:     uuid.New(),
+		Title:  c.Title,
+		UserId: c.UserId,
 	}
 
-	return id, nil
+	err := uc.contestRepo.CreateContest(ctx, params)
+	if err != nil {
+		return uuid.Nil, pkg.Wrap(err, nil, "can't create contest")
+	}
+
+	err = uc.contestRepo.CreateContestMember(ctx, &models.ContestMemberParams{
+		ContestId: params.Id,
+		UserId:    c.UserId,
+		Role:      models.ContestRoleOwner,
+	})
+	if err != nil {
+		return uuid.Nil, pkg.Wrap(err, nil, "can't create contest member")
+	}
+
+	return params.Id, nil
 }
 
 func (uc *UseCase) GetContest(ctx context.Context, id uuid.UUID) (*models.Contest, error) {
@@ -58,21 +71,17 @@ func (uc *UseCase) GetContest(ctx context.Context, id uuid.UUID) (*models.Contes
 }
 
 func (uc *UseCase) ListContests(ctx context.Context, filter models.ContestsFilter) (*models.ContestsList, error) {
-	const op = "UseCase.ListContests"
-
 	contestsList, err := uc.contestRepo.ListContests(ctx, filter)
 	if err != nil {
-		return nil, pkg.Wrap(nil, err, op, "can't list contests from database")
+		return nil, pkg.Wrap(err, nil, "can't list contests from database")
 	}
 	return contestsList, nil
 }
 
 func (uc *UseCase) UpdateContest(ctx context.Context, c models.ContestUpdate) error {
-	const op = "UseCase.UpdateContest"
-
 	err := uc.contestRepo.UpdateContest(ctx, c)
 	if err != nil {
-		return pkg.Wrap(nil, err, op, "can't update contest")
+		return pkg.Wrap(err, nil, "can't update contest")
 	}
 
 	return nil
@@ -99,17 +108,21 @@ func (uc *UseCase) DeleteContestProblem(ctx context.Context, c models.ContestPro
 }
 
 func (uc *UseCase) CreateParticipant(ctx context.Context, c models.ParticipantCreation) error {
-	return uc.contestRepo.CreateParticipant(ctx, c)
+	return uc.contestRepo.CreateContestMember(ctx, &models.ContestMemberParams{
+		ContestId: c.ContestId,
+		UserId:    c.UserId,
+		Role:      models.ContestRoleParticipant,
+	})
 }
 
 func (uc *UseCase) DeleteParticipant(ctx context.Context, c models.ParticipantDeletion) error {
-	return uc.contestRepo.DeleteParticipant(ctx, c)
+	return uc.contestRepo.DeleteContestMember(ctx, c.ContestId, c.UserId)
 }
 
-func (uc *UseCase) ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*models.UsersList, error) {
-	return uc.contestRepo.ListParticipants(ctx, filter)
+func (uc *UseCase) ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*models.ParticipantsList, error) {
+	return uc.contestRepo.ListContestMembers(ctx, filter)
 }
 
-func (uc *UseCase) GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMember, error) {
+func (uc *UseCase) GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMemberRecord, error) {
 	return uc.contestRepo.GetContestMember(ctx, c)
 }

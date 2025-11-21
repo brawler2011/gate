@@ -4,121 +4,148 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/gate149/core/internal/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	ory "github.com/ory/client-go"
 )
 
-// KratosWebhookRequest represents the webhook payload from Kratos
 type KratosWebhookRequest struct {
 	UserId   string `json:"userId"`
 	Username string `json:"username"`
 }
 
-// KratosWebhookResponse represents the response to Kratos
 type KratosWebhookResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
-	Error   string `json:"error,omitempty"`
+	Identity *IdentityModification `json:"identity,omitempty"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type IdentityModification struct {
+	MetadataPublic map[string]any `json:"metadata_public"`
 }
 
 type UsersUC interface {
 	GetUserByKratosId(ctx context.Context, kratosId string) (*models.User, error)
-	CreateUser(ctx context.Context, user *models.UserCreation) (uuid.UUID, error)
+	CreateUser(ctx context.Context, user *models.CreateUserInput) (uuid.UUID, error)
 }
 
 type KratosHandler struct {
-	usersUC UsersUC
+	usersUC     UsersUC
+	identityAPI ory.IdentityAPI
 }
 
-func NewKratosHandler(usersUC UsersUC) *KratosHandler {
+func NewKratosHandler(usersUC UsersUC, identityAPI ory.IdentityAPI) *KratosHandler {
 	return &KratosHandler{
-		usersUC: usersUC,
+		usersUC:     usersUC,
+		identityAPI: identityAPI,
 	}
 }
 
-// HandleKratosWebhook handles webhook requests from Kratos
 func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	slog.Info("Received webhook from Kratos",
-		slog.String("method", c.Method()),
-		slog.String("path", c.Path()),
-		slog.String("content_type", c.Get("Content-Type")),
+		"method", c.Method(),
+		"path", c.Path(),
+		"content_type", c.Get("Content-Type"),
 	)
 
 	var req KratosWebhookRequest
 	if err := c.BodyParser(&req); err != nil {
-		slog.Error("Failed to parse webhook body", slog.Any("error", err))
-		return c.Status(http.StatusBadRequest).JSON(KratosWebhookResponse{
-			Success: false,
-			Error:   "Invalid request body",
+		slog.Error("Failed to parse webhook body", "error", err)
+		return c.Status(http.StatusBadRequest).JSON(&ErrorResponse{
+			Error: "Invalid request body",
 		})
 	}
 
-	slog.Info("Processing webhook",
-		slog.String("user_id", req.UserId),
-		slog.String("username", req.Username),
-	)
+	slog.Info("Processing webhook", "user_id", req.UserId, "username", req.Username)
 
-	// Validate required fields
 	if req.UserId == "" || req.Username == "" {
 		slog.Error("Missing required fields in webhook")
-		return c.Status(http.StatusBadRequest).JSON(KratosWebhookResponse{
-			Success: false,
-			Error:   "Missing required fields: userId and username",
+
+		return c.Status(http.StatusBadRequest).JSON(&ErrorResponse{
+			Error: "Missing required fields: userId and username",
 		})
 	}
 
-	// Check if user already exists
-	existingUser, err := h.usersUC.GetUserByKratosId(ctx, req.UserId)
-	if err == nil && existingUser != nil {
-		slog.Info("User already exists", slog.String("kratos_id", req.UserId))
-		return c.Status(http.StatusOK).JSON(KratosWebhookResponse{
-			Success: true,
-			Message: "User already exists",
-		})
-	}
+	defaultRole := models.RoleUser
 
-	// Create new user
-	userCreation := &models.UserCreation{
-		Id:       uuid.New(),
+	userCreation := &models.CreateUserInput{
 		Username: req.Username,
-		Role:     "user", // Default role for new users
-		KratosId: &req.UserId,
+		Role:     defaultRole,
+		KratosId: req.UserId,
 	}
 
-	_, err = h.usersUC.CreateUser(ctx, userCreation)
+	// FIXME:
+	userId, err := h.usersUC.CreateUser(ctx, userCreation)
 	if err != nil {
+		existingUser, fetchErr := h.usersUC.GetUserByKratosId(ctx, req.UserId)
+		if fetchErr == nil && existingUser != nil {
+			slog.Info("User already exists", "kratos_id", req.UserId)
+			return c.Status(http.StatusOK).JSON(KratosWebhookResponse{
+				Identity: &IdentityModification{
+					MetadataPublic: map[string]any{
+						"user_id": existingUser.Id.String(),
+						"role":    existingUser.Role,
+					},
+				},
+			})
+		}
+
 		slog.Error("Failed to create user",
-			slog.Any("error", err),
-			slog.String("kratos_id", req.UserId),
-			slog.String("username", req.Username),
+			"error", err,
+			"kratos_id", req.UserId,
+			"username", req.Username,
 		)
-		return c.Status(http.StatusInternalServerError).JSON(KratosWebhookResponse{
-			Success: false,
-			Error:   "Failed to create user in database",
+
+		return c.Status(http.StatusInternalServerError).JSON(&ErrorResponse{
+			Error: "Failed to create user in database",
 		})
 	}
 
 	slog.Info("Successfully created user",
-		slog.String("kratos_id", req.UserId),
-		slog.String("username", req.Username),
+		"kratos_id", req.UserId,
+		"user_id", userId.String(),
+		"username", req.Username,
+		"role", defaultRole,
 	)
 
-	return c.Status(http.StatusOK).JSON(KratosWebhookResponse{
-		Success: true,
-		Message: "User created successfully",
-	})
-}
+	// Update Kratos identity with metadata
+	_, _, err = h.identityAPI.PatchIdentity(ctx, req.UserId).JsonPatch([]ory.JsonPatch{
+		{
+			Op:    "add",
+			Path:  "/metadata_public/user_id",
+			Value: userId.String(),
+		},
+		{
+			Op:    "add",
+			Path:  "/metadata_public/role",
+			Value: defaultRole,
+		},
+	}).Execute()
 
-// HealthCheck provides a simple health check endpoint for the private server
-func (h *KratosHandler) HealthCheck(c *fiber.Ctx) error {
-	return c.Status(http.StatusOK).JSON(map[string]interface{}{
-		"status":    "healthy",
-		"timestamp": time.Now().UTC(),
-		"service":   "tester-private-server",
+	if err != nil {
+		slog.Error("Failed to update Kratos identity metadata",
+			"error", err,
+			"kratos_id", req.UserId,
+		)
+		// We don't fail the request here because the user is already created in our DB
+		// and the session is active. The metadata will be missing until next update/login
+		// or we could try to retry.
+	} else {
+		slog.Info("Successfully updated Kratos identity metadata", "kratos_id", req.UserId)
+	}
+
+	return c.Status(http.StatusOK).JSON(KratosWebhookResponse{
+		Identity: &IdentityModification{
+			MetadataPublic: map[string]any{
+				"user_id": userId.String(),
+				"role":    defaultRole,
+			},
+		},
 	})
 }

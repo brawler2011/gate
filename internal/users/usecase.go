@@ -8,34 +8,47 @@ import (
 )
 
 type Repo interface {
-	CreateUser(ctx context.Context, user *models.UserCreation) (uuid.UUID, error)
+	CreateUser(ctx context.Context, params *models.CreateUserParams) error
 	GetUserById(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetUserByKratosId(ctx context.Context, kratosId string) (*models.User, error)
-	SearchUsers(ctx context.Context, search *models.UsersSearch) (*models.UsersList, error)
+	ListUsers(ctx context.Context, filter *models.UsersFilter) (*models.UsersList, error)
 }
 
 type UsersUseCase struct {
-	usersRepo Repo
+	repo Repo
 }
 
-func NewUseCase(usersRepo Repo) *UsersUseCase {
+func NewUseCase(repo Repo) *UsersUseCase {
 	return &UsersUseCase{
-		usersRepo: usersRepo,
+		repo: repo,
 	}
 }
 
-func (u *UsersUseCase) CreateUser(ctx context.Context, user *models.UserCreation) (uuid.UUID, error) {
-	return u.usersRepo.CreateUser(ctx, user)
+func (u *UsersUseCase) CreateUser(ctx context.Context, input *models.CreateUserInput) (uuid.UUID, error) {
+	id := uuid.New()
+
+	params := &models.CreateUserParams{
+		Id:       id,
+		Username: input.Username,
+		Role:     input.Role,
+		KratosId: input.KratosId,
+	}
+
+	if err := u.repo.CreateUser(ctx, params); err != nil {
+		return uuid.Nil, err
+	}
+
+	return id, nil
 }
 
 func (u *UsersUseCase) GetUserById(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	return u.usersRepo.GetUserById(ctx, id)
+	return u.repo.GetUserById(ctx, id)
 }
 
 func (u *UsersUseCase) GetUserByKratosId(ctx context.Context, kratosId string) (*models.User, error) {
-	return u.usersRepo.GetUserByKratosId(ctx, kratosId)
+	return u.repo.GetUserByKratosId(ctx, kratosId)
 }
 
-func (u *UsersUseCase) SearchUsers(ctx context.Context, search *models.UsersSearch) (*models.UsersList, error) {
-	return u.usersRepo.SearchUsers(ctx, search)
+func (u *UsersUseCase) ListUsers(ctx context.Context, filter *models.UsersFilter) (*models.UsersList, error) {
+	return u.repo.ListUsers(ctx, filter)
 }

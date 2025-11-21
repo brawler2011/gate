@@ -12,9 +12,9 @@ const (
 )
 
 const (
-	ContestRoleOwner     = "owner"
-	ContestRoleModerator = "moderator"
-	ContestRoleUser      = "participant"
+	ContestRoleOwner       = "owner"
+	ContestRoleModerator   = "moderator"
+	ContestRoleParticipant = "participant"
 )
 
 type Contest struct {
@@ -42,9 +42,15 @@ func (c *Contest) IsPrivate() bool {
 	return c.Visibility == ContestVisibilityPrivate
 }
 
-type ContestCreation struct {
-	Title  string    `json:"title"`
-	UserId uuid.UUID `json:"user_id"`
+type CreateContestParams struct {
+	Id     uuid.UUID
+	Title  string
+	UserId uuid.UUID
+}
+
+type CreateContestInput struct {
+	Title  string
+	UserId uuid.UUID
 }
 
 type ContestsList struct {
@@ -137,20 +143,20 @@ func (f ParticipantsFilter) Offset() int64 {
 	return (f.Page - 1) * f.PageSize
 }
 
-type Participant struct {
+type ContestMember struct {
 	UserId      uuid.UUID `db:"user_id"`
 	ContestId   uuid.UUID `db:"contest_id"`
 	Username    string    `db:"username"`
-	GlobalRole  string    `db:"global_role"`
+	Role        string    `db:"role"`
 	ContestRole string    `db:"contest_role"`
-	KratosId    *string   `db:"kratos_id"`
+	KratosId    string    `db:"kratos_id"`
 	CreatedAt   time.Time `db:"created_at"`
 	UpdatedAt   time.Time `db:"updated_at"`
 }
 
 type ParticipantsList struct {
-	Users      []*Participant
-	Pagination Pagination
+	Users      []*ContestMember
+	Pagination *Pagination
 }
 
 type ContestPermissionGet struct {
@@ -158,22 +164,22 @@ type ContestPermissionGet struct {
 	UserId    uuid.UUID
 }
 
-type ContestMember struct {
+type ContestMemberRecord struct {
 	ContestId uuid.UUID `db:"contest_id"`
 	UserId    uuid.UUID `db:"user_id"`
 	Role      string    `db:"role"`
 }
 
-func (cm *ContestMember) IsOwner() bool {
+func (cm *ContestMemberRecord) IsOwner() bool {
 	return cm.Role == ContestRoleOwner
 }
 
-func (cm *ContestMember) IsModerator() bool {
+func (cm *ContestMemberRecord) IsModerator() bool {
 	return cm.Role == ContestRoleModerator
 }
 
-func (cm *ContestMember) IsParticipant() bool {
-	return cm.Role == ContestRoleUser
+func (cm *ContestMemberRecord) IsParticipant() bool {
+	return cm.Role == ContestRoleParticipant
 }
 
 type ContestPermissions struct {
@@ -185,13 +191,12 @@ type ContestPermissions struct {
 	GetOtherUserSubmission bool
 	GetOwnSubmission       bool
 	CreateSubmission       bool
-	// кому доступны тесты?
-} // А СХУЯЛИ МЫ НЕ ЗАПИХНУЛИ ДВА ГЕТ В SUBMISSION?????
+}
 
 var roleHierarchy = map[string]int{
-	ContestRoleOwner:     3,
-	ContestRoleModerator: 2,
-	ContestRoleUser:      1,
+	ContestRoleOwner:       3,
+	ContestRoleModerator:   2,
+	ContestRoleParticipant: 1,
 }
 
 func RoleGraterOrEquals(r1 string, r2 string) bool {
@@ -203,4 +208,16 @@ func RoleGraterOrEquals(r1 string, r2 string) bool {
 	}
 
 	return h1 >= h2
+}
+
+type CreateContestMemberInput struct {
+	ContestId uuid.UUID `json:"contest_id"`
+	UserId    uuid.UUID `json:"user_id"`
+	Role      string    `json:"role"`
+}
+
+type ContestMemberParams struct {
+	ContestId uuid.UUID `json:"contest_id"`
+	UserId    uuid.UUID `json:"user_id"`
+	Role      string    `json:"role"`
 }

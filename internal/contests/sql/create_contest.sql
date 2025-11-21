@@ -1,3 +1,3 @@
-INSERT INTO contests (title)
-VALUES ($1)
+INSERT INTO contests (id, title, created_by)
+VALUES ($1, $2, $3)
 RETURNING id

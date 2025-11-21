@@ -28,21 +28,31 @@ func (u User) IsUser() bool {
 	return u.Role == RoleUser
 }
 
-type UserCreation struct {
-	Id       uuid.UUID
-	Username string
-	Role     string
-	KratosId *string
-}
-
 type UsersList struct {
 	Users      []*User
-	Pagination Pagination
+	Pagination *Pagination
 }
 
-type UsersSearch struct {
+type UsersFilter struct {
 	Page     int64
 	PageSize int64
 	Search   string
 	Role     string
+}
+
+func (f UsersFilter) Offset() int64 {
+	return (f.Page - 1) * f.PageSize
+}
+
+type CreateUserInput struct {
+	Username string
+	Role     string
+	KratosId string
+}
+
+type CreateUserParams struct {
+	Id       uuid.UUID
+	Username string
+	Role     string
+	KratosId string
 }

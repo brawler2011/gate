@@ -2,7 +2,6 @@
 -- +goose StatementBegin
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
 CREATE FUNCTION updated_at_update() RETURNS TRIGGER
     LANGUAGE plpgsql AS
 $$
@@ -11,7 +10,6 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
 CREATE FUNCTION check_max_problems_on_contest() RETURNS TRIGGER
     LANGUAGE plpgsql AS
 $$
@@ -26,37 +24,31 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
 CREATE TYPE user_role AS ENUM ('user', 'admin');
-
 CREATE TABLE IF NOT EXISTS users
 (
     id         uuid PRIMARY KEY,
-    username   varchar(70) NOT NULL,
-    role       user_role   NOT NULL DEFAULT 'user',
-    kratos_id  varchar(255) UNIQUE,
-    created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now(),
+    username   varchar(70)         NOT NULL,
+    role       user_role           NOT NULL DEFAULT 'user',
+    kratos_id  varchar(255) UNIQUE NOT NULL,
+    created_at timestamptz         NOT NULL DEFAULT now(),
+    updated_at timestamptz         NOT NULL DEFAULT now(),
     CHECK (length(username) != 0),
     CHECK (
         role = 'user'
             OR role = 'admin'
         )
 );
-
 CREATE INDEX IF NOT EXISTS users_username_trgm_idx ON users USING gin (username gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS users_kratos_id_idx ON users (kratos_id);
 CREATE INDEX IF NOT EXISTS users_role ON users (role);
-
 CREATE TRIGGER on_users_update
     BEFORE
         UPDATE
     ON users
     FOR EACH ROW
 EXECUTE FUNCTION updated_at_update();
-
 CREATE TYPE problem_visibility AS ENUM ('private', 'public');
-
 CREATE TABLE IF NOT EXISTS problems
 (
     id                 uuid PRIMARY KEY            DEFAULT uuid_generate_v4(),
@@ -86,18 +78,14 @@ CREATE TABLE IF NOT EXISTS problems
         time_limit BETWEEN 250 AND 5000
         )
 );
-
 CREATE INDEX IF NOT EXISTS problem_title_trgm_idx ON problems USING gin (title gin_trgm_ops);
-
 CREATE TRIGGER on_problems_update
     BEFORE
         UPDATE
     ON problems
     FOR EACH ROW
 EXECUTE FUNCTION updated_at_update();
-
 CREATE TYPE problem_role as ENUM ('owner', 'moderator');
-
 CREATE TABLE IF NOT EXISTS problem_members
 (
     problem_id uuid REFERENCES problems (id) ON DELETE CASCADE,
@@ -105,21 +93,8 @@ CREATE TABLE IF NOT EXISTS problem_members
     role       problem_role NOT NULL DEFAULT 'moderator',
     UNIQUE (user_id, problem_id)
 );
-
-CREATE TABLE IF NOT EXISTS problem_samples
-(
-    id         uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    problem_id uuid    NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
-    ordinal    integer NOT NULL,
-    input      text    NOT NULL,
-    output     text    NOT NULL,
-    UNIQUE (problem_id, ordinal)
-);
-
 CREATE TYPE contest_visibility AS ENUM ('private', 'public');
-
 CREATE TYPE contest_role AS ENUM ('owner', 'moderator', 'participant');
-
 CREATE TABLE IF NOT EXISTS contests
 (
     id                       uuid PRIMARY KEY            DEFAULT uuid_generate_v4(),
@@ -135,33 +110,28 @@ CREATE TABLE IF NOT EXISTS contests
     updated_at               timestamptz        NOT NULL DEFAULT now(),
     CONSTRAINT contest_title_check CHECK (length(title) != 0)
 );
-
 CREATE INDEX IF NOT EXISTS contest_title_trgm_idx ON contests USING gin (title gin_trgm_ops);
-
 CREATE TRIGGER on_contests_update
     BEFORE
         UPDATE
     ON contests
     FOR EACH ROW
 EXECUTE FUNCTION updated_at_update();
-
 CREATE TABLE IF NOT EXISTS contest_problem
 (
     problem_id uuid REFERENCES problems (id) ON DELETE CASCADE,
-    contest_id uuid REFERENCES contests (id),
+    contest_id uuid REFERENCES contests (id) ON DELETE CASCADE,
     position   integer NOT NULL,
     UNIQUE (problem_id, contest_id),
     UNIQUE (contest_id, position),
     CHECK (position >= 0)
 );
-
 CREATE TRIGGER max_problems_on_contest_check
     BEFORE
         INSERT
     ON contest_problem
     FOR EACH ROW
 EXECUTE FUNCTION check_max_problems_on_contest();
-
 CREATE TABLE IF NOT EXISTS contest_members
 (
     user_id    uuid         NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -169,7 +139,6 @@ CREATE TABLE IF NOT EXISTS contest_members
     role       contest_role NOT NULL DEFAULT 'participant',
     UNIQUE (user_id, contest_id)
 );
-
 CREATE TABLE IF NOT EXISTS submissions
 (
     id          uuid PRIMARY KEY          DEFAULT uuid_generate_v4(),
@@ -189,71 +158,23 @@ CREATE TABLE IF NOT EXISTS submissions
     updated_at  timestamptz      NOT NULL DEFAULT now(),
     created_at  timestamptz      NOT NULL DEFAULT now()
 );
-
 CREATE TRIGGER on_solutions_update
     BEFORE
         UPDATE
     ON submissions
     FOR EACH ROW
 EXECUTE FUNCTION updated_at_update();
-
-CREATE TABLE IF NOT EXISTS test_groups
-(
-    id         uuid PRIMARY KEY,
-    problem_id uuid    NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
-    name       text    NOT NULL,
-    ordinal    integer NOT NULL DEFAULT 0,
-    points     integer NOT NULL DEFAULT 0,
-    is_sample  boolean NOT NULL DEFAULT false,
-    UNIQUE (problem_id, name),
-    UNIQUE (problem_id, ordinal)
-);
-
-CREATE TABLE IF NOT EXISTS problem_tests
-(
-    id            uuid PRIMARY KEY,
-    problem_id    uuid    NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
-    group_id      uuid    REFERENCES test_groups (id) ON DELETE SET NULL,
-    ordinal       integer NOT NULL,
-    input_object  text    NOT NULL,
-    output_object text,
-    checksum      text,
-    UNIQUE (problem_id, ordinal)
-);
-
-CREATE INDEX IF NOT EXISTS problem_tests_problem_id_idx ON problem_tests (problem_id);
-CREATE INDEX IF NOT EXISTS problem_tests_group_id_idx ON problem_tests (group_id);
-
-CREATE TABLE IF NOT EXISTS test_results
-(
-    id             uuid PRIMARY KEY     DEFAULT uuid_generate_v4(),
-    submission_id  uuid        NOT NULL REFERENCES submissions (id) ON DELETE CASCADE,
-    test_id        uuid        NOT NULL REFERENCES problem_tests (id) ON DELETE CASCADE,
-    verdict        integer     NOT NULL,
-    time_ms        integer     NOT NULL DEFAULT 0,
-    memory_kb      integer     NOT NULL DEFAULT 0,
-    stdout         text,
-    stderr         text,
-    compile_output text,
-    created_at     timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (submission_id, test_id)
-);
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS test_results;
-DROP INDEX IF EXISTS problem_tests_group_id_idx;
-DROP INDEX IF EXISTS problem_tests_problem_id_idx;
-DROP TABLE IF EXISTS problem_tests;
-DROP TABLE IF EXISTS test_groups;
 DROP TRIGGER IF EXISTS on_solutions_update ON submissions;
 DROP TABLE IF EXISTS submissions;
 DROP TABLE IF EXISTS contest_members;
 DROP TRIGGER IF EXISTS max_problems_on_contest_check ON contest_problem;
 DROP TABLE IF EXISTS contest_problem;
+DROP TABLE IF EXISTS problem_members;
 DROP TRIGGER IF EXISTS on_problems_update ON problems;
 DROP INDEX IF EXISTS problem_title_trgm_idx;
-DROP TABLE IF EXISTS problem_samples;
 DROP TABLE IF EXISTS problems;
 DROP TRIGGER IF EXISTS on_contests_update ON contests;
 DROP INDEX IF EXISTS contest_title_trgm_idx;
@@ -263,8 +184,10 @@ DROP INDEX IF EXISTS users_username_trgm_idx;
 DROP INDEX IF EXISTS users_kratos_id_idx;
 DROP INDEX IF EXISTS users_role;
 DROP TABLE IF EXISTS users;
-DROP FUNCTION IF EXISTS updated_at_update();
+DROP TYPE IF EXISTS problem_role;
+DROP TYPE IF EXISTS user_role;
 DROP FUNCTION IF EXISTS check_max_problems_on_contest();
+DROP FUNCTION IF EXISTS updated_at_update();
 DROP TYPE IF EXISTS contest_role;
 DROP TYPE IF EXISTS contest_visibility;
 -- +goose StatementEnd

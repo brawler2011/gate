@@ -139,3 +139,20 @@ type ProblemPermissionGet struct {
 	ProblemId uuid.UUID
 	UserId    uuid.UUID
 }
+
+type CreateProblemInput struct {
+	Title  string
+	UserId uuid.UUID
+}
+
+type CreateProblemParams struct {
+	Id     uuid.UUID
+	Title  string
+	UserId uuid.UUID
+}
+
+type CreateProblemMemberParams struct {
+	ProblemId uuid.UUID
+	UserId    uuid.UUID
+	Role      string
+}

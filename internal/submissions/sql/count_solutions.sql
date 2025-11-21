@@ -1,12 +1,12 @@
 SELECT COUNT(*)
-FROM solutions s
+FROM submissions s
 WHERE (
         $1::uuid IS NULL
         OR s.contest_id = $1
     )
     AND (
         $2::uuid IS NULL
-        OR s.user_id = $2
+        OR s.created_by = $2
     )
     AND (
         $3::uuid IS NULL

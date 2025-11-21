@@ -24,35 +24,26 @@ func NewRepository(db *sqlx.DB) *Repository {
 //go:embed sql/create_contest.sql
 var CreateContestQuery string
 
-func (r *Repository) CreateContest(ctx context.Context, contestCreation models.ContestCreation) (uuid.UUID, error) {
-	const op = "Repository.CreateContest"
-
-	rows, err := r.db.QueryxContext(ctx, CreateContestQuery, contestCreation.Title)
+func (r *Repository) CreateContest(ctx context.Context, params *models.CreateContestParams) error {
+	_, err := r.db.QueryxContext(ctx, CreateContestQuery,
+		params.Id,
+		params.Title,
+		params.UserId,
+	)
 	if err != nil {
-		return uuid.Nil, pkg.HandlePgErr(err, op)
+		return pkg.HandlePgErr(err)
 	}
-
-	defer rows.Close()
-	var id uuid.UUID
-	rows.Next()
-	err = rows.Scan(&id)
-	if err != nil {
-		return uuid.Nil, pkg.HandlePgErr(err, op)
-	}
-
-	return id, nil
+	return nil
 }
 
 //go:embed sql/get_contest.sql
 var GetContestQuery string
 
 func (r *Repository) GetContest(ctx context.Context, id uuid.UUID) (*models.Contest, error) {
-	const op = "Repository.GetContest"
-
 	var contest models.Contest
 	err := r.db.GetContext(ctx, &contest, GetContestQuery, id)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 	return &contest, nil
 }
@@ -61,8 +52,6 @@ func (r *Repository) GetContest(ctx context.Context, id uuid.UUID) (*models.Cont
 var UpdateContestQuery string
 
 func (r *Repository) UpdateContest(ctx context.Context, c models.ContestUpdate) error {
-	const op = "Repository.UpdateContest"
-
 	_, err := r.db.ExecContext(ctx, UpdateContestQuery,
 		c.Id,
 		c.Title,
@@ -73,7 +62,7 @@ func (r *Repository) UpdateContest(ctx context.Context, c models.ContestUpdate) 
 		c.SubmissionsReviewScope,
 	)
 	if err != nil {
-		return pkg.HandlePgErr(err, op)
+		return pkg.HandlePgErr(err)
 	}
 
 	return nil
@@ -83,11 +72,9 @@ func (r *Repository) UpdateContest(ctx context.Context, c models.ContestUpdate) 
 var DeleteContestQuery string
 
 func (r *Repository) DeleteContest(ctx context.Context, id uuid.UUID) error {
-	const op = "Repository.DeleteContest"
-
 	_, err := r.db.ExecContext(ctx, DeleteContestQuery, id)
 	if err != nil {
-		return pkg.HandlePgErr(err, op)
+		return pkg.HandlePgErr(err)
 	}
 
 	return nil
@@ -100,8 +87,6 @@ var ListContestsQuery string
 var CountContestsQuery string
 
 func (r *Repository) ListContests(ctx context.Context, filter models.ContestsFilter) (*models.ContestsList, error) {
-	const op = "Repository.ListContests"
-
 	contests := make([]*models.Contest, 0)
 	err := r.db.SelectContext(ctx, &contests, ListContestsQuery,
 		filter.OwnerId,
@@ -111,7 +96,7 @@ func (r *Repository) ListContests(ctx context.Context, filter models.ContestsFil
 		filter.Offset(),
 	)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 
 	var count int64
@@ -120,7 +105,7 @@ func (r *Repository) ListContests(ctx context.Context, filter models.ContestsFil
 		filter.Search,
 	)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 
 	return &models.ContestsList{
@@ -136,11 +121,9 @@ func (r *Repository) ListContests(ctx context.Context, filter models.ContestsFil
 var CreateContestProblemQuery string
 
 func (r *Repository) CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error {
-	const op = "Repository.ContestProblemCreation"
-
 	_, err := r.db.ExecContext(ctx, CreateContestProblemQuery, c.ProblemId, c.ContestId)
 	if err != nil {
-		return pkg.HandlePgErr(err, op)
+		return pkg.HandlePgErr(err)
 	}
 
 	return nil
@@ -150,11 +133,9 @@ func (r *Repository) CreateContestProblem(ctx context.Context, c models.ContestP
 var DeleteContestProblemQuery string
 
 func (r *Repository) DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error {
-	const op = "Repository.DeleteContestProblem"
-
 	_, err := r.db.ExecContext(ctx, DeleteContestProblemQuery, c.ContestId, c.ProblemId)
 	if err != nil {
-		return pkg.HandlePgErr(err, op)
+		return pkg.HandlePgErr(err)
 	}
 
 	return nil
@@ -164,12 +145,10 @@ func (r *Repository) DeleteContestProblem(ctx context.Context, c models.ContestP
 var GetContestProblemQuery string
 
 func (r *Repository) GetContestProblem(ctx context.Context, c models.ContestProblemGet) (*models.ContestProblem, error) {
-	const op = "Repository.GetContestProblem"
-
 	var contestProblem models.ContestProblem
 	err := r.db.GetContext(ctx, &contestProblem, GetContestProblemQuery, c.ContestId, c.ProblemId)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 
 	return &contestProblem, nil
@@ -179,91 +158,78 @@ func (r *Repository) GetContestProblem(ctx context.Context, c models.ContestProb
 var GetContestProblemsQuery string
 
 func (r *Repository) GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]*models.ContestProblemsListItem, error) {
-	const op = "Repository.GetContestProblems"
-
 	contestProblems := make([]*models.ContestProblemsListItem, 0)
 	err := r.db.SelectContext(ctx, &contestProblems, GetContestProblemsQuery, contestId)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 
 	return contestProblems, nil
 }
 
-//go:embed sql/create_participant.sql
-var CreateParticipantQuery string
+//go:embed sql/list_contest_members.sql
+var ListContestMembersQuery string
 
-func (r *Repository) CreateParticipant(ctx context.Context, c models.ParticipantCreation) error {
-	const op = "Repository.CreateParticipant"
+//go:embed sql/count_contest_members.sql
+var CountContestMembersQuery string
 
-	_, err := r.db.ExecContext(ctx, CreateParticipantQuery, c.UserId, c.ContestId)
-	if err != nil {
-		return pkg.HandlePgErr(err, op)
-	}
-
-	return nil
-}
-
-//go:embed sql/delete_participant.sql
-var DeleteParticipantQuery string
-
-func (r *Repository) DeleteParticipant(ctx context.Context, c models.ParticipantDeletion) error {
-	const op = "Repository.DeleteParticipant"
-
-	_, err := r.db.ExecContext(ctx, DeleteParticipantQuery, c.UserId, c.ContestId)
-	if err != nil {
-		return pkg.HandlePgErr(err, op)
-	}
-
-	return nil
-}
-
-//go:embed sql/list_participants.sql
-var ListParticipantsQuery string
-
-//go:embed sql/count_participants.sql
-var CountParticipantsQuery string
-
-func (r *Repository) ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*models.UsersList, error) {
-	const op = "Repository.ListParticipants"
-
-	var participants []*models.User
+func (r *Repository) ListContestMembers(ctx context.Context, filter models.ParticipantsFilter) (*models.ParticipantsList, error) {
+	var participants []*models.ContestMember
 	err := r.db.SelectContext(ctx, &participants,
-		ListParticipantsQuery,
+		ListContestMembersQuery,
 		filter.ContestId,
 		filter.PageSize,
 		filter.Offset(),
 	)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 
 	var count int64
-	err = r.db.GetContext(ctx, &count, CountParticipantsQuery, filter.ContestId)
+	err = r.db.GetContext(ctx, &count, CountContestMembersQuery, filter.ContestId)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
 
-	return &models.UsersList{
+	return &models.ParticipantsList{
 		Users: participants,
-		Pagination: models.Pagination{
+		Pagination: &models.Pagination{
 			Total: models.Total(count, filter.PageSize),
 			Page:  filter.Page,
 		},
 	}, nil
 }
 
+//go:embed sql/create_contest_member.sql
+var CreateContestMemberQuery string
+
+func (r *Repository) CreateContestMember(ctx context.Context, c *models.ContestMemberParams) error {
+	_, err := r.db.ExecContext(ctx, CreateContestMemberQuery, c.ContestId, c.UserId, c.Role)
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	return nil
+}
+
 //go:embed sql/get_contest_member.sql
 var GetContestMemberQuery string
 
-func (r *Repository) GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMember, error) {
-	const op = "Repository.GetContestMember"
-
-	var member models.ContestMember
+func (r *Repository) GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMemberRecord, error) {
+	var member models.ContestMemberRecord
 	err := r.db.GetContext(ctx, &member, GetContestMemberQuery, c.ContestId, c.UserId)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err, op)
+		return nil, pkg.HandlePgErr(err)
 	}
-
 	return &member, nil
+}
+
+//go:embed sql/delete_contest_member.sql
+var DeleteContestMemberQuery string
+
+func (r *Repository) DeleteContestMember(ctx context.Context, userId uuid.UUID, contestId uuid.UUID) error {
+	_, err := r.db.ExecContext(ctx, DeleteContestMemberQuery, contestId, userId)
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	return nil
 }

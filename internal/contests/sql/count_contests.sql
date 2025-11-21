@@ -11,7 +11,7 @@ WHERE (
                         FROM contest_members p
                         WHERE p.contest_id = c.id
                           AND p.user_id = $1
-                          AND p.role in ('owner', 'moderator', 'participant'))
+                          AND p.role = 'owner')
         )
     )
   AND (
@@ -20,7 +20,7 @@ WHERE (
         OR (
         CASE
             WHEN LENGTH($2) < 3 THEN c.title ILIKE '%' || $2 || '%'
-            ELSE word_similarity(c.title, $2) > 0.3
+            ELSE word_similarity(c.title, $2) > 0.1
             END
         )
     )

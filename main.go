@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -9,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	testerv1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/config"
@@ -19,25 +17,20 @@ import (
 	"github.com/gate149/core/internal/middleware"
 	"github.com/gate149/core/internal/permissions"
 	"github.com/gate149/core/internal/problems"
-	"github.com/gate149/core/internal/queue"
 	"github.com/gate149/core/internal/submissions"
 	"github.com/gate149/core/internal/users"
 	"github.com/gate149/core/pkg"
 	"github.com/gofiber/fiber/v2"
 	"github.com/ilyakaznacheev/cleanenv"
 	ory "github.com/ory/client-go"
-
-	"github.com/redis/go-redis/v9"
 )
 
-// MergedHandlers combines all handler structs
 type MergedHandlers struct {
 	*users.UsersHandlers
 	*contests.ContestsHandlers
 	*problems.ProblemsHandlers
 	*submissions.SolutionsHandlers
 	*health.HealthHandlers
-	*permissions.PermissionsHandler
 }
 
 func main() {
@@ -59,7 +52,6 @@ func main() {
 		}
 	}
 
-	// Create slog logger
 	var logger *slog.Logger
 	if cfg.Env == "prod" {
 		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -81,161 +73,70 @@ func main() {
 	defer db.Close()
 	logger.Info("successfully connected to postgres")
 
-	logger.Info("connecting to s3")
-	s3Client, err := pkg.NewS3Client(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey)
-	if err != nil {
-		logger.Error("error connecting to s3", slog.Any("error", err))
-		os.Exit(1)
-	}
-	logger.Info("successfully connected to s3")
-
-	logger.Info("connecting to redis")
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.RedisAddr,
-		Password: cfg.RedisPassword,
-		DB:       0,
-	})
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err = redisClient.Ping(ctx).Result()
-	if err != nil {
-		logger.Error("Failed to connect to Redis", slog.Any("error", err))
-		os.Exit(1)
-	}
-	logger.Info("successfully connected to redis")
-
 	usersRepo := users.NewRepository(db)
 	usersUC := users.NewUseCase(usersRepo)
-
-	np, err := pkg.NewNatsPublisher(cfg.NatsUrl)
-	if err != nil {
-		logger.Error("error connecting to nats", slog.Any("error", err))
-		os.Exit(1)
-	}
 
 	pandocClient := pkg.NewPandocClient(&http.Client{}, cfg.Pandoc)
 
 	problemsRepo := problems.NewRepository(db)
-	s3Repo := problems.NewS3Repository(s3Client, "tester-problems-archives")
 
-	problemsUC, err := problems.NewUseCase(problemsRepo, pandocClient, s3Repo, cfg.CacheDir)
+	problemsUC, err := problems.NewUseCase(problemsRepo, pandocClient)
 	if err != nil {
 		logger.Error("failed to create problems use case", slog.Any("error", err))
-		os.Exit(1)
+		return
 	}
 
 	contestsRepo := contests.NewRepository(db)
 	contestsUC := contests.NewContestUseCase(contestsRepo)
 
-	permissionsUC := permissions.NewUseCase(contestsRepo, usersRepo)
+	permissionsUC := permissions.NewUseCase(contestsRepo, usersRepo, problemsUC)
 	logger.Info("successfully initialized permissions system")
 
 	solutionsRepo := submissions.NewRepository(db)
-	judgeQueue := "submissions:judge"
-	solutionsUC := submissions.NewUseCase(solutionsRepo, problemsUC, np, redisClient, judgeQueue)
+	solutionsUC := submissions.NewUseCase(solutionsRepo)
 
-	// Initialize test results repository
-	//testResultsRepo := testresults.NewRepository(db)
+	server := fiber.New()
 
-	if err := os.MkdirAll(cfg.CacheDir, 0700); err != nil {
-		panic(fmt.Errorf("failed to create cache dir: %v", err))
-	}
-
-	server := fiber.New(fiber.Config{
-		BodyLimit: 512 * 1024 * 1024, // 512 MB for problem archives and submissions
-	})
-
-	// Add CORS middleware
-	server.Use(func(c *fiber.Ctx) error {
-		c.Set("Access-Control-Allow-Origin", "*")
-		c.Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-		c.Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-ID, X-Session-ID")
-
-		if c.Method() == "OPTIONS" {
-			return c.SendStatus(fiber.StatusOK)
-		}
-		return c.Next()
-	})
-
-	// Add request logging middleware with timing and context
 	server.Use(middleware.RequestLoggerMiddleware(logger))
 
 	merged := &MergedHandlers{
-		UsersHandlers:     users.NewHandlers(usersUC),
-		ContestsHandlers:  contests.NewHandlers(contestsUC, permissionsUC),
+		UsersHandlers:     users.NewHandlers(usersUC, solutionsUC, permissionsUC),
+		ContestsHandlers:  contests.NewHandlers(contestsUC, permissionsUC, solutionsUC),
 		ProblemsHandlers:  problems.NewHandlers(problemsUC, permissionsUC),
-		SolutionsHandlers: submissions.NewHandlers(solutionsUC, contestsUC, permissionsUC, usersUC),
+		SolutionsHandlers: submissions.NewHandlers(solutionsUC, permissionsUC, usersUC),
 		HealthHandlers:    health.NewHandlers(),
 	}
 
-	oryConfiguration := ory.NewConfiguration()
-	oryConfiguration.Servers = []ory.ServerConfiguration{{
+	// Public API client for session validation (port 4433)
+	oryPublicConfiguration := ory.NewConfiguration()
+	oryPublicConfiguration.Servers = []ory.ServerConfiguration{{
 		URL: cfg.KratosURl,
 	}}
+	oryPublicClient := ory.NewAPIClient(oryPublicConfiguration)
 
-	oryClient := ory.NewAPIClient(oryConfiguration)
+	// Admin API client for identity management (port 4434)
+	oryAdminConfiguration := ory.NewConfiguration()
+	oryAdminConfiguration.Servers = []ory.ServerConfiguration{{
+		URL: cfg.KratosAdminURL,
+	}}
+	oryAdminClient := ory.NewAPIClient(oryAdminConfiguration)
 
 	testerv1.RegisterHandlersWithOptions(server, merged, testerv1.FiberServerOptions{
 		Middlewares: []testerv1.MiddlewareFunc{
 			middleware.ErrorHandlerMiddleware(logger),
-			middleware.AuthMiddleware(oryClient.FrontendAPI),
+			middleware.AuthMiddleware(oryPublicClient.FrontendAPI),
 			middleware.UsersMiddleware(usersUC),
 		},
 	})
 
-	// Start queue consumer for user creation
-	consumer := queue.NewConsumer(redisClient, usersUC)
-	go func() {
-		consumerCtx := context.Background()
-		consumer.StartConsuming(consumerCtx, "user:created")
-	}()
-
-	// Initialize Judge0 components
-	//logger.Info("initializing judge0 client", slog.String("url", cfg.Judge0URL))
-	//judge0Client, err := pkg.NewJudge0Client(cfg.Judge0URL)
-	//if err != nil {
-	//	logger.Error("failed to create judge0 client", slog.Any("error", err))
-	//	os.Exit(1)
-	//}
-	//logger.Info("successfully initialized judge0 client")
-
-	// Initialize test files manager
-	//testFilesManager := testing.NewTestFilesManager(s3Client, cfg.S3Bucket, cfg.CacheDir)
-
-	// Initialize event publisher
-	//eventPublisher := testing.NewEventPublisher(np)
-
-	// Initialize judge
-	//judge := testing.NewJudge(judge0Client, testFilesManager, eventPublisher, testResultsRepo, logger)
-
-	// Initialize and start judge worker
-	//judgeWorker := testing.NewWorker(
-	//	redisClient,
-	//	judge,
-	//	solutionsRepo,
-	//	problemsUC,
-	//	judgeQueue,
-	//	logger,
-	//)
-
-	// Start judge worker in background
-	//go func() {
-	//	workerCtx := context.Background()
-	//	judgeWorker.Start(workerCtx)
-	//}()
-	//logger.Info("started judge worker", slog.String("queue", judgeQueue))
-
 	// Start private server for Kratos webhooks
-	kratosHandler := kratos.NewKratosHandler(usersUC)
+	kratosHandler := kratos.NewKratosHandler(usersUC, oryAdminClient.IdentityAPI)
 	privateServer := fiber.New(fiber.Config{
 		BodyLimit: 1024 * 1024, // 1 MB for webhook requests
 	})
 
 	// Setup private server routes
 	privateServer.Post("/webhook/kratos", kratosHandler.HandleKratosWebhook)
-	privateServer.Get("/health", kratosHandler.HealthCheck)
 
 	go func() {
 		err := privateServer.Listen(cfg.PrivateAddress)
