@@ -12,12 +12,12 @@ const (
 )
 
 type User struct {
-	Id        uuid.UUID `db:"id"`
-	Username  string    `db:"username"`
-	Role      string    `db:"role"`
-	KratosId  *string   `db:"kratos_id"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
+	Id        uuid.UUID `db:"id" json:"Id"`
+	Username  string    `db:"username" json:"Username"`
+	Role      string    `db:"role" json:"Role"`
+	KratosId  *string   `db:"kratos_id" json:"KratosId"`
+	CreatedAt time.Time `db:"created_at" json:"CreatedAt"`
+	UpdatedAt time.Time `db:"updated_at" json:"UpdatedAt"`
 }
 
 func (u User) IsAdmin() bool {

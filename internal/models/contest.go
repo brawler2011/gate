@@ -18,20 +18,20 @@ const (
 )
 
 type Contest struct {
-	Id uuid.UUID `db:"id"`
+	Id uuid.UUID `db:"id" json:"Id"`
 
-	Title       string `db:"title"`
-	Description string `db:"description"`
+	Title       string `db:"title" json:"Title"`
+	Description string `db:"description" json:"Description"`
 
-	Visibility             string `db:"visibility"`
-	MonitorScope           string `db:"monitor_scope"`
-	SubmissionsListScope   string `db:"submissions_list_scope"`
-	SubmissionsReviewScope string `db:"submissions_review_scope"`
+	Visibility             string `db:"visibility" json:"Visibility"`
+	MonitorScope           string `db:"monitor_scope" json:"MonitorScope"`
+	SubmissionsListScope   string `db:"submissions_list_scope" json:"SubmissionsListScope"`
+	SubmissionsReviewScope string `db:"submissions_review_scope" json:"SubmissionsReviewScope"`
 
-	CreatedBy uuid.UUID `db:"created_by"`
+	CreatedBy uuid.UUID `db:"created_by" json:"CreatedBy"`
 
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
+	CreatedAt time.Time `db:"created_at" json:"CreatedAt"`
+	UpdatedAt time.Time `db:"updated_at" json:"UpdatedAt"`
 }
 
 func (c *Contest) IsPublic() bool {
@@ -165,9 +165,9 @@ type ContestPermissionGet struct {
 }
 
 type ContestMemberRecord struct {
-	ContestId uuid.UUID `db:"contest_id"`
-	UserId    uuid.UUID `db:"user_id"`
-	Role      string    `db:"role"`
+	ContestId uuid.UUID `db:"contest_id" json:"ContestId"`
+	UserId    uuid.UUID `db:"user_id" json:"UserId"`
+	Role      string    `db:"role" json:"Role"`
 }
 
 func (cm *ContestMemberRecord) IsOwner() bool {
@@ -183,6 +183,7 @@ func (cm *ContestMemberRecord) IsParticipant() bool {
 }
 
 type ContestPermissions struct {
+	GetContest             bool
 	UpdateContest          bool
 	AdminContest           bool
 	GetMonitor             bool

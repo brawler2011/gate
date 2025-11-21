@@ -93,7 +93,7 @@ func NewUseCase(contestsUC ContestsUC, usersUC UsersUC, problemsUC ProblemsUC) *
 					UserId:    uID,
 				})
 				if err != nil {
-					return nil, nil // Return nil if not found (no permission) or handle error?
+					return nil, nil // Return nil if not found (no permission)
 				}
 				val, err := ast.InterfaceToValue(member)
 				if err != nil {
@@ -220,6 +220,7 @@ func NewUseCase(contestsUC ContestsUC, usersUC UsersUC, problemsUC ProblemsUC) *
 type ContestAction string
 
 const (
+	ActionGetContest             ContestAction = "GetContest"
 	ActionUpdateContest          ContestAction = "UpdateContest"
 	ActionAdminContest           ContestAction = "AdminContest"
 	ActionGetMonitor             ContestAction = "GetMonitor"
@@ -251,6 +252,12 @@ type PermissionOption func(*permissionOptions)
 func WithUser(u *models.User) PermissionOption {
 	return func(o *permissionOptions) {
 		o.user = u
+	}
+}
+
+func WithContest(c *models.Contest) PermissionOption {
+	return func(o *permissionOptions) {
+		o.contest = c
 	}
 }
 
@@ -286,7 +293,7 @@ func (uc *PermissionsUseCase) getContestPermissions(ctx context.Context, contest
 
 	permsMap, ok := results[0].Expressions[0].Value.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected result type from OPA")
+		return nil, fmt.Errorf("unexpected result type from OPA: %T", results[0].Expressions[0].Value)
 	}
 
 	getBool := func(key string) bool {
@@ -299,6 +306,7 @@ func (uc *PermissionsUseCase) getContestPermissions(ctx context.Context, contest
 	}
 
 	return &models.ContestPermissions{
+		GetContest:             getBool(string(ActionGetContest)),
 		UpdateContest:          getBool(string(ActionUpdateContest)),
 		AdminContest:           getBool(string(ActionAdminContest)),
 		GetMonitor:             getBool(string(ActionGetMonitor)),
@@ -317,6 +325,8 @@ func (uc *PermissionsUseCase) HasContestPermission(ctx context.Context, contestI
 	}
 
 	switch action {
+	case ActionGetContest:
+		return perms.GetContest, nil
 	case ActionUpdateContest:
 		return perms.UpdateContest, nil
 	case ActionAdminContest:
