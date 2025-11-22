@@ -1,48 +1,64 @@
-import { Card, Text, Group, Avatar, Stack, Title, Badge, Skeleton } from '@mantine/core';
-import { ReactNode } from 'react';
+import { Card, Text, Group, Avatar, Stack, Title, Skeleton, Image } from '@mantine/core';
+import Link from 'next/link';
 import classes from './styles.module.css';
+import { formatDate } from '@/lib/formatDate';
 
 export interface BlogPostProps {
+  id: string;
   title: string;
   author: string;
   avatarUrl?: string;
-  body: ReactNode;
+  description: string;
   date?: string;
+  previewImageUrl?: string;
 }
 
-export function BlogPost({ title, author, avatarUrl, body, date }: BlogPostProps) {
+export function BlogPost({ id, title, author, avatarUrl, description, date, previewImageUrl }: BlogPostProps) {
   return (
-    <Card shadow="sm" padding="xl" radius="lg" className={classes.card}>
-      <Stack gap="md">
-        <Stack gap="xs">
-          <Group justify="space-between" align="center" wrap="nowrap">
-            <Group gap="xs">
-              <Avatar src={avatarUrl} name={author} size={32} radius="xl" />
-              <Stack gap={0}>
-                <Text size="sm" fw={600} style={{ lineHeight: 1 }}>
-                  {author}
-                </Text>
-                {date && (
-                  <Text size="xs" c="dimmed" style={{ lineHeight: 1 }}>
-                    {date}
-                  </Text>
-                )}
-              </Stack>
-            </Group>
-          </Group>
-
-          <Title order={3} size="h3" className={classes.title} mt={4}>
+    <Card 
+      component={Link} 
+      href={`/blog/${id}`}
+      shadow="sm" 
+      padding={0} 
+      radius="lg" 
+      className={classes.card}
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      <Stack gap={0}>
+        {previewImageUrl && (
+          <div className={classes.imageContainer}>
+            <Image
+              src={previewImageUrl}
+              alt={title}
+              className={classes.previewImage}
+              fallbackSrc="https://placehold.co/1200x500/e0e0e0/666?text=Blog+Post"
+            />
+          </div>
+        )}
+        
+        <Stack gap="md" p="xl">
+          <Title order={3} size="h3" className={classes.title}>
             {title}
           </Title>
-        </Stack>
 
-        <div className={classes.body}>
-          {typeof body === 'string' ? (
-            <Text inherit>{body}</Text>
-          ) : (
-            body
-          )}
-        </div>
+          <Group gap="xs">
+            <Avatar src={avatarUrl} name={author} size={32} radius="xl" />
+            <Stack gap={2}>
+              <Text size="sm" fw={600} style={{ lineHeight: 1.2 }}>
+                {author}
+              </Text>
+              {date && (
+                <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>
+                  {formatDate(date)}
+                </Text>
+              )}
+            </Stack>
+          </Group>
+
+          <Text className={classes.description} lineClamp={3}>
+            {description}
+          </Text>
+        </Stack>
       </Stack>
     </Card>
   );

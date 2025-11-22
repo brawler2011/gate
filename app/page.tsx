@@ -30,25 +30,8 @@ const mockBlogPosts = [
     author: "Gate149 Team",
     avatarUrl: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=256&q=80",
     date: "2025-01-18",
-    body: (
-      <>
-        <Text inherit>
-          Добро пожаловать на Gate149 — современную платформу для
-          соревновательного программирования! Красивый интерфейс, быстрое
-          тестирование и многое другое. Created by @brawler2011 and @dragon286!
-        </Text>
-        <Text inherit mt="sm">
-          GitHub:{" "}
-          <Link
-            href="https://github.com/gate149"
-            target="_blank"
-            style={{ color: "inherit", textDecoration: "underline" }}
-          >
-            Gate149
-          </Link>
-        </Text>
-      </>
-    ),
+    description: "Добро пожаловать на Gate149 — современную платформу для соревновательного программирования! Красивый интерфейс, быстрое тестирование и многое другое.",
+    previewImageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80",
   },
   {
     id: "2",
@@ -56,7 +39,8 @@ const mockBlogPosts = [
     author: "brawler2011",
     avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=256&q=80",
     date: "2025-01-15",
-    body: "Мы рады представить вам первую стабильную версию платформы. Теперь вы можете создавать контесты, добавлять задачи и соревноваться с друзьями. Следите за обновлениями!",
+    description: "Мы рады представить вам первую стабильную версию платформы. Теперь вы можете создавать контесты, добавлять задачи и соревноваться с друзьями.",
+    previewImageUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
   },
   {
     id: "3",
@@ -64,7 +48,8 @@ const mockBlogPosts = [
     author: "dragon286",
     avatarUrl: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=256&q=80",
     date: "2025-01-10",
-    body: "Если вы новичок в спортивном программировании, рекомендуем начать с раздела 'Продолжить решение'. Там собраны простые задачи для старта.",
+    description: "Если вы новичок в спортивном программировании, рекомендуем начать с раздела 'Продолжить решение'. Там собраны простые задачи для старта.",
+    previewImageUrl: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
   },
 ];
 
@@ -251,11 +236,13 @@ export default async function Page() {
                 {mockBlogPosts.map((post) => (
                   <BlogPost
                     key={post.id}
+                    id={post.id}
                     title={post.title}
                     author={post.author}
                     avatarUrl={post.avatarUrl}
                     date={post.date}
-                    body={post.body}
+                    description={post.description}
+                    previewImageUrl={post.previewImageUrl}
                   />
                 ))}
               </Stack>
@@ -272,11 +259,13 @@ export default async function Page() {
               {mockBlogPosts.map((post) => (
                 <BlogPost
                   key={post.id}
+                  id={post.id}
                   title={post.title}
                   author={post.author}
                   avatarUrl={post.avatarUrl}
                   date={post.date}
-                  body={post.body}
+                  description={post.description}
+                  previewImageUrl={post.previewImageUrl}
                 />
               ))}
             </Stack>
