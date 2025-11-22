@@ -70,6 +70,62 @@ func (f ContestsFilter) Offset() int64 {
 	return (f.Page - 1) * f.PageSize
 }
 
+type AdminContestsFilter struct {
+	Page       int64
+	PageSize   int64
+	Search     *string
+	Visibility *string
+	SortBy     *string
+	SortOrder  *string
+}
+
+func (f AdminContestsFilter) Offset() int64 {
+	return (f.Page - 1) * f.PageSize
+}
+
+type UserContestsFilter struct {
+	Page      int64
+	PageSize  int64
+	UserId    uuid.UUID
+	Search    *string
+	SortBy    *string
+	SortOrder *string
+}
+
+func (f UserContestsFilter) Offset() int64 {
+	return (f.Page - 1) * f.PageSize
+}
+
+type WorkshopContestsFilter struct {
+	Page      int64
+	PageSize  int64
+	UserId    uuid.UUID
+	Search    *string
+	SortBy    *string
+	SortOrder *string
+}
+
+func (f WorkshopContestsFilter) Offset() int64 {
+	return (f.Page - 1) * f.PageSize
+}
+
+type PublicContestsFilter struct {
+	Page      int64
+	PageSize  int64
+	Search    *string
+	SortBy    *string
+	SortOrder *string
+}
+
+func (f PublicContestsFilter) Offset() int64 {
+	return (f.Page - 1) * f.PageSize
+}
+
+type UserContestsList struct {
+	Contests   []*Contest
+	Pagination Pagination
+}
+
 type ContestUpdate struct {
 	Id                     uuid.UUID `db:"id"`
 	Title                  *string   `json:"title"`

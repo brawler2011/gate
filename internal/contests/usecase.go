@@ -11,9 +11,13 @@ import (
 type ContestRepo interface {
 	CreateContest(ctx context.Context, c *models.CreateContestParams) error
 	GetContest(ctx context.Context, id uuid.UUID) (*models.Contest, error)
-	ListContests(ctx context.Context, filter models.ContestsFilter) (*models.ContestsList, error)
 	UpdateContest(ctx context.Context, c models.ContestUpdate) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
+
+	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error)
+	ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.UserContestsList, error)
+	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error)
+	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error)
 
 	CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error
 	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (*models.ContestProblem, error)
@@ -70,10 +74,34 @@ func (uc *UseCase) GetContest(ctx context.Context, id uuid.UUID) (*models.Contes
 	return uc.contestRepo.GetContest(ctx, id)
 }
 
-func (uc *UseCase) ListContests(ctx context.Context, filter models.ContestsFilter) (*models.ContestsList, error) {
-	contestsList, err := uc.contestRepo.ListContests(ctx, filter)
+func (uc *UseCase) ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error) {
+	contestsList, err := uc.contestRepo.ListAdminContests(ctx, filter)
 	if err != nil {
-		return nil, pkg.Wrap(err, nil, "can't list contests from database")
+		return nil, pkg.Wrap(err, nil, "can't list admin contests from database")
+	}
+	return contestsList, nil
+}
+
+func (uc *UseCase) ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.UserContestsList, error) {
+	contestsList, err := uc.contestRepo.ListUserContests(ctx, filter)
+	if err != nil {
+		return nil, pkg.Wrap(err, nil, "can't list user contests from database")
+	}
+	return contestsList, nil
+}
+
+func (uc *UseCase) ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error) {
+	contestsList, err := uc.contestRepo.ListWorkshopContests(ctx, filter)
+	if err != nil {
+		return nil, pkg.Wrap(err, nil, "can't list workshop contests from database")
+	}
+	return contestsList, nil
+}
+
+func (uc *UseCase) ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error) {
+	contestsList, err := uc.contestRepo.ListPublicContests(ctx, filter)
+	if err != nil {
+		return nil, pkg.Wrap(err, nil, "can't list public contests from database")
 	}
 	return contestsList, nil
 }

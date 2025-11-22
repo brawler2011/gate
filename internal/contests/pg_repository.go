@@ -80,18 +80,77 @@ func (r *Repository) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-//go:embed sql/list_contests.sql
-var ListContestsQuery string
+//go:embed sql/list_admin_contests.sql
+var ListAdminContestsQuery string
 
-//go:embed sql/count_contests.sql
-var CountContestsQuery string
+//go:embed sql/count_admin_contests.sql
+var CountAdminContestsQuery string
 
-func (r *Repository) ListContests(ctx context.Context, filter models.ContestsFilter) (*models.ContestsList, error) {
+func (r *Repository) ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error) {
 	contests := make([]*models.Contest, 0)
-	err := r.db.SelectContext(ctx, &contests, ListContestsQuery,
-		filter.OwnerId,
+
+	sortBy := ""
+	if filter.SortBy != nil {
+		sortBy = *filter.SortBy
+	}
+	sortOrder := "desc"
+	if filter.SortOrder != nil {
+		sortOrder = *filter.SortOrder
+	}
+
+	err := r.db.SelectContext(ctx, &contests, ListAdminContestsQuery,
+		filter.PageSize,
+		filter.Offset(),
 		filter.Search,
-		filter.Descending,
+		filter.Visibility,
+		sortBy,
+		sortOrder,
+	)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+
+	var count int64
+	err = r.db.GetContext(ctx, &count, CountAdminContestsQuery,
+		filter.Search,
+		filter.Visibility,
+	)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+
+	return &models.ContestsList{
+		Contests: contests,
+		Pagination: models.Pagination{
+			Total: models.Total(count, filter.PageSize),
+			Page:  filter.Page,
+		},
+	}, nil
+}
+
+//go:embed sql/list_user_contests.sql
+var ListUserContestsQuery string
+
+//go:embed sql/count_user_contests.sql
+var CountUserContestsQuery string
+
+func (r *Repository) ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.UserContestsList, error) {
+	contests := make([]*models.Contest, 0)
+
+	sortBy := ""
+	if filter.SortBy != nil {
+		sortBy = *filter.SortBy
+	}
+	sortOrder := "desc"
+	if filter.SortOrder != nil {
+		sortOrder = *filter.SortOrder
+	}
+
+	err := r.db.SelectContext(ctx, &contests, ListUserContestsQuery,
+		filter.UserId,
+		filter.Search,
+		sortBy,
+		sortOrder,
 		filter.PageSize,
 		filter.Offset(),
 	)
@@ -100,8 +159,102 @@ func (r *Repository) ListContests(ctx context.Context, filter models.ContestsFil
 	}
 
 	var count int64
-	err = r.db.GetContext(ctx, &count, CountContestsQuery,
-		filter.OwnerId,
+	err = r.db.GetContext(ctx, &count, CountUserContestsQuery,
+		filter.UserId,
+		filter.Search,
+	)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+
+	return &models.UserContestsList{
+		Contests: contests,
+		Pagination: models.Pagination{
+			Total: models.Total(count, filter.PageSize),
+			Page:  filter.Page,
+		},
+	}, nil
+}
+
+//go:embed sql/list_workshop_contests.sql
+var ListWorkshopContestsQuery string
+
+//go:embed sql/count_workshop_contests.sql
+var CountWorkshopContestsQuery string
+
+func (r *Repository) ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error) {
+	contests := make([]*models.Contest, 0)
+
+	sortBy := ""
+	if filter.SortBy != nil {
+		sortBy = *filter.SortBy
+	}
+	sortOrder := "desc"
+	if filter.SortOrder != nil {
+		sortOrder = *filter.SortOrder
+	}
+
+	err := r.db.SelectContext(ctx, &contests, ListWorkshopContestsQuery,
+		filter.UserId,
+		filter.Search,
+		sortBy,
+		sortOrder,
+		filter.PageSize,
+		filter.Offset(),
+	)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+
+	var count int64
+	err = r.db.GetContext(ctx, &count, CountWorkshopContestsQuery,
+		filter.UserId,
+		filter.Search,
+	)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+
+	return &models.ContestsList{
+		Contests: contests,
+		Pagination: models.Pagination{
+			Total: models.Total(count, filter.PageSize),
+			Page:  filter.Page,
+		},
+	}, nil
+}
+
+//go:embed sql/list_public_contests.sql
+var ListPublicContestsQuery string
+
+//go:embed sql/count_public_contests.sql
+var CountPublicContestsQuery string
+
+func (r *Repository) ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error) {
+	contests := make([]*models.Contest, 0)
+
+	sortBy := ""
+	if filter.SortBy != nil {
+		sortBy = *filter.SortBy
+	}
+	sortOrder := "desc"
+	if filter.SortOrder != nil {
+		sortOrder = *filter.SortOrder
+	}
+
+	err := r.db.SelectContext(ctx, &contests, ListPublicContestsQuery,
+		filter.Search,
+		sortBy,
+		sortOrder,
+		filter.PageSize,
+		filter.Offset(),
+	)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+
+	var count int64
+	err = r.db.GetContext(ctx, &count, CountPublicContestsQuery,
 		filter.Search,
 	)
 	if err != nil {

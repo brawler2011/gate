@@ -16,9 +16,13 @@ import (
 type ContestsUC interface {
 	CreateContest(ctx context.Context, c *models.CreateContestInput) (uuid.UUID, error)
 	GetContest(ctx context.Context, id uuid.UUID) (*models.Contest, error)
-	ListContests(ctx context.Context, filter models.ContestsFilter) (*models.ContestsList, error)
 	UpdateContest(ctx context.Context, c models.ContestUpdate) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
+
+	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error)
+	ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.UserContestsList, error)
+	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error)
+	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error)
 
 	CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error
 	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (*models.ContestProblem, error)
@@ -120,7 +124,7 @@ func (h *ContestsHandlers) GetContest(c *fiber.Ctx, id uuid.UUID) error {
 	}
 
 	// Check if user can view contest
-	canView, err := h.permissionsUC.HasContestPermission(ctx, id, user.Id, permissions.ActionGetContest, 
+	canView, err := h.permissionsUC.HasContestPermission(ctx, id, user.Id, permissions.ActionGetContest,
 		permissions.WithUser(user),
 		permissions.WithContest(contest))
 	if err != nil {
@@ -246,49 +250,187 @@ func (h *ContestsHandlers) DeleteContest(c *fiber.Ctx, id uuid.UUID) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func validateListContestsParams(params corev1.ListContestsParams) error {
-	if params.Page < 1 {
+func validateListContestsParams(page, pageSize int64, search *string) error {
+	if page < 1 {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "page must be greater than 0")
 	}
 
-	if params.PageSize < 1 || params.PageSize > 100 {
+	if pageSize < 1 || pageSize > 100 {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "page size must be between 1 and 100")
 	}
 
-	if params.Search != nil && !checkLength(*params.Search, 0, 64) {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "title length must be less than 64 characters")
+	if search != nil && !checkLength(*search, 0, 64) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "search length must be less than 64 characters")
 	}
 
 	return nil
 }
 
-func (h *ContestsHandlers) ListContests(c *fiber.Ctx, params corev1.ListContestsParams) error {
+func (h *ContestsHandlers) ListAdminContests(c *fiber.Ctx, params corev1.ListAdminContestsParams) error {
 	ctx := c.UserContext()
 
-	err := validateListContestsParams(params)
+	err := validateListContestsParams(params.Page, params.PageSize, params.Search)
 	if err != nil {
 		return err
 	}
 
-	filter := models.ContestsFilter{
-		Page:     params.Page,
-		PageSize: params.PageSize,
-		Search:   params.Search,
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
 	}
 
-	if params.Owner != nil {
-		user, err := middleware.GetUser(ctx)
-		if err != nil {
-			return err
-		}
-		filter.OwnerId = &user.Id
+	if user.Role != "admin" {
+		return pkg.Wrap(pkg.NoPermission, nil, "admin access required")
 	}
 
-	if params.Descending != nil {
-		filter.Descending = *params.Descending
+	var visibility *string
+	if params.Visibility != nil {
+		v := string(*params.Visibility)
+		visibility = &v
+	}
+	var sortBy *string
+	if params.SortBy != nil {
+		s := string(*params.SortBy)
+		sortBy = &s
+	}
+	var sortOrder *string
+	if params.SortOrder != nil {
+		s := string(*params.SortOrder)
+		sortOrder = &s
 	}
 
-	contestsList, err := h.contestsUC.ListContests(ctx, filter)
+	filter := models.AdminContestsFilter{
+		Page:       params.Page,
+		PageSize:   params.PageSize,
+		Search:     params.Search,
+		Visibility: visibility,
+		SortBy:     sortBy,
+		SortOrder:  sortOrder,
+	}
+
+	contestsList, err := h.contestsUC.ListAdminContests(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(ListContestsResponseDTO(contestsList))
+}
+
+func (h *ContestsHandlers) ListUserContests(c *fiber.Ctx, id uuid.UUID, params corev1.ListUserContestsParams) error {
+	ctx := c.UserContext()
+
+	err := validateListContestsParams(params.Page, params.PageSize, params.Search)
+	if err != nil {
+		return err
+	}
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Only allow user to see their own contests or admins
+	if id != user.Id && user.Role != "admin" {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
+	}
+
+	var sortBy *string
+	if params.SortBy != nil {
+		s := string(*params.SortBy)
+		sortBy = &s
+	}
+	var sortOrder *string
+	if params.SortOrder != nil {
+		s := string(*params.SortOrder)
+		sortOrder = &s
+	}
+
+	filter := models.UserContestsFilter{
+		Page:      params.Page,
+		PageSize:  params.PageSize,
+		UserId:    id,
+		Search:    params.Search,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+	}
+
+	contestsList, err := h.contestsUC.ListUserContests(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(ListUserContestsResponseDTO(contestsList))
+}
+
+func (h *ContestsHandlers) ListWorkshopContests(c *fiber.Ctx, params corev1.ListWorkshopContestsParams) error {
+	ctx := c.UserContext()
+
+	err := validateListContestsParams(params.Page, params.PageSize, params.Search)
+	if err != nil {
+		return err
+	}
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	var sortBy *string
+	if params.SortBy != nil {
+		s := string(*params.SortBy)
+		sortBy = &s
+	}
+	var sortOrder *string
+	if params.SortOrder != nil {
+		s := string(*params.SortOrder)
+		sortOrder = &s
+	}
+
+	filter := models.WorkshopContestsFilter{
+		Page:      params.Page,
+		PageSize:  params.PageSize,
+		UserId:    user.Id,
+		Search:    params.Search,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+	}
+
+	contestsList, err := h.contestsUC.ListWorkshopContests(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(ListContestsResponseDTO(contestsList))
+}
+
+func (h *ContestsHandlers) ListPublicContests(c *fiber.Ctx, params corev1.ListPublicContestsParams) error {
+	ctx := c.UserContext()
+
+	err := validateListContestsParams(params.Page, params.PageSize, params.Search)
+	if err != nil {
+		return err
+	}
+
+	var sortBy *string
+	if params.SortBy != nil {
+		s := string(*params.SortBy)
+		sortBy = &s
+	}
+	var sortOrder *string
+	if params.SortOrder != nil {
+		s := string(*params.SortOrder)
+		sortOrder = &s
+	}
+
+	filter := models.PublicContestsFilter{
+		Page:      params.Page,
+		PageSize:  params.PageSize,
+		Search:    params.Search,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+	}
+
+	contestsList, err := h.contestsUC.ListPublicContests(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -612,6 +754,19 @@ func GetContestResponseDTO(contest *models.Contest, problems []*models.ContestPr
 
 func ListContestsResponseDTO(contestsList *models.ContestsList) *corev1.ListContestsResponseModel {
 	resp := corev1.ListContestsResponseModel{
+		Contests:   make([]corev1.ContestModel, len(contestsList.Contests)),
+		Pagination: PaginationDTO(contestsList.Pagination),
+	}
+
+	for i, contest := range contestsList.Contests {
+		resp.Contests[i] = ContestDTO(*contest)
+	}
+
+	return &resp
+}
+
+func ListUserContestsResponseDTO(contestsList *models.UserContestsList) *corev1.ListUserContestsResponseModel {
+	resp := corev1.ListUserContestsResponseModel{
 		Contests:   make([]corev1.ContestModel, len(contestsList.Contests)),
 		Pagination: PaginationDTO(contestsList.Pagination),
 	}

@@ -210,7 +210,7 @@ func listUserSubmissionsParamsToFilter(userId uuid.UUID, params testerv1.ListUse
 	var order *int64 = nil
 	if params.SortOrder != nil {
 		var orderVal int64
-		if *params.SortOrder == testerv1.Desc {
+		if *params.SortOrder == testerv1.ListUserSubmissionsParamsSortOrderDesc {
 			orderVal = -1
 		} else {
 			orderVal = 0
