@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.31.17
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.21
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.90.0
-	github.com/gate149/contracts v0.0.0-20251121054637-d569c2aa894d
+	github.com/gate149/contracts v0.0.0-20251122145351-14eaf67962e2
 	github.com/gate149/judge0-go-sdk v0.0.0-20251106191720-f413b24b83ea
 	github.com/gate149/pandoc-go-sdk v0.0.0-20251106192314-fc6f856bb189
 	github.com/gofiber/fiber/v2 v2.52.9
@@ -112,5 +112,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect
 )
-
-replace github.com/gate149/contracts => ../contracts
