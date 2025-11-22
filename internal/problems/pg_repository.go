@@ -157,3 +157,43 @@ func (r *Repository) GetProblemMember(ctx context.Context, problemId uuid.UUID, 
 	}
 	return &member, nil
 }
+
+//go:embed sql/delete_problem_tests.sql
+var DeleteProblemTestsQuery string
+
+func (r *Repository) DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error {
+	_, err := r.db.ExecContext(ctx, DeleteProblemTestsQuery, problemId)
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	return nil
+}
+
+//go:embed sql/create_problem_tests.sql
+var CreateProblemTestsQuery string
+
+func (r *Repository) CreateProblemTests(ctx context.Context, tests models.ProblemTests) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	defer tx.Rollback()
+
+	for _, test := range tests {
+		_, err := tx.ExecContext(ctx, CreateProblemTestsQuery,
+			test.ProblemId,
+			test.Ordinal,
+			test.Input,
+			test.Output,
+		)
+		if err != nil {
+			return pkg.HandlePgErr(err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return pkg.HandlePgErr(err)
+	}
+
+	return nil
+}

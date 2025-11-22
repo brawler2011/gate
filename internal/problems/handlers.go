@@ -3,6 +3,7 @@ package problems
 import (
 	"context"
 	"fmt"
+	"io"
 	"unicode/utf8"
 
 	testerv1 "github.com/gate149/contracts/core/v1"
@@ -20,6 +21,7 @@ type ProblemsUC interface {
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
 	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate *models.ProblemUpdate) error
+	UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error
 }
 
 type PermissionsUC interface {
@@ -301,4 +303,61 @@ func ProblemDTO(p *models.Problem) *testerv1.ProblemModel {
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
 	}
+}
+
+const (
+	maxArchiveSize = 10 * 1024 * 1024 // 10 MB
+)
+
+func (h *ProblemsHandlers) UploadProblemTests(c *fiber.Ctx, id uuid.UUID) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	if user == nil {
+		return pkg.Wrap(pkg.NoPermission, nil, "no session found")
+	}
+
+	// Check permissions: owner or moderator can upload tests
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.Id, permissions.ActionUpdateProblem, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canEdit {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to upload tests")
+	}
+
+	// Parse multipart form
+	file, err := c.FormFile("file")
+	if err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to get file from form")
+	}
+
+	// Validate file size
+	if file.Size > maxArchiveSize {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "file size exceeds 10 MB limit")
+	}
+
+	// Open and read file
+	src, err := file.Open()
+	if err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to open uploaded file")
+	}
+	defer src.Close()
+
+	zipData, err := io.ReadAll(src)
+	if err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to read uploaded file")
+	}
+
+	// Call usecase to process and save tests
+	err = h.problemsUC.UploadProblemTests(ctx, id, zipData)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusOK)
 }

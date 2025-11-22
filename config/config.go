@@ -12,15 +12,10 @@ type Config struct {
 	AdminUsername string `env:"ADMIN_USERNAME" env-default:"admin"`
 	AdminPassword string `env:"ADMIN_PASSWORD" env-default:"admin"`
 
-	CacheDir string `env:"CACHE_DIR" env-default:"/tmp"`
-
 	Judge0URL string `env:"JUDGE0_URL" env-default:"http://localhost:2358"`
 
 	NatsUrl string `env:"NATS_URL" env-default:"nats://localhost:4222"`
 
 	KratosURl      string `env:"KRATOS_URL" env-default:"http://localhost:4433"`
 	KratosAdminURL string `env:"KRATOS_ADMIN_URL" env-default:"http://localhost:4434"`
-
-	RedisAddr     string `env:"REDIS_ADDR" env-default:"localhost:6379"`
-	RedisPassword string `env:"REDIS_PASSWORD" required:"true"`
 }

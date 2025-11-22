@@ -1,9 +1,15 @@
 package problems
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gate149/core/internal/models"
@@ -20,6 +26,8 @@ type Repo interface {
 	UpdateProblem(ctx context.Context, id uuid.UUID, heading *models.ProblemUpdate) error
 	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (*models.ProblemMember, error)
 	CreateProblemMember(ctx context.Context, params *models.CreateProblemMemberParams) error
+	DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error
+	CreateProblemTests(ctx context.Context, tests models.ProblemTests) error
 }
 
 type Pandoc interface {
@@ -254,4 +262,131 @@ func build(ctx context.Context, pandocClient Pandoc, p models.ProblemStatement) 
 
 func (u *UseCase) GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (*models.ProblemMember, error) {
 	return u.problemRepo.GetProblemMember(ctx, problemId, userId)
+}
+
+const (
+	maxArchiveSize = 10 * 1024 * 1024 // 10 MB
+	maxTestSize    = 1 * 1024 * 1024  // 1 MB
+)
+
+func (u *UseCase) UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error {
+	// Validate archive size
+	if len(zipData) > maxArchiveSize {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "archive size exceeds 10 MB limit")
+	}
+
+	// Parse ZIP archive
+	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
+	if err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to parse ZIP archive")
+	}
+
+	// Extract test files from ZIP
+	testFiles := make(map[int]struct {
+		input  *string
+		output *string
+	})
+
+	for _, file := range zipReader.File {
+		// Skip directories
+		if file.FileInfo().IsDir() {
+			continue
+		}
+
+		// Get filename without path
+		fileName := filepath.Base(file.Name)
+
+		// Parse filename (N.in or N.out)
+		parts := strings.Split(fileName, ".")
+		if len(parts) != 2 {
+			continue
+		}
+
+		testNum, err := strconv.Atoi(parts[0])
+		if err != nil || testNum <= 0 {
+			continue
+		}
+
+		extension := parts[1]
+		if extension != "in" && extension != "out" {
+			continue
+		}
+
+		// Validate file size
+		if file.UncompressedSize64 > maxTestSize {
+			return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("test file %s exceeds 1 MB limit", fileName))
+		}
+
+		// Read file content
+		rc, err := file.Open()
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, fmt.Sprintf("failed to open file %s", fileName))
+		}
+
+		content, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, fmt.Sprintf("failed to read file %s", fileName))
+		}
+
+		contentStr := string(content)
+
+		// Store in map
+		if testFiles[testNum].input == nil && testFiles[testNum].output == nil {
+			testFiles[testNum] = struct {
+				input  *string
+				output *string
+			}{}
+		}
+
+		test := testFiles[testNum]
+		if extension == "in" {
+			test.input = &contentStr
+		} else {
+			test.output = &contentStr
+		}
+		testFiles[testNum] = test
+	}
+
+	// Validate that all tests have both .in and .out files
+	if len(testFiles) == 0 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "no valid test files found in archive")
+	}
+
+	// Extract test numbers and sort them
+	testNums := make([]int, 0, len(testFiles))
+	for num := range testFiles {
+		testNums = append(testNums, num)
+	}
+	sort.Ints(testNums)
+
+	// Validate and build tests array
+	tests := make(models.ProblemTests, 0, len(testFiles))
+	for i, num := range testNums {
+		test := testFiles[num]
+		if test.input == nil {
+			return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("missing %d.in file", num))
+		}
+		if test.output == nil {
+			return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("missing %d.out file", num))
+		}
+
+		tests = append(tests, models.ProblemTest{
+			ProblemId: problemId,
+			Ordinal:   int64(i + 1), // Use sequential ordinals starting from 1
+			Input:     *test.input,
+			Output:    *test.output,
+		})
+	}
+
+	// Delete old tests and insert new ones (in transaction via repository)
+	if err := u.problemRepo.DeleteProblemTests(ctx, problemId); err != nil {
+		return err
+	}
+
+	if err := u.problemRepo.CreateProblemTests(ctx, tests); err != nil {
+		return err
+	}
+
+	return nil
 }

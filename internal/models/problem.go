@@ -110,6 +110,17 @@ type ProblemSample struct {
 
 type ProblemSamples []ProblemSample
 
+type ProblemTest struct {
+	Id        uuid.UUID `db:"id"`
+	ProblemId uuid.UUID `db:"problem_id"`
+	Ordinal   int64     `db:"ordinal"`
+	Input     string    `db:"input"`
+	Output    string    `db:"output"`
+	CreatedAt time.Time `db:"created_at"`
+}
+
+type ProblemTests []ProblemTest
+
 type ProblemPermissions struct {
 	ViewProblem  bool
 	EditProblem  bool
