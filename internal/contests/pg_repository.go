@@ -386,3 +386,14 @@ func (r *Repository) DeleteContestMember(ctx context.Context, userId uuid.UUID, 
 	}
 	return nil
 }
+
+//go:embed sql/update_contest_member.sql
+var UpdateContestMemberQuery string
+
+func (r *Repository) UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error {
+	_, err := r.db.ExecContext(ctx, UpdateContestMemberQuery, contestId, userId, role)
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	return nil
+}

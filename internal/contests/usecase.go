@@ -29,6 +29,7 @@ type ContestRepo interface {
 	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMemberRecord, error)
 	CreateContestMember(ctx context.Context, c *models.ContestMemberParams) error
 	DeleteContestMember(ctx context.Context, userId uuid.UUID, contestId uuid.UUID) error
+	UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error
 }
 
 type UseCase struct {
@@ -153,4 +154,38 @@ func (uc *UseCase) ListParticipants(ctx context.Context, filter models.Participa
 
 func (uc *UseCase) GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMemberRecord, error) {
 	return uc.contestRepo.GetContestMember(ctx, c)
+}
+
+func (uc *UseCase) UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error {
+	// Validate role value
+	if role != models.ContestRoleOwner && role != models.ContestRoleModerator && role != models.ContestRoleParticipant {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
+	}
+
+	// Get current member to check existing role
+	currentMember, err := uc.contestRepo.GetContestMember(ctx, &models.ContestPermissionGet{
+		ContestId: contestId,
+		UserId:    userId,
+	})
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't get contest member")
+	}
+
+	// Prevent changing FROM owner role
+	if currentMember.Role == models.ContestRoleOwner {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot change role from owner")
+	}
+
+	// Prevent changing TO owner role
+	if role == models.ContestRoleOwner {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot change role to owner")
+	}
+
+	// Update the role
+	err = uc.contestRepo.UpdateContestMember(ctx, contestId, userId, role)
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't update contest member")
+	}
+
+	return nil
 }

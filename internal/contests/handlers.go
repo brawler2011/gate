@@ -34,6 +34,7 @@ type ContestsUC interface {
 	ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*models.ParticipantsList, error)
 
 	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMemberRecord, error)
+	UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error
 }
 
 type SubmissionsUC interface {
@@ -573,6 +574,56 @@ func (h *ContestsHandlers) DeleteContestMember(c *fiber.Ctx, contestId uuid.UUID
 		ContestId: contestId,
 		UserId:    params.UserId,
 	})
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *ContestsHandlers) UpdateContestMember(c *fiber.Ctx, contestId uuid.UUID, params corev1.UpdateContestMemberParams) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	userId, err := uuid.Parse(params.UserId.String())
+	if err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "invalid user_id")
+	}
+
+	// Prevent user from updating their own role
+	if userId == user.Id {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot update own role")
+	}
+
+	// Check if user is contest owner or global admin
+	// First check if user is global admin
+	isAdmin := user.Role == "admin"
+
+	// If not admin, check if user is contest owner
+	if !isAdmin {
+		contestMember, err := h.contestsUC.GetContestMember(ctx, &models.ContestPermissionGet{
+			ContestId: contestId,
+			UserId:    user.Id,
+		})
+		if err != nil {
+			return pkg.Wrap(pkg.NoPermission, err, "insufficient permission to update contest member")
+		}
+		if contestMember.Role != models.ContestRoleOwner {
+			return pkg.Wrap(pkg.NoPermission, nil, "only contest owner or admin can update contest member role")
+		}
+	}
+
+	// Validate role value
+	if params.Role != models.ContestRoleOwner && params.Role != models.ContestRoleModerator && params.Role != models.ContestRoleParticipant {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
+	}
+
+	// Call usecase to update the member
+	err = h.contestsUC.UpdateContestMember(ctx, contestId, userId, params.Role)
 	if err != nil {
 		return err
 	}

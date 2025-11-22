@@ -88,6 +88,8 @@ github.com/foxcpp/go-mockdns v1.1.0/go.mod h1:IhLeSFGed3mJIAXPH2aiRQB+kqz7oqu8ld
 github.com/gate149/contracts v0.0.0-20251121054637-d569c2aa894d/go.mod h1:tNNvBeDhLMBNvzCp5dyZTTjePL6E+66YQU0L+REBfmo=
 github.com/gate149/contracts v0.0.0-20251122145351-14eaf67962e2 h1:8CGY0GQIiptwMmFnzb47utXQdHSIhwA0zu2eJspmrXU=
 github.com/gate149/contracts v0.0.0-20251122145351-14eaf67962e2/go.mod h1:tNNvBeDhLMBNvzCp5dyZTTjePL6E+66YQU0L+REBfmo=
+github.com/gate149/contracts v0.0.0-20251122170939-3349ce1e956c h1:seaFCEoxqcS8DYokpHOX1yZ3kFduimn/MlWjlgcqF+o=
+github.com/gate149/contracts v0.0.0-20251122170939-3349ce1e956c/go.mod h1:tNNvBeDhLMBNvzCp5dyZTTjePL6E+66YQU0L+REBfmo=
 github.com/gate149/judge0-go-sdk v0.0.0-20251106191720-f413b24b83ea h1:5IVucvJHt4vXb3XqR8a27ho+CAXu7T5+AjxNecLhlng=
 github.com/gate149/judge0-go-sdk v0.0.0-20251106191720-f413b24b83ea/go.mod h1:Zz2WmGkPs+3UeEO2Faacs7pnejf2F16KANDDhodJCrw=
 github.com/gate149/pandoc-go-sdk v0.0.0-20251106192314-fc6f856bb189 h1:tPX6EL8/td3esx5UasxDzlHW7FANJBqrxiPqidv1jNY=

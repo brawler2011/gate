@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.31.17
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.21
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.90.0
-	github.com/gate149/contracts v0.0.0-20251122145351-14eaf67962e2
+	github.com/gate149/contracts v0.0.0-20251122170939-3349ce1e956c
 	github.com/gate149/judge0-go-sdk v0.0.0-20251106191720-f413b24b83ea
 	github.com/gate149/pandoc-go-sdk v0.0.0-20251106192314-fc6f856bb189
 	github.com/gofiber/fiber/v2 v2.52.9
