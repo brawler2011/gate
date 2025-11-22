@@ -305,10 +305,6 @@ func ProblemDTO(p *models.Problem) *testerv1.ProblemModel {
 	}
 }
 
-const (
-	maxArchiveSize = 10 * 1024 * 1024 // 10 MB
-)
-
 func (h *ProblemsHandlers) UploadProblemTests(c *fiber.Ctx, id uuid.UUID) error {
 	ctx := c.UserContext()
 
