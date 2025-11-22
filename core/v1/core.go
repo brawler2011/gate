@@ -374,6 +374,12 @@ type ListContestMembersParams struct {
 	PageSize int64 `form:"pageSize" json:"pageSize"`
 }
 
+// UpdateContestMemberParams defines parameters for UpdateContestMember.
+type UpdateContestMemberParams struct {
+	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	Role   string             `form:"role" json:"role"`
+}
+
 // CreateContestMemberParams defines parameters for CreateContestMember.
 type CreateContestMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
@@ -532,6 +538,9 @@ type ServerInterface interface {
 
 	// (GET /contests/{contest_id}/members)
 	ListContestMembers(c *fiber.Ctx, contestId openapi_types.UUID, params ListContestMembersParams) error
+
+	// (PATCH /contests/{contest_id}/members)
+	UpdateContestMember(c *fiber.Ctx, contestId openapi_types.UUID, params UpdateContestMemberParams) error
 
 	// (POST /contests/{contest_id}/members)
 	CreateContestMember(c *fiber.Ctx, contestId openapi_types.UUID, params CreateContestMemberParams) error
@@ -852,6 +861,61 @@ func (siw *ServerInterfaceWrapper) ListContestMembers(c *fiber.Ctx) error {
 	}
 
 	return siw.Handler.ListContestMembers(c, contestId, params)
+}
+
+// UpdateContestMember operation middleware
+func (siw *ServerInterfaceWrapper) UpdateContestMember(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateContestMemberParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "user_id" -------------
+
+	if paramValue := c.Query("user_id"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument user_id is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "user_id", query, &params.UserId)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter user_id: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "role" -------------
+
+	if paramValue := c.Query("role"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument role is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "role", query, &params.Role)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter role: %w", err).Error())
+	}
+
+	return siw.Handler.UpdateContestMember(c, contestId, params)
 }
 
 // CreateContestMember operation middleware
@@ -1815,6 +1879,8 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Delete(options.BaseURL+"/contests/:contest_id/members", wrapper.DeleteContestMember)
 
 	router.Get(options.BaseURL+"/contests/:contest_id/members", wrapper.ListContestMembers)
+
+	router.Patch(options.BaseURL+"/contests/:contest_id/members", wrapper.UpdateContestMember)
 
 	router.Post(options.BaseURL+"/contests/:contest_id/members", wrapper.CreateContestMember)
 

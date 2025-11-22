@@ -452,6 +452,31 @@ export class DefaultService {
         });
     }
     /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public updateContestMember({
+        contestId,
+        userId,
+        role,
+    }: {
+        contestId: string,
+        userId: string,
+        role: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/contests/{contest_id}/members',
+            path: {
+                'contest_id': contestId,
+            },
+            query: {
+                'user_id': userId,
+                'role': role,
+            },
+        });
+    }
+    /**
      * @returns GetMyContestRoleResponseModel OK
      * @throws ApiError
      */

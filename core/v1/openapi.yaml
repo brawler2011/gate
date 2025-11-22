@@ -508,6 +508,29 @@ paths:
       responses:
         "200":
           description: OK
+    patch:
+      operationId: UpdateContestMember
+      parameters:
+        - name: contest_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: role
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
   /contests/{contest_id}/my-role:
     get:
       operationId: GetMyContestRole
