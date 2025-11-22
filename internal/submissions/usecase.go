@@ -2,6 +2,7 @@ package submissions
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/gate149/core/internal/models"
 	"github.com/gate149/core/pkg"
@@ -23,21 +24,28 @@ type ProblemsRepo interface {
 	GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error)
 }
 
+type OutboxRepo interface {
+	InsertEvent(ctx context.Context, event *models.OutboxEvent) error
+}
+
 type UseCase struct {
 	solutionsRepo Repo
 	contestsRepo  ContestsRepo
 	problemsRepo  ProblemsRepo
+	outboxRepo    OutboxRepo
 }
 
 func NewUseCase(
 	solutionsRepo Repo,
 	contestsRepo ContestsRepo,
 	problemsRepo ProblemsRepo,
+	outboxRepo OutboxRepo,
 ) *UseCase {
 	return &UseCase{
 		solutionsRepo: solutionsRepo,
 		contestsRepo:  contestsRepo,
 		problemsRepo:  problemsRepo,
+		outboxRepo:    outboxRepo,
 	}
 }
 
@@ -62,6 +70,33 @@ func (uc *UseCase) CreateSubmission(ctx context.Context, creation *models.Submis
 	id, err := uc.solutionsRepo.CreateSubmission(ctx, creation)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	// Create outbox event for submission.created
+	payload := models.SubmissionCreatedPayload{
+		SubmissionId: id,
+		ProblemId:    creation.ProblemId,
+		ContestId:    creation.ContestId,
+		Language:     int64(creation.Language),
+		CreatedBy:    creation.UserId,
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return uuid.Nil, pkg.Wrap(pkg.ErrInternal, err, "failed to marshal outbox payload")
+	}
+
+	event := &models.OutboxEvent{
+		AggregateId:   id,
+		AggregateType: "submission",
+		EventType:     models.EventTypeSubmissionCreated,
+		Payload:       payloadBytes,
+		Status:        models.OutboxEventStatusPending,
+		RetryCount:    0,
+	}
+
+	if err := uc.outboxRepo.InsertEvent(ctx, event); err != nil {
+		return uuid.Nil, pkg.Wrap(pkg.ErrInternal, err, "failed to insert outbox event")
 	}
 
 	return id, nil

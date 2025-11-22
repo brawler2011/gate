@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	testerv1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/config"
@@ -15,6 +17,7 @@ import (
 	"github.com/gate149/core/internal/health"
 	"github.com/gate149/core/internal/kratos"
 	"github.com/gate149/core/internal/middleware"
+	"github.com/gate149/core/internal/outbox"
 	"github.com/gate149/core/internal/permissions"
 	"github.com/gate149/core/internal/problems"
 	"github.com/gate149/core/internal/submissions"
@@ -92,8 +95,34 @@ func main() {
 	permissionsUC := permissions.NewUseCase(contestsRepo, usersRepo, problemsUC)
 	logger.Info("successfully initialized permissions system")
 
+	// Initialize Judge0 client
+	judge0Client, err := pkg.NewJudge0Client(cfg.Judge0URL)
+	if err != nil {
+		logger.Error("failed to create judge0 client", slog.Any("error", err))
+		return
+	}
+	logger.Info("successfully initialized judge0 client", slog.String("url", cfg.Judge0URL))
+
+	// Initialize NATS publisher
+	natsPublisher, err := pkg.NewNatsPublisher(cfg.NatsUrl)
+	if err != nil {
+		logger.Error("failed to create nats publisher", slog.Any("error", err))
+		return
+	}
+	logger.Info("successfully initialized nats publisher", slog.String("url", cfg.NatsUrl))
+
+	// Initialize outbox repository
+	outboxRepo := outbox.NewRepository(db)
+
 	solutionsRepo := submissions.NewRepository(db)
-	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsRepo, problemsRepo)
+	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsRepo, problemsRepo, outboxRepo)
+
+	// Initialize and start outbox worker
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	worker := outbox.NewWorker(logger, outboxRepo, solutionsRepo, problemsRepo, judge0Client, natsPublisher)
+	go worker.Start(ctx)
 
 	server := fiber.New()
 
@@ -157,9 +186,27 @@ func main() {
 
 	logger.Info("public server started", slog.String("address", cfg.Address))
 	logger.Info("private server started", slog.String("address", cfg.PrivateAddress))
+	logger.Info("outbox worker started")
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 
 	<-stop
+
+	logger.Info("shutting down servers and worker...")
+	cancel() // Stop the outbox worker
+
+	// Give some time for graceful shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := server.ShutdownWithContext(shutdownCtx); err != nil {
+		logger.Error("error shutting down public server", slog.Any("error", err))
+	}
+
+	if err := privateServer.ShutdownWithContext(shutdownCtx); err != nil {
+		logger.Error("error shutting down private server", slog.Any("error", err))
+	}
+
+	logger.Info("shutdown complete")
 }

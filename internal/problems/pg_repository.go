@@ -197,3 +197,16 @@ func (r *Repository) CreateProblemTests(ctx context.Context, tests models.Proble
 
 	return nil
 }
+
+//go:embed sql/get_problem_tests.sql
+var GetProblemTestsQuery string
+
+func (r *Repository) GetProblemTests(ctx context.Context, problemId uuid.UUID) (models.ProblemTests, error) {
+	tests := make(models.ProblemTests, 0)
+	err := r.db.SelectContext(ctx, &tests, GetProblemTestsQuery, problemId)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+
+	return tests, nil
+}
