@@ -15,6 +15,7 @@ import type { ListContestMembersResponseModel } from '../models/ListContestMembe
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
 import type { ListProblemsResponseModel } from '../models/ListProblemsResponseModel';
 import type { ListSubmissionsResponseModel } from '../models/ListSubmissionsResponseModel';
+import type { ListUserContestsResponseModel } from '../models/ListUserContestsResponseModel';
 import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
 import type { UpdateProblemRequestModel } from '../models/UpdateProblemRequestModel';
@@ -124,35 +125,6 @@ export class DefaultService {
         });
     }
     /**
-     * @returns ListContestsResponseModel OK
-     * @throws ApiError
-     */
-    public listContests({
-        page,
-        pageSize,
-        search,
-        owner,
-        descending = false,
-    }: {
-        page: number,
-        pageSize: number,
-        search?: string,
-        owner?: boolean,
-        descending?: boolean,
-    }): CancelablePromise<ListContestsResponseModel> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/contests',
-            query: {
-                'page': page,
-                'pageSize': pageSize,
-                'search': search,
-                'owner': owner,
-                'descending': descending,
-            },
-        });
-    }
-    /**
      * @returns CreationResponseModel OK
      * @throws ApiError
      */
@@ -166,6 +138,130 @@ export class DefaultService {
             url: '/contests',
             query: {
                 'title': title,
+            },
+        });
+    }
+    /**
+     * @returns ListContestsResponseModel OK
+     * @throws ApiError
+     */
+    public listAdminContests({
+        page,
+        pageSize,
+        search,
+        visibility,
+        sortBy,
+        sortOrder,
+    }: {
+        page: number,
+        pageSize: number,
+        search?: string,
+        visibility?: 'public' | 'private',
+        sortBy?: 'created_at' | 'updated_at' | 'title',
+        sortOrder?: 'asc' | 'desc',
+    }): CancelablePromise<ListContestsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/admin/contests',
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'search': search,
+                'visibility': visibility,
+                'sortBy': sortBy,
+                'sortOrder': sortOrder,
+            },
+        });
+    }
+    /**
+     * @returns ListUserContestsResponseModel OK
+     * @throws ApiError
+     */
+    public listUserContests({
+        id,
+        page,
+        pageSize,
+        search,
+        sortBy,
+        sortOrder,
+    }: {
+        id: string,
+        page: number,
+        pageSize: number,
+        search?: string,
+        sortBy?: 'last_submission_time' | 'created_at' | 'updated_at' | 'title',
+        sortOrder?: 'asc' | 'desc',
+    }): CancelablePromise<ListUserContestsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/user/{id}/contests',
+            path: {
+                'id': id,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'search': search,
+                'sortBy': sortBy,
+                'sortOrder': sortOrder,
+            },
+        });
+    }
+    /**
+     * @returns ListContestsResponseModel OK
+     * @throws ApiError
+     */
+    public listWorkshopContests({
+        page,
+        pageSize,
+        search,
+        sortBy,
+        sortOrder,
+    }: {
+        page: number,
+        pageSize: number,
+        search?: string,
+        sortBy?: 'created_at' | 'updated_at' | 'title',
+        sortOrder?: 'asc' | 'desc',
+    }): CancelablePromise<ListContestsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/workshop/contests',
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'search': search,
+                'sortBy': sortBy,
+                'sortOrder': sortOrder,
+            },
+        });
+    }
+    /**
+     * @returns ListContestsResponseModel OK
+     * @throws ApiError
+     */
+    public listPublicContests({
+        page,
+        pageSize,
+        search,
+        sortBy,
+        sortOrder,
+    }: {
+        page: number,
+        pageSize: number,
+        search?: string,
+        sortBy?: 'created_at' | 'updated_at' | 'title',
+        sortOrder?: 'asc' | 'desc',
+    }): CancelablePromise<ListContestsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/public/contests',
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'search': search,
+                'sortBy': sortBy,
+                'sortOrder': sortOrder,
             },
         });
     }

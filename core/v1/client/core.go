@@ -18,10 +18,42 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ListAdminContestsParamsVisibility.
+const (
+	Private ListAdminContestsParamsVisibility = "private"
+	Public  ListAdminContestsParamsVisibility = "public"
+)
+
+// Defines values for ListAdminContestsParamsSortBy.
+const (
+	ListAdminContestsParamsSortByCreatedAt ListAdminContestsParamsSortBy = "created_at"
+	ListAdminContestsParamsSortByTitle     ListAdminContestsParamsSortBy = "title"
+	ListAdminContestsParamsSortByUpdatedAt ListAdminContestsParamsSortBy = "updated_at"
+)
+
+// Defines values for ListAdminContestsParamsSortOrder.
+const (
+	ListAdminContestsParamsSortOrderAsc  ListAdminContestsParamsSortOrder = "asc"
+	ListAdminContestsParamsSortOrderDesc ListAdminContestsParamsSortOrder = "desc"
+)
+
 // Defines values for ListContestSubmissionsParamsSortOrder.
 const (
 	ListContestSubmissionsParamsSortOrderAsc  ListContestSubmissionsParamsSortOrder = "asc"
 	ListContestSubmissionsParamsSortOrderDesc ListContestSubmissionsParamsSortOrder = "desc"
+)
+
+// Defines values for ListPublicContestsParamsSortBy.
+const (
+	ListPublicContestsParamsSortByCreatedAt ListPublicContestsParamsSortBy = "created_at"
+	ListPublicContestsParamsSortByTitle     ListPublicContestsParamsSortBy = "title"
+	ListPublicContestsParamsSortByUpdatedAt ListPublicContestsParamsSortBy = "updated_at"
+)
+
+// Defines values for ListPublicContestsParamsSortOrder.
+const (
+	ListPublicContestsParamsSortOrderAsc  ListPublicContestsParamsSortOrder = "asc"
+	ListPublicContestsParamsSortOrderDesc ListPublicContestsParamsSortOrder = "desc"
 )
 
 // Defines values for ListSubmissionsParamsSortOrder.
@@ -30,10 +62,37 @@ const (
 	ListSubmissionsParamsSortOrderDesc ListSubmissionsParamsSortOrder = "desc"
 )
 
+// Defines values for ListUserContestsParamsSortBy.
+const (
+	ListUserContestsParamsSortByCreatedAt          ListUserContestsParamsSortBy = "created_at"
+	ListUserContestsParamsSortByLastSubmissionTime ListUserContestsParamsSortBy = "last_submission_time"
+	ListUserContestsParamsSortByTitle              ListUserContestsParamsSortBy = "title"
+	ListUserContestsParamsSortByUpdatedAt          ListUserContestsParamsSortBy = "updated_at"
+)
+
+// Defines values for ListUserContestsParamsSortOrder.
+const (
+	ListUserContestsParamsSortOrderAsc  ListUserContestsParamsSortOrder = "asc"
+	ListUserContestsParamsSortOrderDesc ListUserContestsParamsSortOrder = "desc"
+)
+
 // Defines values for ListUserSubmissionsParamsSortOrder.
 const (
-	Asc  ListUserSubmissionsParamsSortOrder = "asc"
-	Desc ListUserSubmissionsParamsSortOrder = "desc"
+	ListUserSubmissionsParamsSortOrderAsc  ListUserSubmissionsParamsSortOrder = "asc"
+	ListUserSubmissionsParamsSortOrderDesc ListUserSubmissionsParamsSortOrder = "desc"
+)
+
+// Defines values for ListWorkshopContestsParamsSortBy.
+const (
+	ListWorkshopContestsParamsSortByCreatedAt ListWorkshopContestsParamsSortBy = "created_at"
+	ListWorkshopContestsParamsSortByTitle     ListWorkshopContestsParamsSortBy = "title"
+	ListWorkshopContestsParamsSortByUpdatedAt ListWorkshopContestsParamsSortBy = "updated_at"
+)
+
+// Defines values for ListWorkshopContestsParamsSortOrder.
+const (
+	Asc  ListWorkshopContestsParamsSortOrder = "asc"
+	Desc ListWorkshopContestsParamsSortOrder = "desc"
 )
 
 // ContestMemberModel defines model for ContestMemberModel.
@@ -161,6 +220,12 @@ type ListSubmissionsResponseModel struct {
 	Submissions []SubmissionsListItemModel `json:"submissions"`
 }
 
+// ListUserContestsResponseModel defines model for ListUserContestsResponseModel.
+type ListUserContestsResponseModel struct {
+	Contests   []ContestModel  `json:"contests"`
+	Pagination PaginationModel `json:"pagination"`
+}
+
 // ListUsersResponseModel defines model for ListUsersResponseModel.
 type ListUsersResponseModel struct {
 	Pagination PaginationModel `json:"pagination"`
@@ -279,14 +344,24 @@ type UserModel struct {
 	Username  string             `json:"username"`
 }
 
-// ListContestsParams defines parameters for ListContests.
-type ListContestsParams struct {
-	Page       int64   `form:"page" json:"page"`
-	PageSize   int64   `form:"pageSize" json:"pageSize"`
-	Search     *string `form:"search,omitempty" json:"search,omitempty"`
-	Owner      *bool   `form:"owner,omitempty" json:"owner,omitempty"`
-	Descending *bool   `form:"descending,omitempty" json:"descending,omitempty"`
+// ListAdminContestsParams defines parameters for ListAdminContests.
+type ListAdminContestsParams struct {
+	Page       int64                              `form:"page" json:"page"`
+	PageSize   int64                              `form:"pageSize" json:"pageSize"`
+	Search     *string                            `form:"search,omitempty" json:"search,omitempty"`
+	Visibility *ListAdminContestsParamsVisibility `form:"visibility,omitempty" json:"visibility,omitempty"`
+	SortBy     *ListAdminContestsParamsSortBy     `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+	SortOrder  *ListAdminContestsParamsSortOrder  `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
 }
+
+// ListAdminContestsParamsVisibility defines parameters for ListAdminContests.
+type ListAdminContestsParamsVisibility string
+
+// ListAdminContestsParamsSortBy defines parameters for ListAdminContests.
+type ListAdminContestsParamsSortBy string
+
+// ListAdminContestsParamsSortOrder defines parameters for ListAdminContests.
+type ListAdminContestsParamsSortOrder string
 
 // CreateContestParams defines parameters for CreateContest.
 type CreateContestParams struct {
@@ -342,6 +417,21 @@ type CreateProblemParams struct {
 	Title string `form:"title" json:"title"`
 }
 
+// ListPublicContestsParams defines parameters for ListPublicContests.
+type ListPublicContestsParams struct {
+	Page      int64                              `form:"page" json:"page"`
+	PageSize  int64                              `form:"pageSize" json:"pageSize"`
+	Search    *string                            `form:"search,omitempty" json:"search,omitempty"`
+	SortBy    *ListPublicContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+	SortOrder *ListPublicContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+}
+
+// ListPublicContestsParamsSortBy defines parameters for ListPublicContests.
+type ListPublicContestsParamsSortBy string
+
+// ListPublicContestsParamsSortOrder defines parameters for ListPublicContests.
+type ListPublicContestsParamsSortOrder string
+
 // ListSubmissionsParams defines parameters for ListSubmissions.
 type ListSubmissionsParams struct {
 	Page      int64                           `form:"page" json:"page"`
@@ -364,6 +454,21 @@ type CreateSubmissionParams struct {
 	Language  int64              `form:"language" json:"language"`
 }
 
+// ListUserContestsParams defines parameters for ListUserContests.
+type ListUserContestsParams struct {
+	Page      int64                            `form:"page" json:"page"`
+	PageSize  int64                            `form:"pageSize" json:"pageSize"`
+	Search    *string                          `form:"search,omitempty" json:"search,omitempty"`
+	SortBy    *ListUserContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+	SortOrder *ListUserContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+}
+
+// ListUserContestsParamsSortBy defines parameters for ListUserContests.
+type ListUserContestsParamsSortBy string
+
+// ListUserContestsParamsSortOrder defines parameters for ListUserContests.
+type ListUserContestsParamsSortOrder string
+
 // ListUsersParams defines parameters for ListUsers.
 type ListUsersParams struct {
 	Page     int64   `form:"page" json:"page"`
@@ -384,6 +489,21 @@ type ListUserSubmissionsParams struct {
 
 // ListUserSubmissionsParamsSortOrder defines parameters for ListUserSubmissions.
 type ListUserSubmissionsParamsSortOrder string
+
+// ListWorkshopContestsParams defines parameters for ListWorkshopContests.
+type ListWorkshopContestsParams struct {
+	Page      int64                                `form:"page" json:"page"`
+	PageSize  int64                                `form:"pageSize" json:"pageSize"`
+	Search    *string                              `form:"search,omitempty" json:"search,omitempty"`
+	SortBy    *ListWorkshopContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+	SortOrder *ListWorkshopContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+}
+
+// ListWorkshopContestsParamsSortBy defines parameters for ListWorkshopContests.
+type ListWorkshopContestsParamsSortBy string
+
+// ListWorkshopContestsParamsSortOrder defines parameters for ListWorkshopContests.
+type ListWorkshopContestsParamsSortOrder string
 
 // UpdateContestJSONRequestBody defines body for UpdateContest for application/json ContentType.
 type UpdateContestJSONRequestBody = UpdateContestRequestModel
@@ -467,8 +587,8 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// ListContests request
-	ListContests(ctx context.Context, params *ListContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ListAdminContests request
+	ListAdminContests(ctx context.Context, params *ListAdminContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateContest request
 	CreateContest(ctx context.Context, params *CreateContestParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -528,6 +648,9 @@ type ClientInterface interface {
 
 	UpdateProblem(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListPublicContests request
+	ListPublicContests(ctx context.Context, params *ListPublicContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListSubmissions request
 	ListSubmissions(ctx context.Context, params *ListSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -539,6 +662,9 @@ type ClientInterface interface {
 	// GetSubmission request
 	GetSubmission(ctx context.Context, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListUserContests request
+	ListUserContests(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListUsers request
 	ListUsers(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -547,10 +673,13 @@ type ClientInterface interface {
 
 	// ListUserSubmissions request
 	ListUserSubmissions(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListWorkshopContests request
+	ListWorkshopContests(ctx context.Context, params *ListWorkshopContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) ListContests(ctx context.Context, params *ListContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListContestsRequest(c.Server, params)
+func (c *Client) ListAdminContests(ctx context.Context, params *ListAdminContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListAdminContestsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -801,6 +930,18 @@ func (c *Client) UpdateProblem(ctx context.Context, id openapi_types.UUID, body 
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListPublicContests(ctx context.Context, params *ListPublicContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListPublicContestsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListSubmissions(ctx context.Context, params *ListSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListSubmissionsRequest(c.Server, params)
 	if err != nil {
@@ -849,6 +990,18 @@ func (c *Client) GetSubmission(ctx context.Context, submissionId openapi_types.U
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListUserContests(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListUserContestsRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListUsers(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListUsersRequest(c.Server, params)
 	if err != nil {
@@ -885,8 +1038,20 @@ func (c *Client) ListUserSubmissions(ctx context.Context, userId openapi_types.U
 	return c.Client.Do(req)
 }
 
-// NewListContestsRequest generates requests for ListContests
-func NewListContestsRequest(server string, params *ListContestsParams) (*http.Request, error) {
+func (c *Client) ListWorkshopContests(ctx context.Context, params *ListWorkshopContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListWorkshopContestsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// NewListAdminContestsRequest generates requests for ListAdminContests
+func NewListAdminContestsRequest(server string, params *ListAdminContestsParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -894,7 +1059,7 @@ func NewListContestsRequest(server string, params *ListContestsParams) (*http.Re
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/contests")
+	operationPath := fmt.Sprintf("/admin/contests")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -947,9 +1112,9 @@ func NewListContestsRequest(server string, params *ListContestsParams) (*http.Re
 
 		}
 
-		if params.Owner != nil {
+		if params.Visibility != nil {
 
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "owner", runtime.ParamLocationQuery, *params.Owner); err != nil {
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "visibility", runtime.ParamLocationQuery, *params.Visibility); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -963,9 +1128,25 @@ func NewListContestsRequest(server string, params *ListContestsParams) (*http.Re
 
 		}
 
-		if params.Descending != nil {
+		if params.SortBy != nil {
 
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "descending", runtime.ParamLocationQuery, *params.Descending); err != nil {
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortBy", runtime.ParamLocationQuery, *params.SortBy); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -1922,6 +2103,111 @@ func NewUpdateProblemRequestWithBody(server string, id openapi_types.UUID, conte
 	return req, nil
 }
 
+// NewListPublicContestsRequest generates requests for ListPublicContests
+func NewListPublicContestsRequest(server string, params *ListPublicContestsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/public/contests")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Search != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "search", runtime.ParamLocationQuery, *params.Search); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortBy", runtime.ParamLocationQuery, *params.SortBy); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListSubmissionsRequest generates requests for ListSubmissions
 func NewListSubmissionsRequest(server string, params *ListSubmissionsParams) (*http.Request, error) {
 	var err error
@@ -2191,6 +2477,118 @@ func NewGetSubmissionRequest(server string, submissionId openapi_types.UUID) (*h
 	return req, nil
 }
 
+// NewListUserContestsRequest generates requests for ListUserContests
+func NewListUserContestsRequest(server string, id openapi_types.UUID, params *ListUserContestsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/user/%s/contests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Search != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "search", runtime.ParamLocationQuery, *params.Search); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortBy", runtime.ParamLocationQuery, *params.SortBy); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListUsersRequest generates requests for ListUsers
 func NewListUsersRequest(server string, params *ListUsersParams) (*http.Request, error) {
 	var err error
@@ -2442,6 +2840,111 @@ func NewListUserSubmissionsRequest(server string, userId openapi_types.UUID, par
 	return req, nil
 }
 
+// NewListWorkshopContestsRequest generates requests for ListWorkshopContests
+func NewListWorkshopContestsRequest(server string, params *ListWorkshopContestsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/workshop/contests")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Search != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "search", runtime.ParamLocationQuery, *params.Search); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortBy", runtime.ParamLocationQuery, *params.SortBy); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -2485,8 +2988,8 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// ListContestsWithResponse request
-	ListContestsWithResponse(ctx context.Context, params *ListContestsParams, reqEditors ...RequestEditorFn) (*ListContestsResponse, error)
+	// ListAdminContestsWithResponse request
+	ListAdminContestsWithResponse(ctx context.Context, params *ListAdminContestsParams, reqEditors ...RequestEditorFn) (*ListAdminContestsResponse, error)
 
 	// CreateContestWithResponse request
 	CreateContestWithResponse(ctx context.Context, params *CreateContestParams, reqEditors ...RequestEditorFn) (*CreateContestResponse, error)
@@ -2546,6 +3049,9 @@ type ClientWithResponsesInterface interface {
 
 	UpdateProblemWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemResponse, error)
 
+	// ListPublicContestsWithResponse request
+	ListPublicContestsWithResponse(ctx context.Context, params *ListPublicContestsParams, reqEditors ...RequestEditorFn) (*ListPublicContestsResponse, error)
+
 	// ListSubmissionsWithResponse request
 	ListSubmissionsWithResponse(ctx context.Context, params *ListSubmissionsParams, reqEditors ...RequestEditorFn) (*ListSubmissionsResponse, error)
 
@@ -2557,6 +3063,9 @@ type ClientWithResponsesInterface interface {
 	// GetSubmissionWithResponse request
 	GetSubmissionWithResponse(ctx context.Context, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetSubmissionResponse, error)
 
+	// ListUserContestsWithResponse request
+	ListUserContestsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*ListUserContestsResponse, error)
+
 	// ListUsersWithResponse request
 	ListUsersWithResponse(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error)
 
@@ -2565,16 +3074,19 @@ type ClientWithResponsesInterface interface {
 
 	// ListUserSubmissionsWithResponse request
 	ListUserSubmissionsWithResponse(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*ListUserSubmissionsResponse, error)
+
+	// ListWorkshopContestsWithResponse request
+	ListWorkshopContestsWithResponse(ctx context.Context, params *ListWorkshopContestsParams, reqEditors ...RequestEditorFn) (*ListWorkshopContestsResponse, error)
 }
 
-type ListContestsResponse struct {
+type ListAdminContestsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *ListContestsResponseModel
 }
 
 // Status returns HTTPResponse.Status
-func (r ListContestsResponse) Status() string {
+func (r ListAdminContestsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -2582,7 +3094,7 @@ func (r ListContestsResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ListContestsResponse) StatusCode() int {
+func (r ListAdminContestsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -2979,6 +3491,28 @@ func (r UpdateProblemResponse) StatusCode() int {
 	return 0
 }
 
+type ListPublicContestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListContestsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListPublicContestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListPublicContestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListSubmissionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3039,6 +3573,28 @@ func (r GetSubmissionResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetSubmissionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListUserContestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListUserContestsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListUserContestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListUserContestsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -3111,13 +3667,35 @@ func (r ListUserSubmissionsResponse) StatusCode() int {
 	return 0
 }
 
-// ListContestsWithResponse request returning *ListContestsResponse
-func (c *ClientWithResponses) ListContestsWithResponse(ctx context.Context, params *ListContestsParams, reqEditors ...RequestEditorFn) (*ListContestsResponse, error) {
-	rsp, err := c.ListContests(ctx, params, reqEditors...)
+type ListWorkshopContestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListContestsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListWorkshopContestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListWorkshopContestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ListAdminContestsWithResponse request returning *ListAdminContestsResponse
+func (c *ClientWithResponses) ListAdminContestsWithResponse(ctx context.Context, params *ListAdminContestsParams, reqEditors ...RequestEditorFn) (*ListAdminContestsResponse, error) {
+	rsp, err := c.ListAdminContests(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseListContestsResponse(rsp)
+	return ParseListAdminContestsResponse(rsp)
 }
 
 // CreateContestWithResponse request returning *CreateContestResponse
@@ -3298,6 +3876,15 @@ func (c *ClientWithResponses) UpdateProblemWithResponse(ctx context.Context, id 
 	return ParseUpdateProblemResponse(rsp)
 }
 
+// ListPublicContestsWithResponse request returning *ListPublicContestsResponse
+func (c *ClientWithResponses) ListPublicContestsWithResponse(ctx context.Context, params *ListPublicContestsParams, reqEditors ...RequestEditorFn) (*ListPublicContestsResponse, error) {
+	rsp, err := c.ListPublicContests(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListPublicContestsResponse(rsp)
+}
+
 // ListSubmissionsWithResponse request returning *ListSubmissionsResponse
 func (c *ClientWithResponses) ListSubmissionsWithResponse(ctx context.Context, params *ListSubmissionsParams, reqEditors ...RequestEditorFn) (*ListSubmissionsResponse, error) {
 	rsp, err := c.ListSubmissions(ctx, params, reqEditors...)
@@ -3333,6 +3920,15 @@ func (c *ClientWithResponses) GetSubmissionWithResponse(ctx context.Context, sub
 	return ParseGetSubmissionResponse(rsp)
 }
 
+// ListUserContestsWithResponse request returning *ListUserContestsResponse
+func (c *ClientWithResponses) ListUserContestsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*ListUserContestsResponse, error) {
+	rsp, err := c.ListUserContests(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListUserContestsResponse(rsp)
+}
+
 // ListUsersWithResponse request returning *ListUsersResponse
 func (c *ClientWithResponses) ListUsersWithResponse(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error) {
 	rsp, err := c.ListUsers(ctx, params, reqEditors...)
@@ -3360,15 +3956,24 @@ func (c *ClientWithResponses) ListUserSubmissionsWithResponse(ctx context.Contex
 	return ParseListUserSubmissionsResponse(rsp)
 }
 
-// ParseListContestsResponse parses an HTTP response from a ListContestsWithResponse call
-func ParseListContestsResponse(rsp *http.Response) (*ListContestsResponse, error) {
+// ListWorkshopContestsWithResponse request returning *ListWorkshopContestsResponse
+func (c *ClientWithResponses) ListWorkshopContestsWithResponse(ctx context.Context, params *ListWorkshopContestsParams, reqEditors ...RequestEditorFn) (*ListWorkshopContestsResponse, error) {
+	rsp, err := c.ListWorkshopContests(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListWorkshopContestsResponse(rsp)
+}
+
+// ParseListAdminContestsResponse parses an HTTP response from a ListAdminContestsWithResponse call
+func ParseListAdminContestsResponse(rsp *http.Response) (*ListAdminContestsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ListContestsResponse{
+	response := &ListAdminContestsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -3794,6 +4399,32 @@ func ParseUpdateProblemResponse(rsp *http.Response) (*UpdateProblemResponse, err
 	return response, nil
 }
 
+// ParseListPublicContestsResponse parses an HTTP response from a ListPublicContestsWithResponse call
+func ParseListPublicContestsResponse(rsp *http.Response) (*ListPublicContestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListPublicContestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListContestsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListSubmissionsResponse parses an HTTP response from a ListSubmissionsWithResponse call
 func ParseListSubmissionsResponse(rsp *http.Response) (*ListSubmissionsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -3872,6 +4503,32 @@ func ParseGetSubmissionResponse(rsp *http.Response) (*GetSubmissionResponse, err
 	return response, nil
 }
 
+// ParseListUserContestsResponse parses an HTTP response from a ListUserContestsWithResponse call
+func ParseListUserContestsResponse(rsp *http.Response) (*ListUserContestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListUserContestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListUserContestsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListUsersResponse parses an HTTP response from a ListUsersWithResponse call
 func ParseListUsersResponse(rsp *http.Response) (*ListUsersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -3940,6 +4597,32 @@ func ParseListUserSubmissionsResponse(rsp *http.Response) (*ListUserSubmissionsR
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest ListSubmissionsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListWorkshopContestsResponse parses an HTTP response from a ListWorkshopContestsWithResponse call
+func ParseListWorkshopContestsResponse(rsp *http.Response) (*ListWorkshopContestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListWorkshopContestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListContestsResponseModel
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

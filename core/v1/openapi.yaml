@@ -108,8 +108,25 @@ paths:
           description: OK
           content: {}
   /contests:
+    post:
+      operationId: CreateContest
+      parameters:
+        - name: title
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "Contest 1"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreationResponseModel"
+  /admin/contests:
     get:
-      operationId: ListContests
+      operationId: ListAdminContests
       parameters:
         - name: page
           in: query
@@ -130,16 +147,30 @@ paths:
           schema:
             type: string
           example: "Contest"
-        - name: owner
+        - name: visibility
           in: query
           schema:
-            type: boolean
-        - name: descending
+            type: string
+            enum:
+              - public
+              - private
+        - name: sortBy
           in: query
           schema:
-            type: boolean
-            default: false
-          example: false
+            type: string
+            enum:
+              - created_at
+              - updated_at
+              - title
+          example: "created_at"
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          example: "desc"
       responses:
         "200":
           description: OK
@@ -147,22 +178,154 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListContestsResponseModel"
-    post:
-      operationId: CreateContest
+  /user/{id}/contests:
+    get:
+      operationId: ListUserContests
       parameters:
-        - name: title
-          in: query
+        - name: id
+          in: path
           required: true
           schema:
             type: string
-          example: "Contest 1"
+            format: uuid
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+          example: "Contest"
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum:
+              - last_submission_time
+              - created_at
+              - updated_at
+              - title
+          example: "last_submission_time"
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          example: "desc"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                $ref: "#/components/schemas/ListUserContestsResponseModel"
+  /workshop/contests:
+    get:
+      operationId: ListWorkshopContests
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+          example: "Contest"
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum:
+              - created_at
+              - updated_at
+              - title
+          example: "created_at"
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          example: "desc"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListContestsResponseModel"
+  /public/contests:
+    get:
+      operationId: ListPublicContests
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+          example: "Contest"
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum:
+              - created_at
+              - updated_at
+              - title
+          example: "created_at"
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          example: "desc"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListContestsResponseModel"
   /contests/{contest_id}:
     get:
       operationId: GetContest
@@ -903,6 +1066,18 @@ components:
           type: string
           format: date-time
     ListContestsResponseModel:
+      type: object
+      required:
+        - contests
+        - pagination
+      properties:
+        contests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContestModel"
+        pagination:
+          $ref: "#/components/schemas/PaginationModel"
+    ListUserContestsResponseModel:
       type: object
       required:
         - contests

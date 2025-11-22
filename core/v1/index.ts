@@ -27,6 +27,7 @@ export type { ListContestMembersResponseModel } from './models/ListContestMember
 export type { ListContestsResponseModel } from './models/ListContestsResponseModel';
 export type { ListProblemsResponseModel } from './models/ListProblemsResponseModel';
 export type { ListSubmissionsResponseModel } from './models/ListSubmissionsResponseModel';
+export type { ListUserContestsResponseModel } from './models/ListUserContestsResponseModel';
 export type { ListUsersResponseModel } from './models/ListUsersResponseModel';
 export type { PaginationModel } from './models/PaginationModel';
 export type { ProblemModel } from './models/ProblemModel';
