@@ -48,3 +48,18 @@ func GetUser(ctx context.Context) (*models.User, error) {
 	}
 	return u, nil
 }
+
+// GetUserOrAnonymous extracts User from context or returns an anonymous user with empty UUID
+// This allows unauthenticated access to public resources
+func GetUserOrAnonymous(ctx context.Context) *models.User {
+	u, err := GetUser(ctx)
+	if err != nil {
+		// Return anonymous user with empty UUID
+		return &models.User{
+			Id:       [16]byte{}, // Empty UUID for anonymous users
+			Username: "",
+			Role:     models.RoleUser,
+		}
+	}
+	return u
+}

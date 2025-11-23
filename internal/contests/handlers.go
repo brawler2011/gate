@@ -113,10 +113,8 @@ func (h *ContestsHandlers) CreateContest(c *fiber.Ctx, params corev1.CreateConte
 func (h *ContestsHandlers) GetContest(c *fiber.Ctx, id uuid.UUID) error {
 	ctx := c.UserContext()
 
-	user, err := middleware.GetUser(ctx)
-	if err != nil {
-		return err
-	}
+	// Allow unauthenticated access for public contests
+	user := middleware.GetUserOrAnonymous(ctx)
 
 	// Get contest first to pass to permissions check
 	contest, err := h.contestsUC.GetContest(ctx, id)
@@ -124,7 +122,7 @@ func (h *ContestsHandlers) GetContest(c *fiber.Ctx, id uuid.UUID) error {
 		return err
 	}
 
-	// Check if user can view contest
+	// Check if user can view contest (includes public contest check)
 	canView, err := h.permissionsUC.HasContestPermission(ctx, id, user.Id, permissions.ActionGetContest,
 		permissions.WithUser(user),
 		permissions.WithContest(contest))
@@ -469,10 +467,8 @@ func (h *ContestsHandlers) CreateContestProblem(c *fiber.Ctx, contestId uuid.UUI
 func (h *ContestsHandlers) GetContestProblem(c *fiber.Ctx, contestId uuid.UUID, problemId uuid.UUID) error {
 	ctx := c.UserContext()
 
-	user, err := middleware.GetUser(ctx)
-	if err != nil {
-		return err
-	}
+	// Allow unauthenticated access for public contests
+	user := middleware.GetUserOrAnonymous(ctx)
 
 	// Check if user can view contest - this includes public contests
 	canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionGetContest, permissions.WithUser(user))
