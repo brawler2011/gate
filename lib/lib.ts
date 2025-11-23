@@ -23,18 +23,22 @@ export function StateColor(state?: number | string): string {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   
   switch (stateNum) {
-    case 0:
-      return "blue"; // Pending
     case 1:
-      return "yellow"; // In Progress / Testing
-    case 2:
+      return "blue"; // Saved to DB
+    case 101:
+      return "orange"; // Compilation Error
+    case 102:
+      return "red"; // Time Limit Exceeded
+    case 103:
+      return "red"; // Memory Limit Exceeded
+    case 104:
+      return "red"; // Runtime Error
+    case 105:
+      return "red"; // Presentation Error
+    case 106:
       return "red"; // Wrong Answer
-    case 3:
-      return "orange"; // Time Limit Exceeded
-    case 4:
-      return "orange"; // Memory Limit Exceeded
     case 200:
-      return "green"; // Accepted (HTTP 200 OK)
+      return "green"; // Accepted
     default:
       return "gray";
   }
@@ -47,16 +51,20 @@ export function StateString(state?: number | string): string {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   
   switch (stateNum) {
-    case 0:
-      return "Ожидание";
     case 1:
-      return "Тестируется";
-    case 2:
-      return "Неправильный ответ";
-    case 3:
+      return "Сохранено";
+    case 101:
+      return "Ошибка компиляции";
+    case 102:
       return "Превышено время";
-    case 4:
+    case 103:
       return "Превышена память";
+    case 104:
+      return "Ошибка выполнения";
+    case 105:
+      return "Ошибка формата";
+    case 106:
+      return "Неправильный ответ";
     case 200:
       return "Принято";
     default:
