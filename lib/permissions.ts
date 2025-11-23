@@ -1,6 +1,6 @@
 import type { ContestModel, ProblemModel } from "../../contracts/core/v1";
-import type { SessionUser } from "./session";
 import type { ContestRole } from "./contest-role";
+import type { SessionUser } from "./session";
 
 /**
  * Permission checker utilities for frontend
@@ -47,18 +47,23 @@ export class PermissionChecker {
   // Contest permissions
 
   canViewContest(contest: ContestModel): boolean {
-    if (!this.isAuthenticated()) {
-      return false;
-    }
-
     // Global admin can view any contest
     if (this.isGlobalAdmin()) {
       return true;
     }
 
-    // For now, allow authenticated users to view contests
-    // Backend will enforce actual visibility rules
-    return true;
+    // Public contests can be viewed by anyone (including unauthenticated users)
+    if (contest.visibility === "public") {
+      return true;
+    }
+
+    // Private contests require authentication and membership
+    if (!this.isAuthenticated()) {
+      return false;
+    }
+
+    // For authenticated users, backend will enforce actual visibility rules
+    return this.contestRole !== null;
   }
 
   canViewProblems(contest: ContestModel): boolean {
@@ -67,12 +72,18 @@ export class PermissionChecker {
       return true;
     }
 
+    // Public contests can be viewed by anyone (including unauthenticated users)
+    if (contest.visibility === "public") {
+      return true;
+    }
+
+    // Private contests require authentication and membership
     // TODO: Когда появится problems_view_scope в backend:
     // if (!this.contestRole) return false;
     // return hasRequiredRole(this.contestRole, contest.problems_view_scope as ContestScope);
 
-    // Временно: все authenticated могут просматривать задачи
-    return this.isAuthenticated();
+    // Временно: все authenticated могут просматривать задачи приватных контестов если они участники
+    return this.isAuthenticated() && this.contestRole !== null;
   }
 
   canSubmitSolution(contest: ContestModel): boolean {
@@ -81,12 +92,24 @@ export class PermissionChecker {
       return true;
     }
 
+    // Submissions always require authentication (even for public contests)
+    // because submissions must be associated with a user
+    if (!this.isAuthenticated()) {
+      return false;
+    }
+
+    // Public contests allow submissions from any authenticated user
+    if (contest.visibility === "public") {
+      return true;
+    }
+
+    // Private contests require contest membership
     // TODO: Когда появится problems_view_scope в backend:
     // if (!this.contestRole) return false;
     // return hasRequiredRole(this.contestRole, contest.problems_view_scope as ContestScope);
 
-    // Временно: все authenticated могут отправлять решения
-    return this.isAuthenticated();
+    // Временно: все authenticated участники могут отправлять решения в приватных контестах
+    return this.contestRole !== null;
   }
 
   canViewMySubmissions(contest: ContestModel): boolean {
@@ -95,12 +118,23 @@ export class PermissionChecker {
       return true;
     }
 
+    // Viewing own submissions requires authentication
+    if (!this.isAuthenticated()) {
+      return false;
+    }
+
+    // Public contests allow viewing own submissions for any authenticated user
+    if (contest.visibility === "public") {
+      return true;
+    }
+
+    // Private contests require contest membership
     // TODO: Когда появится problems_view_scope в backend:
     // if (!this.contestRole) return false;
     // return hasRequiredRole(this.contestRole, contest.problems_view_scope as ContestScope);
 
-    // Временно: все authenticated могут просматривать свои посылки
-    return this.isAuthenticated();
+    // Временно: все authenticated участники могут просматривать свои посылки
+    return this.contestRole !== null;
   }
 
   canViewAllSubmissions(contest: ContestModel): boolean {
