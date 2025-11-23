@@ -19,6 +19,8 @@ import {
   TableTr,
   Text,
   Title,
+  ScrollArea,
+  Container,
 } from "@mantine/core";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -84,22 +86,24 @@ const Page = async (props: Props) => {
 
   return (
     <DefaultLayout>
-      <Stack px="16">
-        <Stack align="center" w="fit-content" m="auto" pt="16" gap="16">
-          <Table horizontalSpacing="sm">
-            <TableThead>
-              <TableTr>
-                <TableTh ta="center">Когда</TableTh>
-                <TableTh ta="center">Кто</TableTh>
-                <TableTh ta="center">Задача</TableTh>
-                <TableTh ta="center">Язык</TableTh>
-                <TableTh ta="center">Вердикт</TableTh>
-                <TableTh ta="center">Время</TableTh>
-                <TableTh ta="center">Память</TableTh>
-              </TableTr>
-            </TableThead>
-            <TableTbody>{rows}</TableTbody>
-          </Table>
+      <Container size="lg" pt="md" pb="xl" px={{ base: 'xs', sm: 'md' }}>
+        <Stack align="center" gap="md">
+          <ScrollArea w="100%" type="auto">
+            <Table horizontalSpacing="sm" style={{ minWidth: 700 }}>
+              <TableThead>
+                <TableTr>
+                  <TableTh ta="center">Когда</TableTh>
+                  <TableTh ta="center">Кто</TableTh>
+                  <TableTh ta="center">Задача</TableTh>
+                  <TableTh ta="center">Язык</TableTh>
+                  <TableTh ta="center">Вердикт</TableTh>
+                  <TableTh ta="center">Время</TableTh>
+                  <TableTh ta="center">Память</TableTh>
+                </TableTr>
+              </TableThead>
+              <TableTbody>{rows}</TableTbody>
+            </Table>
+          </ScrollArea>
           <Stack align="flex-start" w="100%">
             <Title order={2}>Код решения</Title>
             <CodeBlock
@@ -108,7 +112,7 @@ const Page = async (props: Props) => {
             />
           </Stack>
         </Stack>
-      </Stack>
+      </Container>
     </DefaultLayout>
   );
 };

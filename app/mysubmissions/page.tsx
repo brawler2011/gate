@@ -1,6 +1,6 @@
 import {Metadata} from 'next';
 import {getSubmissions, getContest} from '@/lib/actions';
-import {Stack, Title, Container, Alert} from '@mantine/core';
+import {Stack, Title, Container, Alert, ScrollArea} from '@mantine/core';
 import {IconAlertCircle} from '@tabler/icons-react';
 import {DefaultLayout} from '@/components/Layout';
 import {NextPagination} from '@/components/Pagination';
@@ -99,7 +99,7 @@ const Page = async ({searchParams}: PageProps) => {
 
     return (
         <DefaultLayout>
-            <Container size="lg" pt="md" pb="xl">
+            <Container size="lg" pt="md" pb="xl" px={{ base: 'xs', sm: 'md' }}>
                 {contestData?.contest && (
                     <ContestHotbar 
                         contest={contestData.contest}
@@ -108,14 +108,16 @@ const Page = async ({searchParams}: PageProps) => {
                         activeTab="mysubmissions"
                     />
                 )}
-                <Stack align="center" w="fit-content" m="auto" gap="16">
+                <Stack align="center" gap="md">
                     <Title>Мои посылки</Title>
-                    <SubmissionsListWithWS
-                        initialSubmissions={submissionsData}
-                        wsUrl={wsUrl}
-                        token={token || ''}
-                        queryParams={queryParams}
-                    />
+                    <ScrollArea w="100%" type="auto">
+                        <SubmissionsListWithWS
+                            initialSubmissions={submissionsData}
+                            wsUrl={wsUrl}
+                            token={token || ''}
+                            queryParams={queryParams}
+                        />
+                    </ScrollArea>
                     <NextPagination
                         pagination={submissionsData.pagination}
                         baseUrl="/mysubmissions"

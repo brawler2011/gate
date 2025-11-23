@@ -75,35 +75,35 @@ const Header = ({ session }: { session?: any }) => {
   return (
     <>
       <div className={classes.header}>
-        <Group h="100%" maw="1920px" mx="auto">
-          <Group justify="flex-start" h="100%" style={{ flex: 1 }}>
+        <Group h="100%" maw="1920px" mx="auto" wrap="nowrap">
+          <Group justify="flex-start" h="100%" className={classes.leftSection} gap="xs">
             <Burger
               opened={drawerOpened}
               onClick={toggleDrawer}
               hiddenFrom="sm"
             />
-            <Link href="/" className={classes.link}>
-              <Group gap="xs" wrap="nowrap" visibleFrom="sm">
+            <Link href="/" className={classes.logoLink}>
+              <Group gap="xs" wrap="nowrap">
                 <Image
                   component={NextImage}
                   src="/gate_logo.svg"
                   alt="Gate logo"
                   width={40}
                   height={40}
+                  className={classes.logoImage}
                 />
-                <Title order={1} visibleFrom="md">
+                <Title order={1}>
                   Gate
                 </Title>
               </Group>
             </Link>
           </Group>
-          <Group justify="center" h="100%" gap={0} style={{ flex: 1 }}>
+          <Group justify="center" h="100%" gap={0} visibleFrom="sm" style={{ flex: 1 }}>
             <Anchor
               component={Link}
               href="/"
               className={classes.link}
               underline="never"
-              visibleFrom="sm"
             >
               Главная
             </Anchor>
@@ -112,7 +112,6 @@ const Header = ({ session }: { session?: any }) => {
               href="/contests"
               className={classes.link}
               underline="never"
-              visibleFrom="sm"
             >
               Контесты
             </Anchor>
@@ -121,7 +120,6 @@ const Header = ({ session }: { session?: any }) => {
               href="/workshop"
               className={classes.link}
               underline="never"
-              visibleFrom="sm"
             >
               Мастерская
             </Anchor>
@@ -130,12 +128,11 @@ const Header = ({ session }: { session?: any }) => {
               href="/about"
               className={classes.link}
               underline="never"
-              visibleFrom="sm"
             >
               О нас
             </Anchor>
           </Group>
-          <Group justify="flex-end" style={{ flex: 1 }}>
+          <Group justify="flex-end" h="100%" gap="xs" className={classes.rightSection}>
             {session?.identity?.metadata_public?.role === "admin" && (
               <Button
                 component={Link}
@@ -179,12 +176,13 @@ const Header = ({ session }: { session?: any }) => {
         zIndex={1000000}
       >
         <ScrollArea h="calc(100vh - 80px)" mx="-md">
-          <Stack>
+          <Stack gap="xs" p="md">
             <Anchor
               component={Link}
               href="/"
               className={classes.link}
               underline="never"
+              onClick={closeDrawer}
             >
               Главная
             </Anchor>
@@ -193,6 +191,7 @@ const Header = ({ session }: { session?: any }) => {
               href="/contests"
               className={classes.link}
               underline="never"
+              onClick={closeDrawer}
             >
               Контесты
             </Anchor>
@@ -201,8 +200,18 @@ const Header = ({ session }: { session?: any }) => {
               href="/workshop"
               className={classes.link}
               underline="never"
+              onClick={closeDrawer}
             >
               Мастерская
+            </Anchor>
+            <Anchor
+              component={Link}
+              href="/about"
+              className={classes.link}
+              underline="never"
+              onClick={closeDrawer}
+            >
+              О нас
             </Anchor>
             {session?.identity?.metadata_public?.role === "admin" && (
               <Anchor
@@ -210,13 +219,71 @@ const Header = ({ session }: { session?: any }) => {
                 href="/admin"
                 className={classes.link}
                 underline="never"
+                onClick={closeDrawer}
               >
                 Администрирование
               </Anchor>
             )}
-          </Stack>
 
-          <Divider my="sm" />
+            <Divider my="sm" />
+
+            <Group justify="space-between" align="center">
+              <span style={{ fontWeight: 600 }}>Тема оформления</span>
+              <ActionIcon
+                onClick={() =>
+                  setColorScheme(
+                    computedColorScheme === "light" ? "dark" : "light"
+                  )
+                }
+                variant="default"
+                size="lg"
+                aria-label="Toggle color scheme"
+              >
+                <IconSun
+                  className={cx(classes.icon, classes.light)}
+                  stroke={1.5}
+                />
+                <IconMoon
+                  className={cx(classes.icon, classes.dark)}
+                  stroke={1.5}
+                />
+              </ActionIcon>
+            </Group>
+
+            <Divider my="sm" />
+
+            {session ? (
+              <Stack gap="sm">
+                {session.identity && (
+                  <Button
+                    component={Link}
+                    href={`/users/${session.identity.metadata_public.user_id}`}
+                    variant="light"
+                    color={APP_COLORS.users}
+                    leftSection={<IconUser size={20} />}
+                    fullWidth
+                    onClick={closeDrawer}
+                  >
+                    Профиль
+                  </Button>
+                )}
+                <LogoutLink variant="outline" fullWidth>
+                  Выйти
+                </LogoutLink>
+              </Stack>
+            ) : (
+              <Button
+                component={Link}
+                href="/auth/login"
+                variant="filled"
+                color={APP_COLORS.actions.primary}
+                fullWidth
+                onClick={closeDrawer}
+              >
+                Войти
+              </Button>
+            )}
+          </Stack>
         </ScrollArea>
       </Drawer>
     </>

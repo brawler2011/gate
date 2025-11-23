@@ -82,7 +82,7 @@ export async function getSubmissions(params: {
             userId: params.userId,
             problemId: params.problemId,
             state: params.state,
-            sortOrder: params.sortOrder,
+            sortOrder: params.sortOrder ?? "desc",
             language: params.language,
         }));
         return response;

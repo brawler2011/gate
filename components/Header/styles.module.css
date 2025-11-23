@@ -4,6 +4,31 @@
     padding-right: var(--mantine-spacing-md);
 }
 
+.leftSection {
+    flex: 1;
+}
+
+.rightSection {
+    /* On mobile: no flex, just wrap content */
+    /* On desktop: flex 1 to push to the right */
+    @media (min-width: var(--mantine-breakpoint-sm)) {
+        flex: 1;
+    }
+}
+
+.logoLink {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    text-decoration: none;
+    color: var(--mantine-color-text);
+}
+
+.logoImage {
+    filter: none !important;
+    color: transparent !important;
+}
+
 .link {
     display: flex;
     align-items: center;

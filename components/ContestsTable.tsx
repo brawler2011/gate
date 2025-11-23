@@ -27,8 +27,8 @@ export function ContestsTable({ contests, showCreatedAt = true }: ContestsTableP
       <TableThead>
         <TableTr>
           <TableTh style={{ width: "50%", maxWidth: 0 }}>Название</TableTh>
-          <TableTh style={{ width: "15%"}}>Участники</TableTh>
-          <TableTh style={{ width: "15%"}}>Задачи</TableTh>
+          <TableTh style={{ width: "15%"}} visibleFrom="sm">Участники</TableTh>
+          <TableTh style={{ width: "15%"}} visibleFrom="sm">Задачи</TableTh>
           {showCreatedAt && <TableTh style={{ width: "20%"}}>Дата создания</TableTh>}
         </TableTr>
       </TableThead>
@@ -42,10 +42,10 @@ export function ContestsTable({ contests, showCreatedAt = true }: ContestsTableP
             <TableTd style={{ width: "50%", maxWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               <Text fw={600}>{contest.title}</Text>
             </TableTd>
-            <TableTd>
+            <TableTd visibleFrom="sm">
               <Text>{0}</Text>
             </TableTd>
-            <TableTd>
+            <TableTd visibleFrom="sm">
               <Text>{0}</Text>
             </TableTd>
             {showCreatedAt && (

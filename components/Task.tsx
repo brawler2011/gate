@@ -64,8 +64,11 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
             </AppShellHeader>
             <AppShellMain>
                 <Box style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
-                    {/* Left Sidebar */}
-                    <Box style={{ width: CONTEST_SIDEBAR_LEFT_WIDTH, marginLeft: '32px' }}>
+                    {/* Left Sidebar - скрыт на мобилках */}
+                    <Box 
+                        style={{ width: CONTEST_SIDEBAR_LEFT_WIDTH, marginLeft: '32px' }}
+                        visibleFrom="sm"
+                    >
                         <Paper 
                             shadow="sm" 
                             radius="md" 
@@ -97,7 +100,10 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
 
                     {/* Main Content */}
                     <Box style={{ flex: 1 }}>
-                        <Container size="lg">
+                        <Container 
+                            size="lg"
+                            px={{ base: 'xs', sm: 'md' }}
+                        >
                             <ContestHotbar 
                                 contest={contest}
                                 user={user}
@@ -107,8 +113,11 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
                         </Container>
                     </Box>
 
-                    {/* Right Sidebar */}
-                    <Box style={{ width: CONTEST_SIDEBAR_RIGHT_WIDTH, marginRight: '32px' }}>
+                    {/* Right Sidebar - скрыт на мобилках */}
+                    <Box 
+                        style={{ width: CONTEST_SIDEBAR_RIGHT_WIDTH, marginRight: '32px' }}
+                        visibleFrom="sm"
+                    >
                         <Paper 
                             shadow="sm" 
                             radius="md" 
