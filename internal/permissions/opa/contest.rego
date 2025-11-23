@@ -27,6 +27,8 @@ role_gte(r1, r2) if {
 
 # Context helpers
 is_admin if common.is_admin
+is_anonymous if common.is_anonymous
+
 is_owner if {
 	member
 	member.Role == "owner"
@@ -112,6 +114,10 @@ can_list_users_submissions := true if {
 can_list_own_submissions := true if has_full_access
 can_list_own_submissions := true if is_participant
 can_list_own_submissions := true if is_moderator
+can_list_own_submissions := true if {
+	contest
+	contest.Visibility == "public"
+}
 
 # GetOtherUserSubmission
 can_get_other_user_submission := true if has_full_access

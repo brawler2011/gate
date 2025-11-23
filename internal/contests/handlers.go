@@ -698,10 +698,8 @@ func (h *ContestsHandlers) GetMyContestRole(c *fiber.Ctx, contestId uuid.UUID) e
 func (h *ContestsHandlers) ListContestSubmissions(c *fiber.Ctx, contestId uuid.UUID, params corev1.ListContestSubmissionsParams) error {
 	ctx := c.UserContext()
 
-	user, err := middleware.GetUser(ctx)
-	if err != nil {
-		return err
-	}
+	// Allow unauthenticated access for public contests
+	user := middleware.GetUserOrAnonymous(ctx)
 
 	// Determine which userId to filter by and check permissions
 	var filterUserId *uuid.UUID
@@ -709,7 +707,7 @@ func (h *ContestsHandlers) ListContestSubmissions(c *fiber.Ctx, contestId uuid.U
 	if params.UserId == nil {
 		// No userId specified - request to get all members' submissions
 		// Need permission to list all users' submissions
-		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionListUsersSubmissions)
+		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionListUsersSubmissions, permissions.WithUser(user))
 		if err != nil {
 			return err
 		}
@@ -730,7 +728,7 @@ func (h *ContestsHandlers) ListContestSubmissions(c *fiber.Ctx, contestId uuid.U
 		filterUserId = &user.Id
 	} else {
 		// UserId is different - need permission to list other users' submissions
-		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionListUsersSubmissions)
+		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionListUsersSubmissions, permissions.WithUser(user))
 		if err != nil {
 			return err
 		}
