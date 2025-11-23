@@ -5,6 +5,7 @@ import {
   ActionIcon,
   Anchor,
   Avatar,
+  Box,
   Burger,
   Button,
   Divider,
@@ -75,7 +76,7 @@ const Header = ({ session }: { session?: any }) => {
   return (
     <>
       <div className={classes.header}>
-        <Group h="100%" maw="1920px" mx="auto" wrap="nowrap">
+        <Group h="100%" maw="1920px" mx="auto" wrap="nowrap" style={{ flex: 1 }}>
           <Group justify="flex-start" h="100%" className={classes.leftSection} gap="xs">
             <Burger
               opened={drawerOpened}
@@ -132,6 +133,7 @@ const Header = ({ session }: { session?: any }) => {
               О нас
             </Anchor>
           </Group>
+          <Box hiddenFrom="sm" style={{ flex: 1 }} />
           <Group justify="flex-end" h="100%" gap="xs" className={classes.rightSection}>
             {session?.identity?.metadata_public?.role === "admin" && (
               <Button

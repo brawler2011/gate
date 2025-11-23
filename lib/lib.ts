@@ -52,17 +52,17 @@ export function StateString(state?: number | string): string {
   
   switch (stateNum) {
     case 1:
-      return "Сохранено";
+      return "Тестируется";
     case 101:
       return "Ошибка компиляции";
     case 102:
-      return "Превышено время";
+      return "Превышено время исполнения";
     case 103:
-      return "Превышена память";
+      return "Превышена ограничение памяти";
     case 104:
-      return "Ошибка выполнения";
+      return "Ошибка исполнения";
     case 105:
-      return "Ошибка формата";
+      return "Ошибка форматирования";
     case 106:
       return "Неправильный ответ";
     case 200:

@@ -216,8 +216,16 @@ export async function updateProblem(
     }
 }
 
-export async function uploadProblem(problemId: string, file: File) {
-    throw "unimplemented";
+export async function uploadProblemTests(id: string, file: File) {
+    try {
+        const response = await Call((client) =>
+            client.default.uploadProblemTests({id, formData: {file: file}})
+        );
+        return response;
+    } catch (error) {
+        console.error('Failed to upload problem tests:', error);
+        throw error;
+    }
 }
 
 export async function updateContest(

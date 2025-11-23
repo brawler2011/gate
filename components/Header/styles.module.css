@@ -5,7 +5,11 @@
 }
 
 .leftSection {
-    flex: 1;
+    /* On mobile: no flex, just wrap content */
+    /* On desktop: flex 1 for proper centering */
+    @media (min-width: var(--mantine-breakpoint-sm)) {
+        flex: 1;
+    }
 }
 
 .rightSection {

@@ -40,7 +40,7 @@ export function RecentSubmissionsTable({
           <Table.Tr>
             <Table.Th ta="center">Задача</Table.Th>
             <Table.Th ta="center">Статус</Table.Th>
-            <Table.Th ta="center">Очки</Table.Th>
+            <Table.Th ta="center">Баллы</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>

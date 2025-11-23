@@ -1,7 +1,7 @@
 import {UpdateProblem} from "@/app/problems/[problem_id]/edit/actions";
 import {ProblemForm} from "@/components/ProblemForm";
 import {DefaultLayout} from "@/components/Layout";
-import {getProblem, uploadProblem as uploadProblemAction,} from "@/lib/actions";
+import {getProblem, uploadProblemTests as uploadProblemTestsAction,} from "@/lib/actions";
 import {Metadata} from "next";
 import {notFound} from "next/navigation";
 
@@ -44,9 +44,9 @@ const Page = async (props: Props) => {
     }
 
     try {
-        return await uploadProblemAction(id, file);
+        return await uploadProblemTestsAction(id, file);
     } catch (error) {
-      console.error("Failed to upload problem:", error);
+      console.error("Failed to upload problem tests:", error);
       throw error;
     }
   };

@@ -118,6 +118,25 @@ const CreateSubmissionForm = ({ onSubmit, problemSelect, large = false, disabled
         }
     };
 
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (event.key === "Tab") {
+            event.preventDefault();
+            const target = event.currentTarget;
+            const start = target.selectionStart;
+            const end = target.selectionEnd;
+            const value = form.values.code;
+            
+            // Insert tab character at cursor position
+            const newValue = value.substring(0, start) + "\t" + value.substring(end);
+            form.setFieldValue("code", newValue);
+            
+            // Set cursor position after the inserted tab
+            setTimeout(() => {
+                target.selectionStart = target.selectionEnd = start + 1;
+            }, 0);
+        }
+    };
+
     return (
         <form
             onSubmit={form.onSubmit((values) => mutation.mutate(values))}
@@ -194,6 +213,7 @@ const CreateSubmissionForm = ({ onSubmit, problemSelect, large = false, disabled
                             placeholder="Введите ваше решение здесь, перетащите файл или текст..."
                             classNames={{ input: classes.input }}
                             disabled={disabled}
+                            onKeyDown={handleKeyDown}
                         />
                     )}
                 </div>
