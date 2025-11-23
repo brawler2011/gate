@@ -3,8 +3,8 @@ module github.com/gate149/core
 go 1.24.6
 
 require (
-	github.com/gate149/contracts v0.0.0-20251122170939-3349ce1e956c
-	github.com/gate149/judge0-go-sdk v0.0.0-20251106191720-f413b24b83ea
+	github.com/gate149/contracts v0.0.0-20251123123544-a9bbf9e0fb3e
+	github.com/gate149/judge0-go-sdk v0.0.0-20251123133356-d33fbfff6e16
 	github.com/gate149/pandoc-go-sdk v0.0.0-20251106192314-fc6f856bb189
 	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/google/uuid v1.6.0

@@ -13,12 +13,12 @@ import (
 )
 
 const (
-	MaxRetries         = 3
-	PollInterval       = 1 * time.Second
-	BatchSize          = 10
-	MaxWaitForJudge0   = 30 * time.Second
-	CleanupInterval    = 1 * time.Hour
-	RetentionDays      = 7
+	MaxRetries       = 3
+	PollInterval     = 1 * time.Second
+	BatchSize        = 10
+	MaxWaitForJudge0 = 30 * time.Second
+	CleanupInterval  = 1 * time.Hour
+	RetentionDays    = 7
 )
 
 type SubmissionsRepo interface {
@@ -107,7 +107,7 @@ func (w *Worker) processEvents(ctx context.Context) {
 				slog.String("event_id", event.Id.String()),
 				slog.String("event_type", string(event.EventType)),
 				slog.Any("error", err))
-			
+
 			// Mark as failed
 			if markErr := w.outboxRepo.MarkAsFailed(ctx, event.Id, err.Error()); markErr != nil {
 				w.logger.Error("failed to mark event as failed", slog.String("event_id", event.Id.String()), slog.Any("error", markErr))
@@ -269,7 +269,7 @@ func (w *Worker) testSubmission(
 	for _, test := range tests {
 		// Create submission in Judge0
 		timeLimit := float64(problem.TimeLimit) / 1000.0 // Convert ms to seconds
-		memoryLimit := int(problem.MemoryLimit)           // Memory limit in MB
+		memoryLimit := int(problem.MemoryLimit)          // Memory limit in MB
 
 		result, err := w.judge0Client.CreateSubmission(
 			ctx,
@@ -347,10 +347,8 @@ func (w *Worker) testSubmission(
 		}
 
 		if result.Memory != nil {
-			// Memory is in KB (int), convert to MB
-			var memoryKB int64
-			fmt.Sscanf(*result.Memory, "%d", &memoryKB)
-			memoryMB := memoryKB / 1024
+			// Memory is in KB (float32), convert to MB
+			memoryMB := int64(*result.Memory / 1024)
 			if memoryMB > maxMemory {
 				maxMemory = memoryMB
 			}
@@ -406,4 +404,3 @@ func (w *Worker) cleanup(ctx context.Context) {
 		w.logger.Error("failed to delete old events", slog.Any("error", err))
 	}
 }
-

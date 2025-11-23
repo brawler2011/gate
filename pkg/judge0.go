@@ -42,15 +42,15 @@ func MapLanguageID(gateLanguageID int32) (int, error) {
 
 // SubmissionResult represents the result of a submission
 type SubmissionResult struct {
-	Token          string
-	Status         *judge0.Status
-	Stdout         *string
-	Stderr         *string
-	CompileOutput  *string
-	Time           *string
-	Memory         *string
-	ExitCode       *int
-	Message        *string
+	Token         string
+	Status        *judge0.Status
+	Stdout        *string
+	Stderr        *string
+	CompileOutput *string
+	Time          *string
+	Memory        *float32
+	ExitCode      *int
+	Message       *string
 }
 
 // CreateSubmission creates a submission in Judge0
@@ -154,4 +154,3 @@ func (j *Judge0Client) WaitForSubmission(ctx context.Context, token string, maxW
 		}
 	}
 }
-
