@@ -423,6 +423,11 @@ type CreateProblemParams struct {
 	Title string `form:"title" json:"title"`
 }
 
+// UploadProblemTestsMultipartBody defines parameters for UploadProblemTests.
+type UploadProblemTestsMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // ListPublicContestsParams defines parameters for ListPublicContests.
 type ListPublicContestsParams struct {
 	Page      int64                              `form:"page" json:"page"`
@@ -516,6 +521,9 @@ type UpdateContestJSONRequestBody = UpdateContestRequestModel
 
 // UpdateProblemJSONRequestBody defines body for UpdateProblem for application/json ContentType.
 type UpdateProblemJSONRequestBody = UpdateProblemRequestModel
+
+// UploadProblemTestsMultipartRequestBody defines body for UploadProblemTests for multipart/form-data ContentType.
+type UploadProblemTestsMultipartRequestBody UploadProblemTestsMultipartBody
 
 // CreateSubmissionJSONRequestBody defines body for CreateSubmission for application/json ContentType.
 type CreateSubmissionJSONRequestBody = CreateSubmissionRequestModel
@@ -656,6 +664,9 @@ type ClientInterface interface {
 	UpdateProblemWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	UpdateProblem(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UploadProblemTestsWithBody request with any body
+	UploadProblemTestsWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListPublicContests request
 	ListPublicContests(ctx context.Context, params *ListPublicContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -941,6 +952,18 @@ func (c *Client) UpdateProblemWithBody(ctx context.Context, id openapi_types.UUI
 
 func (c *Client) UpdateProblem(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateProblemRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UploadProblemTestsWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUploadProblemTestsRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2188,6 +2211,42 @@ func NewUpdateProblemRequestWithBody(server string, id openapi_types.UUID, conte
 	return req, nil
 }
 
+// NewUploadProblemTestsRequestWithBody generates requests for UploadProblemTests with any type of body
+func NewUploadProblemTestsRequestWithBody(server string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/tests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewListPublicContestsRequest generates requests for ListPublicContests
 func NewListPublicContestsRequest(server string, params *ListPublicContestsParams) (*http.Request, error) {
 	var err error
@@ -3137,6 +3196,9 @@ type ClientWithResponsesInterface interface {
 
 	UpdateProblemWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemResponse, error)
 
+	// UploadProblemTestsWithBodyWithResponse request with any body
+	UploadProblemTestsWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadProblemTestsResponse, error)
+
 	// ListPublicContestsWithResponse request
 	ListPublicContestsWithResponse(ctx context.Context, params *ListPublicContestsParams, reqEditors ...RequestEditorFn) (*ListPublicContestsResponse, error)
 
@@ -3600,6 +3662,27 @@ func (r UpdateProblemResponse) StatusCode() int {
 	return 0
 }
 
+type UploadProblemTestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UploadProblemTestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UploadProblemTestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListPublicContestsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3992,6 +4075,15 @@ func (c *ClientWithResponses) UpdateProblemWithResponse(ctx context.Context, id 
 		return nil, err
 	}
 	return ParseUpdateProblemResponse(rsp)
+}
+
+// UploadProblemTestsWithBodyWithResponse request with arbitrary body returning *UploadProblemTestsResponse
+func (c *ClientWithResponses) UploadProblemTestsWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadProblemTestsResponse, error) {
+	rsp, err := c.UploadProblemTestsWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUploadProblemTestsResponse(rsp)
 }
 
 // ListPublicContestsWithResponse request returning *ListPublicContestsResponse
@@ -4526,6 +4618,22 @@ func ParseUpdateProblemResponse(rsp *http.Response) (*UpdateProblemResponse, err
 	}
 
 	response := &UpdateProblemResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUploadProblemTestsResponse parses an HTTP response from a UploadProblemTestsWithResponse call
+func ParseUploadProblemTestsResponse(rsp *http.Response) (*UploadProblemTestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UploadProblemTestsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}

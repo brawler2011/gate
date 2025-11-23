@@ -125,6 +125,29 @@ export class DefaultService {
         });
     }
     /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public uploadProblemTests({
+        id,
+        formData,
+    }: {
+        id: string,
+        formData: {
+            file: Blob;
+        },
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{id}/tests',
+            path: {
+                'id': id,
+            },
+            formData: formData,
+            mediaType: 'multipart/form-data',
+        });
+    }
+    /**
      * @returns CreationResponseModel OK
      * @throws ApiError
      */

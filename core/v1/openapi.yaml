@@ -107,6 +107,32 @@ paths:
         "200":
           description: OK
           content: {}
+  /problems/{id}/tests:
+    post:
+      operationId: UploadProblemTests
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+                - file
+      responses:
+        "200":
+          description: OK
+          content: {}
   /contests:
     post:
       operationId: CreateContest

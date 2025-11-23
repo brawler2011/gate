@@ -418,6 +418,11 @@ type CreateProblemParams struct {
 	Title string `form:"title" json:"title"`
 }
 
+// UploadProblemTestsMultipartBody defines parameters for UploadProblemTests.
+type UploadProblemTestsMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // ListPublicContestsParams defines parameters for ListPublicContests.
 type ListPublicContestsParams struct {
 	Page      int64                              `form:"page" json:"page"`
@@ -512,6 +517,9 @@ type UpdateContestJSONRequestBody = UpdateContestRequestModel
 // UpdateProblemJSONRequestBody defines body for UpdateProblem for application/json ContentType.
 type UpdateProblemJSONRequestBody = UpdateProblemRequestModel
 
+// UploadProblemTestsMultipartRequestBody defines body for UploadProblemTests for multipart/form-data ContentType.
+type UploadProblemTestsMultipartRequestBody UploadProblemTestsMultipartBody
+
 // CreateSubmissionJSONRequestBody defines body for CreateSubmission for application/json ContentType.
 type CreateSubmissionJSONRequestBody = CreateSubmissionRequestModel
 
@@ -577,6 +585,9 @@ type ServerInterface interface {
 
 	// (PATCH /problems/{id})
 	UpdateProblem(c *fiber.Ctx, id openapi_types.UUID) error
+
+	// (POST /problems/{id}/tests)
+	UploadProblemTests(c *fiber.Ctx, id openapi_types.UUID) error
 
 	// (GET /public/contests)
 	ListPublicContests(c *fiber.Ctx, params ListPublicContestsParams) error
@@ -1306,6 +1317,22 @@ func (siw *ServerInterfaceWrapper) UpdateProblem(c *fiber.Ctx) error {
 	return siw.Handler.UpdateProblem(c, id)
 }
 
+// UploadProblemTests operation middleware
+func (siw *ServerInterfaceWrapper) UploadProblemTests(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.UploadProblemTests(c, id)
+}
+
 // ListPublicContests operation middleware
 func (siw *ServerInterfaceWrapper) ListPublicContests(c *fiber.Ctx) error {
 
@@ -1905,6 +1932,8 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Get(options.BaseURL+"/problems/:id", wrapper.GetProblem)
 
 	router.Patch(options.BaseURL+"/problems/:id", wrapper.UpdateProblem)
+
+	router.Post(options.BaseURL+"/problems/:id/tests", wrapper.UploadProblemTests)
 
 	router.Get(options.BaseURL+"/public/contests", wrapper.ListPublicContests)
 
