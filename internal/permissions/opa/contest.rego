@@ -132,3 +132,7 @@ can_get_own_submission := true if is_moderator
 can_create_submission := true if has_full_access
 can_create_submission := true if is_participant
 can_create_submission := true if is_moderator
+can_create_submission := true if {
+	contest
+	contest.Visibility == "public"
+}

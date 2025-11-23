@@ -474,19 +474,13 @@ func (h *ContestsHandlers) GetContestProblem(c *fiber.Ctx, contestId uuid.UUID, 
 		return err
 	}
 
-	// Check if user can view contest (any permission implies view access)
-	canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionGetMonitor, permissions.WithUser(user))
+	// Check if user can view contest - this includes public contests
+	canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionGetContest, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
 	if !canView {
-		canView, err = h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionListOwnSubmissions, permissions.WithUser(user))
-		if err != nil {
-			return err
-		}
-	}
-	if !canView {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest problem")
 	}
 
 	p, err := h.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
