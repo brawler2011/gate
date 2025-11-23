@@ -70,9 +70,6 @@ export default async function BlogPostPage({ params }: Props) {
               </Group>
             </Stack>
 
-            {/* Divider */}
-            <div className={classes.divider} />
-
             {/* Content */}
             <div className={classes.content}>
               <ReactMarkdown remarkPlugins={[remarkGfm]}>

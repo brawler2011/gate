@@ -18,40 +18,12 @@ import { HomeProblemsTable } from "@/components/HomeProblemsTable";
 import { BlogPost } from "@/components/BlogPost/BlogPost";
 import { APP_COLORS } from "@/lib/theme/colors";
 import type { ContestModel } from "../../contracts/core/v1";
+import { getAllBlogPosts } from "@/lib/blog";
 
 export const metadata = {
   title: "Главная",
 };
 
-const mockBlogPosts = [
-  {
-    id: "1",
-    title: "Добро пожаловать на Gate149",
-    author: "Gate149 Team",
-    avatarUrl: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=256&q=80",
-    date: "2025-01-18",
-    description: "Добро пожаловать на Gate149 — современную платформу для соревновательного программирования! Красивый интерфейс, быстрое тестирование и многое другое.",
-    previewImageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "2",
-    title: "Обновление платформы v1.0",
-    author: "brawler2011",
-    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=256&q=80",
-    date: "2025-01-15",
-    description: "Мы рады представить вам первую стабильную версию платформы. Теперь вы можете создавать контесты, добавлять задачи и соревноваться с друзьями.",
-    previewImageUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "3",
-    title: "Как решать задачи?",
-    author: "dragon286",
-    avatarUrl: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=256&q=80",
-    date: "2025-01-10",
-    description: "Если вы новичок в спортивном программировании, рекомендуем начать с раздела 'Продолжить решение'. Там собраны простые задачи для старта.",
-    previewImageUrl: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
-  },
-];
 
 // Mock data for problems
 const mockProblems = [
@@ -168,6 +140,7 @@ const mockContests: ContestModel[] = [
 
 export default async function Page() {
   const session = await getOrySession();
+  const blogPosts = getAllBlogPosts();
   const isAuthenticated = !!session;
 
   return (
@@ -233,7 +206,7 @@ export default async function Page() {
                 <Title order={2}>Блог</Title>
               </Group>
               <Stack gap="md">
-                {mockBlogPosts.map((post) => (
+                {blogPosts.map((post) => (
                   <BlogPost
                     key={post.id}
                     id={post.id}
@@ -256,7 +229,7 @@ export default async function Page() {
               <Title order={2}>Блог</Title>
             </Group>
             <Stack gap="md">
-              {mockBlogPosts.map((post) => (
+              {blogPosts.map((post) => (
                 <BlogPost
                   key={post.id}
                   id={post.id}
