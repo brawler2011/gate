@@ -1,0 +1,93 @@
+# Project: Gate149
+
+A competitive programming platform for creating problems, contests, and evaluating solutions.
+
+**Purpose**: Platform that allows users to:
+- Create and manage competitive programming problems
+- Organize contests with multiple problems
+- Submit solutions that are automatically evaluated against test cases
+- Track user performance and contest results
+
+**Architecture**: Full-stack application with OpenAPI-first design
+- **Frontend**: Next.js 15 (App Router) + TypeScript + React
+  - **SSR-FIRST**: Server-Side Rendering for ALL pages
+  - Client components only for interactivity
+- **Backend**: Go 1.24.6 with Fiber v2 framework
+- **Contracts**: OpenAPI specification with auto-generated clients/servers
+- **Authentication**: Ory Kratos for identity management
+
+**Shell**: PowerShell (use PowerShell syntax for all commands, NOT bash/sh)
+**Note**: Use PowerShell command syntax (semicolons, PowerShell-specific commands) instead of bash/sh syntax.
+
+## Core Rules
+
+1. **CRITICAL**: Before introducing any new library, framework, or significant code style changes, **ASK THE USER FIRST**. Maintain consistency with existing patterns and libraries.
+
+2. **SSR MANDATORY**: ALL pages MUST use Server-Side Rendering. Pages are server components by default. Use `"use client"` ONLY for components that absolutely require client-side interactivity (user interactions, browser APIs, React hooks).
+
+3. **PLAN MODE - ALWAYS CLARIFY FIRST**: In plan mode, NEVER immediately create a plan. ALWAYS ask clarifying questions first to understand:
+   - What exactly needs to be changed/implemented?
+   - Are there any constraints or preferences?
+   - Which approach does the user prefer (if multiple options exist)?
+   - What is the scope of changes?
+   Only after getting answers, create a detailed, specific plan. Avoid assumptions - ASK, don't guess.
+
+4. **USE CONSISTENT CODE METHODS**: Before writing new code, search the codebase for similar implementations. Match existing patterns, naming, and style. Never introduce new approaches when established patterns exist. When in doubt - search first, code second.
+
+## Technology Stack
+
+**Framework & Core**:
+- Next.js 15.0.3 (App Router with server/client components)
+- React 18+ / React 19
+- TypeScript 5 (strict mode enabled)
+
+**UI & Styling**:
+- Mantine 8.x (primary UI component library)
+- CSS Modules (`.module.css`) for component-specific styles
+- PostCSS with Mantine presets
+- Tabler Icons (`@tabler/icons-react`)
+- NO Tailwind CSS (despite config file presence)
+
+**Special Libraries**:
+- KaTeX for mathematical expression rendering
+- React Syntax Highlighter for code display
+- jsonwebtoken for JWT handling
+
+### General
+
+1. **Consistency First**: Match existing code patterns in the file/module you're editing
+2. **Type Safety**: Utilize TypeScript's strict mode; avoid `any` except when necessary
+4. **Comments**: Add comments for complex logic and exported functions/components
+5. **Language**: UI text is in Russian (e.g., "Войти", "Контесты", "Администрирование")
+
+### Frontend Conventions
+
+**File Structure**:
+- Use App Router structure: `app/[route]/page.tsx`, `app/[route]/layout.tsx`
+- Components in `/components` with index exports: `ComponentName/ComponentName.tsx` + `index.ts`
+- Styles: `ComponentName/styles.module.css` or adjacent `styles.module.css`
+- Server actions: `actions.ts` files for server-side logic
+- Utilities: `/lib` directory for shared functions
+
+**Rendering Strategy**:
+- **SSR FIRST**: ALL pages use Server-Side Rendering (SSR) by default
+- **NO FLASHES**: SSR ensures instant content display without loading flashes
+- Pages are server components unless there's a specific need for client-side interactivity
+- Data fetching happens on the server using the `Call` wrapper
+
+**Styling**:
+- Primary: Mantine components with props-based styling
+- Secondary: CSS Modules for custom styles (`.module.css`)
+- Naming: Use camelCase for CSS Module classes
+- Import as: `import classes from './styles.module.css'`
+
+### Navigation
+- Use Next.js `Link` component for internal navigation
+- Use Next.js `useRouter` for programmatic navigation (client-side only)
+- Mantine Anchor component with Next.js Link for styled links
+- URL-based state via searchParams for tab/section selection (see contest manage page)
+- Always await params and searchParams in Next.js 15 pages
+
+### Code Display
+- Use `react-syntax-highlighter` for code blocks
+- Use `CodeBlock` component wrapper (see `/components/CodeBlock.tsx`)
