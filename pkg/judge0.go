@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -58,18 +59,25 @@ func (j *Judge0Client) CreateSubmission(ctx context.Context, sourceCode string, 
 	timeLimitStr := fmt.Sprintf("%.1f", timeLimit)
 	memoryLimitStr := fmt.Sprintf("%d", memoryLimit*1024) // Convert MB to KB
 
+	// Base64 encode the fields to handle non-UTF-8 characters
+	sourceCodeEncoded := base64.StdEncoding.EncodeToString([]byte(sourceCode))
+	stdinEncoded := base64.StdEncoding.EncodeToString([]byte(stdin))
+	expectedOutputEncoded := base64.StdEncoding.EncodeToString([]byte(expectedOutput))
+
 	submission := judge0.Submission{
-		SourceCode:     sourceCode,
+		SourceCode:     sourceCodeEncoded,
 		LanguageId:     languageID,
-		Stdin:          &stdin,
-		ExpectedOutput: &expectedOutput,
+		Stdin:          &stdinEncoded,
+		ExpectedOutput: &expectedOutputEncoded,
 		CpuTimeLimit:   &timeLimitStr,
 		MemoryLimit:    &memoryLimitStr,
 	}
 
 	waitFlag := false
+	base64EncodedFlag := true
 	resp, err := j.client.CreateSubmissionWithResponse(ctx, &judge0.CreateSubmissionParams{
-		Wait: &waitFlag,
+		Wait:          &waitFlag,
+		Base64Encoded: &base64EncodedFlag,
 	}, submission)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create submission: %w", err)
@@ -96,7 +104,10 @@ func (j *Judge0Client) CreateSubmission(ctx context.Context, sourceCode string, 
 
 // GetSubmission retrieves a submission result from Judge0
 func (j *Judge0Client) GetSubmission(ctx context.Context, token string) (*SubmissionResult, error) {
-	resp, err := j.client.GetSubmissionWithResponse(ctx, token, &judge0.GetSubmissionParams{})
+	base64EncodedFlag := true
+	resp, err := j.client.GetSubmissionWithResponse(ctx, token, &judge0.GetSubmissionParams{
+		Base64Encoded: &base64EncodedFlag,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get submission: %w", err)
 	}
@@ -113,17 +124,40 @@ func (j *Judge0Client) GetSubmission(ctx context.Context, token string) (*Submis
 	}
 
 	sub := resp.JSON200
+
+	// Decode base64 fields if present
+	stdout := decodeBase64String(sub.Stdout)
+	stderr := decodeBase64String(sub.Stderr)
+	compileOutput := decodeBase64String(sub.CompileOutput)
+	message := decodeBase64String(sub.Message)
+
 	return &SubmissionResult{
 		Token:         *sub.Token,
 		Status:        sub.Status,
-		Stdout:        sub.Stdout,
-		Stderr:        sub.Stderr,
-		CompileOutput: sub.CompileOutput,
+		Stdout:        stdout,
+		Stderr:        stderr,
+		CompileOutput: compileOutput,
 		Time:          sub.Time,
 		Memory:        sub.Memory,
 		ExitCode:      sub.ExitCode,
-		Message:       sub.Message,
+		Message:       message,
 	}, nil
+}
+
+// decodeBase64String decodes a base64-encoded string, returns nil if input is nil or decoding fails
+func decodeBase64String(encoded *string) *string {
+	if encoded == nil {
+		return nil
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(*encoded)
+	if err != nil {
+		// If decoding fails, return the original string (might not be base64 encoded)
+		return encoded
+	}
+
+	result := string(decoded)
+	return &result
 }
 
 // WaitForSubmission polls Judge0 until the submission is complete

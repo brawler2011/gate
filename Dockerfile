@@ -1,13 +1,21 @@
 FROM golang:1.24-alpine AS base
-WORKDIR /src
-RUN --mount=type=cache,target=/go/pkg/mod/ \
-  --mount=type=bind,source=go.sum,target=go.sum \
-  --mount=type=bind,source=go.mod,target=go.mod \
-  go mod download -x
+RUN apk add --no-cache git
+WORKDIR /workspace
+
+# Копируем зависимости (локальные модули)
+COPY contracts /workspace/contracts
+COPY judge0-go-sdk /workspace/judge0-go-sdk
+COPY pandoc-go-sdk /workspace/pandoc-go-sdk
+
+# Копируем tester модуль
+WORKDIR /workspace/tester
+COPY tester/go.mod tester/go.sum ./
+RUN go mod download -x
 
 FROM base AS builder
+WORKDIR /workspace/tester
+COPY tester/ ./
 RUN --mount=type=cache,target=/go/pkg/mod/ \
- --mount=type=bind,target=. \
   go build -o /bin/server .
 
 FROM scratch AS runner

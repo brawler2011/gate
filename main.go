@@ -111,6 +111,7 @@ func main() {
 	}
 	logger.Info("successfully initialized nats publisher", slog.String("url", cfg.NatsUrl))
 
+	//
 	// Initialize outbox repository
 	outboxRepo := outbox.NewRepository(db)
 
