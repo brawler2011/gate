@@ -149,8 +149,8 @@ export default async function Page() {
         {isAuthenticated ? (
           <Stack gap="md">
             {/* Two columns for Problems and Contests */}
-            <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-              {/* Problems Section */}
+            {/* <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+              { Problems Section }
               <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
                 <Stack gap="md" h="100%">
                   <Group justify="space-between" align="center">
@@ -174,7 +174,7 @@ export default async function Page() {
                 </Stack>
               </Card>
 
-              {/* Contests Section */}
+              { Contests Section }
               <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
                 <Stack gap="md" h="100%">
                   <Group justify="space-between" align="center">
@@ -197,7 +197,7 @@ export default async function Page() {
                   </Box>
                 </Stack>
               </Card>
-            </SimpleGrid>
+            </SimpleGrid> */}
 
             {/* Blog Section - Full width below */}
             <Stack gap="md">

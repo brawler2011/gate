@@ -130,7 +130,7 @@ const Header = ({ session }: { session?: any }) => {
               className={classes.link}
               underline="never"
             >
-              О нас
+              О платформе
             </Anchor>
           </Group>
           <Box hiddenFrom="sm" style={{ flex: 1 }} />
@@ -213,7 +213,7 @@ const Header = ({ session }: { session?: any }) => {
               underline="never"
               onClick={closeDrawer}
             >
-              О нас
+              О платформе
             </Anchor>
             {session?.identity?.metadata_public?.role === "admin" && (
               <Anchor

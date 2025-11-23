@@ -1,4 +1,3 @@
-import { DefaultLayout } from "@/components/Layout";
 import { PresentationSlide } from "@/components/PresentationSlide";
 
 export const metadata = {
@@ -6,9 +5,5 @@ export const metadata = {
 };
 
 export default function Page() {
-  return (
-    <DefaultLayout>
-      <PresentationSlide />
-    </DefaultLayout>
-  );
+  return <PresentationSlide />;
 }

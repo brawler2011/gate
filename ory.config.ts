@@ -16,6 +16,10 @@ const config: OryClientConfiguration = {
     login_ui_url: "/auth/login",
     settings_ui_url: "/settings",
   },
+  sdk: {
+    url: process.env.NEXT_PUBLIC_ORY_SDK_URL ,
+  },
+
 }
 
 export default config

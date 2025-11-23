@@ -7,8 +7,11 @@ import {
     ThemeIcon, 
     Stack, 
     Group, 
-    Paper, 
+    AspectRatio, 
+    Paper,
     Box,
+    Overlay,
+    Image,
     rem 
   } from '@mantine/core';
   import { 
@@ -23,24 +26,48 @@ import {
     const features = [
       {
         icon: IconRocket,
-        title: 'Скорость и Технологии',
-        description: 'Next.js 15 (SSR) для мгновенного отклика. Мощный Go-бэкенд для высоких нагрузок.'
+        title: 'Мгновенный Отклик',
+        description: 'Сайт летает благодаря Next.js 15 SSR и оптимизированному Go-бэкенду.'
       },
       {
         icon: IconGavel,
-        title: 'Мгновенная Система Проверки',
-        description: 'Автоматический Judge System. Вердикт за миллисекунды. Честное тестирование в изоляции.'
+        title: 'Автоматическое Тестирование',
+        description: 'Поддержка множества языков (C++, Python, Go, Java). Молниеносная проверка решений.'
       },
       {
         icon: IconTools,
         title: 'Воркшоп и Сообщество',
-        description: 'Инструменты для авторов задач. Создавай контесты, пиши блоги, делись знаниями.'
+        description: 'Инструменты для авторов задач. Создавай задачи и контесты, делись знаниями.'
       },
     ];
-  
+
     return (
-      <Box py={80} bg="var(--mantine-color-dark-8)">
-        <Container size="xl">
+      <Box 
+        pt={60} 
+        pb={60} 
+        style={{ 
+          minHeight: '100vh',
+          width: '100%',
+          position: 'relative',
+          backgroundImage: 'url(/images/presentation-bg.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          overflowY: 'auto',
+        }}
+      >
+          <Overlay color="#000" backgroundOpacity={0.3} zIndex={0} style={{ pointerEvents: 'none' }} />
+
+          {/* Декоративная сетка */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+            zIndex: 0,
+            pointerEvents: 'none'
+          }} />
+
+          <Container size="xl" w="100%" style={{ position: 'relative', zIndex: 1 }}>
           <Grid gutter={50} align="center">
             {/* Левая колонка: Текст */}
             <GridCol span={{ base: 12, md: 6 }}>
@@ -87,82 +114,73 @@ import {
                   ))}
                 </Stack>
   
-                <Group mt="xl">
-                  <Text size="sm" c="dimmed" tt="uppercase" fw={700} lts={1}>
+                <Group mt="md">
+                  <Text size="md" c="dimmed" tt="uppercase" fw={700} lts={1}>
                     Powered by
                   </Text>
-                  <Group gap="xs">
-                    <IconBrandNextjs size={24} color="white" />
-                    <Text fw={700} c="white">Next.js</Text>
-                    <div style={{ width: 1, height: 20, background: '#444' }} />
-                    <IconBrandGolang size={24} color="#00ADD8" />
-                    <Text fw={700} c="#00ADD8">Go</Text>
+                  <Group gap="md">
+                    <IconBrandNextjs size={40} color="white" />
+                    <Text size="xl" fw={900} c="white">Next.js</Text>
+                    <div style={{ width: 2, height: 32, background: '#444' }} />
+                    <IconBrandGolang size={40} color="#00ADD8" />
                   </Group>
                 </Group>
               </Stack>
             </GridCol>
   
-            {/* Правая колонка: Визуал (Плейсхолдеры) */}
-            <GridCol span={{ base: 12, md: 6 }}>
+            {/* Правая колонка: Визуал (Скриншоты) */}
+            <GridCol span={{ base: 12, md: 6 }} visibleFrom="md">
               <div style={{ position: 'relative' }}>
-                {/* Основной скриншот (например, Редактор кода) */}
+                {/* Основной скриншот - code.png */}
                 <Paper 
                   shadow="xl" 
                   radius="lg" 
                   withBorder 
-                  p="xl" 
-                  h={300}
+                  p={0}
+                  h={370}
+                  w={800}
                   style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: 'var(--mantine-color-dark-7)',
+                    overflow: 'hidden',
                     borderColor: 'var(--mantine-color-dark-4)',
-                    borderStyle: 'dashed'
                   }}
                 >
-                  <Stack align="center" gap="xs">
-                    <IconTools size={48} color="gray" style={{ opacity: 0.3 }} />
-                    <Text c="dimmed" ta="center">
-                      СКРИНШОТ 1<br/>
-                      (Например: Редактор кода с "Accepted")
-                    </Text>
-                  </Stack>
+                  <Image 
+                    src="/images/code.png" 
+                    alt="Code Editor Screenshot"
+                    fit="cover"
+                    h="100%"
+                    w="100%"
+                  />
                 </Paper>
   
-                {/* Второстепенный скриншот (например, Карточка задачи) */}
+                {/* Второстепенный скриншот - verdict.png */}
                 <Paper 
                   shadow="xl" 
                   radius="lg" 
                   withBorder 
-                  p="md"
-                  h={180}
-                  w={280}
+                  p={0}
+                  w={400}
+                  h={210}
                   style={{ 
                     position: 'absolute', 
-                    bottom: -40, 
-                    left: -40,
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: 'var(--mantine-color-dark-6)',
-                    borderColor: 'var(--mantine-color-blue-9)',
-                    borderWidth: 2,
-                    borderStyle: 'dashed'
+                    bottom: -100, 
+                    left: -100,
+                    overflow: 'hidden',
+                    borderColor: 'var(--mantine-color-dark-4)',
                   }}
                 >
-                   <Stack align="center" gap="xs">
-                    <IconGavel size={32} color="var(--mantine-color-blue-5)" style={{ opacity: 0.5 }} />
-                    <Text c="dimmed" size="sm" ta="center">
-                      СКРИНШОТ 2<br/>
-                      (Например: Условие задачи)
-                    </Text>
-                  </Stack>
+                  <Image 
+                    src="/images/verdict.png" 
+                    alt="Verdict Screenshot"
+                    fit="contain"
+                    h="100%"
+                    w="100%"
+                  />
                 </Paper>
               </div>
             </GridCol>
           </Grid>
-        </Container>
+          </Container>
       </Box>
     );
   }
