@@ -17,7 +17,7 @@ const config: OryClientConfiguration = {
     settings_ui_url: "/settings",
   },
   sdk: {
-    url: process.env.NEXT_PUBLIC_ORY_SDK_URL ,
+    url: process.env.NEXT_PUBLIC_ORY_SDK_URL || "/api/.ory",
   },
 
 }

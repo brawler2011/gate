@@ -1,12 +1,15 @@
 import { Settings } from "@ory/elements-react/theme"
 import { SessionProvider } from "@ory/elements-react/client"
-import { getSettingsFlow, OryPageParams } from "@ory/nextjs/app"
+import { getSettingsFlow } from "@/lib/ory-flows"
 import "@ory/elements-react/theme/styles.css"
-
 import config from "@/ory.config"
 
-export default async function SettingsPage(props: OryPageParams) {
-  const flow = await getSettingsFlow(config, props.searchParams)
+type PageProps = {
+  searchParams: Promise<{ flow?: string }>;
+};
+
+export default async function SettingsPage({ searchParams }: PageProps) {
+  const flow = await getSettingsFlow(searchParams)
 
   if (!flow) {
     return null

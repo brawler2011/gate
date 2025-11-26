@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Registration } from "@ory/elements-react/theme"
-import { getRegistrationFlow, OryPageParams } from "@ory/nextjs/app"
-
+import { getRegistrationFlow } from "@/lib/ory-flows"
 import config from "@/ory.config"
 
-export default async function RegistrationPage(props: OryPageParams) {
-  const flow = await getRegistrationFlow(config, props.searchParams)
+type PageProps = {
+  searchParams: Promise<{ flow?: string }>;
+};
+
+export default async function RegistrationPage({ searchParams }: PageProps) {
+  const flow = await getRegistrationFlow(searchParams)
 
   if (!flow) {
     return null

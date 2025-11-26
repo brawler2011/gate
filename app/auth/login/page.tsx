@@ -1,10 +1,13 @@
 import { Login } from "@ory/elements-react/theme"
-import { getLoginFlow, OryPageParams } from "@ory/nextjs/app"
-
+import { getLoginFlow } from "@/lib/ory-flows"
 import config from "@/ory.config"
 
-export default async function LoginPage(props: OryPageParams) {
-  const flow = await getLoginFlow(config, props.searchParams)
+type PageProps = {
+  searchParams: Promise<{ flow?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: PageProps) {
+  const flow = await getLoginFlow(searchParams)
 
   if (!flow) {
     return null
