@@ -1,5 +1,7 @@
 services:
   frontend:
+    env_file:
+      - .env.production
     build:
       context: ..
       dockerfile: frontend/Dockerfile
