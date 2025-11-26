@@ -6,6 +6,9 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import classes from "./styles.module.css";
 
 type Props = {
@@ -72,7 +75,10 @@ export default async function BlogPostPage({ params }: Props) {
 
             {/* Content */}
             <div className={classes.content}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+              >
                 {post.content}
               </ReactMarkdown>
             </div>
@@ -82,4 +88,3 @@ export default async function BlogPostPage({ params }: Props) {
     </DefaultLayout>
   );
 }
-
