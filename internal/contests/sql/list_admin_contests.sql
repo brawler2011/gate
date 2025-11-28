@@ -21,7 +21,7 @@ WHERE (
     )
   AND (
     $4::text IS NULL
-        OR c.visibility = $4
+        OR c.visibility = $4::contest_visibility
     )
 ORDER BY CASE
              WHEN $3::text IS NOT NULL

@@ -12,6 +12,6 @@ WHERE (
     )
   AND (
     $2::text IS NULL
-        OR c.visibility = $2
+        OR c.visibility = $2::contest_visibility
     )
 
