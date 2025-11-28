@@ -26,7 +26,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 type Props = {
-  params: Promise<{ solution_id: string }>;
+  params: Promise<{ submission_id: string }>;
 };
 
 const metadata: Metadata = {
@@ -35,7 +35,7 @@ const metadata: Metadata = {
 };
 
 const Page = async (props: Props) => {
-  const solutionId = (await props.params).solution_id;
+  const solutionId = (await props.params).submission_id;
   const resp = await getSubmission(solutionId);
 
   if (!resp) {
