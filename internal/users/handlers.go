@@ -61,6 +61,19 @@ func (h *UsersHandlers) GetUser(c *fiber.Ctx, id uuid.UUID) error {
 	})
 }
 
+func (h *UsersHandlers) GetMe(c *fiber.Ctx) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(testerv1.GetUserResponseModel{
+		User: userDTO(*user),
+	})
+}
+
 func isLengthBetween(s string, min, max int) bool {
 	length := utf8.RuneCountInString(s)
 	return length >= min && length <= max
