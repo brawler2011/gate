@@ -14,21 +14,25 @@
     width: 100%;
     box-sizing: border-box;
     overflow-y: auto; /* Container handles scrolling */
-    background-color: transparent;
+    background-color: #252526; /* VS Code sidebar background - slightly lighter */
     border: none;
+    border-radius: var(--mantine-radius-sm);
 }
 
 .codeEditor {
     min-height: 100%; /* Allow editor to grow */
     width: 100%;
     box-sizing: border-box;
-    background-color: transparent;
+    background-color: #252526; /* VS Code sidebar background - slightly lighter */
+    color: #d4d4d4; /* VS Code Dark+ default text color */
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 14px;
 }
 
 .codeEditor textarea {
     outline: none;
+    color: #d4d4d4; /* VS Code Dark+ text color for input */
+    caret-color: #d4d4d4; /* Cursor color */
 }
 
 .codeEditor textarea,
@@ -45,9 +49,9 @@
 .dropZone {
     position: relative;
     height: 253px; /* Фиксированная высота */
-    border: 2px dashed light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+    border: 1px solid #3c3c3c; /* VS Code border color */
     border-radius: var(--mantine-radius-default);
-    background-color: light-dark(var(--mantine-color-white), var(--mantine-color-dark-6));
+    background-color: #252526; /* VS Code sidebar background - slightly lighter */
     transition: border-color 0.2s ease, background-color 0.2s ease;
     padding: 4px;
     box-sizing: border-box;

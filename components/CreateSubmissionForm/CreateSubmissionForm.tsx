@@ -15,21 +15,15 @@ import { IconTrash, IconUpload } from "@tabler/icons-react";
 import { useMutation } from "@tanstack/react-query";
 import classes from "./styles.module.css";
 import { APP_COLORS } from "@/lib/theme/colors";
+import { highlightCode } from "@/lib/highlightCode";
 import dynamic from "next/dynamic";
-import { highlight, languages as prismLanguages } from "prismjs";
+import "./vsc-dark-plus.css";
 
 // Dynamic import to avoid hydration mismatch (autoCapitalize="off" vs "none")
 const Editor = dynamic(
     () => import("react-simple-code-editor").then((mod) => mod.default),
     { ssr: false }
 );
-import "prismjs/components/prism-clike";
-import "prismjs/components/prism-javascript";
-import "prismjs/components/prism-python";
-import "prismjs/components/prism-go";
-import "prismjs/components/prism-c";
-import "prismjs/components/prism-cpp";
-import "prismjs/themes/prism-tomorrow.css"; // Using a standard theme available in prismjs package
 
 const languages = ["python", "cpp", "golang"];
 
@@ -232,13 +226,7 @@ const CreateSubmissionForm = ({ onSubmit, problemSelect, large = false, disabled
                                 <Editor
                                     value={form.values.code}
                                     onValueChange={(code: string) => form.setFieldValue("code", code)}
-                                    highlight={(code: string) => {
-                                        let grammar = prismLanguages.clike;
-                                        if (form.values.language === 'python') grammar = prismLanguages.python;
-                                        if (form.values.language === 'go' || form.values.language === 'golang') grammar = prismLanguages.go;
-                                        if (form.values.language === 'cpp') grammar = prismLanguages.cpp;
-                                        return highlight(code, grammar, form.values.language);
-                                    }}
+                                    highlight={(code: string) => highlightCode(code, form.values.language)}
                                     padding={10}
                                     placeholder="Введите ваше решение здесь, перетащите файл или текст..."
                                     className={classes.codeEditor}
