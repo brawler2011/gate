@@ -8,6 +8,28 @@
     box-sizing: border-box;
 }
 
+.editorContainer {
+    min-height: 245px;
+    height: 245px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-y: auto; /* Container handles scrolling */
+    background-color: transparent;
+    border: none;
+}
+
+.codeEditor {
+    min-height: 100%; /* Allow editor to grow */
+    width: 100%;
+    box-sizing: border-box;
+    /* Font settings handled inline to ensure sync */
+    background-color: transparent;
+}
+
+.codeEditor textarea {
+    outline: none;
+}
+
 .code {
     width: 100%;
     height: fit-content;
@@ -90,6 +112,11 @@
     height: 500px;
 }
 
+.codeLarge .editorContainer {
+    min-height: 500px;
+    height: 500px;
+}
+
 .codeLarge .dropZone {
     height: 508px;
 }
@@ -111,6 +138,11 @@
         min-height: 122px;
         height: 122px;
         padding: var(--mantine-spacing-xs);
+    }
+
+    .editorContainer {
+        min-height: 122px;
+        height: 122px;
     }
 
     .fileAttached {
