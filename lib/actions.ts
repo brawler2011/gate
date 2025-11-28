@@ -403,3 +403,34 @@ export async function updateContestMemberRole(
   console.log("Update role:", { contestId, userId, newRole });
   console.log("Not implemented!");
 }
+
+export async function listAdminContests(
+  page: number = 1,
+  pageSize: number = 10,
+  search?: string,
+  sortBy: 'created_at' | 'updated_at' | 'title' = 'created_at',
+  sortOrder: 'asc' | 'desc' = 'desc'
+) {
+  try {
+    const response = await Call((client) =>
+      client.default.listAdminContests({ page, pageSize, search, sortBy, sortOrder })
+    );
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch admin contests:', error);
+    return null;
+  }
+}
+
+export async function deleteContest(contestId: string) {
+  try {
+    console.log('📤 Deleting contest:', contestId);
+    const response = await Call((client) =>
+      client.default.deleteContest({ contestId })
+    );
+    return response;
+  } catch (error) {
+    console.error('Failed to delete contest:', error);
+    throw error;
+  }
+}

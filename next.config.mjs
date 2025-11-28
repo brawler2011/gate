@@ -13,6 +13,12 @@ const nextConfig = {
     async rewrites() {
         const oryUrl = process.env.ORY_SDK_URL;
         console.log('🔧 ORY_SDK_URL =', oryUrl);
+        console.log('🔧 NEXT_PUBLIC_ORY_SDK_URL =', process.env.NEXT_PUBLIC_ORY_SDK_URL);
+        console.log('🔧 TESTER_URL =', process.env.TESTER_URL);
+        console.log('🔧 GATEWAY_URL =', process.env.GATEWAY_URL);
+        console.log('🔧 BACKEND_API_URL =', process.env.BACKEND_API_URL);
+        console.log('🔧 NEXT_PUBLIC_WS_core_URL =', process.env.NEXT_PUBLIC_WS_core_URL);
+
         if (!oryUrl) {
             console.warn('⚠️  ORY_SDK_URL is not set! Auth will not work.');
             return [];

@@ -22,8 +22,7 @@ export function UsersTable({ users, pagination, search, role }: Props) {
 
   // Ensure pagination values are numbers
   const currentPage = Number(pagination.page) || 1;
-  const currentPageSize = (pagination as any).pageSize || 10;
-  const totalUsers = Number(pagination.total) || 0;
+  const totalPages = Number(pagination.total) || 1;
 
   if (users.length === 0) {
     return (
@@ -86,12 +85,12 @@ export function UsersTable({ users, pagination, search, role }: Props) {
         </Table.Tbody>
       </Table>
 
-      {Math.ceil(totalUsers / currentPageSize) > 1 && (
+      {totalPages > 1 && (
         <Stack align="center" gap="md">
           <NextPagination
             pagination={{
               page: currentPage,
-              total: Math.ceil(totalUsers / currentPageSize),
+              total: totalPages,
             }}
             baseUrl="/admin"
             queryParams={queryParams}

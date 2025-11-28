@@ -3,37 +3,53 @@
 import { Input } from "@mantine/core";
 import { IconSearch } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function UsersSearchInput() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const initialSearch = searchParams.get("search") || "";
+  const [search, setSearch] = useState(initialSearch);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const isFirstRender = useRef(true);
 
-  const updateURL = useCallback(
-    (newSearch: string) => {
+  // Sync state with URL when searchParams change externally
+  useEffect(() => {
+    const urlSearch = searchParams.get("search") || "";
+    if (urlSearch !== search) {
+      setSearch(urlSearch);
+    }
+  }, [searchParams]);
+
+  // Only update URL when user actually types (not on initial render or URL change)
+  useEffect(() => {
+    // Skip initial render
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    // Skip if search matches current URL (was set from URL sync)
+    const urlSearch = searchParams.get("search") || "";
+    if (search === urlSearch) {
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
       const params = new URLSearchParams(searchParams);
       params.delete("page"); // Reset to first page on search
-      if (newSearch) {
-        params.set("search", newSearch);
+      if (search) {
+        params.set("search", search);
       } else {
         params.delete("search");
       }
 
       const query = params.toString();
       router.push(`/admin${query ? `?${query}` : ""}`);
-    },
-    [router, searchParams]
-  );
-
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      updateURL(search);
     }, 300);
 
     return () => {
@@ -41,7 +57,7 @@ export function UsersSearchInput() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [search, updateURL]);
+  }, [search]);
 
   return (
     <Input
