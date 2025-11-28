@@ -18,20 +18,8 @@ import { APP_COLORS } from "@/lib/theme/colors";
 import dynamic from "next/dynamic";
 import { highlight, languages as prismLanguages } from "prismjs";
 
-// Type for react-simple-code-editor props
-type EditorProps = {
-    value: string;
-    onValueChange: (value: string) => void;
-    highlight: (value: string) => string;
-    padding?: number;
-    placeholder?: string;
-    className?: string;
-    disabled?: boolean;
-    textareaId?: string;
-};
-
 // Dynamic import to avoid hydration mismatch (autoCapitalize="off" vs "none")
-const Editor = dynamic<EditorProps>(
+const Editor = dynamic(
     () => import("react-simple-code-editor").then((mod) => mod.default),
     { ssr: false }
 );
