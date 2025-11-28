@@ -864,6 +864,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListSubmissionsResponseModel"
+  /users/me:
+    get:
+      operationId: GetMe
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetUserResponseModel"
 components:
   schemas:
     CreationResponseModel:
