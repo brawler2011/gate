@@ -88,6 +88,7 @@ export function UsersContent({ page, search, role }: UsersContentProps) {
           <UsersTable
             users={users}
             pagination={pagination}
+            page={page}
             search={search}
             role={role}
           />

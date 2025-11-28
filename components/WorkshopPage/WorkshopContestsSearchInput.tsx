@@ -13,6 +13,11 @@ export function WorkshopContestsSearchInput() {
 
   const updateURL = useCallback(
     (newSearch: string) => {
+      const currentSearch = searchParams.get("search") || "";
+      if (newSearch === currentSearch) {
+        return;
+      }
+
       const urlParams = new URLSearchParams(searchParams);
       urlParams.delete("page"); // Reset to page 1 when searching
       if (newSearch) {

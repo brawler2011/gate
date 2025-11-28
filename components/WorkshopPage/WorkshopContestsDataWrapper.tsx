@@ -37,7 +37,7 @@ export function WorkshopContestsDataWrapper({ contests, pagination, search }: Pr
     <>
       <ContestsTable contests={contests} />
       {totalPages > 1 && (
-        <Center mt="xl">
+        <Center>
           <NextPagination
             pagination={pagination}
             baseUrl="/workshop"

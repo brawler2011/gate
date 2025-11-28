@@ -1,30 +1,63 @@
 "use client";
 
 import { TextInput } from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
 import { IconSearch } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function AdminContestsSearchInput() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
   const [search, setSearch] = useState(initialSearch);
-  const [debouncedSearch] = useDebouncedValue(search, 300);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const isFirstRender = useRef(true);
 
+  // Sync state with URL when searchParams change externally (e.g., browser back)
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    if (debouncedSearch) {
-      params.set("search", debouncedSearch);
-    } else {
-      params.delete("search");
+    const urlSearch = searchParams.get("search") || "";
+    if (urlSearch !== search) {
+      setSearch(urlSearch);
     }
-    params.delete("page"); // Reset to page 1 on search change
+  }, [searchParams]);
 
-    const query = params.toString();
-    router.push(`/admin${query ? `?${query}` : ""}`);
-  }, [debouncedSearch]);
+  // Only update URL when user actually types (not on initial render or URL change)
+  useEffect(() => {
+    // Skip initial render
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    // Skip if search matches current URL (was set from URL sync)
+    const urlSearch = searchParams.get("search") || "";
+    if (search === urlSearch) {
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      const params = new URLSearchParams(searchParams);
+      params.delete("page"); // Reset to first page on search
+      if (search) {
+        params.set("search", search);
+      } else {
+        params.delete("search");
+      }
+
+      const query = params.toString();
+      router.push(`/admin${query ? `?${query}` : ""}`);
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [search]);
 
   return (
     <TextInput

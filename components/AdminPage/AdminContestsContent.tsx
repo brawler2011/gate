@@ -25,7 +25,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
   const [contests, setContests] = useState<ContestModel[]>([]);
   const [pagination, setPagination] = useState<PaginationModel>({
     total: 0,
-    page: 1,
+    page: page,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -56,6 +56,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
   };
 
   useEffect(() => {
+    setPagination((prev) => ({ ...prev, page }));
     loadContests();
   }, [page, search]);
 
@@ -129,7 +130,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
               <Stack align="center" gap="md">
                 <NextPagination
                   pagination={{
-                    page: pagination.page,
+                    page: page,
                     total: totalPages,
                   }}
                   baseUrl="/admin"

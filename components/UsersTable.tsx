@@ -13,15 +13,16 @@ import { getRoleColor } from "@/lib/lib";
 type Props = {
   users: UserModel[];
   pagination: PaginationType;
+  page: number;
   search?: string;
   role?: string;
 };
 
-export function UsersTable({ users, pagination, search, role }: Props) {
+export function UsersTable({ users, pagination, page, search, role }: Props) {
   const router = useRouter();
 
-  // Ensure pagination values are numbers
-  const currentPage = Number(pagination.page) || 1;
+  // Use page from URL props, not from API response state
+  const currentPage = page;
   const totalPages = Number(pagination.total) || 1;
 
   if (users.length === 0) {
