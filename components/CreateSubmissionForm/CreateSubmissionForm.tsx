@@ -256,10 +256,6 @@ const CreateSubmissionForm = ({ onSubmit, problemSelect, large = false, disabled
                                     className={classes.codeEditor}
                                     disabled={disabled}
                                     textareaId="code-editor-textarea"
-                                    style={{
-                                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                                        fontSize: 14,
-                                    }}
                                 />
                             )}
                         </div>

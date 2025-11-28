@@ -22,12 +22,19 @@
     min-height: 100%; /* Allow editor to grow */
     width: 100%;
     box-sizing: border-box;
-    /* Font settings handled inline to ensure sync */
     background-color: transparent;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 14px;
 }
 
 .codeEditor textarea {
     outline: none;
+}
+
+.codeEditor textarea,
+.codeEditor pre {
+    font-family: inherit !important;
+    font-size: inherit !important;
 }
 
 .code {
