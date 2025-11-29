@@ -16,17 +16,20 @@ import (
 )
 
 const (
-	MaxRetries       = 3
-	PollInterval     = 1 * time.Second
-	BatchSize        = 10
-	MaxWaitForJudge0 = 30 * time.Second
-	CleanupInterval  = 1 * time.Hour
-	RetentionDays    = 7
+	MaxRetries        = 3
+	PollInterval      = 1 * time.Second
+	BatchSize         = 10
+	MaxWaitForJudge0  = 30 * time.Second
+	CleanupInterval   = 1 * time.Hour
+	RetentionDays     = 7
+	RetryInterval     = 5 * time.Minute // Interval to retry untested submissions
+	RetryBatchSize    = 5               // Number of untested submissions to retry at once
 )
 
 type SubmissionsRepo interface {
 	GetSubmission(ctx context.Context, id uuid.UUID) (submissionssqlc.GetSubmissionRow, error)
 	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
+	GetUntestedSubmissions(ctx context.Context, limit int32) ([]submissionssqlc.GetUntestedSubmissionsRow, error)
 }
 
 type ProblemsRepo interface {
@@ -71,6 +74,9 @@ func (w *Worker) Start(ctx context.Context) {
 	cleanupTicker := time.NewTicker(CleanupInterval)
 	defer cleanupTicker.Stop()
 
+	retryTicker := time.NewTicker(RetryInterval)
+	defer retryTicker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -80,6 +86,8 @@ func (w *Worker) Start(ctx context.Context) {
 			w.processEvents(ctx)
 		case <-cleanupTicker.C:
 			w.cleanup(ctx)
+		case <-retryTicker.C:
+			w.retryUntestedSubmissions(ctx)
 		}
 	}
 }
@@ -393,5 +401,77 @@ func (w *Worker) cleanup(ctx context.Context) {
 
 	if err := w.outboxRepo.DeleteOldEvents(ctx, RetentionDays); err != nil {
 		w.logger.Error("failed to delete old events", slog.Any("error", err))
+	}
+}
+
+// retryUntestedSubmissions finds submissions that are still in "Saved" state 
+// and creates new outbox events for them to retry testing
+func (w *Worker) retryUntestedSubmissions(ctx context.Context) {
+	w.logger.Info("checking for untested submissions")
+
+	// Get submissions that are still in "Saved" state
+	submissions, err := w.submissionsRepo.GetUntestedSubmissions(ctx, RetryBatchSize)
+	if err != nil {
+		w.logger.Error("failed to get untested submissions", slog.Any("error", err))
+		return
+	}
+
+	if len(submissions) == 0 {
+		return
+	}
+
+	w.logger.Info("found untested submissions to retry", slog.Int("count", len(submissions)))
+
+	// Create new outbox events for untested submissions
+	for _, sub := range submissions {
+		// Convert pgtype.UUID to uuid.UUID
+		var problemID uuid.UUID
+		var contestID uuid.UUID
+		var createdBy uuid.UUID
+
+		if sub.ProblemID.Valid {
+			problemID = sub.ProblemID.Bytes
+		}
+		if sub.ContestID.Valid {
+			contestID = sub.ContestID.Bytes
+		}
+		if sub.CreatedBy.Valid {
+			createdBy = sub.CreatedBy.Bytes
+		}
+
+		payload := models.SubmissionCreatedPayload{
+			SubmissionId: sub.ID,
+			ProblemId:    problemID,
+			ContestId:    contestID,
+			Language:     int64(sub.Language),
+			CreatedBy:    createdBy,
+		}
+
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			w.logger.Error("failed to marshal retry payload",
+				slog.String("submission_id", sub.ID.String()),
+				slog.Any("error", err))
+			continue
+		}
+
+		event := &outboxsqlc.OutboxEvent{
+			AggregateID:   sub.ID,
+			AggregateType: "submission",
+			EventType:     models.EventTypeSubmissionCreated,
+			Payload:       payloadBytes,
+			Status:        models.OutboxEventStatusPending,
+			RetryCount:    0,
+		}
+
+		if err := w.outboxRepo.InsertEvent(ctx, event); err != nil {
+			w.logger.Error("failed to insert retry event",
+				slog.String("submission_id", sub.ID.String()),
+				slog.Any("error", err))
+			continue
+		}
+
+		w.logger.Info("created retry event for untested submission",
+			slog.String("submission_id", sub.ID.String()))
 	}
 }

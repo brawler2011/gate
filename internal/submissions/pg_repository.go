@@ -95,6 +95,14 @@ func (r *PgRepository) ListSolutions(ctx context.Context, filter models.Solution
 	return rows, totalCount, nil
 }
 
+func (r *PgRepository) GetUntestedSubmissions(ctx context.Context, limit int32) ([]submissionssqlc.GetUntestedSubmissionsRow, error) {
+	rows, err := r.queries.GetUntestedSubmissions(ctx, limit)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+	return rows, nil
+}
+
 // Helper functions
 
 func nullableUUIDToPgtype(id *uuid.UUID) pgtype.UUID {

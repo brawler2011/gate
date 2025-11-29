@@ -170,6 +170,53 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 	return i, err
 }
 
+const getUntestedSubmissions = `-- name: GetUntestedSubmissions :many
+SELECT s.id,
+    s.contest_id,
+    s.problem_id,
+    s.created_by,
+    s.language
+FROM submissions s
+WHERE s.state = 1 -- Saved state
+    AND s.created_at < now() - interval '1 minute' -- Only submissions older than 1 minute
+ORDER BY s.created_at ASC
+LIMIT $1
+`
+
+type GetUntestedSubmissionsRow struct {
+	ID        uuid.UUID           `json:"id"`
+	ContestID pgtype.UUID         `json:"contest_id"`
+	ProblemID pgtype.UUID         `json:"problem_id"`
+	CreatedBy pgtype.UUID         `json:"created_by"`
+	Language  models.LanguageName `json:"language"`
+}
+
+func (q *Queries) GetUntestedSubmissions(ctx context.Context, limit int32) ([]GetUntestedSubmissionsRow, error) {
+	rows, err := q.db.Query(ctx, getUntestedSubmissions, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetUntestedSubmissionsRow{}
+	for rows.Next() {
+		var i GetUntestedSubmissionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ContestID,
+			&i.ProblemID,
+			&i.CreatedBy,
+			&i.Language,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSubmissions = `-- name: ListSubmissions :many
 
 SELECT s.id,

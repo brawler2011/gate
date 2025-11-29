@@ -17,6 +17,7 @@ type Repo interface {
 	CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error)
 	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
 	ListSolutions(ctx context.Context, filter models.SolutionsFilter) ([]submissionssqlc.ListSubmissionsRow, int64, error)
+	GetUntestedSubmissions(ctx context.Context, limit int32) ([]submissionssqlc.GetUntestedSubmissionsRow, error)
 }
 
 type ContestsUC interface {

@@ -169,8 +169,9 @@ func pgtypeToUUIDPtr(u pgtype.UUID) *uuid.UUID {
 	if !u.Valid {
 		return nil
 	}
-	id := u.Bytes
-	return &id
+	id := new(uuid.UUID)
+	*id = u.Bytes
+	return id
 }
 
 func pgtypeToTime(t pgtype.Timestamptz) time.Time {
