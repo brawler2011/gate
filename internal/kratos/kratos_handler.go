@@ -87,14 +87,7 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 		existingUser, fetchErr := h.usersUC.GetUserByKratosId(ctx, req.UserId)
 		if fetchErr == nil && existingUser.ID != uuid.Nil {
 			slog.Info("User already exists", "kratos_id", req.UserId)
-			return c.Status(http.StatusOK).JSON(KratosWebhookResponse{
-				Identity: &IdentityModification{
-					MetadataPublic: map[string]any{
-						"user_id": existingUser.ID.String(),
-						"role":    existingUser.Role,
-					},
-				},
-			})
+			return c.Status(http.StatusOK).JSON(KratosWebhookResponse{})
 		}
 
 		slog.Error("Failed to create user",
@@ -115,38 +108,5 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 		"role", defaultRole,
 	)
 
-	// Update Kratos identity with metadata
-	_, _, err = h.identityAPI.PatchIdentity(ctx, req.UserId).JsonPatch([]ory.JsonPatch{
-		{
-			Op:    "add",
-			Path:  "/metadata_public/user_id",
-			Value: userId.String(),
-		},
-		{
-			Op:    "add",
-			Path:  "/metadata_public/role",
-			Value: defaultRole,
-		},
-	}).Execute()
-
-	if err != nil {
-		slog.Error("Failed to update Kratos identity metadata",
-			"error", err,
-			"kratos_id", req.UserId,
-		)
-		// We don't fail the request here because the user is already created in our DB
-		// and the session is active. The metadata will be missing until next update/login
-		// or we could try to retry.
-	} else {
-		slog.Info("Successfully updated Kratos identity metadata", "kratos_id", req.UserId)
-	}
-
-	return c.Status(http.StatusOK).JSON(KratosWebhookResponse{
-		Identity: &IdentityModification{
-			MetadataPublic: map[string]any{
-				"user_id": userId.String(),
-				"role":    defaultRole,
-			},
-		},
-	})
+	return c.Status(http.StatusOK).JSON(KratosWebhookResponse{})
 }

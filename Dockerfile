@@ -16,8 +16,8 @@ FROM base AS builder
 WORKDIR /workspace/tester
 COPY tester/ ./
 RUN --mount=type=cache,target=/go/pkg/mod/ \
-  go build -o /bin/server .
+  go build -o /bin/core .
 
 FROM scratch AS runner
-COPY --from=builder /bin/server /bin/
-ENTRYPOINT [ "/bin/server" ]
+COPY --from=builder /bin/core /bin/
+ENTRYPOINT [ "/bin/core" ]
