@@ -1557,3 +1557,103 @@ components:
         role:
           type: string
           example: "owner"
+    TestProgressEventType:
+      type: string
+      enum:
+        - testing_started
+        - test_completed
+        - testing_completed
+      description: |
+        WebSocket testing progress event type:
+        - testing_started: Sent when testing of a submission begins
+        - test_completed: Sent after each individual test case completes
+        - testing_completed: Sent when all testing for a submission is finished
+    TestingStartedEventModel:
+      type: object
+      required:
+        - type
+        - submission_id
+        - total_tests
+      properties:
+        type:
+          $ref: "#/components/schemas/TestProgressEventType"
+        submission_id:
+          type: string
+          format: uuid
+          description: UUID of the submission being tested
+        total_tests:
+          type: integer
+          minimum: 0
+          description: Total number of test cases for this submission
+      example:
+        type: testing_started
+        submission_id: "550e8400-e29b-41d4-a716-446655440000"
+        total_tests: 10
+    TestCompletedEventModel:
+      type: object
+      required:
+        - type
+        - submission_id
+        - test_number
+        - total_tests
+        - passed
+      properties:
+        type:
+          $ref: "#/components/schemas/TestProgressEventType"
+        submission_id:
+          type: string
+          format: uuid
+          description: UUID of the submission being tested
+        test_number:
+          type: integer
+          minimum: 1
+          description: The test case number that just completed (1-indexed)
+        total_tests:
+          type: integer
+          minimum: 1
+          description: Total number of test cases
+        passed:
+          type: boolean
+          description: Whether the test case passed
+      example:
+        type: test_completed
+        submission_id: "550e8400-e29b-41d4-a716-446655440000"
+        test_number: 3
+        total_tests: 10
+        passed: true
+    TestingCompletedEventModel:
+      type: object
+      required:
+        - type
+        - submission_id
+        - total_tests
+        - state
+      properties:
+        type:
+          $ref: "#/components/schemas/TestProgressEventType"
+        submission_id:
+          type: string
+          format: uuid
+          description: UUID of the submission
+        total_tests:
+          type: integer
+          minimum: 0
+          description: Total number of test cases
+        state:
+          type: integer
+          description: |
+            Final submission state:
+            - 1: Saved (not yet tested)
+            - 101: Compilation Error (CE)
+            - 102: Time Limit Exceeded (TL)
+            - 103: Memory Limit Exceeded (ML)
+            - 104: Runtime Error (RE)
+            - 105: Presentation Error (PE)
+            - 106: Wrong Answer (WA)
+            - 200: Accepted (AC)
+          enum: [1, 101, 102, 103, 104, 105, 106, 200]
+      example:
+        type: testing_completed
+        submission_id: "550e8400-e29b-41d4-a716-446655440000"
+        total_tests: 10
+        state: 200
