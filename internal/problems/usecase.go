@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -91,7 +92,9 @@ func (uc *UseCase) GetProblemById(ctx context.Context, id uuid.UUID) (domain.Pro
 	}
 
 	domainProblem := domain.ProblemFromSqlc(problem)
-	_ = uc.cache.Set(ctx, cache.ProblemKey(id), domainProblem, cache.ProblemTTL)
+	if err := uc.cache.Set(ctx, cache.ProblemKey(id), domainProblem, cache.ProblemTTL); err != nil {
+		slog.Error("failed to cache problem", "error", err, "problem_id", id)
+	}
 
 	return domainProblem, nil
 }
@@ -209,7 +212,9 @@ func (uc *UseCase) GetProblemMember(ctx context.Context, problemId uuid.UUID, us
 		Role:      string(member.Role),
 	}
 
-	_ = uc.cache.Set(ctx, key, domainMember, cache.PermissionTTL)
+	if err := uc.cache.Set(ctx, key, domainMember, cache.PermissionTTL); err != nil {
+		slog.Error("failed to cache problem member", "error", err, "key", key)
+	}
 
 	return domainMember, nil
 }
@@ -255,7 +260,9 @@ func (uc *UseCase) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]
 		domainTests[i] = domain.ProblemTestFromSqlc(t)
 	}
 
-	_ = uc.cache.Set(ctx, key, domainTests, cache.ProblemTTL)
+	if err := uc.cache.Set(ctx, key, domainTests, cache.ProblemTTL); err != nil {
+		slog.Error("failed to cache problem tests", "error", err, "key", key)
+	}
 
 	return domainTests, nil
 }

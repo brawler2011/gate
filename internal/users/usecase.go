@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/gate149/core/internal/cache"
 	"github.com/gate149/core/internal/domain"
@@ -68,7 +69,9 @@ func (u *UsersUseCase) GetUserById(ctx context.Context, id uuid.UUID) (domain.Us
 	domainUser := domain.UserFromSqlc(user)
 
 	// Set cache
-	_ = u.cache.Set(ctx, cache.UserKey(id), domainUser, cache.UserTTL)
+	if err := u.cache.Set(ctx, cache.UserKey(id), domainUser, cache.UserTTL); err != nil {
+		slog.Error("failed to cache user", "error", err, "user_id", id)
+	}
 
 	return domainUser, nil
 }

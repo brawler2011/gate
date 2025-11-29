@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"log/slog"
 
 	"github.com/gate149/core/internal/cache"
 	"github.com/gate149/core/internal/domain"
@@ -370,7 +371,9 @@ func (uc *PermissionsUseCase) HasContestPermission(ctx context.Context, contestI
 	}
 
 	// Cache result (short TTL)
-	_ = uc.cache.Set(ctx, key, result, cache.PermissionTTL)
+	if err := uc.cache.Set(ctx, key, result, cache.PermissionTTL); err != nil {
+		slog.Error("failed to cache contest permissions", "error", err, "key", key)
+	}
 
 	return result, nil
 }
@@ -450,7 +453,9 @@ func (uc *PermissionsUseCase) HasProblemPermission(ctx context.Context, problemI
 		return false, fmt.Errorf("unknown problem action: %s", action)
 	}
 
-	_ = uc.cache.Set(ctx, key, result, cache.PermissionTTL)
+	if err := uc.cache.Set(ctx, key, result, cache.PermissionTTL); err != nil {
+		slog.Error("failed to cache problem permissions", "error", err, "key", key)
+	}
 
 	return result, nil
 }

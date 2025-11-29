@@ -2,6 +2,7 @@ package contests
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/gate149/core/internal/cache"
 	contestssqlc "github.com/gate149/core/internal/contests/sqlc"
@@ -94,7 +95,9 @@ func (uc *UseCase) GetContest(ctx context.Context, id uuid.UUID) (domain.Contest
 	domainContest := domain.ContestFromSqlc(contest)
 
 	// Set cache
-	_ = uc.cache.Set(ctx, cache.ContestKey(id), domainContest, cache.ContestTTL)
+	if err := uc.cache.Set(ctx, cache.ContestKey(id), domainContest, cache.ContestTTL); err != nil {
+		slog.Error("failed to cache contest", "error", err, "contest_id", id)
+	}
 
 	return domainContest, nil
 }
@@ -214,7 +217,9 @@ func (uc *UseCase) GetContestProblem(ctx context.Context, c models.ContestProble
 	}
 
 	domainCP := domain.ContestProblemFromSqlc(cp)
-	_ = uc.cache.Set(ctx, key, domainCP, cache.ContestTTL)
+	if err := uc.cache.Set(ctx, key, domainCP, cache.ContestTTL); err != nil {
+		slog.Error("failed to cache contest problem", "error", err, "key", key)
+	}
 
 	return domainCP, nil
 }
@@ -310,7 +315,9 @@ func (uc *UseCase) GetContestMember(ctx context.Context, c *models.ContestPermis
 		// other fields empty
 	}
 
-	_ = uc.cache.Set(ctx, key, domainMember, cache.ContestTTL)
+	if err := uc.cache.Set(ctx, key, domainMember, cache.ContestTTL); err != nil {
+		slog.Error("failed to cache contest member", "error", err, "key", key)
+	}
 
 	return domainMember, nil
 }
