@@ -18,12 +18,12 @@ else := null
 # Check if user is admin
 is_admin if {
 	user
-	user.Role == "admin"
+	user.role == "admin"
 }
 
 is_user if {
 	user
-	user.Role == "user"
+	user.role == "user"
 }
 
 # Check if user is anonymous (not authenticated)

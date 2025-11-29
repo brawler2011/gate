@@ -31,15 +31,15 @@ is_anonymous if common.is_anonymous
 
 is_owner if {
 	member
-	member.Role == "owner"
+	member.role == "owner"
 }
 is_moderator if {
 	member
-	member.Role == "moderator"
+	member.role == "moderator"
 }
 is_participant if {
 	member
-	member.Role == "participant"
+	member.role == "participant"
 }
 
 # Map of all permissions for the current context
@@ -80,7 +80,7 @@ can_get_contest := true if is_participant
 can_get_contest := true if is_moderator
 can_get_contest := true if {
 	contest
-	contest.Visibility == "public"
+	contest.visibility == "public"
 }
 
 # UpdateContest
@@ -94,20 +94,20 @@ can_admin_contest := true if has_full_access
 can_get_monitor := true if has_full_access
 can_get_monitor := true if {
 	member
-	member.Role
+	member.role
 	contest
-	contest.MonitorScope
-	role_gte(member.Role, contest.MonitorScope)
+	contest.monitor_scope
+	role_gte(member.role, contest.monitor_scope)
 }
 
 # ListUsersSubmissions
 can_list_users_submissions := true if has_full_access
 can_list_users_submissions := true if {
 	member
-	member.Role
+	member.role
 	contest
-	contest.SubmissionsListScope
-	role_gte(member.Role, contest.SubmissionsListScope)
+	contest.submissions_list_scope
+	role_gte(member.role, contest.submissions_list_scope)
 }
 
 # ListOwnSubmissions
@@ -116,17 +116,17 @@ can_list_own_submissions := true if is_participant
 can_list_own_submissions := true if is_moderator
 can_list_own_submissions := true if {
 	contest
-	contest.Visibility == "public"
+	contest.visibility == "public"
 }
 
 # GetOtherUserSubmission
 can_get_other_user_submission := true if has_full_access
 can_get_other_user_submission := true if {
 	member
-	member.Role
+	member.role
 	contest
-	contest.SubmissionsReviewScope
-	role_gte(member.Role, contest.SubmissionsReviewScope)
+	contest.submissions_review_scope
+	role_gte(member.role, contest.submissions_review_scope)
 }
 
 # GetOwnSubmission
@@ -140,5 +140,5 @@ can_create_submission := true if is_participant
 can_create_submission := true if is_moderator
 can_create_submission := true if {
 	contest
-	contest.Visibility == "public"
+	contest.visibility == "public"
 }

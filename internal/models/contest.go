@@ -1,8 +1,6 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -17,31 +15,6 @@ const (
 	ContestRoleParticipant = "participant"
 )
 
-type Contest struct {
-	Id uuid.UUID `db:"id" json:"Id"`
-
-	Title       string `db:"title" json:"Title"`
-	Description string `db:"description" json:"Description"`
-
-	Visibility             string `db:"visibility" json:"Visibility"`
-	MonitorScope           string `db:"monitor_scope" json:"MonitorScope"`
-	SubmissionsListScope   string `db:"submissions_list_scope" json:"SubmissionsListScope"`
-	SubmissionsReviewScope string `db:"submissions_review_scope" json:"SubmissionsReviewScope"`
-
-	CreatedBy uuid.UUID `db:"created_by" json:"CreatedBy"`
-
-	CreatedAt time.Time `db:"created_at" json:"CreatedAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"UpdatedAt"`
-}
-
-func (c *Contest) IsPublic() bool {
-	return c.Visibility == ContestVisibilityPublic
-}
-
-func (c *Contest) IsPrivate() bool {
-	return c.Visibility == ContestVisibilityPrivate
-}
-
 type CreateContestParams struct {
 	Id     uuid.UUID
 	Title  string
@@ -51,11 +24,6 @@ type CreateContestParams struct {
 type CreateContestInput struct {
 	Title  string
 	UserId uuid.UUID
-}
-
-type ContestsList struct {
-	Contests   []*Contest
-	Pagination Pagination
 }
 
 type ContestsFilter struct {
@@ -121,11 +89,6 @@ func (f PublicContestsFilter) Offset() int64 {
 	return (f.Page - 1) * f.PageSize
 }
 
-type UserContestsList struct {
-	Contests   []*Contest
-	Pagination Pagination
-}
-
 type ContestUpdate struct {
 	Id                     uuid.UUID `db:"id"`
 	Title                  *string   `json:"title"`
@@ -134,34 +97,6 @@ type ContestUpdate struct {
 	MonitorScope           *string   `db:"monitor_scope"`
 	SubmissionsListScope   *string   `db:"submissions_list_scope"`
 	SubmissionsReviewScope *string   `db:"submissions_review_scope"`
-}
-
-type ContestProblemsListItem struct {
-	ProblemId   uuid.UUID `db:"problem_id"`
-	Position    int64     `db:"position"`
-	Title       string    `db:"title"`
-	TimeLimit   int64     `db:"time_limit"`
-	MemoryLimit int64     `db:"memory_limit"`
-	CreatedAt   time.Time `db:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"`
-}
-
-type ContestProblem struct {
-	ProblemId   uuid.UUID `db:"problem_id"`
-	Title       string    `db:"title"`
-	TimeLimit   int64     `db:"time_limit"`
-	MemoryLimit int64     `db:"memory_limit"`
-
-	Position int64 `db:"position"`
-
-	LegendHtml       string `db:"legend_html"`
-	InputFormatHtml  string `db:"input_format_html"`
-	OutputFormatHtml string `db:"output_format_html"`
-	NotesHtml        string `db:"notes_html"`
-	ScoringHtml      string `db:"scoring_html"`
-
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
 }
 
 type ContestProblemGet struct {
@@ -199,43 +134,9 @@ func (f ParticipantsFilter) Offset() int64 {
 	return (f.Page - 1) * f.PageSize
 }
 
-type ContestMember struct {
-	UserId      uuid.UUID `db:"user_id"`
-	ContestId   uuid.UUID `db:"contest_id"`
-	Username    string    `db:"username"`
-	Role        string    `db:"role"`
-	ContestRole string    `db:"contest_role"`
-	KratosId    string    `db:"kratos_id"`
-	CreatedAt   time.Time `db:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"`
-}
-
-type ParticipantsList struct {
-	Users      []*ContestMember
-	Pagination *Pagination
-}
-
 type ContestPermissionGet struct {
 	ContestId uuid.UUID
 	UserId    uuid.UUID
-}
-
-type ContestMemberRecord struct {
-	ContestId uuid.UUID `db:"contest_id" json:"ContestId"`
-	UserId    uuid.UUID `db:"user_id" json:"UserId"`
-	Role      string    `db:"role" json:"Role"`
-}
-
-func (cm *ContestMemberRecord) IsOwner() bool {
-	return cm.Role == ContestRoleOwner
-}
-
-func (cm *ContestMemberRecord) IsModerator() bool {
-	return cm.Role == ContestRoleModerator
-}
-
-func (cm *ContestMemberRecord) IsParticipant() bool {
-	return cm.Role == ContestRoleParticipant
 }
 
 type ContestPermissions struct {

@@ -135,8 +135,8 @@ func ErrorHandlerMiddleware(logger *slog.Logger) fiber.Handler {
 		}
 
 		// Add user/session context if available in the context
-		if user, _ := GetUser(ctx); user != nil {
-			logAttrs = append(logAttrs, slog.String("user_id", user.Id.String()))
+		if user, _ := GetUser(ctx); user.ID != uuid.Nil {
+			logAttrs = append(logAttrs, slog.String("user_id", user.ID.String()))
 		}
 		if session, _ := GetSession(ctx); session != nil {
 			logAttrs = append(logAttrs, slog.String("session_id", session.Id))

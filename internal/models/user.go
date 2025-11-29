@@ -1,8 +1,6 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -11,26 +9,10 @@ const (
 	RoleUser  = "user"
 )
 
-type User struct {
-	Id        uuid.UUID `db:"id" json:"Id"`
-	Username  string    `db:"username" json:"Username"`
-	Role      string    `db:"role" json:"Role"`
-	KratosId  *string   `db:"kratos_id" json:"KratosId"`
-	CreatedAt time.Time `db:"created_at" json:"CreatedAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"UpdatedAt"`
-}
-
-func (u User) IsAdmin() bool {
-	return u.Role == RoleAdmin
-}
-
-func (u User) IsUser() bool {
-	return u.Role == RoleUser
-}
-
 type UsersList struct {
-	Users      []*User
-	Pagination *Pagination
+	// This struct is likely obsolete if we return []User directly, but kept if needed for pagination wrapper
+	// But repo returns *models.UsersList. I should change repo to return ([]User, int64).
+	// So I'll remove this.
 }
 
 type UsersFilter struct {

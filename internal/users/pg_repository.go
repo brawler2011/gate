@@ -4,94 +4,78 @@ import (
 	"context"
 
 	"github.com/gate149/core/internal/models"
+	userssqlc "github.com/gate149/core/internal/users/sqlc"
 	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
-
-	_ "embed"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repository struct {
-	db *sqlx.DB
+	queries *userssqlc.Queries
 }
 
-func NewRepository(db *sqlx.DB) *Repository {
+func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{
-		db: db,
+		queries: userssqlc.New(db),
 	}
 }
 
-//go:embed sql/create_user.sql
-var CreateUserQuery string
-
 func (r *Repository) CreateUser(ctx context.Context, params *models.CreateUserParams) error {
-	_, err := r.db.ExecContext(
-		ctx,
-		CreateUserQuery,
-		params.Id,
-		params.Username,
-		params.Role,
-		params.KratosId,
-	)
+	err := r.queries.CreateUser(ctx, userssqlc.CreateUserParams{
+		ID:       params.Id,
+		Username: params.Username,
+		Role:     userssqlc.UserRole(params.Role),
+		KratosID: params.KratosId,
+	})
 	if err != nil {
 		return pkg.HandlePgErr(err)
 	}
 	return nil
 }
 
-//go:embed sql/get_user_by_id.sql
-var GetUserByIdQuery string
-
-func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	var user models.User
-	err := r.db.GetContext(ctx, &user, GetUserByIdQuery, id)
+func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (userssqlc.User, error) {
+	user, err := r.queries.GetUserById(ctx, id)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+		return userssqlc.User{}, pkg.HandlePgErr(err)
 	}
-	return &user, nil
+	return user, nil
 }
 
-//go:embed sql/get_user_by_kratos_id.sql
-var GetUserByKratosIdQuery string
-
-func (r *Repository) GetUserByKratosId(ctx context.Context, kratosId string) (*models.User, error) {
-	var user models.User
-	err := r.db.GetContext(ctx, &user, GetUserByKratosIdQuery, kratosId)
+func (r *Repository) GetUserByKratosId(ctx context.Context, kratosId string) (userssqlc.User, error) {
+	user, err := r.queries.GetUserByKratosId(ctx, kratosId)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+		return userssqlc.User{}, pkg.HandlePgErr(err)
 	}
-	return &user, nil
+	return user, nil
 }
 
-//go:embed sql/list_users.sql
-var ListUsersQuery string
-
-//go:embed sql/count_users.sql
-var CountUsersQuery string
-
-func (r *Repository) ListUsers(ctx context.Context, filter *models.UsersFilter) (*models.UsersList, error) {
-	var total int64
-	err := r.db.GetContext(ctx, &total, CountUsersQuery,
-		filter.Search,
-		filter.Role,
-	)
-	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+func (r *Repository) ListUsers(ctx context.Context, filter *models.UsersFilter) ([]userssqlc.User, int64, error) {
+	search := &filter.Search
+	if filter.Search == "" {
+		search = nil
+	}
+	role := &filter.Role
+	if filter.Role == "" {
+		role = nil
 	}
 
-	var users []*models.User
-	err = r.db.SelectContext(ctx, &users, ListUsersQuery,
-		filter.Search,
-		filter.Role,
-		filter.PageSize,
-		filter.Offset(),
-	)
+	total, err := r.queries.CountUsers(ctx, userssqlc.CountUsersParams{
+		Search: search,
+		Role:   role,
+	})
 	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+		return nil, 0, pkg.HandlePgErr(err)
 	}
 
-	return &models.UsersList{
-		Users:      users,
-		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
-	}, nil
+	users, err := r.queries.ListUsers(ctx, userssqlc.ListUsersParams{
+		Limit:  int32(filter.PageSize),
+		Offset: int32(filter.Offset()),
+		Search: search,
+		Role:   role,
+	})
+	if err != nil {
+		return nil, 0, pkg.HandlePgErr(err)
+	}
+
+	return users, total, nil
 }

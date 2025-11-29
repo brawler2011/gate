@@ -1,8 +1,6 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -23,20 +21,6 @@ const (
 	EventTypeSubmissionCreated OutboxEventType = "submission.created"
 	EventTypeSubmissionTested  OutboxEventType = "submission.tested"
 )
-
-// OutboxEvent represents an event in the outbox table
-type OutboxEvent struct {
-	Id            uuid.UUID         `db:"id"`
-	AggregateId   uuid.UUID         `db:"aggregate_id"`
-	AggregateType string            `db:"aggregate_type"`
-	EventType     OutboxEventType   `db:"event_type"`
-	Payload       []byte            `db:"payload"` // jsonb stored as []byte
-	Status        OutboxEventStatus `db:"status"`
-	CreatedAt     time.Time         `db:"created_at"`
-	ProcessedAt   *time.Time        `db:"processed_at"`
-	RetryCount    int               `db:"retry_count"`
-	ErrorMessage  *string           `db:"error_message"`
-}
 
 // SubmissionCreatedPayload represents the payload for submission.created events
 type SubmissionCreatedPayload struct {
@@ -59,4 +43,3 @@ type SubmissionTestedPayload struct {
 	Language     int64     `json:"language"`
 	CreatedBy    uuid.UUID `json:"created_by"`
 }
-

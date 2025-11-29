@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/gate149/core/internal/models"
+	outboxsqlc "github.com/gate149/core/internal/outbox/sqlc"
+	problemssqlc "github.com/gate149/core/internal/problems/sqlc"
+	submissionssqlc "github.com/gate149/core/internal/submissions/sqlc"
 	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
 )
@@ -22,13 +25,13 @@ const (
 )
 
 type SubmissionsRepo interface {
-	GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error)
+	GetSubmission(ctx context.Context, id uuid.UUID) (submissionssqlc.GetSubmissionRow, error)
 	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
 }
 
 type ProblemsRepo interface {
-	GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error)
-	GetProblemTests(ctx context.Context, problemId uuid.UUID) (models.ProblemTests, error)
+	GetProblemById(ctx context.Context, id uuid.UUID) (problemssqlc.Problem, error)
+	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.ProblemTest, error)
 }
 
 type Worker struct {
@@ -94,35 +97,36 @@ func (w *Worker) processEvents(ctx context.Context) {
 		return
 	}
 
-	for _, event := range events {
+	for i := range events {
+		event := &events[i]
 		// Mark as processing
-		if err := w.outboxRepo.MarkAsProcessing(ctx, event.Id); err != nil {
-			w.logger.Error("failed to mark event as processing", slog.String("event_id", event.Id.String()), slog.Any("error", err))
+		if err := w.outboxRepo.MarkAsProcessing(ctx, event.ID); err != nil {
+			w.logger.Error("failed to mark event as processing", slog.String("event_id", event.ID.String()), slog.Any("error", err))
 			continue
 		}
 
 		// Process the event
 		if err := w.processEvent(ctx, event); err != nil {
 			w.logger.Error("failed to process event",
-				slog.String("event_id", event.Id.String()),
+				slog.String("event_id", event.ID.String()),
 				slog.String("event_type", string(event.EventType)),
 				slog.Any("error", err))
 
 			// Mark as failed
-			if markErr := w.outboxRepo.MarkAsFailed(ctx, event.Id, err.Error()); markErr != nil {
-				w.logger.Error("failed to mark event as failed", slog.String("event_id", event.Id.String()), slog.Any("error", markErr))
+			if markErr := w.outboxRepo.MarkAsFailed(ctx, event.ID, err.Error()); markErr != nil {
+				w.logger.Error("failed to mark event as failed", slog.String("event_id", event.ID.String()), slog.Any("error", markErr))
 			}
 			continue
 		}
 
 		// Mark as completed
-		if err := w.outboxRepo.MarkAsCompleted(ctx, event.Id); err != nil {
-			w.logger.Error("failed to mark event as completed", slog.String("event_id", event.Id.String()), slog.Any("error", err))
+		if err := w.outboxRepo.MarkAsCompleted(ctx, event.ID); err != nil {
+			w.logger.Error("failed to mark event as completed", slog.String("event_id", event.ID.String()), slog.Any("error", err))
 		}
 	}
 }
 
-func (w *Worker) processEvent(ctx context.Context, event *models.OutboxEvent) error {
+func (w *Worker) processEvent(ctx context.Context, event *outboxsqlc.OutboxEvent) error {
 	switch event.EventType {
 	case models.EventTypeSubmissionCreated:
 		return w.processSubmissionCreated(ctx, event)
@@ -133,7 +137,7 @@ func (w *Worker) processEvent(ctx context.Context, event *models.OutboxEvent) er
 	}
 }
 
-func (w *Worker) processSubmissionCreated(ctx context.Context, event *models.OutboxEvent) error {
+func (w *Worker) processSubmissionCreated(ctx context.Context, event *outboxsqlc.OutboxEvent) error {
 	// Parse payload
 	var payload models.SubmissionCreatedPayload
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {
@@ -145,7 +149,7 @@ func (w *Worker) processSubmissionCreated(ctx context.Context, event *models.Out
 		slog.String("problem_id", payload.ProblemId.String()))
 
 	// Fetch submission
-	submission, err := w.submissionsRepo.GetSubmissions(ctx, payload.SubmissionId)
+	submission, err := w.submissionsRepo.GetSubmission(ctx, payload.SubmissionId)
 	if err != nil {
 		return fmt.Errorf("failed to get submission: %w", err)
 	}
@@ -224,8 +228,8 @@ func (w *Worker) processSubmissionCreated(ctx context.Context, event *models.Out
 		return fmt.Errorf("failed to marshal tested payload: %w", err)
 	}
 
-	testedEvent := &models.OutboxEvent{
-		AggregateId:   payload.SubmissionId,
+	testedEvent := &outboxsqlc.OutboxEvent{
+		AggregateID:   payload.SubmissionId,
 		AggregateType: "submission",
 		EventType:     models.EventTypeSubmissionTested,
 		Payload:       testedPayloadBytes,
@@ -249,9 +253,9 @@ type TestResults struct {
 
 func (w *Worker) testSubmission(
 	ctx context.Context,
-	submission *models.Submission,
-	problem *models.Problem,
-	tests models.ProblemTests,
+	submission submissionssqlc.GetSubmissionRow,
+	problem problemssqlc.Problem,
+	tests []problemssqlc.ProblemTest,
 	languageID int,
 ) (*TestResults, error) {
 	results := &TestResults{
@@ -296,19 +300,6 @@ func (w *Worker) testSubmission(
 		}
 
 		// Map Judge0 status to our state
-		// Judge0 status IDs:
-		// 3 = Accepted
-		// 4 = Wrong Answer
-		// 5 = Time Limit Exceeded
-		// 6 = Compilation Error
-		// 7 = Runtime Error (SIGSEGV)
-		// 8 = Runtime Error (SIGXFSZ)
-		// 9 = Runtime Error (SIGFPE)
-		// 10 = Runtime Error (SIGABRT)
-		// 11 = Runtime Error (NZEC)
-		// 12 = Runtime Error (Other)
-		// 13 = Internal Error
-		// 14 = Exec Format Error
 		statusID := result.Status.Id
 
 		switch statusID {
@@ -329,8 +320,8 @@ func (w *Worker) testSubmission(
 		// If not accepted, stop testing
 		if statusID != 3 {
 			w.logger.Info("test failed",
-				slog.String("submission_id", submission.Id.String()),
-				slog.Int64("test_ordinal", test.Ordinal),
+				slog.String("submission_id", submission.ID.String()),
+				slog.Int64("test_ordinal", int64(test.Ordinal)),
 				slog.Int("status_id", statusID))
 			break
 		}
@@ -371,7 +362,7 @@ func (w *Worker) testSubmission(
 	return results, nil
 }
 
-func (w *Worker) processSubmissionTested(ctx context.Context, event *models.OutboxEvent) error {
+func (w *Worker) processSubmissionTested(ctx context.Context, event *outboxsqlc.OutboxEvent) error {
 	// Parse payload
 	var payload models.SubmissionTestedPayload
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {

@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	corev1 "github.com/gate149/contracts/core/v1"
+	"github.com/gate149/core/internal/domain"
 	"github.com/gate149/core/internal/middleware"
 	"github.com/gate149/core/internal/models"
 	"github.com/gate149/core/internal/permissions"
@@ -15,30 +16,30 @@ import (
 
 type ContestsUC interface {
 	CreateContest(ctx context.Context, c *models.CreateContestInput) (uuid.UUID, error)
-	GetContest(ctx context.Context, id uuid.UUID) (*models.Contest, error)
+	GetContest(ctx context.Context, id uuid.UUID) (domain.Contest, error)
 	UpdateContest(ctx context.Context, c models.ContestUpdate) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
 
-	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error)
-	ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.UserContestsList, error)
-	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error)
-	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error)
+	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*domain.ContestsList, error)
+	ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*domain.ContestsList, error)
+	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*domain.ContestsList, error)
+	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*domain.ContestsList, error)
 
 	CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error
-	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (*models.ContestProblem, error)
-	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]*models.ContestProblemsListItem, error)
+	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (domain.ContestProblem, error)
+	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]domain.ContestProblem, error)
 	DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error
 
 	CreateParticipant(ctx context.Context, c models.ParticipantCreation) error
 	DeleteParticipant(ctx context.Context, c models.ParticipantDeletion) error
-	ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*models.ParticipantsList, error)
+	ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*domain.ContestMembersList, error)
 
-	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMemberRecord, error)
+	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (domain.ContestMember, error)
 	UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error
 }
 
 type SubmissionsUC interface {
-	ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*models.SolutionsList, error)
+	ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*domain.SubmissionsList, error)
 }
 
 type PermissionsUC interface {
@@ -88,18 +89,14 @@ func (h *ContestsHandlers) CreateContest(c *fiber.Ctx, params corev1.CreateConte
 		return pkg.Wrap(pkg.NoPermission, nil, "no session found")
 	}
 
-	userIdStr, ok := session.Identity.MetadataPublic["user_id"].(string)
-	if !ok {
-		return pkg.Wrap(pkg.NoPermission, nil, "no user id found in session")
-	}
-	userId, err := uuid.Parse(userIdStr)
+	user, err := middleware.GetUser(ctx)
 	if err != nil {
-		return pkg.Wrap(pkg.NoPermission, nil, "invalid user id")
+		return err
 	}
 
 	contestCreation := &models.CreateContestInput{
 		Title:  params.Title,
-		UserId: userId,
+		UserId: user.ID,
 	}
 
 	contestID, err := h.contestsUC.CreateContest(ctx, contestCreation)
@@ -123,9 +120,9 @@ func (h *ContestsHandlers) GetContest(c *fiber.Ctx, id uuid.UUID) error {
 	}
 
 	// Check if user can view contest (includes public contest check)
-	canView, err := h.permissionsUC.HasContestPermission(ctx, id, user.Id, permissions.ActionGetContest,
+	canView, err := h.permissionsUC.HasContestPermission(ctx, id, user.ID, permissions.ActionGetContest,
 		permissions.WithUser(user),
-		permissions.WithContest(contest))
+		permissions.WithContest(contest)) // Need to fix this later if WithContest expects domain.Contest
 	if err != nil {
 		return err
 	}
@@ -201,7 +198,7 @@ func (h *ContestsHandlers) UpdateContest(c *fiber.Ctx, id uuid.UUID) error {
 		return err
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, id, user.Id, permissions.ActionUpdateContest, permissions.WithUser(user))
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, id, user.ID, permissions.ActionUpdateContest, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -233,7 +230,7 @@ func (h *ContestsHandlers) DeleteContest(c *fiber.Ctx, id uuid.UUID) error {
 		return err
 	}
 
-	canAdmin, err := h.permissionsUC.HasContestPermission(ctx, id, user.Id, permissions.ActionAdminContest, permissions.WithUser(user))
+	canAdmin, err := h.permissionsUC.HasContestPermission(ctx, id, user.ID, permissions.ActionAdminContest, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -329,7 +326,7 @@ func (h *ContestsHandlers) ListUserContests(c *fiber.Ctx, id uuid.UUID, params c
 	}
 
 	// Only allow user to see their own contests or admins
-	if id != user.Id && user.Role != "admin" {
+	if id != user.ID && user.Role != "admin" {
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
 	}
 
@@ -388,7 +385,7 @@ func (h *ContestsHandlers) ListWorkshopContests(c *fiber.Ctx, params corev1.List
 	filter := models.WorkshopContestsFilter{
 		Page:      params.Page,
 		PageSize:  params.PageSize,
-		UserId:    user.Id,
+		UserId:    user.ID,
 		Search:    params.Search,
 		SortBy:    sortBy,
 		SortOrder: sortOrder,
@@ -445,7 +442,7 @@ func (h *ContestsHandlers) CreateContestProblem(c *fiber.Ctx, contestId uuid.UUI
 		return err
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionUpdateContest, permissions.WithUser(user))
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionUpdateContest, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -471,7 +468,7 @@ func (h *ContestsHandlers) GetContestProblem(c *fiber.Ctx, contestId uuid.UUID, 
 	user := middleware.GetUserOrAnonymous(ctx)
 
 	// Check if user can view contest - this includes public contests
-	canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionGetContest, permissions.WithUser(user))
+	canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionGetContest, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -498,7 +495,7 @@ func (h *ContestsHandlers) DeleteContestProblem(c *fiber.Ctx, contestId uuid.UUI
 		return err
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionUpdateContest, permissions.WithUser(user))
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionUpdateContest, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -525,7 +522,7 @@ func (h *ContestsHandlers) CreateContestMember(c *fiber.Ctx, contestId uuid.UUID
 		return err
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionUpdateContest, permissions.WithUser(user))
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionUpdateContest, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -552,7 +549,7 @@ func (h *ContestsHandlers) DeleteContestMember(c *fiber.Ctx, contestId uuid.UUID
 		return err
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionUpdateContest, permissions.WithUser(user))
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionUpdateContest, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -585,7 +582,7 @@ func (h *ContestsHandlers) UpdateContestMember(c *fiber.Ctx, contestId uuid.UUID
 	}
 
 	// Prevent user from updating their own role
-	if userId == user.Id {
+	if userId == user.ID {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot update own role")
 	}
 
@@ -597,7 +594,7 @@ func (h *ContestsHandlers) UpdateContestMember(c *fiber.Ctx, contestId uuid.UUID
 	if !isAdmin {
 		contestMember, err := h.contestsUC.GetContestMember(ctx, &models.ContestPermissionGet{
 			ContestId: contestId,
-			UserId:    user.Id,
+			UserId:    user.ID,
 		})
 		if err != nil {
 			return pkg.Wrap(pkg.NoPermission, err, "insufficient permission to update contest member")
@@ -630,12 +627,12 @@ func (h *ContestsHandlers) ListContestMembers(c *fiber.Ctx, contestId uuid.UUID,
 	}
 
 	// Check if user can view contest (any permission implies view access)
-	canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionGetMonitor, permissions.WithUser(user))
+	canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionGetMonitor, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
 	if !canView {
-		canView, err = h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionListOwnSubmissions, permissions.WithUser(user))
+		canView, err = h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionListOwnSubmissions, permissions.WithUser(user))
 		if err != nil {
 			return err
 		}
@@ -654,16 +651,16 @@ func (h *ContestsHandlers) ListContestMembers(c *fiber.Ctx, contestId uuid.UUID,
 	}
 
 	resp := corev1.ListContestMembersResponseModel{
-		Members:    make([]corev1.ContestMemberModel, len(participantsList.Users)),
-		Pagination: PaginationDTO(*participantsList.Pagination),
+		Members:    make([]corev1.ContestMemberModel, len(participantsList.Members)),
+		Pagination: PaginationDTO(participantsList.Pagination),
 	}
 
-	for i, user := range participantsList.Users {
+	for i, user := range participantsList.Members {
 		resp.Members[i] = corev1.ContestMemberModel{
 			ContestId:   contestId,
 			ContestRole: user.ContestRole,
-			UserId:      user.UserId,
-			KratosId:    user.KratosId,
+			UserId:      user.UserID,
+			KratosId:    user.KratosID,
 			Username:    user.Username,
 			Role:        user.Role,
 			CreatedAt:   user.CreatedAt,
@@ -684,7 +681,7 @@ func (h *ContestsHandlers) GetMyContestRole(c *fiber.Ctx, contestId uuid.UUID) e
 
 	contestMember, err := h.contestsUC.GetContestMember(ctx, &models.ContestPermissionGet{
 		ContestId: contestId,
-		UserId:    user.Id,
+		UserId:    user.ID,
 	})
 	if err != nil {
 		return err
@@ -707,7 +704,7 @@ func (h *ContestsHandlers) ListContestSubmissions(c *fiber.Ctx, contestId uuid.U
 	if params.UserId == nil {
 		// No userId specified - request to get all members' submissions
 		// Need permission to list all users' submissions
-		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionListUsersSubmissions, permissions.WithUser(user))
+		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionListUsersSubmissions, permissions.WithUser(user))
 		if err != nil {
 			return err
 		}
@@ -716,19 +713,19 @@ func (h *ContestsHandlers) ListContestSubmissions(c *fiber.Ctx, contestId uuid.U
 		}
 		// Don't filter by userId - get all submissions
 		filterUserId = nil
-	} else if *params.UserId == user.Id {
+	} else if *params.UserId == user.ID {
 		// UserId matches current user - check permission to view own submissions
-		canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionListOwnSubmissions, permissions.WithUser(user))
+		canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionListOwnSubmissions, permissions.WithUser(user))
 		if err != nil {
 			return err
 		}
 		if !canView {
 			return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view own submissions in this contest")
 		}
-		filterUserId = &user.Id
+		filterUserId = &user.ID
 	} else {
 		// UserId is different - need permission to list other users' submissions
-		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, permissions.ActionListUsersSubmissions, permissions.WithUser(user))
+		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionListUsersSubmissions, permissions.WithUser(user))
 		if err != nil {
 			return err
 		}
@@ -778,92 +775,87 @@ func (h *ContestsHandlers) ListContestSubmissions(c *fiber.Ctx, contestId uuid.U
 	return c.JSON(SubmissionsListToDTO(submissionsList))
 }
 
-func GetContestResponseDTO(contest *models.Contest, problems []*models.ContestProblemsListItem) *corev1.GetContestResponseModel {
+func GetContestResponseDTO(contest domain.Contest, problems []domain.ContestProblem) *corev1.GetContestResponseModel {
 	resp := corev1.GetContestResponseModel{
-		Contest:  ContestDTO(*contest),
+		Contest:  ContestDTO(contest),
 		Problems: make([]corev1.ContestProblemListItemModel, len(problems)),
 	}
 
 	for i, task := range problems {
-		resp.Problems[i] = ContestProblemsListItemDTO(*task)
+		resp.Problems[i] = ContestProblemsListItemDTO(task)
 	}
 
 	return &resp
 }
 
-func ListContestsResponseDTO(contestsList *models.ContestsList) *corev1.ListContestsResponseModel {
+func ListContestsResponseDTO(contestsList *domain.ContestsList) *corev1.ListContestsResponseModel {
 	resp := corev1.ListContestsResponseModel{
 		Contests:   make([]corev1.ContestModel, len(contestsList.Contests)),
 		Pagination: PaginationDTO(contestsList.Pagination),
 	}
 
 	for i, contest := range contestsList.Contests {
-		resp.Contests[i] = ContestDTO(*contest)
+		resp.Contests[i] = ContestDTO(contest)
 	}
 
 	return &resp
 }
 
-func ListUserContestsResponseDTO(contestsList *models.UserContestsList) *corev1.ListUserContestsResponseModel {
+func ListUserContestsResponseDTO(contestsList *domain.ContestsList) *corev1.ListUserContestsResponseModel {
 	resp := corev1.ListUserContestsResponseModel{
 		Contests:   make([]corev1.ContestModel, len(contestsList.Contests)),
 		Pagination: PaginationDTO(contestsList.Pagination),
 	}
 
 	for i, contest := range contestsList.Contests {
-		resp.Contests[i] = ContestDTO(*contest)
+		resp.Contests[i] = ContestDTO(contest)
 	}
 
 	return &resp
 }
 
-func GetContestProblemResponseDTO(p *models.ContestProblem) *corev1.GetContestProblemResponseModel {
-	resp := corev1.GetContestProblemResponseModel{
+func GetContestProblemResponseDTO(p domain.ContestProblem) *corev1.GetContestProblemResponseModel {
+	return &corev1.GetContestProblemResponseModel{
 		Problem: corev1.ContestProblemModel{
-			ProblemId:   p.ProblemId,
-			Title:       p.Title,
-			MemoryLimit: p.MemoryLimit,
-			TimeLimit:   p.TimeLimit,
-
-			Position: p.Position,
-
+			ProblemId:        p.ProblemID,
+			Title:            p.Title,
+			TimeLimit:        p.TimeLimit,
+			MemoryLimit:      p.MemoryLimit,
+			Position:         p.Position,
 			LegendHtml:       p.LegendHtml,
 			InputFormatHtml:  p.InputFormatHtml,
 			OutputFormatHtml: p.OutputFormatHtml,
 			NotesHtml:        p.NotesHtml,
 			ScoringHtml:      p.ScoringHtml,
-
-			CreatedAt: p.CreatedAt,
-			UpdatedAt: p.UpdatedAt,
+			CreatedAt:        p.CreatedAt,
+			UpdatedAt:        p.UpdatedAt,
 		},
 	}
-
-	return &resp
 }
 
-func PaginationDTO(p models.Pagination) corev1.PaginationModel {
+func PaginationDTO(p domain.Pagination) corev1.PaginationModel {
 	return corev1.PaginationModel{
 		Page:  p.Page,
 		Total: p.Total,
 	}
 }
 
-func SubmissionsListToDTO(solutionsList *models.SolutionsList) *corev1.ListSubmissionsResponseModel {
+func SubmissionsListToDTO(solutionsList *domain.SubmissionsList) *corev1.ListSubmissionsResponseModel {
 	resp := corev1.ListSubmissionsResponseModel{
-		Submissions: make([]corev1.SubmissionsListItemModel, len(solutionsList.Solutions)),
+		Submissions: make([]corev1.SubmissionsListItemModel, len(solutionsList.Submissions)),
 		Pagination:  PaginationDTO(solutionsList.Pagination),
 	}
 
-	for i, solution := range solutionsList.Solutions {
-		resp.Submissions[i] = SubmissionListItemDTO(*solution)
+	for i, solution := range solutionsList.Submissions {
+		resp.Submissions[i] = SubmissionListItemDTO(solution)
 	}
 
 	return &resp
 }
 
-func SubmissionListItemDTO(s models.SubmissionListItem) corev1.SubmissionsListItemModel {
+func SubmissionListItemDTO(s domain.Submission) corev1.SubmissionsListItemModel {
 	return corev1.SubmissionsListItemModel{
-		Id:           s.Id,
+		Id:           s.ID,
 		UserId:       s.CreatedBy,
 		Username:     s.Username,
 		State:        int64(s.State),
@@ -872,19 +864,19 @@ func SubmissionListItemDTO(s models.SubmissionListItem) corev1.SubmissionsListIt
 		TimeStat:     s.TimeStat,
 		MemoryStat:   s.MemoryStat,
 		Language:     int64(s.Language),
-		ProblemId:    s.ProblemId,
+		ProblemId:    s.ProblemID,
 		ProblemTitle: s.ProblemTitle,
 		Position:     s.Position,
-		ContestId:    s.ContestId,
+		ContestId:    s.ContestID,
 		ContestTitle: s.ContestTitle,
 		CreatedAt:    s.CreatedAt,
 		UpdatedAt:    s.UpdatedAt,
 	}
 }
 
-func ContestDTO(c models.Contest) corev1.ContestModel {
+func ContestDTO(c domain.Contest) corev1.ContestModel {
 	return corev1.ContestModel{
-		Id:                     c.Id,
+		Id:                     c.ID,
 		Title:                  c.Title,
 		Description:            c.Description,
 		Visibility:             c.Visibility,
@@ -897,9 +889,9 @@ func ContestDTO(c models.Contest) corev1.ContestModel {
 	}
 }
 
-func ContestProblemsListItemDTO(t models.ContestProblemsListItem) corev1.ContestProblemListItemModel {
+func ContestProblemsListItemDTO(t domain.ContestProblem) corev1.ContestProblemListItemModel {
 	return corev1.ContestProblemListItemModel{
-		ProblemId:   t.ProblemId,
+		ProblemId:   t.ProblemID,
 		Position:    t.Position,
 		Title:       t.Title,
 		MemoryLimit: t.MemoryLimit,
@@ -909,9 +901,9 @@ func ContestProblemsListItemDTO(t models.ContestProblemsListItem) corev1.Contest
 	}
 }
 
-func UserDTO(u models.User) corev1.UserModel {
+func UserDTO(u domain.User) corev1.UserModel {
 	return corev1.UserModel{
-		Id:        u.Id,
+		Id:        u.ID,
 		Username:  u.Username,
 		Role:      u.Role,
 		CreatedAt: u.CreatedAt,
@@ -919,11 +911,9 @@ func UserDTO(u models.User) corev1.UserModel {
 	}
 }
 
-func ParticipantDTO(p models.ContestMember) corev1.UserModel {
+func ParticipantDTO(p domain.ContestMember) corev1.UserModel {
 	return corev1.UserModel{
-		// UserId:    p.UserId,
-		// ContestId: p.ContestId,
-		Id:        p.UserId,
+		Id:        p.UserID,
 		Username:  p.Username,
 		Role:      p.Role,
 		CreatedAt: p.CreatedAt,

@@ -14,8 +14,8 @@ else := custom.get_problem_member(input.problem_id, input.user_id)
 
 # Context helpers
 is_admin if common.is_admin
-is_owner if member.Role == "owner"
-is_moderator if member.Role == "moderator"
+is_owner if member.role == "owner"
+is_moderator if member.role == "moderator"
 
 has_full_access if is_admin
 has_full_access if is_owner
@@ -39,4 +39,4 @@ can_update_problem if is_moderator
 
 # GetProblem
 can_get_problem if can_update_problem
-can_get_problem if problem.Visibility == "public"
+can_get_problem if problem.visibility == "public"

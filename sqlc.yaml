@@ -1,0 +1,135 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "internal/users/queries.sql"
+    schema: "cmd/migrate/migrations/"
+    gen:
+      go:
+        package: "userssqlc"
+        out: "internal/users/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: "pg_catalog.uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "pg_catalog.timestamptz"
+            go_type: "time.Time"
+          - db_type: "text"
+            go_type: "string"
+          - db_type: "varchar"
+            go_type: "string"
+
+  - engine: "postgresql"
+    queries: "internal/contests/queries.sql"
+    schema: "cmd/migrate/migrations/"
+    gen:
+      go:
+        package: "contestssqlc"
+        out: "internal/contests/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: "pg_catalog.uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "pg_catalog.timestamptz"
+            go_type: "time.Time"
+          - db_type: "text"
+            go_type: "string"
+          - db_type: "varchar"
+            go_type: "string"
+
+  - engine: "postgresql"
+    queries: "internal/problems/queries.sql"
+    schema: "cmd/migrate/migrations/"
+    gen:
+      go:
+        package: "problemssqlc"
+        out: "internal/problems/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: "pg_catalog.uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "pg_catalog.timestamptz"
+            go_type: "time.Time"
+          - db_type: "text"
+            go_type: "string"
+          - db_type: "varchar"
+            go_type: "string"
+
+  - engine: "postgresql"
+    queries: "internal/submissions/queries.sql"
+    schema: "cmd/migrate/migrations/"
+    gen:
+      go:
+        package: "submissionssqlc"
+        out: "internal/submissions/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: "pg_catalog.uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "pg_catalog.timestamptz"
+            go_type: "time.Time"
+          - db_type: "text"
+            go_type: "string"
+          - db_type: "varchar"
+            go_type: "string"
+          # Map columns to domain models
+          - column: "submissions.language"
+            go_type: "github.com/gate149/core/internal/models.LanguageName"
+          - column: "submissions.state"
+            go_type: "github.com/gate149/core/internal/models.State"
+
+  - engine: "postgresql"
+    queries: "internal/outbox/queries.sql"
+    schema: "cmd/migrate/migrations/"
+    gen:
+      go:
+        package: "outboxsqlc"
+        out: "internal/outbox/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: "pg_catalog.uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "pg_catalog.timestamptz"
+            go_type: "time.Time"
+          - db_type: "text"
+            go_type: "string"
+          - db_type: "varchar"
+            go_type: "string"
+          - column: "outbox_events.status"
+            go_type: "github.com/gate149/core/internal/models.OutboxEventStatus"
+          - column: "outbox_events.event_type"
+            go_type: "github.com/gate149/core/internal/models.OutboxEventType"

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	testerv1 "github.com/gate149/contracts/core/v1"
+	"github.com/gate149/core/internal/domain"
 	"github.com/gate149/core/internal/middleware"
 	"github.com/gate149/core/internal/models"
 	"github.com/gate149/core/internal/permissions"
@@ -13,10 +14,10 @@ import (
 )
 
 type SolutionsUC interface {
-	GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error)
+	GetSubmissions(ctx context.Context, id uuid.UUID) (domain.Submission, error)
 	CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error)
 	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
-	ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*models.SolutionsList, error)
+	ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*domain.SubmissionsList, error)
 }
 
 type PermissionsUC interface {
@@ -24,7 +25,7 @@ type PermissionsUC interface {
 }
 
 type UsersUC interface {
-	GetUserByKratosId(ctx context.Context, kratosId string) (*models.User, error)
+	GetUserByKratosId(ctx context.Context, kratosId string) (domain.User, error)
 }
 
 type SolutionsHandlers struct {
@@ -46,7 +47,7 @@ func getUserID(h *SolutionsHandlers, c *fiber.Ctx) (uuid.UUID, error) {
 		return uuid.Nil, err
 	}
 
-	return user.Id, nil
+	return user.ID, nil
 }
 
 func NewHandlers(
@@ -137,7 +138,7 @@ func (h *SolutionsHandlers) GetSubmission(c *fiber.Ctx, id uuid.UUID) error {
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
 	}
 
-	return c.JSON(testerv1.GetSubmissionResponseModel{Submission: SolutionDTO(*submission)})
+	return c.JSON(testerv1.GetSubmissionResponseModel{Submission: SolutionDTO(submission)})
 }
 
 func (h *SolutionsHandlers) ListSubmissions(c *fiber.Ctx, params testerv1.ListSubmissionsParams) error {
@@ -205,29 +206,29 @@ func ListSolutionsParamsDTO(params testerv1.ListSubmissionsParams) models.Soluti
 	}
 }
 
-func ListSolutionsResponseDTO(solutionsList *models.SolutionsList) *testerv1.ListSubmissionsResponseModel {
+func ListSolutionsResponseDTO(solutionsList *domain.SubmissionsList) *testerv1.ListSubmissionsResponseModel {
 	resp := testerv1.ListSubmissionsResponseModel{
-		Submissions: make([]testerv1.SubmissionsListItemModel, len(solutionsList.Solutions)),
+		Submissions: make([]testerv1.SubmissionsListItemModel, len(solutionsList.Submissions)),
 		Pagination:  PaginationDTO(solutionsList.Pagination),
 	}
 
-	for i, solution := range solutionsList.Solutions {
-		resp.Submissions[i] = SubmissionListItemDTO(*solution)
+	for i, solution := range solutionsList.Submissions {
+		resp.Submissions[i] = SubmissionListItemDTO(solution)
 	}
 
 	return &resp
 }
 
-func PaginationDTO(p models.Pagination) testerv1.PaginationModel {
+func PaginationDTO(p domain.Pagination) testerv1.PaginationModel {
 	return testerv1.PaginationModel{
 		Page:  p.Page,
 		Total: p.Total,
 	}
 }
 
-func SubmissionListItemDTO(s models.SubmissionListItem) testerv1.SubmissionsListItemModel {
+func SubmissionListItemDTO(s domain.Submission) testerv1.SubmissionsListItemModel {
 	return testerv1.SubmissionsListItemModel{
-		Id: s.Id,
+		Id: s.ID,
 
 		Username: s.Username,
 
@@ -238,12 +239,12 @@ func SubmissionListItemDTO(s models.SubmissionListItem) testerv1.SubmissionsList
 		MemoryStat: s.MemoryStat,
 		Language:   int64(s.Language),
 
-		ProblemId:    s.ProblemId,
+		ProblemId:    s.ProblemID,
 		ProblemTitle: s.ProblemTitle,
 
 		Position: s.Position,
 
-		ContestId:    s.ContestId,
+		ContestId:    s.ContestID,
 		ContestTitle: s.ContestTitle,
 
 		CreatedAt: s.CreatedAt,
@@ -251,9 +252,9 @@ func SubmissionListItemDTO(s models.SubmissionListItem) testerv1.SubmissionsList
 	}
 }
 
-func SolutionDTO(s models.Submission) testerv1.SubmissionModel {
+func SolutionDTO(s domain.Submission) testerv1.SubmissionModel {
 	return testerv1.SubmissionModel{
-		Id: s.Id,
+		Id: s.ID,
 
 		Username: s.Username,
 
@@ -266,12 +267,12 @@ func SolutionDTO(s models.Submission) testerv1.SubmissionModel {
 		MemoryStat: s.MemoryStat,
 		Language:   int64(s.Language),
 
-		ProblemId:    s.ProblemId,
+		ProblemId:    s.ProblemID,
 		ProblemTitle: s.ProblemTitle,
 
 		Position: s.Position,
 
-		ContestId:    s.ContestId,
+		ContestId:    s.ContestID,
 		ContestTitle: s.ContestTitle,
 
 		CreatedAt: s.CreatedAt,

@@ -5,6 +5,8 @@ import (
 	"embed"
 	"fmt"
 
+	"github.com/gate149/core/internal/cache"
+	"github.com/gate149/core/internal/domain"
 	"github.com/gate149/core/internal/models"
 	"github.com/google/uuid"
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -16,28 +18,29 @@ import (
 var opaFS embed.FS
 
 type ContestsUC interface {
-	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (*models.ContestMemberRecord, error)
-	GetContest(ctx context.Context, id uuid.UUID) (*models.Contest, error)
+	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (domain.ContestMember, error)
+	GetContest(ctx context.Context, id uuid.UUID) (domain.Contest, error)
 }
 
 type UsersUC interface {
-	GetUserById(ctx context.Context, id uuid.UUID) (*models.User, error)
+	GetUserById(ctx context.Context, id uuid.UUID) (domain.User, error)
 }
 
 type ProblemsUC interface {
-	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (*models.ProblemMember, error)
-	GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error)
+	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (domain.ProblemMember, error)
+	GetProblemById(ctx context.Context, id uuid.UUID) (domain.Problem, error)
 }
 
 type PermissionsUseCase struct {
 	contestsUC   ContestsUC
 	usersUC      UsersUC
 	problemsUC   ProblemsUC
+	cache        cache.Cache
 	contestQuery rego.PreparedEvalQuery
 	problemQuery rego.PreparedEvalQuery
 }
 
-func NewUseCase(contestsUC ContestsUC, usersUC UsersUC, problemsUC ProblemsUC) *PermissionsUseCase {
+func NewUseCase(contestsUC ContestsUC, usersUC UsersUC, problemsUC ProblemsUC, cache cache.Cache) *PermissionsUseCase {
 	ctx := context.Background()
 
 	// Define custom functions
@@ -93,6 +96,8 @@ func NewUseCase(contestsUC ContestsUC, usersUC UsersUC, problemsUC ProblemsUC) *
 					UserId:    uID,
 				})
 				if err != nil {
+					// Log debug info if needed, but error means not found usually
+					// fmt.Printf("GetContestMember error: %v for cID=%s uID=%s\n", err, cID, uID)
 					return nil, nil // Return nil if not found (no permission)
 				}
 				val, err := ast.InterfaceToValue(member)
@@ -212,6 +217,7 @@ func NewUseCase(contestsUC ContestsUC, usersUC UsersUC, problemsUC ProblemsUC) *
 		contestsUC:   contestsUC,
 		usersUC:      usersUC,
 		problemsUC:   problemsUC,
+		cache:        cache,
 		contestQuery: mustPrepare("data.authz.contest.permissions", "common.rego", "contest.rego"),
 		problemQuery: mustPrepare("data.authz.problem.permissions", "common.rego", "problem.rego"),
 	}
@@ -240,24 +246,24 @@ const (
 )
 
 type permissionOptions struct {
-	contest       *models.Contest
-	contestMember *models.ContestMemberRecord
-	problem       *models.Problem
-	problemMember *models.ProblemMember
-	user          *models.User
+	contest       *domain.Contest
+	contestMember *domain.ContestMember
+	problem       *domain.Problem
+	problemMember *domain.ProblemMember
+	user          *domain.User
 }
 
 type PermissionOption func(*permissionOptions)
 
-func WithUser(u *models.User) PermissionOption {
+func WithUser(u domain.User) PermissionOption {
 	return func(o *permissionOptions) {
-		o.user = u
+		o.user = &u
 	}
 }
 
-func WithContest(c *models.Contest) PermissionOption {
+func WithContest(c domain.Contest) PermissionOption {
 	return func(o *permissionOptions) {
-		o.contest = c
+		o.contest = &c
 	}
 }
 
@@ -319,33 +325,54 @@ func (uc *PermissionsUseCase) getContestPermissions(ctx context.Context, contest
 }
 
 func (uc *PermissionsUseCase) HasContestPermission(ctx context.Context, contestID uuid.UUID, userID uuid.UUID, action ContestAction, opts ...PermissionOption) (bool, error) {
+	// Cache-aside for permission result
+	// Note: options (user object etc) might make cache key complex.
+	// We only cache based on IDs. If options are provided, we assume they match DB state or are consistent.
+	// Actually, if we pass User object, it might be fresher than DB.
+	// But OPA evaluation is deterministic given inputs.
+	// Ideally we cache the result of (contestID, userID, action).
+	// If inputs change (e.g. user role updated), cache should be invalidated.
+	// We handle invalidation in other modules.
+
+	key := cache.PermissionKey(userID, contestID, string(action))
+	var allowed bool
+	if err := uc.cache.Get(ctx, key, &allowed); err == nil {
+		return allowed, nil
+	}
+
 	perms, err := uc.getContestPermissions(ctx, contestID, userID, opts...)
 	if err != nil {
 		return false, err
 	}
 
+	var result bool
 	switch action {
 	case ActionGetContest:
-		return perms.GetContest, nil
+		result = perms.GetContest
 	case ActionUpdateContest:
-		return perms.UpdateContest, nil
+		result = perms.UpdateContest
 	case ActionAdminContest:
-		return perms.AdminContest, nil
+		result = perms.AdminContest
 	case ActionGetMonitor:
-		return perms.GetMonitor, nil
+		result = perms.GetMonitor
 	case ActionListUsersSubmissions:
-		return perms.ListUsersSubmissions, nil
+		result = perms.ListUsersSubmissions
 	case ActionListOwnSubmissions:
-		return perms.ListOwnSubmissions, nil
+		result = perms.ListOwnSubmissions
 	case ActionGetOtherUserSubmission:
-		return perms.GetOtherUserSubmission, nil
+		result = perms.GetOtherUserSubmission
 	case ActionGetOwnSubmission:
-		return perms.GetOwnSubmission, nil
+		result = perms.GetOwnSubmission
 	case ActionCreateSubmission:
-		return perms.CreateSubmission, nil
+		result = perms.CreateSubmission
 	default:
 		return false, fmt.Errorf("unknown contest action: %s", action)
 	}
+
+	// Cache result (short TTL)
+	_ = uc.cache.Set(ctx, key, result, cache.PermissionTTL)
+
+	return result, nil
 }
 
 func (uc *PermissionsUseCase) getProblemPermissions(ctx context.Context, problemID uuid.UUID, userID uuid.UUID, opts ...PermissionOption) (*models.ProblemPermissions, error) {
@@ -400,19 +427,30 @@ func (uc *PermissionsUseCase) getProblemPermissions(ctx context.Context, problem
 }
 
 func (uc *PermissionsUseCase) HasProblemPermission(ctx context.Context, problemID uuid.UUID, userID uuid.UUID, action ProblemAction, opts ...PermissionOption) (bool, error) {
+	key := cache.PermissionKey(userID, problemID, string(action))
+	var allowed bool
+	if err := uc.cache.Get(ctx, key, &allowed); err == nil {
+		return allowed, nil
+	}
+
 	perms, err := uc.getProblemPermissions(ctx, problemID, userID, opts...)
 	if err != nil {
 		return false, err
 	}
 
+	var result bool
 	switch action {
 	case ActionGetProblem:
-		return perms.ViewProblem, nil
+		result = perms.ViewProblem
 	case ActionUpdateProblem:
-		return perms.EditProblem, nil
+		result = perms.EditProblem
 	case ActionAdminProblem:
-		return perms.AdminProblem, nil
+		result = perms.AdminProblem
 	default:
 		return false, fmt.Errorf("unknown problem action: %s", action)
 	}
+
+	_ = uc.cache.Set(ctx, key, result, cache.PermissionTTL)
+
+	return result, nil
 }

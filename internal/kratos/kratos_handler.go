@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/gate149/core/internal/domain"
 	"github.com/gate149/core/internal/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -29,7 +30,7 @@ type IdentityModification struct {
 }
 
 type UsersUC interface {
-	GetUserByKratosId(ctx context.Context, kratosId string) (*models.User, error)
+	GetUserByKratosId(ctx context.Context, kratosId string) (domain.User, error)
 	CreateUser(ctx context.Context, user *models.CreateUserInput) (uuid.UUID, error)
 }
 
@@ -84,12 +85,12 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 	userId, err := h.usersUC.CreateUser(ctx, userCreation)
 	if err != nil {
 		existingUser, fetchErr := h.usersUC.GetUserByKratosId(ctx, req.UserId)
-		if fetchErr == nil && existingUser != nil {
+		if fetchErr == nil && existingUser.ID != uuid.Nil {
 			slog.Info("User already exists", "kratos_id", req.UserId)
 			return c.Status(http.StatusOK).JSON(KratosWebhookResponse{
 				Identity: &IdentityModification{
 					MetadataPublic: map[string]any{
-						"user_id": existingUser.Id.String(),
+						"user_id": existingUser.ID.String(),
 						"role":    existingUser.Role,
 					},
 				},

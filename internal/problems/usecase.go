@@ -4,389 +4,372 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"errors"
-	"fmt"
 	"io"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/gate149/core/internal/cache"
+	"github.com/gate149/core/internal/domain"
 	"github.com/gate149/core/internal/models"
+	problemssqlc "github.com/gate149/core/internal/problems/sqlc"
 	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
-	"github.com/microcosm-cc/bluemonday"
 )
 
 type Repo interface {
 	CreateProblem(ctx context.Context, params *models.CreateProblemParams) error
-	GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error)
+	GetProblemById(ctx context.Context, id uuid.UUID) (problemssqlc.Problem, error)
+	UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
-	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
-	UpdateProblem(ctx context.Context, id uuid.UUID, heading *models.ProblemUpdate) error
-	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (*models.ProblemMember, error)
+	ListProblems(ctx context.Context, filter *models.ProblemsFilter) ([]problemssqlc.ListProblemsRow, int64, error)
+
 	CreateProblemMember(ctx context.Context, params *models.CreateProblemMemberParams) error
-	DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error
+	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (problemssqlc.ProblemMember, error)
+
 	CreateProblemTests(ctx context.Context, tests models.ProblemTests) error
+	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.ProblemTest, error)
+	DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error
 }
 
-type Pandoc interface {
-	ConvertLatexToHtml5(ctx context.Context, text string) (string, error)
+type PandocClient interface {
 	BatchConvertLatexToHtml5(ctx context.Context, texts []string) ([]string, error)
 }
 
 type UseCase struct {
-	problemRepo  Repo
-	pandocClient Pandoc
+	repo         Repo
+	cache        cache.Cache
+	pandocClient PandocClient
 }
 
-func NewUseCase(
-	problemRepo Repo,
-	pandocClient Pandoc,
-) (*UseCase, error) {
+func NewUseCase(repo Repo, cache cache.Cache, pandocClient PandocClient) *UseCase {
 	return &UseCase{
-		problemRepo:  problemRepo,
+		repo:         repo,
+		cache:        cache,
 		pandocClient: pandocClient,
-	}, nil
+	}
 }
 
-func (u *UseCase) CreateProblem(ctx context.Context, input *models.CreateProblemInput) (uuid.UUID, error) {
+func (uc *UseCase) CreateProblem(ctx context.Context, input *models.CreateProblemInput) (uuid.UUID, error) {
+	id := uuid.New()
+
 	params := &models.CreateProblemParams{
-		Id:     uuid.New(),
+		Id:     id,
 		Title:  input.Title,
 		UserId: input.UserId,
 	}
 
-	// FIXME: use transaction here
-
-	err := u.problemRepo.CreateProblem(ctx, params)
-	if err != nil {
+	if err := uc.repo.CreateProblem(ctx, params); err != nil {
 		return uuid.Nil, err
 	}
 
-	err = u.problemRepo.CreateProblemMember(ctx, &models.CreateProblemMemberParams{
-		ProblemId: params.Id,
+	// Add creator as owner
+	memberParams := &models.CreateProblemMemberParams{
+		ProblemId: id,
 		UserId:    input.UserId,
 		Role:      models.ProblemRoleOwner,
-	})
-	if err != nil {
+	}
+
+	if err := uc.repo.CreateProblemMember(ctx, memberParams); err != nil {
 		return uuid.Nil, err
 	}
 
-	return params.Id, nil
+	return id, nil
 }
 
-func (u *UseCase) GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error) {
-	return u.problemRepo.GetProblemById(ctx, id)
-}
-
-func (u *UseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
-	return u.problemRepo.DeleteProblem(ctx, id)
-}
-
-func (u *UseCase) ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error) {
-	return u.problemRepo.ListProblems(ctx, filter)
-}
-
-func (u *UseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate *models.ProblemUpdate) error {
-	if isEmpty(*problemUpdate) {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "empty problem update")
+func (uc *UseCase) GetProblemById(ctx context.Context, id uuid.UUID) (domain.Problem, error) {
+	// Cache-aside
+	var cached domain.Problem
+	if err := uc.cache.Get(ctx, cache.ProblemKey(id), &cached); err == nil {
+		return cached, nil
 	}
 
-	problem, err := u.problemRepo.GetProblemById(ctx, id)
+	problem, err := uc.repo.GetProblemById(ctx, id)
 	if err != nil {
+		return domain.Problem{}, err
+	}
+
+	domainProblem := domain.ProblemFromSqlc(problem)
+	_ = uc.cache.Set(ctx, cache.ProblemKey(id), domainProblem, cache.ProblemTTL)
+
+	return domainProblem, nil
+}
+
+func (uc *UseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
+	// Process latex if needed
+	if problem.Legend != nil || problem.InputFormat != nil || problem.OutputFormat != nil || problem.Notes != nil || problem.Scoring != nil {
+		texts := make([]string, 5)
+		if problem.Legend != nil {
+			texts[0] = *problem.Legend
+		}
+		if problem.InputFormat != nil {
+			texts[1] = *problem.InputFormat
+		}
+		if problem.OutputFormat != nil {
+			texts[2] = *problem.OutputFormat
+		}
+		if problem.Notes != nil {
+			texts[3] = *problem.Notes
+		}
+		if problem.Scoring != nil {
+			texts[4] = *problem.Scoring
+		}
+
+		htmls, err := uc.pandocClient.BatchConvertLatexToHtml5(ctx, texts)
+		if err != nil {
+			return pkg.Wrap(err, nil, "failed to convert latex to html")
+		}
+
+		if problem.Legend != nil {
+			problem.LegendHtml = &htmls[0]
+		}
+		if problem.InputFormat != nil {
+			problem.InputFormatHtml = &htmls[1]
+		}
+		if problem.OutputFormat != nil {
+			problem.OutputFormatHtml = &htmls[2]
+		}
+		if problem.Notes != nil {
+			problem.NotesHtml = &htmls[3]
+		}
+		if problem.Scoring != nil {
+			problem.ScoringHtml = &htmls[4]
+		}
+	}
+
+	if err := uc.repo.UpdateProblem(ctx, id, problem); err != nil {
 		return err
 	}
 
-	statement := models.ProblemStatement{
-		Legend:       problem.Legend,
-		InputFormat:  problem.InputFormat,
-		OutputFormat: problem.OutputFormat,
-		Notes:        problem.Notes,
-		Scoring:      problem.Scoring,
-	}
-
-	if problemUpdate.Legend != nil {
-		statement.Legend = *problemUpdate.Legend
-	}
-	if problemUpdate.InputFormat != nil {
-		statement.InputFormat = *problemUpdate.InputFormat
-	}
-	if problemUpdate.OutputFormat != nil {
-		statement.OutputFormat = *problemUpdate.OutputFormat
-	}
-	if problemUpdate.Notes != nil {
-		statement.Notes = *problemUpdate.Notes
-	}
-	if problemUpdate.Scoring != nil {
-		statement.Scoring = *problemUpdate.Scoring
-	}
-
-	builtStatement, err := build(ctx, u.pandocClient, trimSpaces(statement))
-	if err != nil {
-		return err
-	}
-
-	problemUpdate.LegendHtml = &builtStatement.LegendHtml
-	problemUpdate.InputFormatHtml = &builtStatement.InputFormatHtml
-	problemUpdate.OutputFormatHtml = &builtStatement.OutputFormatHtml
-	problemUpdate.NotesHtml = &builtStatement.NotesHtml
-	problemUpdate.ScoringHtml = &builtStatement.ScoringHtml
-
-	err = u.problemRepo.UpdateProblem(ctx, id, problemUpdate)
-	if err != nil {
-		return errors.Join(err)
-	}
+	// Invalidate cache
+	_ = uc.cache.Delete(ctx, cache.ProblemKey(id))
 
 	return nil
 }
 
-type ProblemProperties struct {
-	Title string `json:"name"`
+func (uc *UseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
+	if err := uc.repo.DeleteProblem(ctx, id); err != nil {
+		return err
+	}
 
-	TimeLimit   int64 `json:"timeLimit"`
-	MemoryLimit int64 `json:"memoryLimit"`
+	// Invalidate cache
+	_ = uc.cache.Delete(ctx, cache.ProblemKey(id))
+	_ = uc.cache.Delete(ctx, cache.ProblemTestsKey(id)) // also invalidate tests
 
-	Legend       *string `json:"legend"`
-	Scoring      *string `json:"scoring"`
-	Notes        *string `json:"notes"`
-	OutputFormat *string `json:"output"`
-	InputFormat  *string `json:"input"`
+	return nil
 }
 
-func isEmpty(p models.ProblemUpdate) bool {
-	return p.Title == nil &&
-		p.Legend == nil &&
-		p.InputFormat == nil &&
-		p.OutputFormat == nil &&
-		p.Notes == nil &&
-		p.Scoring == nil &&
-		p.MemoryLimit == nil &&
-		p.TimeLimit == nil
-}
-
-func wrap(s string) string {
-	return fmt.Sprintf("\\begin{document}\n%s\n\\end{document}\n", s)
-}
-
-func trimSpaces(statement models.ProblemStatement) models.ProblemStatement {
-	return models.ProblemStatement{
-		Legend:       strings.TrimSpace(statement.Legend),
-		InputFormat:  strings.TrimSpace(statement.InputFormat),
-		OutputFormat: strings.TrimSpace(statement.OutputFormat),
-		Notes:        strings.TrimSpace(statement.Notes),
-		Scoring:      strings.TrimSpace(statement.Scoring),
-	}
-}
-
-func sanitize(statement models.Html5ProblemStatement) models.Html5ProblemStatement {
-	p := bluemonday.UGCPolicy()
-
-	p.AllowAttrs("class").Globally()
-	p.AllowAttrs("style").Globally()
-	p.AllowStyles("text-align").MatchingEnum("center", "left", "right").Globally()
-	p.AllowStyles("display").MatchingEnum("block", "inline", "inline-block").Globally()
-
-	p.AllowStandardURLs()
-	p.AllowAttrs("cite").OnElements("blockquote", "q")
-	p.AllowAttrs("href").OnElements("a", "area")
-	p.AllowAttrs("src").OnElements("img")
-
-	if statement.LegendHtml != "" {
-		statement.LegendHtml = p.Sanitize(statement.LegendHtml)
-	}
-	if statement.InputFormatHtml != "" {
-		statement.InputFormatHtml = p.Sanitize(statement.InputFormatHtml)
-	}
-	if statement.OutputFormatHtml != "" {
-		statement.OutputFormatHtml = p.Sanitize(statement.OutputFormatHtml)
-	}
-	if statement.NotesHtml != "" {
-		statement.NotesHtml = p.Sanitize(statement.NotesHtml)
-	}
-	if statement.ScoringHtml != "" {
-		statement.ScoringHtml = p.Sanitize(statement.ScoringHtml)
-	}
-
-	return statement
-}
-
-func build(ctx context.Context, pandocClient Pandoc, p models.ProblemStatement) (models.Html5ProblemStatement, error) {
-	p = trimSpaces(p)
-
-	latex := models.ProblemStatement{}
-
-	if p.Legend != "" {
-		latex.Legend = wrap(p.Legend)
-	}
-	if p.InputFormat != "" {
-		latex.InputFormat = wrap(p.InputFormat)
-	}
-	if p.OutputFormat != "" {
-		latex.OutputFormat = wrap(p.OutputFormat)
-	}
-	if p.Notes != "" {
-		latex.Notes = wrap(p.Notes)
-	}
-	if p.Scoring != "" {
-		latex.Scoring = wrap(p.Scoring)
-	}
-
-	req := []string{
-		latex.Legend,
-		latex.InputFormat,
-		latex.OutputFormat,
-		latex.Notes,
-		latex.Scoring,
-	}
-
-	res, err := pandocClient.BatchConvertLatexToHtml5(ctx, req)
+func (uc *UseCase) ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*domain.ProblemsList, error) {
+	problems, total, err := uc.repo.ListProblems(ctx, filter)
 	if err != nil {
-		return models.Html5ProblemStatement{}, err
+		return nil, err
 	}
 
-	if len(res) != len(req) {
-		return models.Html5ProblemStatement{}, fmt.Errorf("wrong number of fieilds returned: %d", len(res))
+	domainProblems := make([]domain.Problem, len(problems))
+	for i, p := range problems {
+		domainProblems[i] = domain.Problem{
+			ID:          p.ID,
+			Title:       p.Title,
+			MemoryLimit: int64(p.MemoryLimit),
+			TimeLimit:   int64(p.TimeLimit),
+			CreatedAt:   p.CreatedAt,
+			UpdatedAt:   p.UpdatedAt,
+		}
 	}
 
-	sanitizedStatement := sanitize(models.Html5ProblemStatement{
-		LegendHtml:       res[0],
-		InputFormatHtml:  res[1],
-		OutputFormatHtml: res[2],
-		NotesHtml:        res[3],
-		ScoringHtml:      res[4],
-	})
-
-	return sanitizedStatement, nil
+	return &domain.ProblemsList{
+		Problems:   domainProblems,
+		Pagination: domain.NewPagination(filter.Page, filter.PageSize, total),
+	}, nil
 }
 
-func (u *UseCase) GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (*models.ProblemMember, error) {
-	return u.problemRepo.GetProblemMember(ctx, problemId, userId)
-}
-
-const (
-	maxArchiveSize = 10 * 1024 * 1024 // 10 MB
-	maxTestSize    = 1 * 1024 * 1024  // 1 MB
-)
-
-func (u *UseCase) UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error {
-	// Validate archive size
-	if len(zipData) > maxArchiveSize {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "archive size exceeds 10 MB limit")
+func (uc *UseCase) GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (domain.ProblemMember, error) {
+	// Cache-aside
+	key := cache.ProblemMemberKey(problemId, userId)
+	var cached domain.ProblemMember
+	if err := uc.cache.Get(ctx, key, &cached); err == nil {
+		return cached, nil
 	}
 
-	// Parse ZIP archive
-	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
+	member, err := uc.repo.GetProblemMember(ctx, problemId, userId)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to parse ZIP archive")
+		return domain.ProblemMember{}, err
 	}
 
-	// Extract test files from ZIP
-	testFiles := make(map[int]struct {
-		input  *string
-		output *string
-	})
+	// Manual mapping
+	var pID uuid.UUID
+	if member.ProblemID.Valid {
+		pID = member.ProblemID.Bytes
+	}
 
-	for _, file := range zipReader.File {
-		// Skip directories
+	domainMember := domain.ProblemMember{
+		ProblemID: pID,
+		UserID:    member.UserID,
+		Role:      string(member.Role),
+	}
+
+	_ = uc.cache.Set(ctx, key, domainMember, cache.PermissionTTL)
+
+	return domainMember, nil
+}
+
+func (uc *UseCase) CreateProblemTests(ctx context.Context, problemId uuid.UUID, tests []domain.ProblemTest) error {
+	modelTests := make(models.ProblemTests, len(tests))
+	for i, t := range tests {
+		modelTests[i] = models.ProblemTest{
+			Id:        t.ID,
+			ProblemId: t.ProblemID,
+			Ordinal:   t.Ordinal,
+			Input:     t.Input,
+			Output:    t.Output,
+		}
+	}
+
+	err := uc.repo.CreateProblemTests(ctx, modelTests)
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache
+	_ = uc.cache.Delete(ctx, cache.ProblemTestsKey(problemId))
+
+	return nil
+}
+
+func (uc *UseCase) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]domain.ProblemTest, error) {
+	// Cache-aside
+	key := cache.ProblemTestsKey(problemId)
+	var cached []domain.ProblemTest
+	if err := uc.cache.Get(ctx, key, &cached); err == nil {
+		return cached, nil
+	}
+
+	tests, err := uc.repo.GetProblemTests(ctx, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	domainTests := make([]domain.ProblemTest, len(tests))
+	for i, t := range tests {
+		domainTests[i] = domain.ProblemTestFromSqlc(t)
+	}
+
+	_ = uc.cache.Set(ctx, key, domainTests, cache.ProblemTTL)
+
+	return domainTests, nil
+}
+
+func (uc *UseCase) DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error {
+	err := uc.repo.DeleteProblemTests(ctx, problemId)
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache
+	_ = uc.cache.Delete(ctx, cache.ProblemTestsKey(problemId))
+
+	return nil
+}
+
+func (uc *UseCase) UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error {
+	// Parse zip
+	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
+	if err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to open zip file")
+	}
+
+	inputs := make(map[string]string)
+	outputs := make(map[string]string)
+
+	for _, file := range reader.File {
 		if file.FileInfo().IsDir() {
 			continue
 		}
 
-		// Get filename without path
-		fileName := filepath.Base(file.Name)
+		name := file.Name
+		ext := filepath.Ext(name)
+		base := strings.TrimSuffix(name, ext)
 
-		// Parse filename (N.in or N.out)
-		parts := strings.Split(fileName, ".")
-		if len(parts) != 2 {
-			continue
-		}
-
-		testNum, err := strconv.Atoi(parts[0])
-		if err != nil || testNum <= 0 {
-			continue
-		}
-
-		extension := parts[1]
-		if extension != "in" && extension != "out" {
-			continue
-		}
-
-		// Validate file size
-		if file.UncompressedSize64 > maxTestSize {
-			return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("test file %s exceeds 1 MB limit", fileName))
-		}
+		// Check if input or output
+		// Assuming format: input/1.txt, output/1.txt or just 1.in, 1.out
+		// Just simple heuristic: if name contains "input" or ends with .in -> input
+		// if name contains "output" or ends with .out -> output
 
 		// Read file content
-		rc, err := file.Open()
+		f, err := file.Open()
 		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, fmt.Sprintf("failed to open file %s", fileName))
+			return pkg.Wrap(pkg.ErrBadInput, err, "failed to read file in zip")
 		}
-
-		content, err := io.ReadAll(rc)
-		rc.Close()
+		contentBytes, err := io.ReadAll(f)
+		f.Close()
 		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, fmt.Sprintf("failed to read file %s", fileName))
+			return pkg.Wrap(pkg.ErrBadInput, err, "failed to read file content")
 		}
+		content := string(contentBytes)
 
-		contentStr := string(content)
+		// Normalize newlines? Maybe later.
 
-		// Store in map
-		if testFiles[testNum].input == nil && testFiles[testNum].output == nil {
-			testFiles[testNum] = struct {
-				input  *string
-				output *string
-			}{}
+		if strings.HasSuffix(name, ".in") || strings.Contains(name, "input") {
+			// Extract number
+			numStr := extractNumber(base)
+			if numStr != "" {
+				inputs[numStr] = content
+			}
+		} else if strings.HasSuffix(name, ".out") || strings.HasSuffix(name, ".ans") || strings.Contains(name, "output") {
+			numStr := extractNumber(base)
+			if numStr != "" {
+				outputs[numStr] = content
+			}
 		}
-
-		test := testFiles[testNum]
-		if extension == "in" {
-			test.input = &contentStr
-		} else {
-			test.output = &contentStr
-		}
-		testFiles[testNum] = test
 	}
 
-	// Validate that all tests have both .in and .out files
-	if len(testFiles) == 0 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "no valid test files found in archive")
-	}
-
-	// Extract test numbers and sort them
-	testNums := make([]int, 0, len(testFiles))
-	for num := range testFiles {
-		testNums = append(testNums, num)
-	}
-	sort.Ints(testNums)
-
-	// Validate and build tests array
-	tests := make(models.ProblemTests, 0, len(testFiles))
-	for i, num := range testNums {
-		test := testFiles[num]
-		if test.input == nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("missing %d.in file", num))
+	var tests []domain.ProblemTest
+	for num, input := range inputs {
+		if output, ok := outputs[num]; ok {
+			ordinal, _ := strconv.ParseInt(num, 10, 64)
+			tests = append(tests, domain.ProblemTest{
+				ID:        uuid.New(),
+				ProblemID: problemId,
+				Ordinal:   ordinal,
+				Input:     input,
+				Output:    output,
+			})
 		}
-		if test.output == nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("missing %d.out file", num))
-		}
-
-		tests = append(tests, models.ProblemTest{
-			ProblemId: problemId,
-			Ordinal:   int64(i + 1), // Use sequential ordinals starting from 1
-			Input:     *test.input,
-			Output:    *test.output,
-		})
 	}
 
-	// Delete old tests and insert new ones (in transaction via repository)
-	if err := u.problemRepo.DeleteProblemTests(ctx, problemId); err != nil {
+	if len(tests) == 0 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "no valid tests found in zip (pairs of input/output)")
+	}
+
+	// Sort by ordinal
+	sort.Slice(tests, func(i, j int) bool {
+		return tests[i].Ordinal < tests[j].Ordinal
+	})
+
+	// Re-assign ordinals to be sequential 1..N
+	for i := range tests {
+		tests[i].Ordinal = int64(i + 1)
+	}
+
+	// Delete existing tests
+	if err := uc.DeleteProblemTests(ctx, problemId); err != nil {
 		return err
 	}
 
-	if err := u.problemRepo.CreateProblemTests(ctx, tests); err != nil {
-		return err
-	}
+	// Create new tests
+	return uc.CreateProblemTests(ctx, problemId, tests)
+}
 
-	return nil
+func extractNumber(s string) string {
+	// Extract numeric part from filename
+	// E.g. "input/test1" -> "1"
+	// "1" -> "1"
+	var numStr string
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			numStr += string(r)
+		}
+	}
+	return numStr
 }

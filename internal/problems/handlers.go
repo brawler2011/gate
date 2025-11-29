@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	testerv1 "github.com/gate149/contracts/core/v1"
+	"github.com/gate149/core/internal/domain"
 	"github.com/gate149/core/internal/middleware"
 	"github.com/gate149/core/internal/models"
 	"github.com/gate149/core/internal/permissions"
@@ -17,9 +18,9 @@ import (
 
 type ProblemsUC interface {
 	CreateProblem(ctx context.Context, input *models.CreateProblemInput) (uuid.UUID, error)
-	GetProblemById(ctx context.Context, id uuid.UUID) (*models.Problem, error)
+	GetProblemById(ctx context.Context, id uuid.UUID) (domain.Problem, error)
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
-	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
+	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*domain.ProblemsList, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate *models.ProblemUpdate) error
 	UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error
 }
@@ -45,6 +46,7 @@ const (
 	minPageSize     = 1
 	maxPageSize     = 20
 	maxSearchLength = 50
+	maxArchiveSize  = 10 * 1024 * 1024 // 10 MB
 )
 
 func badInput(msg string) error {
@@ -99,7 +101,7 @@ func (h *ProblemsHandlers) ListProblems(c *fiber.Ctx, params testerv1.ListProble
 			return err
 		}
 
-		filter.OwnerId = &user.Id
+		filter.OwnerId = &user.ID
 	}
 
 	if params.Descending != nil {
@@ -117,7 +119,7 @@ func (h *ProblemsHandlers) ListProblems(c *fiber.Ctx, params testerv1.ListProble
 	}
 
 	for i, problem := range problemsList.Problems {
-		resp.Problems[i] = ProblemsListItemDTO(*problem)
+		resp.Problems[i] = ProblemsListItemDTO(problem)
 	}
 	return c.JSON(resp)
 }
@@ -138,18 +140,14 @@ func (h *ProblemsHandlers) CreateProblem(c *fiber.Ctx, params testerv1.CreatePro
 		return pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
 	}
 
-	userIdStr, ok := session.Identity.MetadataPublic["user_id"].(string)
-	if !ok {
-		return pkg.Wrap(pkg.NoPermission, nil, "no user id found in session")
-	}
-	userId, err := uuid.Parse(userIdStr)
+	user, err := middleware.GetUser(ctx)
 	if err != nil {
-		return pkg.Wrap(pkg.NoPermission, nil, "invalid user id")
+		return err
 	}
 
 	input := &models.CreateProblemInput{
 		Title:  params.Title,
-		UserId: userId,
+		UserId: user.ID,
 	}
 
 	problemID, err := h.problemsUC.CreateProblem(ctx, input)
@@ -168,11 +166,7 @@ func (h *ProblemsHandlers) DeleteProblem(c *fiber.Ctx, id uuid.UUID) error {
 		return err
 	}
 
-	if user == nil {
-		return pkg.Wrap(pkg.NoPermission, nil, "no session found")
-	}
-
-	canAdmin, err := h.permissionsUC.HasProblemPermission(ctx, id, user.Id, permissions.ActionAdminProblem, permissions.WithUser(user))
+	canAdmin, err := h.permissionsUC.HasProblemPermission(ctx, id, user.ID, permissions.ActionAdminProblem, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -196,11 +190,7 @@ func (h *ProblemsHandlers) GetProblem(c *fiber.Ctx, id uuid.UUID) error {
 		return err
 	}
 
-	if user == nil {
-		return pkg.Wrap(pkg.NoPermission, nil, "no session found")
-	}
-
-	canView, err := h.permissionsUC.HasProblemPermission(ctx, id, user.Id, permissions.ActionGetProblem, permissions.WithUser(user))
+	canView, err := h.permissionsUC.HasProblemPermission(ctx, id, user.ID, permissions.ActionGetProblem, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -224,11 +214,7 @@ func (h *ProblemsHandlers) UpdateProblem(c *fiber.Ctx, id uuid.UUID) error {
 		return err
 	}
 
-	if user == nil {
-		return pkg.Wrap(pkg.NoPermission, nil, "no session found")
-	}
-
-	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.Id, permissions.ActionUpdateProblem, permissions.WithUser(user))
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.ID, permissions.ActionUpdateProblem, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}
@@ -263,16 +249,16 @@ func (h *ProblemsHandlers) UpdateProblem(c *fiber.Ctx, id uuid.UUID) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func PaginationDTO(p models.Pagination) testerv1.PaginationModel {
+func PaginationDTO(p domain.Pagination) testerv1.PaginationModel {
 	return testerv1.PaginationModel{
 		Page:  p.Page,
 		Total: p.Total,
 	}
 }
 
-func ProblemsListItemDTO(p models.ProblemsListItem) testerv1.ProblemsListItemModel {
+func ProblemsListItemDTO(p domain.Problem) testerv1.ProblemsListItemModel {
 	return testerv1.ProblemsListItemModel{
-		Id:          p.Id,
+		Id:          p.ID,
 		Title:       p.Title,
 		MemoryLimit: p.MemoryLimit,
 		TimeLimit:   p.TimeLimit,
@@ -281,9 +267,9 @@ func ProblemsListItemDTO(p models.ProblemsListItem) testerv1.ProblemsListItemMod
 	}
 }
 
-func ProblemDTO(p *models.Problem) *testerv1.ProblemModel {
+func ProblemDTO(p domain.Problem) *testerv1.ProblemModel {
 	return &testerv1.ProblemModel{
-		Id:          p.Id,
+		Id:          p.ID,
 		Title:       p.Title,
 		TimeLimit:   p.TimeLimit,
 		MemoryLimit: p.MemoryLimit,
@@ -313,12 +299,8 @@ func (h *ProblemsHandlers) UploadProblemTests(c *fiber.Ctx, id uuid.UUID) error 
 		return err
 	}
 
-	if user == nil {
-		return pkg.Wrap(pkg.NoPermission, nil, "no session found")
-	}
-
 	// Check permissions: owner or moderator can upload tests
-	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.Id, permissions.ActionUpdateProblem, permissions.WithUser(user))
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.ID, permissions.ActionUpdateProblem, permissions.WithUser(user))
 	if err != nil {
 		return err
 	}

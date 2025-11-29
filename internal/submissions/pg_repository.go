@@ -4,122 +4,118 @@ import (
 	"context"
 
 	"github.com/gate149/core/internal/models"
+	submissionssqlc "github.com/gate149/core/internal/submissions/sqlc"
 	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
-
-	_ "embed"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PgRepository struct {
-	db *sqlx.DB
+	queries *submissionssqlc.Queries
 }
 
-func NewRepository(db *sqlx.DB) *PgRepository {
+func NewRepository(db *pgxpool.Pool) *PgRepository {
 	return &PgRepository{
-		db: db,
+		queries: submissionssqlc.New(db),
 	}
 }
 
-//go:embed sql/get_solution.sql
-var GetSolutionQuery string
-
-func (r *PgRepository) GetSubmissions(ctx context.Context, id uuid.UUID) (*models.Submission, error) {
-	var solution models.Submission
-	err := r.db.GetContext(ctx, &solution, GetSolutionQuery, id)
+func (r *PgRepository) GetSubmission(ctx context.Context, id uuid.UUID) (submissionssqlc.GetSubmissionRow, error) {
+	row, err := r.queries.GetSubmission(ctx, id)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+		return submissionssqlc.GetSubmissionRow{}, pkg.HandlePgErr(err)
 	}
-
-	return &solution, nil
+	return row, nil
 }
-
-//go:embed sql/create_solution.sql
-var CreateSolutionQuery string
 
 func (r *PgRepository) CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error) {
-	rows, err := r.db.QueryxContext(ctx,
-		CreateSolutionQuery,
-		creation.ContestId,
-		creation.ProblemId,
-		creation.UserId,
-		creation.Solution,
-		creation.Language,
-		creation.Penalty,
-	)
+	id, err := r.queries.CreateSubmission(ctx, submissionssqlc.CreateSubmissionParams{
+		ContestID:  creation.ContestId,
+		ProblemID:  creation.ProblemId,
+		CreatedBy:  creation.UserId,
+		Submission: creation.Solution,
+		Language:   creation.Language,
+		Penalty:    int32(creation.Penalty),
+	})
 	if err != nil {
 		return uuid.Nil, pkg.HandlePgErr(err)
 	}
-
-	defer rows.Close()
-	var id uuid.UUID
-	rows.Next()
-	err = rows.Scan(&id)
-	if err != nil {
-		return uuid.Nil, pkg.HandlePgErr(err)
-	}
-
 	return id, nil
 }
 
-//go:embed sql/update_solution.sql
-var UpdateSolutionQuery string
-
 func (r *PgRepository) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
-	_, err := r.db.ExecContext(ctx, UpdateSolutionQuery, update.State, update.Score, update.TimeStat, update.MemoryStat, id)
+	err := r.queries.UpdateSubmission(ctx, submissionssqlc.UpdateSubmissionParams{
+		State:      update.State,
+		Score:      int32(update.Score),
+		TimeStat:   int32(update.TimeStat),
+		MemoryStat: int32(update.MemoryStat),
+		ID:         id,
+	})
 	if err != nil {
 		return pkg.HandlePgErr(err)
 	}
-
 	return nil
 }
 
-//go:embed sql/list_solutions.sql
-var ListSolutionsQuery string
-
-//go:embed sql/count_solutions.sql
-var CountSolutionsQuery string
-
-func (r *PgRepository) ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*models.SolutionsList, error) {
-	var order int = 0
+func (r *PgRepository) ListSolutions(ctx context.Context, filter models.SolutionsFilter) ([]submissionssqlc.ListSubmissionsRow, int64, error) {
+	var sortOrder *int32
 	if filter.Order != nil {
-		order = int(*filter.Order)
+		val := int32(*filter.Order)
+		sortOrder = &val
 	}
 
 	// Get count
-	var totalCount int64
-	err := r.db.GetContext(ctx, &totalCount, CountSolutionsQuery,
-		filter.ContestId,
-		filter.UserId,
-		filter.ProblemId,
-		filter.Language,
-		filter.State,
-	)
+	totalCount, err := r.queries.CountSubmissions(ctx, submissionssqlc.CountSubmissionsParams{
+		ContestID: nullableUUIDToPgtype(filter.ContestId),
+		CreatedBy: nullableUUIDToPgtype(filter.UserId),
+		ProblemID: nullableUUIDToPgtype(filter.ProblemId),
+		Language:  languagePtrToInt32Ptr(filter.Language),
+		State:     statePtrToInt32Ptr(filter.State),
+	})
 	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+		return nil, 0, pkg.HandlePgErr(err)
 	}
 
 	// Get submissions list
-	solutions := make([]*models.SubmissionListItem, 0)
-	err = r.db.SelectContext(ctx, &solutions, ListSolutionsQuery,
-		filter.ContestId,
-		filter.UserId,
-		filter.ProblemId,
-		filter.Language,
-		filter.State,
-		order,
-		filter.PageSize,
-		filter.Offset(),
-	)
+	rows, err := r.queries.ListSubmissions(ctx, submissionssqlc.ListSubmissionsParams{
+		Limit:     int32(filter.PageSize),
+		Offset:    int32(filter.Offset()),
+		ContestID: nullableUUIDToPgtype(filter.ContestId),
+		CreatedBy: nullableUUIDToPgtype(filter.UserId),
+		ProblemID: nullableUUIDToPgtype(filter.ProblemId),
+		Language:  languagePtrToInt32Ptr(filter.Language),
+		State:     statePtrToInt32Ptr(filter.State),
+		SortOrder: sortOrder,
+	})
 	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+		return nil, 0, pkg.HandlePgErr(err)
 	}
 
-	return &models.SolutionsList{
-		Solutions: solutions,
-		Pagination: models.Pagination{
-			Total: models.Total(totalCount, filter.PageSize),
-			Page:  filter.Page,
-		},
-	}, nil
+	return rows, totalCount, nil
+}
+
+// Helper functions
+
+func nullableUUIDToPgtype(id *uuid.UUID) pgtype.UUID {
+	if id == nil {
+		return pgtype.UUID{Valid: false}
+	}
+	return pgtype.UUID{Bytes: *id, Valid: true}
+}
+
+func languagePtrToInt32Ptr(l *models.LanguageName) *int32 {
+	if l == nil {
+		return nil
+	}
+	val := int32(*l)
+	return &val
+}
+
+func statePtrToInt32Ptr(s *models.State) *int32 {
+	if s == nil {
+		return nil
+	}
+	val := int32(*s)
+	return &val
 }

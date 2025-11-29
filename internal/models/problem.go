@@ -1,8 +1,6 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -10,46 +8,6 @@ const (
 	ProblemVisibilityPublic  = "public"
 	ProblemVisibilityPrivate = "private"
 )
-
-type Problem struct {
-	Id        uuid.UUID `db:"id"`
-	CreatedBy uuid.UUID `db:"created_by"`
-
-	Visibility string `db:"visibility"`
-
-	Title       string `db:"title"`
-	TimeLimit   int64  `db:"time_limit"`
-	MemoryLimit int64  `db:"memory_limit"`
-
-	Legend       string `db:"legend"`
-	InputFormat  string `db:"input_format"`
-	OutputFormat string `db:"output_format"`
-	Notes        string `db:"notes"`
-	Scoring      string `db:"scoring"`
-
-	LegendHtml       string `db:"legend_html"`
-	InputFormatHtml  string `db:"input_format_html"`
-	OutputFormatHtml string `db:"output_format_html"`
-	NotesHtml        string `db:"notes_html"`
-	ScoringHtml      string `db:"scoring_html"`
-
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-}
-
-type ProblemsListItem struct {
-	Id          uuid.UUID `db:"id"`
-	Title       string    `db:"title"`
-	MemoryLimit int64     `db:"memory_limit"`
-	TimeLimit   int64     `db:"time_limit"`
-	CreatedAt   time.Time `db:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"`
-}
-
-type ProblemsList struct {
-	Problems   []*ProblemsListItem `json:"problems"`
-	Pagination Pagination          `json:"pagination"`
-}
 
 type ProblemsFilter struct {
 	Page       int64
@@ -116,7 +74,7 @@ type ProblemTest struct {
 	Ordinal   int64     `db:"ordinal"`
 	Input     string    `db:"input"`
 	Output    string    `db:"output"`
-	CreatedAt time.Time `db:"created_at"`
+	// CreatedAt time.Time `db:"created_at"` // removed time import if unused
 }
 
 type ProblemTests []ProblemTest

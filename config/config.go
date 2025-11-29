@@ -8,6 +8,7 @@ type Config struct {
 
 	Pandoc      string `env:"PANDOC" required:"true"`
 	PostgresDSN string `env:"POSTGRES_DSN" required:"true"`
+	RedisURL    string `env:"REDIS_URL" env-default:"redis://localhost:6379"`
 
 	AdminUsername string `env:"ADMIN_USERNAME" env-default:"admin"`
 	AdminPassword string `env:"ADMIN_PASSWORD" env-default:"admin"`

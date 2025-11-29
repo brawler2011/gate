@@ -13,6 +13,7 @@ import (
 
 	testerv1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/config"
+	"github.com/gate149/core/internal/cache"
 	"github.com/gate149/core/internal/contests"
 	"github.com/gate149/core/internal/health"
 	"github.com/gate149/core/internal/kratos"
@@ -69,30 +70,36 @@ func main() {
 	}
 
 	logger.Info("connecting to postgres")
-	db, err := pkg.NewPostgresDB(cfg.PostgresDSN)
+	pool, err := pkg.NewPostgresDB(cfg.PostgresDSN)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+	defer pool.Close()
 	logger.Info("successfully connected to postgres")
 
-	usersRepo := users.NewRepository(db)
-	usersUC := users.NewUseCase(usersRepo)
+	logger.Info("connecting to redis")
+	redisClient, err := pkg.NewRedisClient(cfg.RedisURL)
+	if err != nil {
+		panic(err)
+	}
+	defer redisClient.Close()
+	logger.Info("successfully connected to redis")
+
+	redisCache := cache.NewRedisCache(redisClient)
+
+	usersRepo := users.NewRepository(pool)
+	usersUC := users.NewUseCase(usersRepo, redisCache)
 
 	pandocClient := pkg.NewPandocClient(&http.Client{}, cfg.Pandoc)
 
-	problemsRepo := problems.NewRepository(db)
+	problemsRepo := problems.NewRepository(pool)
 
-	problemsUC, err := problems.NewUseCase(problemsRepo, pandocClient)
-	if err != nil {
-		logger.Error("failed to create problems use case", slog.Any("error", err))
-		return
-	}
+	problemsUC := problems.NewUseCase(problemsRepo, redisCache, pandocClient)
 
-	contestsRepo := contests.NewRepository(db)
-	contestsUC := contests.NewContestUseCase(contestsRepo)
+	contestsRepo := contests.NewRepository(pool)
+	contestsUC := contests.NewContestUseCase(contestsRepo, redisCache)
 
-	permissionsUC := permissions.NewUseCase(contestsRepo, usersRepo, problemsUC)
+	permissionsUC := permissions.NewUseCase(contestsUC, usersUC, problemsUC, redisCache)
 	logger.Info("successfully initialized permissions system")
 
 	// Initialize Judge0 client
@@ -111,12 +118,11 @@ func main() {
 	}
 	logger.Info("successfully initialized nats publisher", slog.String("url", cfg.NatsUrl))
 
-	//
 	// Initialize outbox repository
-	outboxRepo := outbox.NewRepository(db)
+	outboxRepo := outbox.NewRepository(pool)
 
-	solutionsRepo := submissions.NewRepository(db)
-	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsRepo, problemsRepo, outboxRepo)
+	solutionsRepo := submissions.NewRepository(pool)
+	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsUC, problemsUC, outboxRepo)
 
 	// Initialize and start outbox worker
 	ctx, cancel := context.WithCancel(context.Background())
@@ -155,7 +161,7 @@ func main() {
 		Middlewares: []testerv1.MiddlewareFunc{
 			middleware.ErrorHandlerMiddleware(logger),
 			middleware.AuthMiddleware(oryPublicClient.FrontendAPI),
-			middleware.UsersMiddleware(usersUC),
+			middleware.NewUsersMiddleware(usersUC).AuthMiddleware(),
 		},
 	})
 

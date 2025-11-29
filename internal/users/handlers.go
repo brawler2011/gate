@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	testerv1 "github.com/gate149/contracts/core/v1"
+	"github.com/gate149/core/internal/domain"
 	"github.com/gate149/core/internal/middleware"
 	"github.com/gate149/core/internal/models"
 	"github.com/gate149/core/internal/permissions"
@@ -15,12 +16,12 @@ import (
 )
 
 type UsersUC interface {
-	GetUserById(ctx context.Context, id uuid.UUID) (*models.User, error)
-	ListUsers(ctx context.Context, filter *models.UsersFilter) (*models.UsersList, error)
+	GetUserById(ctx context.Context, id uuid.UUID) (domain.User, error)
+	ListUsers(ctx context.Context, filter *models.UsersFilter) (*domain.UsersList, error)
 }
 
 type SubmissionsUC interface {
-	ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*models.SolutionsList, error)
+	ListSolutions(ctx context.Context, filter models.SolutionsFilter) (*domain.SubmissionsList, error)
 }
 
 type PermissionsUC interface {
@@ -57,7 +58,7 @@ func (h *UsersHandlers) GetUser(c *fiber.Ctx, id uuid.UUID) error {
 	}
 
 	return c.JSON(testerv1.GetUserResponseModel{
-		User: userDTO(*user),
+		User: userDTO(user),
 	})
 }
 
@@ -70,7 +71,7 @@ func (h *UsersHandlers) GetMe(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(testerv1.GetUserResponseModel{
-		User: userDTO(*user),
+		User: userDTO(user),
 	})
 }
 
@@ -160,14 +161,14 @@ func (h *UsersHandlers) ListUserSubmissions(c *fiber.Ctx, userId uuid.UUID, para
 	}
 
 	// Check permissions based on whether viewing own or other's submissions
-	if userId != user.Id {
+	if userId != user.ID {
 		// Trying to view someone else's submissions - only admin can do this
 		if !user.IsAdmin() {
 			return pkg.Wrap(pkg.NoPermission, nil, "only admins can view other users' submissions")
 		}
 	} else if params.ContestId != nil {
 		// Viewing own submissions with contestId specified - check contest permission
-		canView, err := h.permissionsUC.HasContestPermission(ctx, *params.ContestId, user.Id, permissions.ActionListOwnSubmissions, permissions.WithUser(user))
+		canView, err := h.permissionsUC.HasContestPermission(ctx, *params.ContestId, user.ID, permissions.ActionListOwnSubmissions, permissions.WithUser(user))
 		if err != nil {
 			return err
 		}
@@ -187,9 +188,9 @@ func (h *UsersHandlers) ListUserSubmissions(c *fiber.Ctx, userId uuid.UUID, para
 	return c.JSON(submissionsListToDTO(submissions))
 }
 
-func userDTO(u models.User) testerv1.UserModel {
+func userDTO(u domain.User) testerv1.UserModel {
 	return testerv1.UserModel{
-		Id:        u.Id,
+		Id:        u.ID,
 		Username:  u.Username,
 		Role:      u.Role,
 		CreatedAt: u.CreatedAt,
@@ -197,10 +198,10 @@ func userDTO(u models.User) testerv1.UserModel {
 	}
 }
 
-func usersListDTO(ul *models.UsersList) testerv1.ListUsersResponseModel {
+func usersListDTO(ul *domain.UsersList) testerv1.ListUsersResponseModel {
 	userDTOs := make([]testerv1.UserModel, len(ul.Users))
 	for i, user := range ul.Users {
-		userDTOs[i] = userDTO(*user)
+		userDTOs[i] = userDTO(user)
 	}
 
 	return testerv1.ListUsersResponseModel{
@@ -243,18 +244,18 @@ func listUserSubmissionsParamsToFilter(userId uuid.UUID, params testerv1.ListUse
 	}
 }
 
-func submissionsListToDTO(solutionsList *models.SolutionsList) *testerv1.ListSubmissionsResponseModel {
+func submissionsListToDTO(solutionsList *domain.SubmissionsList) *testerv1.ListSubmissionsResponseModel {
 	resp := testerv1.ListSubmissionsResponseModel{
-		Submissions: make([]testerv1.SubmissionsListItemModel, len(solutionsList.Solutions)),
+		Submissions: make([]testerv1.SubmissionsListItemModel, len(solutionsList.Submissions)),
 		Pagination: testerv1.PaginationModel{
 			Page:  solutionsList.Pagination.Page,
 			Total: solutionsList.Pagination.Total,
 		},
 	}
 
-	for i, solution := range solutionsList.Solutions {
+	for i, solution := range solutionsList.Submissions {
 		resp.Submissions[i] = testerv1.SubmissionsListItemModel{
-			Id:           solution.Id,
+			Id:           solution.ID,
 			UserId:       solution.CreatedBy,
 			Username:     solution.Username,
 			State:        int64(solution.State),
@@ -263,10 +264,10 @@ func submissionsListToDTO(solutionsList *models.SolutionsList) *testerv1.ListSub
 			TimeStat:     solution.TimeStat,
 			MemoryStat:   solution.MemoryStat,
 			Language:     int64(solution.Language),
-			ProblemId:    solution.ProblemId,
+			ProblemId:    solution.ProblemID,
 			ProblemTitle: solution.ProblemTitle,
 			Position:     solution.Position,
-			ContestId:    solution.ContestId,
+			ContestId:    solution.ContestID,
 			ContestTitle: solution.ContestTitle,
 			UpdatedAt:    solution.UpdatedAt,
 			CreatedAt:    solution.CreatedAt,

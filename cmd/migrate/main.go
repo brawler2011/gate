@@ -20,10 +20,11 @@ func main() {
 		panic(fmt.Sprintf("error reading config: %s", err.Error()))
 	}
 
-	db, err := pkg.NewPostgresDB(cfg.PostgresDSN)
+	db, err := pkg.NewPostgresDBForMigrations(cfg.PostgresDSN)
 	if err != nil {
 		panic(err)
 	}
+	defer db.Close()
 
 	goose.SetBaseFS(embedMigrations)
 
@@ -31,7 +32,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := goose.Up(db.DB, "migrations"); err != nil {
+	if err := goose.Up(db, "migrations"); err != nil {
 		panic(err)
 	}
 }
