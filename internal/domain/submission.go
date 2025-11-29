@@ -9,7 +9,7 @@ import (
 
 type Submission struct {
 	ID           uuid.UUID           `json:"id"`
-	CreatedBy    uuid.UUID           `json:"created_by"`
+	CreatedBy    *uuid.UUID          `json:"created_by"`
 	Username     string              `json:"username"`
 	Submission   string              `json:"submission"`
 	State        models.State        `json:"state"`
@@ -18,10 +18,10 @@ type Submission struct {
 	TimeStat     int64               `json:"time_stat"`
 	MemoryStat   int64               `json:"memory_stat"`
 	Language     models.LanguageName `json:"language"`
-	ProblemID    uuid.UUID           `json:"problem_id"`
+	ProblemID    *uuid.UUID          `json:"problem_id"`
 	ProblemTitle string              `json:"problem_title"`
-	Position     int64               `json:"position"`
-	ContestID    uuid.UUID           `json:"contest_id"`
+	Position     *int64              `json:"position"`
+	ContestID    *uuid.UUID          `json:"contest_id"`
 	ContestTitle string              `json:"contest_title"`
 	UpdatedAt    time.Time           `json:"updated_at"`
 	CreatedAt    time.Time           `json:"created_at"`

@@ -256,7 +256,7 @@ func submissionsListToDTO(solutionsList *domain.SubmissionsList) *testerv1.ListS
 	for i, solution := range solutionsList.Submissions {
 		resp.Submissions[i] = testerv1.SubmissionsListItemModel{
 			Id:           solution.ID,
-			UserId:       solution.CreatedBy,
+			UserId:       uuidPtrToUUID(solution.CreatedBy),
 			Username:     solution.Username,
 			State:        int64(solution.State),
 			Score:        solution.Score,
@@ -264,10 +264,10 @@ func submissionsListToDTO(solutionsList *domain.SubmissionsList) *testerv1.ListS
 			TimeStat:     solution.TimeStat,
 			MemoryStat:   solution.MemoryStat,
 			Language:     int64(solution.Language),
-			ProblemId:    solution.ProblemID,
+			ProblemId:    uuidPtrToUUID(solution.ProblemID),
 			ProblemTitle: solution.ProblemTitle,
-			Position:     solution.Position,
-			ContestId:    solution.ContestID,
+			Position:     int64PtrToInt64(solution.Position),
+			ContestId:    uuidPtrToUUID(solution.ContestID),
 			ContestTitle: solution.ContestTitle,
 			UpdatedAt:    solution.UpdatedAt,
 			CreatedAt:    solution.CreatedAt,
@@ -275,4 +275,20 @@ func submissionsListToDTO(solutionsList *domain.SubmissionsList) *testerv1.ListS
 	}
 
 	return &resp
+}
+
+// Helper functions
+
+func uuidPtrToUUID(u *uuid.UUID) uuid.UUID {
+	if u == nil {
+		return uuid.Nil
+	}
+	return *u
+}
+
+func int64PtrToInt64(i *int64) int64 {
+	if i == nil {
+		return 0
+	}
+	return *i
 }

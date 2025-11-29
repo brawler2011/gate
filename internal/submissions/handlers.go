@@ -134,7 +134,7 @@ func (h *SolutionsHandlers) GetSubmission(c *fiber.Ctx, id uuid.UUID) error {
 	}
 
 	// User can only view their own submission (simplified for now)
-	if submission.CreatedBy != userID {
+	if submission.CreatedBy == nil || *submission.CreatedBy != userID {
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
 	}
 
@@ -239,12 +239,12 @@ func SubmissionListItemDTO(s domain.Submission) testerv1.SubmissionsListItemMode
 		MemoryStat: s.MemoryStat,
 		Language:   int64(s.Language),
 
-		ProblemId:    s.ProblemID,
+		ProblemId:    uuidPtrToUUID(s.ProblemID),
 		ProblemTitle: s.ProblemTitle,
 
-		Position: s.Position,
+		Position: int64PtrToInt64(s.Position),
 
-		ContestId:    s.ContestID,
+		ContestId:    uuidPtrToUUID(s.ContestID),
 		ContestTitle: s.ContestTitle,
 
 		CreatedAt: s.CreatedAt,
@@ -267,15 +267,31 @@ func SolutionDTO(s domain.Submission) testerv1.SubmissionModel {
 		MemoryStat: s.MemoryStat,
 		Language:   int64(s.Language),
 
-		ProblemId:    s.ProblemID,
+		ProblemId:    uuidPtrToUUID(s.ProblemID),
 		ProblemTitle: s.ProblemTitle,
 
-		Position: s.Position,
+		Position: int64PtrToInt64(s.Position),
 
-		ContestId:    s.ContestID,
+		ContestId:    uuidPtrToUUID(s.ContestID),
 		ContestTitle: s.ContestTitle,
 
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
 	}
+}
+
+// Helper functions
+
+func uuidPtrToUUID(u *uuid.UUID) uuid.UUID {
+	if u == nil {
+		return uuid.Nil
+	}
+	return *u
+}
+
+func int64PtrToInt64(i *int64) int64 {
+	if i == nil {
+		return 0
+	}
+	return *i
 }

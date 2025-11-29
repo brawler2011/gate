@@ -856,7 +856,7 @@ func SubmissionsListToDTO(solutionsList *domain.SubmissionsList) *corev1.ListSub
 func SubmissionListItemDTO(s domain.Submission) corev1.SubmissionsListItemModel {
 	return corev1.SubmissionsListItemModel{
 		Id:           s.ID,
-		UserId:       s.CreatedBy,
+		UserId:       uuidPtrToUUID(s.CreatedBy),
 		Username:     s.Username,
 		State:        int64(s.State),
 		Score:        s.Score,
@@ -864,10 +864,10 @@ func SubmissionListItemDTO(s domain.Submission) corev1.SubmissionsListItemModel 
 		TimeStat:     s.TimeStat,
 		MemoryStat:   s.MemoryStat,
 		Language:     int64(s.Language),
-		ProblemId:    s.ProblemID,
+		ProblemId:    uuidPtrToUUID(s.ProblemID),
 		ProblemTitle: s.ProblemTitle,
-		Position:     s.Position,
-		ContestId:    s.ContestID,
+		Position:     int64PtrToInt64(s.Position),
+		ContestId:    uuidPtrToUUID(s.ContestID),
 		ContestTitle: s.ContestTitle,
 		CreatedAt:    s.CreatedAt,
 		UpdatedAt:    s.UpdatedAt,
@@ -919,4 +919,20 @@ func ParticipantDTO(p domain.ContestMember) corev1.UserModel {
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
 	}
+}
+
+// Helper functions
+
+func uuidPtrToUUID(u *uuid.UUID) uuid.UUID {
+	if u == nil {
+		return uuid.Nil
+	}
+	return *u
+}
+
+func int64PtrToInt64(i *int64) int64 {
+	if i == nil {
+		return 0
+	}
+	return *i
 }
