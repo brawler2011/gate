@@ -223,7 +223,7 @@ func (h *ContestsHandlers) UpdateContest(c *fiber.Ctx, id uuid.UUID) error {
 }
 
 func (h *ContestsHandlers) DeleteContest(c *fiber.Ctx, id uuid.UUID) error {
-	ctx := c.Context()
+	ctx := c.UserContext()
 
 	user, err := middleware.GetUser(ctx)
 	if err != nil {

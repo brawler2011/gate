@@ -69,7 +69,7 @@ const (
 )
 
 func (h *SolutionsHandlers) CreateSubmission(c *fiber.Ctx, params testerv1.CreateSubmissionParams) error {
-	ctx := c.Context()
+	ctx := c.UserContext()
 
 	userID, err := getUserID(h, c)
 	if err != nil {
@@ -121,7 +121,7 @@ func (h *SolutionsHandlers) CreateSubmission(c *fiber.Ctx, params testerv1.Creat
 }
 
 func (h *SolutionsHandlers) GetSubmission(c *fiber.Ctx, id uuid.UUID) error {
-	ctx := c.Context()
+	ctx := c.UserContext()
 
 	userID, err := getUserID(h, c)
 	if err != nil {
@@ -142,7 +142,7 @@ func (h *SolutionsHandlers) GetSubmission(c *fiber.Ctx, id uuid.UUID) error {
 }
 
 func (h *SolutionsHandlers) ListSubmissions(c *fiber.Ctx, params testerv1.ListSubmissionsParams) error {
-	ctx := c.Context()
+	ctx := c.UserContext()
 
 	// Get the current user
 	session, err := middleware.GetSession(ctx)
