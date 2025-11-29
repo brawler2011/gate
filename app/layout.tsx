@@ -15,7 +15,7 @@ import { theme } from '@/lib/theme/theme';
 const queryClient = new QueryClient();
 const inter = Inter({subsets: ["latin"]})
 
-export default function RootLayout({children}: { children: any }) {    
+export default function RootLayout({children}: { children: React.ReactNode }) {    
     return (
         <html lang="ru" className={inter.className} {...mantineHtmlProps}>
         <head>

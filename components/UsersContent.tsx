@@ -16,10 +16,9 @@ type UsersContentProps = {
 
 export function UsersContent({ page, search, role }: UsersContentProps) {
   const [users, setUsers] = useState<UserModel[]>([]);
-  const [pagination, setPagination] = useState<any>({
+  const [pagination, setPagination] = useState<PaginationModel>({
     total: 0,
     page: 1,
-    pageSize: 10,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

@@ -20,13 +20,14 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconMoon, IconSun, IconUser } from "@tabler/icons-react";
+import type { Session } from "@ory/client";
 import cx from "clsx";
 import NextImage from "next/image";
 import Link from "next/link";
 import { LogoutLink } from "../LogoutLink";
 import classes from "./styles.module.css";
 
-const Profile = ({ session }: { session?: any }) => {
+const Profile = ({ session }: { session?: Session | null }) => {
   if (session) {
     return (
       <Group justify="flex-end">
@@ -64,7 +65,7 @@ const Profile = ({ session }: { session?: any }) => {
   );
 };
 
-const Header = ({ session }: { session?: any }) => {
+const Header = ({ session }: { session?: Session | null }) => {
   const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] =
     useDisclosure(false);
 

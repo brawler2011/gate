@@ -61,9 +61,10 @@ const SubmissionsListWithWS: React.FC<SubmissionsListWithWebSocketProps> = (
                         prevSubmissions.map((submission) => {
                             if (submission.id === data.submission.id) {
                                 if (data.message) {
-                                    // FIXME
-                                    // @ts-ignore
-                                    data.submission.state = data.message;
+                                    // FIXME: Backend sends state as string in WebSocket message,
+                                    // but SubmissionsListItemModel.state is typed as number.
+                                    // This needs to be fixed on the backend or model adjusted.
+                                    (data.submission as SubmissionsListItemModel & { state: string | number }).state = data.message;
                                 }
 
                                 return data.submission;

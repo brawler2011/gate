@@ -24,10 +24,21 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import type { ProblemModel } from "../../contracts/core/v1";
 
+type ProblemFormData = {
+  title?: string;
+  time_limit?: number;
+  memory_limit?: number;
+  legend?: string;
+  input_format?: string;
+  output_format?: string;
+  notes?: string;
+  scoring?: string;
+};
+
 type Props = {
   problem: ProblemModel;
-  onSubmitFn: (id: string, data: any) => Promise<any>;
-  onUploadFn: (id: string, data: FormData) => Promise<any>;
+  onSubmitFn: (id: string, data: ProblemFormData) => Promise<unknown>;
+  onUploadFn: (id: string, data: FormData) => Promise<unknown>;
 };
 
 const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
@@ -49,7 +60,7 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
   });
 
   const mutation = useMutation({
-    mutationFn: (data: any) => onSubmitFn(problem.id, data),
+    mutationFn: (data: ProblemFormData) => onSubmitFn(problem.id, data),
     onSuccess: async () => {
       console.log("✅ Problem updated successfully");
       form.resetDirty();

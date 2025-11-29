@@ -1,10 +1,8 @@
 'use client';
 
 import React, {useEffect, useState} from 'react';
-// @ts-ignore
-import SyntaxHighlighter from 'react-syntax-highlighter/dist/cjs/prism';
-// @ts-ignore
-import {oneDark, oneLight} from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import {useComputedColorScheme} from '@mantine/core';
 
 interface CodeBlockProps {
