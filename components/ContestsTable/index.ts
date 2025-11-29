@@ -1,0 +1,2 @@
+export { ContestsTable } from "./ContestsTable";
+

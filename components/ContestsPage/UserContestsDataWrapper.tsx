@@ -37,7 +37,7 @@ export function UserContestsDataWrapper({ contests, pagination, search }: Props)
     <>
       <ContestsTable contests={contests} />
       {totalPages > 1 && (
-        <Center mt="xl">
+        <Center>
           <NextPagination
             pagination={pagination}
             baseUrl="/contests"

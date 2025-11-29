@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useTransition } from "react";
 
-type TransitionContextType = {
+export type TransitionContextType = {
   isPending: boolean;
   startTransition: (callback: () => void) => void;
   pendingView: string;
@@ -11,12 +11,11 @@ type TransitionContextType = {
   setIsPaginationTransition: (isPagination: boolean) => void;
 };
 
-// Export context so other wrappers can use it
-export const TransitionContext = createContext<TransitionContextType>(null!);
+export const TransitionContext = createContext<TransitionContextType | null>(null);
 
 export const usePageTransition = () => useContext(TransitionContext);
 
-export const WorkshopPageWrapper = ({ children }: React.PropsWithChildren) => {
+export const PageTransitionProvider = ({ children }: React.PropsWithChildren) => {
   const [isPending, startTransition] = useTransition();
   const [pendingView, setPendingView] = useState("");
   const [isPaginationTransition, setIsPaginationTransition] = useState(false);
@@ -27,3 +26,4 @@ export const WorkshopPageWrapper = ({ children }: React.PropsWithChildren) => {
     </TransitionContext.Provider>
   );
 };
+

@@ -1,19 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { TransitionContext, usePageTransition } from "../WorkshopPage/WorkshopPageWrapper";
 
-type TransitionContextType = {
-  isPending: boolean;
-  startTransition: (callback: () => void) => void;
-  pendingView: string;
-  setPendingView: (view: string) => void;
-  isPaginationTransition: boolean;
-  setIsPaginationTransition: (isPagination: boolean) => void;
-};
-
-const TransitionContext = createContext<TransitionContextType>(null!);
-
-export const usePageTransition = () => useContext(TransitionContext);
+export { usePageTransition };
 
 export const ContestsPageWrapper = ({ children }: React.PropsWithChildren) => {
   const [isPending, startTransition] = useTransition();
@@ -25,5 +15,4 @@ export const ContestsPageWrapper = ({ children }: React.PropsWithChildren) => {
       {children}
     </TransitionContext.Provider>
   );
-}
-
+};
