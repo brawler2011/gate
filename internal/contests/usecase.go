@@ -191,6 +191,16 @@ func (uc *UseCase) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	// Invalidate cache
 	_ = uc.cache.Delete(ctx, cache.ContestKey(id))
 
+	// Invalidate all contest_problem caches for this contest
+	// Pattern: contest_problem:{contestId}:*
+	pattern := "contest_problem:" + id.String() + ":*"
+	_ = uc.cache.DeleteByPattern(ctx, pattern)
+
+	// Invalidate all contest_member caches for this contest
+	// Pattern: contest_member:{contestId}:*
+	memberPattern := "contest_member:" + id.String() + ":*"
+	_ = uc.cache.DeleteByPattern(ctx, memberPattern)
+
 	return nil
 }
 

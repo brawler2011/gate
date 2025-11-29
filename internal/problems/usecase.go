@@ -148,6 +148,11 @@ func (uc *UseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *mod
 	// Invalidate cache
 	_ = uc.cache.Delete(ctx, cache.ProblemKey(id))
 
+	// Invalidate all contest_problem caches that contain this problem
+	// Pattern: contest_problem:*:{problemId}
+	pattern := "contest_problem:*:" + id.String()
+	_ = uc.cache.DeleteByPattern(ctx, pattern)
+
 	return nil
 }
 
@@ -159,6 +164,11 @@ func (uc *UseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	// Invalidate cache
 	_ = uc.cache.Delete(ctx, cache.ProblemKey(id))
 	_ = uc.cache.Delete(ctx, cache.ProblemTestsKey(id)) // also invalidate tests
+
+	// Invalidate all contest_problem caches that contain this problem
+	// Pattern: contest_problem:*:{problemId}
+	pattern := "contest_problem:*:" + id.String()
+	_ = uc.cache.DeleteByPattern(ctx, pattern)
 
 	return nil
 }
