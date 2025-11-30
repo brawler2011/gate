@@ -259,6 +259,31 @@ type TestResults struct {
 	MemoryStat int64
 }
 
+// publishTestProgress publishes a test progress event to NATS
+func (w *Worker) publishTestProgress(submissionID uuid.UUID, event *models.TestProgressEvent) {
+	subject := fmt.Sprintf("submissions.%s.progress", submissionID.String())
+	
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		w.logger.Error("failed to marshal test progress event",
+			slog.String("submission_id", submissionID.String()),
+			slog.Any("error", err))
+		return
+	}
+
+	if err := w.natsPublisher.Publish(subject, eventBytes); err != nil {
+		w.logger.Error("failed to publish test progress event",
+			slog.String("submission_id", submissionID.String()),
+			slog.String("subject", subject),
+			slog.Any("error", err))
+		return
+	}
+
+	w.logger.Debug("published test progress event",
+		slog.String("submission_id", submissionID.String()),
+		slog.String("type", string(event.Type)))
+}
+
 func (w *Worker) testSubmission(
 	ctx context.Context,
 	submission submissionssqlc.GetSubmissionRow,
@@ -273,12 +298,21 @@ func (w *Worker) testSubmission(
 		MemoryStat: 0,
 	}
 
-	totalTests := int64(len(tests))
-	passedTests := int64(0)
+	totalTests := len(tests)
+	passedTests := 0
 	maxTime := int64(0)
 	maxMemory := int64(0)
 
-	for _, test := range tests {
+	// Publish testing_started event
+	w.publishTestProgress(submission.ID, &models.TestProgressEvent{
+		Type:         models.TestProgressEventTestingStarted,
+		SubmissionId: submission.ID,
+		TotalTests:   totalTests,
+	})
+
+	for i, test := range tests {
+		testNumber := i + 1
+		
 		// Create submission in Judge0
 		timeLimit := float64(problem.TimeLimit) / 1000.0 // Convert ms to seconds
 		memoryLimit := int(problem.MemoryLimit)          // Memory limit in MB
@@ -309,6 +343,7 @@ func (w *Worker) testSubmission(
 
 		// Map Judge0 status to our state
 		statusID := result.Status.Id
+		testPassed := statusID == 3
 
 		switch statusID {
 		case 3: // Accepted
@@ -325,8 +360,17 @@ func (w *Worker) testSubmission(
 			results.State = models.GotRE
 		}
 
+		// Publish test_completed event
+		w.publishTestProgress(submission.ID, &models.TestProgressEvent{
+			Type:         models.TestProgressEventTestCompleted,
+			SubmissionId: submission.ID,
+			TestNumber:   testNumber,
+			TotalTests:   totalTests,
+			Passed:       testPassed,
+		})
+
 		// If not accepted, stop testing
-		if statusID != 3 {
+		if !testPassed {
 			w.logger.Info("test failed",
 				slog.String("submission_id", submission.ID.String()),
 				slog.Int64("test_ordinal", int64(test.Ordinal)),
@@ -356,7 +400,7 @@ func (w *Worker) testSubmission(
 
 	// Calculate score (percentage of passed tests)
 	if totalTests > 0 {
-		results.Score = (passedTests * 100) / totalTests
+		results.Score = int64(passedTests * 100 / totalTests)
 	}
 
 	// If all tests passed, set state to Accepted
@@ -366,6 +410,14 @@ func (w *Worker) testSubmission(
 
 	results.TimeStat = maxTime
 	results.MemoryStat = maxMemory
+
+	// Publish testing_completed event
+	w.publishTestProgress(submission.ID, &models.TestProgressEvent{
+		Type:         models.TestProgressEventTestingCompleted,
+		SubmissionId: submission.ID,
+		TotalTests:   totalTests,
+		State:        results.State,
+	})
 
 	return results, nil
 }

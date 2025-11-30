@@ -5,6 +5,7 @@ type Config struct {
 
 	Address        string `env:"ADDRESS" required:"true"`
 	PrivateAddress string `env:"PRIVATE_ADDRESS" env-default:":13011"`
+	WsAddress      string `env:"WS_ADDRESS" env-default:":8081"`
 
 	Pandoc      string `env:"PANDOC" required:"true"`
 	PostgresDSN string `env:"POSTGRES_DSN" required:"true"`
@@ -19,4 +20,11 @@ type Config struct {
 
 	KratosURl      string `env:"KRATOS_URL" env-default:"http://localhost:4433"`
 	KratosAdminURL string `env:"KRATOS_ADMIN_URL" env-default:"http://localhost:4434"`
+}
+
+// WsConfig is a minimal config for WebSocket server
+type WsConfig struct {
+	Env       string `env:"ENV" env-default:"prod"`
+	WsAddress string `env:"WS_ADDRESS" env-default:":8081"`
+	NatsUrl   string `env:"NATS_URL" env-default:"nats://localhost:4222"`
 }

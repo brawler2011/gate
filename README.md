@@ -168,13 +168,62 @@ make gen
 
 ## 5. Running the Application
 
-Start the tester service:
+The tester service has multiple commands:
+
+### Main API Server
+
+Start the main REST API server:
 
 ```bash
-go run ./main.go
+go run . server --env .env
 ```
 
-The service will be available at the address specified in the ADDRESS variable (e.g., http://localhost:13000).
+The service will be available at the address specified in the `ADDRESS` variable (e.g., http://localhost:13000).
+
+### WebSocket Server (Separate Process)
+
+Start the WebSocket server for real-time testing progress updates:
+
+```bash
+go run . ws --env .env
+```
+
+The WebSocket server runs on a separate port (default: `:8081`) and provides:
+- **Endpoint**: `GET /ws/submissions?ids=uuid1,uuid2,...`
+- **Health check**: `GET /health`
+
+**Environment variables for WebSocket server:**
+```dotenv
+WS_ADDRESS=:8081           # WebSocket server address
+NATS_URL=nats://localhost:4222  # NATS connection URL
+ENV=dev                    # Environment (dev/prod)
+```
+
+### Running Both Servers
+
+In production, run both servers as separate processes:
+
+```bash
+# Terminal 1 - Main API
+go run . server --env .env
+
+# Terminal 2 - WebSocket
+go run . ws --env .env
+```
+
+Or with Docker/systemd as separate services.
+
+### Available Commands
+
+```bash
+go run . --help
+
+# Commands:
+#   server    Start the public API server
+#   ws        Start the WebSocket server for submission testing progress
+#   kratos    Start the private Kratos webhook server
+#   migrate   Run database migrations
+```
 
 ## 6. Authentication and User Management
 

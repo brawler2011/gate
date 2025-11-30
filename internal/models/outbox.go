@@ -43,3 +43,22 @@ type SubmissionTestedPayload struct {
 	Language     int64     `json:"language"`
 	CreatedBy    uuid.UUID `json:"created_by"`
 }
+
+// TestProgressEventType represents the type of testing progress event
+type TestProgressEventType string
+
+const (
+	TestProgressEventTestingStarted   TestProgressEventType = "testing_started"
+	TestProgressEventTestCompleted    TestProgressEventType = "test_completed"
+	TestProgressEventTestingCompleted TestProgressEventType = "testing_completed"
+)
+
+// TestProgressEvent represents a NATS event for testing progress updates
+type TestProgressEvent struct {
+	Type         TestProgressEventType `json:"type"`
+	SubmissionId uuid.UUID             `json:"submission_id"`
+	TestNumber   int                   `json:"test_number,omitempty"`
+	TotalTests   int                   `json:"total_tests"`
+	Passed       bool                  `json:"passed,omitempty"`
+	State        State                 `json:"state,omitempty"`
+}
