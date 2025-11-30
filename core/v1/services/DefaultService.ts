@@ -728,4 +728,14 @@ export class DefaultService {
             },
         });
     }
+    /**
+     * @returns GetUserResponseModel OK
+     * @throws ApiError
+     */
+    public getMe(): CancelablePromise<GetUserResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/users/me',
+        });
+    }
 }

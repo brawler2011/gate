@@ -38,6 +38,24 @@ npm run gen          # Generate TypeScript client only
 - Output: Fetch-based client with TypeScript types
 - Compatible with Next.js API routes
 
+## Contracts Structure
+
+### OpenAPI Schema (`core/v1/openapi.yaml`)
+
+Contains all API and WebSocket event type definitions:
+
+#### REST API Models
+- Standard REST endpoints for problems, contests, submissions, users
+- Request/Response models with full validation
+
+#### WebSocket Event Models
+- `TestingStartedEventModel` - Emitted when testing starts
+- `TestCompletedEventModel` - Emitted after each test completes  
+- `TestingCompletedEventModel` - Emitted when testing finishes
+- `TestProgressEventType` - Enum for event type discrimination
+
+See [WEBSOCKET_API documentation](../docs/WEBSOCKET_API.md) for complete WebSocket API reference.
+
 ## Usage
 
 ### TypeScript Client
@@ -48,6 +66,42 @@ import type { Problem, GetProblemResponse } from "../../contracts/core/v1";
 const response: GetProblemResponse = await client.default.getProblem({
   id: problemId,
 });
+```
+
+### WebSocket Event Types
+
+After generation, WebSocket events can be imported and used:
+
+```typescript
+import type { 
+  TestingStartedEventModel,
+  TestCompletedEventModel,
+  TestingCompletedEventModel,
+} from "../../contracts/core/v1";
+
+const ws = new WebSocket('/ws/submissions?ids=uuid1,uuid2');
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  
+  switch (data.type) {
+    case 'testing_started': {
+      const event: TestingStartedEventModel = data;
+      // Handle testing started
+      break;
+    }
+    case 'test_completed': {
+      const event: TestCompletedEventModel = data;
+      // Handle test completed
+      break;
+    }
+    case 'testing_completed': {
+      const event: TestingCompletedEventModel = data;
+      // Handle testing completed
+      break;
+    }
+  }
+};
 ```
 
 ### Go Server

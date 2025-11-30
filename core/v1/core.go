@@ -607,6 +607,9 @@ type ServerInterface interface {
 	// (GET /users)
 	ListUsers(c *fiber.Ctx, params ListUsersParams) error
 
+	// (GET /users/me)
+	GetMe(c *fiber.Ctx) error
+
 	// (GET /users/{id})
 	GetUser(c *fiber.Ctx, id openapi_types.UUID) error
 
@@ -1705,6 +1708,12 @@ func (siw *ServerInterfaceWrapper) ListUsers(c *fiber.Ctx) error {
 	return siw.Handler.ListUsers(c, params)
 }
 
+// GetMe operation middleware
+func (siw *ServerInterfaceWrapper) GetMe(c *fiber.Ctx) error {
+
+	return siw.Handler.GetMe(c)
+}
+
 // GetUser operation middleware
 func (siw *ServerInterfaceWrapper) GetUser(c *fiber.Ctx) error {
 
@@ -1946,6 +1955,8 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Get(options.BaseURL+"/user/:id/contests", wrapper.ListUserContests)
 
 	router.Get(options.BaseURL+"/users", wrapper.ListUsers)
+
+	router.Get(options.BaseURL+"/users/me", wrapper.GetMe)
 
 	router.Get(options.BaseURL+"/users/:id", wrapper.GetUser)
 
