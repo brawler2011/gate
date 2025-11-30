@@ -2,20 +2,18 @@ package ws
 
 import (
 	"log/slog"
-	"strings"
+	"strconv"
 
+	"github.com/gate149/core/internal/models"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
-const (
-	MaxSubmissionIDs = 20
-)
-
 // Handler handles WebSocket connections for submission progress.
 //
 // WebSocket Events (JSON):
+// - SubmissionWebSocketEventModel: Sent when a submission is created or updated
 // - TestingStartedEventModel: Sent when testing of a submission begins
 // - TestCompletedEventModel: Sent after each individual test case completes
 // - TestingCompletedEventModel: Sent when all testing for a submission is finished
@@ -61,65 +59,108 @@ func (h *Handler) UpgradeMiddleware() fiber.Handler {
 	}
 }
 
-// HandleSubmissions handles WebSocket connections for submission progress
-// GET /ws/submissions?ids=id1,id2,...
+// HandleSubmissions handles WebSocket connections for submission list updates
+// GET /ws/submissions?contestId=uuid&userId=uuid&problemId=uuid&state=int&language=int&sortOrder=desc
+//
+// Parameters:
+// - contestId (optional): Filter by contest ID
+// - userId (optional): Filter by user ID
+// - problemId (optional): Filter by problem ID
+// - state (optional): Filter by submission state
+// - language (optional): Filter by programming language
+// - sortOrder (required): Must be "desc" for real-time updates (page=1, sortOrder=desc)
 func (h *Handler) HandleSubmissions() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
-		// Parse submission IDs from query params
-		idsParam := c.Query("ids")
-		if idsParam == "" {
-			h.logger.Debug("no submission IDs provided")
+		// Parse sortOrder - must be "desc" for real-time updates
+		sortOrder := c.Query("sortOrder")
+		if sortOrder != "desc" {
+			h.logger.Debug("invalid sortOrder for WebSocket", slog.String("sortOrder", sortOrder))
 			c.WriteMessage(websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "missing ids parameter"))
+				websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, 
+					"sortOrder must be 'desc' for real-time updates (page=1, sortOrder=desc)"))
 			return
 		}
 
-		idStrings := strings.Split(idsParam, ",")
-		if len(idStrings) > MaxSubmissionIDs {
-			h.logger.Debug("too many submission IDs", slog.Int("count", len(idStrings)))
-			c.WriteMessage(websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "maximum 20 submission IDs allowed"))
-			return
-		}
+		// Build filter from query parameters
+		filter := models.WebSocketFilter{}
 
-		submissionIDs := make([]uuid.UUID, 0, len(idStrings))
-		for _, idStr := range idStrings {
-			idStr = strings.TrimSpace(idStr)
-			if idStr == "" {
-				continue
-			}
-			id, err := uuid.Parse(idStr)
+		// Parse contestId
+		if contestIdStr := c.Query("contestId"); contestIdStr != "" {
+			contestId, err := uuid.Parse(contestIdStr)
 			if err != nil {
-				h.logger.Debug("invalid submission ID", slog.String("id", idStr), slog.Any("error", err))
+				h.logger.Debug("invalid contestId", slog.String("contestId", contestIdStr), slog.Any("error", err))
 				c.WriteMessage(websocket.CloseMessage,
-					websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "invalid submission ID: "+idStr))
+					websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "invalid contestId: "+contestIdStr))
 				return
 			}
-			submissionIDs = append(submissionIDs, id)
+			filter.ContestID = &contestId
 		}
 
-		if len(submissionIDs) == 0 {
-			h.logger.Debug("no valid submission IDs provided")
-			c.WriteMessage(websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "no valid submission IDs provided"))
-			return
+		// Parse userId
+		if userIdStr := c.Query("userId"); userIdStr != "" {
+			userId, err := uuid.Parse(userIdStr)
+			if err != nil {
+				h.logger.Debug("invalid userId", slog.String("userId", userIdStr), slog.Any("error", err))
+				c.WriteMessage(websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "invalid userId: "+userIdStr))
+				return
+			}
+			filter.UserID = &userId
+		}
+
+		// Parse problemId
+		if problemIdStr := c.Query("problemId"); problemIdStr != "" {
+			problemId, err := uuid.Parse(problemIdStr)
+			if err != nil {
+				h.logger.Debug("invalid problemId", slog.String("problemId", problemIdStr), slog.Any("error", err))
+				c.WriteMessage(websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "invalid problemId: "+problemIdStr))
+				return
+			}
+			filter.ProblemID = &problemId
+		}
+
+		// Parse state
+		if stateStr := c.Query("state"); stateStr != "" {
+			stateInt, err := strconv.ParseInt(stateStr, 10, 64)
+			if err != nil {
+				h.logger.Debug("invalid state", slog.String("state", stateStr), slog.Any("error", err))
+				c.WriteMessage(websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "invalid state: "+stateStr))
+				return
+			}
+			state := models.State(stateInt)
+			filter.State = &state
+		}
+
+		// Parse language
+		if languageStr := c.Query("language"); languageStr != "" {
+			languageInt, err := strconv.ParseInt(languageStr, 10, 64)
+			if err != nil {
+				h.logger.Debug("invalid language", slog.String("language", languageStr), slog.Any("error", err))
+				c.WriteMessage(websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "invalid language: "+languageStr))
+				return
+			}
+			language := models.LanguageName(languageInt)
+			filter.Language = &language
 		}
 
 		// Create client
 		clientID := uuid.New().String()
 		wsConn := &FiberWebSocketConn{Conn: c}
-		client := NewClient(clientID, wsConn, h.hub)
+		client := NewClient(clientID, wsConn, h.hub, &filter)
 
-		h.logger.Info("WebSocket client connected",
+		h.logger.Info("WebSocket client connected for submission list",
 			slog.String("client_id", clientID),
-			slog.Int("subscription_count", len(submissionIDs)))
+			slog.Any("filter", filter))
 
 		// Register client with hub
 		h.hub.RegisterClient(client)
 
-		// Subscribe to submission progress events
-		if err := h.hub.SubscribeToSubmissions(client, submissionIDs); err != nil {
-			h.logger.Error("failed to subscribe to submissions",
+		// Subscribe to submission list events (new submissions and updates)
+		if err := h.hub.SubscribeToSubmissionList(client); err != nil {
+			h.logger.Error("failed to subscribe to submission list",
 				slog.String("client_id", clientID),
 				slog.Any("error", err))
 			h.hub.UnregisterClient(client)
@@ -142,4 +183,3 @@ func (h *Handler) RegisterRoutes(app *fiber.App) {
 	wsGroup.Use(h.UpgradeMiddleware())
 	wsGroup.Get("/submissions", h.HandleSubmissions())
 }
-

@@ -28,6 +28,7 @@ SELECT s.id,
     cp.position,
     s.contest_id,
     c.title AS contest_title,
+    c.visibility AS contest_visibility,
     s.updated_at,
     s.created_at
 FROM submissions s

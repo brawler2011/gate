@@ -18,13 +18,25 @@ import (
 
 var wsCmd = &cobra.Command{
 	Use:   "ws",
-	Short: "Start the WebSocket server for submission testing progress",
+	Short: "Start the WebSocket server for submission list updates",
 	Long: `Start a dedicated WebSocket server that handles real-time 
-submission testing progress updates.
+submission list updates and testing progress.
 
-The server connects to NATS and broadcasts testing events to connected clients.
+The server connects to NATS and broadcasts submission events to connected clients
+based on their filter parameters.
 
-Endpoint: GET /ws/submissions?ids=uuid1,uuid2,...
+Endpoint: GET /ws/submissions?sortOrder=desc&contestId=uuid&userId=uuid&problemId=uuid&state=int&language=int
+
+Parameters:
+  sortOrder (required): Must be "desc" for real-time updates (page=1, sortOrder=desc)
+  contestId (optional): Filter by contest ID
+  userId (optional): Filter by user ID  
+  problemId (optional): Filter by problem ID
+  state (optional): Filter by submission state
+  language (optional): Filter by programming language
+
+Events are only sent for submissions that match the filter criteria.
+For private contests, only clients with a matching contestId filter will receive events.
 
 Environment variables:
   WS_ADDRESS - WebSocket server address (default: :8081)

@@ -13,12 +13,14 @@ import (
 
 // Client represents a WebSocket client connection
 type Client struct {
-	ID            string
-	conn          WebSocketConn
+	ID     string
+	conn   WebSocketConn
+	filter *models.WebSocketFilter
+	send   chan []byte
+	hub    *Hub
+	mu     sync.RWMutex
+	// submissionIDs is used for backward compatibility with individual submission progress tracking
 	submissionIDs map[uuid.UUID]bool
-	send          chan []byte
-	hub           *Hub
-	mu            sync.RWMutex
 }
 
 // WebSocketConn is an interface for WebSocket connections (allows testing)
@@ -31,6 +33,7 @@ type WebSocketConn interface {
 // Hub manages WebSocket clients and NATS subscriptions.
 //
 // Messages are JSON structures defined in contracts/core/v1/openapi.yaml:
+// - SubmissionWebSocketEventModel (for submission list updates)
 // - TestingStartedEventModel
 // - TestCompletedEventModel
 // - TestingCompletedEventModel
@@ -38,10 +41,15 @@ type Hub struct {
 	logger        *slog.Logger
 	natsConn      *nats.Conn
 	clients       map[*Client]bool
-	subscriptions map[uuid.UUID][]*nats.Subscription
+	subscriptions map[string]*nats.Subscription // Changed to string key for flexibility
 	register      chan *Client
 	unregister    chan *Client
 	mu            sync.RWMutex
+	
+	// listSubscription is the global subscription for submission list events
+	listSubscription *nats.Subscription
+	// listClients are clients subscribed to the submission list
+	listClients map[*Client]bool
 }
 
 // NewHub creates a new Hub
@@ -55,9 +63,10 @@ func NewHub(logger *slog.Logger, natsURL string) (*Hub, error) {
 		logger:        logger,
 		natsConn:      conn,
 		clients:       make(map[*Client]bool),
-		subscriptions: make(map[uuid.UUID][]*nats.Subscription),
+		subscriptions: make(map[string]*nats.Subscription),
 		register:      make(chan *Client),
 		unregister:    make(chan *Client),
+		listClients:   make(map[*Client]bool),
 	}
 
 	return hub, nil
@@ -77,6 +86,7 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
+				delete(h.listClients, client)
 				close(client.send)
 				h.cleanupClientSubscriptions(client)
 			}
@@ -92,10 +102,13 @@ func (h *Hub) Close() {
 	defer h.mu.Unlock()
 
 	// Close all NATS subscriptions
-	for _, subs := range h.subscriptions {
-		for _, sub := range subs {
-			sub.Unsubscribe()
-		}
+	for _, sub := range h.subscriptions {
+		sub.Unsubscribe()
+	}
+
+	// Close list subscription if exists
+	if h.listSubscription != nil {
+		h.listSubscription.Unsubscribe()
 	}
 
 	// Close NATS connection
@@ -114,7 +127,62 @@ func (h *Hub) UnregisterClient(client *Client) {
 	h.unregister <- client
 }
 
-// SubscribeToSubmissions subscribes a client to submission progress events
+// SubscribeToSubmissionList subscribes a client to submission list events
+// Events are filtered based on the client's filter parameters
+func (h *Hub) SubscribeToSubmissionList(client *Client) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	// Add client to list clients
+	h.listClients[client] = true
+
+	// Create list subscription if it doesn't exist
+	if h.listSubscription == nil {
+		sub, err := h.natsConn.Subscribe("submissions.list", func(msg *nats.Msg) {
+			h.handleSubmissionListEvent(msg.Data)
+		})
+		if err != nil {
+			return fmt.Errorf("failed to subscribe to submissions.list: %w", err)
+		}
+		h.listSubscription = sub
+		h.logger.Debug("subscribed to NATS subject", slog.String("subject", "submissions.list"))
+	}
+
+	return nil
+}
+
+// handleSubmissionListEvent handles incoming submission list events from NATS
+func (h *Hub) handleSubmissionListEvent(data []byte) {
+	var event models.SubmissionWebSocketEvent
+	if err := json.Unmarshal(data, &event); err != nil {
+		h.logger.Error("failed to unmarshal submission list event",
+			slog.Any("error", err))
+		return
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	// Send to all clients that match the filter
+	for client := range h.listClients {
+		// Check if the event matches client's filter
+		if client.filter != nil && !client.filter.MatchesSubmission(&event.Submission) {
+			continue
+		}
+
+		// Send to client
+		select {
+		case client.send <- data:
+		default:
+			// Client's send buffer is full, skip this message
+			h.logger.Warn("client send buffer full, skipping message",
+				slog.String("client_id", client.ID))
+		}
+	}
+}
+
+// SubscribeToSubmissions subscribes a client to individual submission progress events
+// This is kept for backward compatibility and for tracking specific submission test progress
 func (h *Hub) SubscribeToSubmissions(client *Client, submissionIDs []uuid.UUID) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -130,6 +198,12 @@ func (h *Hub) SubscribeToSubmissions(client *Client, submissionIDs []uuid.UUID) 
 		client.mu.Unlock()
 
 		subject := fmt.Sprintf("submissions.%s.progress", submissionID.String())
+		subKey := subject
+
+		// Check if subscription already exists
+		if _, exists := h.subscriptions[subKey]; exists {
+			continue
+		}
 
 		sub, err := h.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 			var event models.TestProgressEvent
@@ -141,14 +215,14 @@ func (h *Hub) SubscribeToSubmissions(client *Client, submissionIDs []uuid.UUID) 
 			}
 
 			// Send to all clients subscribed to this submission
-			h.broadcastToSubscribers(event.SubmissionId, msg.Data)
+			h.broadcastToSubmissionSubscribers(event.SubmissionId, msg.Data)
 		})
 
 		if err != nil {
 			return fmt.Errorf("failed to subscribe to %s: %w", subject, err)
 		}
 
-		h.subscriptions[submissionID] = append(h.subscriptions[submissionID], sub)
+		h.subscriptions[subKey] = sub
 		h.logger.Debug("subscribed to NATS subject",
 			slog.String("subject", subject),
 			slog.String("client_id", client.ID))
@@ -157,8 +231,8 @@ func (h *Hub) SubscribeToSubmissions(client *Client, submissionIDs []uuid.UUID) 
 	return nil
 }
 
-// broadcastToSubscribers sends a message to all clients subscribed to a submission
-func (h *Hub) broadcastToSubscribers(submissionID uuid.UUID, data []byte) {
+// broadcastToSubmissionSubscribers sends a message to all clients subscribed to a specific submission
+func (h *Hub) broadcastToSubmissionSubscribers(submissionID uuid.UUID, data []byte) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -207,23 +281,38 @@ func (h *Hub) cleanupClientSubscriptions(client *Client) {
 
 		// If no other subscribers, unsubscribe from NATS
 		if !hasOtherSubscribers {
-			if subs, ok := h.subscriptions[submissionID]; ok {
-				for _, sub := range subs {
-					sub.Unsubscribe()
-				}
-				delete(h.subscriptions, submissionID)
+			subKey := fmt.Sprintf("submissions.%s.progress", submissionID.String())
+			if sub, ok := h.subscriptions[subKey]; ok {
+				sub.Unsubscribe()
+				delete(h.subscriptions, subKey)
 				h.logger.Debug("unsubscribed from NATS subject",
 					slog.String("submission_id", submissionID.String()))
 			}
 		}
 	}
+
+	// Check if we should unsubscribe from list events
+	hasOtherListClients := false
+	for c := range h.listClients {
+		if c != client {
+			hasOtherListClients = true
+			break
+		}
+	}
+
+	if !hasOtherListClients && h.listSubscription != nil {
+		h.listSubscription.Unsubscribe()
+		h.listSubscription = nil
+		h.logger.Debug("unsubscribed from submissions.list")
+	}
 }
 
 // NewClient creates a new Client
-func NewClient(id string, conn WebSocketConn, hub *Hub) *Client {
+func NewClient(id string, conn WebSocketConn, hub *Hub, filter *models.WebSocketFilter) *Client {
 	return &Client{
 		ID:            id,
 		conn:          conn,
+		filter:        filter,
 		submissionIDs: make(map[uuid.UUID]bool),
 		send:          make(chan []byte, 256),
 		hub:           hub,
@@ -264,4 +353,3 @@ func (c *Client) ReadPump() {
 		}
 	}
 }
-

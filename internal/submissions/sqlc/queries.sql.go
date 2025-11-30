@@ -114,6 +114,7 @@ SELECT s.id,
     cp.position,
     s.contest_id,
     c.title AS contest_title,
+    c.visibility AS contest_visibility,
     s.updated_at,
     s.created_at
 FROM submissions s
@@ -126,23 +127,24 @@ WHERE s.id = $1::uuid
 `
 
 type GetSubmissionRow struct {
-	ID           uuid.UUID           `json:"id"`
-	CreatedBy    pgtype.UUID         `json:"created_by"`
-	Username     *string             `json:"username"`
-	Submission   string              `json:"submission"`
-	State        models.State        `json:"state"`
-	Score        int32               `json:"score"`
-	Penalty      int32               `json:"penalty"`
-	TimeStat     int32               `json:"time_stat"`
-	MemoryStat   int32               `json:"memory_stat"`
-	Language     models.LanguageName `json:"language"`
-	ProblemID    pgtype.UUID         `json:"problem_id"`
-	ProblemTitle *string             `json:"problem_title"`
-	Position     *int32              `json:"position"`
-	ContestID    pgtype.UUID         `json:"contest_id"`
-	ContestTitle *string             `json:"contest_title"`
-	UpdatedAt    time.Time           `json:"updated_at"`
-	CreatedAt    time.Time           `json:"created_at"`
+	ID                uuid.UUID             `json:"id"`
+	CreatedBy         pgtype.UUID           `json:"created_by"`
+	Username          *string               `json:"username"`
+	Submission        string                `json:"submission"`
+	State             models.State          `json:"state"`
+	Score             int32                 `json:"score"`
+	Penalty           int32                 `json:"penalty"`
+	TimeStat          int32                 `json:"time_stat"`
+	MemoryStat        int32                 `json:"memory_stat"`
+	Language          models.LanguageName   `json:"language"`
+	ProblemID         pgtype.UUID           `json:"problem_id"`
+	ProblemTitle      *string               `json:"problem_title"`
+	Position          *int32                `json:"position"`
+	ContestID         pgtype.UUID           `json:"contest_id"`
+	ContestTitle      *string               `json:"contest_title"`
+	ContestVisibility NullContestVisibility `json:"contest_visibility"`
+	UpdatedAt         time.Time             `json:"updated_at"`
+	CreatedAt         time.Time             `json:"created_at"`
 }
 
 func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error) {
@@ -164,6 +166,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.Position,
 		&i.ContestID,
 		&i.ContestTitle,
+		&i.ContestVisibility,
 		&i.UpdatedAt,
 		&i.CreatedAt,
 	)

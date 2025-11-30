@@ -162,6 +162,10 @@ func (w *Worker) processSubmissionCreated(ctx context.Context, event *outboxsqlc
 		return fmt.Errorf("failed to get submission: %w", err)
 	}
 
+	// Publish submission.created WebSocket event immediately
+	// so users can see the new submission in real-time
+	w.publishSubmissionCreated(&submission)
+
 	// Fetch problem
 	problem, err := w.problemsRepo.GetProblemById(ctx, payload.ProblemId)
 	if err != nil {
@@ -217,6 +221,17 @@ func (w *Worker) processSubmissionCreated(ctx context.Context, event *outboxsqlc
 		slog.String("submission_id", payload.SubmissionId.String()),
 		slog.Int64("state", int64(results.State)),
 		slog.Int64("score", results.Score))
+
+	// Fetch updated submission to publish WebSocket event
+	updatedSubmission, err := w.submissionsRepo.GetSubmission(ctx, payload.SubmissionId)
+	if err != nil {
+		w.logger.Error("failed to fetch updated submission for websocket event",
+			slog.String("submission_id", payload.SubmissionId.String()),
+			slog.Any("error", err))
+	} else {
+		// Publish submission.updated WebSocket event for real-time list updates
+		w.publishSubmissionUpdated(&updatedSubmission)
+	}
 
 	// Create submission.tested event
 	testedPayload := models.SubmissionTestedPayload{
@@ -282,6 +297,108 @@ func (w *Worker) publishTestProgress(submissionID uuid.UUID, event *models.TestP
 	w.logger.Debug("published test progress event",
 		slog.String("submission_id", submissionID.String()),
 		slog.String("type", string(event.Type)))
+}
+
+// publishSubmissionCreated publishes a submission.created WebSocket event to NATS
+// This is used to notify WebSocket clients about new submissions in real-time
+func (w *Worker) publishSubmissionCreated(submission *submissionssqlc.GetSubmissionRow) {
+	event := w.buildSubmissionWebSocketEvent(submission, models.MessageTypeSubmissionCreated)
+	w.publishSubmissionWebSocketEvent(event)
+}
+
+// publishSubmissionUpdated publishes a submission.updated WebSocket event to NATS
+// This is used to notify WebSocket clients when submission test results are ready
+func (w *Worker) publishSubmissionUpdated(submission *submissionssqlc.GetSubmissionRow) {
+	event := w.buildSubmissionWebSocketEvent(submission, models.MessageTypeSubmissionUpdated)
+	w.publishSubmissionWebSocketEvent(event)
+}
+
+// buildSubmissionWebSocketEvent creates a WebSocket event from a submission row
+func (w *Worker) buildSubmissionWebSocketEvent(submission *submissionssqlc.GetSubmissionRow, messageType models.WebSocketMessageType) *models.SubmissionWebSocketEvent {
+	// Convert pgtype.UUID to uuid.UUID safely
+	var userID, problemID, contestID uuid.UUID
+	if submission.CreatedBy.Valid {
+		userID = submission.CreatedBy.Bytes
+	}
+	if submission.ProblemID.Valid {
+		problemID = submission.ProblemID.Bytes
+	}
+	if submission.ContestID.Valid {
+		contestID = submission.ContestID.Bytes
+	}
+
+	// Handle nullable strings
+	username := ""
+	if submission.Username != nil {
+		username = *submission.Username
+	}
+	problemTitle := ""
+	if submission.ProblemTitle != nil {
+		problemTitle = *submission.ProblemTitle
+	}
+	contestTitle := ""
+	if submission.ContestTitle != nil {
+		contestTitle = *submission.ContestTitle
+	}
+	position := int64(0)
+	if submission.Position != nil {
+		position = int64(*submission.Position)
+	}
+	
+	// Get contest visibility for permission filtering
+	contestVisibility := ""
+	if submission.ContestVisibility.Valid {
+		contestVisibility = string(submission.ContestVisibility.ContestVisibility)
+	}
+
+	return &models.SubmissionWebSocketEvent{
+		MessageType: messageType,
+		Submission: models.SubmissionListItem{
+			ID:                submission.ID,
+			UserID:            userID,
+			Username:          username,
+			State:             submission.State,
+			Score:             int64(submission.Score),
+			Penalty:           int64(submission.Penalty),
+			TimeStat:          int64(submission.TimeStat),
+			MemoryStat:        int64(submission.MemoryStat),
+			Language:          int64(submission.Language),
+			ProblemID:         problemID,
+			ProblemTitle:      problemTitle,
+			Position:          position,
+			ContestID:         contestID,
+			ContestTitle:      contestTitle,
+			UpdatedAt:         submission.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			CreatedAt:         submission.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			ContestVisibility: contestVisibility,
+		},
+	}
+}
+
+// publishSubmissionWebSocketEvent publishes a submission WebSocket event to NATS
+func (w *Worker) publishSubmissionWebSocketEvent(event *models.SubmissionWebSocketEvent) {
+	// Publish to submissions.list subject for real-time list updates
+	subject := "submissions.list"
+	
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		w.logger.Error("failed to marshal submission websocket event",
+			slog.String("submission_id", event.Submission.ID.String()),
+			slog.Any("error", err))
+		return
+	}
+
+	if err := w.natsPublisher.Publish(subject, eventBytes); err != nil {
+		w.logger.Error("failed to publish submission websocket event",
+			slog.String("submission_id", event.Submission.ID.String()),
+			slog.String("subject", subject),
+			slog.Any("error", err))
+		return
+	}
+
+	w.logger.Debug("published submission websocket event",
+		slog.String("submission_id", event.Submission.ID.String()),
+		slog.String("message_type", string(event.MessageType)))
 }
 
 func (w *Worker) testSubmission(
