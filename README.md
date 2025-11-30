@@ -68,7 +68,6 @@ func (h *Handlers) UpdateProblem(c *fiber.Ctx, id openapi_types.UUID) error {
     // your logic
     return c.SendStatus(fiber.StatusOK)
 }
-
-// Register handlers
+// Register handlers 
 corev1.RegisterHandlers(app, handlers)
 ```
