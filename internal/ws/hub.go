@@ -152,7 +152,10 @@ func (h *Hub) SubscribeToSubmissionList(client *Client) error {
 }
 
 // handleSubmissionListEvent handles incoming submission list events from NATS
+// This handles both submission events (created/updated) and test progress events
 func (h *Hub) handleSubmissionListEvent(data []byte) {
+	h.logger.Debug("received nats message on submissions.list", slog.Int("size", len(data)))
+
 	var event models.SubmissionWebSocketEvent
 	if err := json.Unmarshal(data, &event); err != nil {
 		h.logger.Error("failed to unmarshal submission list event",
@@ -166,13 +169,30 @@ func (h *Hub) handleSubmissionListEvent(data []byte) {
 	// Send to all clients that match the filter
 	for client := range h.listClients {
 		// Check if the event matches client's filter
-		if client.filter != nil && !client.filter.MatchesSubmission(&event.Submission) {
+		if client.filter != nil && !client.filter.MatchesEvent(&event) {
+			// Log mismatch for debugging (only at debug level usually, but helpful here)
+			filterUserID := "nil"
+			if client.filter.UserID != nil {
+				filterUserID = client.filter.UserID.String()
+			}
+			eventUserID := "nil"
+			if event.UserID != nil {
+				eventUserID = event.UserID.String()
+			}
+			h.logger.Debug("event dropped by filter",
+				slog.String("client_id", client.ID),
+				slog.String("message_type", string(event.MessageType)),
+				slog.String("filter_user_id", filterUserID),
+				slog.String("event_user_id", eventUserID))
 			continue
 		}
 
 		// Send to client
 		select {
 		case client.send <- data:
+			h.logger.Debug("sent event to client",
+				slog.String("client_id", client.ID),
+				slog.String("message_type", string(event.MessageType)))
 		default:
 			// Client's send buffer is full, skip this message
 			h.logger.Warn("client send buffer full, skipping message",

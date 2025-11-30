@@ -74,6 +74,10 @@ type WebSocketMessageType string
 const (
 	MessageTypeSubmissionCreated WebSocketMessageType = "submission_created"
 	MessageTypeSubmissionUpdated WebSocketMessageType = "submission_updated"
+	// Test progress message types - sent while submission is being tested
+	MessageTypeTestingStarted   WebSocketMessageType = "testing_started"
+	MessageTypeTestCompleted    WebSocketMessageType = "test_completed"
+	MessageTypeTestingCompleted WebSocketMessageType = "testing_completed"
 )
 
 // SubmissionListItem represents a submission in the list format (matches SubmissionsListItemModel)
@@ -102,8 +106,20 @@ type SubmissionListItem struct {
 // SubmissionWebSocketEvent is the event sent to WebSocket clients
 type SubmissionWebSocketEvent struct {
 	MessageType WebSocketMessageType `json:"message_type"`
-	Submission  SubmissionListItem   `json:"submission"`
+	Submission  *SubmissionListItem  `json:"submission,omitempty"`
 	Message     string               `json:"message,omitempty"`
+	// Test progress fields (for testing_started, test_completed, testing_completed events)
+	SubmissionID *uuid.UUID `json:"submission_id,omitempty"`
+	TestNumber   int        `json:"test_number,omitempty"`
+	TotalTests   int        `json:"total_tests,omitempty"`
+	Passed       *bool      `json:"passed,omitempty"`
+	State        *State     `json:"state,omitempty"`
+	// Filter metadata for matching (included in progress events)
+	ContestID         *uuid.UUID `json:"contest_id,omitempty"`
+	UserID            *uuid.UUID `json:"user_id,omitempty"`
+	ProblemID         *uuid.UUID `json:"problem_id,omitempty"`
+	Language          *int64     `json:"language,omitempty"`
+	ContestVisibility string     `json:"contest_visibility,omitempty"`
 }
 
 // WebSocketFilter represents the filter parameters for WebSocket subscriptions
@@ -151,4 +167,54 @@ func (f WebSocketFilter) MatchesSubmission(submission *SubmissionListItem) bool 
 		return false
 	}
 	return true
+}
+
+// MatchesEvent checks if a WebSocket event matches the filter criteria
+// Used for test progress events that don't have full submission data
+func (f WebSocketFilter) MatchesEvent(event *SubmissionWebSocketEvent) bool {
+	// For submission events, use the submission data
+	if event.Submission != nil {
+		return f.MatchesSubmission(event.Submission)
+	}
+
+	// For progress events, use the event metadata
+	// Permission check based on contest visibility
+	if event.ContestVisibility == "private" {
+		if f.ContestID == nil {
+			return false
+		}
+		if event.ContestID != nil && *f.ContestID != *event.ContestID {
+			return false
+		}
+	}
+
+	// Standard filter matching using event metadata
+	if f.ContestID != nil && event.ContestID != nil && *f.ContestID != *event.ContestID {
+		return false
+	}
+	if f.UserID != nil && event.UserID != nil && *f.UserID != *event.UserID {
+		return false
+	}
+	if f.ProblemID != nil && event.ProblemID != nil && *f.ProblemID != *event.ProblemID {
+		return false
+	}
+	if f.Language != nil && event.Language != nil && int64(*f.Language) != *event.Language {
+		return false
+	}
+	// Note: We don't filter by state for progress events since the state is changing
+	return true
+}
+
+func (u *LanguageName) String() string {
+	if u == nil {
+		return "nil"
+	}
+	return "LanguageName"
+}
+
+func (s *State) String() string {
+	if s == nil {
+		return "nil"
+	}
+	return "State"
 }

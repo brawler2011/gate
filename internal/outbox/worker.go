@@ -199,8 +199,11 @@ func (w *Worker) processSubmissionCreated(ctx context.Context, event *outboxsqlc
 		return fmt.Errorf("failed to map language ID: %w", err)
 	}
 
+	// Build submission context for progress events
+	subCtx := w.buildSubmissionContext(&submission)
+
 	// Test submission with Judge0
-	results, err := w.testSubmission(ctx, submission, problem, tests, judge0LanguageID)
+	results, err := w.testSubmission(ctx, submission, subCtx, problem, tests, judge0LanguageID)
 	if err != nil {
 		return fmt.Errorf("failed to test submission: %w", err)
 	}
@@ -274,29 +277,84 @@ type TestResults struct {
 	MemoryStat int64
 }
 
+// SubmissionContext holds metadata needed for publishing test progress events
+type SubmissionContext struct {
+	SubmissionID      uuid.UUID
+	ContestID         uuid.UUID
+	UserID            uuid.UUID
+	ProblemID         uuid.UUID
+	Language          int64
+	ContestVisibility string
+}
+
 // publishTestProgress publishes a test progress event to NATS
-func (w *Worker) publishTestProgress(submissionID uuid.UUID, event *models.TestProgressEvent) {
-	subject := fmt.Sprintf("submissions.%s.progress", submissionID.String())
+// Publishes to both the individual submission subject and the list subject
+func (w *Worker) publishTestProgress(ctx *SubmissionContext, event *models.TestProgressEvent) {
+	// Publish to individual submission subject (for backward compatibility)
+	subject := fmt.Sprintf("submissions.%s.progress", ctx.SubmissionID.String())
 	
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
 		w.logger.Error("failed to marshal test progress event",
-			slog.String("submission_id", submissionID.String()),
+			slog.String("submission_id", ctx.SubmissionID.String()),
 			slog.Any("error", err))
 		return
 	}
 
 	if err := w.natsPublisher.Publish(subject, eventBytes); err != nil {
 		w.logger.Error("failed to publish test progress event",
-			slog.String("submission_id", submissionID.String()),
+			slog.String("submission_id", ctx.SubmissionID.String()),
 			slog.String("subject", subject),
 			slog.Any("error", err))
+	}
+
+	// Also publish to submissions.list for real-time list updates
+	w.publishTestProgressToList(ctx, event)
+
+	w.logger.Debug("published test progress event",
+		slog.String("submission_id", ctx.SubmissionID.String()),
+		slog.String("type", string(event.Type)))
+}
+
+// publishTestProgressToList publishes test progress to the submissions.list subject
+// This allows WebSocket clients watching the submission list to see real-time test progress
+func (w *Worker) publishTestProgressToList(ctx *SubmissionContext, event *models.TestProgressEvent) {
+	// Map TestProgressEvent type to WebSocket message type
+	var messageType models.WebSocketMessageType
+	switch event.Type {
+	case models.TestProgressEventTestingStarted:
+		messageType = models.MessageTypeTestingStarted
+	case models.TestProgressEventTestCompleted:
+		messageType = models.MessageTypeTestCompleted
+	case models.TestProgressEventTestingCompleted:
+		messageType = models.MessageTypeTestingCompleted
+	default:
 		return
 	}
 
-	w.logger.Debug("published test progress event",
-		slog.String("submission_id", submissionID.String()),
-		slog.String("type", string(event.Type)))
+	// Build WebSocket event with filter metadata
+	passed := event.Passed
+	state := event.State
+	wsEvent := &models.SubmissionWebSocketEvent{
+		MessageType:       messageType,
+		SubmissionID:      &ctx.SubmissionID,
+		TestNumber:        event.TestNumber,
+		TotalTests:        event.TotalTests,
+		Passed:            &passed,
+		State:             &state,
+		ContestID:         &ctx.ContestID,
+		UserID:            &ctx.UserID,
+		ProblemID:         &ctx.ProblemID,
+		Language:          &ctx.Language,
+		ContestVisibility: ctx.ContestVisibility,
+	}
+
+	w.publishSubmissionWebSocketEvent(wsEvent)
+
+	w.logger.Info("published test progress list event",
+		slog.String("submission_id", ctx.SubmissionID.String()),
+		slog.String("type", string(messageType)),
+		slog.String("user_id", ctx.UserID.String()))
 }
 
 // publishSubmissionCreated publishes a submission.created WebSocket event to NATS
@@ -353,7 +411,7 @@ func (w *Worker) buildSubmissionWebSocketEvent(submission *submissionssqlc.GetSu
 
 	return &models.SubmissionWebSocketEvent{
 		MessageType: messageType,
-		Submission: models.SubmissionListItem{
+		Submission: &models.SubmissionListItem{
 			ID:                submission.ID,
 			UserID:            userID,
 			Username:          username,
@@ -375,6 +433,34 @@ func (w *Worker) buildSubmissionWebSocketEvent(submission *submissionssqlc.GetSu
 	}
 }
 
+// buildSubmissionContext creates a SubmissionContext from a submission row
+func (w *Worker) buildSubmissionContext(submission *submissionssqlc.GetSubmissionRow) *SubmissionContext {
+	var userID, problemID, contestID uuid.UUID
+	if submission.CreatedBy.Valid {
+		userID = submission.CreatedBy.Bytes
+	}
+	if submission.ProblemID.Valid {
+		problemID = submission.ProblemID.Bytes
+	}
+	if submission.ContestID.Valid {
+		contestID = submission.ContestID.Bytes
+	}
+
+	contestVisibility := ""
+	if submission.ContestVisibility.Valid {
+		contestVisibility = string(submission.ContestVisibility.ContestVisibility)
+	}
+
+	return &SubmissionContext{
+		SubmissionID:      submission.ID,
+		ContestID:         contestID,
+		UserID:            userID,
+		ProblemID:         problemID,
+		Language:          int64(submission.Language),
+		ContestVisibility: contestVisibility,
+	}
+}
+
 // publishSubmissionWebSocketEvent publishes a submission WebSocket event to NATS
 func (w *Worker) publishSubmissionWebSocketEvent(event *models.SubmissionWebSocketEvent) {
 	// Publish to submissions.list subject for real-time list updates
@@ -383,27 +469,34 @@ func (w *Worker) publishSubmissionWebSocketEvent(event *models.SubmissionWebSock
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
 		w.logger.Error("failed to marshal submission websocket event",
-			slog.String("submission_id", event.Submission.ID.String()),
 			slog.Any("error", err))
 		return
 	}
 
 	if err := w.natsPublisher.Publish(subject, eventBytes); err != nil {
 		w.logger.Error("failed to publish submission websocket event",
-			slog.String("submission_id", event.Submission.ID.String()),
 			slog.String("subject", subject),
 			slog.Any("error", err))
 		return
 	}
 
+	// Get submission ID for logging
+	var subID string
+	if event.Submission != nil {
+		subID = event.Submission.ID.String()
+	} else if event.SubmissionID != nil {
+		subID = event.SubmissionID.String()
+	}
+
 	w.logger.Debug("published submission websocket event",
-		slog.String("submission_id", event.Submission.ID.String()),
+		slog.String("submission_id", subID),
 		slog.String("message_type", string(event.MessageType)))
 }
 
 func (w *Worker) testSubmission(
 	ctx context.Context,
 	submission submissionssqlc.GetSubmissionRow,
+	subCtx *SubmissionContext,
 	problem problemssqlc.Problem,
 	tests []problemssqlc.ProblemTest,
 	languageID int,
@@ -421,11 +514,15 @@ func (w *Worker) testSubmission(
 	maxMemory := int64(0)
 
 	// Publish testing_started event
-	w.publishTestProgress(submission.ID, &models.TestProgressEvent{
+	w.publishTestProgress(subCtx, &models.TestProgressEvent{
 		Type:         models.TestProgressEventTestingStarted,
 		SubmissionId: submission.ID,
 		TotalTests:   totalTests,
 	})
+
+	w.logger.Info("starting tests", 
+		slog.String("submission_id", submission.ID.String()), 
+		slog.Int("total_tests", totalTests))
 
 	for i, test := range tests {
 		testNumber := i + 1
@@ -478,7 +575,7 @@ func (w *Worker) testSubmission(
 		}
 
 		// Publish test_completed event
-		w.publishTestProgress(submission.ID, &models.TestProgressEvent{
+		w.publishTestProgress(subCtx, &models.TestProgressEvent{
 			Type:         models.TestProgressEventTestCompleted,
 			SubmissionId: submission.ID,
 			TestNumber:   testNumber,
@@ -529,7 +626,7 @@ func (w *Worker) testSubmission(
 	results.MemoryStat = maxMemory
 
 	// Publish testing_completed event
-	w.publishTestProgress(submission.ID, &models.TestProgressEvent{
+	w.publishTestProgress(subCtx, &models.TestProgressEvent{
 		Type:         models.TestProgressEventTestingCompleted,
 		SubmissionId: submission.ID,
 		TotalTests:   totalTests,
