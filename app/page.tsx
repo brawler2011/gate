@@ -1,5 +1,5 @@
 import { DefaultLayout } from "@/components/Layout";
-import { getOrySession } from "@/lib/api";
+import { getSession } from "@/lib/auth";
 import {
   Container,
   Group,
@@ -15,7 +15,7 @@ export const metadata = {
 };
 
 export default async function Page() {
-  const session = await getOrySession();
+  const session = await getSession();
   const blogPosts = getAllBlogPosts();
   const isAuthenticated = !!session;
 

@@ -6,7 +6,7 @@ import { Box, Paper, Select, Stack } from "@mantine/core";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ContestModel, ContestProblemListItemModel } from "../../../../../contracts/core/v1";
-import type { SessionUser } from "@/lib/session";
+import type { SessionUser } from "@/lib/auth";
 import { submitSubmission } from "./actions";
 
 type Props = {

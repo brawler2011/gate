@@ -2,14 +2,12 @@
 
 import '@mantine/core/styles.css';
 import '@mantine/dropzone/styles.css';
-import "@ory/elements-react/theme/styles.css";
 import './globals.css';
 import React, {Suspense} from 'react';
 import {ColorSchemeScript, mantineHtmlProps, MantineProvider} from '@mantine/core';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {Notifications} from "@mantine/notifications";
 import {Inter} from "next/font/google"
-import {SessionProvider} from "@ory/elements-react/client";
 import { theme } from '@/lib/theme/theme';
 
 const queryClient = new QueryClient();
@@ -31,9 +29,7 @@ export default function RootLayout({children}: { children: React.ReactNode }) {
             <MantineProvider theme={theme} defaultColorScheme="dark" withGlobalClasses>
                 <Notifications/>
                 <Suspense>
-                    <SessionProvider>
-                        {children}
-                    </SessionProvider>
+                    {children}
                 </Suspense>
             </MantineProvider>
         </QueryClientProvider>

@@ -24,7 +24,7 @@ import {Footer} from "@/components/Footer";
 import {RecentSubmissionsTable} from "@/components/RecentSubmissionsTable";
 import {submitSubmission} from "@/app/contests/[contest_id]/problems/[problem_id]/actions";
 import {ContestHotbar} from "@/components/ContestHotbar";
-import type {SessionUser} from "@/lib/session";
+import type {SessionUser} from "@/lib/auth";
 import type {ContestRole} from "@/lib/contest-role";
 import { useRouter } from "next/navigation";
 

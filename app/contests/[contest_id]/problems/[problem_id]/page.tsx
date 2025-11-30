@@ -9,7 +9,7 @@ import { HeaderWithSession } from "@/components/HeaderWithSession";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Task } from "@/components/Task";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";
 
 type Props = {

@@ -12,7 +12,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ContestHotbar } from "@/components/ContestHotbar";
 import { SubmitSubmissionClient } from "./SubmitSubmissionClient";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";
 
 type Props = {

@@ -1,11 +1,7 @@
-// Copyright © 2024 Ory Corp
-// SPDX-License-Identifier: Apache-2.0
-
-import "@ory/elements-react/theme/styles.css"
 import { PropsWithChildren } from "react"
 import { Stack } from "@mantine/core"
 
-export default function DefaultCardLayout({ children }: PropsWithChildren) {
+export default function AuthLayout({ children }: PropsWithChildren) {
   return (
     <main style={{ 
       padding: 'var(--mantine-spacing-md)', 

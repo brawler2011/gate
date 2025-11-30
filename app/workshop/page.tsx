@@ -7,7 +7,7 @@ import { WorkshopProblemsContentSkeleton } from "@/components/WorkshopPage/Works
 import { WorkshopProblemsWrapper } from "@/components/WorkshopPage/WorkshopProblemsWrapper";
 import { WorkshopTabs } from "@/components/WorkshopPage/WorkshopTabs";
 import { getContests, getProblems } from "@/lib/actions";
-import { getOrySession } from "@/lib/api";
+import { getSession } from "@/lib/auth";
 import { Alert, Center, Container, Stack } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { Metadata } from "next";
@@ -100,7 +100,7 @@ const WorshopPageContent = async ({
   view: string;
   search?: string;
 }) => {
-  const session = await getOrySession();
+  const session = await getSession();
   const isAuthenticated = !!session?.active;
 
   return (

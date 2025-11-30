@@ -18,8 +18,6 @@
     "@mdx-js/react": "^3.1.1",
     "@next/mdx": "^16.0.3",
     "@ory/client": "^1.22.7",
-    "@ory/elements-react": "^1.0.0-next.22",
-    "@ory/nextjs": "^1.0.0-next.22",
     "@tabler/icons-react": "^3.35.0",
     "@tanstack/react-query": "^5.90.2",
     "@types/jsonwebtoken": "^9.0.10",

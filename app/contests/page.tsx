@@ -6,7 +6,7 @@ import { ContestsHeader } from "@/components/ContestsPage/ContestsHeader";
 import { ContestsTabs } from "@/components/ContestsPage/ContestsTabs";
 import { ContestsPageWrapper } from "@/components/ContestsPage/ContestsPageWrapper";
 import { getPublicContests, getUserContests } from "@/lib/actions";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser } from "@/lib/auth";
 import { Alert, Center, Container, Stack } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { Metadata } from "next";

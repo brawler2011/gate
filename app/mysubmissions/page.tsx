@@ -6,7 +6,7 @@ import {DefaultLayout} from '@/components/Layout';
 import {NextPagination} from '@/components/Pagination';
 import {SubmissionsListWithWS} from '@/components/SubmissionsList';
 import {ContestHotbar} from '@/components/ContestHotbar';
-import { getCurrentUser } from '@/lib/session';
+import { getCurrentUser } from '@/lib/auth';
 import { getMyContestRole } from '@/lib/contest-role';
 
 export const metadata: Metadata = {
