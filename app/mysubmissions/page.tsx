@@ -1,10 +1,10 @@
 import {Metadata} from 'next';
 import {getSubmissions, getContest} from '@/lib/actions';
-import {Stack, Title, Container, Alert, ScrollArea} from '@mantine/core';
+import {Stack, Title, Container, Alert} from '@mantine/core';
 import {IconAlertCircle} from '@tabler/icons-react';
 import {DefaultLayout} from '@/components/Layout';
 import {NextPagination} from '@/components/Pagination';
-import {SubmissionsListWithWS} from '@/components/SubmissionsList';
+import {SubmissionsListClient} from '@/components/SubmissionsList';
 import {ContestHotbar} from '@/components/ContestHotbar';
 import { getCurrentUser } from '@/lib/auth';
 import { getMyContestRole } from '@/lib/contest-role';
@@ -28,7 +28,7 @@ interface PageProps {
     searchParams: Promise<SearchParams>;
 }
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 20;
 
 const Page = async ({searchParams}: PageProps) => {
     const params = await searchParams;
@@ -54,9 +54,8 @@ const Page = async ({searchParams}: PageProps) => {
     if (params.order === 'asc' || params.order === 'desc') parsedParams.sortOrder = params.order;
     if (params.language) parsedParams.language = Number(params.language);
     
-    console.log(parsedParams);
     const submissionsData = await getSubmissions(parsedParams);
-    console.log(submissionsData);
+    
     if (!submissionsData) {
         return (
             <DefaultLayout>
@@ -84,8 +83,8 @@ const Page = async ({searchParams}: PageProps) => {
         language: parsedParams.language,
     };
 
-    const token = 'access-token' in submissionsData ? submissionsData['access-token'] : undefined;
-    const wsUrl = process.env.NEXT_PUBLIC_WS_core_URL! + "/submissions";
+    // Remove trailing slash if present to avoid double slashes
+    const wsBaseUrl = (process.env.NEXT_PUBLIC_WS_core_URL || '').replace(/\/+$/, '');
 
     // Load contest if contestId is provided
     let contestData = null;
@@ -110,14 +109,18 @@ const Page = async ({searchParams}: PageProps) => {
                 )}
                 <Stack align="center" gap="md">
                     <Title>Мои посылки</Title>
-                    <ScrollArea w="100%" type="auto">
-                        <SubmissionsListWithWS
-                            initialSubmissions={submissionsData}
-                            wsUrl={wsUrl}
-                            token={token || ''}
-                            queryParams={queryParams}
-                        />
-                    </ScrollArea>
+                    <SubmissionsListClient
+                        initialSubmissions={submissionsData.submissions}
+                        wsUrl={wsBaseUrl + "/submissions"}
+                        filter={{
+                            contestId: parsedParams.contestId,
+                            userId: parsedParams.userId,
+                            problemId: parsedParams.problemId,
+                        }}
+                        pageSize={PAGE_SIZE}
+                        page={parsedParams.page}
+                        sortOrder={parsedParams.sortOrder}
+                    />
                     <NextPagination
                         pagination={submissionsData.pagination}
                         baseUrl="/mysubmissions"

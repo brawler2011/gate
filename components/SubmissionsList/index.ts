@@ -1,2 +1,2 @@
 export * from "./SubmissionsList";
-export * from "./SubmissionsListWithWS";
+export * from "./SubmissionsListClient";

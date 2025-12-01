@@ -26,7 +26,6 @@ import {submitSubmission} from "@/app/contests/[contest_id]/problems/[problem_id
 import {ContestHotbar} from "@/components/ContestHotbar";
 import type {SessionUser} from "@/lib/auth";
 import type {ContestRole} from "@/lib/contest-role";
-import { useRouter } from "next/navigation";
 
 type PageProps = {
     tasks: ContestProblemListItemModel[]
@@ -37,24 +36,17 @@ type PageProps = {
     contestId: string,
     user: SessionUser,
     contestRole: { role: ContestRole } | null,
-    header: React.ReactNode
+    header: React.ReactNode,
+    wsUrl?: string
 }
 
-const Task = ({tasks, contest, task, submissions, problemId, contestId, user, contestRole, header}: PageProps) => {
-    const router = useRouter();
-
+const Task = ({tasks, contest, task, submissions, problemId, contestId, user, contestRole, header, wsUrl}: PageProps) => {
     const onSubmit = async (
         submission: FormData,
         language: string
     ): Promise<number | null> => {
-        const result = await submitSubmission(problemId, contestId, submission, language);
-        
-        if (result) {
-            // Refresh the page data to update submissions list
-            router.refresh();
-        }
-        
-        return result;
+        // WebSocket will automatically update the submissions list
+        return await submitSubmission(problemId, contestId, submission, language);
     };
 
     return (
@@ -127,7 +119,13 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
                         >
                             <Stack>
                                 <CreateSubmissionForm onSubmit={onSubmit}/>
-                                <RecentSubmissionsTable submissions={submissions} contestId={contest.id} userId={user?.id}/>
+                                <RecentSubmissionsTable 
+                                    submissions={submissions} 
+                                    contestId={contest.id} 
+                                    userId={user?.id}
+                                    problemId={problemId}
+                                    wsUrl={wsUrl}
+                                />
                             </Stack>
                         </Paper>
                     </Box>

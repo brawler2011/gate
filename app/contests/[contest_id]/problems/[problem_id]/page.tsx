@@ -70,6 +70,11 @@ const Page = async (props: Props) => {
   // This can happen if user is not synced in backend DB yet
   const submissions = submissionsResponse.submissions || [];
 
+  // Build WebSocket URL for real-time updates
+  // Remove trailing slash if present to avoid double slashes
+  const wsBaseUrl = (process.env.NEXT_PUBLIC_WS_core_URL || '').replace(/\/+$/, '');
+  const wsUrl = wsBaseUrl ? `${wsBaseUrl}/submissions` : undefined;
+
   return (
     <Task
       task={problemResponse.problem}
@@ -81,6 +86,7 @@ const Page = async (props: Props) => {
       user={user}
       contestRole={contestRole}
       header={<HeaderWithSession />}
+      wsUrl={wsUrl}
     />
   );
 };
