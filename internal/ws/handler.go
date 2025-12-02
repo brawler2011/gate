@@ -3,6 +3,7 @@ package ws
 import (
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/gate149/core/internal/models"
 	"github.com/gofiber/contrib/websocket"
@@ -60,7 +61,7 @@ func (h *Handler) UpgradeMiddleware() fiber.Handler {
 }
 
 // HandleSubmissions handles WebSocket connections for submission list updates
-// GET /ws/submissions?contestId=uuid&userId=uuid&problemId=uuid&state=int&language=int&sortOrder=desc
+// GET /ws/submissions?contestId=uuid&userId=uuid&problemId=uuid&state=int&language=int&sortOrder=desc&ids=uuid1,uuid2
 //
 // Parameters:
 // - contestId (optional): Filter by contest ID
@@ -69,6 +70,7 @@ func (h *Handler) UpgradeMiddleware() fiber.Handler {
 // - state (optional): Filter by submission state
 // - language (optional): Filter by programming language
 // - sortOrder (required): Must be "desc" for real-time updates (page=1, sortOrder=desc)
+// - ids (optional): Comma-separated submission IDs to get cached last test events on connect
 func (h *Handler) HandleSubmissions() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		// Parse sortOrder - must be "desc" for real-time updates
@@ -146,6 +148,26 @@ func (h *Handler) HandleSubmissions() fiber.Handler {
 			filter.Language = &language
 		}
 
+		// Parse ids (comma-separated submission IDs to get cached last tests)
+		var submissionIDs []uuid.UUID
+		if idsStr := c.Query("ids"); idsStr != "" {
+			idParts := strings.Split(idsStr, ",")
+			for _, idStr := range idParts {
+				idStr = strings.TrimSpace(idStr)
+				if idStr == "" {
+					continue
+				}
+				id, err := uuid.Parse(idStr)
+				if err != nil {
+					h.logger.Debug("invalid id in ids parameter", slog.String("id", idStr), slog.Any("error", err))
+					c.WriteMessage(websocket.CloseMessage,
+						websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, "invalid id in ids: "+idStr))
+					return
+				}
+				submissionIDs = append(submissionIDs, id)
+			}
+		}
+
 		// Create client
 		clientID := uuid.New().String()
 		wsConn := &FiberWebSocketConn{Conn: c}
@@ -165,6 +187,23 @@ func (h *Handler) HandleSubmissions() fiber.Handler {
 				slog.Any("error", err))
 			h.hub.UnregisterClient(client)
 			return
+		}
+
+		// Send cached last tests for requested submission IDs
+		if len(submissionIDs) > 0 {
+			cachedTests := h.hub.GetLastTests(submissionIDs)
+			for id, data := range cachedTests {
+				if err := c.WriteMessage(websocket.TextMessage, data); err != nil {
+					h.logger.Error("failed to send cached test",
+						slog.String("client_id", clientID),
+						slog.String("submission_id", id.String()),
+						slog.Any("error", err))
+				} else {
+					h.logger.Debug("sent cached test to client",
+						slog.String("client_id", clientID),
+						slog.String("submission_id", id.String()))
+				}
+			}
 		}
 
 		// Start write pump in a goroutine
