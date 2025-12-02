@@ -1345,6 +1345,12 @@ components:
           type: string
           example: "Contest title"
 
+        failed_test:
+          type: integer
+          nullable: true
+          example: 3
+          description: "The test number (1-indexed) where the submission failed. NULL for AC submissions."
+
         updated_at:
           type: string
           format: date-time
@@ -1437,6 +1443,12 @@ components:
         contest_title:
           type: string
           example: "Contest title"
+
+        failed_test:
+          type: integer
+          nullable: true
+          example: 3
+          description: "The test number (1-indexed) where the submission failed. NULL for AC submissions."
 
         updated_at:
           type: string

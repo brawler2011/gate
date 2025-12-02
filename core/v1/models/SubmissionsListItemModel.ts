@@ -17,6 +17,10 @@ export type SubmissionsListItemModel = {
     position: number;
     contest_id: string;
     contest_title: string;
+    /**
+     * The test number (1-indexed) where the submission failed. NULL for AC submissions.
+     */
+    failed_test?: number | null;
     updated_at: string;
     created_at: string;
 };
