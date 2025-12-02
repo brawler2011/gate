@@ -38,6 +38,11 @@ func (u *UsersUseCase) CreateUser(ctx context.Context, input *models.CreateUserI
 		Username: input.Username,
 		Role:     input.Role,
 		KratosId: input.KratosId,
+		Email:    input.Email,
+		Name:     input.Name,
+		Surname:  input.Surname,
+		Bio:      input.Bio,
+		Img:      input.Img,
 	}
 
 	if err := u.repo.CreateUser(ctx, params); err != nil {

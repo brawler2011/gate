@@ -146,7 +146,7 @@ func runServer(envFile string) {
 
 	merged := &MergedHandlers{
 		UsersHandlers:     users.NewHandlers(usersUC, solutionsUC, permissionsUC),
-		ContestsHandlers:  contests.NewHandlers(contestsUC, permissionsUC, solutionsUC),
+		ContestsHandlers:  contests.NewHandlers(contestsUC, permissionsUC, solutionsUC, usersUC),
 		ProblemsHandlers:  problems.NewHandlers(problemsUC, permissionsUC),
 		SolutionsHandlers: submissions.NewHandlers(solutionsUC, permissionsUC, usersUC),
 		HealthHandlers:    health.NewHandlers(),

@@ -13,6 +13,7 @@ import (
 	"github.com/gate149/core/pkg"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 type UsersUC interface {
@@ -189,10 +190,21 @@ func (h *UsersHandlers) ListUserSubmissions(c *fiber.Ctx, userId uuid.UUID, para
 }
 
 func userDTO(u domain.User) testerv1.UserModel {
+	var email *openapi_types.Email
+	if u.Email != nil {
+		emailVal := openapi_types.Email(*u.Email)
+		email = &emailVal
+	}
+
 	return testerv1.UserModel{
 		Id:        u.ID,
 		Username:  u.Username,
 		Role:      u.Role,
+		Email:     email,
+		Name:      u.Name,
+		Surname:   u.Surname,
+		Bio:       u.Bio,
+		Img:       u.Img,
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,
 	}

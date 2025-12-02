@@ -365,4 +365,9 @@ type User struct {
 	KratosID  string    `json:"kratos_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	Email     *string   `json:"email"`
+	Name      *string   `json:"name"`
+	Surname   *string   `json:"surname"`
+	Bio       *string   `json:"bio"`
+	Img       *string   `json:"img"`
 }

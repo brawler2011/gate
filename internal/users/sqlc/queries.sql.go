@@ -39,8 +39,8 @@ func (q *Queries) CountUsers(ctx context.Context, arg CountUsersParams) (int64, 
 }
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO users (id, username, role, kratos_id)
-VALUES ($1::uuid, $2, $3, $4)
+INSERT INTO users (id, username, role, kratos_id, email, name, surname, bio, img)
+VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type CreateUserParams struct {
@@ -48,6 +48,11 @@ type CreateUserParams struct {
 	Username string    `json:"username"`
 	Role     UserRole  `json:"role"`
 	KratosID string    `json:"kratos_id"`
+	Email    *string   `json:"email"`
+	Name     *string   `json:"name"`
+	Surname  *string   `json:"surname"`
+	Bio      *string   `json:"bio"`
+	Img      *string   `json:"img"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -56,12 +61,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.Username,
 		arg.Role,
 		arg.KratosID,
+		arg.Email,
+		arg.Name,
+		arg.Surname,
+		arg.Bio,
+		arg.Img,
 	)
 	return err
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, username, role, kratos_id, created_at, updated_at
+SELECT id, username, role, kratos_id, created_at, updated_at, email, name, surname, bio, img
 FROM users
 WHERE id = $1::uuid
 LIMIT 1
@@ -77,12 +87,17 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.KratosID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Email,
+		&i.Name,
+		&i.Surname,
+		&i.Bio,
+		&i.Img,
 	)
 	return i, err
 }
 
 const getUserByKratosId = `-- name: GetUserByKratosId :one
-SELECT id, username, role, kratos_id, created_at, updated_at
+SELECT id, username, role, kratos_id, created_at, updated_at, email, name, surname, bio, img
 FROM users
 WHERE kratos_id = $1
 LIMIT 1
@@ -98,12 +113,17 @@ func (q *Queries) GetUserByKratosId(ctx context.Context, kratosID string) (User,
 		&i.KratosID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Email,
+		&i.Name,
+		&i.Surname,
+		&i.Bio,
+		&i.Img,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, role, kratos_id, created_at, updated_at
+SELECT id, username, role, kratos_id, created_at, updated_at, email, name, surname, bio, img
 FROM users
 WHERE (
         $1::text IS NULL
@@ -151,6 +171,11 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.KratosID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Email,
+			&i.Name,
+			&i.Surname,
+			&i.Bio,
+			&i.Img,
 		); err != nil {
 			return nil, err
 		}

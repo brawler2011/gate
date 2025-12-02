@@ -17,6 +17,11 @@ func UserFromSqlc(u userssqlc.User) User {
 		Username:  u.Username,
 		Role:      string(u.Role),
 		KratosID:  u.KratosID,
+		Email:     u.Email,
+		Name:      u.Name,
+		Surname:   u.Surname,
+		Bio:       u.Bio,
+		Img:       u.Img,
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,
 	}
