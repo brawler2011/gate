@@ -114,6 +114,7 @@ type ContestModel struct {
 	Description            string             `json:"description"`
 	Id                     openapi_types.UUID `json:"id"`
 	MonitorScope           string             `json:"monitor_scope"`
+	Owner                  *UserModel         `json:"owner,omitempty"`
 	SubmissionsListScope   string             `json:"submissions_list_scope"`
 	SubmissionsReviewScope string             `json:"submissions_review_scope"`
 	Title                  string             `json:"title"`
@@ -337,11 +338,16 @@ type UpdateProblemRequestModel struct {
 
 // UserModel defines model for UserModel.
 type UserModel struct {
-	CreatedAt time.Time          `json:"createdAt"`
-	Id        openapi_types.UUID `json:"id"`
-	Role      string             `json:"role"`
-	UpdatedAt time.Time          `json:"updatedAt"`
-	Username  string             `json:"username"`
+	Bio       *string              `json:"bio,omitempty"`
+	CreatedAt time.Time            `json:"createdAt"`
+	Email     *openapi_types.Email `json:"email,omitempty"`
+	Id        openapi_types.UUID   `json:"id"`
+	Img       *string              `json:"img,omitempty"`
+	Name      *string              `json:"name,omitempty"`
+	Role      string               `json:"role"`
+	Surname   *string              `json:"surname,omitempty"`
+	UpdatedAt time.Time            `json:"updatedAt"`
+	Username  string               `json:"username"`
 }
 
 // ListAdminContestsParams defines parameters for ListAdminContests.

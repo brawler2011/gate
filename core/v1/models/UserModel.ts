@@ -8,5 +8,10 @@ export type UserModel = {
     createdAt: string;
     updatedAt: string;
     role: string;
+    email?: string;
+    name?: string;
+    surname?: string;
+    bio?: string;
+    img?: string;
 };
 
