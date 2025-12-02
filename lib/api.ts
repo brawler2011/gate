@@ -62,6 +62,7 @@ export const Call = async <T>(
         requestId: body?.request_id,
       }, null];
     }
+    console.error('Unknown error:', error);
     return [{ status: 500, message: 'Неизвестная ошибка' }, null];
   }
 };
