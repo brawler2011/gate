@@ -2,13 +2,12 @@ import {ParticipantsSection} from "@/components/ContestManage/ParticipantsSectio
 import {ProblemsSection} from "@/components/ContestManage/ProblemsSection";
 import {SettingsSection} from "@/components/ContestManage/SettingsSection";
 import {DefaultLayout} from "@/components/Layout";
-import {Call} from "@/lib/api";
+import {getContest} from "@/lib/actions";
 import {CONTEST_CONTENT_MAX_WIDTH} from "@/lib/constants";
 import {Box, Button, Container, Group, Stack, Title} from "@mantine/core";
 import {IconArrowLeft, IconPuzzle, IconSettings, IconUsers} from "@tabler/icons-react";
 import Link from "next/link";
-import {notFound} from "next/navigation";
-import type {ContestModel, ContestProblemListItemModel,} from "../../../../../contracts/core/v1";
+import type {ContestProblemListItemModel} from "../../../../../contracts/core/v1";
 
 // Constants for sections
 const SECTIONS = {
@@ -47,29 +46,9 @@ export default async function ContestManagePage({params, searchParams}: Props) {
     const {contest_id: contestId} = await params;
     const {section = "settings"} = await searchParams;
 
-    // Load contest data on the server
-    let contest: ContestModel | null = null;
-    let problems: Array<ContestProblemListItemModel> = [];
-
-    try {
-        const response = await Call((client) =>
-            client.default.getContest({contestId: contestId})
-        );
-
-        if (!response || !response.contest) {
-            notFound();
-        }
-
-        contest = response.contest;
-        problems = response.problems || [];
-    } catch (error) {
-        console.error("Failed to load contest:", error);
-        notFound();
-    }
-
-    if (!contest) {
-        notFound();
-    }
+    const response = await getContest(contestId);
+    const contest = response.contest;
+    const problems: Array<ContestProblemListItemModel> = response.problems || [];
 
     const validSections = Object.values(SECTIONS);
     const activeSection = (

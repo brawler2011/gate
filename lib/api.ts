@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { core } from "../../contracts/core/v1";
+import { ApiError } from "../../contracts/core/v1/core/ApiError";
 
 const oryKratosCookieName = "ory_kratos_session";
 
@@ -39,6 +40,13 @@ export const Call = async <T>(
   try {
     return await method(client);
   } catch (error) {
+    // Re-throw with informative message that survives SSR serialization
+    if (error instanceof ApiError) {
+      const body = error.body as { message?: string; request_id?: string } | undefined;
+      const details = body?.message || error.statusText;
+      const requestId = body?.request_id ? ` [${body.request_id}]` : "";
+      throw new Error(`${error.status}: ${details}${requestId}`);
+    }
     throw error;
   }
 };

@@ -1,7 +1,7 @@
 import { Footer } from "@/components/Footer";
 import { HeaderWithSession } from "@/components/HeaderWithSession";
 import { Layout } from "@/components/Layout";
-import { Call } from "@/lib/api";
+import { getContest } from "@/lib/actions";
 import {
   AppShellFooter,
   AppShellHeader,
@@ -13,7 +13,6 @@ import {
   Text,
 } from "@mantine/core";
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
 import type {
   ContestModel,
   ContestProblemListItemModel,
@@ -33,16 +32,14 @@ export const generateMetadata = async ({
   const { contest_id } = await params;
 
   try {
-    const response = await Call((client) =>
-      client.default.getContest({ contestId: contest_id })
-    );
+    const response = await getContest(contest_id);
     return {
-      title: response?.contest?.title || "Контест не найден",
-      description: response?.contest?.title || "",
+      title: response.contest.title,
+      description: response.contest.title,
     };
-  } catch (error) {
+  } catch {
     return {
-      title: "Контест не найден",
+      title: "Ошибка загрузки контеста",
     };
   }
 };
@@ -103,36 +100,20 @@ const Contest = ({ contest, problems, user, contestRole }: ContestProps) => {
 const Page = async ({ params }: Props) => {
   const { contest_id } = await params;
 
-  console.log("🔍 Loading contest:", contest_id);
+  const response = await getContest(contest_id);
 
-  try {
-    const response = await Call((client) =>
-      client.default.getContest({ contestId: contest_id })
-    );
+  // Get user and contest role for permissions
+  const user = await getCurrentUser();
+  const contestRole = user ? await getMyContestRole(contest_id) : null;
 
-    console.log("✅ Contest response:", response);
-
-    if (!response || !response.contest) {
-      console.error("❌ No contest in response");
-      notFound();
-    }
-
-    // Get user and contest role for permissions
-    const user = await getCurrentUser();
-    const contestRole = user ? await getMyContestRole(contest_id) : null;
-
-    return (
-      <Contest 
-        contest={response.contest} 
-        problems={response.problems || []}
-        user={user}
-        contestRole={contestRole}
-      />
-    );
-  } catch (error) {
-    console.error("❌ Failed to load contest:", error);
-    notFound();
-  }
+  return (
+    <Contest 
+      contest={response.contest} 
+      problems={response.problems || []}
+      user={user}
+      contestRole={contestRole}
+    />
+  );
 };
 
 export default Page;

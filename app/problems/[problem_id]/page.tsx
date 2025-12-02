@@ -3,9 +3,8 @@
 import { DefaultLayout } from "@/components/Layout";
 import { Problem } from "@/components/Problem";
 import { getProblem } from "@/lib/actions";
-import { Button, Center, Container, Stack, Text, Title } from "@mantine/core";
 import { Metadata } from "next";
-import Link from "next/link";
+import { Stack } from "@mantine/core";
 
 type Props = {
   params: Promise<{ problem_id: string }>;
@@ -13,43 +12,23 @@ type Props = {
 
 export const generateMetadata = async (props: Props): Promise<Metadata> => {
   const { problem_id } = await props.params;
-  const response = await getProblem(problem_id);
-
-  if (!response) {
+  
+  try {
+    const response = await getProblem(problem_id);
     return {
-      title: "Задача не найдена",
+      title: `${response.problem.title}`,
+      description: "",
+    };
+  } catch {
+    return {
+      title: "Ошибка загрузки задачи",
     };
   }
-
-  return {
-    title: `${response.problem.title}`,
-    description: "",
-  };
 };
 
 const Page = async (props: Props) => {
   const { problem_id } = await props.params;
   const response = await getProblem(problem_id);
-
-  console.log(response);
-
-  if (!response) {
-    return (
-      <DefaultLayout>
-        <Container size="xl" py="xl">
-          <Center>
-            <Stack align="center">
-              <Title order={2}>Задача не найдена</Title>
-              <Text c="dimmed">Не удалось загрузить задачу</Text>
-              <Button component={Link} href="/workshop?view=problems">
-                Вернуться к задачам
-              </Button>
-            </Stack>
-          </Center>
-        </Container>
-      </DefaultLayout>
-    );
-  }
 
   return (
     <DefaultLayout>

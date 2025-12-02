@@ -3,7 +3,6 @@ import {ProblemForm} from "@/components/ProblemForm";
 import {DefaultLayout} from "@/components/Layout";
 import {getProblem, uploadProblemTests as uploadProblemTestsAction,} from "@/lib/actions";
 import {Metadata} from "next";
-import {notFound} from "next/navigation";
 
 type Props = {
   params: Promise<{ problem_id: string }>;
@@ -11,29 +10,23 @@ type Props = {
 
 export const generateMetadata = async (props: Props): Promise<Metadata> => {
   const { problem_id } = await props.params;
-  const response = await getProblem(problem_id);
-
-  if (!response) {
+  
+  try {
+    const response = await getProblem(problem_id);
     return {
-      title: "Задача не найдена",
+      title: `Редактирование ${response.problem.title}`,
+      description: "",
+    };
+  } catch {
+    return {
+      title: "Ошибка загрузки задачи",
     };
   }
-
-  const problem = response.problem;
-
-  return {
-    title: `Редактирование ${problem.title}`,
-    description: "",
-  };
 };
 
 const Page = async (props: Props) => {
   const { problem_id } = await props.params;
   const response = await getProblem(problem_id);
-
-  if (!response) {
-    notFound();
-  }
 
   const onUploadFn = async (id: string, data: FormData) => {
     "use server";
@@ -43,12 +36,7 @@ const Page = async (props: Props) => {
       throw new Error("Invalid file");
     }
 
-    try {
-        return await uploadProblemTestsAction(id, file);
-    } catch (error) {
-      console.error("Failed to upload problem tests:", error);
-      throw error;
-    }
+    return await uploadProblemTestsAction(id, file);
   };
 
   const problem = response.problem;

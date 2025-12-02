@@ -19,17 +19,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const userData = await getUser(user_id);
-
-  if (!userData) {
+  try {
+    const userData = await getUser(user_id);
     return {
-      title: "Профиль пользователя - Gate149",
+      title: `${userData.user.username} - Gate149`,
+    };
+  } catch {
+    return {
+      title: "Ошибка загрузки профиля - Gate149",
     };
   }
-
-  return {
-    title: `${userData.user.username} - Gate149`,
-  };
 }
 
 const Page = async ({ params }: Props) => {
@@ -41,10 +40,6 @@ const Page = async ({ params }: Props) => {
   }
 
   const userData = await getUser(user_id);
-
-  if (!userData) {
-    notFound();
-  }
 
   return (
     <DefaultLayout>

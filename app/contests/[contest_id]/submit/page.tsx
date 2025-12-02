@@ -1,7 +1,7 @@
 import { Footer } from "@/components/Footer";
 import { HeaderWithSession } from "@/components/HeaderWithSession";
 import { Layout } from "@/components/Layout";
-import { Call } from "@/lib/api";
+import { getContest } from "@/lib/actions";
 import {
   AppShellFooter,
   AppShellHeader,
@@ -9,7 +9,6 @@ import {
   Container,
 } from "@mantine/core";
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { ContestHotbar } from "@/components/ContestHotbar";
 import { SubmitSubmissionClient } from "./SubmitSubmissionClient";
 import { getCurrentUser } from "@/lib/auth";
@@ -25,16 +24,14 @@ export const generateMetadata = async ({
   const { contest_id } = await params;
 
   try {
-    const response = await Call((client) =>
-      client.default.getContest({ contestId: contest_id })
-    );
+    const response = await getContest(contest_id);
     return {
-      title: response?.contest?.title || "Контест",
-      description: response?.contest?.title || "",
+      title: response.contest.title,
+      description: response.contest.title,
     };
-  } catch (error) {
+  } catch {
     return {
-      title: "Контест не найден",
+      title: "Ошибка загрузки контеста",
     };
   }
 };
@@ -42,58 +39,42 @@ export const generateMetadata = async ({
 const Page = async ({ params }: Props) => {
   const { contest_id } = await params;
 
-  console.log("🔍 Loading contest for submit:", contest_id);
+  const response = await getContest(contest_id);
 
-  try {
-    const response = await Call((client) =>
-      client.default.getContest({ contestId: contest_id })
-    );
+  // Get user and contest role for permissions
+  const user = await getCurrentUser();
+  const contestRole = user ? await getMyContestRole(contest_id) : null;
 
-    console.log("✅ Contest response:", response);
-
-    if (!response || !response.contest) {
-      console.error("❌ No contest in response");
-      notFound();
-    }
-
-    // Get user and contest role for permissions
-    const user = await getCurrentUser();
-    const contestRole = user ? await getMyContestRole(contest_id) : null;
-
-    return (
-      <Layout>
-        <AppShellHeader>
-          <HeaderWithSession />
-        </AppShellHeader>
-        <AppShellMain>
-          <Container
-            size="lg"
-            pt={0}
-            pb={{ base: "md", sm: "lg", md: "xl" }}
-            px={{ base: "xs", sm: "md", md: "lg" }}
-          >
-            <ContestHotbar 
-              contest={response.contest}
-              user={user}
-              contestRole={contestRole}
-              activeTab="submit"
-            />
-            <SubmitSubmissionClient 
-              contest={response.contest}
-              problems={response.problems || []}
-              user={user}
-            />
-          </Container>
-        </AppShellMain>
-        <AppShellFooter withBorder={false}>
-          <Footer />
-        </AppShellFooter>
-      </Layout>
-    );
-  } catch (error) {
-    console.error("❌ Failed to load contest:", error);
-    notFound();
-  }
+  return (
+    <Layout>
+      <AppShellHeader>
+        <HeaderWithSession />
+      </AppShellHeader>
+      <AppShellMain>
+        <Container
+          size="lg"
+          pt={0}
+          pb={{ base: "md", sm: "lg", md: "xl" }}
+          px={{ base: "xs", sm: "md", md: "lg" }}
+        >
+          <ContestHotbar 
+            contest={response.contest}
+            user={user}
+            contestRole={contestRole}
+            activeTab="submit"
+          />
+          <SubmitSubmissionClient 
+            contest={response.contest}
+            problems={response.problems || []}
+            user={user}
+          />
+        </Container>
+      </AppShellMain>
+      <AppShellFooter withBorder={false}>
+        <Footer />
+      </AppShellFooter>
+    </Layout>
+  );
 };
 
 export default Page;

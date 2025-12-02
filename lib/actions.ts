@@ -4,57 +4,37 @@ import { ListContestMembersResponseModel, ListSubmissionsResponseModel, ListUser
 import {Call} from './api';
 
 export async function getContests(page: number = 1, pageSize: number = 10, search?: string) {
-    try {
-        const response = await Call((client) => client.default.listWorkshopContests({page, pageSize, search}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch contests:', error);
-        return null;
-    }
+    const response = await Call((client) => client.default.listWorkshopContests({page, pageSize, search}));
+    return response;
 }
 
 export async function getPublicContests(page: number = 1, pageSize: number = 10, search?: string) {
-    try {
-        const response = await Call((client) => client.default.listPublicContests({page, pageSize, search}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch public contests:', error);
-        return null;
-    }
+    const response = await Call((client) => client.default.listPublicContests({page, pageSize, search}));
+    return response;
 }
 
 export async function getUserContests(userId: string, page: number = 1, pageSize: number = 10, search?: string) {
-    try {
-        const response = await Call((client) => client.default.listUserContests({id: userId, page, pageSize, search}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch user contests:', error);
-        return null;
-    }
+    const response = await Call((client) => client.default.listUserContests({id: userId, page, pageSize, search}));
+    return response;
 }
 
 export async function getProblems(page: number = 1, pageSize: number = 10, search?: string, order?: number, owner?: boolean) {
-    try {
-        const params: {
-            page: number;
-            pageSize: number;
-            search?: string;
-            order?: number;
-            owner?: boolean;
-        } = {
-            page,
-            pageSize,
-            search,
-            order,
-            owner,
-        };
+    const params: {
+        page: number;
+        pageSize: number;
+        search?: string;
+        order?: number;
+        owner?: boolean;
+    } = {
+        page,
+        pageSize,
+        search,
+        order,
+        owner,
+    };
 
-        const response = await Call((client) => client.default.listProblems(params));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch problems:', error);
-        return null;
-    }
+    const response = await Call((client) => client.default.listProblems(params));
+    return response;
 }
 
 export async function getSubmissions(params: {
@@ -97,43 +77,23 @@ export async function getSubmissions(params: {
 }
 
 export async function listUsers(page: number = 1, pageSize: number = 10, search?: string, role?: string) {
-    try {
-        const response = await Call((client) => client.default.listUsers({page, pageSize, search, role}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch users:', error);
-        return null;
-    }
+    const response = await Call((client) => client.default.listUsers({page, pageSize, search, role}));
+    return response;
 }
 
 export async function getUser(userId: string) {
-    try {
-        const response = await Call((client) => client.default.getUser({id: userId}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch user:', error);
-        return null;
-    }
+    const response = await Call((client) => client.default.getUser({id: userId}));
+    return response;
 }
 
 export async function getContest(contestId: string) {
-    try {
-        const response = await Call((client) => client.default.getContest({contestId}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch contest:', error);
-        return null;
-    }
+    const response = await Call((client) => client.default.getContest({contestId}));
+    return response;
 }
 
 export async function getContestProblem(problemId: string, contestId: string) {
-    try {
-        const response = await Call((client) => client.default.getContestProblem({problemId, contestId}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch contest problem:', error);
-        return null;
-    }
+    const response = await Call((client) => client.default.getContestProblem({problemId, contestId}));
+    return response;
 }
 
 export async function getContestMembers(contestId: string, page: number = 1, pageSize: number = 10): Promise<ListContestMembersResponseModel> {
@@ -147,13 +107,8 @@ export async function getContestMembers(contestId: string, page: number = 1, pag
 }
 
 export async function getProblem(problemId: string) {
-    try {
-        const response = await Call((client) => client.default.getProblem({id: problemId}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch problem:', error);
-        return null;
-    }
+    const response = await Call((client) => client.default.getProblem({id: problemId}));
+    return response;
 }
 
 export async function getSubmission(submissionId: string) {
@@ -316,28 +271,23 @@ export async function removeContestMember(
 }
 
 export async function searchProblems(title: string, owner?: boolean) {
-    try {
-        const params: {
-            page: number;
-            pageSize: number;
-            title?: string;
-            owner?: boolean;
-        } = {
-            page: 1,
-            pageSize: 10,
-            owner: owner
-        };
+    const params: {
+        page: number;
+        pageSize: number;
+        title?: string;
+        owner?: boolean;
+    } = {
+        page: 1,
+        pageSize: 10,
+        owner: owner
+    };
 
-        if (title && title.trim() !== "") {
-            params.title = title.trim();
-        }
-
-        const response = await Call((client) => client.default.listProblems(params));
-        return response;
-    } catch (error) {
-        console.error('Failed to search problems:', error);
-        return null;
+    if (title && title.trim() !== "") {
+        params.title = title.trim();
     }
+
+    const response = await Call((client) => client.default.listProblems(params));
+    return response;
 }
 
 // NOTE: duplicate of listUsers
@@ -411,15 +361,10 @@ export async function listAdminContests(
   sortBy: 'created_at' | 'updated_at' | 'title' = 'created_at',
   sortOrder: 'asc' | 'desc' = 'desc'
 ) {
-  try {
-    const response = await Call((client) =>
-      client.default.listAdminContests({ page, pageSize, search, sortBy, sortOrder })
-    );
-    return response;
-  } catch (error) {
-    console.error('Failed to fetch admin contests:', error);
-    return null;
-  }
+  const response = await Call((client) =>
+    client.default.listAdminContests({ page, pageSize, search, sortBy, sortOrder })
+  );
+  return response;
 }
 
 export async function deleteContest(contestId: string) {

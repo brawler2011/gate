@@ -7,8 +7,7 @@ import { ContestsTabs } from "@/components/ContestsPage/ContestsTabs";
 import { ContestsPageWrapper } from "@/components/ContestsPage/ContestsPageWrapper";
 import { getPublicContests, getUserContests } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
-import { Alert, Center, Container, Stack } from "@mantine/core";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { Container, Stack } from "@mantine/core";
 import { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -30,22 +29,6 @@ const PublicContestsView = async ({
 }) => {
   const contestsData = await getPublicContests(page, 10, search);
 
-  if (!contestsData) {
-    return (
-      <Center py="xl">
-        <Stack align="center">
-          <Alert
-            icon={<IconAlertCircle size="1rem" />}
-            title="Ошибка загрузки"
-            color="red"
-          >
-            Не удалось загрузить список контестов. Попробуйте обновить страницу.
-          </Alert>
-        </Stack>
-      </Center>
-    );
-  }
-
   return (
     <PublicContestsWrapper
       contests={contestsData.contests}
@@ -64,22 +47,6 @@ const UserContestsView = async ({
   userId: string;
 }) => {
   const contestsData = await getUserContests(userId, page, 10, search);
-
-  if (!contestsData) {
-    return (
-      <Center py="xl">
-        <Stack align="center">
-          <Alert
-            icon={<IconAlertCircle size="1rem" />}
-            title="Ошибка загрузки"
-            color="red"
-          >
-            Не удалось загрузить список контестов. Попробуйте обновить страницу.
-          </Alert>
-        </Stack>
-      </Center>
-    );
-  }
 
   return (
     <UserContestsWrapper

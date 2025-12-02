@@ -8,10 +8,10 @@ import { WorkshopProblemsWrapper } from "@/components/WorkshopPage/WorkshopProbl
 import { WorkshopTabs } from "@/components/WorkshopPage/WorkshopTabs";
 import { getContests, getProblems } from "@/lib/actions";
 import { isAuthenticated } from "@/lib/auth";
-import { Alert, Center, Container, Stack } from "@mantine/core";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { Container, Stack } from "@mantine/core";
 import { Metadata } from "next";
 import { Suspense } from "react";
+
 export const metadata: Metadata = {
   title: "Мастерская",
   description: "",
@@ -23,30 +23,12 @@ type Props = {
 
 const ProblemsView = async ({
   page,
-  search,
   authenticated,
 }: {
   page: number;
-  search?: string;
   authenticated: boolean;
 }) => {
   const problemsData = await getProblems(page, 20, undefined, undefined, true);
-
-  if (!problemsData) {
-    return (
-      <Center py="xl">
-        <Stack align="center">
-          <Alert
-            icon={<IconAlertCircle size="1rem" />}
-            title="Ошибка загрузки"
-            color="red"
-          >
-            Не удалось загрузить список задач. Попробуйте обновить страницу.
-          </Alert>
-        </Stack>
-      </Center>
-    );
-  }
 
   return (
     <WorkshopProblemsWrapper
@@ -66,22 +48,6 @@ const ContestsView = async ({
   search?: string;
 }) => {
   const contestsData = await getContests(page, 10, search);
-
-  if (!contestsData) {
-    return (
-      <Center py="xl">
-        <Stack align="center">
-          <Alert
-            icon={<IconAlertCircle size="1rem" />}
-            title="Ошибка загрузки"
-            color="red"
-          >
-            Не удалось загрузить список контестов. Попробуйте обновить страницу.
-          </Alert>
-        </Stack>
-      </Center>
-    );
-  }
 
   return (
     <WorkshopContestsWrapper
@@ -111,7 +77,6 @@ const WorshopPageContent = async ({
           <Suspense fallback={<WorkshopProblemsContentSkeleton />}>
             <ProblemsView
               page={page}
-              search={search}
               authenticated={authenticated}
             />
           </Suspense>
