@@ -1118,6 +1118,8 @@ components:
         created_by:
           type: string
           format: uuid
+        owner:
+          $ref: "#/components/schemas/UserModel"
         created_at:
           type: string
           format: date-time
@@ -1343,6 +1345,12 @@ components:
           type: string
           example: "Contest title"
 
+        failed_test:
+          type: integer
+          nullable: true
+          example: 3
+          description: "The test number (1-indexed) where the submission failed. NULL for AC submissions."
+
         updated_at:
           type: string
           format: date-time
@@ -1436,6 +1444,12 @@ components:
           type: string
           example: "Contest title"
 
+        failed_test:
+          type: integer
+          nullable: true
+          example: 3
+          description: "The test number (1-indexed) where the submission failed. NULL for AC submissions."
+
         updated_at:
           type: string
           format: date-time
@@ -1479,6 +1493,22 @@ components:
           format: date-time
         role:
           type: string
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        name:
+          type: string
+          example: John
+        surname:
+          type: string
+          example: Doe
+        bio:
+          type: string
+          example: Software developer passionate about coding
+        img:
+          type: string
+          example: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA...
     ListUsersResponseModel:
       type: object
       required:
@@ -1662,52 +1692,81 @@ components:
       enum:
         - submission_created
         - submission_updated
+        - testing_started
+        - test_completed
+        - testing_completed
       description: |
         WebSocket message type for submission list updates:
         - submission_created: A new submission was created
-        - submission_updated: An existing submission was updated (test progress/completion)
+        - submission_updated: An existing submission was updated (test results)
+        - testing_started: Testing of a submission has started
+        - test_completed: A single test case completed (shows progress)
+        - testing_completed: All testing for a submission is finished
     SubmissionWebSocketEventModel:
       type: object
       required:
         - message_type
-        - submission
       properties:
         message_type:
           $ref: "#/components/schemas/WebSocketMessageType"
         submission:
           $ref: "#/components/schemas/SubmissionsListItemModel"
+          description: Full submission data (for submission_created/submission_updated events)
         message:
           type: string
-          description: Optional message with additional details (e.g., test progress info)
+          description: Optional message with additional details
+        submission_id:
+          type: string
+          format: uuid
+          description: Submission ID (for test progress events)
+        test_number:
+          type: integer
+          description: Current test number (for test_completed events)
+        total_tests:
+          type: integer
+          description: Total number of tests
+        passed:
+          type: boolean
+          description: Whether the current test passed (for test_completed events)
+        state:
+          type: integer
+          description: Final submission state (for testing_completed events)
+        contest_id:
+          type: string
+          format: uuid
+          description: Contest ID (for filtering)
+        user_id:
+          type: string
+          format: uuid
+          description: User ID (for filtering)
+        problem_id:
+          type: string
+          format: uuid
+          description: Problem ID (for filtering)
+        language:
+          type: integer
+          format: int64
+          description: Programming language (for filtering)
       description: |
-        WebSocket event sent to clients when a submission is created or updated.
-
-        The /ws/submissions endpoint accepts the following query parameters:
+        WebSocket event sent to clients for submission list updates.
+        
+        Event types:
+        - submission_created: New submission (includes full submission data)
+        - submission_updated: Test results ready (includes full submission data)
+        - testing_started: Testing began (includes submission_id, total_tests)
+        - test_completed: Test finished (includes submission_id, test_number, total_tests, passed)
+        - testing_completed: All tests done (includes submission_id, total_tests, state)
+        
+        The /ws/submissions endpoint accepts these query parameters:
         - contestId (uuid, optional): Filter by contest ID
         - userId (uuid, optional): Filter by user ID
         - problemId (uuid, optional): Filter by problem ID  
         - state (integer, optional): Filter by submission state
         - language (integer, optional): Filter by programming language
         - sortOrder (string, required): Must be "desc" for real-time updates
-
-        Events are only sent for the first page (page=1) when sortOrder=desc.
-        New submissions appear at the top of the list.
       example:
-        message_type: submission_created
-        submission:
-          id: "550e8400-e29b-41d4-a716-446655440000"
-          user_id: "660e8400-e29b-41d4-a716-446655440001"
-          username: "john_doe"
-          state: 1
-          score: 0
-          penalty: 0
-          time_stat: 0
-          memory_stat: 0
-          language: 30
-          problem_id: "770e8400-e29b-41d4-a716-446655440002"
-          problem_title: "Two Sum"
-          position: 1
-          contest_id: "880e8400-e29b-41d4-a716-446655440003"
-          contest_title: "Weekly Contest"
-          updated_at: "2024-01-15T10:30:00Z"
-          created_at: "2024-01-15T10:30:00Z"
+        message_type: test_completed
+        submission_id: "550e8400-e29b-41d4-a716-446655440000"
+        test_number: 3
+        total_tests: 10
+        passed: true
