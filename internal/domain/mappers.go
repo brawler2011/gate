@@ -17,6 +17,11 @@ func UserFromSqlc(u userssqlc.User) User {
 		Username:  u.Username,
 		Role:      string(u.Role),
 		KratosID:  u.KratosID,
+		Email:     u.Email,
+		Name:      u.Name,
+		Surname:   u.Surname,
+		Bio:       u.Bio,
+		Img:       u.Img,
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,
 	}
@@ -130,6 +135,7 @@ func SubmissionFromSqlc(s submissionssqlc.GetSubmissionRow) Submission {
 		Position:     derefInt32ToInt64Ptr(s.Position),
 		ContestID:    pgtypeToUUIDPtr(s.ContestID),
 		ContestTitle: derefString(s.ContestTitle),
+		FailedTest:   derefInt32ToInt64Ptr(s.FailedTest),
 		UpdatedAt:    s.UpdatedAt,
 		CreatedAt:    s.CreatedAt,
 	}
@@ -151,6 +157,7 @@ func SubmissionListRowFromSqlc(s submissionssqlc.ListSubmissionsRow) Submission 
 		Position:     derefInt32ToInt64Ptr(s.Position),
 		ContestID:    pgtypeToUUIDPtr(s.ContestID),
 		ContestTitle: derefString(s.ContestTitle),
+		FailedTest:   derefInt32ToInt64Ptr(s.FailedTest),
 		UpdatedAt:    s.UpdatedAt,
 		CreatedAt:    s.CreatedAt,
 	}

@@ -46,17 +46,23 @@ type PermissionsUC interface {
 	HasContestPermission(ctx context.Context, contestID uuid.UUID, userID uuid.UUID, action permissions.ContestAction, opts ...permissions.PermissionOption) (bool, error)
 }
 
+type UsersUC interface {
+	GetUserById(ctx context.Context, id uuid.UUID) (domain.User, error)
+}
+
 type ContestsHandlers struct {
 	contestsUC    ContestsUC
 	permissionsUC PermissionsUC
 	submissionsUC SubmissionsUC
+	usersUC       UsersUC
 }
 
-func NewHandlers(contestsUC ContestsUC, permissionsUC PermissionsUC, submissionsUC SubmissionsUC) *ContestsHandlers {
+func NewHandlers(contestsUC ContestsUC, permissionsUC PermissionsUC, submissionsUC SubmissionsUC, usersUC UsersUC) *ContestsHandlers {
 	return &ContestsHandlers{
 		contestsUC:    contestsUC,
 		permissionsUC: permissionsUC,
 		submissionsUC: submissionsUC,
+		usersUC:       usersUC,
 	}
 }
 
@@ -140,7 +146,17 @@ func (h *ContestsHandlers) GetContest(c *fiber.Ctx, id uuid.UUID) error {
 		return err
 	}
 
-	return c.JSON(GetContestResponseDTO(contest, ps))
+	// Fetch owner user
+	var owner *domain.User
+	if contest.CreatedBy != uuid.Nil {
+		ownerUser, err := h.usersUC.GetUserById(ctx, contest.CreatedBy)
+		if err == nil {
+			owner = &ownerUser
+		}
+		// Silently ignore errors fetching owner - contest can be returned without owner
+	}
+
+	return c.JSON(GetContestResponseDTO(contest, ps, owner))
 }
 
 func publicOrPrivate(s string) bool {
@@ -792,9 +808,9 @@ func (h *ContestsHandlers) ListContestSubmissions(c *fiber.Ctx, contestId uuid.U
 	return c.JSON(SubmissionsListToDTO(submissionsList))
 }
 
-func GetContestResponseDTO(contest domain.Contest, problems []domain.ContestProblem) *corev1.GetContestResponseModel {
+func GetContestResponseDTO(contest domain.Contest, problems []domain.ContestProblem, owner *domain.User) *corev1.GetContestResponseModel {
 	resp := corev1.GetContestResponseModel{
-		Contest:  ContestDTO(contest),
+		Contest:  ContestDTO(contest, owner),
 		Problems: make([]corev1.ContestProblemListItemModel, len(problems)),
 	}
 
@@ -812,7 +828,7 @@ func ListContestsResponseDTO(contestsList *domain.ContestsList) *corev1.ListCont
 	}
 
 	for i, contest := range contestsList.Contests {
-		resp.Contests[i] = ContestDTO(contest)
+		resp.Contests[i] = ContestDTO(contest, nil)
 	}
 
 	return &resp
@@ -825,7 +841,7 @@ func ListUserContestsResponseDTO(contestsList *domain.ContestsList) *corev1.List
 	}
 
 	for i, contest := range contestsList.Contests {
-		resp.Contests[i] = ContestDTO(contest)
+		resp.Contests[i] = ContestDTO(contest, nil)
 	}
 
 	return &resp
@@ -886,13 +902,14 @@ func SubmissionListItemDTO(s domain.Submission) corev1.SubmissionsListItemModel 
 		Position:     int64PtrToInt64(s.Position),
 		ContestId:    uuidPtrToUUID(s.ContestID),
 		ContestTitle: s.ContestTitle,
+		FailedTest:   int64PtrToIntPtr(s.FailedTest),
 		CreatedAt:    s.CreatedAt,
 		UpdatedAt:    s.UpdatedAt,
 	}
 }
 
-func ContestDTO(c domain.Contest) corev1.ContestModel {
-	return corev1.ContestModel{
+func ContestDTO(c domain.Contest, owner *domain.User) corev1.ContestModel {
+	model := corev1.ContestModel{
 		Id:                     c.ID,
 		Title:                  c.Title,
 		Description:            c.Description,
@@ -904,6 +921,13 @@ func ContestDTO(c domain.Contest) corev1.ContestModel {
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,
 	}
+
+	if owner != nil {
+		ownerModel := UserDTO(*owner)
+		model.Owner = &ownerModel
+	}
+
+	return model
 }
 
 func ContestProblemsListItemDTO(t domain.ContestProblem) corev1.ContestProblemListItemModel {
@@ -952,4 +976,12 @@ func int64PtrToInt64(i *int64) int64 {
 		return 0
 	}
 	return *i
+}
+
+func int64PtrToIntPtr(i *int64) *int {
+	if i == nil {
+		return nil
+	}
+	val := int(*i)
+	return &val
 }

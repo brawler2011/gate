@@ -45,11 +45,18 @@ func (r *PgRepository) CreateSubmission(ctx context.Context, creation *models.Su
 }
 
 func (r *PgRepository) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
+	var failedTest *int32
+	if update.FailedTest != nil {
+		val := int32(*update.FailedTest)
+		failedTest = &val
+	}
+	
 	err := r.queries.UpdateSubmission(ctx, submissionssqlc.UpdateSubmissionParams{
 		State:      update.State,
 		Score:      int32(update.Score),
 		TimeStat:   int32(update.TimeStat),
 		MemoryStat: int32(update.MemoryStat),
+		FailedTest: failedTest,
 		ID:         id,
 	})
 	if err != nil {

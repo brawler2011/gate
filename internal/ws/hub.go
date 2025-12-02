@@ -50,6 +50,8 @@ type Hub struct {
 	listSubscription *nats.Subscription
 	// listClients are clients subscribed to the submission list
 	listClients map[*Client]bool
+	// lastTestCache stores the last test_completed event for each submission
+	lastTestCache map[uuid.UUID][]byte
 }
 
 // NewHub creates a new Hub
@@ -67,6 +69,7 @@ func NewHub(logger *slog.Logger, natsURL string) (*Hub, error) {
 		register:      make(chan *Client),
 		unregister:    make(chan *Client),
 		listClients:   make(map[*Client]bool),
+		lastTestCache: make(map[uuid.UUID][]byte),
 	}
 
 	return hub, nil
@@ -161,6 +164,25 @@ func (h *Hub) handleSubmissionListEvent(data []byte) {
 		h.logger.Error("failed to unmarshal submission list event",
 			slog.Any("error", err))
 		return
+	}
+
+	// Cache test_completed events for later retrieval
+	if event.MessageType == models.MessageTypeTestCompleted && event.SubmissionID != nil {
+		h.mu.Lock()
+		h.lastTestCache[*event.SubmissionID] = data
+		h.mu.Unlock()
+		h.logger.Debug("cached test_completed event",
+			slog.String("submission_id", event.SubmissionID.String()),
+			slog.Int("test_number", event.TestNumber))
+	}
+
+	// Clear cached test when testing is completed
+	if event.MessageType == models.MessageTypeTestingCompleted && event.SubmissionID != nil {
+		h.mu.Lock()
+		delete(h.lastTestCache, *event.SubmissionID)
+		h.mu.Unlock()
+		h.logger.Debug("cleared cached test for submission",
+			slog.String("submission_id", event.SubmissionID.String()))
 	}
 
 	h.mu.RLock()
@@ -325,6 +347,20 @@ func (h *Hub) cleanupClientSubscriptions(client *Client) {
 		h.listSubscription = nil
 		h.logger.Debug("unsubscribed from submissions.list")
 	}
+}
+
+// GetLastTests returns the cached last test_completed events for the given submission IDs
+func (h *Hub) GetLastTests(submissionIDs []uuid.UUID) map[uuid.UUID][]byte {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	result := make(map[uuid.UUID][]byte)
+	for _, id := range submissionIDs {
+		if data, ok := h.lastTestCache[id]; ok {
+			result[id] = data
+		}
+	}
+	return result
 }
 
 // NewClient creates a new Client

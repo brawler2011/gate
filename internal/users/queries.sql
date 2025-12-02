@@ -1,6 +1,6 @@
 -- name: CreateUser :exec
-INSERT INTO users (id, username, role, kratos_id)
-VALUES (@id::uuid, @username, @role, @kratos_id);
+INSERT INTO users (id, username, role, kratos_id, email, name, surname, bio, img)
+VALUES (@id::uuid, @username, @role, @kratos_id, @email, @name, @surname, @bio, @img);
 
 -- name: GetUserById :one
 SELECT *

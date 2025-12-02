@@ -30,6 +30,11 @@ type CreateUserInput struct {
 	Username string
 	Role     string
 	KratosId string
+	Email    *string
+	Name     *string
+	Surname  *string
+	Bio      *string
+	Img      *string
 }
 
 type CreateUserParams struct {
@@ -37,4 +42,9 @@ type CreateUserParams struct {
 	Username string
 	Role     string
 	KratosId string
+	Email    *string
+	Name     *string
+	Surname  *string
+	Bio      *string
+	Img      *string
 }

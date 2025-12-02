@@ -19,11 +19,21 @@ type OutboxEventType string
 
 const (
 	EventTypeSubmissionCreated OutboxEventType = "submission.created"
+	EventTypeSubmissionTest    OutboxEventType = "submission.test"
 	EventTypeSubmissionTested  OutboxEventType = "submission.tested"
 )
 
 // SubmissionCreatedPayload represents the payload for submission.created events
 type SubmissionCreatedPayload struct {
+	SubmissionId uuid.UUID `json:"submission_id"`
+	ProblemId    uuid.UUID `json:"problem_id"`
+	ContestId    uuid.UUID `json:"contest_id"`
+	Language     int64     `json:"language"`
+	CreatedBy    uuid.UUID `json:"created_by"`
+}
+
+// SubmissionTestPayload represents the payload for submission.test events
+type SubmissionTestPayload struct {
 	SubmissionId uuid.UUID `json:"submission_id"`
 	ProblemId    uuid.UUID `json:"problem_id"`
 	ContestId    uuid.UUID `json:"contest_id"`

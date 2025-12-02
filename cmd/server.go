@@ -131,7 +131,7 @@ func runServer(envFile string) {
 	outboxRepo := outbox.NewRepository(pool)
 
 	solutionsRepo := submissions.NewRepository(pool)
-	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsUC, problemsUC, outboxRepo)
+	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsUC, problemsUC, outboxRepo, natsPublisher, logger)
 
 	// Initialize and start outbox worker
 	ctx, cancel := context.WithCancel(context.Background())
@@ -146,7 +146,7 @@ func runServer(envFile string) {
 
 	merged := &MergedHandlers{
 		UsersHandlers:     users.NewHandlers(usersUC, solutionsUC, permissionsUC),
-		ContestsHandlers:  contests.NewHandlers(contestsUC, permissionsUC, solutionsUC),
+		ContestsHandlers:  contests.NewHandlers(contestsUC, permissionsUC, solutionsUC, usersUC),
 		ProblemsHandlers:  problems.NewHandlers(problemsUC, permissionsUC),
 		SolutionsHandlers: submissions.NewHandlers(solutionsUC, permissionsUC, usersUC),
 		HealthHandlers:    health.NewHandlers(),

@@ -26,6 +26,11 @@ func (r *Repository) CreateUser(ctx context.Context, params *models.CreateUserPa
 		Username: params.Username,
 		Role:     userssqlc.UserRole(params.Role),
 		KratosID: params.KratosId,
+		Email:    params.Email,
+		Name:     params.Name,
+		Surname:  params.Surname,
+		Bio:      params.Bio,
+		Img:      params.Img,
 	})
 	if err != nil {
 		return pkg.HandlePgErr(err)

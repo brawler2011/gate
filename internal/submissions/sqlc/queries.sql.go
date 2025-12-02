@@ -115,6 +115,7 @@ SELECT s.id,
     s.contest_id,
     c.title AS contest_title,
     c.visibility AS contest_visibility,
+    s.failed_test,
     s.updated_at,
     s.created_at
 FROM submissions s
@@ -143,6 +144,7 @@ type GetSubmissionRow struct {
 	ContestID         pgtype.UUID           `json:"contest_id"`
 	ContestTitle      *string               `json:"contest_title"`
 	ContestVisibility NullContestVisibility `json:"contest_visibility"`
+	FailedTest        *int32                `json:"failed_test"`
 	UpdatedAt         time.Time             `json:"updated_at"`
 	CreatedAt         time.Time             `json:"created_at"`
 }
@@ -167,6 +169,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.ContestID,
 		&i.ContestTitle,
 		&i.ContestVisibility,
+		&i.FailedTest,
 		&i.UpdatedAt,
 		&i.CreatedAt,
 	)
@@ -236,6 +239,7 @@ SELECT s.id,
   cp.position,
   s.contest_id,
   c.title AS contest_title,
+  s.failed_test,
   s.updated_at,
   s.created_at
 FROM submissions s
@@ -299,6 +303,7 @@ type ListSubmissionsRow struct {
 	Position     *int32              `json:"position"`
 	ContestID    pgtype.UUID         `json:"contest_id"`
 	ContestTitle *string             `json:"contest_title"`
+	FailedTest   *int32              `json:"failed_test"`
 	UpdatedAt    time.Time           `json:"updated_at"`
 	CreatedAt    time.Time           `json:"created_at"`
 }
@@ -337,6 +342,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.Position,
 			&i.ContestID,
 			&i.ContestTitle,
+			&i.FailedTest,
 			&i.UpdatedAt,
 			&i.CreatedAt,
 		); err != nil {
@@ -355,8 +361,9 @@ UPDATE submissions
 SET state = $1,
     score = $2,
     time_stat = $3,
-    memory_stat = $4
-WHERE id = $5::uuid
+    memory_stat = $4,
+    failed_test = $5
+WHERE id = $6::uuid
 `
 
 type UpdateSubmissionParams struct {
@@ -364,6 +371,7 @@ type UpdateSubmissionParams struct {
 	Score      int32        `json:"score"`
 	TimeStat   int32        `json:"time_stat"`
 	MemoryStat int32        `json:"memory_stat"`
+	FailedTest *int32       `json:"failed_test"`
 	ID         uuid.UUID    `json:"id"`
 }
 
@@ -373,6 +381,7 @@ func (q *Queries) UpdateSubmission(ctx context.Context, arg UpdateSubmissionPara
 		arg.Score,
 		arg.TimeStat,
 		arg.MemoryStat,
+		arg.FailedTest,
 		arg.ID,
 	)
 	return err

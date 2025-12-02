@@ -23,6 +23,7 @@ type Submission struct {
 	Position     *int64              `json:"position"`
 	ContestID    *uuid.UUID          `json:"contest_id"`
 	ContestTitle string              `json:"contest_title"`
+	FailedTest   *int64              `json:"failed_test,omitempty"`
 	UpdatedAt    time.Time           `json:"updated_at"`
 	CreatedAt    time.Time           `json:"created_at"`
 }

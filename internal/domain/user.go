@@ -12,6 +12,11 @@ type User struct {
 	Username  string    `json:"username"`
 	Role      string    `json:"role"`
 	KratosID  string    `json:"kratos_id"`
+	Email     *string   `json:"email,omitempty"`
+	Name      *string   `json:"name,omitempty"`
+	Surname   *string   `json:"surname,omitempty"`
+	Bio       *string   `json:"bio,omitempty"`
+	Img       *string   `json:"img,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
