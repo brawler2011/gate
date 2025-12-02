@@ -15,6 +15,9 @@ SELECT
     submissions_list_scope,
     submissions_review_scope,
     created_by,
+    start_time,
+    end_time,
+    scoring_mode,
     created_at,
     updated_at
 FROM contests
@@ -27,7 +30,10 @@ SET title                    = COALESCE(sqlc.narg('title'), title),
     visibility               = COALESCE(sqlc.narg('visibility'), visibility),
     monitor_scope            = COALESCE(sqlc.narg('monitor_scope'), monitor_scope),
     submissions_list_scope   = COALESCE(sqlc.narg('submissions_list_scope'), submissions_list_scope),
-    submissions_review_scope = COALESCE(sqlc.narg('submissions_review_scope'), submissions_review_scope)
+    submissions_review_scope = COALESCE(sqlc.narg('submissions_review_scope'), submissions_review_scope),
+    start_time               = COALESCE(sqlc.narg('start_time'), start_time),
+    end_time                 = COALESCE(sqlc.narg('end_time'), end_time),
+    scoring_mode             = COALESCE(sqlc.narg('scoring_mode'), scoring_mode)
 WHERE id = @id::uuid;
 
 -- name: DeleteContest :exec
@@ -45,6 +51,9 @@ SELECT c.id,
        c.submissions_list_scope,
        c.submissions_review_scope,
        c.created_by,
+       c.start_time,
+       c.end_time,
+       c.scoring_mode,
        c.created_at,
        c.updated_at
 FROM contests c
@@ -119,6 +128,9 @@ SELECT c.id,
        c.submissions_list_scope,
        c.submissions_review_scope,
        c.created_by,
+       c.start_time,
+       c.end_time,
+       c.scoring_mode,
        c.created_at,
        c.updated_at
 FROM contests c
@@ -187,6 +199,9 @@ SELECT c.id,
        c.submissions_list_scope,
        c.submissions_review_scope,
        c.created_by,
+       c.start_time,
+       c.end_time,
+       c.scoring_mode,
        c.created_at,
        c.updated_at
 FROM contests c
@@ -281,6 +296,9 @@ SELECT c.id,
        c.submissions_list_scope,
        c.submissions_review_scope,
        c.created_by,
+       c.start_time,
+       c.end_time,
+       c.scoring_mode,
        c.created_at,
        c.updated_at
 FROM contests c
@@ -433,4 +451,126 @@ LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 -- name: CountContestMembers :one
 SELECT COUNT(*)
 FROM contest_members
+WHERE contest_id = @contest_id::uuid;
+
+-- Contest Access Requests operations
+
+-- name: CreateAccessRequest :one
+INSERT INTO contest_access_requests (id, contest_id, user_id, status)
+VALUES (@id::uuid, @contest_id::uuid, @user_id::uuid, @status)
+RETURNING id;
+
+-- name: GetAccessRequest :one
+SELECT id, contest_id, user_id, status, created_at, updated_at
+FROM contest_access_requests
+WHERE contest_id = @contest_id::uuid
+  AND user_id = @user_id::uuid;
+
+-- name: GetAccessRequestById :one
+SELECT id, contest_id, user_id, status, created_at, updated_at
+FROM contest_access_requests
+WHERE id = @id::uuid;
+
+-- name: ListAccessRequests :many
+SELECT car.id, car.contest_id, car.user_id, car.status, car.created_at, car.updated_at,
+       u.username, u.role AS user_role
+FROM contest_access_requests car
+LEFT JOIN users u ON car.user_id = u.id
+WHERE car.contest_id = @contest_id::uuid
+  AND (sqlc.narg('status')::text IS NULL OR car.status = sqlc.narg('status')::contest_access_request_status)
+ORDER BY car.created_at DESC
+LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
+-- name: CountAccessRequests :one
+SELECT COUNT(*)
+FROM contest_access_requests
+WHERE contest_id = @contest_id::uuid
+  AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status')::contest_access_request_status);
+
+-- name: UpdateAccessRequestStatus :exec
+UPDATE contest_access_requests
+SET status = @status
+WHERE id = @id::uuid;
+
+-- name: DeleteAccessRequest :exec
+DELETE FROM contest_access_requests
+WHERE id = @id::uuid;
+
+-- Contest Invitations operations
+
+-- name: CreateInvitation :one
+INSERT INTO contest_invitations (id, contest_id, user_id, invited_by, status)
+VALUES (@id::uuid, @contest_id::uuid, @user_id::uuid, @invited_by::uuid, @status)
+RETURNING id;
+
+-- name: GetInvitation :one
+SELECT id, contest_id, user_id, invited_by, status, created_at, updated_at
+FROM contest_invitations
+WHERE id = @id::uuid;
+
+-- name: GetInvitationByUser :one
+SELECT id, contest_id, user_id, invited_by, status, created_at, updated_at
+FROM contest_invitations
+WHERE contest_id = @contest_id::uuid
+  AND user_id = @user_id::uuid
+  AND status != 'revoked'
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- name: ListInvitations :many
+SELECT ci.id, ci.contest_id, ci.user_id, ci.invited_by, ci.status, ci.created_at, ci.updated_at,
+       u.username, u.role AS user_role,
+       inv.username AS invited_by_username
+FROM contest_invitations ci
+LEFT JOIN users u ON ci.user_id = u.id
+LEFT JOIN users inv ON ci.invited_by = inv.id
+WHERE ci.contest_id = @contest_id::uuid
+  AND (sqlc.narg('status')::text IS NULL OR ci.status = sqlc.narg('status')::contest_invitation_status)
+ORDER BY ci.created_at DESC
+LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
+-- name: ListUserInvitations :many
+SELECT ci.id, ci.contest_id, ci.user_id, ci.invited_by, ci.status, ci.created_at, ci.updated_at,
+       c.title AS contest_title,
+       inv.username AS invited_by_username
+FROM contest_invitations ci
+LEFT JOIN contests c ON ci.contest_id = c.id
+LEFT JOIN users inv ON ci.invited_by = inv.id
+WHERE ci.user_id = @user_id::uuid
+  AND ci.status = 'pending'
+ORDER BY ci.created_at DESC
+LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
+-- name: CountInvitations :one
+SELECT COUNT(*)
+FROM contest_invitations
+WHERE contest_id = @contest_id::uuid
+  AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status')::contest_invitation_status);
+
+-- name: UpdateInvitationStatus :exec
+UPDATE contest_invitations
+SET status = @status
+WHERE id = @id::uuid;
+
+-- name: DeleteInvitation :exec
+DELETE FROM contest_invitations
+WHERE id = @id::uuid;
+
+-- Problem Position Management
+
+-- name: UpdateContestProblemPosition :exec
+UPDATE contest_problem
+SET position = @position
+WHERE contest_id = @contest_id::uuid
+  AND problem_id = @problem_id::uuid;
+
+-- name: ReorderContestProblemsAfterDelete :exec
+UPDATE contest_problem
+SET position = position - 1
+WHERE contest_id = @contest_id::uuid
+  AND position > @deleted_position;
+
+-- name: GetMaxProblemPosition :one
+SELECT COALESCE(MAX(position), -1) AS max_position
+FROM contest_problem
 WHERE contest_id = @contest_id::uuid;

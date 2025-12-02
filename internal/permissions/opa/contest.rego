@@ -46,6 +46,7 @@ is_participant if {
 permissions = {
 	"GetContest": can_get_contest,
 	"UpdateContest": can_update_contest,
+	"ManageContest": can_manage_contest,
 	"AdminContest": can_admin_contest,
 	"GetMonitor": can_get_monitor,
 	"ListUsersSubmissions": can_list_users_submissions,
@@ -63,6 +64,7 @@ allow if permissions[input.action]
 # Default values
 default can_get_contest := false
 default can_update_contest := false
+default can_manage_contest := false
 default can_admin_contest := false
 default can_get_monitor := false
 default can_list_users_submissions := false
@@ -70,6 +72,35 @@ default can_list_own_submissions := false
 default can_get_other_user_submission := false
 default can_get_own_submission := false
 default can_create_submission := false
+
+# Time-based access helpers
+contest_started if {
+	contest
+	contest.start_time
+	time.now_ns() >= time.parse_rfc3339_ns(contest.start_time)
+}
+
+contest_started if {
+	contest
+	not contest.start_time
+}
+
+contest_ended if {
+	contest
+	contest.end_time
+	time.now_ns() > time.parse_rfc3339_ns(contest.end_time)
+}
+
+contest_ended if {
+	contest
+	not contest.end_time
+	false
+}
+
+contest_active if {
+	contest_started
+	not contest_ended
+}
 
 has_full_access if is_admin
 has_full_access if is_owner
@@ -86,6 +117,10 @@ can_get_contest := true if {
 # UpdateContest
 can_update_contest := true if has_full_access
 can_update_contest := true if is_moderator
+
+# ManageContest - manage members, invitations, access requests
+can_manage_contest := true if has_full_access
+can_manage_contest := true if is_moderator
 
 # AdminContest
 can_admin_contest := true if has_full_access
@@ -134,11 +169,24 @@ can_get_own_submission := true if has_full_access
 can_get_own_submission := true if is_participant
 can_get_own_submission := true if is_moderator
 
-# CreateSubmission
-can_create_submission := true if has_full_access
-can_create_submission := true if is_participant
-can_create_submission := true if is_moderator
+# CreateSubmission - must be within contest time
+can_create_submission := true if {
+	has_full_access
+	contest_active
+}
+
+can_create_submission := true if {
+	is_participant
+	contest_active
+}
+
+can_create_submission := true if {
+	is_moderator
+	contest_active
+}
+
 can_create_submission := true if {
 	contest
 	contest.visibility == "public"
+	contest_active
 }

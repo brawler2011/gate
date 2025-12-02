@@ -32,6 +32,18 @@ type Repo interface {
 	CreateProblemTests(ctx context.Context, tests models.ProblemTests) error
 	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.ProblemTest, error)
 	DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error
+
+	// Test Groups
+	CreateTestGroup(ctx context.Context, id uuid.UUID, problemId uuid.UUID, ordinal int64, name string, points int64, isSample bool) error
+	GetTestGroup(ctx context.Context, id uuid.UUID) (problemssqlc.TestGroup, error)
+	GetTestGroupsByProblem(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.TestGroup, error)
+	UpdateTestGroup(ctx context.Context, id uuid.UUID, name *string, points *int64, isSample *bool) error
+	DeleteTestGroup(ctx context.Context, id uuid.UUID) error
+
+	// Problem Samples
+	CreateProblemSample(ctx context.Context, id uuid.UUID, problemId uuid.UUID, ordinal int64, input string, output string) error
+	GetProblemSamples(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.ProblemSample, error)
+	DeleteProblemSample(ctx context.Context, id uuid.UUID) error
 }
 
 type PandocClient interface {
@@ -376,6 +388,112 @@ func (uc *UseCase) UploadProblemTests(ctx context.Context, problemId uuid.UUID, 
 
 	// Create new tests
 	return uc.CreateProblemTests(ctx, problemId, tests)
+}
+
+// Test Groups
+
+func (uc *UseCase) CreateTestGroup(ctx context.Context, problemId uuid.UUID, ordinal int64, name string, points int64, isSample bool) (uuid.UUID, error) {
+	id := uuid.New()
+	err := uc.repo.CreateTestGroup(ctx, id, problemId, ordinal, name, points, isSample)
+	if err != nil {
+		return uuid.Nil, pkg.Wrap(err, nil, "can't create test group")
+	}
+	return id, nil
+}
+
+func (uc *UseCase) GetTestGroup(ctx context.Context, id uuid.UUID) (domain.TestGroup, error) {
+	group, err := uc.repo.GetTestGroup(ctx, id)
+	if err != nil {
+		return domain.TestGroup{}, pkg.Wrap(err, nil, "can't get test group")
+	}
+
+	return domain.TestGroup{
+		ID:        group.ID,
+		ProblemID: group.ProblemID,
+		Ordinal:   int64(group.Ordinal),
+		Name:      group.Name,
+		Points:    int64(group.Points),
+		IsSample:  group.IsSample,
+		CreatedAt: group.CreatedAt,
+	}, nil
+}
+
+func (uc *UseCase) GetTestGroupsByProblem(ctx context.Context, problemId uuid.UUID) ([]domain.TestGroup, error) {
+	groups, err := uc.repo.GetTestGroupsByProblem(ctx, problemId)
+	if err != nil {
+		return nil, pkg.Wrap(err, nil, "can't get test groups")
+	}
+
+	domainGroups := make([]domain.TestGroup, len(groups))
+	for i, g := range groups {
+		domainGroups[i] = domain.TestGroup{
+			ID:        g.ID,
+			ProblemID: g.ProblemID,
+			Ordinal:   int64(g.Ordinal),
+			Name:      g.Name,
+			Points:    int64(g.Points),
+			IsSample:  g.IsSample,
+			CreatedAt: g.CreatedAt,
+		}
+	}
+
+	return domainGroups, nil
+}
+
+func (uc *UseCase) UpdateTestGroup(ctx context.Context, id uuid.UUID, name *string, points *int64, isSample *bool) error {
+	err := uc.repo.UpdateTestGroup(ctx, id, name, points, isSample)
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't update test group")
+	}
+	return nil
+}
+
+func (uc *UseCase) DeleteTestGroup(ctx context.Context, id uuid.UUID) error {
+	err := uc.repo.DeleteTestGroup(ctx, id)
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't delete test group")
+	}
+	return nil
+}
+
+// Problem Samples
+
+func (uc *UseCase) CreateProblemSample(ctx context.Context, problemId uuid.UUID, ordinal int64, input string, output string) (uuid.UUID, error) {
+	id := uuid.New()
+	err := uc.repo.CreateProblemSample(ctx, id, problemId, ordinal, input, output)
+	if err != nil {
+		return uuid.Nil, pkg.Wrap(err, nil, "can't create problem sample")
+	}
+	return id, nil
+}
+
+func (uc *UseCase) GetProblemSamples(ctx context.Context, problemId uuid.UUID) ([]domain.ProblemSample, error) {
+	samples, err := uc.repo.GetProblemSamples(ctx, problemId)
+	if err != nil {
+		return nil, pkg.Wrap(err, nil, "can't get problem samples")
+	}
+
+	domainSamples := make([]domain.ProblemSample, len(samples))
+	for i, s := range samples {
+		domainSamples[i] = domain.ProblemSample{
+			ID:        s.ID,
+			ProblemID: s.ProblemID,
+			Ordinal:   int64(s.Ordinal),
+			Input:     s.Input,
+			Output:    s.Output,
+			CreatedAt: s.CreatedAt,
+		}
+	}
+
+	return domainSamples, nil
+}
+
+func (uc *UseCase) DeleteProblemSample(ctx context.Context, id uuid.UUID) error {
+	err := uc.repo.DeleteProblemSample(ctx, id)
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't delete problem sample")
+	}
+	return nil
 }
 
 func extractNumber(s string) string {

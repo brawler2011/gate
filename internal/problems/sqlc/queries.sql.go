@@ -93,6 +93,35 @@ func (q *Queries) CreateProblemMember(ctx context.Context, arg CreateProblemMemb
 	return err
 }
 
+const createProblemSample = `-- name: CreateProblemSample :one
+
+INSERT INTO problem_samples (id, problem_id, ordinal, input, output)
+VALUES ($1::uuid, $2::uuid, $3, $4, $5)
+RETURNING id
+`
+
+type CreateProblemSampleParams struct {
+	ID        uuid.UUID `json:"id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	Ordinal   int32     `json:"ordinal"`
+	Input     string    `json:"input"`
+	Output    string    `json:"output"`
+}
+
+// Problem Samples operations
+func (q *Queries) CreateProblemSample(ctx context.Context, arg CreateProblemSampleParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createProblemSample,
+		arg.ID,
+		arg.ProblemID,
+		arg.Ordinal,
+		arg.Input,
+		arg.Output,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createProblemTest = `-- name: CreateProblemTest :exec
 
 INSERT INTO problem_tests (problem_id, ordinal, input, output)
@@ -117,6 +146,37 @@ func (q *Queries) CreateProblemTest(ctx context.Context, arg CreateProblemTestPa
 	return err
 }
 
+const createTestGroup = `-- name: CreateTestGroup :one
+
+INSERT INTO test_groups (id, problem_id, ordinal, name, points, is_sample)
+VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)
+RETURNING id
+`
+
+type CreateTestGroupParams struct {
+	ID        uuid.UUID `json:"id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	Ordinal   int32     `json:"ordinal"`
+	Name      string    `json:"name"`
+	Points    int32     `json:"points"`
+	IsSample  bool      `json:"is_sample"`
+}
+
+// Test Groups operations
+func (q *Queries) CreateTestGroup(ctx context.Context, arg CreateTestGroupParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createTestGroup,
+		arg.ID,
+		arg.ProblemID,
+		arg.Ordinal,
+		arg.Name,
+		arg.Points,
+		arg.IsSample,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const deleteProblem = `-- name: DeleteProblem :exec
 DELETE
 FROM problems
@@ -128,6 +188,26 @@ func (q *Queries) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const deleteProblemSample = `-- name: DeleteProblemSample :exec
+DELETE FROM problem_samples
+WHERE id = $1::uuid
+`
+
+func (q *Queries) DeleteProblemSample(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteProblemSample, id)
+	return err
+}
+
+const deleteProblemSamplesByProblem = `-- name: DeleteProblemSamplesByProblem :exec
+DELETE FROM problem_samples
+WHERE problem_id = $1::uuid
+`
+
+func (q *Queries) DeleteProblemSamplesByProblem(ctx context.Context, problemID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteProblemSamplesByProblem, problemID)
+	return err
+}
+
 const deleteProblemTests = `-- name: DeleteProblemTests :exec
 DELETE FROM problem_tests
 WHERE problem_id = $1::uuid
@@ -135,6 +215,26 @@ WHERE problem_id = $1::uuid
 
 func (q *Queries) DeleteProblemTests(ctx context.Context, problemID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteProblemTests, problemID)
+	return err
+}
+
+const deleteTestGroup = `-- name: DeleteTestGroup :exec
+DELETE FROM test_groups
+WHERE id = $1::uuid
+`
+
+func (q *Queries) DeleteTestGroup(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteTestGroup, id)
+	return err
+}
+
+const deleteTestGroupsByProblem = `-- name: DeleteTestGroupsByProblem :exec
+DELETE FROM test_groups
+WHERE problem_id = $1::uuid
+`
+
+func (q *Queries) DeleteTestGroupsByProblem(ctx context.Context, problemID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteTestGroupsByProblem, problemID)
 	return err
 }
 
@@ -192,6 +292,40 @@ func (q *Queries) GetProblemMember(ctx context.Context, arg GetProblemMemberPara
 	return i, err
 }
 
+const getProblemSamples = `-- name: GetProblemSamples :many
+SELECT id, problem_id, ordinal, input, output, created_at
+FROM problem_samples
+WHERE problem_id = $1::uuid
+ORDER BY ordinal ASC
+`
+
+func (q *Queries) GetProblemSamples(ctx context.Context, problemID uuid.UUID) ([]ProblemSample, error) {
+	rows, err := q.db.Query(ctx, getProblemSamples, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProblemSample{}
+	for rows.Next() {
+		var i ProblemSample
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProblemID,
+			&i.Ordinal,
+			&i.Input,
+			&i.Output,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProblemTests = `-- name: GetProblemTests :many
 SELECT id, problem_id, ordinal, input, output, created_at
 FROM problem_tests
@@ -199,21 +333,86 @@ WHERE problem_id = $1::uuid
 ORDER BY ordinal ASC
 `
 
-func (q *Queries) GetProblemTests(ctx context.Context, problemID uuid.UUID) ([]ProblemTest, error) {
+type GetProblemTestsRow struct {
+	ID        uuid.UUID `json:"id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	Ordinal   int32     `json:"ordinal"`
+	Input     string    `json:"input"`
+	Output    string    `json:"output"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (q *Queries) GetProblemTests(ctx context.Context, problemID uuid.UUID) ([]GetProblemTestsRow, error) {
 	rows, err := q.db.Query(ctx, getProblemTests, problemID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ProblemTest{}
+	items := []GetProblemTestsRow{}
 	for rows.Next() {
-		var i ProblemTest
+		var i GetProblemTestsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProblemID,
 			&i.Ordinal,
 			&i.Input,
 			&i.Output,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTestGroup = `-- name: GetTestGroup :one
+SELECT id, problem_id, ordinal, name, points, is_sample, created_at
+FROM test_groups
+WHERE id = $1::uuid
+`
+
+func (q *Queries) GetTestGroup(ctx context.Context, id uuid.UUID) (TestGroup, error) {
+	row := q.db.QueryRow(ctx, getTestGroup, id)
+	var i TestGroup
+	err := row.Scan(
+		&i.ID,
+		&i.ProblemID,
+		&i.Ordinal,
+		&i.Name,
+		&i.Points,
+		&i.IsSample,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getTestGroupsByProblem = `-- name: GetTestGroupsByProblem :many
+SELECT id, problem_id, ordinal, name, points, is_sample, created_at
+FROM test_groups
+WHERE problem_id = $1::uuid
+ORDER BY ordinal ASC
+`
+
+func (q *Queries) GetTestGroupsByProblem(ctx context.Context, problemID uuid.UUID) ([]TestGroup, error) {
+	rows, err := q.db.Query(ctx, getTestGroupsByProblem, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []TestGroup{}
+	for rows.Next() {
+		var i TestGroup
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProblemID,
+			&i.Ordinal,
+			&i.Name,
+			&i.Points,
+			&i.IsSample,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -378,6 +577,31 @@ func (q *Queries) UpdateProblem(ctx context.Context, arg UpdateProblemParams) er
 		arg.OutputFormatHtml,
 		arg.NotesHtml,
 		arg.ScoringHtml,
+		arg.ID,
+	)
+	return err
+}
+
+const updateTestGroup = `-- name: UpdateTestGroup :exec
+UPDATE test_groups
+SET name      = COALESCE($1, name),
+    points    = COALESCE($2, points),
+    is_sample = COALESCE($3, is_sample)
+WHERE id = $4::uuid
+`
+
+type UpdateTestGroupParams struct {
+	Name     *string   `json:"name"`
+	Points   *int32    `json:"points"`
+	IsSample *bool     `json:"is_sample"`
+	ID       uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateTestGroup(ctx context.Context, arg UpdateTestGroupParams) error {
+	_, err := q.db.Exec(ctx, updateTestGroup,
+		arg.Name,
+		arg.Points,
+		arg.IsSample,
 		arg.ID,
 	)
 	return err

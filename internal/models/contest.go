@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -90,13 +92,16 @@ func (f PublicContestsFilter) Offset() int64 {
 }
 
 type ContestUpdate struct {
-	Id                     uuid.UUID `db:"id"`
-	Title                  *string   `json:"title"`
-	Description            *string   `json:"description"`
-	Visibility             *string   `db:"visibility"`
-	MonitorScope           *string   `db:"monitor_scope"`
-	SubmissionsListScope   *string   `db:"submissions_list_scope"`
-	SubmissionsReviewScope *string   `db:"submissions_review_scope"`
+	Id                     uuid.UUID  `db:"id"`
+	Title                  *string    `json:"title"`
+	Description            *string    `json:"description"`
+	Visibility             *string    `db:"visibility"`
+	MonitorScope           *string    `db:"monitor_scope"`
+	SubmissionsListScope   *string    `db:"submissions_list_scope"`
+	SubmissionsReviewScope *string    `db:"submissions_review_scope"`
+	StartTime              *time.Time `json:"start_time"`
+	EndTime                *time.Time `json:"end_time"`
+	ScoringMode            *string    `json:"scoring_mode"`
 }
 
 type ContestProblemGet struct {

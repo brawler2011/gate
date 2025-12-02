@@ -7,16 +7,19 @@ import (
 )
 
 type Contest struct {
-	ID                     uuid.UUID `json:"id"`
-	Title                  string    `json:"title"`
-	Description            string    `json:"description"`
-	Visibility             string    `json:"visibility"`
-	MonitorScope           string    `json:"monitor_scope"`
-	SubmissionsListScope   string    `json:"submissions_list_scope"`
-	SubmissionsReviewScope string    `json:"submissions_review_scope"`
-	CreatedBy              uuid.UUID `json:"created_by"`
-	CreatedAt              time.Time `json:"created_at"`
-	UpdatedAt              time.Time `json:"updated_at"`
+	ID                     uuid.UUID  `json:"id"`
+	Title                  string     `json:"title"`
+	Description            string     `json:"description"`
+	Visibility             string     `json:"visibility"`
+	MonitorScope           string     `json:"monitor_scope"`
+	SubmissionsListScope   string     `json:"submissions_list_scope"`
+	SubmissionsReviewScope string     `json:"submissions_review_scope"`
+	CreatedBy              uuid.UUID  `json:"created_by"`
+	StartTime              *time.Time `json:"start_time,omitempty"`
+	EndTime                *time.Time `json:"end_time,omitempty"`
+	ScoringMode            string     `json:"scoring_mode"`
+	CreatedAt              time.Time  `json:"created_at"`
+	UpdatedAt              time.Time  `json:"updated_at"`
 }
 
 type ContestsList struct {
@@ -53,5 +56,47 @@ type ContestMember struct {
 type ContestMembersList struct {
 	Members    []ContestMember `json:"members"`
 	Pagination Pagination      `json:"pagination"`
+}
+
+type ContestAccessRequest struct {
+	ID        uuid.UUID `json:"id"`
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type ContestInvitation struct {
+	ID        uuid.UUID `json:"id"`
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	InvitedBy uuid.UUID `json:"invited_by"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type MonitorProblemStatus struct {
+	ProblemID uuid.UUID `json:"problem_id"`
+	Position  int64     `json:"position"`
+	Score     int64     `json:"score"`
+	Attempts  int64     `json:"attempts"`
+	Solved    bool      `json:"solved"`
+	Penalty   int64     `json:"penalty"`
+}
+
+type MonitorRow struct {
+	UserID       uuid.UUID              `json:"user_id"`
+	Username     string                 `json:"username"`
+	TotalScore   int64                  `json:"total_score"`
+	TotalPenalty int64                  `json:"total_penalty"`
+	SolvedCount  int64                  `json:"solved_count"`
+	Problems     []MonitorProblemStatus `json:"problems"`
+}
+
+type Monitor struct {
+	Rows       []MonitorRow `json:"rows"`
+	Pagination Pagination   `json:"pagination"`
 }
 

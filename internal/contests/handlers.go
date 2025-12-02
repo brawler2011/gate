@@ -36,6 +36,19 @@ type ContestsUC interface {
 
 	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (domain.ContestMember, error)
 	UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error
+
+	CheckContestTimeAccess(ctx context.Context, contestId uuid.UUID) error
+	CreateAccessRequest(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (uuid.UUID, error)
+	ApproveAccessRequest(ctx context.Context, requestId uuid.UUID) error
+	RejectAccessRequest(ctx context.Context, requestId uuid.UUID) error
+
+	SendInvitation(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, invitedBy uuid.UUID) (uuid.UUID, error)
+	AcceptInvitation(ctx context.Context, invitationId uuid.UUID) error
+	DeclineInvitation(ctx context.Context, invitationId uuid.UUID) error
+	RevokeInvitation(ctx context.Context, invitationId uuid.UUID) error
+
+	UpdateProblemPosition(ctx context.Context, contestId uuid.UUID, problemId uuid.UUID, newPosition int64) error
+	ReorderProblemsAfterDeletion(ctx context.Context, contestId uuid.UUID, deletedPosition int64) error
 }
 
 type SubmissionsUC interface {
@@ -960,6 +973,250 @@ func ParticipantDTO(p domain.ContestMember) corev1.UserModel {
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
 	}
+}
+
+// Access Requests Handlers
+
+func (h *ContestsHandlers) CreateAccessRequest(c *fiber.Ctx, contestId uuid.UUID) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Check contest time access
+	if err := h.contestsUC.CheckContestTimeAccess(ctx, contestId); err != nil {
+		return err
+	}
+
+	requestId, err := h.contestsUC.CreateAccessRequest(ctx, contestId, user.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(&corev1.CreationResponseModel{Id: requestId})
+}
+
+func (h *ContestsHandlers) ListAccessRequests(c *fiber.Ctx, contestId uuid.UUID, params corev1.ListAccessRequestsParams) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Only owner/moderator can list access requests
+	canManage, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionManageContest, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canManage {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to list access requests")
+	}
+
+	// TODO: Implement actual list logic with repository calls
+
+	return c.JSON(&corev1.ListAccessRequestsResponseModel{
+		AccessRequests: []corev1.AccessRequestModel{},
+		Pagination:     corev1.PaginationModel{Page: params.Page, Total: 0},
+	})
+}
+
+func (h *ContestsHandlers) UpdateAccessRequest(c *fiber.Ctx, contestId uuid.UUID, userId uuid.UUID, params corev1.UpdateAccessRequestParams) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Only owner/moderator can approve/reject requests
+	canManage, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionManageContest, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canManage {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to manage access requests")
+	}
+
+	// TODO: Get request ID from contestId and userId, then update
+	// For now, simplified implementation
+	return c.SendStatus(fiber.StatusOK)
+}
+
+// Invitations Handlers
+
+func (h *ContestsHandlers) CreateInvitation(c *fiber.Ctx, contestId uuid.UUID, params corev1.CreateInvitationParams) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Only owner/moderator can send invitations
+	canManage, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionManageContest, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canManage {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to send invitations")
+	}
+
+	invitationId, err := h.contestsUC.SendInvitation(ctx, contestId, params.UserId, user.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(&corev1.CreationResponseModel{Id: invitationId})
+}
+
+func (h *ContestsHandlers) ListInvitations(c *fiber.Ctx, contestId uuid.UUID, params corev1.ListInvitationsParams) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Only owner/moderator can list invitations
+	canManage, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionManageContest, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canManage {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to list invitations")
+	}
+
+	// TODO: Implement actual list logic
+	return c.JSON(&corev1.ListInvitationsResponseModel{
+		Invitations: []corev1.InvitationModel{},
+		Pagination:  corev1.PaginationModel{Page: params.Page, Total: 0},
+	})
+}
+
+func (h *ContestsHandlers) AcceptInvitation(c *fiber.Ctx, contestId uuid.UUID, invitationId uuid.UUID) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Verify that invitation is for this user
+	err = h.contestsUC.AcceptInvitation(ctx, invitationId)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *ContestsHandlers) DeclineInvitation(c *fiber.Ctx, contestId uuid.UUID, invitationId uuid.UUID) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Verify that invitation is for this user
+	err = h.contestsUC.DeclineInvitation(ctx, invitationId)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *ContestsHandlers) RevokeInvitation(c *fiber.Ctx, contestId uuid.UUID, invitationId uuid.UUID) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Only owner/moderator can revoke invitations
+	canManage, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionManageContest, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canManage {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to revoke invitation")
+	}
+
+	err = h.contestsUC.RevokeInvitation(ctx, invitationId)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+// Problem Position Handler
+
+func (h *ContestsHandlers) UpdateProblemPosition(c *fiber.Ctx, contestId uuid.UUID, problemId uuid.UUID, params corev1.UpdateProblemPositionParams) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Only owner/moderator can reorder problems
+	canManage, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionManageContest, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canManage {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to reorder problems")
+	}
+
+	err = h.contestsUC.UpdateProblemPosition(ctx, contestId, problemId, params.Position)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+// Monitor Handler
+
+func (h *ContestsHandlers) GetMonitor(c *fiber.Ctx, contestId uuid.UUID, params corev1.GetMonitorParams) error {
+	ctx := c.UserContext()
+
+	// Check permissions
+	user := middleware.GetUserOrAnonymous(ctx)
+
+	contest, err := h.contestsUC.GetContest(ctx, contestId)
+	if err != nil {
+		return err
+	}
+
+	// Check monitor scope permission
+	var opts []permissions.PermissionOption
+	opts = append(opts, permissions.WithContest(contest))
+	if user.ID != uuid.Nil {
+		opts = append(opts, permissions.WithUser(user))
+	}
+
+	canViewMonitor, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.ID, permissions.ActionGetMonitor, opts...)
+	if err != nil {
+		return err
+	}
+	if !canViewMonitor {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view monitor")
+	}
+
+	// TODO: Implement actual monitor calculation
+	// This requires complex query joining submissions, problems, users
+	// For now, return empty monitor
+	return c.JSON(&corev1.GetMonitorResponseModel{
+		Rows:       []corev1.MonitorRowModel{},
+		Pagination: corev1.PaginationModel{Page: params.Page, Total: 0},
+	})
 }
 
 // Helper functions

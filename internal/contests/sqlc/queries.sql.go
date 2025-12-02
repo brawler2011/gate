@@ -7,10 +7,30 @@ package contestssqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const countAccessRequests = `-- name: CountAccessRequests :one
+SELECT COUNT(*)
+FROM contest_access_requests
+WHERE contest_id = $1::uuid
+  AND ($2::text IS NULL OR status = $2::contest_access_request_status)
+`
+
+type CountAccessRequestsParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	Status    *string   `json:"status"`
+}
+
+func (q *Queries) CountAccessRequests(ctx context.Context, arg CountAccessRequestsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAccessRequests, arg.ContestID, arg.Status)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
 
 const countAdminContests = `-- name: CountAdminContests :one
 SELECT COUNT(*)
@@ -51,6 +71,25 @@ WHERE contest_id = $1::uuid
 
 func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countContestMembers, contestID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countInvitations = `-- name: CountInvitations :one
+SELECT COUNT(*)
+FROM contest_invitations
+WHERE contest_id = $1::uuid
+  AND ($2::text IS NULL OR status = $2::contest_invitation_status)
+`
+
+type CountInvitationsParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	Status    *string   `json:"status"`
+}
+
+func (q *Queries) CountInvitations(ctx context.Context, arg CountInvitationsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countInvitations, arg.ContestID, arg.Status)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -146,6 +185,33 @@ func (q *Queries) CountWorkshopContests(ctx context.Context, arg CountWorkshopCo
 	return count, err
 }
 
+const createAccessRequest = `-- name: CreateAccessRequest :one
+
+INSERT INTO contest_access_requests (id, contest_id, user_id, status)
+VALUES ($1::uuid, $2::uuid, $3::uuid, $4)
+RETURNING id
+`
+
+type CreateAccessRequestParams struct {
+	ID        uuid.UUID                  `json:"id"`
+	ContestID uuid.UUID                  `json:"contest_id"`
+	UserID    uuid.UUID                  `json:"user_id"`
+	Status    ContestAccessRequestStatus `json:"status"`
+}
+
+// Contest Access Requests operations
+func (q *Queries) CreateAccessRequest(ctx context.Context, arg CreateAccessRequestParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createAccessRequest,
+		arg.ID,
+		arg.ContestID,
+		arg.UserID,
+		arg.Status,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createContest = `-- name: CreateContest :one
 
 INSERT INTO contests (id, title, created_by)
@@ -209,6 +275,45 @@ func (q *Queries) CreateContestProblem(ctx context.Context, arg CreateContestPro
 	return err
 }
 
+const createInvitation = `-- name: CreateInvitation :one
+
+INSERT INTO contest_invitations (id, contest_id, user_id, invited_by, status)
+VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5)
+RETURNING id
+`
+
+type CreateInvitationParams struct {
+	ID        uuid.UUID               `json:"id"`
+	ContestID uuid.UUID               `json:"contest_id"`
+	UserID    uuid.UUID               `json:"user_id"`
+	InvitedBy uuid.UUID               `json:"invited_by"`
+	Status    ContestInvitationStatus `json:"status"`
+}
+
+// Contest Invitations operations
+func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createInvitation,
+		arg.ID,
+		arg.ContestID,
+		arg.UserID,
+		arg.InvitedBy,
+		arg.Status,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const deleteAccessRequest = `-- name: DeleteAccessRequest :exec
+DELETE FROM contest_access_requests
+WHERE id = $1::uuid
+`
+
+func (q *Queries) DeleteAccessRequest(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAccessRequest, id)
+	return err
+}
+
 const deleteContest = `-- name: DeleteContest :exec
 DELETE FROM contests
 WHERE id = $1::uuid
@@ -251,6 +356,62 @@ func (q *Queries) DeleteContestProblem(ctx context.Context, arg DeleteContestPro
 	return err
 }
 
+const deleteInvitation = `-- name: DeleteInvitation :exec
+DELETE FROM contest_invitations
+WHERE id = $1::uuid
+`
+
+func (q *Queries) DeleteInvitation(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteInvitation, id)
+	return err
+}
+
+const getAccessRequest = `-- name: GetAccessRequest :one
+SELECT id, contest_id, user_id, status, created_at, updated_at
+FROM contest_access_requests
+WHERE contest_id = $1::uuid
+  AND user_id = $2::uuid
+`
+
+type GetAccessRequestParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetAccessRequest(ctx context.Context, arg GetAccessRequestParams) (ContestAccessRequest, error) {
+	row := q.db.QueryRow(ctx, getAccessRequest, arg.ContestID, arg.UserID)
+	var i ContestAccessRequest
+	err := row.Scan(
+		&i.ID,
+		&i.ContestID,
+		&i.UserID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAccessRequestById = `-- name: GetAccessRequestById :one
+SELECT id, contest_id, user_id, status, created_at, updated_at
+FROM contest_access_requests
+WHERE id = $1::uuid
+`
+
+func (q *Queries) GetAccessRequestById(ctx context.Context, id uuid.UUID) (ContestAccessRequest, error) {
+	row := q.db.QueryRow(ctx, getAccessRequestById, id)
+	var i ContestAccessRequest
+	err := row.Scan(
+		&i.ID,
+		&i.ContestID,
+		&i.UserID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getContest = `-- name: GetContest :one
 SELECT
     id,
@@ -261,15 +422,34 @@ SELECT
     submissions_list_scope,
     submissions_review_scope,
     created_by,
+    start_time,
+    end_time,
+    scoring_mode,
     created_at,
     updated_at
 FROM contests
 WHERE id = $1::uuid
 `
 
-func (q *Queries) GetContest(ctx context.Context, id uuid.UUID) (Contest, error) {
+type GetContestRow struct {
+	ID                     uuid.UUID          `json:"id"`
+	Title                  string             `json:"title"`
+	Description            string             `json:"description"`
+	Visibility             ContestVisibility  `json:"visibility"`
+	MonitorScope           ContestRole        `json:"monitor_scope"`
+	SubmissionsListScope   ContestRole        `json:"submissions_list_scope"`
+	SubmissionsReviewScope ContestRole        `json:"submissions_review_scope"`
+	CreatedBy              pgtype.UUID        `json:"created_by"`
+	StartTime              pgtype.Timestamptz `json:"start_time"`
+	EndTime                pgtype.Timestamptz `json:"end_time"`
+	ScoringMode            ContestScoringMode `json:"scoring_mode"`
+	CreatedAt              time.Time          `json:"created_at"`
+	UpdatedAt              time.Time          `json:"updated_at"`
+}
+
+func (q *Queries) GetContest(ctx context.Context, id uuid.UUID) (GetContestRow, error) {
 	row := q.db.QueryRow(ctx, getContest, id)
-	var i Contest
+	var i GetContestRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
@@ -279,6 +459,9 @@ func (q *Queries) GetContest(ctx context.Context, id uuid.UUID) (Contest, error)
 		&i.SubmissionsListScope,
 		&i.SubmissionsReviewScope,
 		&i.CreatedBy,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ScoringMode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -423,6 +606,133 @@ func (q *Queries) GetContestProblems(ctx context.Context, contestID uuid.UUID) (
 	return items, nil
 }
 
+const getInvitation = `-- name: GetInvitation :one
+SELECT id, contest_id, user_id, invited_by, status, created_at, updated_at
+FROM contest_invitations
+WHERE id = $1::uuid
+`
+
+func (q *Queries) GetInvitation(ctx context.Context, id uuid.UUID) (ContestInvitation, error) {
+	row := q.db.QueryRow(ctx, getInvitation, id)
+	var i ContestInvitation
+	err := row.Scan(
+		&i.ID,
+		&i.ContestID,
+		&i.UserID,
+		&i.InvitedBy,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getInvitationByUser = `-- name: GetInvitationByUser :one
+SELECT id, contest_id, user_id, invited_by, status, created_at, updated_at
+FROM contest_invitations
+WHERE contest_id = $1::uuid
+  AND user_id = $2::uuid
+  AND status != 'revoked'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetInvitationByUserParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetInvitationByUser(ctx context.Context, arg GetInvitationByUserParams) (ContestInvitation, error) {
+	row := q.db.QueryRow(ctx, getInvitationByUser, arg.ContestID, arg.UserID)
+	var i ContestInvitation
+	err := row.Scan(
+		&i.ID,
+		&i.ContestID,
+		&i.UserID,
+		&i.InvitedBy,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getMaxProblemPosition = `-- name: GetMaxProblemPosition :one
+SELECT COALESCE(MAX(position), -1) AS max_position
+FROM contest_problem
+WHERE contest_id = $1::uuid
+`
+
+func (q *Queries) GetMaxProblemPosition(ctx context.Context, contestID uuid.UUID) (interface{}, error) {
+	row := q.db.QueryRow(ctx, getMaxProblemPosition, contestID)
+	var max_position interface{}
+	err := row.Scan(&max_position)
+	return max_position, err
+}
+
+const listAccessRequests = `-- name: ListAccessRequests :many
+SELECT car.id, car.contest_id, car.user_id, car.status, car.created_at, car.updated_at,
+       u.username, u.role AS user_role
+FROM contest_access_requests car
+LEFT JOIN users u ON car.user_id = u.id
+WHERE car.contest_id = $1::uuid
+  AND ($2::text IS NULL OR car.status = $2::contest_access_request_status)
+ORDER BY car.created_at DESC
+LIMIT $4 OFFSET $3
+`
+
+type ListAccessRequestsParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	Status    *string   `json:"status"`
+	Offset    int32     `json:"offset"`
+	Limit     int32     `json:"limit"`
+}
+
+type ListAccessRequestsRow struct {
+	ID        uuid.UUID                  `json:"id"`
+	ContestID uuid.UUID                  `json:"contest_id"`
+	UserID    uuid.UUID                  `json:"user_id"`
+	Status    ContestAccessRequestStatus `json:"status"`
+	CreatedAt time.Time                  `json:"created_at"`
+	UpdatedAt time.Time                  `json:"updated_at"`
+	Username  *string                    `json:"username"`
+	UserRole  NullUserRole               `json:"user_role"`
+}
+
+func (q *Queries) ListAccessRequests(ctx context.Context, arg ListAccessRequestsParams) ([]ListAccessRequestsRow, error) {
+	rows, err := q.db.Query(ctx, listAccessRequests,
+		arg.ContestID,
+		arg.Status,
+		arg.Offset,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAccessRequestsRow{}
+	for rows.Next() {
+		var i ListAccessRequestsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ContestID,
+			&i.UserID,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Username,
+			&i.UserRole,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAdminContests = `-- name: ListAdminContests :many
 
 SELECT c.id,
@@ -433,6 +743,9 @@ SELECT c.id,
        c.submissions_list_scope,
        c.submissions_review_scope,
        c.created_by,
+       c.start_time,
+       c.end_time,
+       c.scoring_mode,
        c.created_at,
        c.updated_at
 FROM contests c
@@ -488,8 +801,24 @@ type ListAdminContestsParams struct {
 	Limit      int32   `json:"limit"`
 }
 
+type ListAdminContestsRow struct {
+	ID                     uuid.UUID          `json:"id"`
+	Title                  string             `json:"title"`
+	Description            string             `json:"description"`
+	Visibility             ContestVisibility  `json:"visibility"`
+	MonitorScope           ContestRole        `json:"monitor_scope"`
+	SubmissionsListScope   ContestRole        `json:"submissions_list_scope"`
+	SubmissionsReviewScope ContestRole        `json:"submissions_review_scope"`
+	CreatedBy              pgtype.UUID        `json:"created_by"`
+	StartTime              pgtype.Timestamptz `json:"start_time"`
+	EndTime                pgtype.Timestamptz `json:"end_time"`
+	ScoringMode            ContestScoringMode `json:"scoring_mode"`
+	CreatedAt              time.Time          `json:"created_at"`
+	UpdatedAt              time.Time          `json:"updated_at"`
+}
+
 // Admin contests listing
-func (q *Queries) ListAdminContests(ctx context.Context, arg ListAdminContestsParams) ([]Contest, error) {
+func (q *Queries) ListAdminContests(ctx context.Context, arg ListAdminContestsParams) ([]ListAdminContestsRow, error) {
 	rows, err := q.db.Query(ctx, listAdminContests,
 		arg.Search,
 		arg.Visibility,
@@ -502,9 +831,9 @@ func (q *Queries) ListAdminContests(ctx context.Context, arg ListAdminContestsPa
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Contest{}
+	items := []ListAdminContestsRow{}
 	for rows.Next() {
-		var i Contest
+		var i ListAdminContestsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -514,6 +843,9 @@ func (q *Queries) ListAdminContests(ctx context.Context, arg ListAdminContestsPa
 			&i.SubmissionsListScope,
 			&i.SubmissionsReviewScope,
 			&i.CreatedBy,
+			&i.StartTime,
+			&i.EndTime,
+			&i.ScoringMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -588,6 +920,75 @@ func (q *Queries) ListContestMembers(ctx context.Context, arg ListContestMembers
 	return items, nil
 }
 
+const listInvitations = `-- name: ListInvitations :many
+SELECT ci.id, ci.contest_id, ci.user_id, ci.invited_by, ci.status, ci.created_at, ci.updated_at,
+       u.username, u.role AS user_role,
+       inv.username AS invited_by_username
+FROM contest_invitations ci
+LEFT JOIN users u ON ci.user_id = u.id
+LEFT JOIN users inv ON ci.invited_by = inv.id
+WHERE ci.contest_id = $1::uuid
+  AND ($2::text IS NULL OR ci.status = $2::contest_invitation_status)
+ORDER BY ci.created_at DESC
+LIMIT $4 OFFSET $3
+`
+
+type ListInvitationsParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	Status    *string   `json:"status"`
+	Offset    int32     `json:"offset"`
+	Limit     int32     `json:"limit"`
+}
+
+type ListInvitationsRow struct {
+	ID                uuid.UUID               `json:"id"`
+	ContestID         uuid.UUID               `json:"contest_id"`
+	UserID            uuid.UUID               `json:"user_id"`
+	InvitedBy         uuid.UUID               `json:"invited_by"`
+	Status            ContestInvitationStatus `json:"status"`
+	CreatedAt         time.Time               `json:"created_at"`
+	UpdatedAt         time.Time               `json:"updated_at"`
+	Username          *string                 `json:"username"`
+	UserRole          NullUserRole            `json:"user_role"`
+	InvitedByUsername *string                 `json:"invited_by_username"`
+}
+
+func (q *Queries) ListInvitations(ctx context.Context, arg ListInvitationsParams) ([]ListInvitationsRow, error) {
+	rows, err := q.db.Query(ctx, listInvitations,
+		arg.ContestID,
+		arg.Status,
+		arg.Offset,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListInvitationsRow{}
+	for rows.Next() {
+		var i ListInvitationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ContestID,
+			&i.UserID,
+			&i.InvitedBy,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Username,
+			&i.UserRole,
+			&i.InvitedByUsername,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPublicContests = `-- name: ListPublicContests :many
 
 SELECT c.id,
@@ -598,6 +999,9 @@ SELECT c.id,
        c.submissions_list_scope,
        c.submissions_review_scope,
        c.created_by,
+       c.start_time,
+       c.end_time,
+       c.scoring_mode,
        c.created_at,
        c.updated_at
 FROM contests c
@@ -649,8 +1053,24 @@ type ListPublicContestsParams struct {
 	Limit     int32   `json:"limit"`
 }
 
+type ListPublicContestsRow struct {
+	ID                     uuid.UUID          `json:"id"`
+	Title                  string             `json:"title"`
+	Description            string             `json:"description"`
+	Visibility             ContestVisibility  `json:"visibility"`
+	MonitorScope           ContestRole        `json:"monitor_scope"`
+	SubmissionsListScope   ContestRole        `json:"submissions_list_scope"`
+	SubmissionsReviewScope ContestRole        `json:"submissions_review_scope"`
+	CreatedBy              pgtype.UUID        `json:"created_by"`
+	StartTime              pgtype.Timestamptz `json:"start_time"`
+	EndTime                pgtype.Timestamptz `json:"end_time"`
+	ScoringMode            ContestScoringMode `json:"scoring_mode"`
+	CreatedAt              time.Time          `json:"created_at"`
+	UpdatedAt              time.Time          `json:"updated_at"`
+}
+
 // Public contests listing
-func (q *Queries) ListPublicContests(ctx context.Context, arg ListPublicContestsParams) ([]Contest, error) {
+func (q *Queries) ListPublicContests(ctx context.Context, arg ListPublicContestsParams) ([]ListPublicContestsRow, error) {
 	rows, err := q.db.Query(ctx, listPublicContests,
 		arg.Search,
 		arg.SortBy,
@@ -662,9 +1082,9 @@ func (q *Queries) ListPublicContests(ctx context.Context, arg ListPublicContests
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Contest{}
+	items := []ListPublicContestsRow{}
 	for rows.Next() {
-		var i Contest
+		var i ListPublicContestsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -674,6 +1094,9 @@ func (q *Queries) ListPublicContests(ctx context.Context, arg ListPublicContests
 			&i.SubmissionsListScope,
 			&i.SubmissionsReviewScope,
 			&i.CreatedBy,
+			&i.StartTime,
+			&i.EndTime,
+			&i.ScoringMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -697,6 +1120,9 @@ SELECT c.id,
        c.submissions_list_scope,
        c.submissions_review_scope,
        c.created_by,
+       c.start_time,
+       c.end_time,
+       c.scoring_mode,
        c.created_at,
        c.updated_at
 FROM contests c
@@ -766,8 +1192,24 @@ type ListUserContestsParams struct {
 	Limit     int32     `json:"limit"`
 }
 
+type ListUserContestsRow struct {
+	ID                     uuid.UUID          `json:"id"`
+	Title                  string             `json:"title"`
+	Description            string             `json:"description"`
+	Visibility             ContestVisibility  `json:"visibility"`
+	MonitorScope           ContestRole        `json:"monitor_scope"`
+	SubmissionsListScope   ContestRole        `json:"submissions_list_scope"`
+	SubmissionsReviewScope ContestRole        `json:"submissions_review_scope"`
+	CreatedBy              pgtype.UUID        `json:"created_by"`
+	StartTime              pgtype.Timestamptz `json:"start_time"`
+	EndTime                pgtype.Timestamptz `json:"end_time"`
+	ScoringMode            ContestScoringMode `json:"scoring_mode"`
+	CreatedAt              time.Time          `json:"created_at"`
+	UpdatedAt              time.Time          `json:"updated_at"`
+}
+
 // User contests listing
-func (q *Queries) ListUserContests(ctx context.Context, arg ListUserContestsParams) ([]Contest, error) {
+func (q *Queries) ListUserContests(ctx context.Context, arg ListUserContestsParams) ([]ListUserContestsRow, error) {
 	rows, err := q.db.Query(ctx, listUserContests,
 		arg.CreatedBy,
 		arg.Search,
@@ -780,9 +1222,9 @@ func (q *Queries) ListUserContests(ctx context.Context, arg ListUserContestsPara
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Contest{}
+	items := []ListUserContestsRow{}
 	for rows.Next() {
-		var i Contest
+		var i ListUserContestsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -792,8 +1234,72 @@ func (q *Queries) ListUserContests(ctx context.Context, arg ListUserContestsPara
 			&i.SubmissionsListScope,
 			&i.SubmissionsReviewScope,
 			&i.CreatedBy,
+			&i.StartTime,
+			&i.EndTime,
+			&i.ScoringMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserInvitations = `-- name: ListUserInvitations :many
+SELECT ci.id, ci.contest_id, ci.user_id, ci.invited_by, ci.status, ci.created_at, ci.updated_at,
+       c.title AS contest_title,
+       inv.username AS invited_by_username
+FROM contest_invitations ci
+LEFT JOIN contests c ON ci.contest_id = c.id
+LEFT JOIN users inv ON ci.invited_by = inv.id
+WHERE ci.user_id = $1::uuid
+  AND ci.status = 'pending'
+ORDER BY ci.created_at DESC
+LIMIT $3 OFFSET $2
+`
+
+type ListUserInvitationsParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Offset int32     `json:"offset"`
+	Limit  int32     `json:"limit"`
+}
+
+type ListUserInvitationsRow struct {
+	ID                uuid.UUID               `json:"id"`
+	ContestID         uuid.UUID               `json:"contest_id"`
+	UserID            uuid.UUID               `json:"user_id"`
+	InvitedBy         uuid.UUID               `json:"invited_by"`
+	Status            ContestInvitationStatus `json:"status"`
+	CreatedAt         time.Time               `json:"created_at"`
+	UpdatedAt         time.Time               `json:"updated_at"`
+	ContestTitle      *string                 `json:"contest_title"`
+	InvitedByUsername *string                 `json:"invited_by_username"`
+}
+
+func (q *Queries) ListUserInvitations(ctx context.Context, arg ListUserInvitationsParams) ([]ListUserInvitationsRow, error) {
+	rows, err := q.db.Query(ctx, listUserInvitations, arg.UserID, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUserInvitationsRow{}
+	for rows.Next() {
+		var i ListUserInvitationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ContestID,
+			&i.UserID,
+			&i.InvitedBy,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ContestTitle,
+			&i.InvitedByUsername,
 		); err != nil {
 			return nil, err
 		}
@@ -815,6 +1321,9 @@ SELECT c.id,
        c.submissions_list_scope,
        c.submissions_review_scope,
        c.created_by,
+       c.start_time,
+       c.end_time,
+       c.scoring_mode,
        c.created_at,
        c.updated_at
 FROM contests c
@@ -869,8 +1378,24 @@ type ListWorkshopContestsParams struct {
 	Limit     int32     `json:"limit"`
 }
 
+type ListWorkshopContestsRow struct {
+	ID                     uuid.UUID          `json:"id"`
+	Title                  string             `json:"title"`
+	Description            string             `json:"description"`
+	Visibility             ContestVisibility  `json:"visibility"`
+	MonitorScope           ContestRole        `json:"monitor_scope"`
+	SubmissionsListScope   ContestRole        `json:"submissions_list_scope"`
+	SubmissionsReviewScope ContestRole        `json:"submissions_review_scope"`
+	CreatedBy              pgtype.UUID        `json:"created_by"`
+	StartTime              pgtype.Timestamptz `json:"start_time"`
+	EndTime                pgtype.Timestamptz `json:"end_time"`
+	ScoringMode            ContestScoringMode `json:"scoring_mode"`
+	CreatedAt              time.Time          `json:"created_at"`
+	UpdatedAt              time.Time          `json:"updated_at"`
+}
+
 // Workshop contests listing
-func (q *Queries) ListWorkshopContests(ctx context.Context, arg ListWorkshopContestsParams) ([]Contest, error) {
+func (q *Queries) ListWorkshopContests(ctx context.Context, arg ListWorkshopContestsParams) ([]ListWorkshopContestsRow, error) {
 	rows, err := q.db.Query(ctx, listWorkshopContests,
 		arg.UserID,
 		arg.Search,
@@ -883,9 +1408,9 @@ func (q *Queries) ListWorkshopContests(ctx context.Context, arg ListWorkshopCont
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Contest{}
+	items := []ListWorkshopContestsRow{}
 	for rows.Next() {
-		var i Contest
+		var i ListWorkshopContestsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -895,6 +1420,9 @@ func (q *Queries) ListWorkshopContests(ctx context.Context, arg ListWorkshopCont
 			&i.SubmissionsListScope,
 			&i.SubmissionsReviewScope,
 			&i.CreatedBy,
+			&i.StartTime,
+			&i.EndTime,
+			&i.ScoringMode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -908,6 +1436,39 @@ func (q *Queries) ListWorkshopContests(ctx context.Context, arg ListWorkshopCont
 	return items, nil
 }
 
+const reorderContestProblemsAfterDelete = `-- name: ReorderContestProblemsAfterDelete :exec
+UPDATE contest_problem
+SET position = position - 1
+WHERE contest_id = $1::uuid
+  AND position > $2
+`
+
+type ReorderContestProblemsAfterDeleteParams struct {
+	ContestID       uuid.UUID `json:"contest_id"`
+	DeletedPosition int32     `json:"deleted_position"`
+}
+
+func (q *Queries) ReorderContestProblemsAfterDelete(ctx context.Context, arg ReorderContestProblemsAfterDeleteParams) error {
+	_, err := q.db.Exec(ctx, reorderContestProblemsAfterDelete, arg.ContestID, arg.DeletedPosition)
+	return err
+}
+
+const updateAccessRequestStatus = `-- name: UpdateAccessRequestStatus :exec
+UPDATE contest_access_requests
+SET status = $1
+WHERE id = $2::uuid
+`
+
+type UpdateAccessRequestStatusParams struct {
+	Status ContestAccessRequestStatus `json:"status"`
+	ID     uuid.UUID                  `json:"id"`
+}
+
+func (q *Queries) UpdateAccessRequestStatus(ctx context.Context, arg UpdateAccessRequestStatusParams) error {
+	_, err := q.db.Exec(ctx, updateAccessRequestStatus, arg.Status, arg.ID)
+	return err
+}
+
 const updateContest = `-- name: UpdateContest :exec
 UPDATE contests
 SET title                    = COALESCE($1, title),
@@ -915,18 +1476,24 @@ SET title                    = COALESCE($1, title),
     visibility               = COALESCE($3, visibility),
     monitor_scope            = COALESCE($4, monitor_scope),
     submissions_list_scope   = COALESCE($5, submissions_list_scope),
-    submissions_review_scope = COALESCE($6, submissions_review_scope)
-WHERE id = $7::uuid
+    submissions_review_scope = COALESCE($6, submissions_review_scope),
+    start_time               = COALESCE($7, start_time),
+    end_time                 = COALESCE($8, end_time),
+    scoring_mode             = COALESCE($9, scoring_mode)
+WHERE id = $10::uuid
 `
 
 type UpdateContestParams struct {
-	Title                  *string               `json:"title"`
-	Description            *string               `json:"description"`
-	Visibility             NullContestVisibility `json:"visibility"`
-	MonitorScope           NullContestRole       `json:"monitor_scope"`
-	SubmissionsListScope   NullContestRole       `json:"submissions_list_scope"`
-	SubmissionsReviewScope NullContestRole       `json:"submissions_review_scope"`
-	ID                     uuid.UUID             `json:"id"`
+	Title                  *string                `json:"title"`
+	Description            *string                `json:"description"`
+	Visibility             NullContestVisibility  `json:"visibility"`
+	MonitorScope           NullContestRole        `json:"monitor_scope"`
+	SubmissionsListScope   NullContestRole        `json:"submissions_list_scope"`
+	SubmissionsReviewScope NullContestRole        `json:"submissions_review_scope"`
+	StartTime              pgtype.Timestamptz     `json:"start_time"`
+	EndTime                pgtype.Timestamptz     `json:"end_time"`
+	ScoringMode            NullContestScoringMode `json:"scoring_mode"`
+	ID                     uuid.UUID              `json:"id"`
 }
 
 func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) error {
@@ -937,6 +1504,9 @@ func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) er
 		arg.MonitorScope,
 		arg.SubmissionsListScope,
 		arg.SubmissionsReviewScope,
+		arg.StartTime,
+		arg.EndTime,
+		arg.ScoringMode,
 		arg.ID,
 	)
 	return err
@@ -957,5 +1527,41 @@ type UpdateContestMemberParams struct {
 
 func (q *Queries) UpdateContestMember(ctx context.Context, arg UpdateContestMemberParams) error {
 	_, err := q.db.Exec(ctx, updateContestMember, arg.Role, arg.ContestID, arg.UserID)
+	return err
+}
+
+const updateContestProblemPosition = `-- name: UpdateContestProblemPosition :exec
+
+UPDATE contest_problem
+SET position = $1
+WHERE contest_id = $2::uuid
+  AND problem_id = $3::uuid
+`
+
+type UpdateContestProblemPositionParams struct {
+	Position  int32     `json:"position"`
+	ContestID uuid.UUID `json:"contest_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+}
+
+// Problem Position Management
+func (q *Queries) UpdateContestProblemPosition(ctx context.Context, arg UpdateContestProblemPositionParams) error {
+	_, err := q.db.Exec(ctx, updateContestProblemPosition, arg.Position, arg.ContestID, arg.ProblemID)
+	return err
+}
+
+const updateInvitationStatus = `-- name: UpdateInvitationStatus :exec
+UPDATE contest_invitations
+SET status = $1
+WHERE id = $2::uuid
+`
+
+type UpdateInvitationStatusParams struct {
+	Status ContestInvitationStatus `json:"status"`
+	ID     uuid.UUID               `json:"id"`
+}
+
+func (q *Queries) UpdateInvitationStatus(ctx context.Context, arg UpdateInvitationStatusParams) error {
+	_, err := q.db.Exec(ctx, updateInvitationStatus, arg.Status, arg.ID)
 	return err
 }

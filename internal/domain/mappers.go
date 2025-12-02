@@ -37,6 +37,9 @@ func ContestFromSqlc(c contestssqlc.Contest) Contest {
 		SubmissionsListScope:   string(c.SubmissionsListScope),
 		SubmissionsReviewScope: string(c.SubmissionsReviewScope),
 		CreatedBy:              pgtypeToUUID(c.CreatedBy),
+		StartTime:              pgtypeToTimePtr(c.StartTime),
+		EndTime:                pgtypeToTimePtr(c.EndTime),
+		ScoringMode:            string(c.ScoringMode),
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,
 	}
@@ -208,4 +211,11 @@ func derefInt32ToInt64Ptr(i *int32) *int64 {
 	}
 	val := int64(*i)
 	return &val
+}
+
+func pgtypeToTimePtr(t pgtype.Timestamptz) *time.Time {
+	if !t.Valid {
+		return nil
+	}
+	return &t.Time
 }

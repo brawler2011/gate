@@ -3,6 +3,7 @@ package contests
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/gate149/core/internal/cache"
 	contestssqlc "github.com/gate149/core/internal/contests/sqlc"
@@ -34,6 +35,25 @@ type ContestRepo interface {
 	CreateContestMember(ctx context.Context, c *models.ContestMemberParams) error
 	DeleteContestMember(ctx context.Context, userId uuid.UUID, contestId uuid.UUID) error
 	UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error
+
+	// Access Requests
+	CreateAccessRequest(ctx context.Context, id uuid.UUID, contestId uuid.UUID, userId uuid.UUID, status string) error
+	GetAccessRequest(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.GetAccessRequestRow, error)
+	ListAccessRequests(ctx context.Context, contestId uuid.UUID, status *string, limit int64, offset int64) ([]contestssqlc.ListAccessRequestsRow, int64, error)
+	UpdateAccessRequestStatus(ctx context.Context, id uuid.UUID, status string) error
+
+	// Invitations
+	CreateInvitation(ctx context.Context, id uuid.UUID, contestId uuid.UUID, userId uuid.UUID, invitedBy uuid.UUID, status string) error
+	GetInvitation(ctx context.Context, id uuid.UUID) (contestssqlc.GetInvitationRow, error)
+	GetInvitationByUser(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.GetInvitationByUserRow, error)
+	ListInvitations(ctx context.Context, contestId uuid.UUID, status *string, limit int64, offset int64) ([]contestssqlc.ListInvitationsRow, int64, error)
+	ListUserInvitations(ctx context.Context, userId uuid.UUID, limit int64, offset int64) ([]contestssqlc.ListUserInvitationsRow, int64, error)
+	UpdateInvitationStatus(ctx context.Context, id uuid.UUID, status string) error
+
+	// Problem Position Management
+	UpdateContestProblemPosition(ctx context.Context, contestId uuid.UUID, problemId uuid.UUID, position int64) error
+	ReorderProblemsAfterDelete(ctx context.Context, contestId uuid.UUID, deletedPosition int64) error
+	GetMaxProblemPosition(ctx context.Context, contestId uuid.UUID) (int64, error)
 }
 
 type UseCase struct {
@@ -361,6 +381,220 @@ func (uc *UseCase) UpdateContestMember(ctx context.Context, contestId uuid.UUID,
 
 	// Invalidate cache
 	_ = uc.cache.Delete(ctx, cache.ContestMemberKey(contestId, userId))
+
+	return nil
+}
+
+// CheckContestTimeAccess verifies if the contest is accessible based on its time settings
+func (uc *UseCase) CheckContestTimeAccess(ctx context.Context, contestId uuid.UUID) error {
+	contest, err := uc.GetContest(ctx, contestId)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UTC()
+
+	// If start_time is set and we haven't reached it yet
+	if contest.StartTime != nil && now.Before(*contest.StartTime) {
+		return pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
+	}
+
+	// If end_time is set and we've passed it
+	if contest.EndTime != nil && now.After(*contest.EndTime) {
+		return pkg.Wrap(pkg.NoPermission, nil, "contest has ended")
+	}
+
+	return nil
+}
+
+// CreateAccessRequest creates a new access request for a contest
+func (uc *UseCase) CreateAccessRequest(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (uuid.UUID, error) {
+	// Check if request already exists
+	_, err := uc.contestRepo.GetAccessRequest(ctx, contestId, userId)
+	if err == nil {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "access request already exists")
+	}
+
+	// Get contest to check visibility
+	contest, err := uc.GetContest(ctx, contestId)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	id := uuid.New()
+	status := "pending"
+
+	// Auto-approve for public contests
+	if contest.Visibility == "public" {
+		status = "approved"
+		// Also create contest member immediately
+		err = uc.contestRepo.CreateContestMember(ctx, &models.ContestMemberParams{
+			ContestId: contestId,
+			UserId:    userId,
+			Role:      models.ContestRoleParticipant,
+		})
+		if err != nil {
+			return uuid.Nil, pkg.Wrap(err, nil, "can't create contest member")
+		}
+	}
+
+	err = uc.contestRepo.CreateAccessRequest(ctx, id, contestId, userId, status)
+	if err != nil {
+		return uuid.Nil, pkg.Wrap(err, nil, "can't create access request")
+	}
+
+	return id, nil
+}
+
+// ApproveAccessRequest approves an access request and adds user as participant
+func (uc *UseCase) ApproveAccessRequest(ctx context.Context, requestId uuid.UUID) error {
+	// Get the request to find user and contest
+	req, err := uc.contestRepo.GetAccessRequest(ctx, uuid.Nil, uuid.Nil) // Need to add GetAccessRequestById
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't get access request")
+	}
+
+	// Update status
+	err = uc.contestRepo.UpdateAccessRequestStatus(ctx, requestId, "approved")
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't update access request status")
+	}
+
+	// Create contest member
+	err = uc.contestRepo.CreateContestMember(ctx, &models.ContestMemberParams{
+		ContestId: req.ContestID,
+		UserId:    req.UserID,
+		Role:      models.ContestRoleParticipant,
+	})
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't create contest member")
+	}
+
+	return nil
+}
+
+// RejectAccessRequest rejects an access request
+func (uc *UseCase) RejectAccessRequest(ctx context.Context, requestId uuid.UUID) error {
+	err := uc.contestRepo.UpdateAccessRequestStatus(ctx, requestId, "rejected")
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't update access request status")
+	}
+	return nil
+}
+
+// SendInvitation sends an invitation to a user to join a contest
+func (uc *UseCase) SendInvitation(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, invitedBy uuid.UUID) (uuid.UUID, error) {
+	// Check if active invitation already exists
+	_, err := uc.contestRepo.GetInvitationByUser(ctx, contestId, userId)
+	if err == nil {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "active invitation already exists")
+	}
+
+	id := uuid.New()
+	err = uc.contestRepo.CreateInvitation(ctx, id, contestId, userId, invitedBy, "pending")
+	if err != nil {
+		return uuid.Nil, pkg.Wrap(err, nil, "can't create invitation")
+	}
+
+	return id, nil
+}
+
+// AcceptInvitation accepts an invitation and adds user as participant
+func (uc *UseCase) AcceptInvitation(ctx context.Context, invitationId uuid.UUID) error {
+	// Get invitation
+	inv, err := uc.contestRepo.GetInvitation(ctx, invitationId)
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't get invitation")
+	}
+
+	if inv.Status != "pending" {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invitation is not pending")
+	}
+
+	// Update status
+	err = uc.contestRepo.UpdateInvitationStatus(ctx, invitationId, "accepted")
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't update invitation status")
+	}
+
+	// Create contest member
+	err = uc.contestRepo.CreateContestMember(ctx, &models.ContestMemberParams{
+		ContestId: inv.ContestID,
+		UserId:    inv.UserID,
+		Role:      models.ContestRoleParticipant,
+	})
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't create contest member")
+	}
+
+	return nil
+}
+
+// DeclineInvitation declines an invitation
+func (uc *UseCase) DeclineInvitation(ctx context.Context, invitationId uuid.UUID) error {
+	inv, err := uc.contestRepo.GetInvitation(ctx, invitationId)
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't get invitation")
+	}
+
+	if inv.Status != "pending" {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invitation is not pending")
+	}
+
+	err = uc.contestRepo.UpdateInvitationStatus(ctx, invitationId, "declined")
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't update invitation status")
+	}
+
+	return nil
+}
+
+// RevokeInvitation revokes an invitation
+func (uc *UseCase) RevokeInvitation(ctx context.Context, invitationId uuid.UUID) error {
+	inv, err := uc.contestRepo.GetInvitation(ctx, invitationId)
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't get invitation")
+	}
+
+	if inv.Status != "pending" {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invitation is not pending")
+	}
+
+	err = uc.contestRepo.UpdateInvitationStatus(ctx, invitationId, "revoked")
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't update invitation status")
+	}
+
+	return nil
+}
+
+// UpdateProblemPosition updates the position of a problem in a contest
+func (uc *UseCase) UpdateProblemPosition(ctx context.Context, contestId uuid.UUID, problemId uuid.UUID, newPosition int64) error {
+	if newPosition < 0 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "position must be non-negative")
+	}
+
+	err := uc.contestRepo.UpdateContestProblemPosition(ctx, contestId, problemId, newPosition)
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't update problem position")
+	}
+
+	// Invalidate cache
+	_ = uc.cache.Delete(ctx, cache.ContestProblemKey(contestId, problemId))
+
+	return nil
+}
+
+// ReorderProblemsAfterDeletion reorders problems after a problem is deleted to remove gaps
+func (uc *UseCase) ReorderProblemsAfterDeletion(ctx context.Context, contestId uuid.UUID, deletedPosition int64) error {
+	err := uc.contestRepo.ReorderProblemsAfterDelete(ctx, contestId, deletedPosition)
+	if err != nil {
+		return pkg.Wrap(err, nil, "can't reorder problems")
+	}
+
+	// Invalidate all contest_problem caches for this contest
+	pattern := "contest_problem:" + contestId.String() + ":*"
+	_ = uc.cache.DeleteByPattern(ctx, pattern)
 
 	return nil
 }
