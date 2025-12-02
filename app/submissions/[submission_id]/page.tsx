@@ -1,5 +1,6 @@
 import { CodeBlock } from "@/components/CodeBlock";
 import { DefaultLayout } from "@/components/Layout";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { getSubmission } from "@/lib/actions";
 import {
   LangNameToString,
@@ -36,11 +37,10 @@ const metadata: Metadata = {
 
 const Page = async (props: Props) => {
   const solutionId = (await props.params).submission_id;
-  const resp = await getSubmission(solutionId);
+  const [error, resp] = await getSubmission(solutionId);
 
-  if (!resp) {
-    return <div>Что-то пошло не так!</div>;
-  }
+  if (error) return <ErrorDisplay error={error} />;
+  if (!resp) return <ErrorDisplay error={{ status: 404, message: "Посылка не найдена" }} />;
 
   const { submission } = resp;
 

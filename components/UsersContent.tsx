@@ -28,21 +28,18 @@ export function UsersContent({ page, search, role }: UsersContentProps) {
       setLoading(true);
       setError(false);
 
-      try {
-        const data = await listUsers(page, 10, search, role);
-        
-        if (!data) {
-          throw new Error("Failed to fetch users");
-        }
-
-        setUsers(data.users || []);
-        setPagination(data.pagination || { total: 0, page: 1, pageSize: 10 });
-      } catch (err) {
+      const [err, data] = await listUsers(page, 10, search, role);
+      
+      if (err || !data) {
         console.error("Error fetching users:", err);
         setError(true);
-      } finally {
         setLoading(false);
+        return;
       }
+
+      setUsers(data.users || []);
+      setPagination(data.pagination || { total: 0, page: 1, pageSize: 10 });
+      setLoading(false);
     };
 
     fetchUsers();
@@ -96,4 +93,3 @@ export function UsersContent({ page, search, role }: UsersContentProps) {
     </Container>
   );
 }
-

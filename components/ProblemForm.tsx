@@ -2,7 +2,6 @@
 
 import {
   Anchor,
-  Badge,
   Button,
   Container,
   Divider,
@@ -17,12 +16,14 @@ import {
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { notifications } from "@mantine/notifications";
 import { IconArrowLeft, IconUpload } from "@tabler/icons-react";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import type { ProblemModel } from "../../contracts/core/v1";
+import type { ApiError } from "@/lib/api";
 
 type ProblemFormData = {
   title?: string;
@@ -37,8 +38,8 @@ type ProblemFormData = {
 
 type Props = {
   problem: ProblemModel;
-  onSubmitFn: (id: string, data: ProblemFormData) => Promise<unknown>;
-  onUploadFn: (id: string, data: FormData) => Promise<unknown>;
+  onSubmitFn: (id: string, data: ProblemFormData) => Promise<readonly [ApiError | null, unknown]>;
+  onUploadFn: (id: string, data: FormData) => Promise<readonly [ApiError | null, unknown]>;
 };
 
 const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
@@ -60,7 +61,11 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
   });
 
   const mutation = useMutation({
-    mutationFn: (data: ProblemFormData) => onSubmitFn(problem.id, data),
+    mutationFn: async (data: ProblemFormData) => {
+      const [error, response] = await onSubmitFn(problem.id, data);
+      if (error) throw new Error(error.message);
+      return response;
+    },
     onSuccess: async () => {
       console.log("✅ Problem updated successfully");
       form.resetDirty();
@@ -68,19 +73,38 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
     },
     onError: (error) => {
       console.error("❌ Problem update failed:", error);
+      notifications.show({
+        title: "Ошибка",
+        message: error instanceof Error ? error.message : "Не удалось обновить задачу",
+        color: "red",
+      });
       form.clearErrors();
     },
     retry: false,
   });
 
   const uploadMutation = useMutation({
-    mutationFn: (formData: FormData) => onUploadFn(problem.id, formData),
+    mutationFn: async (formData: FormData) => {
+      const [error, response] = await onUploadFn(problem.id, formData);
+      if (error) throw new Error(error.message);
+      return response;
+    },
     onSuccess: () => {
       setOpened(false);
       setFile(null);
+      notifications.show({
+        title: "Успешно",
+        message: "Файл загружен",
+        color: "green",
+      });
     },
     onError: (error) => {
       console.error("Upload failed:", error);
+      notifications.show({
+        title: "Ошибка",
+        message: error instanceof Error ? error.message : "Не удалось загрузить файл",
+        color: "red",
+      });
     },
   });
 

@@ -5,6 +5,7 @@ import { UserContestsWrapper } from "@/components/ContestsPage/UserContestsWrapp
 import { ContestsHeader } from "@/components/ContestsPage/ContestsHeader";
 import { ContestsTabs } from "@/components/ContestsPage/ContestsTabs";
 import { ContestsPageWrapper } from "@/components/ContestsPage/ContestsPageWrapper";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { getPublicContests, getUserContests } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { Container, Stack } from "@mantine/core";
@@ -27,12 +28,13 @@ const PublicContestsView = async ({
   page: number;
   search?: string;
 }) => {
-  const contestsData = await getPublicContests(page, 10, search);
+  const [error, contestsData] = await getPublicContests(page, 10, search);
+  if (error) return <ErrorDisplay error={error} />;
 
   return (
     <PublicContestsWrapper
-      contests={contestsData.contests}
-      pagination={contestsData.pagination}
+      contests={contestsData!.contests}
+      pagination={contestsData!.pagination}
     />
   );
 };
@@ -46,12 +48,13 @@ const UserContestsView = async ({
   search?: string;
   userId: string;
 }) => {
-  const contestsData = await getUserContests(userId, page, 10, search);
+  const [error, contestsData] = await getUserContests(userId, page, 10, search);
+  if (error) return <ErrorDisplay error={error} />;
 
   return (
     <UserContestsWrapper
-      contests={contestsData.contests}
-      pagination={contestsData.pagination}
+      contests={contestsData!.contests}
+      pagination={contestsData!.pagination}
     />
   );
 };
@@ -107,4 +110,3 @@ const Page = async (props: Props) => {
 };
 
 export default Page;
-

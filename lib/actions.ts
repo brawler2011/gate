@@ -1,21 +1,17 @@
 "use server";
 
-import { ListContestMembersResponseModel, ListSubmissionsResponseModel, ListUsersResponseModel, SubmissionsListItemModel } from '../../contracts/core/v1';
-import {Call} from './api';
+import { Call } from './api';
 
 export async function getContests(page: number = 1, pageSize: number = 10, search?: string) {
-    const response = await Call((client) => client.default.listWorkshopContests({page, pageSize, search}));
-    return response;
+    return Call((client) => client.default.listWorkshopContests({page, pageSize, search}));
 }
 
 export async function getPublicContests(page: number = 1, pageSize: number = 10, search?: string) {
-    const response = await Call((client) => client.default.listPublicContests({page, pageSize, search}));
-    return response;
+    return Call((client) => client.default.listPublicContests({page, pageSize, search}));
 }
 
 export async function getUserContests(userId: string, page: number = 1, pageSize: number = 10, search?: string) {
-    const response = await Call((client) => client.default.listUserContests({id: userId, page, pageSize, search}));
-    return response;
+    return Call((client) => client.default.listUserContests({id: userId, page, pageSize, search}));
 }
 
 export async function getProblems(page: number = 1, pageSize: number = 10, search?: string, order?: number, owner?: boolean) {
@@ -33,8 +29,7 @@ export async function getProblems(page: number = 1, pageSize: number = 10, searc
         owner,
     };
 
-    const response = await Call((client) => client.default.listProblems(params));
-    return response;
+    return Call((client) => client.default.listProblems(params));
 }
 
 export async function getSubmissions(params: {
@@ -46,103 +41,60 @@ export async function getSubmissions(params: {
     state?: number;
     sortOrder?: "asc" | "desc";
     language?: number;
-}): Promise<ListSubmissionsResponseModel> {
-    try {
-        // contestId is required for listContestSubmissions
-        if (!params.contestId) {
-            return {submissions: [], pagination: {page: 1, total: 0}};
-        }
-        
-        const contestId = params.contestId; // TypeScript now knows this is a string
-        
-        const response = await Call((client) => client.default.listContestSubmissions({
-            page: params.page ?? 1,
-            pageSize: params.pageSize ?? 10,
-            contestId: contestId,
-            userId: params.userId,
-            problemId: params.problemId,
-            state: params.state,
-            sortOrder: params.sortOrder ?? "desc",
-            language: params.language,
-        }));
-        return response;
-    } catch (error: any) {
-        const status = error?.status || error?.response?.status;
-        if (status === 404) {
-            return {submissions: [], pagination: {page: 1, total: 0}};
-        }
-        console.error('Failed to fetch solutions:', error);
-        return {submissions: [] as SubmissionsListItemModel[], pagination: {page: 1, total: 0}};
+}) {
+    // contestId is required for listContestSubmissions
+    if (!params.contestId) {
+        return [null, {submissions: [], pagination: {page: 1, total: 0}}] as const;
     }
+    
+    const contestId = params.contestId;
+    
+    return Call((client) => client.default.listContestSubmissions({
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 10,
+        contestId: contestId,
+        userId: params.userId,
+        problemId: params.problemId,
+        state: params.state,
+        sortOrder: params.sortOrder ?? "desc",
+        language: params.language,
+    }));
 }
 
 export async function listUsers(page: number = 1, pageSize: number = 10, search?: string, role?: string) {
-    const response = await Call((client) => client.default.listUsers({page, pageSize, search, role}));
-    return response;
+    return Call((client) => client.default.listUsers({page, pageSize, search, role}));
 }
 
 export async function getUser(userId: string) {
-    const response = await Call((client) => client.default.getUser({id: userId}));
-    return response;
+    return Call((client) => client.default.getUser({id: userId}));
 }
 
 export async function getContest(contestId: string) {
-    const response = await Call((client) => client.default.getContest({contestId}));
-    return response;
+    return Call((client) => client.default.getContest({contestId}));
 }
 
 export async function getContestProblem(problemId: string, contestId: string) {
-    const response = await Call((client) => client.default.getContestProblem({problemId, contestId}));
-    return response;
+    return Call((client) => client.default.getContestProblem({problemId, contestId}));
 }
 
-export async function getContestMembers(contestId: string, page: number = 1, pageSize: number = 10): Promise<ListContestMembersResponseModel> {
-    try {
-        const response = await Call((client) => client.default.listContestMembers({contestId, page, pageSize}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch participants:', error);
-        return {members: [], pagination: {page: 1, total: 0}};
-    }
+export async function getContestMembers(contestId: string, page: number = 1, pageSize: number = 10) {
+    return Call((client) => client.default.listContestMembers({contestId, page, pageSize}));
 }
 
 export async function getProblem(problemId: string) {
-    const response = await Call((client) => client.default.getProblem({id: problemId}));
-    return response;
+    return Call((client) => client.default.getProblem({id: problemId}));
 }
 
 export async function getSubmission(submissionId: string) {
-    try {
-        const response = await Call((client) => client.default.getSubmission({submissionId}));
-        return response;
-    } catch (error) {
-        console.error('Failed to fetch solution:', error);
-        return null;
-    }
+    return Call((client) => client.default.getSubmission({submissionId}));
 }
 
 export async function createContest(title: string) {
-    try {
-        const response = await Call((client) =>
-            client.default.createContest({title})
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to create contest:', error);
-        throw error;
-    }
+    return Call((client) => client.default.createContest({title}));
 }
 
 export async function createProblem(title: string) {
-    try {
-        const response = await Call((client) =>
-            client.default.createProblem({title})
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to create problem:', error);
-        throw error;
-    }
+    return Call((client) => client.default.createProblem({title}));
 }
 
 export async function updateProblem(
@@ -159,28 +111,11 @@ export async function updateProblem(
         is_private?: boolean;
     }
 ) {
-    try {
-        console.log('📤 Updating problem:', problemId, 'with data:', JSON.stringify(data, null, 2));
-        const response = await Call((client) =>
-            client.default.updateProblem({id: problemId, requestBody: data})
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to update problem:', error);
-        throw error;
-    }
+    return Call((client) => client.default.updateProblem({id: problemId, requestBody: data}));
 }
 
 export async function uploadProblemTests(id: string, file: File) {
-    try {
-        const response = await Call((client) =>
-            client.default.uploadProblemTests({id, formData: {file: file}})
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to upload problem tests:', error);
-        throw error;
-    }
+    return Call((client) => client.default.uploadProblemTests({id, formData: {file: file}}));
 }
 
 export async function updateContest(
@@ -194,80 +129,23 @@ export async function updateContest(
         submissions_review_scope?: string;
     }
 ) {
-    try {
-        console.log('📤 Updating contest:', contestId, 'with data:', JSON.stringify(data, null, 2));
-        const response = await Call((client) =>
-            client.default.updateContest({contestId, requestBody: data})
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to update contest:', error);
-        throw error;
-    }
+    return Call((client) => client.default.updateContest({contestId, requestBody: data}));
 }
 
-export async function addContestProblem(
-    contestId: string,
-    problemId: string
-) {
-    try {
-        console.log('📤 Adding problem to contest:', {contestId, problemId});
-        const response = await Call((client) =>
-            client.default.createContestProblem({contestId, problemId})
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to add problem to contest:', error);
-        throw error;
-    }
+export async function addContestProblem(contestId: string, problemId: string) {
+    return Call((client) => client.default.createContestProblem({contestId, problemId}));
 }
 
-export async function removeContestProblem(
-    contestId: string,
-    problemId: string
-) {
-    try {
-        console.log('📤 Removing problem from contest:', {contestId, problemId});
-        const response = await Call((client) =>
-            client.default.deleteContestProblem({problemId, contestId})
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to remove problem from contest:', error);
-        throw error;
-    }
+export async function removeContestProblem(contestId: string, problemId: string) {
+    return Call((client) => client.default.deleteContestProblem({problemId, contestId}));
 }
 
-export async function addContestMember(
-    contestId: string,
-    userId: string
-) {
-    try {
-        console.log('📤 Adding participant to contest:', {contestId, userId});
-        const response = await Call((client) =>
-            client.default.createContestMember({contestId, userId})
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to add participant to contest:', error);
-        throw error;
-    }
+export async function addContestMember(contestId: string, userId: string) {
+    return Call((client) => client.default.createContestMember({contestId, userId}));
 }
 
-export async function removeContestMember(
-    contestId: string,
-    userId: string
-) {
-    try {
-        console.log('📤 Removing participant from contest:', {contestId, userId});
-        const response = await Call((client) =>
-            client.default.deleteContestMember({userId, contestId})
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to remove participant from contest:', error);
-        throw error;
-    }
+export async function removeContestMember(contestId: string, userId: string) {
+    return Call((client) => client.default.deleteContestMember({userId, contestId}));
 }
 
 export async function searchProblems(title: string, owner?: boolean) {
@@ -286,25 +164,15 @@ export async function searchProblems(title: string, owner?: boolean) {
         params.title = title.trim();
     }
 
-    const response = await Call((client) => client.default.listProblems(params));
-    return response;
+    return Call((client) => client.default.listProblems(params));
 }
 
-// NOTE: duplicate of listUsers
-export async function searchUsers(search: string): Promise<ListUsersResponseModel> {
-    try {
-        const response = await Call((client) =>
-            client.default.listUsers({
-                page: 1,
-                pageSize: 10,
-                search: search,
-            })
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to search users:', error);
-        return {users: [], pagination: {page: 1, total: 0}};
-    }
+export async function searchUsers(search: string) {
+    return Call((client) => client.default.listUsers({
+        page: 1,
+        pageSize: 10,
+        search: search,
+    }));
 }
 
 export async function createSolution(
@@ -313,34 +181,25 @@ export async function createSolution(
     language: number,
     submission: FormData
 ) {
-    try {
-        const solutionData = submission.get("submission");
-        let solutionContent: string;
-        
-        if (solutionData instanceof File) {
-            solutionContent = await solutionData.text();
-        } else if (typeof solutionData === "string") {
-            solutionContent = solutionData;
-        } else {
-            throw new Error("Invalid solution data type");
-        }
-        
-        console.log("Creating submission:", {problemId, contestId, language});
-        const response = await Call((client) =>
-            client.default.createSubmission({
-                problemId,
-                contestId,
-                language,
-                requestBody: {
-                    submission: solutionContent,
-                },
-            })
-        );
-        return response;
-    } catch (error) {
-        console.error('Failed to create solution:', error);
-        throw error;
+    const solutionData = submission.get("submission");
+    let solutionContent: string;
+    
+    if (solutionData instanceof File) {
+        solutionContent = await solutionData.text();
+    } else if (typeof solutionData === "string") {
+        solutionContent = solutionData;
+    } else {
+        return [{ status: 400, message: "Invalid solution data type" }, null] as const;
     }
+    
+    return Call((client) => client.default.createSubmission({
+        problemId,
+        contestId,
+        language,
+        requestBody: {
+            submission: solutionContent,
+        },
+    }));
 }
 
 // FIXME: Implement actual API endpoint for updating contest member role
@@ -361,21 +220,9 @@ export async function listAdminContests(
   sortBy: 'created_at' | 'updated_at' | 'title' = 'created_at',
   sortOrder: 'asc' | 'desc' = 'desc'
 ) {
-  const response = await Call((client) =>
-    client.default.listAdminContests({ page, pageSize, search, sortBy, sortOrder })
-  );
-  return response;
+  return Call((client) => client.default.listAdminContests({ page, pageSize, search, sortBy, sortOrder }));
 }
 
 export async function deleteContest(contestId: string) {
-  try {
-    console.log('📤 Deleting contest:', contestId);
-    const response = await Call((client) =>
-      client.default.deleteContest({ contestId })
-    );
-    return response;
-  } catch (error) {
-    console.error('Failed to delete contest:', error);
-    throw error;
-  }
+  return Call((client) => client.default.deleteContest({ contestId }));
 }

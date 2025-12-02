@@ -18,9 +18,9 @@ import {
   Stack,
   Table,
   Text,
-  Title,
 } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -65,16 +65,16 @@ export function ProblemsSection({
         return;
       }
 
-      try {
-        setSearching(true);
-        const response = await searchProblems(debouncedQuery, true);
+      setSearching(true);
+      const [error, response] = await searchProblems(debouncedQuery, true);
+      setSearching(false);
 
-        setSearchResults(response?.problems || []);
-      } catch (error) {
+      if (error) {
         console.error("Failed to search problems:", error);
-      } finally {
-        setSearching(false);
+        return;
       }
+
+      setSearchResults(response?.problems || []);
     };
 
     searchProblemsAsync();
@@ -83,51 +83,59 @@ export function ProblemsSection({
   const handleAddProblem = async () => {
     if (!selectedProblemId) return;
 
-    try {
-      setAdding(true);
+    setAdding(true);
+    const [error] = await addContestProblem(contestId, selectedProblemId);
+    setAdding(false);
 
-      await addContestProblem(contestId, selectedProblemId);
-
-      setStatusMessage({
-        type: "success",
-        message: "Задача добавлена в контест",
-      });
-
-      setSearchQuery("");
-      setSelectedProblemId(null);
-      router.refresh();
-    } catch (error) {
+    if (error) {
       console.error("Failed to add problem:", error);
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось добавить задачу",
+        color: "red",
+      });
       setStatusMessage({
         type: "error",
         message: "Не удалось добавить задачу",
       });
-    } finally {
-      setAdding(false);
+      return;
     }
+
+    setStatusMessage({
+      type: "success",
+      message: "Задача добавлена в контест",
+    });
+
+    setSearchQuery("");
+    setSelectedProblemId(null);
+    router.refresh();
   };
 
   const handleDeleteProblem = async (problemId: string) => {
-    try {
-      setDeletingId(problemId);
+    setDeletingId(problemId);
+    const [error] = await removeContestProblem(contestId, problemId);
+    setDeletingId(null);
 
-      await removeContestProblem(contestId, problemId);
-
-      setStatusMessage({
-        type: "success",
-        message: "Задача удалена из контеста",
-      });
-
-      router.refresh();
-    } catch (error) {
+    if (error) {
       console.error("Failed to delete problem:", error);
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось удалить задачу",
+        color: "red",
+      });
       setStatusMessage({
         type: "error",
         message: "Не удалось удалить задачу",
       });
-    } finally {
-      setDeletingId(null);
+      return;
     }
+
+    setStatusMessage({
+      type: "success",
+      message: "Задача удалена из контеста",
+    });
+
+    router.refresh();
   };
 
   const autocompleteData = searchResults.map((p) => ({

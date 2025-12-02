@@ -9,6 +9,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useEffect, useState } from "react";
 import type { ContestModel, PaginationModel } from "../../../contracts/core/v1";
 import { NextPagination } from "../Pagination";
@@ -38,21 +39,18 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
     setLoading(true);
     setError(false);
 
-    try {
-      const data = await listAdminContests(page, 10, search);
+    const [err, data] = await listAdminContests(page, 10, search);
 
-      if (!data) {
-        throw new Error("Failed to fetch contests");
-      }
-
-      setContests(data.contests || []);
-      setPagination(data.pagination || { total: 0, page: 1 });
-    } catch (err) {
+    if (err || !data) {
       console.error("Error fetching contests:", err);
       setError(true);
-    } finally {
       setLoading(false);
+      return;
     }
+
+    setContests(data.contests || []);
+    setPagination(data.pagination || { total: 0, page: 1 });
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -61,22 +59,24 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
   }, [page, search]);
 
   const handleDeleteContest = async (contestId: string) => {
-    try {
-      await deleteContest(contestId);
-      setStatusMessage({
-        type: "success",
-        message: "Контест успешно удалён",
-      });
-      // Reload contests after deletion
-      await loadContests();
-    } catch (err) {
+    const [err] = await deleteContest(contestId);
+    
+    if (err) {
       console.error("Error deleting contest:", err);
-      setStatusMessage({
-        type: "error",
-        message: "Не удалось удалить контест",
+      notifications.show({
+        title: "Ошибка",
+        message: err.message || "Не удалось удалить контест",
+        color: "red",
       });
-      throw err;
+      throw new Error(err.message);
     }
+
+    setStatusMessage({
+      type: "success",
+      message: "Контест успешно удалён",
+    });
+    // Reload contests after deletion
+    await loadContests();
   };
 
   if (error) {
@@ -151,4 +151,3 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
     </Container>
   );
 }
-

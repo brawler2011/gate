@@ -12,13 +12,13 @@ const CreateContestForm = () => {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const response = await createContest("New Contest");
-      return response?.id || "";
+      const [error, response] = await createContest("New Contest");
+      if (error) throw new Error(error.message);
+      if (!response?.id) throw new Error("Не получен ID контеста");
+      return response.id;
     },
-    onSuccess: async (data: string) => {
-      if (data) {
-        router.push(`/contests/${data}`);
-      }
+    onSuccess: (contestId: string) => {
+      router.push(`/contests/${contestId}`);
     },
     onError: (error) => {
       console.error("Не удалось создать контест. Попробуйте позже.", error);

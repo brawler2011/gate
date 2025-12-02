@@ -31,16 +31,16 @@ export function WorkshopHeader({ isAuthenticated }: Props) {
 
   const createContestMutation = useMutation({
     mutationFn: async () => {
-      const response = await createContest("New Contest");
-      return response?.id || "";
+      const [error, response] = await createContest("New Contest");
+      if (error) throw new Error(error.message);
+      if (!response?.id) throw new Error("Не получен ID контеста");
+      return response.id;
     },
-    onSuccess: async (data: string) => {
-      if (data) {
-        router.push(`/contests/${data}`);
-      }
+    onSuccess: (contestId: string) => {
+      router.push(`/contests/${contestId}`);
     },
     onError: (error) => {
-      console.error("Не удалось создать контест. Попробуйте позже.", error);
+      console.error("Не удалось создать контест:", error);
       notifications.show({
         title: "Ошибка",
         message:
@@ -52,14 +52,22 @@ export function WorkshopHeader({ isAuthenticated }: Props) {
 
   const createProblemMutation = useMutation({
     mutationFn: async (): Promise<string> => {
-      const response = await createProblem("New Problem");
-      return response?.id || "";
+      const [error, response] = await createProblem("New Problem");
+      if (error) throw new Error(error.message);
+      if (!response?.id) throw new Error("Не получен ID задачи");
+      return response.id;
     },
-    onSuccess: async (data: string) => {
-      router.push(`/problems/${data}/edit`);
+    onSuccess: (problemId: string) => {
+      router.push(`/problems/${problemId}/edit`);
     },
     onError: (error) => {
-      console.error("Не удалось создать задачу. Попробуйте позже.", error);
+      console.error("Не удалось создать задачу:", error);
+      notifications.show({
+        title: "Ошибка",
+        message:
+          error instanceof Error ? error.message : "Не удалось создать задачу",
+        color: "red",
+      });
     },
   });
 

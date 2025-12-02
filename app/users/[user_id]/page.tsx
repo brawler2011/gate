@@ -1,5 +1,6 @@
 import { DefaultLayout } from "@/components/Layout";
 import { Profile } from "@/components/Profile";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { getUser } from "@/lib/actions";
 import { isValidUUIDV4 } from "@/lib/lib";
 import { Metadata } from "next";
@@ -19,16 +20,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  try {
-    const userData = await getUser(user_id);
-    return {
-      title: `${userData.user.username} - Gate149`,
-    };
-  } catch {
+  const [error, userData] = await getUser(user_id);
+  if (error || !userData) {
     return {
       title: "Ошибка загрузки профиля - Gate149",
     };
   }
+
+  return {
+    title: `${userData.user.username} - Gate149`,
+  };
 }
 
 const Page = async ({ params }: Props) => {
@@ -39,16 +40,17 @@ const Page = async ({ params }: Props) => {
     notFound();
   }
 
-  const userData = await getUser(user_id);
+  const [error, userData] = await getUser(user_id);
+  if (error) return <ErrorDisplay error={error} />;
 
   return (
     <DefaultLayout>
       <Profile 
-        username={userData.user.username}
+        username={userData!.user.username}
         email={"kotok.9647@gmail.com"}
         name={"Алексей"}
         surname={"Котоков"}
-        role={userData.user.role}
+        role={userData!.user.role}
         avatarlink={"/images/avatar.png"}
       />
     </DefaultLayout>

@@ -15,17 +15,18 @@ export async function submitSubmission(
     return null;
   }
 
-  try {
-    const response = await createSolution(
-      problemId,
-      contestId,
-      languageCode,
-      submission
-    );
-    // Return 1 on success (component uses this only to check success, not the actual ID)
-    return response?.id ? 1 : null;
-  } catch (error) {
+  const [error, response] = await createSolution(
+    problemId,
+    contestId,
+    languageCode,
+    submission
+  );
+
+  if (error) {
     console.error("Failed to create submission:", error);
     return null;
   }
+
+  // Return 1 on success (component uses this only to check success, not the actual ID)
+  return response?.id ? 1 : null;
 }

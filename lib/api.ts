@@ -2,9 +2,18 @@
 
 import { cookies } from "next/headers";
 import { core } from "../../contracts/core/v1";
-import { ApiError } from "../../contracts/core/v1/core/ApiError";
+import { ApiError as ContractsApiError } from "../../contracts/core/v1/core/ApiError";
 
 const oryKratosCookieName = "ory_kratos_session";
+
+/**
+ * API error info returned from Call
+ */
+export type ApiError = {
+  status: number;
+  message: string;
+  requestId?: string;
+};
 
 const getKratosCookie = async (): Promise<string | undefined> => {
   const requestCookies = await cookies();
@@ -22,9 +31,13 @@ const getKratosCookie = async (): Promise<string | undefined> => {
   return `${oryKratosCookieName}=${cookie.value}`;
 };
 
+/**
+ * Call API method and return [error, data] tuple
+ * Returns [null, data] on success, [error, null] on failure
+ */
 export const Call = async <T>(
   method: (client: core) => Promise<T>
-): Promise<T> => {
+): Promise<[ApiError | null, T | null]> => {
   const headers: Record<string, string> = {};
 
   const kratosCookie = await getKratosCookie();
@@ -38,15 +51,17 @@ export const Call = async <T>(
   });
 
   try {
-    return await method(client);
+    const data = await method(client);
+    return [null, data];
   } catch (error) {
-    // Re-throw with informative message that survives SSR serialization
-    if (error instanceof ApiError) {
+    if (error instanceof ContractsApiError) {
       const body = error.body as { message?: string; request_id?: string } | undefined;
-      const details = body?.message || error.statusText;
-      const requestId = body?.request_id ? ` [${body.request_id}]` : "";
-      throw new Error(`${error.status}: ${details}${requestId}`);
+      return [{
+        status: error.status,
+        message: body?.message || error.statusText,
+        requestId: body?.request_id,
+      }, null];
     }
-    throw error;
+    return [{ status: 500, message: 'Неизвестная ошибка' }, null];
   }
 };

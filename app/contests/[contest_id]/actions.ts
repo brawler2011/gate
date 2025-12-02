@@ -10,34 +10,36 @@ type CreateTaskParams = {
 export const CreateTask = async ({
   contest_id,
   problem_id,
-}: CreateTaskParams): Promise<string | null> => {
+}: CreateTaskParams) => {
   if (!contest_id || !problem_id) {
     console.error("Missing contest_id or problem_id", { contest_id, problem_id });
-    return null;
+    return [{ status: 400, message: "Missing contest_id or problem_id" }, null] as const;
   }
 
   console.log("🚀 Creating task with:", { contest_id, problem_id });
 
-  try {
-    const response = await Call((client) =>
-      client.default.createContestProblem({ contestId: contest_id, problemId: problem_id })
-    );
-    console.log("✅ Task created:", response);
-    return response?.id || null;
-  } catch (error) {
+  const [error, response] = await Call((client) =>
+    client.default.createContestProblem({ contestId: contest_id, problemId: problem_id })
+  );
+
+  if (error) {
     console.error("❌ Failed to create task:", error);
-    throw error;
+    return [error, null] as const;
   }
+
+  console.log("✅ Task created:", response);
+  return [null, response?.id || null] as const;
 };
 
 export const fetchProblems = async (title: string) => {
-  try {
-    const response = await Call((client) =>
-      client.default.listProblems({ page: 1, pageSize: 20, search: title })
-    );
-    return response?.problems || [];
-  } catch (error) {
+  const [error, response] = await Call((client) =>
+    client.default.listProblems({ page: 1, pageSize: 20, search: title })
+  );
+
+  if (error) {
     console.error("Failed to fetch problems:", error);
     return [];
   }
+
+  return response?.problems || [];
 };

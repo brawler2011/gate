@@ -6,6 +6,7 @@ import {DefaultLayout} from '@/components/Layout';
 import {NextPagination} from '@/components/Pagination';
 import {SubmissionsListClient} from '@/components/SubmissionsList';
 import {ContestHotbar} from '@/components/ContestHotbar';
+import {ErrorDisplay} from '@/components/ErrorDisplay';
 import { getCurrentUser } from '@/lib/auth';
 import { getMyContestRole } from '@/lib/contest-role';
 
@@ -54,7 +55,9 @@ const Page = async ({searchParams}: PageProps) => {
     if (params.order === 'asc' || params.order === 'desc') parsedParams.sortOrder = params.order;
     if (params.language) parsedParams.language = Number(params.language);
     
-    const submissionsData = await getSubmissions(parsedParams);
+    const [error, submissionsData] = await getSubmissions(parsedParams);
+    
+    if (error) return <ErrorDisplay error={error} />;
     
     if (!submissionsData) {
         return (
@@ -92,7 +95,8 @@ const Page = async ({searchParams}: PageProps) => {
     let contestRole = null;
     
     if (parsedParams.contestId) {
-        contestData = await getContest(parsedParams.contestId);
+        const [, contestResponse] = await getContest(parsedParams.contestId);
+        contestData = contestResponse;
         contestRole = user ? await getMyContestRole(parsedParams.contestId) : null;
     }
 

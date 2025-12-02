@@ -15,6 +15,7 @@ import {
   Divider,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type * as corev1 from "../../../contracts/core/v1";
@@ -100,25 +101,30 @@ export function SettingsSection({ contest }: SettingsSectionProps) {
   });
 
   const handleSave = async (values: typeof form.values) => {
-    try {
-      setSaving(true);
-      await updateContest(contest.id, values);
-      
-      setStatusMessage({
-        type: "success",
-        message: "Настройки контеста обновлены",
-      });
-      
-      router.refresh();
-    } catch (error) {
+    setSaving(true);
+    const [error] = await updateContest(contest.id, values);
+    setSaving(false);
+
+    if (error) {
       console.error("Failed to update contest:", error);
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось обновить настройки",
+        color: "red",
+      });
       setStatusMessage({
         type: "error",
         message: "Не удалось обновить настройки",
       });
-    } finally {
-      setSaving(false);
+      return;
     }
+
+    setStatusMessage({
+      type: "success",
+      message: "Настройки контеста обновлены",
+    });
+    
+    router.refresh();
   };
 
   return (

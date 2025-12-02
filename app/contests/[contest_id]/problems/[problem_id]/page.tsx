@@ -6,8 +6,8 @@ import {
   getSubmissions,
 } from "@/lib/actions";
 import { HeaderWithSession } from "@/components/HeaderWithSession";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Task } from "@/components/Task";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";
@@ -24,12 +24,12 @@ const getCachedContestProblem = cache(
 
 const generateMetadata = async (props: Props): Promise<Metadata> => {
   const params = await props.params;
-  const problem = await getCachedContestProblem(
+  const [error, problem] = await getCachedContestProblem(
     params.problem_id,
     params.contest_id
   );
 
-  if (!problem?.problem) {
+  if (error || !problem?.problem) {
     return {
       title: "Что-то пошло не так!",
     };
@@ -46,21 +46,28 @@ const generateMetadata = async (props: Props): Promise<Metadata> => {
 const Page = async (props: Props) => {
   const params = await props.params;
 
-  const [problemResponse, contestResponse, submissionsResponse, user] =
-    await Promise.all([
-      getCachedContestProblem(params.problem_id, params.contest_id),
-      getContest(params.contest_id),
-      getSubmissions({
-        page: 1,
-        pageSize: 20,
-        contestId: params.contest_id,
-        sortOrder: "desc",
-      }),
-      getCurrentUser(),
-    ]);
+  const [
+    [problemError, problemResponse],
+    [contestError, contestResponse],
+    [, submissionsResponse],
+    user
+  ] = await Promise.all([
+    getCachedContestProblem(params.problem_id, params.contest_id),
+    getContest(params.contest_id),
+    getSubmissions({
+      page: 1,
+      pageSize: 20,
+      contestId: params.contest_id,
+      sortOrder: "desc",
+    }),
+    getCurrentUser(),
+  ]);
+
+  if (problemError) return <ErrorDisplay error={problemError} />;
+  if (contestError) return <ErrorDisplay error={contestError} />;
 
   if (!problemResponse?.problem || !contestResponse?.contest) {
-    notFound();
+    return <ErrorDisplay error={{ status: 404, message: "Задача или контест не найдены" }} />;
   }
 
   // Get contest role for permissions
@@ -68,7 +75,7 @@ const Page = async (props: Props) => {
 
   // Handle submissions - if null or error, use empty array
   // This can happen if user is not synced in backend DB yet
-  const submissions = submissionsResponse.submissions || [];
+  const submissions = [...(submissionsResponse?.submissions || [])];
 
   // Build WebSocket URL for real-time updates
   // Remove trailing slash if present to avoid double slashes

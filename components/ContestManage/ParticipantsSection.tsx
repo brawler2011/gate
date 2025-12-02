@@ -22,6 +22,7 @@ import {
   Text,
 } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -74,18 +75,18 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
 
   // Load participants
   const loadParticipants = async () => {
-    try {
-      setLoading(true);
-      const response = await getContestMembers(contestId, page, pageSize);
+    setLoading(true);
+    const [error, response] = await getContestMembers(contestId, page, pageSize);
+    setLoading(false);
 
-      setParticipants(response.members);
-      const total = response?.pagination?.total || 0;
-      setTotalPages(Math.ceil(total / pageSize));
-    } catch (error) {
+    if (error || !response) {
       console.error("Failed to load participants:", error);
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    setParticipants(response.members);
+    const total = response?.pagination?.total || 0;
+    setTotalPages(Math.ceil(total / pageSize));
   };
 
   // Load participants on mount and when page changes
@@ -101,16 +102,16 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
         return;
       }
 
-      try {
-        setSearching(true);
-        const response = await searchUsers(debouncedQuery);
+      setSearching(true);
+      const [error, response] = await searchUsers(debouncedQuery);
+      setSearching(false);
 
-        setSearchResults(response.users);
-      } catch (error) {
+      if (error || !response) {
         console.error("Failed to search users:", error);
-      } finally {
-        setSearching(false);
+        return;
       }
+
+      setSearchResults(response.users);
     };
 
     searchUsersAsync();
@@ -119,51 +120,59 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
   const handleAddParticipant = async () => {
     if (!selectedUserId) return;
 
-    try {
-      setAdding(true);
+    setAdding(true);
+    const [error] = await addContestMember(contestId, selectedUserId);
+    setAdding(false);
 
-      await addContestMember(contestId, selectedUserId);
-
-      setStatusMessage({
-        type: "success",
-        message: "Участник добавлен",
-      });
-
-      setSearchQuery("");
-      setSelectedUserId(null);
-      await loadParticipants();
-    } catch (error) {
+    if (error) {
       console.error("Failed to add participant:", error);
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось добавить участника",
+        color: "red",
+      });
       setStatusMessage({
         type: "error",
         message: "Не удалось добавить участника",
       });
-    } finally {
-      setAdding(false);
+      return;
     }
+
+    setStatusMessage({
+      type: "success",
+      message: "Участник добавлен",
+    });
+
+    setSearchQuery("");
+    setSelectedUserId(null);
+    await loadParticipants();
   };
 
   const handleDeleteParticipant = async (userId: string) => {
-    try {
-      setDeletingId(userId);
+    setDeletingId(userId);
+    const [error] = await removeContestMember(contestId, userId);
+    setDeletingId(null);
 
-      await removeContestMember(contestId, userId);
-
-      setStatusMessage({
-        type: "success",
-        message: "Участник удален",
-      });
-
-      await loadParticipants();
-    } catch (error) {
+    if (error) {
       console.error("Failed to delete participant:", error);
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось удалить участника",
+        color: "red",
+      });
       setStatusMessage({
         type: "error",
         message: "Не удалось удалить участника",
       });
-    } finally {
-      setDeletingId(null);
+      return;
     }
+
+    setStatusMessage({
+      type: "success",
+      message: "Участник удален",
+    });
+
+    await loadParticipants();
   };
 
   const handleEditRole = (user: corev1.ContestMemberModel) => {

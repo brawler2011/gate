@@ -1,6 +1,7 @@
 import { Footer } from "@/components/Footer";
 import { HeaderWithSession } from "@/components/HeaderWithSession";
 import { Layout } from "@/components/Layout";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { getContest } from "@/lib/actions";
 import {
   AppShellFooter,
@@ -31,17 +32,17 @@ export const generateMetadata = async ({
 }: Props): Promise<Metadata> => {
   const { contest_id } = await params;
 
-  try {
-    const response = await getContest(contest_id);
-    return {
-      title: response.contest.title,
-      description: response.contest.title,
-    };
-  } catch {
+  const [error, response] = await getContest(contest_id);
+  if (error || !response) {
     return {
       title: "Ошибка загрузки контеста",
     };
   }
+
+  return {
+    title: response.contest.title,
+    description: response.contest.title,
+  };
 };
 
 type ContestProps = {
@@ -100,7 +101,8 @@ const Contest = ({ contest, problems, user, contestRole }: ContestProps) => {
 const Page = async ({ params }: Props) => {
   const { contest_id } = await params;
 
-  const response = await getContest(contest_id);
+  const [error, response] = await getContest(contest_id);
+  if (error) return <ErrorDisplay error={error} />;
 
   // Get user and contest role for permissions
   const user = await getCurrentUser();
@@ -108,8 +110,8 @@ const Page = async ({ params }: Props) => {
 
   return (
     <Contest 
-      contest={response.contest} 
-      problems={response.problems || []}
+      contest={response!.contest} 
+      problems={response!.problems || []}
       user={user}
       contestRole={contestRole}
     />

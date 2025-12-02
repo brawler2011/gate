@@ -6,6 +6,7 @@ import { WorkshopPageWrapper } from "@/components/WorkshopPage/WorkshopPageWrapp
 import { WorkshopProblemsContentSkeleton } from "@/components/WorkshopPage/WorkshopProblemsContentSkeleton";
 import { WorkshopProblemsWrapper } from "@/components/WorkshopPage/WorkshopProblemsWrapper";
 import { WorkshopTabs } from "@/components/WorkshopPage/WorkshopTabs";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { getContests, getProblems } from "@/lib/actions";
 import { isAuthenticated } from "@/lib/auth";
 import { Container, Stack } from "@mantine/core";
@@ -28,12 +29,13 @@ const ProblemsView = async ({
   page: number;
   authenticated: boolean;
 }) => {
-  const problemsData = await getProblems(page, 20, undefined, undefined, true);
+  const [error, problemsData] = await getProblems(page, 20, undefined, undefined, true);
+  if (error) return <ErrorDisplay error={error} />;
 
   return (
     <WorkshopProblemsWrapper
-      problems={problemsData.problems}
-      pagination={problemsData.pagination}
+      problems={problemsData!.problems}
+      pagination={problemsData!.pagination}
       isAuthenticated={authenticated}
       owner="me"
     />
@@ -47,12 +49,13 @@ const ContestsView = async ({
   page: number;
   search?: string;
 }) => {
-  const contestsData = await getContests(page, 10, search);
+  const [error, contestsData] = await getContests(page, 10, search);
+  if (error) return <ErrorDisplay error={error} />;
 
   return (
     <WorkshopContestsWrapper
-      contests={contestsData.contests}
-      pagination={contestsData.pagination}
+      contests={contestsData!.contests}
+      pagination={contestsData!.pagination}
     />
   );
 };

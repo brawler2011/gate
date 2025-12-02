@@ -18,29 +18,29 @@ export type SessionUser = {
  * Returns null if user is not authenticated (403) or any error occurs
  */
 export const getCurrentUser = cache(async (): Promise<SessionUser> => {
-  try {
-    const response = await Call((client) => client.default.getMe());
+  const [error, response] = await Call((client) => client.default.getMe());
 
-    console.log("GetMe response:", response);
-
-    if (!response || !response.user) {
-      console.log("GetMe: no user in response");
-      return null;
-    }
-
-    const { user } = response;
-    const role = user.role === "admin" ? "admin" : "user";
-
-    return {
-      id: user.id,
-      username: user.username,
-      role,
-    };
-  } catch (error) {
+  if (error || !response) {
     // 403 or any other error means not authenticated
     console.log("GetMe error:", error);
     return null;
   }
+
+  console.log("GetMe response:", response);
+
+  if (!response.user) {
+    console.log("GetMe: no user in response");
+    return null;
+  }
+
+  const { user } = response;
+  const role = user.role === "admin" ? "admin" : "user";
+
+  return {
+    id: user.id,
+    username: user.username,
+    role,
+  };
 });
 
 /**

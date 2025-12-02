@@ -2,6 +2,7 @@ import {ParticipantsSection} from "@/components/ContestManage/ParticipantsSectio
 import {ProblemsSection} from "@/components/ContestManage/ProblemsSection";
 import {SettingsSection} from "@/components/ContestManage/SettingsSection";
 import {DefaultLayout} from "@/components/Layout";
+import {ErrorDisplay} from "@/components/ErrorDisplay";
 import {getContest} from "@/lib/actions";
 import {CONTEST_CONTENT_MAX_WIDTH} from "@/lib/constants";
 import {Box, Button, Container, Group, Stack, Title} from "@mantine/core";
@@ -46,9 +47,11 @@ export default async function ContestManagePage({params, searchParams}: Props) {
     const {contest_id: contestId} = await params;
     const {section = "settings"} = await searchParams;
 
-    const response = await getContest(contestId);
-    const contest = response.contest;
-    const problems: Array<ContestProblemListItemModel> = response.problems || [];
+    const [error, response] = await getContest(contestId);
+    if (error) return <ErrorDisplay error={error} />;
+
+    const contest = response!.contest;
+    const problems: Array<ContestProblemListItemModel> = response!.problems || [];
 
     const validSections = Object.values(SECTIONS);
     const activeSection = (
