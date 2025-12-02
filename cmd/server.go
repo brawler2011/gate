@@ -131,7 +131,7 @@ func runServer(envFile string) {
 	outboxRepo := outbox.NewRepository(pool)
 
 	solutionsRepo := submissions.NewRepository(pool)
-	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsUC, problemsUC, outboxRepo)
+	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsUC, problemsUC, outboxRepo, natsPublisher, logger)
 
 	// Initialize and start outbox worker
 	ctx, cancel := context.WithCancel(context.Background())

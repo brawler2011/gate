@@ -16,14 +16,14 @@ import (
 )
 
 const (
-	MaxRetries        = 3
-	PollInterval      = 1 * time.Second
-	BatchSize         = 10
-	MaxWaitForJudge0  = 30 * time.Second
-	CleanupInterval   = 1 * time.Hour
-	RetentionDays     = 7
-	RetryInterval     = 5 * time.Minute // Interval to retry untested submissions
-	RetryBatchSize    = 5               // Number of untested submissions to retry at once
+	MaxRetries       = 3
+	PollInterval     = 1 * time.Second
+	BatchSize        = 10
+	MaxWaitForJudge0 = 30 * time.Second
+	CleanupInterval  = 1 * time.Hour
+	RetentionDays    = 7
+	RetryInterval    = 5 * time.Minute // Interval to retry untested submissions
+	RetryBatchSize   = 5               // Number of untested submissions to retry at once
 )
 
 type SubmissionsRepo interface {
@@ -136,8 +136,8 @@ func (w *Worker) processEvents(ctx context.Context) {
 
 func (w *Worker) processEvent(ctx context.Context, event *outboxsqlc.OutboxEvent) error {
 	switch event.EventType {
-	case models.EventTypeSubmissionCreated:
-		return w.processSubmissionCreated(ctx, event)
+	case models.EventTypeSubmissionTest:
+		return w.processSubmissionTest(ctx, event)
 	case models.EventTypeSubmissionTested:
 		return w.processSubmissionTested(ctx, event)
 	default:
@@ -145,14 +145,14 @@ func (w *Worker) processEvent(ctx context.Context, event *outboxsqlc.OutboxEvent
 	}
 }
 
-func (w *Worker) processSubmissionCreated(ctx context.Context, event *outboxsqlc.OutboxEvent) error {
+func (w *Worker) processSubmissionTest(ctx context.Context, event *outboxsqlc.OutboxEvent) error {
 	// Parse payload
-	var payload models.SubmissionCreatedPayload
+	var payload models.SubmissionTestPayload
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
 
-	w.logger.Info("processing submission.created event",
+	w.logger.Info("processing submission.test event",
 		slog.String("submission_id", payload.SubmissionId.String()),
 		slog.String("problem_id", payload.ProblemId.String()))
 
@@ -161,10 +161,6 @@ func (w *Worker) processSubmissionCreated(ctx context.Context, event *outboxsqlc
 	if err != nil {
 		return fmt.Errorf("failed to get submission: %w", err)
 	}
-
-	// Publish submission.created WebSocket event immediately
-	// so users can see the new submission in real-time
-	w.publishSubmissionCreated(&submission)
 
 	// Fetch problem
 	problem, err := w.problemsRepo.GetProblemById(ctx, payload.ProblemId)
@@ -292,7 +288,7 @@ type SubmissionContext struct {
 func (w *Worker) publishTestProgress(ctx *SubmissionContext, event *models.TestProgressEvent) {
 	// Publish to individual submission subject (for backward compatibility)
 	subject := fmt.Sprintf("submissions.%s.progress", ctx.SubmissionID.String())
-	
+
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
 		w.logger.Error("failed to marshal test progress event",
@@ -402,7 +398,7 @@ func (w *Worker) buildSubmissionWebSocketEvent(submission *submissionssqlc.GetSu
 	if submission.Position != nil {
 		position = int64(*submission.Position)
 	}
-	
+
 	// Get contest visibility for permission filtering
 	contestVisibility := ""
 	if submission.ContestVisibility.Valid {
@@ -465,7 +461,7 @@ func (w *Worker) buildSubmissionContext(submission *submissionssqlc.GetSubmissio
 func (w *Worker) publishSubmissionWebSocketEvent(event *models.SubmissionWebSocketEvent) {
 	// Publish to submissions.list subject for real-time list updates
 	subject := "submissions.list"
-	
+
 	eventBytes, err := json.Marshal(event)
 	if err != nil {
 		w.logger.Error("failed to marshal submission websocket event",
@@ -520,13 +516,13 @@ func (w *Worker) testSubmission(
 		TotalTests:   totalTests,
 	})
 
-	w.logger.Info("starting tests", 
-		slog.String("submission_id", submission.ID.String()), 
+	w.logger.Info("starting tests",
+		slog.String("submission_id", submission.ID.String()),
 		slog.Int("total_tests", totalTests))
 
 	for i, test := range tests {
 		testNumber := i + 1
-		
+
 		// Create submission in Judge0
 		timeLimit := float64(problem.TimeLimit) / 1000.0 // Convert ms to seconds
 		memoryLimit := int(problem.MemoryLimit)          // Memory limit in MB
@@ -670,7 +666,7 @@ func (w *Worker) cleanup(ctx context.Context) {
 	}
 }
 
-// retryUntestedSubmissions finds submissions that are still in "Saved" state 
+// retryUntestedSubmissions finds submissions that are still in "Saved" state
 // and creates new outbox events for them to retry testing
 func (w *Worker) retryUntestedSubmissions(ctx context.Context) {
 	w.logger.Info("checking for untested submissions")

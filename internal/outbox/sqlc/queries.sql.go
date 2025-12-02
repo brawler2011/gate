@@ -16,7 +16,8 @@ import (
 
 const deleteOldEvents = `-- name: DeleteOldEvents :exec
 DELETE FROM outbox_events
-WHERE status = $1 AND processed_at < $2
+WHERE status = $1
+       AND processed_at < $2
 `
 
 type DeleteOldEventsParams struct {
@@ -30,8 +31,16 @@ func (q *Queries) DeleteOldEvents(ctx context.Context, arg DeleteOldEventsParams
 }
 
 const getPendingEvents = `-- name: GetPendingEvents :many
-SELECT id, aggregate_id, aggregate_type, event_type, payload, status, 
-       created_at, processed_at, retry_count, error_message
+SELECT id,
+       aggregate_id,
+       aggregate_type,
+       event_type,
+       payload,
+       status,
+       created_at,
+       processed_at,
+       retry_count,
+       error_message
 FROM outbox_events
 WHERE status = $1
 ORDER BY created_at ASC
@@ -75,10 +84,24 @@ func (q *Queries) GetPendingEvents(ctx context.Context, arg GetPendingEventsPara
 }
 
 const insertEvent = `-- name: InsertEvent :one
-
-INSERT INTO outbox_events (aggregate_id, aggregate_type, event_type, payload, status, retry_count)
-VALUES ($1::uuid, $2, $3, $4, $5, $6)
-RETURNING id, created_at
+INSERT INTO outbox_events (
+              aggregate_id,
+              aggregate_type,
+              event_type,
+              payload,
+              status,
+              retry_count
+       )
+VALUES (
+              $1::uuid,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6
+       )
+RETURNING id,
+       created_at
 `
 
 type InsertEventParams struct {
@@ -112,7 +135,8 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) (Inser
 
 const markAsCompleted = `-- name: MarkAsCompleted :exec
 UPDATE outbox_events
-SET status = $1, processed_at = $2
+SET status = $1,
+       processed_at = $2
 WHERE id = $3::uuid
 `
 
@@ -129,7 +153,9 @@ func (q *Queries) MarkAsCompleted(ctx context.Context, arg MarkAsCompletedParams
 
 const markAsFailed = `-- name: MarkAsFailed :exec
 UPDATE outbox_events
-SET status = $1, retry_count = retry_count + 1, error_message = $2
+SET status = $1,
+       retry_count = retry_count + 1,
+       error_message = $2
 WHERE id = $3::uuid
 `
 
@@ -163,7 +189,8 @@ func (q *Queries) MarkAsProcessing(ctx context.Context, arg MarkAsProcessingPara
 const resetFailedToPending = `-- name: ResetFailedToPending :exec
 UPDATE outbox_events
 SET status = $1
-WHERE status = $2 AND retry_count < $3
+WHERE status = $2
+       AND retry_count < $3
 `
 
 type ResetFailedToPendingParams struct {
