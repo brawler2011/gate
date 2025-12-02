@@ -18,6 +18,33 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AccessRequestModelStatus.
+const (
+	AccessRequestModelStatusApproved AccessRequestModelStatus = "approved"
+	AccessRequestModelStatusPending  AccessRequestModelStatus = "pending"
+	AccessRequestModelStatusRejected AccessRequestModelStatus = "rejected"
+)
+
+// Defines values for ContestModelScoringMode.
+const (
+	ContestModelScoringModeBinary ContestModelScoringMode = "binary"
+	ContestModelScoringModePoints ContestModelScoringMode = "points"
+)
+
+// Defines values for InvitationModelStatus.
+const (
+	InvitationModelStatusAccepted InvitationModelStatus = "accepted"
+	InvitationModelStatusDeclined InvitationModelStatus = "declined"
+	InvitationModelStatusPending  InvitationModelStatus = "pending"
+	InvitationModelStatusRevoked  InvitationModelStatus = "revoked"
+)
+
+// Defines values for UpdateContestRequestModelScoringMode.
+const (
+	UpdateContestRequestModelScoringModeBinary UpdateContestRequestModelScoringMode = "binary"
+	UpdateContestRequestModelScoringModePoints UpdateContestRequestModelScoringMode = "points"
+)
+
 // Defines values for ListAdminContestsParamsVisibility.
 const (
 	Private ListAdminContestsParamsVisibility = "private"
@@ -35,6 +62,27 @@ const (
 const (
 	ListAdminContestsParamsSortOrderAsc  ListAdminContestsParamsSortOrder = "asc"
 	ListAdminContestsParamsSortOrderDesc ListAdminContestsParamsSortOrder = "desc"
+)
+
+// Defines values for ListAccessRequestsParamsStatus.
+const (
+	ListAccessRequestsParamsStatusApproved ListAccessRequestsParamsStatus = "approved"
+	ListAccessRequestsParamsStatusPending  ListAccessRequestsParamsStatus = "pending"
+	ListAccessRequestsParamsStatusRejected ListAccessRequestsParamsStatus = "rejected"
+)
+
+// Defines values for UpdateAccessRequestParamsStatus.
+const (
+	UpdateAccessRequestParamsStatusApproved UpdateAccessRequestParamsStatus = "approved"
+	UpdateAccessRequestParamsStatusRejected UpdateAccessRequestParamsStatus = "rejected"
+)
+
+// Defines values for ListInvitationsParamsStatus.
+const (
+	Accepted ListInvitationsParamsStatus = "accepted"
+	Declined ListInvitationsParamsStatus = "declined"
+	Pending  ListInvitationsParamsStatus = "pending"
+	Revoked  ListInvitationsParamsStatus = "revoked"
 )
 
 // Defines values for ListContestSubmissionsParamsSortOrder.
@@ -95,6 +143,21 @@ const (
 	Desc ListWorkshopContestsParamsSortOrder = "desc"
 )
 
+// AccessRequestModel defines model for AccessRequestModel.
+type AccessRequestModel struct {
+	ContestId openapi_types.UUID       `json:"contest_id"`
+	CreatedAt time.Time                `json:"created_at"`
+	Id        openapi_types.UUID       `json:"id"`
+	Status    AccessRequestModelStatus `json:"status"`
+	UpdatedAt time.Time                `json:"updated_at"`
+	UserId    openapi_types.UUID       `json:"user_id"`
+	UserRole  *string                  `json:"user_role,omitempty"`
+	Username  *string                  `json:"username,omitempty"`
+}
+
+// AccessRequestModelStatus defines model for AccessRequestModel.Status.
+type AccessRequestModelStatus string
+
 // ContestMemberModel defines model for ContestMemberModel.
 type ContestMemberModel struct {
 	ContestId   openapi_types.UUID `json:"contest_id"`
@@ -109,18 +172,24 @@ type ContestMemberModel struct {
 
 // ContestModel defines model for ContestModel.
 type ContestModel struct {
-	CreatedAt              time.Time          `json:"created_at"`
-	CreatedBy              openapi_types.UUID `json:"created_by"`
-	Description            string             `json:"description"`
-	Id                     openapi_types.UUID `json:"id"`
-	MonitorScope           string             `json:"monitor_scope"`
-	Owner                  *UserModel         `json:"owner,omitempty"`
-	SubmissionsListScope   string             `json:"submissions_list_scope"`
-	SubmissionsReviewScope string             `json:"submissions_review_scope"`
-	Title                  string             `json:"title"`
-	UpdatedAt              time.Time          `json:"updated_at"`
-	Visibility             string             `json:"visibility"`
+	CreatedAt              time.Time               `json:"created_at"`
+	CreatedBy              openapi_types.UUID      `json:"created_by"`
+	Description            string                  `json:"description"`
+	EndTime                *time.Time              `json:"end_time"`
+	Id                     openapi_types.UUID      `json:"id"`
+	MonitorScope           string                  `json:"monitor_scope"`
+	Owner                  *UserModel              `json:"owner,omitempty"`
+	ScoringMode            ContestModelScoringMode `json:"scoring_mode"`
+	StartTime              *time.Time              `json:"start_time"`
+	SubmissionsListScope   string                  `json:"submissions_list_scope"`
+	SubmissionsReviewScope string                  `json:"submissions_review_scope"`
+	Title                  string                  `json:"title"`
+	UpdatedAt              time.Time               `json:"updated_at"`
+	Visibility             string                  `json:"visibility"`
 }
+
+// ContestModelScoringMode defines model for ContestModel.ScoringMode.
+type ContestModelScoringMode string
 
 // ContestProblemListItemModel defines model for ContestProblemListItemModel.
 type ContestProblemListItemModel struct {
@@ -147,6 +216,12 @@ type ContestProblemModel struct {
 	TimeLimit        int64              `json:"time_limit"`
 	Title            string             `json:"title"`
 	UpdatedAt        time.Time          `json:"updated_at"`
+}
+
+// CreateSampleRequestModel defines model for CreateSampleRequestModel.
+type CreateSampleRequestModel struct {
+	Input  string `json:"input"`
+	Output string `json:"output"`
 }
 
 // CreateSubmissionRequestModel defines model for CreateSubmissionRequestModel.
@@ -176,6 +251,12 @@ type GetHealthResponseModel struct {
 	Status  string `json:"status"`
 }
 
+// GetMonitorResponseModel defines model for GetMonitorResponseModel.
+type GetMonitorResponseModel struct {
+	Pagination PaginationModel   `json:"pagination"`
+	Rows       []MonitorRowModel `json:"rows"`
+}
+
 // GetMyContestRoleResponseModel defines model for GetMyContestRoleResponseModel.
 type GetMyContestRoleResponseModel struct {
 	Role string `json:"role"`
@@ -186,14 +267,47 @@ type GetProblemResponseModel struct {
 	Problem ProblemModel `json:"problem"`
 }
 
+// GetSamplesResponseModel defines model for GetSamplesResponseModel.
+type GetSamplesResponseModel struct {
+	Samples []ProblemSampleModel `json:"samples"`
+}
+
 // GetSubmissionResponseModel defines model for GetSubmissionResponseModel.
 type GetSubmissionResponseModel struct {
 	Submission SubmissionModel `json:"submission"`
 }
 
+// GetTestGroupsResponseModel defines model for GetTestGroupsResponseModel.
+type GetTestGroupsResponseModel struct {
+	TestGroups []TestGroupModel `json:"test_groups"`
+}
+
 // GetUserResponseModel defines model for GetUserResponseModel.
 type GetUserResponseModel struct {
 	User UserModel `json:"user"`
+}
+
+// InvitationModel defines model for InvitationModel.
+type InvitationModel struct {
+	ContestId         openapi_types.UUID    `json:"contest_id"`
+	CreatedAt         time.Time             `json:"created_at"`
+	Id                openapi_types.UUID    `json:"id"`
+	InvitedBy         openapi_types.UUID    `json:"invited_by"`
+	InvitedByUsername *string               `json:"invited_by_username,omitempty"`
+	Status            InvitationModelStatus `json:"status"`
+	UpdatedAt         time.Time             `json:"updated_at"`
+	UserId            openapi_types.UUID    `json:"user_id"`
+	UserRole          *string               `json:"user_role,omitempty"`
+	Username          *string               `json:"username,omitempty"`
+}
+
+// InvitationModelStatus defines model for InvitationModel.Status.
+type InvitationModelStatus string
+
+// ListAccessRequestsResponseModel defines model for ListAccessRequestsResponseModel.
+type ListAccessRequestsResponseModel struct {
+	AccessRequests []AccessRequestModel `json:"access_requests"`
+	Pagination     PaginationModel      `json:"pagination"`
 }
 
 // ListContestMembersResponseModel defines model for ListContestMembersResponseModel.
@@ -206,6 +320,12 @@ type ListContestMembersResponseModel struct {
 type ListContestsResponseModel struct {
 	Contests   []ContestModel  `json:"contests"`
 	Pagination PaginationModel `json:"pagination"`
+}
+
+// ListInvitationsResponseModel defines model for ListInvitationsResponseModel.
+type ListInvitationsResponseModel struct {
+	Invitations []InvitationModel `json:"invitations"`
+	Pagination  PaginationModel   `json:"pagination"`
 }
 
 // ListProblemsResponseModel defines model for ListProblemsResponseModel.
@@ -231,6 +351,26 @@ type ListUserContestsResponseModel struct {
 type ListUsersResponseModel struct {
 	Pagination PaginationModel `json:"pagination"`
 	Users      []UserModel     `json:"users"`
+}
+
+// MonitorProblemStatusModel defines model for MonitorProblemStatusModel.
+type MonitorProblemStatusModel struct {
+	Attempts  int64              `json:"attempts"`
+	Penalty   int64              `json:"penalty"`
+	Position  int64              `json:"position"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+	Score     int64              `json:"score"`
+	Solved    bool               `json:"solved"`
+}
+
+// MonitorRowModel defines model for MonitorRowModel.
+type MonitorRowModel struct {
+	Problems     []MonitorProblemStatusModel `json:"problems"`
+	SolvedCount  int64                       `json:"solved_count"`
+	TotalPenalty int64                       `json:"total_penalty"`
+	TotalScore   int64                       `json:"total_score"`
+	UserId       openapi_types.UUID          `json:"user_id"`
+	Username     string                      `json:"username"`
 }
 
 // PaginationModel defines model for PaginationModel.
@@ -262,6 +402,16 @@ type ProblemModel struct {
 	Visibility       string             `json:"visibility"`
 }
 
+// ProblemSampleModel defines model for ProblemSampleModel.
+type ProblemSampleModel struct {
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+	Input     string             `json:"input"`
+	Ordinal   int64              `json:"ordinal"`
+	Output    string             `json:"output"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+}
+
 // ProblemsListItemModel defines model for ProblemsListItemModel.
 type ProblemsListItemModel struct {
 	CreatedAt   time.Time          `json:"created_at"`
@@ -277,6 +427,9 @@ type SubmissionModel struct {
 	ContestId    openapi_types.UUID `json:"contest_id"`
 	ContestTitle string             `json:"contest_title"`
 	CreatedAt    time.Time          `json:"created_at"`
+
+	// FailedTest The test number (1-indexed) where the submission failed. NULL for AC submissions.
+	FailedTest   *int               `json:"failed_test"`
 	Id           openapi_types.UUID `json:"id"`
 	Language     int64              `json:"language"`
 	MemoryStat   int64              `json:"memory_stat"`
@@ -298,6 +451,9 @@ type SubmissionsListItemModel struct {
 	ContestId    openapi_types.UUID `json:"contest_id"`
 	ContestTitle string             `json:"contest_title"`
 	CreatedAt    time.Time          `json:"created_at"`
+
+	// FailedTest The test number (1-indexed) where the submission failed. NULL for AC submissions.
+	FailedTest   *int               `json:"failed_test"`
 	Id           openapi_types.UUID `json:"id"`
 	Language     int64              `json:"language"`
 	MemoryStat   int64              `json:"memory_stat"`
@@ -313,15 +469,32 @@ type SubmissionsListItemModel struct {
 	Username     string             `json:"username"`
 }
 
+// TestGroupModel defines model for TestGroupModel.
+type TestGroupModel struct {
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+	IsSample  bool               `json:"is_sample"`
+	Name      string             `json:"name"`
+	Ordinal   int64              `json:"ordinal"`
+	Points    int64              `json:"points"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+}
+
 // UpdateContestRequestModel defines model for UpdateContestRequestModel.
 type UpdateContestRequestModel struct {
-	Description            *string `json:"description,omitempty"`
-	MonitorScope           *string `json:"monitor_scope,omitempty"`
-	SubmissionsListScope   *string `json:"submissions_list_scope,omitempty"`
-	SubmissionsReviewScope *string `json:"submissions_review_scope,omitempty"`
-	Title                  *string `json:"title,omitempty"`
-	Visibility             *string `json:"visibility,omitempty"`
+	Description            *string                               `json:"description,omitempty"`
+	EndTime                *time.Time                            `json:"end_time,omitempty"`
+	MonitorScope           *string                               `json:"monitor_scope,omitempty"`
+	ScoringMode            *UpdateContestRequestModelScoringMode `json:"scoring_mode,omitempty"`
+	StartTime              *time.Time                            `json:"start_time,omitempty"`
+	SubmissionsListScope   *string                               `json:"submissions_list_scope,omitempty"`
+	SubmissionsReviewScope *string                               `json:"submissions_review_scope,omitempty"`
+	Title                  *string                               `json:"title,omitempty"`
+	Visibility             *string                               `json:"visibility,omitempty"`
 }
+
+// UpdateContestRequestModelScoringMode defines model for UpdateContestRequestModel.ScoringMode.
+type UpdateContestRequestModelScoringMode string
 
 // UpdateProblemRequestModel defines model for UpdateProblemRequestModel.
 type UpdateProblemRequestModel struct {
@@ -334,6 +507,13 @@ type UpdateProblemRequestModel struct {
 	TimeLimit    *int64  `json:"time_limit,omitempty"`
 	Title        *string `json:"title,omitempty"`
 	Visibility   *string `json:"visibility,omitempty"`
+}
+
+// UpdateTestGroupRequestModel defines model for UpdateTestGroupRequestModel.
+type UpdateTestGroupRequestModel struct {
+	IsSample *bool   `json:"is_sample,omitempty"`
+	Name     *string `json:"name,omitempty"`
+	Points   *int64  `json:"points,omitempty"`
 }
 
 // UserModel defines model for UserModel.
@@ -374,6 +554,39 @@ type CreateContestParams struct {
 	Title string `form:"title" json:"title"`
 }
 
+// ListAccessRequestsParams defines parameters for ListAccessRequests.
+type ListAccessRequestsParams struct {
+	Page     int64                           `form:"page" json:"page"`
+	PageSize int64                           `form:"pageSize" json:"pageSize"`
+	Status   *ListAccessRequestsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListAccessRequestsParamsStatus defines parameters for ListAccessRequests.
+type ListAccessRequestsParamsStatus string
+
+// UpdateAccessRequestParams defines parameters for UpdateAccessRequest.
+type UpdateAccessRequestParams struct {
+	Status UpdateAccessRequestParamsStatus `form:"status" json:"status"`
+}
+
+// UpdateAccessRequestParamsStatus defines parameters for UpdateAccessRequest.
+type UpdateAccessRequestParamsStatus string
+
+// ListInvitationsParams defines parameters for ListInvitations.
+type ListInvitationsParams struct {
+	Page     int64                        `form:"page" json:"page"`
+	PageSize int64                        `form:"pageSize" json:"pageSize"`
+	Status   *ListInvitationsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListInvitationsParamsStatus defines parameters for ListInvitations.
+type ListInvitationsParamsStatus string
+
+// CreateInvitationParams defines parameters for CreateInvitation.
+type CreateInvitationParams struct {
+	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+}
+
 // DeleteContestMemberParams defines parameters for DeleteContestMember.
 type DeleteContestMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
@@ -396,9 +609,20 @@ type CreateContestMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
 }
 
+// GetMonitorParams defines parameters for GetMonitor.
+type GetMonitorParams struct {
+	Page     int64 `form:"page" json:"page"`
+	PageSize int64 `form:"pageSize" json:"pageSize"`
+}
+
 // CreateContestProblemParams defines parameters for CreateContestProblem.
 type CreateContestProblemParams struct {
 	ProblemId openapi_types.UUID `form:"problem_id" json:"problem_id"`
+}
+
+// UpdateProblemPositionParams defines parameters for UpdateProblemPosition.
+type UpdateProblemPositionParams struct {
+	Position int64 `form:"position" json:"position"`
 }
 
 // ListContestSubmissionsParams defines parameters for ListContestSubmissions.
@@ -427,6 +651,19 @@ type ListProblemsParams struct {
 // CreateProblemParams defines parameters for CreateProblem.
 type CreateProblemParams struct {
 	Title string `form:"title" json:"title"`
+}
+
+// CreateProblemSampleParams defines parameters for CreateProblemSample.
+type CreateProblemSampleParams struct {
+	Ordinal int64 `form:"ordinal" json:"ordinal"`
+}
+
+// CreateTestGroupParams defines parameters for CreateTestGroup.
+type CreateTestGroupParams struct {
+	Ordinal  int64  `form:"ordinal" json:"ordinal"`
+	Name     string `form:"name" json:"name"`
+	Points   int64  `form:"points" json:"points"`
+	IsSample *bool  `form:"is_sample,omitempty" json:"is_sample,omitempty"`
 }
 
 // UploadProblemTestsMultipartBody defines parameters for UploadProblemTests.
@@ -528,6 +765,12 @@ type UpdateContestJSONRequestBody = UpdateContestRequestModel
 // UpdateProblemJSONRequestBody defines body for UpdateProblem for application/json ContentType.
 type UpdateProblemJSONRequestBody = UpdateProblemRequestModel
 
+// CreateProblemSampleJSONRequestBody defines body for CreateProblemSample for application/json ContentType.
+type CreateProblemSampleJSONRequestBody = CreateSampleRequestModel
+
+// UpdateTestGroupJSONRequestBody defines body for UpdateTestGroup for application/json ContentType.
+type UpdateTestGroupJSONRequestBody = UpdateTestGroupRequestModel
+
 // UploadProblemTestsMultipartRequestBody defines body for UploadProblemTests for multipart/form-data ContentType.
 type UploadProblemTestsMultipartRequestBody UploadProblemTestsMultipartBody
 
@@ -624,6 +867,30 @@ type ClientInterface interface {
 
 	UpdateContest(ctx context.Context, contestId openapi_types.UUID, body UpdateContestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListAccessRequests request
+	ListAccessRequests(ctx context.Context, contestId openapi_types.UUID, params *ListAccessRequestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateAccessRequest request
+	CreateAccessRequest(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateAccessRequest request
+	UpdateAccessRequest(ctx context.Context, contestId openapi_types.UUID, userId openapi_types.UUID, params *UpdateAccessRequestParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListInvitations request
+	ListInvitations(ctx context.Context, contestId openapi_types.UUID, params *ListInvitationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateInvitation request
+	CreateInvitation(ctx context.Context, contestId openapi_types.UUID, params *CreateInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RevokeInvitation request
+	RevokeInvitation(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AcceptInvitation request
+	AcceptInvitation(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeclineInvitation request
+	DeclineInvitation(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DeleteContestMember request
 	DeleteContestMember(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -636,6 +903,9 @@ type ClientInterface interface {
 	// CreateContestMember request
 	CreateContestMember(ctx context.Context, contestId openapi_types.UUID, params *CreateContestMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetMonitor request
+	GetMonitor(ctx context.Context, contestId openapi_types.UUID, params *GetMonitorParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetMyContestRole request
 	GetMyContestRole(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -647,6 +917,9 @@ type ClientInterface interface {
 
 	// GetContestProblem request
 	GetContestProblem(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemPosition request
+	UpdateProblemPosition(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, params *UpdateProblemPositionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListContestSubmissions request
 	ListContestSubmissions(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -670,6 +943,31 @@ type ClientInterface interface {
 	UpdateProblemWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	UpdateProblem(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemSamples request
+	GetProblemSamples(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemSampleWithBody request with any body
+	CreateProblemSampleWithBody(ctx context.Context, id openapi_types.UUID, params *CreateProblemSampleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateProblemSample(ctx context.Context, id openapi_types.UUID, params *CreateProblemSampleParams, body CreateProblemSampleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemSample request
+	DeleteProblemSample(ctx context.Context, id openapi_types.UUID, sampleId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetTestGroups request
+	GetTestGroups(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateTestGroup request
+	CreateTestGroup(ctx context.Context, id openapi_types.UUID, params *CreateTestGroupParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteTestGroup request
+	DeleteTestGroup(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateTestGroupWithBody request with any body
+	UpdateTestGroupWithBody(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateTestGroup(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, body UpdateTestGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UploadProblemTestsWithBody request with any body
 	UploadProblemTestsWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -779,6 +1077,102 @@ func (c *Client) UpdateContest(ctx context.Context, contestId openapi_types.UUID
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListAccessRequests(ctx context.Context, contestId openapi_types.UUID, params *ListAccessRequestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListAccessRequestsRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateAccessRequest(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateAccessRequestRequest(c.Server, contestId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateAccessRequest(ctx context.Context, contestId openapi_types.UUID, userId openapi_types.UUID, params *UpdateAccessRequestParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateAccessRequestRequest(c.Server, contestId, userId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListInvitations(ctx context.Context, contestId openapi_types.UUID, params *ListInvitationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListInvitationsRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateInvitation(ctx context.Context, contestId openapi_types.UUID, params *CreateInvitationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateInvitationRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RevokeInvitation(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRevokeInvitationRequest(c.Server, contestId, invitationId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AcceptInvitation(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAcceptInvitationRequest(c.Server, contestId, invitationId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeclineInvitation(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeclineInvitationRequest(c.Server, contestId, invitationId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) DeleteContestMember(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteContestMemberRequest(c.Server, contestId, params)
 	if err != nil {
@@ -827,6 +1221,18 @@ func (c *Client) CreateContestMember(ctx context.Context, contestId openapi_type
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetMonitor(ctx context.Context, contestId openapi_types.UUID, params *GetMonitorParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetMonitorRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetMyContestRole(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetMyContestRoleRequest(c.Server, contestId)
 	if err != nil {
@@ -865,6 +1271,18 @@ func (c *Client) DeleteContestProblem(ctx context.Context, contestId openapi_typ
 
 func (c *Client) GetContestProblem(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetContestProblemRequest(c.Server, contestId, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemPosition(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, params *UpdateProblemPositionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemPositionRequest(c.Server, contestId, problemId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -961,6 +1379,114 @@ func (c *Client) UpdateProblemWithBody(ctx context.Context, id openapi_types.UUI
 
 func (c *Client) UpdateProblem(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateProblemRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemSamples(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemSamplesRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemSampleWithBody(ctx context.Context, id openapi_types.UUID, params *CreateProblemSampleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemSampleRequestWithBody(c.Server, id, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemSample(ctx context.Context, id openapi_types.UUID, params *CreateProblemSampleParams, body CreateProblemSampleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemSampleRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemSample(ctx context.Context, id openapi_types.UUID, sampleId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemSampleRequest(c.Server, id, sampleId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetTestGroups(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetTestGroupsRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateTestGroup(ctx context.Context, id openapi_types.UUID, params *CreateTestGroupParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateTestGroupRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteTestGroup(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteTestGroupRequest(c.Server, id, groupId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateTestGroupWithBody(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateTestGroupRequestWithBody(c.Server, id, groupId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateTestGroup(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, body UpdateTestGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateTestGroupRequest(c.Server, id, groupId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1396,6 +1922,434 @@ func NewUpdateContestRequestWithBody(server string, contestId openapi_types.UUID
 	return req, nil
 }
 
+// NewListAccessRequestsRequest generates requests for ListAccessRequests
+func NewListAccessRequestsRequest(server string, contestId openapi_types.UUID, params *ListAccessRequestsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/access-requests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Status != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "status", runtime.ParamLocationQuery, *params.Status); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateAccessRequestRequest generates requests for CreateAccessRequest
+func NewCreateAccessRequestRequest(server string, contestId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/access-requests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateAccessRequestRequest generates requests for UpdateAccessRequest
+func NewUpdateAccessRequestRequest(server string, contestId openapi_types.UUID, userId openapi_types.UUID, params *UpdateAccessRequestParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "user_id", runtime.ParamLocationPath, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/access-requests/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "status", runtime.ParamLocationQuery, params.Status); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListInvitationsRequest generates requests for ListInvitations
+func NewListInvitationsRequest(server string, contestId openapi_types.UUID, params *ListInvitationsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/invitations", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Status != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "status", runtime.ParamLocationQuery, *params.Status); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateInvitationRequest generates requests for CreateInvitation
+func NewCreateInvitationRequest(server string, contestId openapi_types.UUID, params *CreateInvitationParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/invitations", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "user_id", runtime.ParamLocationQuery, params.UserId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRevokeInvitationRequest generates requests for RevokeInvitation
+func NewRevokeInvitationRequest(server string, contestId openapi_types.UUID, invitationId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "invitation_id", runtime.ParamLocationPath, invitationId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/invitations/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAcceptInvitationRequest generates requests for AcceptInvitation
+func NewAcceptInvitationRequest(server string, contestId openapi_types.UUID, invitationId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "invitation_id", runtime.ParamLocationPath, invitationId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/invitations/%s/accept", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeclineInvitationRequest generates requests for DeclineInvitation
+func NewDeclineInvitationRequest(server string, contestId openapi_types.UUID, invitationId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "invitation_id", runtime.ParamLocationPath, invitationId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/invitations/%s/decline", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewDeleteContestMemberRequest generates requests for DeleteContestMember
 func NewDeleteContestMemberRequest(server string, contestId openapi_types.UUID, params *DeleteContestMemberParams) (*http.Request, error) {
 	var err error
@@ -1628,6 +2582,70 @@ func NewCreateContestMemberRequest(server string, contestId openapi_types.UUID, 
 	return req, nil
 }
 
+// NewGetMonitorRequest generates requests for GetMonitor
+func NewGetMonitorRequest(server string, contestId openapi_types.UUID, params *GetMonitorParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/monitor", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetMyContestRoleRequest generates requests for GetMyContestRole
 func NewGetMyContestRoleRequest(server string, contestId openapi_types.UUID) (*http.Request, error) {
 	var err error
@@ -1789,6 +2807,65 @@ func NewGetContestProblemRequest(server string, contestId openapi_types.UUID, pr
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemPositionRequest generates requests for UpdateProblemPosition
+func NewUpdateProblemPositionRequest(server string, contestId openapi_types.UUID, problemId openapi_types.UUID, params *UpdateProblemPositionParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "problem_id", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/problems/%s/position", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "position", runtime.ParamLocationQuery, params.Position); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2213,6 +3290,367 @@ func NewUpdateProblemRequestWithBody(server string, id openapi_types.UUID, conte
 	}
 
 	operationPath := fmt.Sprintf("/problems/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetProblemSamplesRequest generates requests for GetProblemSamples
+func NewGetProblemSamplesRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/samples", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemSampleRequest calls the generic CreateProblemSample builder with application/json body
+func NewCreateProblemSampleRequest(server string, id openapi_types.UUID, params *CreateProblemSampleParams, body CreateProblemSampleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateProblemSampleRequestWithBody(server, id, params, "application/json", bodyReader)
+}
+
+// NewCreateProblemSampleRequestWithBody generates requests for CreateProblemSample with any type of body
+func NewCreateProblemSampleRequestWithBody(server string, id openapi_types.UUID, params *CreateProblemSampleParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/samples", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "ordinal", runtime.ParamLocationQuery, params.Ordinal); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteProblemSampleRequest generates requests for DeleteProblemSample
+func NewDeleteProblemSampleRequest(server string, id openapi_types.UUID, sampleId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "sample_id", runtime.ParamLocationPath, sampleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/samples/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetTestGroupsRequest generates requests for GetTestGroups
+func NewGetTestGroupsRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/test-groups", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateTestGroupRequest generates requests for CreateTestGroup
+func NewCreateTestGroupRequest(server string, id openapi_types.UUID, params *CreateTestGroupParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/test-groups", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "ordinal", runtime.ParamLocationQuery, params.Ordinal); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, params.Name); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "points", runtime.ParamLocationQuery, params.Points); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.IsSample != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "is_sample", runtime.ParamLocationQuery, *params.IsSample); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeleteTestGroupRequest generates requests for DeleteTestGroup
+func NewDeleteTestGroupRequest(server string, id openapi_types.UUID, groupId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "group_id", runtime.ParamLocationPath, groupId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/test-groups/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateTestGroupRequest calls the generic UpdateTestGroup builder with application/json body
+func NewUpdateTestGroupRequest(server string, id openapi_types.UUID, groupId openapi_types.UUID, body UpdateTestGroupJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateTestGroupRequestWithBody(server, id, groupId, "application/json", bodyReader)
+}
+
+// NewUpdateTestGroupRequestWithBody generates requests for UpdateTestGroup with any type of body
+func NewUpdateTestGroupRequestWithBody(server string, id openapi_types.UUID, groupId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "group_id", runtime.ParamLocationPath, groupId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/test-groups/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3197,6 +4635,30 @@ type ClientWithResponsesInterface interface {
 
 	UpdateContestWithResponse(ctx context.Context, contestId openapi_types.UUID, body UpdateContestJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateContestResponse, error)
 
+	// ListAccessRequestsWithResponse request
+	ListAccessRequestsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListAccessRequestsParams, reqEditors ...RequestEditorFn) (*ListAccessRequestsResponse, error)
+
+	// CreateAccessRequestWithResponse request
+	CreateAccessRequestWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*CreateAccessRequestResponse, error)
+
+	// UpdateAccessRequestWithResponse request
+	UpdateAccessRequestWithResponse(ctx context.Context, contestId openapi_types.UUID, userId openapi_types.UUID, params *UpdateAccessRequestParams, reqEditors ...RequestEditorFn) (*UpdateAccessRequestResponse, error)
+
+	// ListInvitationsWithResponse request
+	ListInvitationsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListInvitationsParams, reqEditors ...RequestEditorFn) (*ListInvitationsResponse, error)
+
+	// CreateInvitationWithResponse request
+	CreateInvitationWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateInvitationParams, reqEditors ...RequestEditorFn) (*CreateInvitationResponse, error)
+
+	// RevokeInvitationWithResponse request
+	RevokeInvitationWithResponse(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RevokeInvitationResponse, error)
+
+	// AcceptInvitationWithResponse request
+	AcceptInvitationWithResponse(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*AcceptInvitationResponse, error)
+
+	// DeclineInvitationWithResponse request
+	DeclineInvitationWithResponse(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeclineInvitationResponse, error)
+
 	// DeleteContestMemberWithResponse request
 	DeleteContestMemberWithResponse(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*DeleteContestMemberResponse, error)
 
@@ -3209,6 +4671,9 @@ type ClientWithResponsesInterface interface {
 	// CreateContestMemberWithResponse request
 	CreateContestMemberWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateContestMemberParams, reqEditors ...RequestEditorFn) (*CreateContestMemberResponse, error)
 
+	// GetMonitorWithResponse request
+	GetMonitorWithResponse(ctx context.Context, contestId openapi_types.UUID, params *GetMonitorParams, reqEditors ...RequestEditorFn) (*GetMonitorResponse, error)
+
 	// GetMyContestRoleWithResponse request
 	GetMyContestRoleWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetMyContestRoleResponse, error)
 
@@ -3220,6 +4685,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetContestProblemWithResponse request
 	GetContestProblemWithResponse(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetContestProblemResponse, error)
+
+	// UpdateProblemPositionWithResponse request
+	UpdateProblemPositionWithResponse(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, params *UpdateProblemPositionParams, reqEditors ...RequestEditorFn) (*UpdateProblemPositionResponse, error)
 
 	// ListContestSubmissionsWithResponse request
 	ListContestSubmissionsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*ListContestSubmissionsResponse, error)
@@ -3243,6 +4711,31 @@ type ClientWithResponsesInterface interface {
 	UpdateProblemWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemResponse, error)
 
 	UpdateProblemWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemResponse, error)
+
+	// GetProblemSamplesWithResponse request
+	GetProblemSamplesWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemSamplesResponse, error)
+
+	// CreateProblemSampleWithBodyWithResponse request with any body
+	CreateProblemSampleWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateProblemSampleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemSampleResponse, error)
+
+	CreateProblemSampleWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateProblemSampleParams, body CreateProblemSampleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateProblemSampleResponse, error)
+
+	// DeleteProblemSampleWithResponse request
+	DeleteProblemSampleWithResponse(ctx context.Context, id openapi_types.UUID, sampleId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteProblemSampleResponse, error)
+
+	// GetTestGroupsWithResponse request
+	GetTestGroupsWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetTestGroupsResponse, error)
+
+	// CreateTestGroupWithResponse request
+	CreateTestGroupWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateTestGroupParams, reqEditors ...RequestEditorFn) (*CreateTestGroupResponse, error)
+
+	// DeleteTestGroupWithResponse request
+	DeleteTestGroupWithResponse(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteTestGroupResponse, error)
+
+	// UpdateTestGroupWithBodyWithResponse request with any body
+	UpdateTestGroupWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateTestGroupResponse, error)
+
+	UpdateTestGroupWithResponse(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, body UpdateTestGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateTestGroupResponse, error)
 
 	// UploadProblemTestsWithBodyWithResponse request with any body
 	UploadProblemTestsWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadProblemTestsResponse, error)
@@ -3388,6 +4881,178 @@ func (r UpdateContestResponse) StatusCode() int {
 	return 0
 }
 
+type ListAccessRequestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListAccessRequestsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListAccessRequestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListAccessRequestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateAccessRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *CreationResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateAccessRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateAccessRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateAccessRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateAccessRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateAccessRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListInvitationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListInvitationsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListInvitationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListInvitationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *CreationResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type RevokeInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r RevokeInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RevokeInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type AcceptInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r AcceptInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AcceptInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeclineInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeclineInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeclineInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type DeleteContestMemberResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3468,6 +5133,28 @@ func (r CreateContestMemberResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r CreateContestMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetMonitorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetMonitorResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetMonitorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetMonitorResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -3555,6 +5242,27 @@ func (r GetContestProblemResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetContestProblemResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemPositionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemPositionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemPositionResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -3707,6 +5415,157 @@ func (r UpdateProblemResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UpdateProblemResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemSamplesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetSamplesResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemSamplesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemSamplesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemSampleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *CreationResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemSampleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemSampleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemSampleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemSampleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemSampleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetTestGroupsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetTestGroupsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetTestGroupsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetTestGroupsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateTestGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *CreationResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateTestGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateTestGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteTestGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteTestGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteTestGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateTestGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateTestGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateTestGroupResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -4007,6 +5866,78 @@ func (c *ClientWithResponses) UpdateContestWithResponse(ctx context.Context, con
 	return ParseUpdateContestResponse(rsp)
 }
 
+// ListAccessRequestsWithResponse request returning *ListAccessRequestsResponse
+func (c *ClientWithResponses) ListAccessRequestsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListAccessRequestsParams, reqEditors ...RequestEditorFn) (*ListAccessRequestsResponse, error) {
+	rsp, err := c.ListAccessRequests(ctx, contestId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListAccessRequestsResponse(rsp)
+}
+
+// CreateAccessRequestWithResponse request returning *CreateAccessRequestResponse
+func (c *ClientWithResponses) CreateAccessRequestWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*CreateAccessRequestResponse, error) {
+	rsp, err := c.CreateAccessRequest(ctx, contestId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateAccessRequestResponse(rsp)
+}
+
+// UpdateAccessRequestWithResponse request returning *UpdateAccessRequestResponse
+func (c *ClientWithResponses) UpdateAccessRequestWithResponse(ctx context.Context, contestId openapi_types.UUID, userId openapi_types.UUID, params *UpdateAccessRequestParams, reqEditors ...RequestEditorFn) (*UpdateAccessRequestResponse, error) {
+	rsp, err := c.UpdateAccessRequest(ctx, contestId, userId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateAccessRequestResponse(rsp)
+}
+
+// ListInvitationsWithResponse request returning *ListInvitationsResponse
+func (c *ClientWithResponses) ListInvitationsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListInvitationsParams, reqEditors ...RequestEditorFn) (*ListInvitationsResponse, error) {
+	rsp, err := c.ListInvitations(ctx, contestId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListInvitationsResponse(rsp)
+}
+
+// CreateInvitationWithResponse request returning *CreateInvitationResponse
+func (c *ClientWithResponses) CreateInvitationWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateInvitationParams, reqEditors ...RequestEditorFn) (*CreateInvitationResponse, error) {
+	rsp, err := c.CreateInvitation(ctx, contestId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateInvitationResponse(rsp)
+}
+
+// RevokeInvitationWithResponse request returning *RevokeInvitationResponse
+func (c *ClientWithResponses) RevokeInvitationWithResponse(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RevokeInvitationResponse, error) {
+	rsp, err := c.RevokeInvitation(ctx, contestId, invitationId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRevokeInvitationResponse(rsp)
+}
+
+// AcceptInvitationWithResponse request returning *AcceptInvitationResponse
+func (c *ClientWithResponses) AcceptInvitationWithResponse(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*AcceptInvitationResponse, error) {
+	rsp, err := c.AcceptInvitation(ctx, contestId, invitationId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAcceptInvitationResponse(rsp)
+}
+
+// DeclineInvitationWithResponse request returning *DeclineInvitationResponse
+func (c *ClientWithResponses) DeclineInvitationWithResponse(ctx context.Context, contestId openapi_types.UUID, invitationId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeclineInvitationResponse, error) {
+	rsp, err := c.DeclineInvitation(ctx, contestId, invitationId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeclineInvitationResponse(rsp)
+}
+
 // DeleteContestMemberWithResponse request returning *DeleteContestMemberResponse
 func (c *ClientWithResponses) DeleteContestMemberWithResponse(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*DeleteContestMemberResponse, error) {
 	rsp, err := c.DeleteContestMember(ctx, contestId, params, reqEditors...)
@@ -4043,6 +5974,15 @@ func (c *ClientWithResponses) CreateContestMemberWithResponse(ctx context.Contex
 	return ParseCreateContestMemberResponse(rsp)
 }
 
+// GetMonitorWithResponse request returning *GetMonitorResponse
+func (c *ClientWithResponses) GetMonitorWithResponse(ctx context.Context, contestId openapi_types.UUID, params *GetMonitorParams, reqEditors ...RequestEditorFn) (*GetMonitorResponse, error) {
+	rsp, err := c.GetMonitor(ctx, contestId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetMonitorResponse(rsp)
+}
+
 // GetMyContestRoleWithResponse request returning *GetMyContestRoleResponse
 func (c *ClientWithResponses) GetMyContestRoleWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetMyContestRoleResponse, error) {
 	rsp, err := c.GetMyContestRole(ctx, contestId, reqEditors...)
@@ -4077,6 +6017,15 @@ func (c *ClientWithResponses) GetContestProblemWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseGetContestProblemResponse(rsp)
+}
+
+// UpdateProblemPositionWithResponse request returning *UpdateProblemPositionResponse
+func (c *ClientWithResponses) UpdateProblemPositionWithResponse(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, params *UpdateProblemPositionParams, reqEditors ...RequestEditorFn) (*UpdateProblemPositionResponse, error) {
+	rsp, err := c.UpdateProblemPosition(ctx, contestId, problemId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemPositionResponse(rsp)
 }
 
 // ListContestSubmissionsWithResponse request returning *ListContestSubmissionsResponse
@@ -4148,6 +6097,85 @@ func (c *ClientWithResponses) UpdateProblemWithResponse(ctx context.Context, id 
 		return nil, err
 	}
 	return ParseUpdateProblemResponse(rsp)
+}
+
+// GetProblemSamplesWithResponse request returning *GetProblemSamplesResponse
+func (c *ClientWithResponses) GetProblemSamplesWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemSamplesResponse, error) {
+	rsp, err := c.GetProblemSamples(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemSamplesResponse(rsp)
+}
+
+// CreateProblemSampleWithBodyWithResponse request with arbitrary body returning *CreateProblemSampleResponse
+func (c *ClientWithResponses) CreateProblemSampleWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateProblemSampleParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemSampleResponse, error) {
+	rsp, err := c.CreateProblemSampleWithBody(ctx, id, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemSampleResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateProblemSampleWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateProblemSampleParams, body CreateProblemSampleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateProblemSampleResponse, error) {
+	rsp, err := c.CreateProblemSample(ctx, id, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemSampleResponse(rsp)
+}
+
+// DeleteProblemSampleWithResponse request returning *DeleteProblemSampleResponse
+func (c *ClientWithResponses) DeleteProblemSampleWithResponse(ctx context.Context, id openapi_types.UUID, sampleId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteProblemSampleResponse, error) {
+	rsp, err := c.DeleteProblemSample(ctx, id, sampleId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemSampleResponse(rsp)
+}
+
+// GetTestGroupsWithResponse request returning *GetTestGroupsResponse
+func (c *ClientWithResponses) GetTestGroupsWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetTestGroupsResponse, error) {
+	rsp, err := c.GetTestGroups(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetTestGroupsResponse(rsp)
+}
+
+// CreateTestGroupWithResponse request returning *CreateTestGroupResponse
+func (c *ClientWithResponses) CreateTestGroupWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateTestGroupParams, reqEditors ...RequestEditorFn) (*CreateTestGroupResponse, error) {
+	rsp, err := c.CreateTestGroup(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateTestGroupResponse(rsp)
+}
+
+// DeleteTestGroupWithResponse request returning *DeleteTestGroupResponse
+func (c *ClientWithResponses) DeleteTestGroupWithResponse(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteTestGroupResponse, error) {
+	rsp, err := c.DeleteTestGroup(ctx, id, groupId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteTestGroupResponse(rsp)
+}
+
+// UpdateTestGroupWithBodyWithResponse request with arbitrary body returning *UpdateTestGroupResponse
+func (c *ClientWithResponses) UpdateTestGroupWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateTestGroupResponse, error) {
+	rsp, err := c.UpdateTestGroupWithBody(ctx, id, groupId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateTestGroupResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateTestGroupWithResponse(ctx context.Context, id openapi_types.UUID, groupId openapi_types.UUID, body UpdateTestGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateTestGroupResponse, error) {
+	rsp, err := c.UpdateTestGroup(ctx, id, groupId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateTestGroupResponse(rsp)
 }
 
 // UploadProblemTestsWithBodyWithResponse request with arbitrary body returning *UploadProblemTestsResponse
@@ -4367,6 +6395,174 @@ func ParseUpdateContestResponse(rsp *http.Response) (*UpdateContestResponse, err
 	return response, nil
 }
 
+// ParseListAccessRequestsResponse parses an HTTP response from a ListAccessRequestsWithResponse call
+func ParseListAccessRequestsResponse(rsp *http.Response) (*ListAccessRequestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListAccessRequestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListAccessRequestsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateAccessRequestResponse parses an HTTP response from a CreateAccessRequestWithResponse call
+func ParseCreateAccessRequestResponse(rsp *http.Response) (*CreateAccessRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateAccessRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CreationResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateAccessRequestResponse parses an HTTP response from a UpdateAccessRequestWithResponse call
+func ParseUpdateAccessRequestResponse(rsp *http.Response) (*UpdateAccessRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateAccessRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseListInvitationsResponse parses an HTTP response from a ListInvitationsWithResponse call
+func ParseListInvitationsResponse(rsp *http.Response) (*ListInvitationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListInvitationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListInvitationsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateInvitationResponse parses an HTTP response from a CreateInvitationWithResponse call
+func ParseCreateInvitationResponse(rsp *http.Response) (*CreateInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CreationResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRevokeInvitationResponse parses an HTTP response from a RevokeInvitationWithResponse call
+func ParseRevokeInvitationResponse(rsp *http.Response) (*RevokeInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RevokeInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseAcceptInvitationResponse parses an HTTP response from a AcceptInvitationWithResponse call
+func ParseAcceptInvitationResponse(rsp *http.Response) (*AcceptInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AcceptInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseDeclineInvitationResponse parses an HTTP response from a DeclineInvitationWithResponse call
+func ParseDeclineInvitationResponse(rsp *http.Response) (*DeclineInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeclineInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseDeleteContestMemberResponse parses an HTTP response from a DeleteContestMemberWithResponse call
 func ParseDeleteContestMemberResponse(rsp *http.Response) (*DeleteContestMemberResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -4441,6 +6637,32 @@ func ParseCreateContestMemberResponse(rsp *http.Response) (*CreateContestMemberR
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest CreationResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetMonitorResponse parses an HTTP response from a GetMonitorWithResponse call
+func ParseGetMonitorResponse(rsp *http.Response) (*GetMonitorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetMonitorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetMonitorResponseModel
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -4540,6 +6762,22 @@ func ParseGetContestProblemResponse(rsp *http.Response) (*GetContestProblemRespo
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemPositionResponse parses an HTTP response from a UpdateProblemPositionWithResponse call
+func ParseUpdateProblemPositionResponse(rsp *http.Response) (*UpdateProblemPositionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemPositionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -4700,6 +6938,158 @@ func ParseUpdateProblemResponse(rsp *http.Response) (*UpdateProblemResponse, err
 	}
 
 	response := &UpdateProblemResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemSamplesResponse parses an HTTP response from a GetProblemSamplesWithResponse call
+func ParseGetProblemSamplesResponse(rsp *http.Response) (*GetProblemSamplesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemSamplesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetSamplesResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemSampleResponse parses an HTTP response from a CreateProblemSampleWithResponse call
+func ParseCreateProblemSampleResponse(rsp *http.Response) (*CreateProblemSampleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemSampleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CreationResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemSampleResponse parses an HTTP response from a DeleteProblemSampleWithResponse call
+func ParseDeleteProblemSampleResponse(rsp *http.Response) (*DeleteProblemSampleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemSampleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseGetTestGroupsResponse parses an HTTP response from a GetTestGroupsWithResponse call
+func ParseGetTestGroupsResponse(rsp *http.Response) (*GetTestGroupsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetTestGroupsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetTestGroupsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateTestGroupResponse parses an HTTP response from a CreateTestGroupWithResponse call
+func ParseCreateTestGroupResponse(rsp *http.Response) (*CreateTestGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateTestGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CreationResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteTestGroupResponse parses an HTTP response from a DeleteTestGroupWithResponse call
+func ParseDeleteTestGroupResponse(rsp *http.Response) (*DeleteTestGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteTestGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateTestGroupResponse parses an HTTP response from a UpdateTestGroupWithResponse call
+func ParseUpdateTestGroupResponse(rsp *http.Response) (*UpdateTestGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateTestGroupResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
