@@ -20,34 +20,28 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconMoon, IconSun, IconUser } from "@tabler/icons-react";
-import type { Session } from "@ory/client";
+import type { SessionUser } from "@/lib/auth";
 import cx from "clsx";
 import NextImage from "next/image";
 import Link from "next/link";
 import { LogoutLink } from "../LogoutLink";
 import classes from "./styles.module.css";
 
-const Profile = ({ session }: { session?: Session | null }) => {
-  if (session) {
+const Profile = ({ user }: { user?: SessionUser }) => {
+  if (user) {
     return (
       <Group justify="flex-end">
         <LogoutLink variant="default" visibleFrom="sm">
           Выйти
         </LogoutLink>
-        {session.identity ? (
-          <Avatar
-            component={Link}
-            href={`/users/${session.identity.metadata_public.user_id}`}
-            color={APP_COLORS.users}
-            size="60"
-          >
-            <IconUser size="32" />
-          </Avatar>
-        ) : (
-          <Avatar color={APP_COLORS.users} size="60">
-            <IconUser size="32" />
-          </Avatar>
-        )}
+        <Avatar
+          component={Link}
+          href={`/users/${user.id}`}
+          color={APP_COLORS.users}
+          size="60"
+        >
+          <IconUser size="32" />
+        </Avatar>
       </Group>
     );
   }
@@ -65,7 +59,7 @@ const Profile = ({ session }: { session?: Session | null }) => {
   );
 };
 
-const Header = ({ session }: { session?: Session | null }) => {
+const Header = ({ user }: { user?: SessionUser }) => {
   const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] =
     useDisclosure(false);
 
@@ -136,7 +130,7 @@ const Header = ({ session }: { session?: Session | null }) => {
           </Group>
           <Box hiddenFrom="sm" style={{ flex: 1 }} />
           <Group justify="flex-end" h="100%" gap="xs" className={classes.rightSection}>
-            {session?.identity?.metadata_public?.role === "admin" && (
+            {user?.role === "admin" && (
               <Button
                 component={Link}
                 href="/admin"
@@ -166,7 +160,7 @@ const Header = ({ session }: { session?: Session | null }) => {
                 stroke={1.5}
               />
             </ActionIcon>
-            <Profile session={session} />
+            <Profile user={user} />
           </Group>
         </Group>
       </div>
@@ -216,7 +210,7 @@ const Header = ({ session }: { session?: Session | null }) => {
             >
               О платформе
             </Anchor>
-            {session?.identity?.metadata_public?.role === "admin" && (
+            {user?.role === "admin" && (
               <Anchor
                 component={Link}
                 href="/admin"
@@ -255,21 +249,19 @@ const Header = ({ session }: { session?: Session | null }) => {
 
             <Divider my="sm" />
 
-            {session ? (
+            {user ? (
               <Stack gap="sm">
-                {session.identity && (
-                  <Button
-                    component={Link}
-                    href={`/users/${session.identity.metadata_public.user_id}`}
-                    variant="light"
-                    color={APP_COLORS.users}
-                    leftSection={<IconUser size={20} />}
-                    fullWidth
-                    onClick={closeDrawer}
-                  >
-                    Профиль
-                  </Button>
-                )}
+                <Button
+                  component={Link}
+                  href={`/users/${user.id}`}
+                  variant="light"
+                  color={APP_COLORS.users}
+                  leftSection={<IconUser size={20} />}
+                  fullWidth
+                  onClick={closeDrawer}
+                >
+                  Профиль
+                </Button>
                 <LogoutLink variant="outline" fullWidth>
                   Выйти
                 </LogoutLink>

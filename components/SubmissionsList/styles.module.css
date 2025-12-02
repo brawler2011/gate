@@ -9,7 +9,7 @@
     padding-right: 8px;
 }
 
-@media (min-width: $mantine-breakpoint-sm) {
+@media (min-width: var(--mantine-breakpoint-sm)) {
     .table th,
     .table td {
         padding-left: 16px;
@@ -17,7 +17,7 @@
     }
 }
 
-@media (min-width: $mantine-breakpoint-lg) {
+@media (min-width: var(--mantine-breakpoint-lg)) {
     .table th,
     .table td {
         padding-left: 24px;

@@ -99,14 +99,14 @@ const ContestsPageContent = async ({
   search?: string;
 }) => {
   const currentUser = await getCurrentUser();
-  const isAuthenticated = !!currentUser;
+  const authenticated = currentUser !== null;
 
   return (
     <ContestsPageWrapper>
       <Stack gap="md">
         <ContestsHeader />
-        <ContestsTabs isAuthenticated={isAuthenticated} />
-        {view === "user" && isAuthenticated ? (
+        <ContestsTabs isAuthenticated={authenticated} />
+        {view === "user" && currentUser ? (
           <Suspense fallback={<ContestsContentSkeleton />}>
             <UserContestsView
               page={page}

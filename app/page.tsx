@@ -1,5 +1,5 @@
 import { DefaultLayout } from "@/components/Layout";
-import { getSession } from "@/lib/auth";
+import { isAuthenticated } from "@/lib/auth";
 import {
   Container,
   Group,
@@ -15,14 +15,13 @@ export const metadata = {
 };
 
 export default async function Page() {
-  const session = await getSession();
+  const authenticated = await isAuthenticated();
   const blogPosts = getAllBlogPosts();
-  const isAuthenticated = !!session;
 
   return (
     <DefaultLayout>
       <Container size="lg" py="xl">
-        {isAuthenticated ? (
+        {authenticated ? (
           <Stack gap="md">
             {/* Blog Section - Full width below */}
             <Stack gap="md">

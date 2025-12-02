@@ -1,92 +1,53 @@
 "use server";
 
 import { cache } from "react";
-import { cookies } from "next/headers";
-import type { Session } from "@ory/client";
+import { Call } from "./api";
 
 /**
- * User data extracted from Ory Kratos session
+ * User data from GetMe API
  */
 export type SessionUser = {
   id: string;
   username: string;
-  email: string;
   role: "admin" | "user";
 } | null;
 
 /**
- * Get Ory Kratos session for the current user
+ * Get current authenticated user from backend GetMe API
  * Wrapped in React cache() to avoid duplicate requests during SSR
+ * Returns null if user is not authenticated (403) or any error occurs
  */
-export const getSession = cache(async (): Promise<Session | null> => {
+export const getCurrentUser = cache(async (): Promise<SessionUser> => {
   try {
-    const { FrontendApi, Configuration } = await import("@ory/client");
-    const cookieStore = await cookies();
+    const response = await Call((client) => client.default.getMe());
 
-    const ory = new FrontendApi(
-      new Configuration({
-        basePath: process.env.ORY_SDK_URL,
-        baseOptions: {
-          withCredentials: true,
-        },
-      })
-    );
+    console.log("GetMe response:", response);
 
-    const cookiePairs: string[] = [];
-    cookieStore.getAll().forEach((cookie) => {
-      cookiePairs.push(`${cookie.name}=${cookie.value}`);
-    });
-
-    if (cookiePairs.length > 0) {
-      const sessionResponse = await ory.toSession(
-        {},
-        {
-          headers: {
-            Cookie: cookiePairs.join("; "),
-          },
-        }
-      );
-
-      return sessionResponse.data;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-});
-
-/**
- * Get current authenticated user from Ory Kratos session
- * Returns null if user is not authenticated
- */
-export async function getCurrentUser(): Promise<SessionUser> {
-  try {
-    const session = await getSession();
-
-    if (!session || !session.identity) {
+    if (!response || !response.user) {
+      console.log("GetMe: no user in response");
       return null;
     }
 
-    const { identity } = session;
-    const traits = identity.traits as { username?: string; email?: string };
-    const metadata = identity.metadata_public as { user_id?: string; role?: string };
-
-    if (!metadata?.user_id || !traits?.username || !traits?.email || !metadata?.role) {
-      console.warn("Session is missing required user data");
-      return null;
-    }
-
-    const role = metadata.role === "admin" ? "admin" : "user";
+    const { user } = response;
+    const role = user.role === "admin" ? "admin" : "user";
 
     return {
-      id: metadata.user_id,
-      username: traits.username,
-      email: traits.email,
+      id: user.id,
+      username: user.username,
       role,
     };
   } catch (error) {
-    console.error("Error getting current user:", error);
+    // 403 or any other error means not authenticated
+    console.log("GetMe error:", error);
     return null;
   }
-}
+});
 
+/**
+ * Check if user is authenticated
+ * Returns true if GetMe returns user data, false otherwise
+ */
+export async function isAuthenticated(): Promise<boolean> {
+  const user = await getCurrentUser();
+  return user !== null;
+}

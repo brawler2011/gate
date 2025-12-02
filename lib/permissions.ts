@@ -1,6 +1,6 @@
 import type { ContestModel, ProblemModel } from "../../contracts/core/v1";
 import type { ContestRole } from "./contest-role";
-import type { SessionUser } from "./session";
+import type { SessionUser } from "./auth";
 
 /**
  * Permission checker utilities for frontend

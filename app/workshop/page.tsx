@@ -7,7 +7,7 @@ import { WorkshopProblemsContentSkeleton } from "@/components/WorkshopPage/Works
 import { WorkshopProblemsWrapper } from "@/components/WorkshopPage/WorkshopProblemsWrapper";
 import { WorkshopTabs } from "@/components/WorkshopPage/WorkshopTabs";
 import { getContests, getProblems } from "@/lib/actions";
-import { getSession } from "@/lib/auth";
+import { isAuthenticated } from "@/lib/auth";
 import { Alert, Center, Container, Stack } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { Metadata } from "next";
@@ -24,11 +24,11 @@ type Props = {
 const ProblemsView = async ({
   page,
   search,
-  isAuthenticated,
+  authenticated,
 }: {
   page: number;
   search?: string;
-  isAuthenticated: boolean;
+  authenticated: boolean;
 }) => {
   const problemsData = await getProblems(page, 20, undefined, undefined, true);
 
@@ -52,7 +52,7 @@ const ProblemsView = async ({
     <WorkshopProblemsWrapper
       problems={problemsData.problems}
       pagination={problemsData.pagination}
-      isAuthenticated={isAuthenticated}
+      isAuthenticated={authenticated}
       owner="me"
     />
   );
@@ -100,20 +100,19 @@ const WorshopPageContent = async ({
   view: string;
   search?: string;
 }) => {
-  const session = await getSession();
-  const isAuthenticated = !!session?.active;
+  const authenticated = await isAuthenticated();
 
   return (
     <WorkshopPageWrapper>
       <Stack gap="md">
-        <WorkshopHeader isAuthenticated={isAuthenticated} />
-        <WorkshopTabs isAuthenticated={isAuthenticated} />
+        <WorkshopHeader isAuthenticated={authenticated} />
+        <WorkshopTabs isAuthenticated={authenticated} />
         {view === "problems" ? (
           <Suspense fallback={<WorkshopProblemsContentSkeleton />}>
             <ProblemsView
               page={page}
               search={search}
-              isAuthenticated={isAuthenticated}
+              authenticated={authenticated}
             />
           </Suspense>
         ) : (

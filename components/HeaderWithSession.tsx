@@ -1,10 +1,8 @@
-import { getSession } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { Header } from "./Header";
 
 export async function HeaderWithSession() {
-  const session = await getSession();
-  console.log(session);
+  const user = await getCurrentUser();
   
-  return <Header session={session} />;
+  return <Header user={user} />;
 }
-
