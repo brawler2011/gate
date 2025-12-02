@@ -210,6 +210,7 @@ func (w *Worker) processSubmissionTest(ctx context.Context, event *outboxsqlc.Ou
 		Score:      results.Score,
 		TimeStat:   results.TimeStat,
 		MemoryStat: results.MemoryStat,
+		FailedTest: results.FailedTest,
 	}
 
 	if err := w.submissionsRepo.UpdateSubmission(ctx, payload.SubmissionId, update); err != nil {
@@ -271,6 +272,7 @@ type TestResults struct {
 	Score      int64
 	TimeStat   int64
 	MemoryStat int64
+	FailedTest *int
 }
 
 // SubmissionContext holds metadata needed for publishing test progress events
@@ -405,6 +407,12 @@ func (w *Worker) buildSubmissionWebSocketEvent(submission *submissionssqlc.GetSu
 		contestVisibility = string(submission.ContestVisibility.ContestVisibility)
 	}
 
+	var failedTest *int
+	if submission.FailedTest != nil {
+		val := int(*submission.FailedTest)
+		failedTest = &val
+	}
+
 	return &models.SubmissionWebSocketEvent{
 		MessageType: messageType,
 		Submission: &models.SubmissionListItem{
@@ -422,6 +430,7 @@ func (w *Worker) buildSubmissionWebSocketEvent(submission *submissionssqlc.GetSu
 			Position:          position,
 			ContestID:         contestID,
 			ContestTitle:      contestTitle,
+			FailedTest:        failedTest,
 			UpdatedAt:         submission.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			CreatedAt:         submission.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			ContestVisibility: contestVisibility,
@@ -581,9 +590,12 @@ func (w *Worker) testSubmission(
 
 		// If not accepted, stop testing
 		if !testPassed {
+			// Track which test failed (1-indexed)
+			results.FailedTest = &testNumber
 			w.logger.Info("test failed",
 				slog.String("submission_id", submission.ID.String()),
 				slog.Int64("test_ordinal", int64(test.Ordinal)),
+				slog.Int("test_number", testNumber),
 				slog.Int("status_id", statusID))
 			break
 		}

@@ -42,6 +42,7 @@ type SubmissionUpdate struct {
 	Score      int64
 	TimeStat   int64
 	MemoryStat int64
+	FailedTest *int
 }
 
 type SubmissionCreation struct {
@@ -96,6 +97,7 @@ type SubmissionListItem struct {
 	Position     int64     `json:"position"`
 	ContestID    uuid.UUID `json:"contest_id"`
 	ContestTitle string    `json:"contest_title"`
+	FailedTest   *int      `json:"failed_test,omitempty"`
 	UpdatedAt    string    `json:"updated_at"`
 	CreatedAt    string    `json:"created_at"`
 	// ContestVisibility is included for permission filtering

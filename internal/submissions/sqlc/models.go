@@ -357,6 +357,8 @@ type Submission struct {
 	MemoryStat int32               `json:"memory_stat"`
 	UpdatedAt  time.Time           `json:"updated_at"`
 	CreatedAt  time.Time           `json:"created_at"`
+	// The test number (1-indexed) where the submission failed. NULL for AC submissions.
+	FailedTest *int32 `json:"failed_test"`
 }
 
 type User struct {

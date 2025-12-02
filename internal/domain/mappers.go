@@ -135,6 +135,7 @@ func SubmissionFromSqlc(s submissionssqlc.GetSubmissionRow) Submission {
 		Position:     derefInt32ToInt64Ptr(s.Position),
 		ContestID:    pgtypeToUUIDPtr(s.ContestID),
 		ContestTitle: derefString(s.ContestTitle),
+		FailedTest:   derefInt32ToInt64Ptr(s.FailedTest),
 		UpdatedAt:    s.UpdatedAt,
 		CreatedAt:    s.CreatedAt,
 	}
@@ -156,6 +157,7 @@ func SubmissionListRowFromSqlc(s submissionssqlc.ListSubmissionsRow) Submission 
 		Position:     derefInt32ToInt64Ptr(s.Position),
 		ContestID:    pgtypeToUUIDPtr(s.ContestID),
 		ContestTitle: derefString(s.ContestTitle),
+		FailedTest:   derefInt32ToInt64Ptr(s.FailedTest),
 		UpdatedAt:    s.UpdatedAt,
 		CreatedAt:    s.CreatedAt,
 	}

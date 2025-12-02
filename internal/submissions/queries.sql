@@ -29,6 +29,7 @@ SELECT s.id,
     s.contest_id,
     c.title AS contest_title,
     c.visibility AS contest_visibility,
+    s.failed_test,
     s.updated_at,
     s.created_at
 FROM submissions s
@@ -44,7 +45,8 @@ UPDATE submissions
 SET state = @state,
     score = @score,
     time_stat = @time_stat,
-    memory_stat = @memory_stat
+    memory_stat = @memory_stat,
+    failed_test = @failed_test
 WHERE id = @id::uuid;
 
 -- Submission listing
@@ -64,6 +66,7 @@ SELECT s.id,
   cp.position,
   s.contest_id,
   c.title AS contest_title,
+  s.failed_test,
   s.updated_at,
   s.created_at
 FROM submissions s

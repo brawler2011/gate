@@ -902,6 +902,7 @@ func SubmissionListItemDTO(s domain.Submission) corev1.SubmissionsListItemModel 
 		Position:     int64PtrToInt64(s.Position),
 		ContestId:    uuidPtrToUUID(s.ContestID),
 		ContestTitle: s.ContestTitle,
+		FailedTest:   int64PtrToIntPtr(s.FailedTest),
 		CreatedAt:    s.CreatedAt,
 		UpdatedAt:    s.UpdatedAt,
 	}
@@ -975,4 +976,12 @@ func int64PtrToInt64(i *int64) int64 {
 		return 0
 	}
 	return *i
+}
+
+func int64PtrToIntPtr(i *int64) *int {
+	if i == nil {
+		return nil
+	}
+	val := int(*i)
+	return &val
 }

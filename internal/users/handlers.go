@@ -281,6 +281,7 @@ func submissionsListToDTO(solutionsList *domain.SubmissionsList) *testerv1.ListS
 			Position:     int64PtrToInt64(solution.Position),
 			ContestId:    uuidPtrToUUID(solution.ContestID),
 			ContestTitle: solution.ContestTitle,
+			FailedTest:   int64PtrToIntPtr(solution.FailedTest),
 			UpdatedAt:    solution.UpdatedAt,
 			CreatedAt:    solution.CreatedAt,
 		}
@@ -303,4 +304,12 @@ func int64PtrToInt64(i *int64) int64 {
 		return 0
 	}
 	return *i
+}
+
+func int64PtrToIntPtr(i *int64) *int {
+	if i == nil {
+		return nil
+	}
+	val := int(*i)
+	return &val
 }
