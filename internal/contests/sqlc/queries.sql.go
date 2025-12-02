@@ -76,6 +76,20 @@ func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) 
 	return count, err
 }
 
+const countContestMonitorRows = `-- name: CountContestMonitorRows :one
+SELECT COUNT(DISTINCT cm.user_id)
+FROM contest_members cm
+WHERE cm.contest_id = $1::uuid
+  AND cm.role = 'participant'
+`
+
+func (q *Queries) CountContestMonitorRows(ctx context.Context, contestID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countContestMonitorRows, contestID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countInvitations = `-- name: CountInvitations :one
 SELECT COUNT(*)
 FROM contest_invitations
@@ -495,6 +509,89 @@ func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberPara
 	return i, err
 }
 
+const getContestMonitor = `-- name: GetContestMonitor :many
+
+SELECT 
+    u.id AS user_id,
+    u.username,
+    COALESCE(SUM(CASE 
+        WHEN s.state = 200 THEN 
+            CASE 
+                WHEN c.scoring_mode = 'points' THEN s.score 
+                ELSE 100  -- binary mode: full points for AC
+            END
+        ELSE 0 
+    END), 0) AS total_score,
+    COALESCE(SUM(CASE WHEN s.state = 200 THEN s.penalty ELSE 0 END), 0) AS total_penalty,
+    COUNT(DISTINCT CASE WHEN s.state = 200 THEN cp.problem_id END) AS solved_count
+FROM contest_members cm
+LEFT JOIN users u ON cm.user_id = u.id
+LEFT JOIN contests c ON cm.contest_id = c.id
+LEFT JOIN contest_problem cp ON cp.contest_id = cm.contest_id
+LEFT JOIN LATERAL (
+    SELECT 
+        s.problem_id,
+        s.state,
+        s.score,
+        s.penalty
+    FROM submissions s
+    WHERE s.contest_id = cm.contest_id
+      AND s.created_by = cm.user_id
+      AND s.problem_id = cp.problem_id
+    ORDER BY 
+        CASE WHEN s.state = 200 THEN 0 ELSE 1 END,  -- AC submissions first
+        s.score DESC,  -- Then by score
+        s.created_at ASC  -- Then by time
+    LIMIT 1
+) s ON true
+WHERE cm.contest_id = $1::uuid
+  AND cm.role = 'participant'
+GROUP BY u.id, u.username
+ORDER BY total_score DESC, total_penalty ASC, u.username ASC
+LIMIT $3 OFFSET $2
+`
+
+type GetContestMonitorParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	Offset    int32     `json:"offset"`
+	Limit     int32     `json:"limit"`
+}
+
+type GetContestMonitorRow struct {
+	UserID       pgtype.UUID `json:"user_id"`
+	Username     *string     `json:"username"`
+	TotalScore   interface{} `json:"total_score"`
+	TotalPenalty interface{} `json:"total_penalty"`
+	SolvedCount  int64       `json:"solved_count"`
+}
+
+// Monitor Query - Calculate standings
+func (q *Queries) GetContestMonitor(ctx context.Context, arg GetContestMonitorParams) ([]GetContestMonitorRow, error) {
+	rows, err := q.db.Query(ctx, getContestMonitor, arg.ContestID, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetContestMonitorRow{}
+	for rows.Next() {
+		var i GetContestMonitorRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Username,
+			&i.TotalScore,
+			&i.TotalPenalty,
+			&i.SolvedCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getContestProblem = `-- name: GetContestProblem :one
 SELECT cp.problem_id,
        p.title,
@@ -668,6 +765,71 @@ func (q *Queries) GetMaxProblemPosition(ctx context.Context, contestID uuid.UUID
 	var max_position interface{}
 	err := row.Scan(&max_position)
 	return max_position, err
+}
+
+const getMonitorProblemDetails = `-- name: GetMonitorProblemDetails :many
+SELECT 
+    cp.problem_id,
+    cp.position,
+    COALESCE(s.score, 0) AS score,
+    COALESCE(s.attempts, 0) AS attempts,
+    COALESCE(s.solved, false) AS solved,
+    COALESCE(s.penalty, 0) AS penalty
+FROM contest_problem cp
+LEFT JOIN LATERAL (
+    SELECT 
+        MAX(CASE WHEN sub.state = 200 THEN sub.score ELSE 0 END) AS score,
+        COUNT(*) AS attempts,
+        bool_or(sub.state = 200) AS solved,
+        MAX(CASE WHEN sub.state = 200 THEN sub.penalty ELSE 0 END) AS penalty
+    FROM submissions sub
+    WHERE sub.contest_id = $1::uuid
+      AND sub.problem_id = cp.problem_id
+      AND sub.created_by = $2::uuid
+) s ON true
+WHERE cp.contest_id = $1::uuid
+ORDER BY cp.position ASC
+`
+
+type GetMonitorProblemDetailsParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+type GetMonitorProblemDetailsRow struct {
+	ProblemID pgtype.UUID `json:"problem_id"`
+	Position  int32       `json:"position"`
+	Score     interface{} `json:"score"`
+	Attempts  int64       `json:"attempts"`
+	Solved    bool        `json:"solved"`
+	Penalty   interface{} `json:"penalty"`
+}
+
+func (q *Queries) GetMonitorProblemDetails(ctx context.Context, arg GetMonitorProblemDetailsParams) ([]GetMonitorProblemDetailsRow, error) {
+	rows, err := q.db.Query(ctx, getMonitorProblemDetails, arg.ContestID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetMonitorProblemDetailsRow{}
+	for rows.Next() {
+		var i GetMonitorProblemDetailsRow
+		if err := rows.Scan(
+			&i.ProblemID,
+			&i.Position,
+			&i.Score,
+			&i.Attempts,
+			&i.Solved,
+			&i.Penalty,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listAccessRequests = `-- name: ListAccessRequests :many

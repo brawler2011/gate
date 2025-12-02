@@ -147,6 +147,7 @@ type ContestPermissionGet struct {
 type ContestPermissions struct {
 	GetContest             bool
 	UpdateContest          bool
+	ManageContest          bool
 	AdminContest           bool
 	GetMonitor             bool
 	ListUsersSubmissions   bool

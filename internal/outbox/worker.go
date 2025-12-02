@@ -34,7 +34,7 @@ type SubmissionsRepo interface {
 
 type ProblemsRepo interface {
 	GetProblemById(ctx context.Context, id uuid.UUID) (problemssqlc.Problem, error)
-	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.ProblemTest, error)
+	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.GetProblemTestsRow, error)
 }
 
 type Worker struct {
@@ -169,12 +169,12 @@ func (w *Worker) processSubmissionTest(ctx context.Context, event *outboxsqlc.Ou
 	}
 
 	// Fetch tests
-	tests, err := w.problemsRepo.GetProblemTests(ctx, payload.ProblemId)
+	testRows, err := w.problemsRepo.GetProblemTests(ctx, payload.ProblemId)
 	if err != nil {
 		return fmt.Errorf("failed to get problem tests: %w", err)
 	}
 
-	if len(tests) == 0 {
+	if len(testRows) == 0 {
 		w.logger.Warn("no tests found for problem", slog.String("problem_id", payload.ProblemId.String()))
 		// Update submission state to indicate no tests
 		update := &models.SubmissionUpdate{
@@ -187,6 +187,19 @@ func (w *Worker) processSubmissionTest(ctx context.Context, event *outboxsqlc.Ou
 			return fmt.Errorf("failed to update submission: %w", err)
 		}
 		return nil
+	}
+
+	// Convert GetProblemTestsRow to ProblemTest
+	tests := make([]problemssqlc.ProblemTest, len(testRows))
+	for i, t := range testRows {
+		tests[i] = problemssqlc.ProblemTest{
+			ID:        t.ID,
+			ProblemID: t.ProblemID,
+			Ordinal:   t.Ordinal,
+			Input:     t.Input,
+			Output:    t.Output,
+			CreatedAt: t.CreatedAt,
+		}
 	}
 
 	// Map language ID
@@ -506,6 +519,15 @@ func (w *Worker) testSubmission(
 	tests []problemssqlc.ProblemTest,
 	languageID int,
 ) (*TestResults, error) {
+	// TODO: Implement test group support
+	// 1. Fetch test groups from database
+	// 2. Group tests by group_id
+	// 3. Calculate per-group scores (all tests in group must pass for group points)
+	// 4. Apply scoring mode from contest:
+	//    - 'points': Sum of group points (partial credit possible)
+	//    - 'binary': Either 0 or 100 (all tests must pass)
+	// 5. Store group-level results for detailed feedback
+
 	results := &TestResults{
 		State:      models.Accepted,
 		Score:      0,

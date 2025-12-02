@@ -229,6 +229,7 @@ type ContestAction string
 const (
 	ActionGetContest             ContestAction = "GetContest"
 	ActionUpdateContest          ContestAction = "UpdateContest"
+	ActionManageContest          ContestAction = "ManageContest"
 	ActionAdminContest           ContestAction = "AdminContest"
 	ActionGetMonitor             ContestAction = "GetMonitor"
 	ActionListUsersSubmissions   ContestAction = "ListUsersSubmissions"
@@ -315,6 +316,7 @@ func (uc *PermissionsUseCase) getContestPermissions(ctx context.Context, contest
 	return &models.ContestPermissions{
 		GetContest:             getBool(string(ActionGetContest)),
 		UpdateContest:          getBool(string(ActionUpdateContest)),
+		ManageContest:          getBool(string(ActionManageContest)),
 		AdminContest:           getBool(string(ActionAdminContest)),
 		GetMonitor:             getBool(string(ActionGetMonitor)),
 		ListUsersSubmissions:   getBool(string(ActionListUsersSubmissions)),

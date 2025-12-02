@@ -34,10 +34,10 @@ func (r *Repository) CreateContest(ctx context.Context, params *models.CreateCon
 	return nil
 }
 
-func (r *Repository) GetContest(ctx context.Context, id uuid.UUID) (contestssqlc.Contest, error) {
+func (r *Repository) GetContest(ctx context.Context, id uuid.UUID) (contestssqlc.GetContestRow, error) {
 	contest, err := r.queries.GetContest(ctx, id)
 	if err != nil {
-		return contestssqlc.Contest{}, pkg.HandlePgErr(err)
+		return contestssqlc.GetContestRow{}, pkg.HandlePgErr(err)
 	}
 	return contest, nil
 }
@@ -69,7 +69,7 @@ func (r *Repository) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *Repository) ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) ([]contestssqlc.Contest, int64, error) {
+func (r *Repository) ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) ([]contestssqlc.ListAdminContestsRow, int64, error) {
 	contests, err := r.queries.ListAdminContests(ctx, contestssqlc.ListAdminContestsParams{
 		Limit:      int32(filter.PageSize),
 		Offset:     int32(filter.Offset()),
@@ -93,7 +93,7 @@ func (r *Repository) ListAdminContests(ctx context.Context, filter models.AdminC
 	return contests, count, nil
 }
 
-func (r *Repository) ListUserContests(ctx context.Context, filter models.UserContestsFilter) ([]contestssqlc.Contest, int64, error) {
+func (r *Repository) ListUserContests(ctx context.Context, filter models.UserContestsFilter) ([]contestssqlc.ListUserContestsRow, int64, error) {
 	contests, err := r.queries.ListUserContests(ctx, contestssqlc.ListUserContestsParams{
 		CreatedBy: filter.UserId,
 		Limit:     int32(filter.PageSize),
@@ -117,7 +117,7 @@ func (r *Repository) ListUserContests(ctx context.Context, filter models.UserCon
 	return contests, count, nil
 }
 
-func (r *Repository) ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]contestssqlc.Contest, int64, error) {
+func (r *Repository) ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]contestssqlc.ListWorkshopContestsRow, int64, error) {
 	contests, err := r.queries.ListWorkshopContests(ctx, contestssqlc.ListWorkshopContestsParams{
 		UserID:    filter.UserId,
 		Limit:     int32(filter.PageSize),
@@ -141,7 +141,7 @@ func (r *Repository) ListWorkshopContests(ctx context.Context, filter models.Wor
 	return contests, count, nil
 }
 
-func (r *Repository) ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) ([]contestssqlc.Contest, int64, error) {
+func (r *Repository) ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) ([]contestssqlc.ListPublicContestsRow, int64, error) {
 	contests, err := r.queries.ListPublicContests(ctx, contestssqlc.ListPublicContestsParams{
 		Limit:     int32(filter.PageSize),
 		Offset:    int32(filter.Offset()),
@@ -281,24 +281,21 @@ func (r *Repository) CreateAccessRequest(ctx context.Context, id uuid.UUID, cont
 	return nil
 }
 
-func (r *Repository) GetAccessRequest(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.GetAccessRequestRow, error) {
+func (r *Repository) GetAccessRequest(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.ContestAccessRequest, error) {
 	row, err := r.queries.GetAccessRequest(ctx, contestssqlc.GetAccessRequestParams{
 		ContestID: contestId,
 		UserID:    userId,
 	})
 	if err != nil {
-		return contestssqlc.GetAccessRequestRow{}, pkg.HandlePgErr(err)
+		return contestssqlc.ContestAccessRequest{}, pkg.HandlePgErr(err)
 	}
 	return row, nil
 }
 
 func (r *Repository) ListAccessRequests(ctx context.Context, contestId uuid.UUID, status *string, limit int64, offset int64) ([]contestssqlc.ListAccessRequestsRow, int64, error) {
-	var statusParam contestssqlc.NullContestAccessRequestStatus
+	var statusParam *string
 	if status != nil {
-		statusParam = contestssqlc.NullContestAccessRequestStatus{
-			ContestAccessRequestStatus: contestssqlc.ContestAccessRequestStatus(*status),
-			Valid:                      true,
-		}
+		statusParam = status
 	}
 
 	rows, err := r.queries.ListAccessRequests(ctx, contestssqlc.ListAccessRequestsParams{
@@ -349,32 +346,29 @@ func (r *Repository) CreateInvitation(ctx context.Context, id uuid.UUID, contest
 	return nil
 }
 
-func (r *Repository) GetInvitation(ctx context.Context, id uuid.UUID) (contestssqlc.GetInvitationRow, error) {
+func (r *Repository) GetInvitation(ctx context.Context, id uuid.UUID) (contestssqlc.ContestInvitation, error) {
 	row, err := r.queries.GetInvitation(ctx, id)
 	if err != nil {
-		return contestssqlc.GetInvitationRow{}, pkg.HandlePgErr(err)
+		return contestssqlc.ContestInvitation{}, pkg.HandlePgErr(err)
 	}
 	return row, nil
 }
 
-func (r *Repository) GetInvitationByUser(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.GetInvitationByUserRow, error) {
+func (r *Repository) GetInvitationByUser(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.ContestInvitation, error) {
 	row, err := r.queries.GetInvitationByUser(ctx, contestssqlc.GetInvitationByUserParams{
 		ContestID: contestId,
 		UserID:    userId,
 	})
 	if err != nil {
-		return contestssqlc.GetInvitationByUserRow{}, pkg.HandlePgErr(err)
+		return contestssqlc.ContestInvitation{}, pkg.HandlePgErr(err)
 	}
 	return row, nil
 }
 
 func (r *Repository) ListInvitations(ctx context.Context, contestId uuid.UUID, status *string, limit int64, offset int64) ([]contestssqlc.ListInvitationsRow, int64, error) {
-	var statusParam contestssqlc.NullContestInvitationStatus
+	var statusParam *string
 	if status != nil {
-		statusParam = contestssqlc.NullContestInvitationStatus{
-			ContestInvitationStatus: contestssqlc.ContestInvitationStatus(*status),
-			Valid:                   true,
-		}
+		statusParam = status
 	}
 
 	rows, err := r.queries.ListInvitations(ctx, contestssqlc.ListInvitationsParams{
@@ -454,7 +448,16 @@ func (r *Repository) GetMaxProblemPosition(ctx context.Context, contestId uuid.U
 	if err != nil {
 		return -1, pkg.HandlePgErr(err)
 	}
-	return int64(maxPos), nil
+	
+	// maxPos might be int32 or int64 depending on database driver
+	switch v := maxPos.(type) {
+	case int32:
+		return int64(v), nil
+	case int64:
+		return v, nil
+	default:
+		return -1, nil
+	}
 }
 
 // Helper functions to convert between sqlc types and models
@@ -497,4 +500,36 @@ func timeToNullTime(t *time.Time) pgtype.Timestamptz {
 		Time:  *t,
 		Valid: true,
 	}
+}
+
+// Monitor
+
+func (r *Repository) GetContestMonitor(ctx context.Context, contestId uuid.UUID, limit int64, offset int64) ([]contestssqlc.GetContestMonitorRow, int64, error) {
+	rows, err := r.queries.GetContestMonitor(ctx, contestssqlc.GetContestMonitorParams{
+		ContestID: contestId,
+		Limit:     int32(limit),
+		Offset:    int32(offset),
+	})
+	if err != nil {
+		return nil, 0, pkg.HandlePgErr(err)
+	}
+
+	count, err := r.queries.CountContestMonitorRows(ctx, contestId)
+	if err != nil {
+		return nil, 0, pkg.HandlePgErr(err)
+	}
+
+	return rows, count, nil
+}
+
+func (r *Repository) GetMonitorProblemDetails(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) ([]contestssqlc.GetMonitorProblemDetailsRow, error) {
+	rows, err := r.queries.GetMonitorProblemDetails(ctx, contestssqlc.GetMonitorProblemDetailsParams{
+		ContestID: contestId,
+		UserID:    userId,
+	})
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+
+	return rows, nil
 }

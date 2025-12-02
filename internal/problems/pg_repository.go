@@ -172,7 +172,7 @@ func (r *Repository) CreateProblemTests(ctx context.Context, tests models.Proble
 	return nil
 }
 
-func (r *Repository) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.ProblemTest, error) {
+func (r *Repository) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.GetProblemTestsRow, error) {
 	rows, err := r.queries.GetProblemTests(ctx, problemId)
 	if err != nil {
 		return nil, pkg.HandlePgErr(err)

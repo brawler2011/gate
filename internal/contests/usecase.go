@@ -15,14 +15,14 @@ import (
 
 type ContestRepo interface {
 	CreateContest(ctx context.Context, c *models.CreateContestParams) error
-	GetContest(ctx context.Context, id uuid.UUID) (contestssqlc.Contest, error)
+	GetContest(ctx context.Context, id uuid.UUID) (contestssqlc.GetContestRow, error)
 	UpdateContest(ctx context.Context, c models.ContestUpdate) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
 
-	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) ([]contestssqlc.Contest, int64, error)
-	ListUserContests(ctx context.Context, filter models.UserContestsFilter) ([]contestssqlc.Contest, int64, error)
-	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]contestssqlc.Contest, int64, error)
-	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) ([]contestssqlc.Contest, int64, error)
+	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) ([]contestssqlc.ListAdminContestsRow, int64, error)
+	ListUserContests(ctx context.Context, filter models.UserContestsFilter) ([]contestssqlc.ListUserContestsRow, int64, error)
+	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]contestssqlc.ListWorkshopContestsRow, int64, error)
+	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) ([]contestssqlc.ListPublicContestsRow, int64, error)
 
 	CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error
 	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (contestssqlc.GetContestProblemRow, error)
@@ -38,14 +38,14 @@ type ContestRepo interface {
 
 	// Access Requests
 	CreateAccessRequest(ctx context.Context, id uuid.UUID, contestId uuid.UUID, userId uuid.UUID, status string) error
-	GetAccessRequest(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.GetAccessRequestRow, error)
+	GetAccessRequest(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.ContestAccessRequest, error)
 	ListAccessRequests(ctx context.Context, contestId uuid.UUID, status *string, limit int64, offset int64) ([]contestssqlc.ListAccessRequestsRow, int64, error)
 	UpdateAccessRequestStatus(ctx context.Context, id uuid.UUID, status string) error
 
 	// Invitations
 	CreateInvitation(ctx context.Context, id uuid.UUID, contestId uuid.UUID, userId uuid.UUID, invitedBy uuid.UUID, status string) error
-	GetInvitation(ctx context.Context, id uuid.UUID) (contestssqlc.GetInvitationRow, error)
-	GetInvitationByUser(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.GetInvitationByUserRow, error)
+	GetInvitation(ctx context.Context, id uuid.UUID) (contestssqlc.ContestInvitation, error)
+	GetInvitationByUser(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) (contestssqlc.ContestInvitation, error)
 	ListInvitations(ctx context.Context, contestId uuid.UUID, status *string, limit int64, offset int64) ([]contestssqlc.ListInvitationsRow, int64, error)
 	ListUserInvitations(ctx context.Context, userId uuid.UUID, limit int64, offset int64) ([]contestssqlc.ListUserInvitationsRow, int64, error)
 	UpdateInvitationStatus(ctx context.Context, id uuid.UUID, status string) error
@@ -54,6 +54,10 @@ type ContestRepo interface {
 	UpdateContestProblemPosition(ctx context.Context, contestId uuid.UUID, problemId uuid.UUID, position int64) error
 	ReorderProblemsAfterDelete(ctx context.Context, contestId uuid.UUID, deletedPosition int64) error
 	GetMaxProblemPosition(ctx context.Context, contestId uuid.UUID) (int64, error)
+
+	// Monitor
+	GetContestMonitor(ctx context.Context, contestId uuid.UUID, limit int64, offset int64) ([]contestssqlc.GetContestMonitorRow, int64, error)
+	GetMonitorProblemDetails(ctx context.Context, contestId uuid.UUID, userId uuid.UUID) ([]contestssqlc.GetMonitorProblemDetailsRow, error)
 }
 
 type UseCase struct {
@@ -112,7 +116,7 @@ func (uc *UseCase) GetContest(ctx context.Context, id uuid.UUID) (domain.Contest
 	}
 
 	// Map
-	domainContest := domain.ContestFromSqlc(contest)
+	domainContest := domain.ContestFromGetRow(contest)
 
 	// Set cache
 	if err := uc.cache.Set(ctx, cache.ContestKey(id), domainContest, cache.ContestTTL); err != nil {
@@ -130,7 +134,7 @@ func (uc *UseCase) ListAdminContests(ctx context.Context, filter models.AdminCon
 
 	domainContests := make([]domain.Contest, len(contests))
 	for i, c := range contests {
-		domainContests[i] = domain.ContestFromSqlc(c)
+		domainContests[i] = domain.ContestFromListRow(c)
 	}
 
 	return &domain.ContestsList{
@@ -147,7 +151,7 @@ func (uc *UseCase) ListUserContests(ctx context.Context, filter models.UserConte
 
 	domainContests := make([]domain.Contest, len(contests))
 	for i, c := range contests {
-		domainContests[i] = domain.ContestFromSqlc(c)
+		domainContests[i] = domain.ContestFromListRow(contestssqlc.ListAdminContestsRow(c))
 	}
 
 	return &domain.ContestsList{
@@ -164,7 +168,7 @@ func (uc *UseCase) ListWorkshopContests(ctx context.Context, filter models.Works
 
 	domainContests := make([]domain.Contest, len(contests))
 	for i, c := range contests {
-		domainContests[i] = domain.ContestFromSqlc(c)
+		domainContests[i] = domain.ContestFromListRow(contestssqlc.ListAdminContestsRow(c))
 	}
 
 	return &domain.ContestsList{
@@ -181,7 +185,7 @@ func (uc *UseCase) ListPublicContests(ctx context.Context, filter models.PublicC
 
 	domainContests := make([]domain.Contest, len(contests))
 	for i, c := range contests {
-		domainContests[i] = domain.ContestFromSqlc(c)
+		domainContests[i] = domain.ContestFromListRow(contestssqlc.ListAdminContestsRow(c))
 	}
 
 	return &domain.ContestsList{
@@ -597,4 +601,86 @@ func (uc *UseCase) ReorderProblemsAfterDeletion(ctx context.Context, contestId u
 	_ = uc.cache.DeleteByPattern(ctx, pattern)
 
 	return nil
+}
+
+// GetMonitor returns the full contest monitor/standings with per-problem details
+func (uc *UseCase) GetMonitor(ctx context.Context, contestId uuid.UUID, page int64, pageSize int64) (*domain.Monitor, error) {
+	offset := (page - 1) * pageSize
+
+	// Get main monitor rows
+	rows, total, err := uc.contestRepo.GetContestMonitor(ctx, contestId, pageSize, offset)
+	if err != nil {
+		return nil, pkg.Wrap(err, nil, "can't get contest monitor")
+	}
+
+	// Build monitor rows with problem details
+	monitorRows := make([]domain.MonitorRow, len(rows))
+	for i, row := range rows {
+		// Convert pgtype.UUID to uuid.UUID
+		userId := uuid.UUID(row.UserID.Bytes)
+		if !row.UserID.Valid {
+			userId = uuid.Nil
+		}
+
+		// Get per-problem details for this user
+		problemDetails, err := uc.contestRepo.GetMonitorProblemDetails(ctx, contestId, userId)
+		if err != nil {
+			return nil, pkg.Wrap(err, nil, "can't get problem details")
+		}
+
+		problems := make([]domain.MonitorProblemStatus, len(problemDetails))
+		for j, pd := range problemDetails {
+			problemId := uuid.UUID(pd.ProblemID.Bytes)
+			if !pd.ProblemID.Valid {
+				problemId = uuid.Nil
+			}
+
+			problems[j] = domain.MonitorProblemStatus{
+				ProblemID: problemId,
+				Position:  int64(pd.Position),
+				Score:     interfaceToInt64(pd.Score),
+				Attempts:  pd.Attempts,
+				Solved:    pd.Solved,
+				Penalty:   interfaceToInt64(pd.Penalty),
+			}
+		}
+
+		username := ""
+		if row.Username != nil {
+			username = *row.Username
+		}
+
+		monitorRows[i] = domain.MonitorRow{
+			UserID:       userId,
+			Username:     username,
+			TotalScore:   interfaceToInt64(row.TotalScore),
+			TotalPenalty: interfaceToInt64(row.TotalPenalty),
+			SolvedCount:  row.SolvedCount,
+			Problems:     problems,
+		}
+	}
+
+	return &domain.Monitor{
+		Rows:       monitorRows,
+		Pagination: domain.NewPagination(page, pageSize, total),
+	}, nil
+}
+
+// Helper to safely convert interface{} to int64
+func interfaceToInt64(val interface{}) int64 {
+	if val == nil {
+		return 0
+	}
+	switch v := val.(type) {
+	case int64:
+		return v
+	case int32:
+		return int64(v)
+	case int:
+		return int64(v)
+	case float64:
+		return int64(v)
+	default:
+		return 0
+	}
 }

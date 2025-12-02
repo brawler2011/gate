@@ -49,6 +49,8 @@ type ContestsUC interface {
 
 	UpdateProblemPosition(ctx context.Context, contestId uuid.UUID, problemId uuid.UUID, newPosition int64) error
 	ReorderProblemsAfterDeletion(ctx context.Context, contestId uuid.UUID, deletedPosition int64) error
+
+	GetMonitor(ctx context.Context, contestId uuid.UUID, page int64, pageSize int64) (*domain.Monitor, error)
 }
 
 type SubmissionsUC interface {
@@ -543,10 +545,26 @@ func (h *ContestsHandlers) DeleteContestProblem(c *fiber.Ctx, contestId uuid.UUI
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
 	}
 
+	// Get problem position before deletion to reorder others
+	problem, err := h.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
+		ContestId: contestId,
+		ProblemId: problemId,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Delete the problem
 	err = h.contestsUC.DeleteContestProblem(ctx, models.ContestProblemDeletion{
 		ContestId: contestId,
 		ProblemId: problemId,
 	})
+	if err != nil {
+		return err
+	}
+
+	// Reorder problems to remove gaps
+	err = h.contestsUC.ReorderProblemsAfterDeletion(ctx, contestId, problem.Position)
 	if err != nil {
 		return err
 	}
@@ -1099,7 +1117,7 @@ func (h *ContestsHandlers) ListInvitations(c *fiber.Ctx, contestId uuid.UUID, pa
 func (h *ContestsHandlers) AcceptInvitation(c *fiber.Ctx, contestId uuid.UUID, invitationId uuid.UUID) error {
 	ctx := c.UserContext()
 
-	user, err := middleware.GetUser(ctx)
+	_, err := middleware.GetUser(ctx)
 	if err != nil {
 		return err
 	}
@@ -1116,7 +1134,7 @@ func (h *ContestsHandlers) AcceptInvitation(c *fiber.Ctx, contestId uuid.UUID, i
 func (h *ContestsHandlers) DeclineInvitation(c *fiber.Ctx, contestId uuid.UUID, invitationId uuid.UUID) error {
 	ctx := c.UserContext()
 
-	user, err := middleware.GetUser(ctx)
+	_, err := middleware.GetUser(ctx)
 	if err != nil {
 		return err
 	}
@@ -1210,12 +1228,40 @@ func (h *ContestsHandlers) GetMonitor(c *fiber.Ctx, contestId uuid.UUID, params 
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view monitor")
 	}
 
-	// TODO: Implement actual monitor calculation
-	// This requires complex query joining submissions, problems, users
-	// For now, return empty monitor
+	// Get monitor data
+	monitor, err := h.contestsUC.GetMonitor(ctx, contestId, params.Page, params.PageSize)
+	if err != nil {
+		return err
+	}
+
+	// Convert to response model
+	rows := make([]corev1.MonitorRowModel, len(monitor.Rows))
+	for i, row := range monitor.Rows {
+		problems := make([]corev1.MonitorProblemStatusModel, len(row.Problems))
+		for j, p := range row.Problems {
+			problems[j] = corev1.MonitorProblemStatusModel{
+				ProblemId: p.ProblemID,
+				Position:  p.Position,
+				Score:     p.Score,
+				Attempts:  p.Attempts,
+				Solved:    p.Solved,
+				Penalty:   p.Penalty,
+			}
+		}
+
+		rows[i] = corev1.MonitorRowModel{
+			UserId:       row.UserID,
+			Username:     row.Username,
+			TotalScore:   row.TotalScore,
+			TotalPenalty: row.TotalPenalty,
+			SolvedCount:  row.SolvedCount,
+			Problems:     problems,
+		}
+	}
+
 	return c.JSON(&corev1.GetMonitorResponseModel{
-		Rows:       []corev1.MonitorRowModel{},
-		Pagination: corev1.PaginationModel{Page: params.Page, Total: 0},
+		Rows:       rows,
+		Pagination: PaginationDTO(monitor.Pagination),
 	})
 }
 

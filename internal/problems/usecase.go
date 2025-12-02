@@ -30,7 +30,7 @@ type Repo interface {
 	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (problemssqlc.ProblemMember, error)
 
 	CreateProblemTests(ctx context.Context, tests models.ProblemTests) error
-	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.ProblemTest, error)
+	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.GetProblemTestsRow, error)
 	DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error
 
 	// Test Groups
@@ -279,7 +279,7 @@ func (uc *UseCase) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]
 
 	domainTests := make([]domain.ProblemTest, len(tests))
 	for i, t := range tests {
-		domainTests[i] = domain.ProblemTestFromSqlc(t)
+		domainTests[i] = domain.ProblemTestFromGetRow(t)
 	}
 
 	if err := uc.cache.Set(ctx, key, domainTests, cache.ProblemTTL); err != nil {
