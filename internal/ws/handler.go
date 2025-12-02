@@ -78,7 +78,7 @@ func (h *Handler) HandleSubmissions() fiber.Handler {
 		if sortOrder != "desc" {
 			h.logger.Debug("invalid sortOrder for WebSocket", slog.String("sortOrder", sortOrder))
 			c.WriteMessage(websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData, 
+				websocket.FormatCloseMessage(websocket.CloseInvalidFramePayloadData,
 					"sortOrder must be 'desc' for real-time updates (page=1, sortOrder=desc)"))
 			return
 		}

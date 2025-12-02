@@ -176,6 +176,15 @@ func (h *Hub) handleSubmissionListEvent(data []byte) {
 			slog.Int("test_number", event.TestNumber))
 	}
 
+	// Clear cached test when testing is completed
+	if event.MessageType == models.MessageTypeTestingCompleted && event.SubmissionID != nil {
+		h.mu.Lock()
+		delete(h.lastTestCache, *event.SubmissionID)
+		h.mu.Unlock()
+		h.logger.Debug("cleared cached test for submission",
+			slog.String("submission_id", event.SubmissionID.String()))
+	}
+
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
