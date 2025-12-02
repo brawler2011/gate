@@ -1657,3 +1657,57 @@ components:
         submission_id: "550e8400-e29b-41d4-a716-446655440000"
         total_tests: 10
         state: 200
+    WebSocketMessageType:
+      type: string
+      enum:
+        - submission_created
+        - submission_updated
+      description: |
+        WebSocket message type for submission list updates:
+        - submission_created: A new submission was created
+        - submission_updated: An existing submission was updated (test progress/completion)
+    SubmissionWebSocketEventModel:
+      type: object
+      required:
+        - message_type
+        - submission
+      properties:
+        message_type:
+          $ref: "#/components/schemas/WebSocketMessageType"
+        submission:
+          $ref: "#/components/schemas/SubmissionsListItemModel"
+        message:
+          type: string
+          description: Optional message with additional details (e.g., test progress info)
+      description: |
+        WebSocket event sent to clients when a submission is created or updated.
+
+        The /ws/submissions endpoint accepts the following query parameters:
+        - contestId (uuid, optional): Filter by contest ID
+        - userId (uuid, optional): Filter by user ID
+        - problemId (uuid, optional): Filter by problem ID  
+        - state (integer, optional): Filter by submission state
+        - language (integer, optional): Filter by programming language
+        - sortOrder (string, required): Must be "desc" for real-time updates
+
+        Events are only sent for the first page (page=1) when sortOrder=desc.
+        New submissions appear at the top of the list.
+      example:
+        message_type: submission_created
+        submission:
+          id: "550e8400-e29b-41d4-a716-446655440000"
+          user_id: "660e8400-e29b-41d4-a716-446655440001"
+          username: "john_doe"
+          state: 1
+          score: 0
+          penalty: 0
+          time_stat: 0
+          memory_stat: 0
+          language: 30
+          problem_id: "770e8400-e29b-41d4-a716-446655440002"
+          problem_title: "Two Sum"
+          position: 1
+          contest_id: "880e8400-e29b-41d4-a716-446655440003"
+          contest_title: "Weekly Contest"
+          updated_at: "2024-01-15T10:30:00Z"
+          created_at: "2024-01-15T10:30:00Z"

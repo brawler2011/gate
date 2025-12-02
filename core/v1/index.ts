@@ -34,6 +34,7 @@ export type { ProblemModel } from './models/ProblemModel';
 export type { ProblemsListItemModel } from './models/ProblemsListItemModel';
 export type { SubmissionModel } from './models/SubmissionModel';
 export type { SubmissionsListItemModel } from './models/SubmissionsListItemModel';
+export type { SubmissionWebSocketEventModel } from './models/SubmissionWebSocketEventModel';
 export type { TestCompletedEventModel } from './models/TestCompletedEventModel';
 export { TestingCompletedEventModel } from './models/TestingCompletedEventModel';
 export type { TestingStartedEventModel } from './models/TestingStartedEventModel';
@@ -41,5 +42,6 @@ export { TestProgressEventType } from './models/TestProgressEventType';
 export type { UpdateContestRequestModel } from './models/UpdateContestRequestModel';
 export type { UpdateProblemRequestModel } from './models/UpdateProblemRequestModel';
 export type { UserModel } from './models/UserModel';
+export { WebSocketMessageType } from './models/WebSocketMessageType';
 
 export { DefaultService } from './services/DefaultService';
