@@ -103,34 +103,56 @@ const Page = async ({searchParams}: PageProps) => {
     return (
         <DefaultLayout>
             <Container size="lg" pt="md" pb="xl" px={{ base: 'xs', sm: 'md' }}>
-                {contestData?.contest && (
+                {contestData?.contest ? (
                     <ContestHotbar 
                         contest={contestData.contest}
                         user={user}
                         contestRole={contestRole}
                         activeTab="mysubmissions"
-                    />
+                    >
+                        <Stack align="center" gap="md">
+                            <Title>Мои посылки</Title>
+                            <SubmissionsListClient
+                                initialSubmissions={submissionsData.submissions}
+                                wsUrl={wsBaseUrl + "/submissions"}
+                                filter={{
+                                    contestId: parsedParams.contestId,
+                                    userId: parsedParams.userId,
+                                    problemId: parsedParams.problemId,
+                                }}
+                                pageSize={PAGE_SIZE}
+                                page={parsedParams.page}
+                                sortOrder={parsedParams.sortOrder}
+                            />
+                            <NextPagination
+                                pagination={submissionsData.pagination}
+                                baseUrl="/mysubmissions"
+                                queryParams={queryParams}
+                            />
+                        </Stack>
+                    </ContestHotbar>
+                ) : (
+                    <Stack align="center" gap="md">
+                        <Title>Мои посылки</Title>
+                        <SubmissionsListClient
+                            initialSubmissions={submissionsData.submissions}
+                            wsUrl={wsBaseUrl + "/submissions"}
+                            filter={{
+                                contestId: parsedParams.contestId,
+                                userId: parsedParams.userId,
+                                problemId: parsedParams.problemId,
+                            }}
+                            pageSize={PAGE_SIZE}
+                            page={parsedParams.page}
+                            sortOrder={parsedParams.sortOrder}
+                        />
+                        <NextPagination
+                            pagination={submissionsData.pagination}
+                            baseUrl="/mysubmissions"
+                            queryParams={queryParams}
+                        />
+                    </Stack>
                 )}
-                <Stack align="center" gap="md">
-                    <Title>Мои посылки</Title>
-                    <SubmissionsListClient
-                        initialSubmissions={submissionsData.submissions}
-                        wsUrl={wsBaseUrl + "/submissions"}
-                        filter={{
-                            contestId: parsedParams.contestId,
-                            userId: parsedParams.userId,
-                            problemId: parsedParams.problemId,
-                        }}
-                        pageSize={PAGE_SIZE}
-                        page={parsedParams.page}
-                        sortOrder={parsedParams.sortOrder}
-                    />
-                    <NextPagination
-                        pagination={submissionsData.pagination}
-                        baseUrl="/mysubmissions"
-                        queryParams={queryParams}
-                    />
-                </Stack>
             </Container>
         </DefaultLayout>
     );

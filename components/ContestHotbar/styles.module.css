@@ -1,0 +1,77 @@
+/* Tab row - overlaps content border below */
+.tabRow {
+  display: flex;
+  gap: 0;
+  margin-bottom: -1px; /* Overlap panel's top border */
+  position: relative;
+  z-index: 1;
+}
+
+/* Individual tab (inactive) */
+.tab {
+  position: relative;
+  padding: 10px 16px;
+  background-color: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-7));
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  border-radius: 6px 6px 0 0;
+  color: light-dark(var(--mantine-color-dark-3), var(--mantine-color-dark-1));
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: -1px; /* Overlap borders */
+}
+
+.tab:hover {
+  background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-dark-6), var(--mantine-color-dark-1));
+}
+
+/* Active tab - connects to panel below */
+.tabActive {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-dark-9), var(--mantine-color-dark-0));
+  border-color: light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  border-bottom: none;
+  z-index: 2;
+}
+
+/* Cover the panel's top border */
+.tabActive::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.tabActive:hover {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-dark-9), var(--mantine-color-dark-0));
+}
+
+/* Mobile section */
+.mobileSection {
+  margin-top: 0;
+}
+
+/* Desktop tabs - hidden on mobile */
+.desktopTabs {
+  display: none;
+}
+
+@media (min-width: 48em) {
+  .desktopTabs {
+    display: block;
+  }
+  
+  .mobileSection {
+    display: none;
+  }
+}

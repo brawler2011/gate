@@ -64,12 +64,13 @@ const Page = async ({ params }: Props) => {
             user={user}
             contestRole={contestRole}
             activeTab="submit"
-          />
-          <SubmitSubmissionClient 
-            contest={response!.contest}
-            problems={response!.problems || []}
-            user={user}
-          />
+          >
+            <SubmitSubmissionClient 
+              contest={response!.contest}
+              problems={response!.problems || []}
+              user={user}
+            />
+          </ContestHotbar>
         </Container>
       </AppShellMain>
       <AppShellFooter withBorder={false}>

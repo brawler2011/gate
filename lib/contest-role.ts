@@ -22,7 +22,6 @@ export async function getMyContestRole(contestId: string): Promise<ContestRoleRe
   const [error, response] = await Call((client) =>
     client.default.getMyContestRole({ contestId })
   );
-  
   if (error || !response) {
     // User is not a participant or not authenticated
     return null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Collapse, Group, Stack, Title } from "@mantine/core";
+import { Box, Button, Collapse, Stack } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconChevronDown,
@@ -10,7 +10,6 @@ import {
   IconMenu2,
   IconPuzzle,
   IconSend,
-  IconSettings,
   IconUser,
 } from "@tabler/icons-react";
 import Link from "next/link";
@@ -19,45 +18,76 @@ import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
 import { PermissionChecker } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/auth";
 import type { ContestRole } from "@/lib/contest-role";
+import classes from "./styles.module.css";
 
 type ContestHotbarProps = {
   contest: ContestModel;
   user: SessionUser;
   contestRole: { role: ContestRole } | null;
   activeTab?: "tasks" | "submit" | "submissions" | "monitor" | "manage" | "mysubmissions" | "allsubmissions";
-  showManageButton?: boolean; // Deprecated, maybe we will use it later again because you might want to not show it everywhere
+  children?: React.ReactNode;
 };
 
-export function ContestHotbar({ contest, user, contestRole, activeTab, showManageButton = true }: ContestHotbarProps) {
+export function ContestHotbar({ contest, user, contestRole, activeTab, children }: ContestHotbarProps) {
   // Create permission checker
   const checker = new PermissionChecker(user, contestRole?.role || null);
   const [mobileNavOpened, { toggle: toggleMobileNav }] = useDisclosure(false);
 
-  return (
-    <Stack gap="md" mb="lg" style={{ maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}>
-      {/* Заголовок с кнопкой управления */}
-      <Group justify="space-between" align="center" wrap="nowrap">
-        <Title order={1} size="h3">
-          🏆 {contest.title}
-        </Title>
-        {checker.canManageContest(contest) && (
-          <Button
-            component={Link}
-            href={`/contests/${contest.id}/manage`}
-            variant="filled"
-            color="violet"
-            size="sm"
-            leftSection={<IconSettings size={16} />}
-            visibleFrom="sm"
-            style={{ flexShrink: 0 }}
-          >
-            Управление
-          </Button>
-        )}
-      </Group>
+  // Build tabs array based on permissions
+  const tabs = [
+    checker.canViewProblems(contest) && {
+      key: "tasks",
+      label: "Задачи",
+      href: `/contests/${contest.id}`,
+      icon: <IconPuzzle size={16} />,
+    },
+    checker.canSubmitSolution(contest) && {
+      key: "submit",
+      label: "Послать решение",
+      href: `/contests/${contest.id}/submit`,
+      icon: <IconSend size={16} />,
+    },
+    checker.canViewMySubmissions(contest) && {
+      key: "mysubmissions",
+      label: "Мои посылки",
+      href: `/mysubmissions?contestId=${contest.id}&sortOrder=desc&userId=${user?.id}`,
+      icon: <IconUser size={16} />,
+    },
+    checker.canViewAllSubmissions(contest) && {
+      key: "allsubmissions",
+      label: "Все посылки",
+      href: `/submissions?contestId=${contest.id}&sortOrder=desc&userId=${user?.id}`,
+      icon: <IconMail size={16} />,
+    },
+    checker.canViewMonitor(contest) && {
+      key: "monitor",
+      label: "Монитор",
+      href: `/contests/${contest.id}/monitor`,
+      icon: <IconDeviceDesktop size={16} />,
+    },
+  ].filter(Boolean) as Array<{ key: string; label: string; href: string; icon: React.ReactNode }>;
 
-      {/* Мобильная навигация (кнопка + раскрывающийся список) */}
-      <Stack gap="sm" hiddenFrom="sm">
+  return (
+    <Box style={{ maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}>
+      {/* Desktop tabs - just tabs, no panel */}
+      <div className={classes.desktopTabs}>
+        <div className={classes.tabRow}>
+          {tabs.map((tab) => (
+            <Link
+              key={tab.key}
+              href={tab.href}
+              className={`${classes.tab} ${activeTab === tab.key ? classes.tabActive : ""}`}
+            >
+              {tab.icon}
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+        {children}
+      </div>
+
+      {/* Mobile navigation - just nav, no panel wrapper */}
+      <Stack gap="md" className={classes.mobileSection}>
         <Button
           onClick={toggleMobileNav}
           variant="default"
@@ -131,81 +161,11 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, showManag
                 Монитор
               </Button>
             )}
-            {checker.canManageContest(contest) && (
-              <Button
-                component={Link}
-                href={`/contests/${contest.id}/manage`}
-                variant="filled"
-                color="violet"
-                size="md"
-                leftSection={<IconSettings size={18} />}
-                fullWidth
-              >
-                Управление
-              </Button>
-            )}
           </Stack>
         </Collapse>
+        
+        {children}
       </Stack>
-      
-      {/* Десктопная навигация (как было) */}
-      <Group gap="sm" visibleFrom="sm">
-        {checker.canViewProblems(contest) && (
-          <Button
-            component={Link}
-            href={`/contests/${contest.id}`}
-            variant={activeTab === "tasks" ? "filled" : "default"}
-            size="sm"
-            leftSection={<IconPuzzle size={16} />}
-          >
-            Задачи
-          </Button>
-        )}
-        {checker.canSubmitSolution(contest) && (
-          <Button
-            component={Link}
-            href={`/contests/${contest.id}/submit`}
-            variant={activeTab === "submit" ? "filled" : "default"}
-            size="sm"
-            leftSection={<IconSend size={16} />}
-          >
-            Послать решение
-          </Button>
-        )}
-        {checker.canViewMySubmissions(contest) && (
-          <Button
-            component={Link}
-            href={`/mysubmissions?contestId=${contest.id}&sortOrder=desc&userId=${user?.id}`}
-            variant={activeTab === "mysubmissions" ? "filled" : "default"}
-            size="sm"
-            leftSection={<IconUser size={16} />}
-          >
-            Мои посылки
-          </Button>
-        )}
-        {checker.canViewAllSubmissions(contest) && (
-          <Button
-            component={Link}
-            href={`/submissions?contestId=${contest.id}&sortOrder=desc&userId=${user?.id}`}
-            variant={activeTab === "allsubmissions" ? "filled" : "default"}
-            size="sm"
-            leftSection={<IconMail size={16} />}
-          >
-            Все посылки
-          </Button>
-        )}
-        {checker.canViewMonitor(contest) && (
-          <Button
-            component={Link}
-            href={`/contests/${contest.id}/monitor`}
-            variant={activeTab === "monitor" ? "filled" : "default"}
-            size="sm"
-            leftSection={<IconDeviceDesktop size={16} />}
-          >
-            Монитор
-          </Button>
-        )}
-      </Group>
-    </Stack>
+    </Box>
   );
 }

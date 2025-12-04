@@ -1,1 +1,8 @@
+/* Global dark mode colors */
+[data-mantine-color-scheme="dark"] body {
+  background-color: var(--mantine-color-dark-8);
+}
 
+[data-mantine-color-scheme="dark"] .mantine-AppShell-header {
+  background-color: var(--mantine-color-dark-8);
+}

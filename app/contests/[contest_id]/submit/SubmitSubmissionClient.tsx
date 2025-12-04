@@ -64,10 +64,13 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
     <Box style={{ maxWidth: 740, margin: "0 auto"}}>
       <Paper 
         shadow="sm" 
-        radius="md" 
         p="md" 
         withBorder 
-        bg="var(--mantine-color-gray-light)"
+        bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))"
+        style={{ 
+          borderRadius: '0 var(--mantine-radius-md) var(--mantine-radius-md) var(--mantine-radius-md)',
+          borderColor: 'light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))'
+        }}
       >
         <CreateSubmissionForm 
           onSubmit={handleSubmit}
@@ -75,13 +78,16 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
           disabled={isSubmitted}
           problemSelect={
             <Select
-              placeholder="Выберите задачу для отправки решения"
+              placeholder="Выберите задачу"
+              variant="subtle"
               data={problemOptions}
               value={selectedProblemId}
               onChange={setSelectedProblemId}
               allowDeselect={false}
               disabled={isSubmitted}
-              style={{ width: 200 }}
+              style={{ width: `${(problemOptions.find(o => o.value === selectedProblemId)?.label.length || 10) + 3}ch` }}
+              comboboxProps={{ position: "bottom-start" }}
+              styles={{ dropdown: { minWidth: "max-content" } }}
             />
           }
         />

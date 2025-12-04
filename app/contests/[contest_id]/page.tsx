@@ -65,29 +65,28 @@ const Contest = ({ contest, problems, user, contestRole }: ContestProps) => {
           pb={{ base: "md", sm: "lg", md: "xl" }}
           px={{ base: "xs", sm: "md", md: "lg" }}
         >
-          {/* Header Section */}
           <ContestHotbar 
             contest={contest} 
             user={user}
             contestRole={contestRole}
             activeTab="tasks" 
-          />
-
-          {/* Tasks Section */}
-          {problems.length === 0 ? (
-            <Center py={{ base: "xl", md: "3xl" }}>
-              <Stack gap="md" align="center">
-                <Box component="div" style={{ fontSize: "2.5rem" }}>
-                  📝
-                </Box>
-                <Text c="dimmed" size="md" fw={500}>
-                  Нет задач в контесте
-                </Text>
-              </Stack>
-            </Center>
-          ) : (
-            <ContestProblemsTable contestId={contest.id} problems={problems} />
-          )}
+          >
+            {/* Tasks Section */}
+            {problems.length === 0 ? (
+              <Center py={{ base: "xl", md: "3xl" }}>
+                <Stack gap="md" align="center">
+                  <Box component="div" style={{ fontSize: "2.5rem" }}>
+                    📝
+                  </Box>
+                  <Text c="dimmed" size="md" fw={500}>
+                    Нет задач в контесте
+                  </Text>
+                </Stack>
+              </Center>
+            ) : (
+              <ContestProblemsTable contestId={contest.id} problems={problems} />
+            )}
+          </ContestHotbar>
         </Container>
       </AppShellMain>
 

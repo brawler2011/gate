@@ -11,7 +11,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import React, { useRef, useState } from "react";
-import { IconTrash, IconUpload } from "@tabler/icons-react";
+import { IconPaperclip, IconTrash } from "@tabler/icons-react";
 import { useMutation } from "@tanstack/react-query";
 import classes from "./styles.module.css";
 import { APP_COLORS } from "@/lib/theme/colors";
@@ -26,6 +26,12 @@ const Editor = dynamic(
 );
 
 const languages = ["python", "cpp", "golang"];
+
+const languageToExtension: Record<string, string> = {
+    python: ".py",
+    cpp: ".cpp",
+    golang: ".go",
+};
 
 type Props = {
     onSubmit: (submission: FormData, language: string) => Promise<number | null>;
@@ -161,19 +167,20 @@ const CreateSubmissionForm = ({ onSubmit, problemSelect, large = false, disabled
                 onDragLeave={handleDragLeave}
                 data-dragging={isDragging}
             >
-                <Group justify="space-between">
-                    {problemSelect && problemSelect}
+                <Group justify="center" gap="md">
+                    {problemSelect}
                     <Select
                         data={languages}
                         allowDeselect={false}
+                        variant="subtle"
                         {...form.getInputProps("language")}
-                        style={{ width: "200px" }}
+                        style={{ width: "120px" }}
                         disabled={disabled}
                     />
                     <Button
                         component="label"
-                        variant="light"
-                        leftSection={<IconUpload size={16} />}
+                        variant="subtle"
+                        leftSection={<IconPaperclip size={16} />}
                         classNames={{
                             label: classes.pinFileLabel,
                             section: classes.pinFileSection,
@@ -181,13 +188,13 @@ const CreateSubmissionForm = ({ onSubmit, problemSelect, large = false, disabled
                         }}
                         disabled={disabled}
                     >
-                        Прикрепить файл
+                        Файл
                         <input
                             type="file"
                             hidden
                             ref={fileInputRef}
                             onChange={handleFileSelect}
-                            accept=".py,.cpp,.go,.txt"
+                            accept={languageToExtension[form.values.language]}
                             disabled={disabled}
                         />
                     </Button>

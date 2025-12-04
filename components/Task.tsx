@@ -100,8 +100,9 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
                                 contest={contest}
                                 user={user}
                                 contestRole={contestRole}
-                            />
-                            <Problem problem={task} letter={numberToLetters(task.position)}/>
+                            >
+                                <Problem problem={task} letter={numberToLetters(task.position)}/>
+                            </ContestHotbar>
                         </Container>
                     </Box>
 
