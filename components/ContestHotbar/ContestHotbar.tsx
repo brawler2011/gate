@@ -26,9 +26,10 @@ type ContestHotbarProps = {
   contestRole: { role: ContestRole } | null;
   activeTab?: "tasks" | "submit" | "submissions" | "monitor" | "manage" | "mysubmissions" | "allsubmissions";
   children?: React.ReactNode;
+  maxWidth?: string | number;
 };
 
-export function ContestHotbar({ contest, user, contestRole, activeTab, children }: ContestHotbarProps) {
+export function ContestHotbar({ contest, user, contestRole, activeTab, children, maxWidth }: ContestHotbarProps) {
   // Create permission checker
   const checker = new PermissionChecker(user, contestRole?.role || null);
   const [mobileNavOpened, { toggle: toggleMobileNav }] = useDisclosure(false);
@@ -50,13 +51,13 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children 
     checker.canViewMySubmissions(contest) && {
       key: "mysubmissions",
       label: "Мои посылки",
-      href: `/mysubmissions?contestId=${contest.id}&sortOrder=desc&userId=${user?.id}`,
+      href: `/contests/${contest.id}/mysubmissions?sortOrder=desc&userId=${user?.id}`,
       icon: <IconUser size={16} />,
     },
     checker.canViewAllSubmissions(contest) && {
       key: "allsubmissions",
       label: "Все посылки",
-      href: `/submissions?contestId=${contest.id}&sortOrder=desc&userId=${user?.id}`,
+      href: `/contests/${contest.id}/submissions?sortOrder=desc`,
       icon: <IconMail size={16} />,
     },
     checker.canViewMonitor(contest) && {
@@ -68,26 +69,34 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children 
   ].filter(Boolean) as Array<{ key: string; label: string; href: string; icon: React.ReactNode }>;
 
   return (
-    <Box style={{ maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}>
+    <Box>
       {/* Desktop tabs - just tabs, no panel */}
       <div className={classes.desktopTabs}>
-        <div className={classes.tabRow}>
-          {tabs.map((tab) => (
-            <Link
-              key={tab.key}
-              href={tab.href}
-              className={`${classes.tab} ${activeTab === tab.key ? classes.tabActive : ""}`}
-            >
-              {tab.icon}
-              {tab.label}
-            </Link>
-          ))}
-        </div>
-        {children}
+        <Box style={{ maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto", marginBottom: -1, position: "relative", zIndex: 1 }}>
+          <div className={classes.tabRow}>
+            {tabs.map((tab) => (
+              <Link
+                key={tab.key}
+                href={tab.href}
+                className={`${classes.tab} ${activeTab === tab.key ? classes.tabActive : ""}`}
+              >
+                {tab.icon}
+                {tab.label}
+              </Link>
+            ))}
+          </div>
+        </Box>
+        <Box style={{ maxWidth: maxWidth || CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}>
+          {children}
+        </Box>
       </div>
 
       {/* Mobile navigation - just nav, no panel wrapper */}
-      <Stack gap="md" className={classes.mobileSection}>
+      <Stack
+        gap="md"
+        className={classes.mobileSection}
+        style={{ maxWidth: maxWidth || CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}
+      >
         <Button
           onClick={toggleMobileNav}
           variant="default"
@@ -128,7 +137,7 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children 
             {checker.canViewMySubmissions(contest) && (
               <Button
                 component={Link}
-                href={`/mysubmissions?contestId=${contest.id}&sortOrder=desc&userId=${user?.id}`}
+                href={`/contests/${contest.id}/mysubmissions?sortOrder=desc&userId=${user?.id}`}
                 variant={activeTab === "mysubmissions" ? "filled" : "light"}
                 size="md"
                 leftSection={<IconUser size={18} />}
@@ -140,7 +149,7 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children 
             {checker.canViewAllSubmissions(contest) && (
               <Button
                 component={Link}
-                href={`/submissions?contestId=${contest.id}&sortOrder=desc&userId=${user?.id}`}
+                href={`/contests/${contest.id}/submissions?sortOrder=desc`}
                 variant={activeTab === "allsubmissions" ? "filled" : "light"}
                 size="md"
                 leftSection={<IconMail size={18} />}

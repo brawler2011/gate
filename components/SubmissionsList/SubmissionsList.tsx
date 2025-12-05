@@ -10,6 +10,7 @@ import {
     TableTr,
     Text,
     Transition,
+    TableScrollContainer,
 } from "@mantine/core";
 import { LangString, ProblemTitle, StateColor, StateString, TimeBeautify } from "@/lib/lib";
 import Link from "next/link";
@@ -150,30 +151,32 @@ const SubmissionRow = ({ submission, isHighlighted, isNew }: SubmissionRowProps)
 
 const SubmissionsList = ({ submissions, highlightedIds = new Set() }: SubmissionsListProps) => {
     return (
-        <Table className={styles.table}>
-            <TableThead>
-                <TableTr>
-                    <TableTh ta="center">Когда</TableTh>
-                    <TableTh ta="center">Кто</TableTh>
-                    <TableTh ta="center">Задача</TableTh>
-                    <TableTh ta="center">Язык</TableTh>
-                    <TableTh ta="center" className={styles.colVerdict}>Вердикт</TableTh>
-                    <TableTh ta="center">Время</TableTh>
-                    <TableTh ta="center">Память</TableTh>
-                    <TableTh ta="center">Просмотр</TableTh>
-                </TableTr>
-            </TableThead>
-            <TableTbody>
-                {submissions.map((submission) => (
-                    <SubmissionRow
-                        key={submission.id}
-                        submission={submission}
-                        isHighlighted={highlightedIds.has(submission.id)}
-                        isNew={submission.isNew ?? false}
-                    />
-                ))}
-            </TableTbody>
-        </Table>
+        <TableScrollContainer minWidth={800}>
+            <Table className={styles.table}>
+                <TableThead>
+                    <TableTr>
+                        <TableTh ta="center">Когда</TableTh>
+                        <TableTh ta="center">Кто</TableTh>
+                        <TableTh ta="center">Задача</TableTh>
+                        <TableTh ta="center">Язык</TableTh>
+                        <TableTh ta="center" className={styles.colVerdict}>Вердикт</TableTh>
+                        <TableTh ta="center">Время</TableTh>
+                        <TableTh ta="center">Память</TableTh>
+                        <TableTh ta="center">Просмотр</TableTh>
+                    </TableTr>
+                </TableThead>
+                <TableTbody>
+                    {submissions.map((submission) => (
+                        <SubmissionRow
+                            key={submission.id}
+                            submission={submission}
+                            isHighlighted={highlightedIds.has(submission.id)}
+                            isNew={submission.isNew ?? false}
+                        />
+                    ))}
+                </TableTbody>
+            </Table>
+        </TableScrollContainer>
     );
 };
 

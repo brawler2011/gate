@@ -44,7 +44,7 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
       // Mark as submitted to disable form
       setIsSubmitted(true);
       // Redirect to "Мои посылки" page after successful submission
-      router.push(`/mysubmissions?contestId=${contest.id}&order=desc&userId=${user?.id}`);
+      router.push(`/contests/${contest.id}/mysubmissions?order=desc&userId=${user?.id}`);
     }
 
     return result;

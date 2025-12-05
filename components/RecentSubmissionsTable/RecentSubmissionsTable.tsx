@@ -112,7 +112,7 @@ export function RecentSubmissionsTable({
         Последние посылки{" "}
         <Anchor
           component={Link}
-          href={`/mysubmissions?contestId=${contestId}&order=desc&userId=${userId}`}
+          href={`/contests/${contestId}/mysubmissions?order=desc&userId=${userId}`}
           fs="italic"
           c="var(--mantine-color-text)"
           fw={500}

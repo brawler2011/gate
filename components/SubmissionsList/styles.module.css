@@ -7,6 +7,7 @@
 .table td {
     padding-left: 8px;
     padding-right: 8px;
+    white-space: nowrap;
 }
 
 @media (min-width: var(--mantine-breakpoint-sm)) {
@@ -25,11 +26,9 @@
     }
 }
 
-/* Verdict column - strictly fixed width */
+/* Verdict column - flexible width with minimum */
 .colVerdict {
-    width: 160px !important;
-    min-width: 160px !important;
-    max-width: 160px !important;
+    min-width: 160px;
     box-sizing: border-box;
 }
 
