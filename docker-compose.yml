@@ -6,9 +6,8 @@ services:
       context: ..
       dockerfile: frontend/Dockerfile
       args:
+        # Only NEXT_PUBLIC_* vars need to be baked in at build time
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-        BACKEND_API_URL: ${BACKEND_API_URL}
-        ORY_SDK_URL: ${ORY_SDK_URL}
     container_name: gate149-frontend
     restart: unless-stopped
     ports:

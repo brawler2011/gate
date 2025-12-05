@@ -42,7 +42,7 @@ error_handler() {
             echo "  - Disk is full"
             echo ""
             echo "How to fix:"
-            echo "  1. Re-upload from Windows: .\\deploy.ps1 -StartFrom upload"
+            echo "  1. Re-upload from Windows: bun run deploy.ts --StartFrom upload"
             echo "  2. Run again: /tmp/server-deploy.sh"
             ;;
         "load")
@@ -114,7 +114,7 @@ if [ ! -f "$ARCHIVE_PATH" ]; then
     echo "Error: Archive not found at $ARCHIVE_PATH"
     echo ""
     echo "Upload the archive from Windows first:"
-    echo "  .\\deploy.ps1 -StartFrom upload"
+    echo "  bun run deploy.ts --StartFrom upload"
     exit 1
 fi
 

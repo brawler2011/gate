@@ -1,44 +1,32 @@
 # Многоступенчатая сборка для оптимизации размера образа
 
-# Этап 1: Установка production зависимостей
-FROM node:20-alpine AS deps
+# Этап 1: Сборка приложения
+FROM oven/bun:1-alpine AS builder
 WORKDIR /app
 
-# Копируем файлы зависимостей из frontend/
-COPY frontend/package.json frontend/package-lock.json ./
-
-# Устанавливаем только production зависимости
-RUN npm ci --only=production
-
-# Этап 2: Сборка приложения
-FROM node:20-alpine AS builder
-WORKDIR /app
-
-# Копируем файлы зависимостей и устанавливаем ВСЕ зависимости (включая dev)
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+# Копируем файлы зависимостей и устанавливаем зависимости
+COPY frontend/package.json frontend/bun.lock ./
+RUN bun install --frozen-lockfile
 
 # Копируем contracts/ (нужны для импортов)
 COPY contracts/ ../contracts/
 
-# Копируем остальные файлы frontend/
+# Копируем остальные файлы frontend/ (включая .env.production)
 COPY frontend/ .
 
-# Переменные окружения для сборки (можно переопределить через build args)
+# Переменные окружения для сборки
+# Только NEXT_PUBLIC_* переменные нужно передавать как build args
+# Остальные (BACKEND_API_URL, ORY_SDK_URL и т.д.) читаются из .env.production
 ARG NEXT_PUBLIC_APP_URL
-ARG BACKEND_API_URL
-ARG ORY_SDK_URL
 
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
-ENV BACKEND_API_URL=$BACKEND_API_URL
-ENV ORY_SDK_URL=$ORY_SDK_URL
 ENV NODE_ENV=production
 
 # Собираем приложение
-RUN npm run build
+RUN bun run build
 
-# Этап 3: Production образ
-FROM node:20-alpine AS runner
+# Этап 2: Production образ
+FROM oven/bun:1-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -63,5 +51,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Запускаем приложение
-CMD ["node", "server.js"]
-
+CMD ["bun", "server.js"]
