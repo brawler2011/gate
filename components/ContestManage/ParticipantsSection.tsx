@@ -187,36 +187,34 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
   const handleChangeRole = async (newRole: string) => {
     if (!editingParticipant) return;
 
-    try {
-      await updateContestMemberRole(
-        contestId,
-        editingParticipant.userId,
-        newRole
-      );
+    const [error] = await updateContestMemberRole(
+      contestId,
+      editingParticipant.userId,
+      newRole
+    );
 
-      setModalOpened(false);
-      
-      // Небольшая задержка перед показом сообщения
-      setTimeout(() => {
-        setStatusMessage({
-          type: "success",
-          message: "Роль обновлена успешно",
-        });
-      }, 50);
+    setModalOpened(false);
 
-      await loadParticipants();
-    } catch (error) {
+    if (error) {
       console.error("Failed to change role:", error);
-      setModalOpened(false);
-      
-      // Небольшая задержка перед показом сообщения
-      setTimeout(() => {
-        setStatusMessage({
-          type: "error",
-          message: "Произошла ошибка",
-        });
-      }, 200);
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось изменить роль",
+        color: "red",
+      });
+      setStatusMessage({
+        type: "error",
+        message: "Не удалось изменить роль",
+      });
+      return;
     }
+
+    setStatusMessage({
+      type: "success",
+      message: "Роль обновлена успешно",
+    });
+
+    await loadParticipants();
   };
 
   const autocompleteData = searchResults.map((u) => ({

@@ -202,15 +202,16 @@ export async function createSolution(
     }));
 }
 
-// FIXME: Implement actual API endpoint for updating contest member role
 export async function updateContestMemberRole(
   contestId: string,
   userId: string,
   newRole: string
-): Promise<void> {
-  // TODO: Add API call when backend endpoint is ready
-  console.log("Update role:", { contestId, userId, newRole });
-  console.log("Not implemented!");
+) {
+  return Call((client) => client.default.updateContestMember({ 
+    contestId, 
+    userId, 
+    role: newRole 
+  }));
 }
 
 export async function listAdminContests(

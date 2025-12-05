@@ -9,7 +9,7 @@ import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {Notifications} from "@mantine/notifications";
 import {Inter} from "next/font/google"
 import { theme } from '@/lib/theme/theme';
-import ReactScan from '@/components/ReactScan';
+// import ReactScan from '@/components/ReactScan';
 
 const queryClient = new QueryClient();
 const inter = Inter({subsets: ["latin"]})
@@ -26,7 +26,7 @@ export default function RootLayout({children}: { children: React.ReactNode }) {
             />  
         </head>
         <body suppressHydrationWarning>
-        <ReactScan />
+        {/* <ReactScan /> */}
         <QueryClientProvider client={queryClient}>
             <MantineProvider theme={theme} defaultColorScheme="dark" withGlobalClasses>
                 <Notifications/>
