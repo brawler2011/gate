@@ -20,8 +20,10 @@ import type {
 } from "../../../../contracts/core/v1";
 import { ContestProblemsTable } from "./ContestProblemsTable";
 import { ContestHotbar } from "@/components/ContestHotbar";
+import { ContestInfoPanel } from "@/components/ContestInfoPanel";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";
+import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
 
 type Props = {
   params: Promise<{ contest_id: string }>;
@@ -59,35 +61,56 @@ const Contest = ({ contest, problems, user, contestRole }: ContestProps) => {
         <HeaderWithSession />
       </AppShellHeader>
       <AppShellMain>
-        <Container
-          size="lg"
-          pt={0}
-          pb={{ base: "md", sm: "lg", md: "xl" }}
-          px={{ base: "xs", sm: "md", md: "lg" }}
-        >
-          <ContestHotbar 
-            contest={contest} 
-            user={user}
-            contestRole={contestRole}
-            activeTab="tasks" 
-          >
-            {/* Tasks Section */}
-            {problems.length === 0 ? (
-              <Center py={{ base: "xl", md: "3xl" }}>
-                <Stack gap="md" align="center">
-                  <Box component="div" style={{ fontSize: "2.5rem" }}>
-                    📝
-                  </Box>
-                  <Text c="dimmed" size="md" fw={500}>
-                    Нет задач в контесте
-                  </Text>
-                </Stack>
-              </Center>
-            ) : (
-              <ContestProblemsTable contestId={contest.id} problems={problems} />
-            )}
-          </ContestHotbar>
-        </Container>
+        <Center>
+          <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
+            {/* Main Content */}
+            <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
+              <Container
+                size="lg"
+                pt={0}
+                pb={{ base: "md", sm: "lg", md: "xl" }}
+                px={0}
+                mx={0}
+                style={{ maxWidth: '100%' }}
+              >
+                <ContestHotbar 
+                  contest={contest} 
+                  user={user}
+                  contestRole={contestRole}
+                  activeTab="tasks" 
+                >
+                  {/* Tasks Section */}
+                  {problems.length === 0 ? (
+                    <Center py={{ base: "xl", md: "3xl" }}>
+                      <Stack gap="md" align="center">
+                        <Box component="div" style={{ fontSize: "2.5rem" }}>
+                          📝
+                        </Box>
+                        <Text c="dimmed" size="md" fw={500}>
+                          Нет задач в контесте
+                        </Text>
+                      </Stack>
+                    </Center>
+                  ) : (
+                    <ContestProblemsTable contestId={contest.id} problems={problems} />
+                  )}
+                </ContestHotbar>
+              </Container>
+            </Box>
+
+            {/* Right Sidebar - Contest Info Panel - hidden on mobile */}
+            <Box 
+              style={{ marginTop: '16px' }}
+              visibleFrom="sm"
+            >
+              <ContestInfoPanel 
+                contest={contest}
+                user={user}
+                contestRole={contestRole}
+              />
+            </Box>
+          </Box>
+        </Center>
       </AppShellMain>
 
       <AppShellFooter withBorder={false}>

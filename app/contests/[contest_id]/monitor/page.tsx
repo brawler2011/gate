@@ -1,10 +1,17 @@
 import {
+    Box,
     Container,
     Text,
-    Title
+    Title,
+    Center
 } from '@mantine/core';
 import {Metadata} from "next";
 import {DefaultLayout} from "@/components/Layout";
+import {ContestInfoPanel} from "@/components/ContestInfoPanel";
+import {getContest} from "@/lib/actions";
+import {getCurrentUser} from "@/lib/auth";
+import {getMyContestRole} from "@/lib/contest-role";
+import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
 
 const metadata: Metadata = {
     title: "Положение"
@@ -15,18 +22,42 @@ type PageProps = {
 }
 
 const Page = async ({params}: PageProps) => {
-    // FIXME: Monitor functionality is not yet implemented in the backend
-    // const contestId = (await params).contest_id;
-    // const monitor = await getMonitor(contestId);
+    const { contest_id } = await params;
+    
+    // Fetch contest data for the info panel
+    const [, contestResponse] = await getContest(contest_id);
+    const user = await getCurrentUser();
+    const contestRole = user ? await getMyContestRole(contest_id) : null;
 
     return (
         <DefaultLayout>
-            <Container size="xl" py="md">
-                <Title order={2}>Положение</Title>
-                <Text c="dimmed" mt="md">
-                    Функция мониторинга находится в разработке.
-                </Text>
-            </Container>
+            <Center>
+                <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
+                    {/* Main Content */}
+                    <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
+                        <Container size="xl" py="md" px={0} mx={0} style={{ maxWidth: '100%' }}>
+                            <Title order={2}>Положение</Title>
+                            <Text c="dimmed" mt="md">
+                                Функция мониторинга находится в разработке.
+                            </Text>
+                        </Container>
+                    </Box>
+
+                    {/* Right Sidebar - Contest Info Panel - hidden on mobile */}
+                    {contestResponse?.contest && (
+                        <Box 
+                            style={{ marginTop: '16px' }}
+                            visibleFrom="sm"
+                        >
+                            <ContestInfoPanel 
+                                contest={contestResponse.contest}
+                                user={user}
+                                contestRole={contestRole}
+                            />
+                        </Box>
+                    )}
+                </Box>
+            </Center>
         </DefaultLayout>
     );
 };

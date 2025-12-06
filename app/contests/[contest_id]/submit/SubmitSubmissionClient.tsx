@@ -61,7 +61,7 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
   }
 
   return (
-    <Box style={{ maxWidth: 740, margin: "0 auto"}}>
+    <Box style={{ maxWidth: "100%", margin: "0 auto"}}>
       <Paper 
         shadow="sm" 
         p="md" 

@@ -24,6 +24,7 @@ import {Footer} from "@/components/Footer";
 import {RecentSubmissionsTable} from "@/components/RecentSubmissionsTable";
 import {submitSubmission} from "@/app/contests/[contest_id]/problems/[problem_id]/actions";
 import {ContestHotbar} from "@/components/ContestHotbar";
+import {ContestInfoPanel} from "@/components/ContestInfoPanel";
 import type {SessionUser} from "@/lib/auth";
 import type {ContestRole} from "@/lib/contest-role";
 
@@ -108,27 +109,39 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
 
                     {/* Right Sidebar - скрыт на мобилках */}
                     <Box 
-                        style={{ width: CONTEST_SIDEBAR_RIGHT_WIDTH, marginRight: '32px' }}
+                        style={{ marginRight: '32px' }}
                         visibleFrom="sm"
                     >
-                        <Paper 
-                            shadow="sm" 
-                            radius="md" 
-                            p="md" 
-                            withBorder 
-                            bg="var(--mantine-color-gray-light)"
-                        >
-                            <Stack>
-                                <CreateSubmissionForm onSubmit={onSubmit}/>
-                                <RecentSubmissionsTable 
-                                    submissions={submissions} 
-                                    contestId={contest.id} 
-                                    userId={user?.id}
-                                    problemId={problemId}
-                                    wsUrl={wsUrl}
-                                />
-                            </Stack>
-                        </Paper>
+                        <Stack gap="md">
+                            {/* Contest Info Panel */}
+                            <ContestInfoPanel 
+                                contest={contest}
+                                user={user}
+                                contestRole={contestRole}
+                                width="100%"
+                            />
+                            
+                            {/* Submission Form and Recent Submissions */}
+                            <Paper 
+                                shadow="sm" 
+                                radius="md" 
+                                p="md" 
+                                withBorder 
+                                bg="var(--mantine-color-gray-light)"
+                                style={{ width: CONTEST_SIDEBAR_RIGHT_WIDTH }}
+                            >
+                                <Stack>
+                                    <CreateSubmissionForm onSubmit={onSubmit}/>
+                                    <RecentSubmissionsTable 
+                                        submissions={submissions} 
+                                        contestId={contest.id} 
+                                        userId={user?.id}
+                                        problemId={problemId}
+                                        wsUrl={wsUrl}
+                                    />
+                                </Stack>
+                            </Paper>
+                        </Stack>
                     </Box>
                 </Box>
             </AppShellMain>

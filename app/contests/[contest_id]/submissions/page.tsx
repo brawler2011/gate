@@ -1,14 +1,16 @@
 import {Metadata} from 'next';
 import {getSubmissions, getContest} from '@/lib/actions';
-import {Stack, Title, Container, Alert, Paper, Group} from '@mantine/core';
+import {Stack, Container, Alert, Paper, Group, Box, Center} from '@mantine/core';
 import {IconAlertCircle} from '@tabler/icons-react';
 import {DefaultLayout} from '@/components/Layout';
 import {NextPagination} from '@/components/Pagination';
 import {SubmissionsListClient} from '@/components/SubmissionsList';
 import {ContestHotbar} from '@/components/ContestHotbar';
+import {ContestInfoPanel} from '@/components/ContestInfoPanel';
 import {ErrorDisplay} from '@/components/ErrorDisplay';
 import { getCurrentUser } from '@/lib/auth';
 import { getMyContestRole } from '@/lib/contest-role';
+import { CONTEST_CONTENT_MAX_WIDTH } from '@/lib/constants';
 
 export const metadata: Metadata = {
     title: 'Посылки',
@@ -97,53 +99,74 @@ const Page = async ({params, searchParams}: PageProps) => {
 
     return (
         <DefaultLayout>
-            <Container size="xl" pt={0} pb="xl" px={{ base: 'xs', sm: 'md' }}>
-                {contestData?.contest ? (
-                    <ContestHotbar 
-                        contest={contestData.contest}
-                        user={user!}
-                        contestRole={contestRole}
-                        activeTab="allsubmissions"
-                        maxWidth="100%"
-                    >
-                        <Paper 
-                            withBorder 
-                            p="md" 
-                            w="100%" 
-                            shadow="sm" 
-                            radius="md"
-                            style={{ 
-                                backgroundColor: 'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))',
-                                borderColor: 'light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))'
-                            }}
+            <Center>
+                <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
+                    {/* Main Content */}
+                    <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
+                        <Container size="xl" pt={0} pb="xl" px={0} mx={0} style={{ maxWidth: '100%' }}>
+                            {contestData?.contest ? (
+                                <ContestHotbar 
+                                    contest={contestData.contest}
+                                    user={user!}
+                                    contestRole={contestRole}
+                                    activeTab="allsubmissions"
+                                    maxWidth="100%"
+                                >
+                                    <Paper 
+                                        withBorder 
+                                        p="md" 
+                                        w="100%" 
+                                        shadow="sm" 
+                                        radius="md"
+                                        style={{ 
+                                            backgroundColor: 'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))',
+                                            borderColor: 'light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))'
+                                        }}
+                                    >
+                                        <Stack gap="md">
+                                            <SubmissionsListClient
+                                                initialSubmissions={submissionsData.submissions}
+                                                wsUrl={wsBaseUrl + "/submissions"}
+                                                filter={{
+                                                    contestId: contest_id,
+                                                    userId: parsedParams.userId,
+                                                    problemId: parsedParams.problemId,
+                                                }}
+                                                pageSize={PAGE_SIZE}
+                                                page={parsedParams.page}
+                                                sortOrder={parsedParams.sortOrder}
+                                            />
+                                            <Group justify="center">
+                                                <NextPagination
+                                                    pagination={submissionsData.pagination}
+                                                    baseUrl={`/contests/${contest_id}/submissions`}
+                                                    queryParams={nextQueryParams}
+                                                />
+                                            </Group>
+                                        </Stack>
+                                    </Paper>
+                                </ContestHotbar>
+                            ) : (
+                                <ErrorDisplay error={contestError || {status: 404, message: "Contest not found"}} />
+                            )}
+                        </Container>
+                    </Box>
+
+                    {/* Right Sidebar - Contest Info Panel - hidden on mobile */}
+                    {contestData?.contest && (
+                        <Box 
+                            style={{ marginTop: '16px' }}
+                            visibleFrom="sm"
                         >
-                            <Stack gap="md">
-                                <SubmissionsListClient
-                                    initialSubmissions={submissionsData.submissions}
-                                    wsUrl={wsBaseUrl + "/submissions"}
-                                    filter={{
-                                        contestId: contest_id,
-                                        userId: parsedParams.userId,
-                                        problemId: parsedParams.problemId,
-                                    }}
-                                    pageSize={PAGE_SIZE}
-                                    page={parsedParams.page}
-                                    sortOrder={parsedParams.sortOrder}
-                                />
-                                <Group justify="center">
-                                    <NextPagination
-                                        pagination={submissionsData.pagination}
-                                        baseUrl={`/contests/${contest_id}/submissions`}
-                                        queryParams={nextQueryParams}
-                                    />
-                                </Group>
-                            </Stack>
-                        </Paper>
-                    </ContestHotbar>
-                ) : (
-                    <ErrorDisplay error={contestError || {status: 404, message: "Contest not found"}} />
-                )}
-            </Container>
+                            <ContestInfoPanel 
+                                contest={contestData.contest}
+                                user={user}
+                                contestRole={contestRole}
+                            />
+                        </Box>
+                    )}
+                </Box>
+            </Center>
         </DefaultLayout>
     );
 };
