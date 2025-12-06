@@ -61,6 +61,32 @@ export async function getSubmissions(params: {
     }));
 }
 
+/**
+ * Get only current user's submissions in a contest
+ * Requires ActionListOwnSubmissions permission on backend
+ */
+export async function getMySubmissions(params: {
+    userId: string;
+    contestId: string;
+    page?: number;
+    pageSize?: number;
+    problemId?: string;
+    state?: number;
+    sortOrder?: "asc" | "desc";
+    language?: number;
+}) {
+    return Call((client) => client.default.listContestSubmissions({
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 10,
+        contestId: params.contestId,
+        userId: params.userId,
+        problemId: params.problemId,
+        state: params.state,
+        sortOrder: params.sortOrder ?? "desc",
+        language: params.language,
+    }));
+}
+
 export async function listUsers(page: number = 1, pageSize: number = 10, search?: string, role?: string) {
     return Call((client) => client.default.listUsers({page, pageSize, search, role}));
 }

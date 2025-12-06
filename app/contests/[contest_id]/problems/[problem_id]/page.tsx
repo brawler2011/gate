@@ -3,7 +3,7 @@ import { numberToLetters } from "@/lib/lib";
 import {
   getContest,
   getContestProblem,
-  getSubmissions,
+  getMySubmissions,
 } from "@/lib/actions";
 import { HeaderWithSession } from "@/components/HeaderWithSession";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
@@ -46,21 +46,26 @@ const generateMetadata = async (props: Props): Promise<Metadata> => {
 const Page = async (props: Props) => {
   const params = await props.params;
 
+  // First get the user to filter submissions by their ID
+  const user = await getCurrentUser();
+
   const [
     [problemError, problemResponse],
     [contestError, contestResponse],
     [, submissionsResponse],
-    user
   ] = await Promise.all([
     getCachedContestProblem(params.problem_id, params.contest_id),
     getContest(params.contest_id),
-    getSubmissions({
-      page: 1,
-      pageSize: 20,
-      contestId: params.contest_id,
-      sortOrder: "desc",
-    }),
-    getCurrentUser(),
+    // Only fetch user's own submissions if authenticated
+    user
+      ? getMySubmissions({
+          userId: user.id,
+          contestId: params.contest_id,
+          page: 1,
+          pageSize: 20,
+          sortOrder: "desc",
+        })
+      : Promise.resolve([null, { submissions: [], pagination: { page: 1, total: 0 } }] as const),
   ]);
 
   if (problemError) return <ErrorDisplay error={problemError} />;
