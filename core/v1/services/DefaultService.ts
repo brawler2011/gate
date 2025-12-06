@@ -2,23 +2,30 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { CreateSampleRequestModel } from '../models/CreateSampleRequestModel';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
 import type { CreationResponseModel } from '../models/CreationResponseModel';
 import type { GetContestProblemResponseModel } from '../models/GetContestProblemResponseModel';
 import type { GetContestResponseModel } from '../models/GetContestResponseModel';
 import type { GetHealthResponseModel } from '../models/GetHealthResponseModel';
+import type { GetMonitorResponseModel } from '../models/GetMonitorResponseModel';
 import type { GetMyContestRoleResponseModel } from '../models/GetMyContestRoleResponseModel';
 import type { GetProblemResponseModel } from '../models/GetProblemResponseModel';
+import type { GetSamplesResponseModel } from '../models/GetSamplesResponseModel';
 import type { GetSubmissionResponseModel } from '../models/GetSubmissionResponseModel';
+import type { GetTestGroupsResponseModel } from '../models/GetTestGroupsResponseModel';
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
+import type { ListAccessRequestsResponseModel } from '../models/ListAccessRequestsResponseModel';
 import type { ListContestMembersResponseModel } from '../models/ListContestMembersResponseModel';
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
+import type { ListInvitationsResponseModel } from '../models/ListInvitationsResponseModel';
 import type { ListProblemsResponseModel } from '../models/ListProblemsResponseModel';
 import type { ListSubmissionsResponseModel } from '../models/ListSubmissionsResponseModel';
 import type { ListUserContestsResponseModel } from '../models/ListUserContestsResponseModel';
 import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
 import type { UpdateProblemRequestModel } from '../models/UpdateProblemRequestModel';
+import type { UpdateTestGroupRequestModel } from '../models/UpdateTestGroupRequestModel';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class DefaultService {
@@ -145,6 +152,161 @@ export class DefaultService {
             },
             formData: formData,
             mediaType: 'multipart/form-data',
+        });
+    }
+    /**
+     * @returns CreationResponseModel OK
+     * @throws ApiError
+     */
+    public createTestGroup({
+        id,
+        ordinal,
+        name,
+        points,
+        isSample,
+    }: {
+        id: string,
+        ordinal: number,
+        name: string,
+        points: number,
+        isSample?: boolean,
+    }): CancelablePromise<CreationResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{id}/test-groups',
+            path: {
+                'id': id,
+            },
+            query: {
+                'ordinal': ordinal,
+                'name': name,
+                'points': points,
+                'is_sample': isSample,
+            },
+        });
+    }
+    /**
+     * @returns GetTestGroupsResponseModel OK
+     * @throws ApiError
+     */
+    public getTestGroups({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<GetTestGroupsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{id}/test-groups',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public updateTestGroup({
+        id,
+        groupId,
+        requestBody,
+    }: {
+        id: string,
+        groupId: string,
+        requestBody: UpdateTestGroupRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{id}/test-groups/{group_id}',
+            path: {
+                'id': id,
+                'group_id': groupId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public deleteTestGroup({
+        id,
+        groupId,
+    }: {
+        id: string,
+        groupId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{id}/test-groups/{group_id}',
+            path: {
+                'id': id,
+                'group_id': groupId,
+            },
+        });
+    }
+    /**
+     * @returns CreationResponseModel OK
+     * @throws ApiError
+     */
+    public createProblemSample({
+        id,
+        ordinal,
+        requestBody,
+    }: {
+        id: string,
+        ordinal: number,
+        requestBody: CreateSampleRequestModel,
+    }): CancelablePromise<CreationResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{id}/samples',
+            path: {
+                'id': id,
+            },
+            query: {
+                'ordinal': ordinal,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns GetSamplesResponseModel OK
+     * @throws ApiError
+     */
+    public getProblemSamples({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<GetSamplesResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{id}/samples',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public deleteProblemSample({
+        id,
+        sampleId,
+    }: {
+        id: string,
+        sampleId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{id}/samples/{sample_id}',
+            path: {
+                'id': id,
+                'sample_id': sampleId,
+            },
         });
     }
     /**
@@ -513,6 +675,236 @@ export class DefaultService {
             url: '/contests/{contest_id}/my-role',
             path: {
                 'contest_id': contestId,
+            },
+        });
+    }
+    /**
+     * @returns CreationResponseModel OK
+     * @throws ApiError
+     */
+    public createAccessRequest({
+        contestId,
+    }: {
+        contestId: string,
+    }): CancelablePromise<CreationResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/contests/{contest_id}/access-requests',
+            path: {
+                'contest_id': contestId,
+            },
+        });
+    }
+    /**
+     * @returns ListAccessRequestsResponseModel OK
+     * @throws ApiError
+     */
+    public listAccessRequests({
+        contestId,
+        page,
+        pageSize,
+        status,
+    }: {
+        contestId: string,
+        page: number,
+        pageSize: number,
+        status?: 'pending' | 'approved' | 'rejected',
+    }): CancelablePromise<ListAccessRequestsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/contests/{contest_id}/access-requests',
+            path: {
+                'contest_id': contestId,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'status': status,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public updateAccessRequest({
+        contestId,
+        userId,
+        status,
+    }: {
+        contestId: string,
+        userId: string,
+        status: 'approved' | 'rejected',
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/contests/{contest_id}/access-requests/{user_id}',
+            path: {
+                'contest_id': contestId,
+                'user_id': userId,
+            },
+            query: {
+                'status': status,
+            },
+        });
+    }
+    /**
+     * @returns CreationResponseModel OK
+     * @throws ApiError
+     */
+    public createInvitation({
+        contestId,
+        userId,
+    }: {
+        contestId: string,
+        userId: string,
+    }): CancelablePromise<CreationResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/contests/{contest_id}/invitations',
+            path: {
+                'contest_id': contestId,
+            },
+            query: {
+                'user_id': userId,
+            },
+        });
+    }
+    /**
+     * @returns ListInvitationsResponseModel OK
+     * @throws ApiError
+     */
+    public listInvitations({
+        contestId,
+        page,
+        pageSize,
+        status,
+    }: {
+        contestId: string,
+        page: number,
+        pageSize: number,
+        status?: 'pending' | 'accepted' | 'declined' | 'revoked',
+    }): CancelablePromise<ListInvitationsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/contests/{contest_id}/invitations',
+            path: {
+                'contest_id': contestId,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'status': status,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public revokeInvitation({
+        contestId,
+        invitationId,
+    }: {
+        contestId: string,
+        invitationId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/contests/{contest_id}/invitations/{invitation_id}',
+            path: {
+                'contest_id': contestId,
+                'invitation_id': invitationId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public acceptInvitation({
+        contestId,
+        invitationId,
+    }: {
+        contestId: string,
+        invitationId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/contests/{contest_id}/invitations/{invitation_id}/accept',
+            path: {
+                'contest_id': contestId,
+                'invitation_id': invitationId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public declineInvitation({
+        contestId,
+        invitationId,
+    }: {
+        contestId: string,
+        invitationId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/contests/{contest_id}/invitations/{invitation_id}/decline',
+            path: {
+                'contest_id': contestId,
+                'invitation_id': invitationId,
+            },
+        });
+    }
+    /**
+     * @returns GetMonitorResponseModel OK
+     * @throws ApiError
+     */
+    public getMonitor({
+        contestId,
+        page,
+        pageSize,
+    }: {
+        contestId: string,
+        page: number,
+        pageSize: number,
+    }): CancelablePromise<GetMonitorResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/contests/{contest_id}/monitor',
+            path: {
+                'contest_id': contestId,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public updateProblemPosition({
+        contestId,
+        problemId,
+        position,
+    }: {
+        contestId: string,
+        problemId: string,
+        position: number,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/contests/{contest_id}/problems/{problem_id}/position',
+            path: {
+                'contest_id': contestId,
+                'problem_id': problemId,
+            },
+            query: {
+                'position': position,
             },
         });
     }

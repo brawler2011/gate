@@ -13,6 +13,33 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AccessRequestModelStatus.
+const (
+	AccessRequestModelStatusApproved AccessRequestModelStatus = "approved"
+	AccessRequestModelStatusPending  AccessRequestModelStatus = "pending"
+	AccessRequestModelStatusRejected AccessRequestModelStatus = "rejected"
+)
+
+// Defines values for ContestModelScoringMode.
+const (
+	ContestModelScoringModeBinary ContestModelScoringMode = "binary"
+	ContestModelScoringModePoints ContestModelScoringMode = "points"
+)
+
+// Defines values for InvitationModelStatus.
+const (
+	InvitationModelStatusAccepted InvitationModelStatus = "accepted"
+	InvitationModelStatusDeclined InvitationModelStatus = "declined"
+	InvitationModelStatusPending  InvitationModelStatus = "pending"
+	InvitationModelStatusRevoked  InvitationModelStatus = "revoked"
+)
+
+// Defines values for UpdateContestRequestModelScoringMode.
+const (
+	UpdateContestRequestModelScoringModeBinary UpdateContestRequestModelScoringMode = "binary"
+	UpdateContestRequestModelScoringModePoints UpdateContestRequestModelScoringMode = "points"
+)
+
 // Defines values for ListAdminContestsParamsVisibility.
 const (
 	Private ListAdminContestsParamsVisibility = "private"
@@ -30,6 +57,27 @@ const (
 const (
 	ListAdminContestsParamsSortOrderAsc  ListAdminContestsParamsSortOrder = "asc"
 	ListAdminContestsParamsSortOrderDesc ListAdminContestsParamsSortOrder = "desc"
+)
+
+// Defines values for ListAccessRequestsParamsStatus.
+const (
+	ListAccessRequestsParamsStatusApproved ListAccessRequestsParamsStatus = "approved"
+	ListAccessRequestsParamsStatusPending  ListAccessRequestsParamsStatus = "pending"
+	ListAccessRequestsParamsStatusRejected ListAccessRequestsParamsStatus = "rejected"
+)
+
+// Defines values for UpdateAccessRequestParamsStatus.
+const (
+	UpdateAccessRequestParamsStatusApproved UpdateAccessRequestParamsStatus = "approved"
+	UpdateAccessRequestParamsStatusRejected UpdateAccessRequestParamsStatus = "rejected"
+)
+
+// Defines values for ListInvitationsParamsStatus.
+const (
+	Accepted ListInvitationsParamsStatus = "accepted"
+	Declined ListInvitationsParamsStatus = "declined"
+	Pending  ListInvitationsParamsStatus = "pending"
+	Revoked  ListInvitationsParamsStatus = "revoked"
 )
 
 // Defines values for ListContestSubmissionsParamsSortOrder.
@@ -90,6 +138,21 @@ const (
 	Desc ListWorkshopContestsParamsSortOrder = "desc"
 )
 
+// AccessRequestModel defines model for AccessRequestModel.
+type AccessRequestModel struct {
+	ContestId openapi_types.UUID       `json:"contest_id"`
+	CreatedAt time.Time                `json:"created_at"`
+	Id        openapi_types.UUID       `json:"id"`
+	Status    AccessRequestModelStatus `json:"status"`
+	UpdatedAt time.Time                `json:"updated_at"`
+	UserId    openapi_types.UUID       `json:"user_id"`
+	UserRole  *string                  `json:"user_role,omitempty"`
+	Username  *string                  `json:"username,omitempty"`
+}
+
+// AccessRequestModelStatus defines model for AccessRequestModel.Status.
+type AccessRequestModelStatus string
+
 // ContestMemberModel defines model for ContestMemberModel.
 type ContestMemberModel struct {
 	ContestId   openapi_types.UUID `json:"contest_id"`
@@ -104,18 +167,24 @@ type ContestMemberModel struct {
 
 // ContestModel defines model for ContestModel.
 type ContestModel struct {
-	CreatedAt              time.Time          `json:"created_at"`
-	CreatedBy              openapi_types.UUID `json:"created_by"`
-	Description            string             `json:"description"`
-	Id                     openapi_types.UUID `json:"id"`
-	MonitorScope           string             `json:"monitor_scope"`
-	Owner                  *UserModel         `json:"owner,omitempty"`
-	SubmissionsListScope   string             `json:"submissions_list_scope"`
-	SubmissionsReviewScope string             `json:"submissions_review_scope"`
-	Title                  string             `json:"title"`
-	UpdatedAt              time.Time          `json:"updated_at"`
-	Visibility             string             `json:"visibility"`
+	CreatedAt              time.Time               `json:"created_at"`
+	CreatedBy              openapi_types.UUID      `json:"created_by"`
+	Description            string                  `json:"description"`
+	EndTime                *time.Time              `json:"end_time"`
+	Id                     openapi_types.UUID      `json:"id"`
+	MonitorScope           string                  `json:"monitor_scope"`
+	Owner                  *UserModel              `json:"owner,omitempty"`
+	ScoringMode            ContestModelScoringMode `json:"scoring_mode"`
+	StartTime              *time.Time              `json:"start_time"`
+	SubmissionsListScope   string                  `json:"submissions_list_scope"`
+	SubmissionsReviewScope string                  `json:"submissions_review_scope"`
+	Title                  string                  `json:"title"`
+	UpdatedAt              time.Time               `json:"updated_at"`
+	Visibility             string                  `json:"visibility"`
 }
+
+// ContestModelScoringMode defines model for ContestModel.ScoringMode.
+type ContestModelScoringMode string
 
 // ContestProblemListItemModel defines model for ContestProblemListItemModel.
 type ContestProblemListItemModel struct {
@@ -142,6 +211,12 @@ type ContestProblemModel struct {
 	TimeLimit        int64              `json:"time_limit"`
 	Title            string             `json:"title"`
 	UpdatedAt        time.Time          `json:"updated_at"`
+}
+
+// CreateSampleRequestModel defines model for CreateSampleRequestModel.
+type CreateSampleRequestModel struct {
+	Input  string `json:"input"`
+	Output string `json:"output"`
 }
 
 // CreateSubmissionRequestModel defines model for CreateSubmissionRequestModel.
@@ -171,6 +246,12 @@ type GetHealthResponseModel struct {
 	Status  string `json:"status"`
 }
 
+// GetMonitorResponseModel defines model for GetMonitorResponseModel.
+type GetMonitorResponseModel struct {
+	Pagination PaginationModel   `json:"pagination"`
+	Rows       []MonitorRowModel `json:"rows"`
+}
+
 // GetMyContestRoleResponseModel defines model for GetMyContestRoleResponseModel.
 type GetMyContestRoleResponseModel struct {
 	Role string `json:"role"`
@@ -181,14 +262,47 @@ type GetProblemResponseModel struct {
 	Problem ProblemModel `json:"problem"`
 }
 
+// GetSamplesResponseModel defines model for GetSamplesResponseModel.
+type GetSamplesResponseModel struct {
+	Samples []ProblemSampleModel `json:"samples"`
+}
+
 // GetSubmissionResponseModel defines model for GetSubmissionResponseModel.
 type GetSubmissionResponseModel struct {
 	Submission SubmissionModel `json:"submission"`
 }
 
+// GetTestGroupsResponseModel defines model for GetTestGroupsResponseModel.
+type GetTestGroupsResponseModel struct {
+	TestGroups []TestGroupModel `json:"test_groups"`
+}
+
 // GetUserResponseModel defines model for GetUserResponseModel.
 type GetUserResponseModel struct {
 	User UserModel `json:"user"`
+}
+
+// InvitationModel defines model for InvitationModel.
+type InvitationModel struct {
+	ContestId         openapi_types.UUID    `json:"contest_id"`
+	CreatedAt         time.Time             `json:"created_at"`
+	Id                openapi_types.UUID    `json:"id"`
+	InvitedBy         openapi_types.UUID    `json:"invited_by"`
+	InvitedByUsername *string               `json:"invited_by_username,omitempty"`
+	Status            InvitationModelStatus `json:"status"`
+	UpdatedAt         time.Time             `json:"updated_at"`
+	UserId            openapi_types.UUID    `json:"user_id"`
+	UserRole          *string               `json:"user_role,omitempty"`
+	Username          *string               `json:"username,omitempty"`
+}
+
+// InvitationModelStatus defines model for InvitationModel.Status.
+type InvitationModelStatus string
+
+// ListAccessRequestsResponseModel defines model for ListAccessRequestsResponseModel.
+type ListAccessRequestsResponseModel struct {
+	AccessRequests []AccessRequestModel `json:"access_requests"`
+	Pagination     PaginationModel      `json:"pagination"`
 }
 
 // ListContestMembersResponseModel defines model for ListContestMembersResponseModel.
@@ -201,6 +315,12 @@ type ListContestMembersResponseModel struct {
 type ListContestsResponseModel struct {
 	Contests   []ContestModel  `json:"contests"`
 	Pagination PaginationModel `json:"pagination"`
+}
+
+// ListInvitationsResponseModel defines model for ListInvitationsResponseModel.
+type ListInvitationsResponseModel struct {
+	Invitations []InvitationModel `json:"invitations"`
+	Pagination  PaginationModel   `json:"pagination"`
 }
 
 // ListProblemsResponseModel defines model for ListProblemsResponseModel.
@@ -226,6 +346,26 @@ type ListUserContestsResponseModel struct {
 type ListUsersResponseModel struct {
 	Pagination PaginationModel `json:"pagination"`
 	Users      []UserModel     `json:"users"`
+}
+
+// MonitorProblemStatusModel defines model for MonitorProblemStatusModel.
+type MonitorProblemStatusModel struct {
+	Attempts  int64              `json:"attempts"`
+	Penalty   int64              `json:"penalty"`
+	Position  int64              `json:"position"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+	Score     int64              `json:"score"`
+	Solved    bool               `json:"solved"`
+}
+
+// MonitorRowModel defines model for MonitorRowModel.
+type MonitorRowModel struct {
+	Problems     []MonitorProblemStatusModel `json:"problems"`
+	SolvedCount  int64                       `json:"solved_count"`
+	TotalPenalty int64                       `json:"total_penalty"`
+	TotalScore   int64                       `json:"total_score"`
+	UserId       openapi_types.UUID          `json:"user_id"`
+	Username     string                      `json:"username"`
 }
 
 // PaginationModel defines model for PaginationModel.
@@ -257,6 +397,16 @@ type ProblemModel struct {
 	Visibility       string             `json:"visibility"`
 }
 
+// ProblemSampleModel defines model for ProblemSampleModel.
+type ProblemSampleModel struct {
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+	Input     string             `json:"input"`
+	Ordinal   int64              `json:"ordinal"`
+	Output    string             `json:"output"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+}
+
 // ProblemsListItemModel defines model for ProblemsListItemModel.
 type ProblemsListItemModel struct {
 	CreatedAt   time.Time          `json:"created_at"`
@@ -272,6 +422,9 @@ type SubmissionModel struct {
 	ContestId    openapi_types.UUID `json:"contest_id"`
 	ContestTitle string             `json:"contest_title"`
 	CreatedAt    time.Time          `json:"created_at"`
+
+	// FailedTest The test number (1-indexed) where the submission failed. NULL for AC submissions.
+	FailedTest   *int               `json:"failed_test"`
 	Id           openapi_types.UUID `json:"id"`
 	Language     int64              `json:"language"`
 	MemoryStat   int64              `json:"memory_stat"`
@@ -293,6 +446,9 @@ type SubmissionsListItemModel struct {
 	ContestId    openapi_types.UUID `json:"contest_id"`
 	ContestTitle string             `json:"contest_title"`
 	CreatedAt    time.Time          `json:"created_at"`
+
+	// FailedTest The test number (1-indexed) where the submission failed. NULL for AC submissions.
+	FailedTest   *int               `json:"failed_test"`
 	Id           openapi_types.UUID `json:"id"`
 	Language     int64              `json:"language"`
 	MemoryStat   int64              `json:"memory_stat"`
@@ -308,15 +464,32 @@ type SubmissionsListItemModel struct {
 	Username     string             `json:"username"`
 }
 
+// TestGroupModel defines model for TestGroupModel.
+type TestGroupModel struct {
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+	IsSample  bool               `json:"is_sample"`
+	Name      string             `json:"name"`
+	Ordinal   int64              `json:"ordinal"`
+	Points    int64              `json:"points"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+}
+
 // UpdateContestRequestModel defines model for UpdateContestRequestModel.
 type UpdateContestRequestModel struct {
-	Description            *string `json:"description,omitempty"`
-	MonitorScope           *string `json:"monitor_scope,omitempty"`
-	SubmissionsListScope   *string `json:"submissions_list_scope,omitempty"`
-	SubmissionsReviewScope *string `json:"submissions_review_scope,omitempty"`
-	Title                  *string `json:"title,omitempty"`
-	Visibility             *string `json:"visibility,omitempty"`
+	Description            *string                               `json:"description,omitempty"`
+	EndTime                *time.Time                            `json:"end_time,omitempty"`
+	MonitorScope           *string                               `json:"monitor_scope,omitempty"`
+	ScoringMode            *UpdateContestRequestModelScoringMode `json:"scoring_mode,omitempty"`
+	StartTime              *time.Time                            `json:"start_time,omitempty"`
+	SubmissionsListScope   *string                               `json:"submissions_list_scope,omitempty"`
+	SubmissionsReviewScope *string                               `json:"submissions_review_scope,omitempty"`
+	Title                  *string                               `json:"title,omitempty"`
+	Visibility             *string                               `json:"visibility,omitempty"`
 }
+
+// UpdateContestRequestModelScoringMode defines model for UpdateContestRequestModel.ScoringMode.
+type UpdateContestRequestModelScoringMode string
 
 // UpdateProblemRequestModel defines model for UpdateProblemRequestModel.
 type UpdateProblemRequestModel struct {
@@ -329,6 +502,13 @@ type UpdateProblemRequestModel struct {
 	TimeLimit    *int64  `json:"time_limit,omitempty"`
 	Title        *string `json:"title,omitempty"`
 	Visibility   *string `json:"visibility,omitempty"`
+}
+
+// UpdateTestGroupRequestModel defines model for UpdateTestGroupRequestModel.
+type UpdateTestGroupRequestModel struct {
+	IsSample *bool   `json:"is_sample,omitempty"`
+	Name     *string `json:"name,omitempty"`
+	Points   *int64  `json:"points,omitempty"`
 }
 
 // UserModel defines model for UserModel.
@@ -369,6 +549,39 @@ type CreateContestParams struct {
 	Title string `form:"title" json:"title"`
 }
 
+// ListAccessRequestsParams defines parameters for ListAccessRequests.
+type ListAccessRequestsParams struct {
+	Page     int64                           `form:"page" json:"page"`
+	PageSize int64                           `form:"pageSize" json:"pageSize"`
+	Status   *ListAccessRequestsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListAccessRequestsParamsStatus defines parameters for ListAccessRequests.
+type ListAccessRequestsParamsStatus string
+
+// UpdateAccessRequestParams defines parameters for UpdateAccessRequest.
+type UpdateAccessRequestParams struct {
+	Status UpdateAccessRequestParamsStatus `form:"status" json:"status"`
+}
+
+// UpdateAccessRequestParamsStatus defines parameters for UpdateAccessRequest.
+type UpdateAccessRequestParamsStatus string
+
+// ListInvitationsParams defines parameters for ListInvitations.
+type ListInvitationsParams struct {
+	Page     int64                        `form:"page" json:"page"`
+	PageSize int64                        `form:"pageSize" json:"pageSize"`
+	Status   *ListInvitationsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListInvitationsParamsStatus defines parameters for ListInvitations.
+type ListInvitationsParamsStatus string
+
+// CreateInvitationParams defines parameters for CreateInvitation.
+type CreateInvitationParams struct {
+	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+}
+
 // DeleteContestMemberParams defines parameters for DeleteContestMember.
 type DeleteContestMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
@@ -391,9 +604,20 @@ type CreateContestMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
 }
 
+// GetMonitorParams defines parameters for GetMonitor.
+type GetMonitorParams struct {
+	Page     int64 `form:"page" json:"page"`
+	PageSize int64 `form:"pageSize" json:"pageSize"`
+}
+
 // CreateContestProblemParams defines parameters for CreateContestProblem.
 type CreateContestProblemParams struct {
 	ProblemId openapi_types.UUID `form:"problem_id" json:"problem_id"`
+}
+
+// UpdateProblemPositionParams defines parameters for UpdateProblemPosition.
+type UpdateProblemPositionParams struct {
+	Position int64 `form:"position" json:"position"`
 }
 
 // ListContestSubmissionsParams defines parameters for ListContestSubmissions.
@@ -422,6 +646,19 @@ type ListProblemsParams struct {
 // CreateProblemParams defines parameters for CreateProblem.
 type CreateProblemParams struct {
 	Title string `form:"title" json:"title"`
+}
+
+// CreateProblemSampleParams defines parameters for CreateProblemSample.
+type CreateProblemSampleParams struct {
+	Ordinal int64 `form:"ordinal" json:"ordinal"`
+}
+
+// CreateTestGroupParams defines parameters for CreateTestGroup.
+type CreateTestGroupParams struct {
+	Ordinal  int64  `form:"ordinal" json:"ordinal"`
+	Name     string `form:"name" json:"name"`
+	Points   int64  `form:"points" json:"points"`
+	IsSample *bool  `form:"is_sample,omitempty" json:"is_sample,omitempty"`
 }
 
 // UploadProblemTestsMultipartBody defines parameters for UploadProblemTests.
@@ -523,6 +760,12 @@ type UpdateContestJSONRequestBody = UpdateContestRequestModel
 // UpdateProblemJSONRequestBody defines body for UpdateProblem for application/json ContentType.
 type UpdateProblemJSONRequestBody = UpdateProblemRequestModel
 
+// CreateProblemSampleJSONRequestBody defines body for CreateProblemSample for application/json ContentType.
+type CreateProblemSampleJSONRequestBody = CreateSampleRequestModel
+
+// UpdateTestGroupJSONRequestBody defines body for UpdateTestGroup for application/json ContentType.
+type UpdateTestGroupJSONRequestBody = UpdateTestGroupRequestModel
+
 // UploadProblemTestsMultipartRequestBody defines body for UploadProblemTests for multipart/form-data ContentType.
 type UploadProblemTestsMultipartRequestBody UploadProblemTestsMultipartBody
 
@@ -547,6 +790,30 @@ type ServerInterface interface {
 	// (PATCH /contests/{contest_id})
 	UpdateContest(c *fiber.Ctx, contestId openapi_types.UUID) error
 
+	// (GET /contests/{contest_id}/access-requests)
+	ListAccessRequests(c *fiber.Ctx, contestId openapi_types.UUID, params ListAccessRequestsParams) error
+
+	// (POST /contests/{contest_id}/access-requests)
+	CreateAccessRequest(c *fiber.Ctx, contestId openapi_types.UUID) error
+
+	// (PATCH /contests/{contest_id}/access-requests/{user_id})
+	UpdateAccessRequest(c *fiber.Ctx, contestId openapi_types.UUID, userId openapi_types.UUID, params UpdateAccessRequestParams) error
+
+	// (GET /contests/{contest_id}/invitations)
+	ListInvitations(c *fiber.Ctx, contestId openapi_types.UUID, params ListInvitationsParams) error
+
+	// (POST /contests/{contest_id}/invitations)
+	CreateInvitation(c *fiber.Ctx, contestId openapi_types.UUID, params CreateInvitationParams) error
+
+	// (DELETE /contests/{contest_id}/invitations/{invitation_id})
+	RevokeInvitation(c *fiber.Ctx, contestId openapi_types.UUID, invitationId openapi_types.UUID) error
+
+	// (POST /contests/{contest_id}/invitations/{invitation_id}/accept)
+	AcceptInvitation(c *fiber.Ctx, contestId openapi_types.UUID, invitationId openapi_types.UUID) error
+
+	// (POST /contests/{contest_id}/invitations/{invitation_id}/decline)
+	DeclineInvitation(c *fiber.Ctx, contestId openapi_types.UUID, invitationId openapi_types.UUID) error
+
 	// (DELETE /contests/{contest_id}/members)
 	DeleteContestMember(c *fiber.Ctx, contestId openapi_types.UUID, params DeleteContestMemberParams) error
 
@@ -559,6 +826,9 @@ type ServerInterface interface {
 	// (POST /contests/{contest_id}/members)
 	CreateContestMember(c *fiber.Ctx, contestId openapi_types.UUID, params CreateContestMemberParams) error
 
+	// (GET /contests/{contest_id}/monitor)
+	GetMonitor(c *fiber.Ctx, contestId openapi_types.UUID, params GetMonitorParams) error
+
 	// (GET /contests/{contest_id}/my-role)
 	GetMyContestRole(c *fiber.Ctx, contestId openapi_types.UUID) error
 
@@ -570,6 +840,9 @@ type ServerInterface interface {
 
 	// (GET /contests/{contest_id}/problems/{problem_id})
 	GetContestProblem(c *fiber.Ctx, contestId openapi_types.UUID, problemId openapi_types.UUID) error
+
+	// (PATCH /contests/{contest_id}/problems/{problem_id}/position)
+	UpdateProblemPosition(c *fiber.Ctx, contestId openapi_types.UUID, problemId openapi_types.UUID, params UpdateProblemPositionParams) error
 
 	// (GET /contests/{contest_id}/submissions)
 	ListContestSubmissions(c *fiber.Ctx, contestId openapi_types.UUID, params ListContestSubmissionsParams) error
@@ -591,6 +864,27 @@ type ServerInterface interface {
 
 	// (PATCH /problems/{id})
 	UpdateProblem(c *fiber.Ctx, id openapi_types.UUID) error
+
+	// (GET /problems/{id}/samples)
+	GetProblemSamples(c *fiber.Ctx, id openapi_types.UUID) error
+
+	// (POST /problems/{id}/samples)
+	CreateProblemSample(c *fiber.Ctx, id openapi_types.UUID, params CreateProblemSampleParams) error
+
+	// (DELETE /problems/{id}/samples/{sample_id})
+	DeleteProblemSample(c *fiber.Ctx, id openapi_types.UUID, sampleId openapi_types.UUID) error
+
+	// (GET /problems/{id}/test-groups)
+	GetTestGroups(c *fiber.Ctx, id openapi_types.UUID) error
+
+	// (POST /problems/{id}/test-groups)
+	CreateTestGroup(c *fiber.Ctx, id openapi_types.UUID, params CreateTestGroupParams) error
+
+	// (DELETE /problems/{id}/test-groups/{group_id})
+	DeleteTestGroup(c *fiber.Ctx, id openapi_types.UUID, groupId openapi_types.UUID) error
+
+	// (PATCH /problems/{id}/test-groups/{group_id})
+	UpdateTestGroup(c *fiber.Ctx, id openapi_types.UUID, groupId openapi_types.UUID) error
 
 	// (POST /problems/{id}/tests)
 	UploadProblemTests(c *fiber.Ctx, id openapi_types.UUID) error
@@ -788,6 +1082,306 @@ func (siw *ServerInterfaceWrapper) UpdateContest(c *fiber.Ctx) error {
 	return siw.Handler.UpdateContest(c, contestId)
 }
 
+// ListAccessRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListAccessRequests(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAccessRequestsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "page" -------------
+
+	if paramValue := c.Query("page"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument page is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "page", query, &params.Page)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter page: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "pageSize" -------------
+
+	if paramValue := c.Query("pageSize"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument pageSize is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "pageSize", query, &params.PageSize)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter pageSize: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "status", query, &params.Status)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter status: %w", err).Error())
+	}
+
+	return siw.Handler.ListAccessRequests(c, contestId, params)
+}
+
+// CreateAccessRequest operation middleware
+func (siw *ServerInterfaceWrapper) CreateAccessRequest(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	return siw.Handler.CreateAccessRequest(c, contestId)
+}
+
+// UpdateAccessRequest operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAccessRequest(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// ------------- Path parameter "user_id" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_id", c.Params("user_id"), &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter user_id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateAccessRequestParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "status" -------------
+
+	if paramValue := c.Query("status"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument status is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "status", query, &params.Status)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter status: %w", err).Error())
+	}
+
+	return siw.Handler.UpdateAccessRequest(c, contestId, userId, params)
+}
+
+// ListInvitations operation middleware
+func (siw *ServerInterfaceWrapper) ListInvitations(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListInvitationsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "page" -------------
+
+	if paramValue := c.Query("page"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument page is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "page", query, &params.Page)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter page: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "pageSize" -------------
+
+	if paramValue := c.Query("pageSize"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument pageSize is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "pageSize", query, &params.PageSize)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter pageSize: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "status", query, &params.Status)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter status: %w", err).Error())
+	}
+
+	return siw.Handler.ListInvitations(c, contestId, params)
+}
+
+// CreateInvitation operation middleware
+func (siw *ServerInterfaceWrapper) CreateInvitation(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateInvitationParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "user_id" -------------
+
+	if paramValue := c.Query("user_id"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument user_id is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "user_id", query, &params.UserId)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter user_id: %w", err).Error())
+	}
+
+	return siw.Handler.CreateInvitation(c, contestId, params)
+}
+
+// RevokeInvitation operation middleware
+func (siw *ServerInterfaceWrapper) RevokeInvitation(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// ------------- Path parameter "invitation_id" -------------
+	var invitationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invitation_id", c.Params("invitation_id"), &invitationId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter invitation_id: %w", err).Error())
+	}
+
+	return siw.Handler.RevokeInvitation(c, contestId, invitationId)
+}
+
+// AcceptInvitation operation middleware
+func (siw *ServerInterfaceWrapper) AcceptInvitation(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// ------------- Path parameter "invitation_id" -------------
+	var invitationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invitation_id", c.Params("invitation_id"), &invitationId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter invitation_id: %w", err).Error())
+	}
+
+	return siw.Handler.AcceptInvitation(c, contestId, invitationId)
+}
+
+// DeclineInvitation operation middleware
+func (siw *ServerInterfaceWrapper) DeclineInvitation(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// ------------- Path parameter "invitation_id" -------------
+	var invitationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invitation_id", c.Params("invitation_id"), &invitationId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter invitation_id: %w", err).Error())
+	}
+
+	return siw.Handler.DeclineInvitation(c, contestId, invitationId)
+}
+
 // DeleteContestMember operation middleware
 func (siw *ServerInterfaceWrapper) DeleteContestMember(c *fiber.Ctx) error {
 
@@ -978,6 +1572,61 @@ func (siw *ServerInterfaceWrapper) CreateContestMember(c *fiber.Ctx) error {
 	return siw.Handler.CreateContestMember(c, contestId, params)
 }
 
+// GetMonitor operation middleware
+func (siw *ServerInterfaceWrapper) GetMonitor(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMonitorParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "page" -------------
+
+	if paramValue := c.Query("page"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument page is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "page", query, &params.Page)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter page: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "pageSize" -------------
+
+	if paramValue := c.Query("pageSize"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument pageSize is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "pageSize", query, &params.PageSize)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter pageSize: %w", err).Error())
+	}
+
+	return siw.Handler.GetMonitor(c, contestId, params)
+}
+
 // GetMyContestRole operation middleware
 func (siw *ServerInterfaceWrapper) GetMyContestRole(c *fiber.Ctx) error {
 
@@ -1080,6 +1729,54 @@ func (siw *ServerInterfaceWrapper) GetContestProblem(c *fiber.Ctx) error {
 	}
 
 	return siw.Handler.GetContestProblem(c, contestId, problemId)
+}
+
+// UpdateProblemPosition operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemPosition(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", c.Params("contest_id"), &contestId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter contest_id: %w", err).Error())
+	}
+
+	// ------------- Path parameter "problem_id" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problem_id", c.Params("problem_id"), &problemId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter problem_id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateProblemPositionParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "position" -------------
+
+	if paramValue := c.Query("position"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument position is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "position", query, &params.Position)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter position: %w", err).Error())
+	}
+
+	return siw.Handler.UpdateProblemPosition(c, contestId, problemId, params)
 }
 
 // ListContestSubmissions operation middleware
@@ -1324,6 +2021,227 @@ func (siw *ServerInterfaceWrapper) UpdateProblem(c *fiber.Ctx) error {
 	}
 
 	return siw.Handler.UpdateProblem(c, id)
+}
+
+// GetProblemSamples operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemSamples(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.GetProblemSamples(c, id)
+}
+
+// CreateProblemSample operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemSample(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemSampleParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "ordinal" -------------
+
+	if paramValue := c.Query("ordinal"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument ordinal is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "ordinal", query, &params.Ordinal)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter ordinal: %w", err).Error())
+	}
+
+	return siw.Handler.CreateProblemSample(c, id, params)
+}
+
+// DeleteProblemSample operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemSample(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	// ------------- Path parameter "sample_id" -------------
+	var sampleId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sample_id", c.Params("sample_id"), &sampleId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter sample_id: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteProblemSample(c, id, sampleId)
+}
+
+// GetTestGroups operation middleware
+func (siw *ServerInterfaceWrapper) GetTestGroups(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.GetTestGroups(c, id)
+}
+
+// CreateTestGroup operation middleware
+func (siw *ServerInterfaceWrapper) CreateTestGroup(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateTestGroupParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "ordinal" -------------
+
+	if paramValue := c.Query("ordinal"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument ordinal is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "ordinal", query, &params.Ordinal)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter ordinal: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "name" -------------
+
+	if paramValue := c.Query("name"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument name is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "name", query, &params.Name)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	// ------------- Required query parameter "points" -------------
+
+	if paramValue := c.Query("points"); paramValue != "" {
+
+	} else {
+		err = fmt.Errorf("Query argument points is required, but not found")
+		c.Status(fiber.StatusBadRequest).JSON(err)
+		return err
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "points", query, &params.Points)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter points: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "is_sample" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "is_sample", query, &params.IsSample)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter is_sample: %w", err).Error())
+	}
+
+	return siw.Handler.CreateTestGroup(c, id, params)
+}
+
+// DeleteTestGroup operation middleware
+func (siw *ServerInterfaceWrapper) DeleteTestGroup(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	// ------------- Path parameter "group_id" -------------
+	var groupId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "group_id", c.Params("group_id"), &groupId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter group_id: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteTestGroup(c, id, groupId)
+}
+
+// UpdateTestGroup operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTestGroup(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	// ------------- Path parameter "group_id" -------------
+	var groupId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "group_id", c.Params("group_id"), &groupId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter group_id: %w", err).Error())
+	}
+
+	return siw.Handler.UpdateTestGroup(c, id, groupId)
 }
 
 // UploadProblemTests operation middleware
@@ -1918,6 +2836,22 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Patch(options.BaseURL+"/contests/:contest_id", wrapper.UpdateContest)
 
+	router.Get(options.BaseURL+"/contests/:contest_id/access-requests", wrapper.ListAccessRequests)
+
+	router.Post(options.BaseURL+"/contests/:contest_id/access-requests", wrapper.CreateAccessRequest)
+
+	router.Patch(options.BaseURL+"/contests/:contest_id/access-requests/:user_id", wrapper.UpdateAccessRequest)
+
+	router.Get(options.BaseURL+"/contests/:contest_id/invitations", wrapper.ListInvitations)
+
+	router.Post(options.BaseURL+"/contests/:contest_id/invitations", wrapper.CreateInvitation)
+
+	router.Delete(options.BaseURL+"/contests/:contest_id/invitations/:invitation_id", wrapper.RevokeInvitation)
+
+	router.Post(options.BaseURL+"/contests/:contest_id/invitations/:invitation_id/accept", wrapper.AcceptInvitation)
+
+	router.Post(options.BaseURL+"/contests/:contest_id/invitations/:invitation_id/decline", wrapper.DeclineInvitation)
+
 	router.Delete(options.BaseURL+"/contests/:contest_id/members", wrapper.DeleteContestMember)
 
 	router.Get(options.BaseURL+"/contests/:contest_id/members", wrapper.ListContestMembers)
@@ -1926,6 +2860,8 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Post(options.BaseURL+"/contests/:contest_id/members", wrapper.CreateContestMember)
 
+	router.Get(options.BaseURL+"/contests/:contest_id/monitor", wrapper.GetMonitor)
+
 	router.Get(options.BaseURL+"/contests/:contest_id/my-role", wrapper.GetMyContestRole)
 
 	router.Post(options.BaseURL+"/contests/:contest_id/problems", wrapper.CreateContestProblem)
@@ -1933,6 +2869,8 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Delete(options.BaseURL+"/contests/:contest_id/problems/:problem_id", wrapper.DeleteContestProblem)
 
 	router.Get(options.BaseURL+"/contests/:contest_id/problems/:problem_id", wrapper.GetContestProblem)
+
+	router.Patch(options.BaseURL+"/contests/:contest_id/problems/:problem_id/position", wrapper.UpdateProblemPosition)
 
 	router.Get(options.BaseURL+"/contests/:contest_id/submissions", wrapper.ListContestSubmissions)
 
@@ -1947,6 +2885,20 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Get(options.BaseURL+"/problems/:id", wrapper.GetProblem)
 
 	router.Patch(options.BaseURL+"/problems/:id", wrapper.UpdateProblem)
+
+	router.Get(options.BaseURL+"/problems/:id/samples", wrapper.GetProblemSamples)
+
+	router.Post(options.BaseURL+"/problems/:id/samples", wrapper.CreateProblemSample)
+
+	router.Delete(options.BaseURL+"/problems/:id/samples/:sample_id", wrapper.DeleteProblemSample)
+
+	router.Get(options.BaseURL+"/problems/:id/test-groups", wrapper.GetTestGroups)
+
+	router.Post(options.BaseURL+"/problems/:id/test-groups", wrapper.CreateTestGroup)
+
+	router.Delete(options.BaseURL+"/problems/:id/test-groups/:group_id", wrapper.DeleteTestGroup)
+
+	router.Patch(options.BaseURL+"/problems/:id/test-groups/:group_id", wrapper.UpdateTestGroup)
 
 	router.Post(options.BaseURL+"/problems/:id/tests", wrapper.UploadProblemTests)
 
