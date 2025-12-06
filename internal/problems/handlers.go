@@ -23,6 +23,16 @@ type ProblemsUC interface {
 	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*domain.ProblemsList, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problemUpdate *models.ProblemUpdate) error
 	UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error
+
+	CreateTestGroup(ctx context.Context, problemId uuid.UUID, ordinal int64, name string, points int64, isSample bool) (uuid.UUID, error)
+	GetTestGroup(ctx context.Context, id uuid.UUID) (domain.TestGroup, error)
+	GetTestGroupsByProblem(ctx context.Context, problemId uuid.UUID) ([]domain.TestGroup, error)
+	UpdateTestGroup(ctx context.Context, id uuid.UUID, name *string, points *int64, isSample *bool) error
+	DeleteTestGroup(ctx context.Context, id uuid.UUID) error
+
+	CreateProblemSample(ctx context.Context, problemId uuid.UUID, ordinal int64, input string, output string) (uuid.UUID, error)
+	GetProblemSamples(ctx context.Context, problemId uuid.UUID) ([]domain.ProblemSample, error)
+	DeleteProblemSample(ctx context.Context, id uuid.UUID) error
 }
 
 type PermissionsUC interface {
@@ -333,6 +343,192 @@ func (h *ProblemsHandlers) UploadProblemTests(c *fiber.Ctx, id uuid.UUID) error 
 
 	// Call usecase to process and save tests
 	err = h.problemsUC.UploadProblemTests(ctx, id, zipData)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+// Test Groups Handlers
+
+func (h *ProblemsHandlers) CreateTestGroup(c *fiber.Ctx, id uuid.UUID, params testerv1.CreateTestGroupParams) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Check permissions
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.ID, permissions.ActionUpdateProblem, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canEdit {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to create test group")
+	}
+
+	groupId, err := h.problemsUC.CreateTestGroup(ctx, id, params.Ordinal, params.Name, params.Points, params.IsSample != nil && *params.IsSample)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(&testerv1.CreationResponseModel{Id: groupId})
+}
+
+func (h *ProblemsHandlers) GetTestGroups(c *fiber.Ctx, id uuid.UUID) error {
+	ctx := c.UserContext()
+
+	groups, err := h.problemsUC.GetTestGroupsByProblem(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	groupModels := make([]testerv1.TestGroupModel, len(groups))
+	for i, g := range groups {
+		groupModels[i] = testerv1.TestGroupModel{
+			Id:        g.ID,
+			ProblemId: g.ProblemID,
+			Ordinal:   g.Ordinal,
+			Name:      g.Name,
+			Points:    g.Points,
+			IsSample:  g.IsSample,
+			CreatedAt: g.CreatedAt,
+		}
+	}
+
+	return c.JSON(&testerv1.GetTestGroupsResponseModel{TestGroups: groupModels})
+}
+
+func (h *ProblemsHandlers) UpdateTestGroup(c *fiber.Ctx, id uuid.UUID, groupId uuid.UUID) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Check permissions
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.ID, permissions.ActionUpdateProblem, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canEdit {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to update test group")
+	}
+
+	var body testerv1.UpdateTestGroupRequestModel
+	if err := c.BodyParser(&body); err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "invalid request body")
+	}
+
+	err = h.problemsUC.UpdateTestGroup(ctx, groupId, body.Name, body.Points, body.IsSample)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *ProblemsHandlers) DeleteTestGroup(c *fiber.Ctx, id uuid.UUID, groupId uuid.UUID) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Check permissions
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.ID, permissions.ActionUpdateProblem, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canEdit {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to delete test group")
+	}
+
+	err = h.problemsUC.DeleteTestGroup(ctx, groupId)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+// Problem Samples Handlers
+
+func (h *ProblemsHandlers) CreateProblemSample(c *fiber.Ctx, id uuid.UUID, params testerv1.CreateProblemSampleParams) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Check permissions
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.ID, permissions.ActionUpdateProblem, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canEdit {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to create sample")
+	}
+
+	var body testerv1.CreateSampleRequestModel
+	if err := c.BodyParser(&body); err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "invalid request body")
+	}
+
+	sampleId, err := h.problemsUC.CreateProblemSample(ctx, id, params.Ordinal, body.Input, body.Output)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(&testerv1.CreationResponseModel{Id: sampleId})
+}
+
+func (h *ProblemsHandlers) GetProblemSamples(c *fiber.Ctx, id uuid.UUID) error {
+	ctx := c.UserContext()
+
+	samples, err := h.problemsUC.GetProblemSamples(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	sampleModels := make([]testerv1.ProblemSampleModel, len(samples))
+	for i, s := range samples {
+		sampleModels[i] = testerv1.ProblemSampleModel{
+			Id:        s.ID,
+			ProblemId: s.ProblemID,
+			Ordinal:   s.Ordinal,
+			Input:     s.Input,
+			Output:    s.Output,
+			CreatedAt: s.CreatedAt,
+		}
+	}
+
+	return c.JSON(&testerv1.GetSamplesResponseModel{Samples: sampleModels})
+}
+
+func (h *ProblemsHandlers) DeleteProblemSample(c *fiber.Ctx, id uuid.UUID, sampleId uuid.UUID) error {
+	ctx := c.UserContext()
+
+	user, err := middleware.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Check permissions
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, id, user.ID, permissions.ActionUpdateProblem, permissions.WithUser(user))
+	if err != nil {
+		return err
+	}
+	if !canEdit {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to delete sample")
+	}
+
+	err = h.problemsUC.DeleteProblemSample(ctx, sampleId)
 	if err != nil {
 		return err
 	}

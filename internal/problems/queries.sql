@@ -139,3 +139,57 @@ ORDER BY ordinal ASC;
 -- name: DeleteProblemTests :exec
 DELETE FROM problem_tests
 WHERE problem_id = @problem_id::uuid;
+
+-- Test Groups operations
+
+-- name: CreateTestGroup :one
+INSERT INTO test_groups (id, problem_id, ordinal, name, points, is_sample)
+VALUES (@id::uuid, @problem_id::uuid, @ordinal, @name, @points, @is_sample)
+RETURNING id;
+
+-- name: GetTestGroup :one
+SELECT id, problem_id, ordinal, name, points, is_sample, created_at
+FROM test_groups
+WHERE id = @id::uuid;
+
+-- name: GetTestGroupsByProblem :many
+SELECT id, problem_id, ordinal, name, points, is_sample, created_at
+FROM test_groups
+WHERE problem_id = @problem_id::uuid
+ORDER BY ordinal ASC;
+
+-- name: UpdateTestGroup :exec
+UPDATE test_groups
+SET name      = COALESCE(sqlc.narg('name'), name),
+    points    = COALESCE(sqlc.narg('points'), points),
+    is_sample = COALESCE(sqlc.narg('is_sample'), is_sample)
+WHERE id = @id::uuid;
+
+-- name: DeleteTestGroup :exec
+DELETE FROM test_groups
+WHERE id = @id::uuid;
+
+-- name: DeleteTestGroupsByProblem :exec
+DELETE FROM test_groups
+WHERE problem_id = @problem_id::uuid;
+
+-- Problem Samples operations
+
+-- name: CreateProblemSample :one
+INSERT INTO problem_samples (id, problem_id, ordinal, input, output)
+VALUES (@id::uuid, @problem_id::uuid, @ordinal, @input, @output)
+RETURNING id;
+
+-- name: GetProblemSamples :many
+SELECT id, problem_id, ordinal, input, output, created_at
+FROM problem_samples
+WHERE problem_id = @problem_id::uuid
+ORDER BY ordinal ASC;
+
+-- name: DeleteProblemSample :exec
+DELETE FROM problem_samples
+WHERE id = @id::uuid;
+
+-- name: DeleteProblemSamplesByProblem :exec
+DELETE FROM problem_samples
+WHERE problem_id = @problem_id::uuid;

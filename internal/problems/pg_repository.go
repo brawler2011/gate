@@ -172,12 +172,104 @@ func (r *Repository) CreateProblemTests(ctx context.Context, tests models.Proble
 	return nil
 }
 
-func (r *Repository) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.ProblemTest, error) {
+func (r *Repository) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.GetProblemTestsRow, error) {
 	rows, err := r.queries.GetProblemTests(ctx, problemId)
 	if err != nil {
 		return nil, pkg.HandlePgErr(err)
 	}
 	return rows, nil
+}
+
+// Test Groups
+
+func (r *Repository) CreateTestGroup(ctx context.Context, id uuid.UUID, problemId uuid.UUID, ordinal int64, name string, points int64, isSample bool) error {
+	_, err := r.queries.CreateTestGroup(ctx, problemssqlc.CreateTestGroupParams{
+		ID:        id,
+		ProblemID: problemId,
+		Ordinal:   int32(ordinal),
+		Name:      name,
+		Points:    int32(points),
+		IsSample:  isSample,
+	})
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *Repository) GetTestGroup(ctx context.Context, id uuid.UUID) (problemssqlc.TestGroup, error) {
+	group, err := r.queries.GetTestGroup(ctx, id)
+	if err != nil {
+		return problemssqlc.TestGroup{}, pkg.HandlePgErr(err)
+	}
+	return group, nil
+}
+
+func (r *Repository) GetTestGroupsByProblem(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.TestGroup, error) {
+	groups, err := r.queries.GetTestGroupsByProblem(ctx, problemId)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+	return groups, nil
+}
+
+func (r *Repository) UpdateTestGroup(ctx context.Context, id uuid.UUID, name *string, points *int64, isSample *bool) error {
+	var pointsParam *int32
+	if points != nil {
+		p := int32(*points)
+		pointsParam = &p
+	}
+
+	err := r.queries.UpdateTestGroup(ctx, problemssqlc.UpdateTestGroupParams{
+		ID:       id,
+		Name:     name,
+		Points:   pointsParam,
+		IsSample: isSample,
+	})
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *Repository) DeleteTestGroup(ctx context.Context, id uuid.UUID) error {
+	err := r.queries.DeleteTestGroup(ctx, id)
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	return nil
+}
+
+// Problem Samples
+
+func (r *Repository) CreateProblemSample(ctx context.Context, id uuid.UUID, problemId uuid.UUID, ordinal int64, input string, output string) error {
+	_, err := r.queries.CreateProblemSample(ctx, problemssqlc.CreateProblemSampleParams{
+		ID:        id,
+		ProblemID: problemId,
+		Ordinal:   int32(ordinal),
+		Input:     input,
+		Output:    output,
+	})
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *Repository) GetProblemSamples(ctx context.Context, problemId uuid.UUID) ([]problemssqlc.ProblemSample, error) {
+	samples, err := r.queries.GetProblemSamples(ctx, problemId)
+	if err != nil {
+		return nil, pkg.HandlePgErr(err)
+	}
+	return samples, nil
+}
+
+func (r *Repository) DeleteProblemSample(ctx context.Context, id uuid.UUID) error {
+	err := r.queries.DeleteProblemSample(ctx, id)
+	if err != nil {
+		return pkg.HandlePgErr(err)
+	}
+	return nil
 }
 
 // Helper functions

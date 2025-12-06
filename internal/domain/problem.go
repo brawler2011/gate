@@ -39,6 +39,26 @@ type ProblemMember struct {
 }
 
 type ProblemTest struct {
+	ID        uuid.UUID  `json:"id"`
+	ProblemID uuid.UUID  `json:"problem_id"`
+	GroupID   *uuid.UUID `json:"group_id,omitempty"`
+	Ordinal   int64      `json:"ordinal"`
+	Input     string     `json:"input"`
+	Output    string     `json:"output"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+type TestGroup struct {
+	ID        uuid.UUID `json:"id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	Ordinal   int64     `json:"ordinal"`
+	Name      string    `json:"name"`
+	Points    int64     `json:"points"`
+	IsSample  bool      `json:"is_sample"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type ProblemSample struct {
 	ID        uuid.UUID `json:"id"`
 	ProblemID uuid.UUID `json:"problem_id"`
 	Ordinal   int64     `json:"ordinal"`

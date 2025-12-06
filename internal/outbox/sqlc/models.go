@@ -14,6 +14,93 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ContestAccessRequestStatus string
+
+const (
+	ContestAccessRequestStatusPending  ContestAccessRequestStatus = "pending"
+	ContestAccessRequestStatusApproved ContestAccessRequestStatus = "approved"
+	ContestAccessRequestStatusRejected ContestAccessRequestStatus = "rejected"
+)
+
+func (e *ContestAccessRequestStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ContestAccessRequestStatus(s)
+	case string:
+		*e = ContestAccessRequestStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ContestAccessRequestStatus: %T", src)
+	}
+	return nil
+}
+
+type NullContestAccessRequestStatus struct {
+	ContestAccessRequestStatus ContestAccessRequestStatus `json:"contest_access_request_status"`
+	Valid                      bool                       `json:"valid"` // Valid is true if ContestAccessRequestStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullContestAccessRequestStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ContestAccessRequestStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ContestAccessRequestStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullContestAccessRequestStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ContestAccessRequestStatus), nil
+}
+
+type ContestInvitationStatus string
+
+const (
+	ContestInvitationStatusPending  ContestInvitationStatus = "pending"
+	ContestInvitationStatusAccepted ContestInvitationStatus = "accepted"
+	ContestInvitationStatusDeclined ContestInvitationStatus = "declined"
+	ContestInvitationStatusRevoked  ContestInvitationStatus = "revoked"
+)
+
+func (e *ContestInvitationStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ContestInvitationStatus(s)
+	case string:
+		*e = ContestInvitationStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ContestInvitationStatus: %T", src)
+	}
+	return nil
+}
+
+type NullContestInvitationStatus struct {
+	ContestInvitationStatus ContestInvitationStatus `json:"contest_invitation_status"`
+	Valid                   bool                    `json:"valid"` // Valid is true if ContestInvitationStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullContestInvitationStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ContestInvitationStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ContestInvitationStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullContestInvitationStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ContestInvitationStatus), nil
+}
+
 type ContestRole string
 
 const (
@@ -55,6 +142,48 @@ func (ns NullContestRole) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.ContestRole), nil
+}
+
+type ContestScoringMode string
+
+const (
+	ContestScoringModePoints ContestScoringMode = "points"
+	ContestScoringModeBinary ContestScoringMode = "binary"
+)
+
+func (e *ContestScoringMode) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ContestScoringMode(s)
+	case string:
+		*e = ContestScoringMode(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ContestScoringMode: %T", src)
+	}
+	return nil
+}
+
+type NullContestScoringMode struct {
+	ContestScoringMode ContestScoringMode `json:"contest_scoring_mode"`
+	Valid              bool               `json:"valid"` // Valid is true if ContestScoringMode is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullContestScoringMode) Scan(value interface{}) error {
+	if value == nil {
+		ns.ContestScoringMode, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ContestScoringMode.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullContestScoringMode) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ContestScoringMode), nil
 }
 
 type ContestVisibility string
@@ -270,16 +399,38 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 }
 
 type Contest struct {
-	ID                     uuid.UUID         `json:"id"`
-	Title                  string            `json:"title"`
-	Description            string            `json:"description"`
-	Visibility             ContestVisibility `json:"visibility"`
-	MonitorScope           ContestRole       `json:"monitor_scope"`
-	SubmissionsListScope   ContestRole       `json:"submissions_list_scope"`
-	SubmissionsReviewScope ContestRole       `json:"submissions_review_scope"`
-	CreatedBy              pgtype.UUID       `json:"created_by"`
-	CreatedAt              time.Time         `json:"created_at"`
-	UpdatedAt              time.Time         `json:"updated_at"`
+	ID                     uuid.UUID          `json:"id"`
+	Title                  string             `json:"title"`
+	Description            string             `json:"description"`
+	Visibility             ContestVisibility  `json:"visibility"`
+	MonitorScope           ContestRole        `json:"monitor_scope"`
+	SubmissionsListScope   ContestRole        `json:"submissions_list_scope"`
+	SubmissionsReviewScope ContestRole        `json:"submissions_review_scope"`
+	CreatedBy              pgtype.UUID        `json:"created_by"`
+	CreatedAt              time.Time          `json:"created_at"`
+	UpdatedAt              time.Time          `json:"updated_at"`
+	StartTime              pgtype.Timestamptz `json:"start_time"`
+	EndTime                pgtype.Timestamptz `json:"end_time"`
+	ScoringMode            ContestScoringMode `json:"scoring_mode"`
+}
+
+type ContestAccessRequest struct {
+	ID        uuid.UUID                  `json:"id"`
+	ContestID uuid.UUID                  `json:"contest_id"`
+	UserID    uuid.UUID                  `json:"user_id"`
+	Status    ContestAccessRequestStatus `json:"status"`
+	CreatedAt time.Time                  `json:"created_at"`
+	UpdatedAt time.Time                  `json:"updated_at"`
+}
+
+type ContestInvitation struct {
+	ID        uuid.UUID               `json:"id"`
+	ContestID uuid.UUID               `json:"contest_id"`
+	UserID    uuid.UUID               `json:"user_id"`
+	InvitedBy uuid.UUID               `json:"invited_by"`
+	Status    ContestInvitationStatus `json:"status"`
+	CreatedAt time.Time               `json:"created_at"`
+	UpdatedAt time.Time               `json:"updated_at"`
 }
 
 type ContestMember struct {
@@ -334,13 +485,23 @@ type ProblemMember struct {
 	Role      ProblemRole `json:"role"`
 }
 
-type ProblemTest struct {
+type ProblemSample struct {
 	ID        uuid.UUID `json:"id"`
 	ProblemID uuid.UUID `json:"problem_id"`
 	Ordinal   int32     `json:"ordinal"`
 	Input     string    `json:"input"`
 	Output    string    `json:"output"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type ProblemTest struct {
+	ID        uuid.UUID   `json:"id"`
+	ProblemID uuid.UUID   `json:"problem_id"`
+	Ordinal   int32       `json:"ordinal"`
+	Input     string      `json:"input"`
+	Output    string      `json:"output"`
+	CreatedAt time.Time   `json:"created_at"`
+	GroupID   pgtype.UUID `json:"group_id"`
 }
 
 type Submission struct {
@@ -359,6 +520,16 @@ type Submission struct {
 	CreatedAt  time.Time   `json:"created_at"`
 	// The test number (1-indexed) where the submission failed. NULL for AC submissions.
 	FailedTest *int32 `json:"failed_test"`
+}
+
+type TestGroup struct {
+	ID        uuid.UUID `json:"id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	Ordinal   int32     `json:"ordinal"`
+	Name      string    `json:"name"`
+	Points    int32     `json:"points"`
+	IsSample  bool      `json:"is_sample"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type User struct {
