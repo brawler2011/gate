@@ -3,7 +3,7 @@
 import { Anchor, Loader, Table, Text } from "@mantine/core";
 import Link from "next/link";
 import type { SubmissionsListItemModel } from "../../../contracts/core/v1";
-import { StateColor, StateString } from "@/lib/lib";
+import { StateColor, StateString, TimeBeautify } from "@/lib/lib";
 import { useSubmissionsWebSocket, type SubmissionWithProgress } from "@/lib/useSubmissionsWebSocket";
 import { notifications } from "@mantine/notifications";
 import { useEffect, useRef } from "react";
@@ -124,7 +124,7 @@ export function RecentSubmissionsTable({
       <Table verticalSpacing="xs" horizontalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th ta="center">Задача</Table.Th>
+            <Table.Th ta="center">Дата отправки</Table.Th>
             <Table.Th ta="center" className={styles.statusColumn}>Статус</Table.Th>
             <Table.Th ta="center">Баллы</Table.Th>
           </Table.Tr>
@@ -136,7 +136,7 @@ export function RecentSubmissionsTable({
               className={highlightedIds.has(submission.id) ? styles.rowHighlight : undefined}
             >
               <Table.Td ta="center">
-                <Text fw={500}>{submission.problem_title}</Text>
+                <Text fw={500}>{TimeBeautify(submission.created_at)}</Text>
               </Table.Td>
               <Table.Td ta="center" className={styles.statusColumn}>
                 <StatusCell submission={submission as SubmissionWithProgress} />

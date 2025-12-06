@@ -27,12 +27,15 @@ type ContestHotbarProps = {
   activeTab?: "tasks" | "submit" | "submissions" | "monitor" | "manage" | "mysubmissions" | "allsubmissions";
   children?: React.ReactNode;
   maxWidth?: string | number;
+  align?: "center" | "left";
 };
 
-export function ContestHotbar({ contest, user, contestRole, activeTab, children, maxWidth }: ContestHotbarProps) {
+export function ContestHotbar({ contest, user, contestRole, activeTab, children, maxWidth, align = "center" }: ContestHotbarProps) {
   // Create permission checker
   const checker = new PermissionChecker(user, contestRole?.role || null);
   const [mobileNavOpened, { toggle: toggleMobileNav }] = useDisclosure(false);
+
+  const marginStyle = align === "center" ? "0 auto" : "0";
 
   // Build tabs array based on permissions
   const tabs = [
@@ -72,7 +75,7 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children,
     <Box>
       {/* Desktop tabs - just tabs, no panel */}
       <div className={classes.desktopTabs}>
-        <Box style={{ maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto", marginBottom: -1, position: "relative", zIndex: 1 }}>
+        <Box style={{ maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: marginStyle, marginBottom: -1, position: "relative", zIndex: 1 }}>
           <div className={classes.tabRow}>
             {tabs.map((tab) => (
               <Link
@@ -86,7 +89,7 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children,
             ))}
           </div>
         </Box>
-        <Box style={{ maxWidth: maxWidth || CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}>
+        <Box style={{ maxWidth: maxWidth || CONTEST_CONTENT_MAX_WIDTH, margin: marginStyle }}>
           {children}
         </Box>
       </div>
@@ -95,7 +98,7 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children,
       <Stack
         gap="md"
         className={classes.mobileSection}
-        style={{ maxWidth: maxWidth || CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}
+        style={{ maxWidth: maxWidth || CONTEST_CONTENT_MAX_WIDTH, margin: marginStyle }}
       >
         <Button
           onClick={toggleMobileNav}

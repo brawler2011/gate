@@ -51,25 +51,32 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
     };
 
     return (
-        <Layout>
+        <Layout paddingConfig="0">
             <AppShellHeader>
                 {header}
             </AppShellHeader>
             <AppShellMain>
-                <Box style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
+                <Box style={{ display: 'flex', gap: '19px', alignItems: 'flex-start', paddingTop: 'var(--mantine-spacing-md)', paddingBottom: 'var(--mantine-spacing-md)', paddingRight: 'var(--mantine-spacing-md)' }}>
                     {/* Left Sidebar - скрыт на мобилках */}
                     <Box 
-                        style={{ width: CONTEST_SIDEBAR_LEFT_WIDTH, marginLeft: '32px' }}
+                        style={{ width: CONTEST_SIDEBAR_LEFT_WIDTH }}
                         visibleFrom="sm"
                     >
                         <Paper 
-                            shadow="sm" 
+                            shadow="none" 
                             radius="md" 
-                            p="md" 
+                            px={0}
+                            py="md"
                             withBorder 
-                            bg="var(--mantine-color-gray-light)"
+                            bg="transparent"
+                            style={{ 
+                                borderColor: 'var(--mantine-color-dark-5)',
+                                borderLeft: 'none',
+                                borderTopLeftRadius: 0,
+                                borderBottomLeftRadius: 0
+                            }}
                         >
-                            <Stack w={200}>
+                            <Stack w="100%" gap="xs">
                                 <Anchor component={Link} href={`/contests/${contest.id}`} c="var(--mantine-color-bright)">
                                     <Title c="var(--mantine-color-text)" order={4} ta="center">
                                         Задачи
@@ -83,7 +90,19 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
                                             href={`/contests/${contest.id}/problems/${item.problem_id}`}
                                             label={`${numberToLetters(item.position)}. ${item.title}`}
                                             active={item.problem_id === task.problem_id}
+                                            color="gray"
+                                            variant="light"
                                             c="var(--mantine-color-text)"
+                                            styles={{
+                                                root: { 
+                                                    paddingLeft: 8, 
+                                                    paddingRight: 8,
+                                                    '&:hover': {
+                                                        backgroundColor: 'var(--mantine-color-dark-5)'
+                                                    }
+                                                },
+                                                label: { fontSize: '0.875rem' }
+                                            }}
                                         />
                                     ))}
                                 </Stack>
@@ -95,21 +114,26 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
                     <Box style={{ flex: 1 }}>
                         <Container 
                             size="lg"
-                            px={{ base: 'xs', sm: 'md' }}
+                            px={0}
+                            mx={0}
+                            style={{ maxWidth: '100%' }}
                         >
                             <ContestHotbar 
                                 contest={contest}
                                 user={user}
                                 contestRole={contestRole}
+                                align="left"
                             >
-                                <Problem problem={task} letter={numberToLetters(task.position)}/>
+                                <Box pt="md">
+                                    <Problem problem={task} letter={numberToLetters(task.position)}/>
+                                </Box>
                             </ContestHotbar>
                         </Container>
                     </Box>
 
                     {/* Right Sidebar - скрыт на мобилках */}
                     <Box 
-                        style={{ marginRight: '32px' }}
+                        style={{ marginRight: '16px' }}
                         visibleFrom="sm"
                     >
                         <Stack gap="md">

@@ -71,7 +71,7 @@ const Header = ({ user }: { user?: SessionUser }) => {
   return (
     <>
       <div className={classes.header}>
-        <Group h="100%" maw="1920px" mx="auto" wrap="nowrap" style={{ flex: 1 }}>
+        <Group h="100%" maw="1920px" mx="auto" wrap="nowrap" justify="space-between" style={{ flex: 1, position: "relative" }}>
           <Group justify="flex-start" h="100%" className={classes.leftSection} gap="xs">
             <Burger
               opened={drawerOpened}
@@ -94,7 +94,7 @@ const Header = ({ user }: { user?: SessionUser }) => {
               </Group>
             </Link>
           </Group>
-          <Group justify="center" h="100%" gap={0} visibleFrom="sm" style={{ flex: 1 }}>
+          <Group justify="center" h="100%" gap={0} visibleFrom="sm" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
             <Anchor
               component={Link}
               href="/"
