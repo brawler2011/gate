@@ -223,7 +223,7 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
   }));
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
+    <>
       <Stack gap="md">
         {/* Add Participant Form */}
         <Card withBorder padding="md">
@@ -363,6 +363,6 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
         opened={!!statusMessage}
         onClose={() => setStatusMessage(null)}
       />
-    </Card>
+    </>
   );
 }

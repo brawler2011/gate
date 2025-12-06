@@ -167,37 +167,54 @@ const CreateSubmissionForm = ({ onSubmit, problemSelect, large = false, disabled
                 onDragLeave={handleDragLeave}
                 data-dragging={isDragging}
             >
-                <Group justify="center" gap="md">
-                    {problemSelect}
-                    <Select
-                        data={languages}
-                        allowDeselect={false}
-                        variant="subtle"
-                        {...form.getInputProps("language")}
-                        style={{ width: "120px" }}
-                        disabled={disabled}
-                    />
-                    <Button
-                        component="label"
-                        variant="subtle"
-                        leftSection={<IconPaperclip size={16} />}
-                        classNames={{
-                            label: classes.pinFileLabel,
-                            section: classes.pinFileSection,
-                            root: classes.pinFileRoot,
-                        }}
-                        disabled={disabled}
-                    >
-                        Файл
-                        <input
-                            type="file"
-                            hidden
-                            ref={fileInputRef}
-                            onChange={handleFileSelect}
-                            accept={languageToExtension[form.values.language]}
+                <Group justify="space-between" gap="md" wrap="nowrap">
+                    <div style={{ flex: 1 }}>
+                        {problemSelect || (
+                            <Select
+                                data={languages}
+                                allowDeselect={false}
+                                variant="subtle"
+                                {...form.getInputProps("language")}
+                                style={{ width: `${(form.values.language?.length || 6) + 6}ch` }}
+                                disabled={disabled}
+                            />
+                        )}
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                        {problemSelect && (
+                            <Select
+                                data={languages}
+                                allowDeselect={false}
+                                variant="subtle"
+                                {...form.getInputProps("language")}
+                                style={{ width: `${(form.values.language?.length || 6) + 6}ch` }}
+                                disabled={disabled}
+                            />
+                        )}
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                            component="label"
+                            variant="subtle"
+                            leftSection={<IconPaperclip size={16} />}
+                            classNames={{
+                                label: classes.pinFileLabel,
+                                section: classes.pinFileSection,
+                                root: classes.pinFileRoot,
+                            }}
                             disabled={disabled}
-                        />
-                    </Button>
+                        >
+                            Файл
+                            <input
+                                type="file"
+                                hidden
+                                ref={fileInputRef}
+                                onChange={handleFileSelect}
+                                accept={languageToExtension[form.values.language]}
+                                disabled={disabled}
+                            />
+                        </Button>
+                    </div>
                 </Group>
 
                 <div className={classes.dropZone}>

@@ -5,10 +5,11 @@ import {DefaultLayout} from "@/components/Layout";
 import {ErrorDisplay} from "@/components/ErrorDisplay";
 import {getContest} from "@/lib/actions";
 import {CONTEST_CONTENT_MAX_WIDTH} from "@/lib/constants";
-import {Box, Button, Container, Group, Stack, Title} from "@mantine/core";
+import {Box, Container, Stack, Title} from "@mantine/core";
 import {IconArrowLeft, IconPuzzle, IconSettings, IconUsers} from "@tabler/icons-react";
 import Link from "next/link";
 import type {ContestProblemListItemModel} from "../../../../../contracts/core/v1";
+import classes from "./styles.module.css";
 
 // Constants for sections
 const SECTIONS = {
@@ -69,48 +70,41 @@ export default async function ContestManagePage({params, searchParams}: Props) {
                 px={{base: "xs", sm: "md", md: "lg"}}
             >
                 {/* Header Section */}
-                <Stack gap="md" mb="lg" style={{maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto"}}>
-                    {/* Заголовок с кнопкой "Назад" */}
-                    <Group justify="space-between" align="center" wrap="nowrap">
-                        <Title order={1} size="h3">
-                            🏆 {contest.title}
-                        </Title>
-                        <Button
-                            component={Link}
+                <Stack gap="md" style={{maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto"}}>
+                    {/* Tab Row */}
+                    <div className={classes.tabRow}>
+                        {/* Back to Contest Tab */}
+                        <Link
                             href={`/contests/${contestId}`}
-                            variant="default"
-                            size="sm"
-                            leftSection={<IconArrowLeft size={16}/>}
-                            visibleFrom="sm"
-                            style={{flexShrink: 0}}
+                            className={classes.tab}
                         >
-                            Назад к контесту
-                        </Button>
-                    </Group>
-                    
-                    {/* Кнопки управления разделами */}
-                    <Group gap="sm">
+                            <IconArrowLeft size={16} />
+                            К контесту
+                        </Link>
+
+                        {/* Section Tabs */}
                         {NAV_SECTIONS.map((section) => {
                             const Icon = section.icon;
+                            const isActive = activeSection === section.key;
                             return (
-                                <Button
+                                <Link
                                     key={section.key}
-                                    component={Link}
                                     href={`/contests/${contestId}/manage?section=${section.key}`}
-                                    variant={activeSection === section.key ? "filled" : "default"}
-                                    size="sm"
-                                    leftSection={<Icon size={16}/>}
-                                    visibleFrom="sm"
+                                    className={`${classes.tab} ${isActive ? classes.tabActive : ""}`}
                                 >
+                                    <Icon size={16} />
                                     {section.label}
-                                </Button>
+                                </Link>
                             );
                         })}
-                    </Group>
+                    </div>
                 </Stack>
 
                 {/* Content Area */}
-                <Box style={{maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto"}}>
+                <Box 
+                    className={classes.contentPanel}
+                    style={{maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto"}}
+                >
                     {activeSection === SECTIONS.SETTINGS && (
                         <SettingsSection contest={contest}/>
                     )}

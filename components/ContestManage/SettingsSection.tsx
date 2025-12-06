@@ -3,7 +3,6 @@
 import { updateContest } from "@/lib/actions";
 import {
   Button,
-  Card,
   Stack,
   TextInput,
   Badge,
@@ -128,7 +127,7 @@ export function SettingsSection({ contest }: SettingsSectionProps) {
   };
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
+    <>
       <form onSubmit={form.onSubmit(handleSave)}>
         <Stack gap="md">
           <TextInput
@@ -190,6 +189,6 @@ export function SettingsSection({ contest }: SettingsSectionProps) {
         opened={!!statusMessage}
         onClose={() => setStatusMessage(null)}
       />
-    </Card>
+    </>
   );
 }

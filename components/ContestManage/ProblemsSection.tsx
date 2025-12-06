@@ -144,7 +144,7 @@ export function ProblemsSection({
   }));
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
+    <>
       <Stack gap="md">
         {/* Add Problem Form */}
         <Card withBorder padding="md">
@@ -248,6 +248,6 @@ export function ProblemsSection({
         opened={!!statusMessage}
         onClose={() => setStatusMessage(null)}
       />
-    </Card>
+    </>
   );
 }
