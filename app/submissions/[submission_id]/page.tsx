@@ -72,7 +72,7 @@ const Page = async (props: Props) => {
       </TableTd>
       <TableTd ta="center">
         <Text c={StateColor(submission.state)} fw={500}>
-          {StateString(submission.state)}
+          {StateString(submission.state, submission.failed_test)}
         </Text>
       </TableTd>
       <TableTd ta="center">

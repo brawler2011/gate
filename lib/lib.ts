@@ -46,30 +46,45 @@ export function StateColor(state?: number | string): string {
 
 /**
  * Get string representation of submission state
+ * @param state - submission state code
+ * @param failedTest - optional test number where submission failed (1-indexed)
  */
-export function StateString(state?: number | string): string {
+export function StateString(state?: number | string, failedTest?: number | null): string {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   
+  let baseString: string;
   switch (stateNum) {
     case 1:
-      return "Тестируется";
+      return "Тестируется"; // No test number for "testing" state
     case 101:
-      return "Ошибка компиляции";
+      return "Ошибка компиляции"; // Compilation error - no specific test
     case 102:
-      return "Превышено время исполнения";
+      baseString = "Превышено время исполнения";
+      break;
     case 103:
-      return "Превышена ограничение памяти";
+      baseString = "Превышено ограничение памяти";
+      break;
     case 104:
-      return "Ошибка исполнения";
+      baseString = "Ошибка исполнения";
+      break;
     case 105:
-      return "Ошибка форматирования";
+      baseString = "Ошибка форматирования";
+      break;
     case 106:
-      return "Неправильный ответ";
+      baseString = "Неправильный ответ";
+      break;
     case 200:
-      return "Принято";
+      return "Принято"; // Accepted - no failed test
     default:
       return "Неизвестно";
   }
+  
+  // Add test number if available (for error states that happen on specific tests)
+  if (failedTest != null && failedTest > 0) {
+    return `${baseString} на тесте ${failedTest}`;
+  }
+  
+  return baseString;
 }
 
 export const isValidUUIDV4 = (str: string): boolean => {

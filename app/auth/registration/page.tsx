@@ -156,10 +156,10 @@ export default function RegistrationPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "2rem",
+        padding: "1rem",
       }}
     >
-      <Stack align="center" gap={32}>
+      <Stack align="center" gap={32} style={{ width: "min(700px, calc(100vw - 2rem))" }}>
         <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
           <Group justify="center" gap="md">
             <Image
@@ -175,7 +175,7 @@ export default function RegistrationPage() {
           </Group>
         </Link>
 
-        <Paper radius="md" p={32} withBorder w={550} shadow="sm">
+        <Paper radius="md" p={32} withBorder shadow="sm" style={{ width: "100%" }}>
           <Title order={2} ta="center" mb={24} fz={22}>
             Регистрация
           </Title>

@@ -55,9 +55,12 @@ const StatusCell = ({ submission }: StatusCellProps) => {
   }
 
   // Final verdict
+  // DEBUG: Log failed_test value
+  console.log('Submission verdict:', { id: submission.id, state, failed_test: submission.failed_test });
+  
   return (
     <Text c={StateColor(state)} fw={500}>
-      {StateString(state)}
+      {StateString(state, submission.failed_test)}
     </Text>
   );
 };

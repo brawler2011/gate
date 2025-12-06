@@ -63,7 +63,7 @@ const VerdictCell = ({ submission }: VerdictCellProps) => {
     }
 
     // Final verdict
-    const stateString = StateString(state);
+    const stateString = StateString(state, submission.failed_test);
     return (
         <Text c={StateColor(state)} fw={500}>
             {stateString === "UK" ? state : stateString}
