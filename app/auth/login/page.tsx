@@ -155,7 +155,7 @@ export default function LoginPage() {
         padding: "1rem",
       }}
     >
-      <Stack align="center" gap={32} style={{ width: "min(700px, calc(100vw - 2rem))" }}>
+      <Stack align="center" gap={32} style={{ width: "min(550px, calc(100vw - 2rem))" }}>
         <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
           <Group justify="center" gap="md">
             <Image
