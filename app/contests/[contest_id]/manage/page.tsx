@@ -12,7 +12,7 @@ import {Box, Container, Stack, Center} from "@mantine/core";
 import {IconArrowLeft, IconPuzzle, IconSettings, IconUsers} from "@tabler/icons-react";
 import Link from "next/link";
 import type {ContestProblemListItemModel} from "../../../../../contracts/core/v1";
-import layoutClasses from './contestLayout.module.css';
+import layoutClasses from '../contestLayout.module.css';
 import classes from "./styles.module.css";
 
 // Constants for sections
