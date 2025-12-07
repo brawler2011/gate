@@ -12,6 +12,7 @@ import {Box, Container, Stack, Center} from "@mantine/core";
 import {IconArrowLeft, IconPuzzle, IconSettings, IconUsers} from "@tabler/icons-react";
 import Link from "next/link";
 import type {ContestProblemListItemModel} from "../../../../../contracts/core/v1";
+import layoutClasses from './contestLayout.module.css';
 import classes from "./styles.module.css";
 
 // Constants for sections
@@ -70,8 +71,7 @@ export default async function ContestManagePage({params, searchParams}: Props) {
 
     return (
         <DefaultLayout>
-            <Center>
-                <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
+                <Box className={layoutClasses.contestContainer}>
                     {/* Main Content */}
                     <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
                         <Container
@@ -83,7 +83,7 @@ export default async function ContestManagePage({params, searchParams}: Props) {
                             style={{ maxWidth: '100%' }}
                         >
                             {/* Header Section */}
-                            <Stack gap="md" style={{maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto"}}>
+                            <Stack gap="md" style={{maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0"}}>
                                 {/* Tab Row */}
                                 <div className={classes.tabRow}>
                                     {/* Back to Contest Tab */}
@@ -116,7 +116,7 @@ export default async function ContestManagePage({params, searchParams}: Props) {
                             {/* Content Area */}
                             <Box 
                                 className={classes.contentPanel}
-                                style={{maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto"}}
+                                style={{maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0"}}
                             >
                                 {activeSection === SECTIONS.SETTINGS && (
                                     <SettingsSection contest={contest}/>
@@ -140,7 +140,6 @@ export default async function ContestManagePage({params, searchParams}: Props) {
                         visibleFrom="sm"
                     />
                 </Box>
-            </Center>
         </DefaultLayout>
     );
 }

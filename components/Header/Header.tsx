@@ -86,6 +86,7 @@ const Header = ({ user }: { user?: SessionUser }) => {
                   alt="Gate logo"
                   width={40}
                   height={40}
+                  priority
                   className={classes.logoImage}
                 />
                 <Title order={1}>

@@ -24,6 +24,7 @@ import { ContestInfoPanel } from "@/components/ContestInfoPanel";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";
 import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
+import classes from "./contestLayout.module.css";
 
 type Props = {
   params: Promise<{ contest_id: string }>;
@@ -62,8 +63,7 @@ const Contest = ({ contest, problems, user, contestRole }: ContestProps) => {
       </AppShellHeader>
       <AppShellMain>
         <Box maw="1920px" mx="auto" w="100%">
-          <Center>
-            <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
+            <Box className={classes.contestContainer}>
             {/* Main Content */}
             <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
               <Container
@@ -79,6 +79,7 @@ const Contest = ({ contest, problems, user, contestRole }: ContestProps) => {
                   user={user}
                   contestRole={contestRole}
                   activeTab="tasks" 
+                  align="left"
                 >
                   {/* Tasks Section */}
                   {problems.length === 0 ? (
@@ -111,7 +112,6 @@ const Contest = ({ contest, problems, user, contestRole }: ContestProps) => {
               />
             </Box>
             </Box>
-          </Center>
         </Box>
       </AppShellMain>
 

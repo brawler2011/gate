@@ -12,6 +12,7 @@ import {getContest} from "@/lib/actions";
 import {getCurrentUser} from "@/lib/auth";
 import {getMyContestRole} from "@/lib/contest-role";
 import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
+import classes from '../contestLayout.module.css';
 
 const metadata: Metadata = {
     title: "Положение"
@@ -31,8 +32,7 @@ const Page = async ({params}: PageProps) => {
 
     return (
         <DefaultLayout>
-            <Center>
-                <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
+                <Box className={classes.contestContainer}>
                     {/* Main Content */}
                     <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
                         <Container size="xl" py="md" px={0} mx={0} style={{ maxWidth: '100%' }}>
@@ -57,7 +57,6 @@ const Page = async ({params}: PageProps) => {
                         </Box>
                     )}
                 </Box>
-            </Center>
         </DefaultLayout>
     );
 };

@@ -18,6 +18,7 @@ import { SubmitSubmissionClient } from "./SubmitSubmissionClient";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";
 import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
+import classes from "../contestLayout.module.css";
 
 type Props = {
   params: Promise<{ contest_id: string }>;
@@ -58,8 +59,7 @@ const Page = async ({ params }: Props) => {
       </AppShellHeader>
       <AppShellMain>
         <Box maw="1920px" mx="auto" w="100%">
-          <Center>
-            <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
+            <Box className={classes.contestContainer}>
             {/* Main Content */}
             <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
               <Container
@@ -75,6 +75,7 @@ const Page = async ({ params }: Props) => {
                   user={user}
                   contestRole={contestRole}
                   activeTab="submit"
+                  align="left"
                 >
                   <SubmitSubmissionClient 
                     contest={response!.contest}
@@ -97,7 +98,6 @@ const Page = async ({ params }: Props) => {
               />
             </Box>
             </Box>
-          </Center>
         </Box>
       </AppShellMain>
       <AppShellFooter withBorder={false}>

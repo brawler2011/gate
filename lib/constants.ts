@@ -15,7 +15,7 @@ export const LANGUAGE_MAP: Record<string, number> = {
 // Contest layout dimensions
 export const CONTEST_CONTENT_MAX_WIDTH = '1080px';    // Контент (таблицы, формы)
 export const CONTEST_PROBLEM_MAX_WIDTH = '800px';
-export const CONTEST_SIDEBAR_LEFT_WIDTH = '200px';
+export const CONTEST_SIDEBAR_LEFT_WIDTH = '300px';
 export const CONTEST_SIDEBAR_RIGHT_WIDTH = '520px';
 export const CONTEST_INFO_PANEL_WIDTH = '370px';     // Панель информации о контесте (половина от hotbar)
 

@@ -11,6 +11,7 @@ import {ErrorDisplay} from '@/components/ErrorDisplay';
 import { getCurrentUser } from '@/lib/auth';
 import { getMyContestRole } from '@/lib/contest-role';
 import { CONTEST_CONTENT_MAX_WIDTH } from '@/lib/constants';
+import classes from '../contestLayout.module.css';
 
 export const metadata: Metadata = {
     title: 'Мои посылки',
@@ -99,8 +100,7 @@ const Page = async ({params, searchParams}: PageProps) => {
 
     return (
         <DefaultLayout>
-            <Center>
-                <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
+                <Box className={classes.contestContainer}>
                     {/* Main Content */}
                     <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
                         <Container size="xl" pt={0} pb="xl" px={0} mx={0} style={{ maxWidth: '100%' }}>
@@ -111,6 +111,7 @@ const Page = async ({params, searchParams}: PageProps) => {
                                     contestRole={contestRole}
                                     activeTab="mysubmissions"
                                     maxWidth="100%"
+                                    align="left"
                                 >
                                     <Paper 
                                         withBorder 
@@ -166,7 +167,6 @@ const Page = async ({params, searchParams}: PageProps) => {
                         </Box>
                     )}
                 </Box>
-            </Center>
         </DefaultLayout>
     );
 };
