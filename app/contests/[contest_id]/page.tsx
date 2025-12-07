@@ -24,7 +24,7 @@ import { ContestInfoPanel } from "@/components/ContestInfoPanel";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";
 import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
-import classes from "../contestLayout.module.css";
+import classes from "./contestLayout.module.css";
 
 type Props = {
   params: Promise<{ contest_id: string }>;
