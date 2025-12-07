@@ -57,8 +57,9 @@ const Page = async ({ params }: Props) => {
         <HeaderWithSession />
       </AppShellHeader>
       <AppShellMain>
-        <Center>
-          <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
+        <Box maw="1920px" mx="auto" w="100%">
+          <Center>
+            <Box style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', maxWidth: '100%' }}>
             {/* Main Content */}
             <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
               <Container
@@ -95,8 +96,9 @@ const Page = async ({ params }: Props) => {
                 contestRole={contestRole}
               />
             </Box>
-          </Box>
-        </Center>
+            </Box>
+          </Center>
+        </Box>
       </AppShellMain>
       <AppShellFooter withBorder={false}>
         <Footer />

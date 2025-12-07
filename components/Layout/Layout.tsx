@@ -1,6 +1,6 @@
 "use client";
 
-import {AppShell, AppShellFooter, AppShellHeader, AppShellMain, AppShellProps, rem,} from "@mantine/core";
+import {AppShell, AppShellFooter, AppShellHeader, AppShellMain, AppShellProps, Box,} from "@mantine/core";
 import React from "react";
 import {Footer} from "@/components/Footer";
 
@@ -57,7 +57,11 @@ const DefaultLayoutClient = ({children, header, ...props}: LayoutProps) => {
             <AppShellHeader>
                 {header}
             </AppShellHeader>
-            <AppShellMain>{children}</AppShellMain>
+            <AppShellMain>
+                <Box maw="1920px" mx="auto" w="100%">
+                    {children}
+                </Box>
+            </AppShellMain>
             <AppShellFooter withBorder={false}>
                 <Footer/>
             </AppShellFooter>

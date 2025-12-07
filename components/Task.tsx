@@ -56,6 +56,7 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
                 {header}
             </AppShellHeader>
             <AppShellMain>
+                <Box maw="1920px" mx="auto" w="100%">
                 <Box style={{ display: 'flex', gap: '19px', alignItems: 'flex-start', paddingTop: 'var(--mantine-spacing-md)', paddingBottom: 'var(--mantine-spacing-md)', paddingRight: 'var(--mantine-spacing-md)' }}>
                     {/* Left Sidebar - скрыт на мобилках */}
                     <Box 
@@ -167,6 +168,7 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
                             </Paper>
                         </Stack>
                     </Box>
+                </Box>
                 </Box>
             </AppShellMain>
             <AppShellFooter withBorder={false}>
