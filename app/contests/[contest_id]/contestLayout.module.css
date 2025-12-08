@@ -5,16 +5,16 @@
     align-items: flex-start;
     max-width: 100%;
     /* On narrow screens: compensate for AppShell padding (16px) */
-    /* 300px (CONTEST_SIDEBAR_LEFT_WIDTH) + 16px (AppShell padding) = 316px total */
-    padding-left: 300px;
+    /* 250px (CONTEST_SIDEBAR_LEFT_WIDTH) + 16px (AppShell padding) = 266px total */
+    padding-left: 250px;
   }
 
 /* On wide screens: Box is centered, AppShell padding is inside */
 /* 1920px (container) + 32px (AppShell padding both sides) + 1px */
 @media (min-width: 1953px) {
   .contestContainer {
-    /* 300px (CONTEST_SIDEBAR_LEFT_WIDTH) + 16px (gap) = 316px from container edge */
-    padding-left: calc(300px + 16px);
+    /* 250px (CONTEST_SIDEBAR_LEFT_WIDTH) + 16px (gap) = 266px from container edge */
+    padding-left: calc(250px + 16px);
   }
 }
   

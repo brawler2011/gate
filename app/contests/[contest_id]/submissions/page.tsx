@@ -102,7 +102,7 @@ const Page = async ({params, searchParams}: PageProps) => {
         <DefaultLayout>
                 <Box className={classes.contestContainer}>
                     {/* Main Content */}
-                    <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
+                    <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH, minWidth: 0, overflow: 'hidden' }}>
                         <Container size="xl" pt={0} pb="xl" px={0} mx={0} style={{ maxWidth: '100%' }}>
                             {contestData?.contest ? (
                                 <ContestHotbar 
