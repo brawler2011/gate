@@ -14,7 +14,7 @@ import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Контесты",
-  description: "",
+  description: "Список доступных контестов по программированию.",
 };
 
 type Props = {

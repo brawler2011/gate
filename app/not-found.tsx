@@ -1,5 +1,14 @@
 import { Container, Title, Text, Button, Stack, Paper } from "@mantine/core";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+// Next.js 15 автоматически кэширует not-found.tsx при билде
+// Эта страница статическая и будет отдаваться из кеша
+export const metadata: Metadata = {
+  title: '404 - Страница не найдена',
+  description: 'Запрашиваемая страница не существует',
+  robots: 'noindex, nofollow',
+};
 
 export default function NotFound() {
   return (
