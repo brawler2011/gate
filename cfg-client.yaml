@@ -1,5 +1,0 @@
-package: corev1
-generate:
-  client: true
-  models: true
-output: ./core/v1/client/core.go

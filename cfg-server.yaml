@@ -1,5 +1,0 @@
-package: corev1
-generate:
-  fiber-server: true
-  models: true
-output: ./core/v1/core.go
