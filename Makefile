@@ -22,6 +22,12 @@ ts-dependencies: check-npm package.json
 dependencies: go-dependencies ts-dependencies
 	@echo "Success: All dependencies installed"
 
+# Merge blogs and core OpenAPI specs into gateway
+merge-gateway: ts-dependencies
+	@echo "Merging OpenAPI specifications into gateway..."
+	@node tools/merge-openapi.js
+	@echo "Success: Gateway OpenAPI created"
+
 # Generate Go code for all services
 go-gen: go-dependencies
 	@if [ -z "$(SPECS)" ]; then \
@@ -77,7 +83,7 @@ ts-gen: ts-dependencies
 	done
 	@echo "Success: TypeScript code generated for all services"
 
-all: go-gen ts-gen
+all: merge-gateway go-gen ts-gen
 	@echo "Success: All code generated successfully"
 
 clean:
@@ -94,6 +100,7 @@ clean:
 			"$$dir/services" \
 			"$$dir/core"; \
 	done
+	@rm -rf gateway/
 	@rm -f /tmp/cfg-server-*.yaml /tmp/cfg-client-*.yaml
 	@echo "Success: Cleaned"
 
