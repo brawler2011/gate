@@ -1,7 +1,7 @@
 import { DefaultLayout } from "@/components/Layout";
 import { UsersContent } from "@/components/UsersContent";
 import { UsersContentSkeleton } from "@/components/UsersPage";
-import { AdminContestsContent, AdminTabs } from "@/components/AdminPage";
+import { AdminBlogsContent, AdminContestsContent, AdminTabs } from "@/components/AdminPage";
 import { Container, Skeleton, Stack } from "@mantine/core";
 import { Metadata } from "next";
 import { Suspense } from "react";
@@ -45,6 +45,29 @@ function AdminContestsContentSkeleton() {
   );
 }
 
+function AdminBlogsContentSkeleton() {
+  return (
+    <Container size="xl" py="md">
+      <Stack gap="md">
+        <Skeleton height={30} width={150} radius="sm" />
+        <Skeleton height={36} width={400} radius="sm" />
+        <Stack gap="sm">
+          <Skeleton height={35} radius="sm" />
+          <Skeleton height={35} radius="sm" />
+          <Skeleton height={35} radius="sm" />
+          <Skeleton height={35} radius="sm" />
+          <Skeleton height={35} radius="sm" />
+          <Skeleton height={35} radius="sm" />
+          <Skeleton height={35} radius="sm" />
+          <Skeleton height={35} radius="sm" />
+          <Skeleton height={35} radius="sm" />
+          <Skeleton height={35} radius="sm" />
+        </Stack>
+      </Stack>
+    </Container>
+  );
+}
+
 export default async function AdminPage({ searchParams }: Props) {
   const params = await searchParams;
   const page = Number(params.page) || 1;
@@ -57,7 +80,11 @@ export default async function AdminPage({ searchParams }: Props) {
       <Container size="xl" pt="lg">
         <AdminTabs />
       </Container>
-      {view === "contests" ? (
+      {view === "blogs" ? (
+        <Suspense fallback={<AdminBlogsContentSkeleton />}>
+          <AdminBlogsContent page={page} search={search} />
+        </Suspense>
+      ) : view === "contests" ? (
         <Suspense fallback={<AdminContestsContentSkeleton />}>
           <AdminContestsContent page={page} search={search} />
         </Suspense>

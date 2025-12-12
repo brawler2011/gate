@@ -1,7 +1,7 @@
 "use client";
 
 import { Group, SegmentedControl } from "@mantine/core";
-import { IconTrophy, IconUsers } from "@tabler/icons-react";
+import { IconNews, IconTrophy, IconUsers } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { flushSync } from "react-dom";
@@ -32,6 +32,8 @@ export function AdminTabs() {
     const params = new URLSearchParams(searchParams);
     if (value === "contests") {
       params.set("view", "contests");
+    } else if (value === "blogs") {
+      params.set("view", "blogs");
     } else {
       params.delete("view");
     }
@@ -65,6 +67,15 @@ export function AdminTabs() {
             <Group gap="xs" wrap="nowrap">
               <IconTrophy size={18} />
               <span>Контесты</span>
+            </Group>
+          ),
+        },
+        {
+          value: "blogs",
+          label: (
+            <Group gap="xs" wrap="nowrap">
+              <IconNews size={18} />
+              <span>Блоги</span>
             </Group>
           ),
         },

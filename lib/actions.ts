@@ -253,3 +253,41 @@ export async function listAdminContests(
 export async function deleteContest(contestId: string) {
   return Call((client) => client.default.deleteContest({ contestId }));
 }
+
+// Blog API actions
+export async function listPosts(
+  page: number = 1,
+  pageSize: number = 10,
+  sortOrder: 'asc' | 'desc' = 'desc'
+) {
+  return Call((client) => client.default.listPosts({ page, pageSize, sortOrder }));
+}
+
+export async function getPostById(id: string) {
+  return Call((client) => client.default.getPostById({ id }));
+}
+
+export async function createPost(formData: {
+  title?: string;
+  description?: string;
+  text?: string;
+  preview_image?: Blob;
+}) {
+  return Call((client) => client.default.createPost({ formData }));
+}
+
+export async function patchPost(
+  id: string,
+  formData: {
+    title?: string;
+    description?: string;
+    text?: string;
+    preview_image?: Blob;
+  }
+) {
+  return Call((client) => client.default.patchPostById({ id, formData }));
+}
+
+export async function deletePost(id: string) {
+  return Call((client) => client.default.deletePostById({ id }));
+}

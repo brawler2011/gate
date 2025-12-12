@@ -11,9 +11,16 @@ export interface BlogPostProps {
   description: string;
   date?: string;
   previewImageUrl?: string;
+  /** If true, uses API image endpoint instead of previewImageUrl */
+  useApiImage?: boolean;
 }
 
-export function BlogPost({ id, title, author, avatarUrl, description, date, previewImageUrl }: BlogPostProps) {
+export function BlogPost({ id, title, author, avatarUrl, description, date, previewImageUrl, useApiImage }: BlogPostProps) {
+  // Determine the image source - either use API endpoint or provided URL
+  const imageUrl = useApiImage 
+    ? `/api/blogs/posts/${id}/image` 
+    : previewImageUrl;
+  
   return (
     <Card 
       component={Link} 
@@ -25,10 +32,10 @@ export function BlogPost({ id, title, author, avatarUrl, description, date, prev
       style={{ textDecoration: 'none', color: 'inherit' }}
     >
       <Stack gap={0}>
-        {previewImageUrl && (
+        {imageUrl && (
           <div className={classes.imageContainer}>
             <Image
-              src={previewImageUrl}
+              src={imageUrl}
               alt={title}
               className={classes.previewImage}
               fallbackSrc="https://placehold.co/1200x500/e0e0e0/666?text=Blog+Post"

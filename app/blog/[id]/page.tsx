@@ -1,5 +1,5 @@
 import { DefaultLayout } from "@/components/Layout";
-import { getBlogPost, getBlogPostIds } from "@/lib/blog";
+import { getPostById } from "@/lib/actions";
 import { formatDate } from "@/lib/formatDate";
 import { Avatar, Container, Group, Stack, Text, Title } from "@mantine/core";
 import { Metadata } from "next";
@@ -15,32 +15,27 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
-export async function generateStaticParams() {
-  const ids = getBlogPostIds();
-  return ids.map((id) => ({ id }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const post = getBlogPost(id);
+  const [error, post] = await getPostById(id);
 
-  if (!post) {
+  if (error || !post) {
     return {
       title: "Пост не найден",
     };
   }
 
   return {
-    title: post.title,
-    description: post.description,
+    title: post.title || "Пост",
+    description: post.description || "",
   };
 }
 
 export default async function BlogPostPage({ params }: Props) {
   const { id } = await params;
-  const post = getBlogPost(id);
+  const [error, post] = await getPostById(id);
 
-  if (!post) {
+  if (error || !post) {
     notFound();
   }
 
@@ -57,18 +52,19 @@ export default async function BlogPostPage({ params }: Props) {
 
               <Group gap="md">
                 <Avatar 
-                  src={post.avatarUrl} 
-                  name={post.author} 
+                  name={post.author_username || "Аноним"} 
                   size={48} 
                   radius="xl" 
                 />
                 <Stack gap={4}>
                   <Text size="lg" fw={600}>
-                    {post.author}
+                    {post.author_username || "Аноним"}
                   </Text>
-                  <Text size="sm" c="dimmed">
-                    {formatDate(post.date)}
-                  </Text>
+                  {post.created_at && (
+                    <Text size="sm" c="dimmed">
+                      {formatDate(post.created_at)}
+                    </Text>
+                  )}
                 </Stack>
               </Group>
             </Stack>
@@ -79,7 +75,7 @@ export default async function BlogPostPage({ params }: Props) {
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
               >
-                {post.content}
+                {post.text || ""}
               </ReactMarkdown>
             </div>
           </Stack>
