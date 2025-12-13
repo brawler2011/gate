@@ -71,7 +71,7 @@ export class DefaultService {
     }): CancelablePromise<ListPostsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/blogs/posts/',
+            url: '/blogs/posts',
             query: {
                 'page': page,
                 'page_size': pageSize,
@@ -96,7 +96,7 @@ export class DefaultService {
     }): CancelablePromise<CreatedPost> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/blogs/posts/',
+            url: '/blogs/posts',
             formData: formData,
             mediaType: 'multipart/form-data',
             errors: {

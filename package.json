@@ -1,8 +1,12 @@
 {
   "name": "contracts",
-  "packageManager": "npm@latest",
+  "packageManager": "bun@latest",
   "scripts": {
-    "gen": "openapi --input core/v1/openapi.yaml --output ./core/v1 --client fetch --name core --useOptions"
+    "gen": "bun g:m && bun g:c && bun g:b && bun g:gw",
+    "g:m": "node tools/merge-openapi.js",
+    "g:c": "bunx openapi-typescript-codegen --input core/v1/openapi.yaml --output ./core/v1 --client fetch --name core --useOptions",
+    "g:b": "bunx openapi-typescript-codegen --input blogs/v1/openapi.yaml --output ./blogs/v1 --client fetch --name blogs --useOptions",
+    "g:gw": "bunx openapi-typescript-codegen --input gateway/v1/openapi.yaml --output ./gateway/v1 --client fetch --name gateway --useOptions"
   },
   "devDependencies": {
     "js-yaml": "^4.1.0",
