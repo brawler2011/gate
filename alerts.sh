@@ -30,17 +30,17 @@ fi
 
 CPU_THRESHOLD=80                       # CPU порог для контейнеров (%)
 MEMORY_THRESHOLD=90                    # Память порог (%)
-DISK_THRESHOLD=85                      # Диск порог (%)
+DISK_THRESHOLD=92                      # Диск порог (%)
 
-GLOBAL_CPU_THRESHOLD=90                # Глобальный CPU порог (%)
+GLOBAL_CPU_THRESHOLD=75                # Глобальный CPU порог (%)
 GLOBAL_CPU_DURATION=10                 # Минут подряд для алерта
 
-COOLDOWN_MINUTES=15                    # Антиспам: минут между алертами
+COOLDOWN_MINUTES=30                    # Антиспам: минут между алертами
 STATE_DIR="/var/lib/server-monitor"   # Папка для хранения состояния
 LOG_FILE="/var/log/server-monitor.log"
 
 # Контейнеры которые ДОЛЖНЫ работать (если упадут — алерт)
-REQUIRED_CONTAINERS="postgres redis gate149-frontend nginx judge0 tester tester-kratos tester-ws tester_dev tester-kratos_dev tester-ws_dev kratos kratos_dev nats pandoc"
+REQUIRED_CONTAINERS="postgres redis gate149-frontend nginx judge0 tester tester-kratos tester-ws tester_dev tester-kratos_dev tester-ws_dev kratos kratos_dev blogs blogs_dev nats pandoc"
 
 # Контейнеры которые НЕ мониторить по CPU (в пиках 100% это нормально)
 CPU_IGNORE_CONTAINERS="judge0"

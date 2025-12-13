@@ -1,4 +1,9 @@
 import createMDX from '@next/mdx'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -10,6 +15,18 @@ const nextConfig = {
         ignoreBuildErrors: true,
     },
     pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
+    experimental: {
+        serverActions: {
+            bodySizeLimit: '20mb',
+        },
+    },
+    webpack: (config) => {
+        config.resolve.alias = {
+            ...config.resolve.alias,
+            '@contracts': path.resolve(__dirname, '../contracts'),
+        }
+        return config
+    },
     async rewrites() {
         const oryUrl = process.env.ORY_SDK_URL;
         console.log('🔧 ORY_SDK_URL =', oryUrl);

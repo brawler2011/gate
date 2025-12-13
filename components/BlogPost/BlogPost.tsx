@@ -16,11 +16,10 @@ export interface BlogPostProps {
 }
 
 export function BlogPost({ id, title, author, avatarUrl, description, date, previewImageUrl, useApiImage }: BlogPostProps) {
-  // Determine the image source - either use API endpoint or provided URL
-  const imageUrl = useApiImage 
-    ? `/api/blogs/posts/${id}/image` 
-    : previewImageUrl;
-  
+  // Determine the image source - use preview image ID if available
+  const imageUrl = previewImageUrl 
+    ? `/api/blogs/posts/${previewImageUrl}/image`  // используем image ID, а не post ID
+    : undefined;
   return (
     <Card 
       component={Link} 

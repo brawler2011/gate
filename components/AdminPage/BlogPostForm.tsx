@@ -10,7 +10,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { IconPhoto, IconUpload } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { PostModel } from "../../../contracts/gateway/v1";
 
 interface BlogPostFormProps {
@@ -77,13 +77,15 @@ export function BlogPostForm({
   };
 
   // Reset form when modal opens with new data
-  const handleModalOpen = () => {
-    setTitle(post?.title || "");
-    setDescription(post?.description || "");
-    setText(post?.text || "");
-    setPreviewImage(null);
-    setErrors({});
-  };
+  useEffect(() => {
+    if (opened) {
+      setTitle(post?.title || "");
+      setDescription(post?.description || "");
+      setText(post?.text || "");
+      setPreviewImage(null);
+      setErrors({});
+    }
+  }, [opened, post]);
 
   return (
     <Modal
@@ -94,7 +96,6 @@ export function BlogPostForm({
       size="lg"
       radius="md"
       overlayProps={{ backgroundOpacity: 0.4 }}
-      onOpen={handleModalOpen}
     >
       <Stack gap="md">
         <TextInput
@@ -160,3 +161,5 @@ export function BlogPostForm({
     </Modal>
   );
 }
+
+

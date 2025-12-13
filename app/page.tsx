@@ -20,6 +20,7 @@ export default async function Page() {
   
   // Fetch blog posts from API
   const [error, postsData] = await listPosts(1, 20);
+  console.log("error", error);
   const blogPosts = postsData?.posts || [];
 
   const renderBlogSection = () => (
@@ -42,7 +43,7 @@ export default async function Page() {
               author={post.author_username || "Аноним"}
               date={post.created_at}
               description={post.description || ""}
-              useApiImage={!!post.preview_image_id}
+              previewImageUrl={post.preview_image_id}
             />
           ))}
         </Stack>

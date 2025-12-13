@@ -253,3 +253,5 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
     </Container>
   );
 }
+
+

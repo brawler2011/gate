@@ -12,7 +12,7 @@ import {
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { PostModel } from "../../../contracts/gateway/v1";
+import type { PostModel } from "@contracts/gateway/v1";
 import { TruncatedWithCopy } from "../TruncatedWithCopy";
 import { DeleteBlogPostModal } from "./DeleteBlogPostModal";
 import classes from "./styles.module.css";
@@ -71,7 +71,6 @@ export function AdminBlogsTable({ posts, onDeletePost, onEditPost }: AdminBlogsT
       year: "numeric",
     });
   };
-
   return (
     <>
       <Box className={classes.tableContainer}>
@@ -96,7 +95,7 @@ export function AdminBlogsTable({ posts, onDeletePost, onEditPost }: AdminBlogsT
                 >
                   <Table.Td>
                     <Avatar
-                      src={post.preview_image_id ? `/api/blogs/posts/${post.id}/image` : undefined}
+                      src={post.preview_image_id ? `/api/blogs/posts/${post.preview_image_id}/image` : undefined}
                       size={32}
                       radius="sm"
                     />
@@ -174,3 +173,6 @@ export function AdminBlogsTable({ posts, onDeletePost, onEditPost }: AdminBlogsT
     </>
   );
 }
+
+
+

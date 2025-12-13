@@ -1,8 +1,8 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { gateway } from "../../contracts/gateway/v1";
-import { ApiError as GatewayApiError } from "../../contracts/gateway/v1/core/ApiError";
+import { gateway } from "@contracts/gateway/v1";
+import { ApiError as GatewayApiError } from "@contracts/gateway/v1/core/ApiError";
 
 const oryKratosCookieName = "ory_kratos_session";
 
@@ -58,6 +58,7 @@ export const Call = async <T>(
     return [null, data];
   } catch (error) {
     if (error instanceof GatewayApiError) {
+      console.log("error", error);
       const body = error.body as { message?: string; request_id?: string } | undefined;
       return [{
         status: error.status,
