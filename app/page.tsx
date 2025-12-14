@@ -5,22 +5,30 @@ import {
   Container,
   Group,
   Stack,
-  Text,
   Title,
 } from "@mantine/core";
 import { IconNews } from "@tabler/icons-react";
-import { BlogPost } from "@/components/BlogPost/BlogPost";
+import { BlogList } from "@/components/BlogList";
 
 export const metadata = {
   title: "Главная",
 };
 
-export default async function Page() {
+type PageProps = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function Page({ searchParams }: PageProps) {
   const authenticated = await isAuthenticated();
   
-  // Fetch blog posts from API
-  const [error, postsData] = await listPosts(1, 20);
+  // Get current page from query params, default to 1
+  const params = await searchParams;
+  const currentPage = parseInt(params?.page || "1", 10) || 1;
+  
+  // Fetch blog posts from API with pagination (5 posts per page)
+  const [error, postsData] = await listPosts(currentPage, 5);
   const blogPosts = postsData?.posts || [];
+  const pagination = postsData?.pagination || { total: 0, page: currentPage };
 
   const renderBlogSection = () => (
     <Stack gap="md">
@@ -28,25 +36,11 @@ export default async function Page() {
         <IconNews size={28} color="var(--mantine-color-orange-6)" />
         <Title order={2}>Блог</Title>
       </Group>
-      {error ? (
-        <Text c="dimmed">Не удалось загрузить посты</Text>
-      ) : blogPosts.length === 0 ? (
-        <Text c="dimmed">Пока нет постов</Text>
-      ) : (
-        <Stack gap="md">
-          {blogPosts.map((post) => (
-            <BlogPost
-              key={post.id}
-              id={post.id || ""}
-              title={post.title || "Без названия"}
-              author={post.author_username || "Аноним"}
-              date={post.created_at}
-              description={post.description || ""}
-              previewImageUrl={post.preview_image_id}
-            />
-          ))}
-        </Stack>
-      )}
+      <BlogList 
+        posts={blogPosts}
+        pagination={pagination}
+        error={!!error}
+      />
     </Stack>
   );
 
