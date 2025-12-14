@@ -20,7 +20,6 @@ export default async function Page() {
   
   // Fetch blog posts from API
   const [error, postsData] = await listPosts(1, 20);
-  console.log("error", error);
   const blogPosts = postsData?.posts || [];
 
   const renderBlogSection = () => (

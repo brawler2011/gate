@@ -19,7 +19,16 @@ export function AdminBlogsSearchInput() {
     if (urlSearch !== search) {
       setSearch(urlSearch);
     }
-  }, [searchParams]);
+  }, [searchParams, search]);
+
+  // Cleanup timeout on unmount to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Only update URL when user actually types (not on initial render or URL change)
   useEffect(() => {
@@ -51,13 +60,7 @@ export function AdminBlogsSearchInput() {
       const query = params.toString();
       router.push(`/admin${query ? `?${query}` : ""}`);
     }, 300);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [search]);
+  }, [search, searchParams, router]);
 
   return (
     <TextInput

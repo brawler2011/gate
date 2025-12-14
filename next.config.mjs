@@ -11,9 +11,6 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
-    typescript: {
-        ignoreBuildErrors: true,
-    },
     pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
     experimental: {
         serverActions: {

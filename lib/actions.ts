@@ -1,6 +1,7 @@
 "use server";
 
-import { Call } from './api';
+import { Call, type ApiError } from './api';
+import type { ListSubmissionsResponseModel } from '@contracts/gateway/v1';
 
 export async function getContests(page: number = 1, pageSize: number = 10, search?: string) {
     return Call((client) => client.default.listWorkshopContests({page, pageSize, search}));
@@ -41,10 +42,10 @@ export async function getSubmissions(params: {
     state?: number;
     sortOrder?: "asc" | "desc";
     language?: number;
-}) {
+}): Promise<[ApiError | null, ListSubmissionsResponseModel | null]> {
     // contestId is required for listContestSubmissions
     if (!params.contestId) {
-        return [null, {submissions: [], pagination: {page: 1, total: 0}}] as const;
+        return [null, {submissions: [], pagination: {page: 1, total: 0}} as ListSubmissionsResponseModel];
     }
     
     const contestId = params.contestId;

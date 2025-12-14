@@ -15,6 +15,7 @@ import { useState } from "react";
 import type { PostModel } from "@contracts/gateway/v1";
 import { TruncatedWithCopy } from "../TruncatedWithCopy";
 import { DeleteBlogPostModal } from "./DeleteBlogPostModal";
+import { formatDate } from "@/lib/formatDate";
 import classes from "./styles.module.css";
 
 type AdminBlogsTableProps = {
@@ -63,14 +64,6 @@ export function AdminBlogsTable({ posts, onDeletePost, onEditPost }: AdminBlogsT
     }
   };
 
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
   return (
     <>
       <Box className={classes.tableContainer}>

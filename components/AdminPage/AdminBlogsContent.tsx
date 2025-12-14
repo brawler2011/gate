@@ -13,7 +13,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { PostModel, PaginationModel } from "../../../contracts/gateway/v1";
 import { NextPagination } from "../Pagination";
 import { StatusMessage } from "../StatusMessage";
@@ -43,11 +43,11 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
   const [formOpened, setFormOpened] = useState(false);
   const [editingPost, setEditingPost] = useState<PostModel | null>(null);
 
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async (currentPage: number) => {
     setLoading(true);
     setError(false);
 
-    const [err, data] = await listPosts(page, 10);
+    const [err, data] = await listPosts(currentPage, 10);
 
     if (err || !data) {
       console.error("Error fetching posts:", err);
@@ -59,12 +59,12 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
     setPosts(data.posts || []);
     setPagination(data.pagination || { total: 0, page: 1 });
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     setPagination((prev) => ({ ...prev, page }));
-    loadPosts();
-  }, [page, search]);
+    loadPosts(page);
+  }, [page, search, loadPosts]);
 
   const handleCreatePost = () => {
     setEditingPost(null);
@@ -129,7 +129,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
       });
     }
 
-    await loadPosts();
+    await loadPosts(page);
   };
 
   const handleDeletePost = async (postId: string) => {
@@ -150,7 +150,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
       message: "Пост успешно удалён",
     });
     // Reload posts after deletion
-    await loadPosts();
+    await loadPosts(page);
   };
 
   if (error) {

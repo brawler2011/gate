@@ -45,11 +45,12 @@ export async function GET(
     }
 
     const imageBuffer = await fetchResponse.arrayBuffer();
+    const contentType = fetchResponse.headers.get('Content-Type') || 'image/png';
     
     return new NextResponse(imageBuffer, {
       status: 200,
       headers: {
-        'Content-Type': 'image/png',
+        'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });
