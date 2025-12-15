@@ -91,7 +91,7 @@ export default function RegistrationPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
+    
     try {
       const response = await fetch(`/api/.ory/self-service/registration?flow=${flowId}`, {
         method: "POST",
