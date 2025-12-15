@@ -4,10 +4,17 @@
     gap: 16px;
     align-items: flex-start;
     max-width: 100%;
-    /* On narrow screens: compensate for AppShell padding (16px) */
-    /* 250px (CONTEST_SIDEBAR_LEFT_WIDTH) + 16px (AppShell padding) = 266px total */
+    /* Mobile: no left padding */
+    padding-left: 0;
+  }
+
+/* Desktop: add left padding for sidebar */
+/* 250px (CONTEST_SIDEBAR_LEFT_WIDTH) + 16px (AppShell padding) = 266px total */
+@media (min-width: 48em) {
+  .contestContainer {
     padding-left: 250px;
   }
+}
 
 /* On wide screens: Box is centered, AppShell padding is inside */
 /* 1920px (container) + 32px (AppShell padding both sides) + 1px */
