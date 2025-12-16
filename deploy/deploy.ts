@@ -151,8 +151,8 @@ async function main() {
       console.log("\x1b[36mStep 1: Building Docker image...\x1b[0m");
       console.log("\x1b[36m========================================\x1b[0m");
 
-      // Load .env.production
-      const envFilePath = join(import.meta.dir, ".env.production");
+      // Load .env.production (находится на уровень выше)
+      const envFilePath = join(import.meta.dir, "../.env.production");
       const envFile = Bun.file(envFilePath);
       if (await envFile.exists()) {
         console.log(`\x1b[32mLoading environment variables from ${envFilePath}...\x1b[0m`);
@@ -186,7 +186,7 @@ async function main() {
       console.log("\x1b[36mStep 2: Saving Docker image to tar...\x1b[0m");
       console.log("\x1b[36m========================================\x1b[0m");
 
-      const composedImageName = "frontend-frontend"; // From docker-compose
+      const composedImageName = "deploy-frontend"; // From docker-compose (папка deploy + service name)
       // Use Bun.spawn for consistency (though save output is minimal)
       await run(["docker", "save", "-o", tarPath, composedImageName]);
       

@@ -1,4 +1,3 @@
-import createMDX from '@next/mdx'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -11,7 +10,7 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
-    pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
+    pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
     experimental: {
         serverActions: {
             bodySizeLimit: '20mb',
@@ -47,8 +46,4 @@ const nextConfig = {
     },
 }
 
-const withMDX = createMDX({
-    // Add markdown plugins here, as desired
-})
-
-export default withMDX(nextConfig)
+export default nextConfig

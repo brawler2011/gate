@@ -21,8 +21,10 @@ export const getCurrentUser = cache(async (): Promise<SessionUser> => {
   const [error, response] = await Call((client) => client.default.getMe());
 
   if (error || !response) {
-    // 403 or any other error means not authenticated
-    console.log("GetMe error:", error);
+    // 401 means not authenticated - this is expected, don't log
+    if (error && error.status !== 401) {
+      console.log("GetMe error:", error);
+    }
     return null;
   }
 

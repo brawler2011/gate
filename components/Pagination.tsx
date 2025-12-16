@@ -4,7 +4,7 @@ import React from 'react';
 import {Pagination} from '@mantine/core';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import * as corev1 from '../../contracts/core/v1';
+import * as corev1 from '@contracts/core/v1';
 import { usePageTransition } from './WorkshopPage/WorkshopPageWrapper';
 
 interface NextPaginationProps {

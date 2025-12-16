@@ -11,7 +11,7 @@ import {CONTEST_CONTENT_MAX_WIDTH, CONTEST_INFO_PANEL_WIDTH} from "@/lib/constan
 import {Box, Container, Stack, Center} from "@mantine/core";
 import {IconArrowLeft, IconPuzzle, IconSettings, IconUsers} from "@tabler/icons-react";
 import Link from "next/link";
-import type {ContestProblemListItemModel} from "../../../../../contracts/core/v1";
+import type {ContestProblemListItemModel} from "@contracts/core/v1";
 import layoutClasses from '../contestLayout.module.css';
 import classes from "./styles.module.css";
 

@@ -1,7 +1,7 @@
 import { Badge, Button, Paper, Stack, Title } from "@mantine/core";
 import { IconSettings } from "@tabler/icons-react";
 import Link from "next/link";
-import type { ContestModel } from "../../../contracts/core/v1";
+import type { ContestModel } from "@contracts/core/v1";
 import type { ContestRole } from "@/lib/contest-role";
 import type { SessionUser } from "@/lib/auth";
 import { PermissionChecker } from "@/lib/permissions";

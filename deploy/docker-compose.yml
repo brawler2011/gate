@@ -1,10 +1,10 @@
 services:
   frontend:
     env_file:
-      - .env.production
+      - ../.env.production
     build:
-      context: ..
-      dockerfile: frontend/Dockerfile
+      context: ../..
+      dockerfile: frontend/deploy/Dockerfile
       args:
         # Only NEXT_PUBLIC_* vars need to be baked in at build time
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}

@@ -11,7 +11,7 @@ import {
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { ContestModel } from "../../../contracts/core/v1";
+import type { ContestModel } from "@contracts/core/v1";
 import { TruncatedWithCopy } from "../TruncatedWithCopy";
 import { DeleteContestModal } from "./DeleteContestModal";
 import classes from "./styles.module.css";

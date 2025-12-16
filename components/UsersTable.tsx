@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type {
   PaginationModel as PaginationType,
   UserModel,
-} from "../../contracts/core/v1";
+} from "@contracts/core/v1";
 import { NextPagination } from "./Pagination";
 import { TruncatedWithCopy } from "./TruncatedWithCopy";
 import { getRoleColor } from "@/lib/lib";

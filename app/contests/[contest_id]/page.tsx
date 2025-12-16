@@ -17,7 +17,7 @@ import { Metadata } from "next";
 import type {
   ContestModel,
   ContestProblemListItemModel,
-} from "../../../../contracts/core/v1";
+} from "@contracts/core/v1";
 import { ContestProblemsTable } from "./ContestProblemsTable";
 import { ContestHotbar } from "@/components/ContestHotbar";
 import { ContestInfoPanel } from "@/components/ContestInfoPanel";

@@ -24,7 +24,7 @@ import { notifications } from "@mantine/notifications";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type * as corev1 from "../../../contracts/core/v1";
+import type * as corev1 from "@contracts/core/v1";
 import { StatusMessage } from "@/components/StatusMessage";
 
 interface ProblemsSectionProps {

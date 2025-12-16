@@ -4,7 +4,7 @@ import { numberToLetters } from "@/lib/lib";
 import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
 import { Box, Table, Text } from "@mantine/core";
 import { useRouter } from "next/navigation";
-import type { ContestProblemListItemModel } from "../../../../contracts/core/v1";
+import type { ContestProblemListItemModel } from "@contracts/core/v1";
 import classes from "./ContestProblemsTable.module.css";
 
 type ContestProblemsTableProps = {

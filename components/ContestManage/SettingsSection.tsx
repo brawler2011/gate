@@ -17,7 +17,7 @@ import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type * as corev1 from "../../../contracts/core/v1";
+import type * as corev1 from "@contracts/core/v1";
 import { APP_COLORS } from "@/lib/theme/colors";
 import { StatusMessage } from "@/components/StatusMessage";
 

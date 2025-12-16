@@ -3,7 +3,7 @@
 import { Text, Table, Box } from "@mantine/core";
 import { IconTrophy, IconChevronRight } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import type { ContestModel } from "../../contracts/core/v1";
+import type { ContestModel } from "@contracts/core/v1";
 import classes from "./HomeContestsList.module.css";
 
 type HomeContestsListProps = {

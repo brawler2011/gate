@@ -58,7 +58,10 @@ export const Call = async <T>(
     return [null, data];
   } catch (error) {
     if (error instanceof GatewayApiError) {
-      console.log("error", error);
+      // Don't log 401 errors - they're expected when user is not authenticated
+      if (error.status !== 401) {
+        console.log("error", error);
+      }
       const body = error.body as { message?: string; request_id?: string } | undefined;
       return [{
         status: error.status,

@@ -3,7 +3,7 @@
 import type {
   ProblemsListItemModel,
   PaginationModel as PaginationType,
-} from "../../../contracts/core/v1";
+} from "@contracts/core/v1";
 import { WorkshopProblemsSearchInput } from "./WorkshopProblemsSearchInput";
 import { WorkshopProblemsContent } from "./WorkshopProblemsContent";
 import { usePageTransition } from "./WorkshopPageWrapper";

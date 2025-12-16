@@ -14,7 +14,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import type { PostModel, PaginationModel } from "../../../contracts/gateway/v1";
+import type { PostModel, PaginationModel } from "@contracts/gateway/v1";
 import { NextPagination } from "../Pagination";
 import { StatusMessage } from "../StatusMessage";
 import { AdminBlogsSearchInput } from "./AdminBlogsSearchInput";

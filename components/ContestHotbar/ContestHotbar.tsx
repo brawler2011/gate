@@ -13,7 +13,7 @@ import {
   IconUser,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import type { ContestModel } from "../../../contracts/core/v1";
+import type { ContestModel } from "@contracts/core/v1";
 import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
 import { PermissionChecker } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/auth";

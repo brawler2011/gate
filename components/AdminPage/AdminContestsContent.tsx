@@ -11,7 +11,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useEffect, useState } from "react";
-import type { ContestModel, PaginationModel } from "../../../contracts/core/v1";
+import type { ContestModel, PaginationModel } from "@contracts/core/v1";
 import { NextPagination } from "../Pagination";
 import { StatusMessage } from "../StatusMessage";
 import { AdminContestsSearchInput } from "./AdminContestsSearchInput";

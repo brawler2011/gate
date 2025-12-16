@@ -22,7 +22,7 @@ import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
-import type { ProblemModel } from "../../contracts/core/v1";
+import type { ProblemModel } from "@contracts/core/v1";
 import type { ApiError } from "@/lib/api";
 
 type ProblemFormData = {

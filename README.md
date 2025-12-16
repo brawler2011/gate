@@ -74,7 +74,6 @@ frontend/
 │   ├── contest-role.ts    # Роли участников контеста
 │   ├── formatDate.ts      # Форматирование дат
 │   └── useSubmissionsWebSocket.ts  # WebSocket хук
-├── content/blog/          # MDX файлы блога
 └── public/                # Статические файлы
 ```
 
@@ -185,7 +184,6 @@ npm run lint
 
 - **typescript** (5.9.3): Type safety
 - **@tabler/icons-react**: Иконки
-- **gray-matter**: Парсинг frontmatter в MDX
 - **postcss**: CSS обработка с Mantine presets
 
 ## 🎨 Технологии UI/UX

@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import {CreateSubmissionForm} from "@/components/CreateSubmissionForm";
 import Link from "next/link";
-import type {ContestProblemListItemModel, ContestModel, ContestProblemModel, SubmissionsListItemModel} from "../../contracts/core/v1";
+import type {ContestProblemListItemModel, ContestModel, ContestProblemModel, SubmissionsListItemModel} from "@contracts/core/v1";
 import {Problem} from "@/components/Problem";
 import {numberToLetters} from '@/lib/lib';
 import {CONTEST_SIDEBAR_LEFT_WIDTH, CONTEST_SIDEBAR_RIGHT_WIDTH} from "@/lib/constants";

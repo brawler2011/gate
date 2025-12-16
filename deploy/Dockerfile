@@ -11,8 +11,9 @@ RUN bun install --frozen-lockfile
 # Копируем contracts/ (нужны для импортов)
 COPY contracts/ ../contracts/
 
-# Копируем остальные файлы frontend/ (включая .env.production)
+# Копируем остальные файлы frontend/ (включая .env.production, исключая папку deploy)
 COPY frontend/ .
+RUN rm -rf deploy
 
 # Переменные окружения для сборки
 # Только NEXT_PUBLIC_* переменные нужно передавать как build args

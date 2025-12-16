@@ -11,7 +11,7 @@ import {
 } from "@mantine/core";
 import { IconPhoto, IconUpload } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import type { PostModel } from "../../../contracts/gateway/v1";
+import type { PostModel } from "@contracts/gateway/v1";
 
 interface BlogPostFormProps {
   opened: boolean;

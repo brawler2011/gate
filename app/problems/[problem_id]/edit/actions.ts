@@ -1,7 +1,7 @@
 "use server";
 
 import { updateProblem as updateProblemAction } from "@/lib/actions";
-import * as corev1 from "../../../../../contracts/core/v1";
+import * as corev1 from "@contracts/core/v1";
 
 export const UpdateProblem = async (
   id: string,

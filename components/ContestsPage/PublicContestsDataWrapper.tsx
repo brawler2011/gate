@@ -3,7 +3,7 @@
 import type {
   ContestModel,
   PaginationModel as PaginationType,
-} from "../../../contracts/core/v1";
+} from "@contracts/core/v1";
 import { ContestsTable } from "../ContestsTable";
 import { NextPagination } from "../Pagination";
 import { Center, Text } from "@mantine/core";

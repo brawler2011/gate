@@ -5,7 +5,7 @@ import { SubmissionsList } from './SubmissionsList';
 import { useSubmissionsWebSocket } from '@/lib/useSubmissionsWebSocket';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useRef } from 'react';
-import type { SubmissionsListItemModel } from '../../../contracts/core/v1';
+import type { SubmissionsListItemModel } from '@contracts/core/v1';
 
 interface SubmissionsListClientProps {
     initialSubmissions: SubmissionsListItemModel[];

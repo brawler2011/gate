@@ -4,7 +4,7 @@ import { Stack } from "@mantine/core";
 import type {
   PaginationModel as PaginationType,
   ProblemsListItemModel,
-} from "../../../contracts/core/v1";
+} from "@contracts/core/v1";
 import { NextPagination } from "../Pagination";
 import { WorkshopProblemsGrid } from "./WorkshopProblemsGrid";
 

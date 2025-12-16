@@ -5,7 +5,7 @@ import React from "react";
 import {useForm} from "@mantine/form";
 import {useRouter} from "next/navigation";
 import {useMutation} from "@tanstack/react-query";
-import {CreationResponseModel} from "../../contracts/core/v1";
+import {CreationResponseModel} from "@contracts/core/v1";
 import {useDisclosure} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconPlus} from "@tabler/icons-react";

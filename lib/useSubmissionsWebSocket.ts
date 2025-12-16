@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { SubmissionsListItemModel } from '../../contracts/core/v1';
+import type { SubmissionsListItemModel } from '@contracts/core/v1';
 
 // WebSocket message types from backend
 type WebSocketMessageType = 

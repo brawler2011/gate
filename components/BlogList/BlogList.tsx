@@ -3,7 +3,7 @@
 import { Stack, Text } from "@mantine/core";
 import { BlogPost } from "@/components/BlogPost/BlogPost";
 import { NextPagination } from "@/components/Pagination";
-import type { PostModel, PaginationModel } from "../../../contracts/gateway/v1";
+import type { PostModel, PaginationModel } from "@contracts/gateway/v1";
 
 type BlogListProps = {
   posts: PostModel[];

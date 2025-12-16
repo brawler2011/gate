@@ -2,7 +2,7 @@
 
 import { Anchor, Loader, Table, Text } from "@mantine/core";
 import Link from "next/link";
-import type { SubmissionsListItemModel } from "../../../contracts/core/v1";
+import type { SubmissionsListItemModel } from "@contracts/core/v1";
 import { StateColor, StateString, TimeBeautify } from "@/lib/lib";
 import { useSubmissionsWebSocket, type SubmissionWithProgress } from "@/lib/useSubmissionsWebSocket";
 import { notifications } from "@mantine/notifications";

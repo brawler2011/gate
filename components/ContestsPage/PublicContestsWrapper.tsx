@@ -3,11 +3,11 @@
 import { useState } from "react";
 import type {
   PaginationModel as PaginationType,
-} from "../../../contracts/core/v1";
+} from "@contracts/core/v1";
 import { usePageTransition } from "./ContestsPageWrapper";
 import { ContestsContentSkeleton } from "./ContestsContentSkeleton";
 import { PublicContestsDataWrapper } from "./PublicContestsDataWrapper";
-import type { ContestModel } from "../../../contracts/core/v1";
+import type { ContestModel } from "@contracts/core/v1";
 import { ContestsSearchInput } from "./ContestsSearchInput";
 import { Stack } from "@mantine/core";
 

@@ -6,7 +6,7 @@ import {
   Text,
 } from "@mantine/core";
 import { useRouter } from "next/navigation";
-import type { ContestModel } from "../../../contracts/core/v1";
+import type { ContestModel } from "@contracts/core/v1";
 import classes from "./styles.module.css";
 
 type ContestsTableProps = {
