@@ -36,6 +36,9 @@ tsconfig.tsbuildinfo
 **/dist/
 **/build/
 
+# Deploy artifacts
+deploy/*.tar.gz
+
 # Don't exclude these - they're needed
 !frontend/
 !contracts/
