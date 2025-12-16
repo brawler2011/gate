@@ -1,2 +1,0 @@
-export { ContestInfoPanel } from "./ContestInfoPanel";
-

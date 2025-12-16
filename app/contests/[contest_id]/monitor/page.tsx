@@ -6,8 +6,8 @@ import {
     Center
 } from '@mantine/core';
 import {Metadata} from "next";
-import {DefaultLayout} from "@/components/Layout";
-import {ContestInfoPanel} from "@/components/ContestInfoPanel";
+import {DefaultLayout} from '@/components/shared';
+import {ContestInfoPanel} from '@/components/contests/ContestInfoPanel';
 import {getContest} from "@/lib/actions";
 import {getCurrentUser} from "@/lib/auth";
 import {getMyContestRole} from "@/lib/contest-role";

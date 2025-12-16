@@ -1,2 +1,0 @@
-export { ContestHotbar } from "./ContestHotbar";
-

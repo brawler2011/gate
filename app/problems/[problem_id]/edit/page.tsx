@@ -1,7 +1,7 @@
 import {UpdateProblem} from "@/app/problems/[problem_id]/edit/actions";
-import {ProblemForm} from "@/components/ProblemForm";
-import {DefaultLayout} from "@/components/Layout";
-import {ErrorDisplay} from "@/components/ErrorDisplay";
+import {ProblemForm} from '@/components/problems/ProblemForm';
+import {DefaultLayout} from '@/components/shared';
+import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
 import {getProblem, uploadProblemTests as uploadProblemTestsAction,} from "@/lib/actions";
 import {Metadata} from "next";
 

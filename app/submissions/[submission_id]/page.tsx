@@ -1,6 +1,6 @@
-import { CodeBlock } from "@/components/CodeBlock";
-import { DefaultLayout } from "@/components/Layout";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { CodeBlock } from '@/components/shared/CodeBlock';
+import { DefaultLayout } from '@/components/shared';
+import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { getSubmission } from "@/lib/actions";
 import {
   LangNameToString,

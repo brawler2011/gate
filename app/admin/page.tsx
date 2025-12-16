@@ -1,7 +1,6 @@
-import { DefaultLayout } from "@/components/Layout";
-import { UsersContent } from "@/components/UsersContent";
-import { UsersContentSkeleton } from "@/components/UsersPage";
-import { AdminBlogsContent, AdminContestsContent, AdminTabs } from "@/components/AdminPage";
+import { DefaultLayout } from '@/components/shared';
+import { UsersContent, UsersContentSkeleton } from '@/components/users';
+import { AdminBlogsContent, AdminContestsContent, AdminTabs } from '@/components/admin';
 import { Container, Skeleton, Stack } from "@mantine/core";
 import { Metadata } from "next";
 import { Suspense } from "react";

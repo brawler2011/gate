@@ -1,2 +1,0 @@
-export { UsersContentSkeleton } from "./UsersContentSkeleton";
-

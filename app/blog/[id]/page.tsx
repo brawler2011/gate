@@ -1,4 +1,4 @@
-import { DefaultLayout } from "@/components/Layout";
+import { DefaultLayout } from '@/components/shared';
 import { getPostById } from "@/lib/actions";
 import { formatDate } from "@/lib/formatDate";
 import { Avatar, Container, Group, Stack, Text, Title } from "@mantine/core";

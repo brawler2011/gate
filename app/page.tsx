@@ -1,4 +1,4 @@
-import { DefaultLayout } from "@/components/Layout";
+import { DefaultLayout } from '@/components/shared';
 import { isAuthenticated } from "@/lib/auth";
 import { listPosts } from "@/lib/actions";
 import {
@@ -8,7 +8,7 @@ import {
   Title,
 } from "@mantine/core";
 import { IconNews } from "@tabler/icons-react";
-import { BlogList } from "@/components/BlogList";
+import { BlogList } from '@/components/blog/BlogList';
 
 export const metadata = {
   title: "Главная",

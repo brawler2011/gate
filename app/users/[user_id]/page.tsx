@@ -1,6 +1,6 @@
-import { DefaultLayout } from "@/components/Layout";
-import { Profile } from "@/components/Profile";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { DefaultLayout } from '@/components/shared';
+import { Profile } from '@/components/users/Profile';
+import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { getUser } from "@/lib/actions";
 import { isValidUUIDV4 } from "@/lib/lib";
 import { Metadata } from "next";

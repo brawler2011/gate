@@ -1,2 +1,0 @@
-export { TruncatedWithCopy } from "./TruncatedWithCopy";
-

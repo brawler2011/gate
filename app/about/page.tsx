@@ -1,4 +1,4 @@
-import { PresentationSlide } from "@/components/PresentationSlide";
+import { PresentationSlide } from '@/components/shared/PresentationSlide';
 
 export const metadata = {
   title: "О проекте",

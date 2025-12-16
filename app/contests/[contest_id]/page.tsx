@@ -1,7 +1,7 @@
-import { Footer } from "@/components/Footer";
-import { HeaderWithSession } from "@/components/HeaderWithSession";
-import { Layout } from "@/components/Layout";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { Footer } from '@/components/shared/Footer';
+import { HeaderWithSession } from '@/components/shared/HeaderWithSession';
+import { Layout } from '@/components/shared';
+import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { getContest } from "@/lib/actions";
 import {
   AppShellFooter,
@@ -19,8 +19,8 @@ import type {
   ContestProblemListItemModel,
 } from "@contracts/core/v1";
 import { ContestProblemsTable } from "./ContestProblemsTable";
-import { ContestHotbar } from "@/components/ContestHotbar";
-import { ContestInfoPanel } from "@/components/ContestInfoPanel";
+import { ContestHotbar } from '@/components/contests/ContestHotbar';
+import { ContestInfoPanel } from '@/components/contests/ContestInfoPanel';
 import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";
 import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";

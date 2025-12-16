@@ -1,6 +1,6 @@
 "use client";
 
-import { CreateSubmissionForm } from "@/components/CreateSubmissionForm";
+import { CreateSubmissionForm } from '@/components/submissions/CreateSubmissionForm';
 import { numberToLetters } from "@/lib/lib";
 import { Box, Paper, Select, Stack } from "@mantine/core";
 import { useState } from "react";

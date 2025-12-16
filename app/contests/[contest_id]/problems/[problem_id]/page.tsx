@@ -5,10 +5,10 @@ import {
   getContestProblem,
   getMySubmissions,
 } from "@/lib/actions";
-import { HeaderWithSession } from "@/components/HeaderWithSession";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { HeaderWithSession } from '@/components/shared/HeaderWithSession';
+import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { Metadata } from "next";
-import { Task } from "@/components/Task";
+import { Task } from '@/components/shared/Task';
 import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";
 

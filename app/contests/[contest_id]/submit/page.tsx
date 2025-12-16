@@ -1,7 +1,7 @@
-import { Footer } from "@/components/Footer";
-import { HeaderWithSession } from "@/components/HeaderWithSession";
-import { Layout } from "@/components/Layout";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { Footer } from '@/components/shared/Footer';
+import { HeaderWithSession } from '@/components/shared/HeaderWithSession';
+import { Layout } from '@/components/shared';
+import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { getContest } from "@/lib/actions";
 import {
   AppShellFooter,
@@ -12,8 +12,8 @@ import {
   Container,
 } from "@mantine/core";
 import { Metadata } from "next";
-import { ContestHotbar } from "@/components/ContestHotbar";
-import { ContestInfoPanel } from "@/components/ContestInfoPanel";
+import { ContestHotbar } from '@/components/contests/ContestHotbar';
+import { ContestInfoPanel } from '@/components/contests/ContestInfoPanel';
 import { SubmitSubmissionClient } from "./SubmitSubmissionClient";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyContestRole } from "@/lib/contest-role";

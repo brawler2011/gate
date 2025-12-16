@@ -1,2 +1,0 @@
-export { HomeProblemsTable } from "./HomeProblemsTable";
-

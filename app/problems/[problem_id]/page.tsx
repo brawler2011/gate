@@ -1,8 +1,8 @@
 "use server";
 
-import { DefaultLayout } from "@/components/Layout";
-import { Problem } from "@/components/Problem";
-import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { DefaultLayout } from '@/components/shared';
+import { Problem } from '@/components/problems/Problem';
+import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { getProblem } from "@/lib/actions";
 import { Metadata } from "next";
 import { Stack } from "@mantine/core";
