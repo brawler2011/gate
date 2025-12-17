@@ -6,7 +6,9 @@ WORKDIR /app
 
 # Копируем файлы зависимостей и устанавливаем зависимости
 COPY frontend/package.json frontend/bun.lock ./
-RUN bun install --frozen-lockfile
+# Кешируем зависимости bun для ускорения установки
+RUN --mount=type=cache,id=bun-cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 # Копируем contracts/ (нужны для импортов)
 COPY contracts/ ../contracts/
@@ -23,8 +25,13 @@ ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NODE_ENV=production
 
-# Собираем приложение
-RUN bun run build
+# Отключаем телеметрию для небольшого ускорения
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Собираем приложение с использованием кэша Next.js
+# Это позволяет не пересобирать неизмененные компоненты и страницы
+RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
+    bun run build
 
 # Этап 2: Production образ
 FROM oven/bun:1-alpine AS runner

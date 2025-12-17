@@ -101,7 +101,7 @@ WEBSOCKET_URL=wss://gate149.ru
 ### Предварительные требования
 
 - **Node.js**: 18+
-- **npm** или **bun**: Последняя версия
+- **bun**: Последняя версия
 - **Backend API**: Запущенный Go-сервер (core) на порту 8080
 - **Ory Kratos**: Запущенный на порту 4433
 
@@ -109,7 +109,7 @@ WEBSOCKET_URL=wss://gate149.ru
 
 ```bash
 cd frontend
-npm install
+bun install
 ```
 
 ### Скрипты
@@ -117,7 +117,7 @@ npm install
 **Запуск dev-сервера:**
 
 ```bash
-npm run dev
+bun dev
 ```
 
 Приложение будет доступно на `http://localhost:3000`
@@ -125,19 +125,19 @@ npm run dev
 **Сборка для production:**
 
 ```bash
-npm run build
+bun run build
 ```
 
 **Запуск production сервера:**
 
 ```bash
-npm run start
+bun run start
 ```
 
 **Линтинг:**
 
 ```bash
-npm run lint
+bun run lint
 ```
 
 ## 🧩 Ключевые зависимости

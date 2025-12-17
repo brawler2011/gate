@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "deploy": "bun run deploy/deploy.ts --AutoDeploy"
+    "deploy": "bun run deploy/deploy.ts --AutoDeploy",
+    "deploy:redeploy": "bun run deploy/deploy.ts --StartFrom deploy --AutoDeploy",
+    "deploy:upload": "bun run deploy/deploy.ts --StartFrom upload --AutoDeploy"
   },
   "dependencies": {
     "@mantine/core": "^8.3.10",
