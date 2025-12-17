@@ -17,7 +17,7 @@ RUN rm -rf deploy
 
 # Переменные окружения для сборки
 # Только NEXT_PUBLIC_* переменные нужно передавать как build args
-# Остальные (BACKEND_API_URL, ORY_SDK_URL и т.д.) читаются из .env.production
+# Остальные (BACKEND_API_URL и т.д.) читаются из .env.production
 ARG NEXT_PUBLIC_APP_URL
 
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL

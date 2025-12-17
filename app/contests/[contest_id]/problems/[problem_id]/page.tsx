@@ -84,7 +84,7 @@ const Page = async (props: Props) => {
 
   // Build WebSocket URL for real-time updates
   // Remove trailing slash if present to avoid double slashes
-  const wsBaseUrl = (process.env.NEXT_PUBLIC_WS_core_URL || '').replace(/\/+$/, '');
+  const wsBaseUrl = (process.env.WEBSOCKET_URL || '').replace(/\/+$/, '');
   const wsUrl = wsBaseUrl ? `${wsBaseUrl}/submissions` : undefined;
 
   return (

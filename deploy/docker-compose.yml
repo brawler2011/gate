@@ -15,7 +15,6 @@ services:
     environment:
       - NODE_ENV=production
       - BACKEND_API_URL=${BACKEND_API_URL}
-      - ORY_SDK_URL=${ORY_SDK_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
     networks:
       # - gate_network

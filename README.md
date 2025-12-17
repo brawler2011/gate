@@ -82,30 +82,18 @@ frontend/
 Создайте файл `.env.local`:
 
 ```bash
-# Backend Gateway API (для Server Actions и SSR)
+# Backend Gateway API (через него также доступен Kratos по /api/.ory/)
 BACKEND_API_URL=http://localhost:8080
 
-# Ory Kratos (для аутентификации)
-ORY_SDK_URL=http://localhost:4433
-NEXT_PUBLIC_ORY_SDK_URL=http://localhost:4433
-
 # WebSocket для real-time обновлений посылок
-NEXT_PUBLIC_WS_core_URL=ws://localhost:8080
-
-# Judge0 для тестирования (опционально)
-TESTER_URL=http://localhost:8080
-
-# Gateway URL для клиентской части (опционально)
-GATEWAY_URL=http://localhost:8080
+WEBSOCKET_URL=ws://localhost:8080
 ```
 
 ### Production
 
 ```bash
 BACKEND_API_URL=https://gate149.ru
-ORY_SDK_URL=https://gate149.ru
-NEXT_PUBLIC_ORY_SDK_URL=https://gate149.ru
-NEXT_PUBLIC_WS_core_URL=wss://gate149.ru
+WEBSOCKET_URL=wss://gate149.ru
 ```
 
 ## 🚀 Установка и запуск
@@ -340,7 +328,6 @@ export function MyForm() {
 
 При старте приложения в консоли выводятся все env variables:
 ```
-🔧 ORY_SDK_URL = http://localhost:4433
 🔧 BACKEND_API_URL = http://localhost:8080
 ...
 ```

@@ -90,7 +90,7 @@ const Page = async ({params, searchParams}: PageProps) => {
     };
 
     // Remove trailing slash if present to avoid double slashes
-    const wsBaseUrl = (process.env.NEXT_PUBLIC_WS_core_URL || '').replace(/\/+$/, '');
+    const wsBaseUrl = (process.env.WEBSOCKET_URL || '').replace(/\/+$/, '');
 
     const [contestError, contestResponse] = await getContest(contest_id);
     const contestData = contestResponse;
