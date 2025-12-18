@@ -24,8 +24,7 @@ import {
 import { useDebouncedValue } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type * as corev1 from "@contracts/core/v1";
 import { ChangeRoleModal } from "./ChangeRoleModal";
 import { StatusMessage } from '@/components/shared/StatusMessage';
@@ -46,7 +45,6 @@ interface ParticipantsSectionProps {
 }
 
 export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
-  const router = useRouter();
   const [participants, setParticipants] = useState<corev1.ContestMemberModel[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -74,7 +72,7 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
   const pageSize = 10;
 
   // Load participants
-  const loadParticipants = async () => {
+  const loadParticipants = useCallback(async () => {
     setLoading(true);
     const [error, response] = await getContestMembers(contestId, page, pageSize);
     setLoading(false);
@@ -87,12 +85,12 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
     setParticipants(response.members);
     const total = response?.pagination?.total || 0;
     setTotalPages(Math.ceil(total / pageSize));
-  };
+  }, [contestId, page]);
 
   // Load participants on mount and when page changes
   useEffect(() => {
     loadParticipants();
-  }, [contestId, page]);
+  }, [loadParticipants]);
 
   // Search for users
   useEffect(() => {

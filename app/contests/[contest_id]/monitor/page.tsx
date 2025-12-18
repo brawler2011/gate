@@ -2,8 +2,7 @@ import {
     Box,
     Container,
     Text,
-    Title,
-    Center
+    Title
 } from '@mantine/core';
 import {Metadata} from "next";
 import {DefaultLayout} from '@/components/shared';

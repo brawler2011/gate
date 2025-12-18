@@ -19,7 +19,7 @@ export function UsersSearchInput() {
     if (urlSearch !== search) {
       setSearch(urlSearch);
     }
-  }, [searchParams]);
+  }, [searchParams, search]);
 
   // Only update URL when user actually types (not on initial render or URL change)
   useEffect(() => {
@@ -57,7 +57,7 @@ export function UsersSearchInput() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [search]);
+  }, [search, router, searchParams]);
 
   return (
     <Input

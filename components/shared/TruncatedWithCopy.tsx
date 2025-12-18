@@ -17,6 +17,15 @@ export function TruncatedWithCopy({
 }: Props) {
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => {
+        setCopied(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
+
   // Handle undefined, null, or non-string values
   const stringValue = value?.toString() || "";
   if (stringValue.length === 0) {
@@ -33,15 +42,6 @@ export function TruncatedWithCopy({
       console.error("Failed to copy:", err);
     });
   };
-
-  useEffect(() => {
-    if (copied) {
-      const timer = setTimeout(() => {
-        setCopied(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [copied]);
 
   const displayText = stringValue.substring(0, maxLength);
 

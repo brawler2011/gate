@@ -15,7 +15,7 @@ export interface BlogPostProps {
   useApiImage?: boolean;
 }
 
-export function BlogPost({ id, title, author, avatarUrl, description, date, previewImageUrl, useApiImage }: BlogPostProps) {
+export function BlogPost({ id, title, author, avatarUrl, description, date, previewImageUrl }: BlogPostProps) {
   // Determine the image source - use preview image ID if available
   const imageUrl = previewImageUrl 
     ? `/api/blogs/posts/${previewImageUrl}/image`  // используем image ID, а не post ID

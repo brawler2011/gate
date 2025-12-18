@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type {
   PaginationModel as PaginationType,
 } from "@contracts/core/v1";
@@ -11,21 +10,24 @@ import type { ContestModel } from "@contracts/core/v1";
 import { WorkshopContestsSearchInput } from "./WorkshopContestsSearchInput";
 import { WorkshopProblemsContentSkeleton } from "./WorkshopProblemsContentSkeleton";
 import { Stack } from "@mantine/core";
+
 type Props = {
   contests: ContestModel[];
   pagination: PaginationType;
+  search?: string;
 };
 
 export function WorkshopContestsWrapper({
   contests,
-  pagination
+  pagination,
+  search = ""
 }: Props) {
-  const [search, setSearch] = useState("");
   const { isPending, isPaginationTransition } = usePageTransition();
-  console.log(isPaginationTransition);
+
   return (
     <>
-      {isPending ? (!isPaginationTransition ? (
+      {/* { THIS IS NOT MISTAKE. IT IS THE CORRECT WAY TO HANDLE THE PAGINATION TRANSITION. COMPONENTS SHOULD BE INVERTED } */
+      isPending ? (!isPaginationTransition ? ( 
         <WorkshopProblemsContentSkeleton />
       ) : (
         <WorkshopContestsContentSkeleton />

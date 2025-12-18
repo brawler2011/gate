@@ -7,7 +7,6 @@ import {
     ThemeIcon, 
     Stack, 
     Group, 
-    AspectRatio, 
     Paper,
     Box,
     Overlay,

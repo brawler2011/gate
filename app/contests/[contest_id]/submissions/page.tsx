@@ -1,6 +1,6 @@
 import {Metadata} from 'next';
 import {getSubmissions, getContest} from '@/lib/actions';
-import {Stack, Container, Alert, Paper, Group, Box, Center} from '@mantine/core';
+import {Stack, Container, Alert, Paper, Group, Box} from '@mantine/core';
 import {IconAlertCircle} from '@tabler/icons-react';
 import {DefaultLayout} from '@/components/shared';
 import {NextPagination} from '@/components/shared/Pagination';

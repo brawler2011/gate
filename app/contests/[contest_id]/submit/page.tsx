@@ -8,7 +8,6 @@ import {
   AppShellHeader,
   AppShellMain,
   Box,
-  Center,
   Container,
 } from "@mantine/core";
 import { Metadata } from "next";

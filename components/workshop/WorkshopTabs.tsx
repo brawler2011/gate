@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { usePageTransition } from "./WorkshopPageWrapper";
 import { useState, useEffect } from "react";
 import { flushSync } from "react-dom";
-import { APP_COLORS } from "@/lib/theme/colors";
 
 type Props = {
   isAuthenticated: boolean;
@@ -16,7 +15,7 @@ export function WorkshopTabs({ isAuthenticated }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentView = searchParams.get("view") || "contests";
-  const { startTransition, pendingView, setPendingView, setIsPaginationTransition } = usePageTransition();
+  const { startTransition, setPendingView, setIsPaginationTransition } = usePageTransition();
   const [localView, setLocalView] = useState<string>(currentView);
   
   // Sync local view with current view when URL changes

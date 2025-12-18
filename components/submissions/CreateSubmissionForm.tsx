@@ -256,6 +256,7 @@ const CreateSubmissionForm = ({ onSubmit, problemSelect, large = false, disabled
                                     className={classes.codeEditor}
                                     disabled={disabled}
                                     textareaId="code-editor-textarea"
+                                    onKeyDown={handleKeyDown as any}
                                 />
                             )}
                         </div>

@@ -10,7 +10,7 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ContestModel, PaginationModel } from "@contracts/core/v1";
 import { NextPagination } from '@/components/shared/Pagination';
 import { StatusMessage } from '@/components/shared/StatusMessage';
@@ -35,7 +35,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
     message: string;
   } | null>(null);
 
-  const loadContests = async () => {
+  const loadContests = useCallback(async () => {
     setLoading(true);
     setError(false);
 
@@ -51,12 +51,12 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
     setContests(data.contests || []);
     setPagination(data.pagination || { total: 0, page: 1 });
     setLoading(false);
-  };
+  }, [page, search]);
 
   useEffect(() => {
     setPagination((prev) => ({ ...prev, page }));
     loadContests();
-  }, [page, search]);
+  }, [page, loadContests]);
 
   const handleDeleteContest = async (contestId: string) => {
     const [err] = await deleteContest(contestId);

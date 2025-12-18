@@ -19,7 +19,6 @@ type Section = "settings" | "problems" | "participants";
 
 type ContestManageHotbarProps = {
   contestId: string;
-  contestTitle: string;
   activeSection: Section;
   children?: React.ReactNode;
   maxWidth?: string | number;
@@ -46,7 +45,6 @@ const NAV_SECTIONS = [
 
 export function ContestManageHotbar({
   contestId,
-  contestTitle,
   activeSection,
   children,
   maxWidth,

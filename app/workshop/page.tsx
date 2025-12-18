@@ -56,6 +56,7 @@ const ContestsView = async ({
     <WorkshopContestsWrapper
       contests={contestsData!.contests}
       pagination={contestsData!.pagination}
+      search={search}
     />
   );
 };

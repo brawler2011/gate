@@ -15,7 +15,7 @@ export function ContestsTabs({ isAuthenticated }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentView = searchParams.get("view") || "public";
-  const { startTransition, pendingView, setPendingView, setIsPaginationTransition } = usePageTransition();
+  const { startTransition, setPendingView, setIsPaginationTransition } = usePageTransition();
   const [localView, setLocalView] = useState<string>(currentView);
   
   // Sync local view with current view when URL changes

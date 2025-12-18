@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename)
 const nextConfig = {
     output: 'standalone',
     eslint: {
-        ignoreDuringBuilds: true,
+        // ESLint will be run via bun lint or CI
     },
     pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
     experimental: {

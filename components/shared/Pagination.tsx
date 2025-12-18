@@ -16,13 +16,13 @@ interface NextPaginationProps {
 const NextPagination = ({pagination, baseUrl, queryParams = {}}: NextPaginationProps) => {
     const router = useRouter();
     const transitionContext = usePageTransition();
-    const [isPending, reactStartTransition] = React.useTransition();
+    const [, reactStartTransition] = React.useTransition();
 
     // Helper function to build query string
     const buildQueryString = (params: Record<string, string | number | undefined>) => {
         const validParams = Object.entries(params)
-            .filter(([_, value]) => value !== undefined && value !== '')
-            .map(([key, value]) => `${key}=${encodeURIComponent(value!)}`);
+            .filter(([key, value]) => value !== undefined && value !== '')
+            .map(([key, _value]) => `${key}=${encodeURIComponent(_value!)}`);
         return validParams.length > 0 ? `?${validParams.join('&')}` : '';
     };
 

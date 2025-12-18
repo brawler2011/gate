@@ -30,7 +30,8 @@ export function WorkshopProblemsWrapper({
 
   return (
     <>
-      {isPending ? (!isPaginationTransition ? (
+      {/* { THIS IS NOT MISTAKE. IT IS THE CORRECT WAY TO HANDLE THE PAGINATION TRANSITION. COMPONENTS SHOULD BE INVERTED } */
+      isPending ? (!isPaginationTransition ? (
         <WorkshopContestsContentSkeleton />
       ) : (
         <WorkshopProblemsContentSkeleton />

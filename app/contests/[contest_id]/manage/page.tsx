@@ -3,12 +3,9 @@ import {ProblemsSection} from '@/components/contests/ProblemsSection';
 import {SettingsSection} from '@/components/contests/SettingsSection';
 import {DefaultLayout} from '@/components/shared';
 import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
-import {ContestInfoPanel} from '@/components/contests/ContestInfoPanel';
 import {getContest} from "@/lib/actions";
-import {getCurrentUser} from "@/lib/auth";
-import {getMyContestRole} from "@/lib/contest-role";
 import {CONTEST_CONTENT_MAX_WIDTH, CONTEST_INFO_PANEL_WIDTH} from "@/lib/constants";
-import {Box, Container, Stack, Center} from "@mantine/core";
+import {Box, Container, Stack} from "@mantine/core";
 import {IconArrowLeft, IconPuzzle, IconSettings, IconUsers} from "@tabler/icons-react";
 import Link from "next/link";
 import type {ContestProblemListItemModel} from "@contracts/core/v1";
@@ -58,10 +55,6 @@ export default async function ContestManagePage({params, searchParams}: Props) {
     const contest = response!.contest;
     const problems: Array<ContestProblemListItemModel> = response!.problems || [];
     
-    // Get user and contest role for the info panel
-    const user = await getCurrentUser();
-    const contestRole = user ? await getMyContestRole(contestId) : null;
-
     const validSections = Object.values(SECTIONS);
     const activeSection = (
         validSections.includes(section as Section)

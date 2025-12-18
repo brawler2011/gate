@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { gateway } from '@contracts/gateway/v1';
 
 const oryKratosCookieName = 'ory_kratos_session';
 

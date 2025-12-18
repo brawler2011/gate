@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:dev": "bun --env-file=.env.development next build",
     "start": "next start",
-    "lint": "next lint",
+    "start:dev": "bun --env-file=.env.development next start",
+    "lint": "eslint .",
     "deploy": "bun run deploy/deploy.ts --AutoDeploy",
     "deploy:redeploy": "bun run deploy/deploy.ts --StartFrom deploy --AutoDeploy",
     "deploy:upload": "bun run deploy/deploy.ts --StartFrom upload --AutoDeploy"

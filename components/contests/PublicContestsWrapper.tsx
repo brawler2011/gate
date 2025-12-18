@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type {
   PaginationModel as PaginationType,
 } from "@contracts/core/v1";
@@ -10,6 +9,7 @@ import { PublicContestsDataWrapper } from "./PublicContestsDataWrapper";
 import type { ContestModel } from "@contracts/core/v1";
 import { ContestsSearchInput } from "./ContestsSearchInput";
 import { Stack } from "@mantine/core";
+import { useSearchParams } from "next/navigation";
 
 type Props = {
   contests: ContestModel[];
@@ -20,8 +20,9 @@ export function PublicContestsWrapper({
   contests,
   pagination
 }: Props) {
-  const [search, setSearch] = useState("");
-  const { isPending, isPaginationTransition } = usePageTransition();
+  const { isPending } = usePageTransition();
+  const searchParams = useSearchParams();
+  const search = searchParams.get("search") || "";
 
   return (
     <>

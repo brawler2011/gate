@@ -7,8 +7,6 @@ import { IconPlus } from "@tabler/icons-react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePageTransition } from "./WorkshopPageWrapper";
-import { useState, useEffect } from "react";
-import { flushSync } from "react-dom";
 
 type Props = {
   isAuthenticated: boolean;
@@ -19,15 +17,9 @@ export function WorkshopHeader({ isAuthenticated }: Props) {
   const searchParams = useSearchParams();
   const currentView = searchParams.get("view") || "contests";
   const { pendingView } = usePageTransition();
-  const [localView, setLocalView] = useState<string>(currentView);
   
-  // Sync local view with current view when URL changes
-  useEffect(() => {
-    setLocalView(currentView);
-  }, [currentView]);
-  
-  // Use pendingView if transition is happening, otherwise use localView
-  const view = pendingView || localView;
+  // Use pendingView if transition is happening, otherwise use currentView from URL
+  const view = pendingView || currentView;
 
   const createContestMutation = useMutation({
     mutationFn: async () => {
