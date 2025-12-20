@@ -96,10 +96,10 @@ type PatchPostByIdMultipartRequestBody PatchPostByIdMultipartBody
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Get a list of posts
-	// (GET /posts/)
+	// (GET /posts)
 	ListPosts(c *fiber.Ctx, params ListPostsParams) error
 	// Create a new post
-	// (POST /posts/)
+	// (POST /posts)
 	CreatePost(c *fiber.Ctx) error
 	// Delete a post by ID
 	// (DELETE /posts/{id})
@@ -257,9 +257,9 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 		router.Use(fiber.Handler(m))
 	}
 
-	router.Get(options.BaseURL+"/posts/", wrapper.ListPosts)
+	router.Get(options.BaseURL+"/posts", wrapper.ListPosts)
 
-	router.Post(options.BaseURL+"/posts/", wrapper.CreatePost)
+	router.Post(options.BaseURL+"/posts", wrapper.CreatePost)
 
 	router.Delete(options.BaseURL+"/posts/:id", wrapper.DeletePostById)
 

@@ -4,7 +4,7 @@ OpenAPI specifications and code generation for TypeScript client and Go server.
 
 ## Quick Start
 
-### Using Make (recommended)
+### Linux/macOS (Using Make)
 
 ```bash
 # Generate all code
@@ -13,8 +13,24 @@ make all
 # Or use specific targets
 make ts-gen          # TypeScript client only
 make go-gen          # Go server only
-make dependencies    # Install all dependencies
-make clean          # Remove generated files
+make merge-gateway   # Merge gateway specifications
+make deps            # Check dependencies
+make clean           # Remove generated files
+```
+
+### Windows (Using PowerShell)
+
+```powershell
+# Generate all code
+.\generate.ps1 all
+
+# Or use specific targets
+.\generate.ps1 ts-gen          # TypeScript client only
+.\generate.ps1 go-gen          # Go server only
+.\generate.ps1 merge-gateway   # Merge gateway specifications
+.\generate.ps1 deps            # Check dependencies
+.\generate.ps1 clean           # Remove generated files
+.\generate.ps1 help            # Show help
 ```
 
 ### Using npm
@@ -45,12 +61,14 @@ npm run gen          # Generate TypeScript client only
 Contains all API and WebSocket event type definitions:
 
 #### REST API Models
+
 - Standard REST endpoints for problems, contests, submissions, users
 - Request/Response models with full validation
 
 #### WebSocket Event Models
+
 - `TestingStartedEventModel` - Emitted when testing starts
-- `TestCompletedEventModel` - Emitted after each test completes  
+- `TestCompletedEventModel` - Emitted after each test completes
 - `TestingCompletedEventModel` - Emitted when testing finishes
 - `TestProgressEventType` - Enum for event type discrimination
 
@@ -73,29 +91,29 @@ const response: GetProblemResponse = await client.default.getProblem({
 After generation, WebSocket events can be imported and used:
 
 ```typescript
-import type { 
+import type {
   TestingStartedEventModel,
   TestCompletedEventModel,
   TestingCompletedEventModel,
 } from "../../contracts/core/v1";
 
-const ws = new WebSocket('/ws/submissions?ids=uuid1,uuid2');
+const ws = new WebSocket("/ws/submissions?ids=uuid1,uuid2");
 
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
-  
+
   switch (data.type) {
-    case 'testing_started': {
+    case "testing_started": {
       const event: TestingStartedEventModel = data;
       // Handle testing started
       break;
     }
-    case 'test_completed': {
+    case "test_completed": {
       const event: TestCompletedEventModel = data;
       // Handle test completed
       break;
     }
-    case 'testing_completed': {
+    case "testing_completed": {
       const event: TestingCompletedEventModel = data;
       // Handle testing completed
       break;
@@ -122,6 +140,6 @@ func (h *Handlers) UpdateProblem(c *fiber.Ctx, id openapi_types.UUID) error {
     // your logic
     return c.SendStatus(fiber.StatusOK)
 }
-// Register handlers 
+// Register handlers
 corev1.RegisterHandlers(app, handlers)
 ```

@@ -270,7 +270,7 @@ func NewListPostsRequest(server string, params *ListPostsParams) (*http.Request,
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/posts/")
+	operationPath := fmt.Sprintf("/posts")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -351,7 +351,7 @@ func NewCreatePostRequestWithBody(server string, contentType string, body io.Rea
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/posts/")
+	operationPath := fmt.Sprintf("/posts")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}

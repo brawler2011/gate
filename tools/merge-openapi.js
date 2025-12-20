@@ -6,8 +6,6 @@ const yaml = require('js-yaml');
  * Merge OpenAPI specifications from blogs and core into gateway
  */
 function mergeOpenAPI() {
-  console.log('Reading source OpenAPI specifications...');
-  
   // Read blogs and core OpenAPI files
   const blogsPath = path.join(__dirname, '../blogs/v1/openapi.yaml');
   const corePath = path.join(__dirname, '../core/v1/openapi.yaml');
@@ -22,9 +20,6 @@ function mergeOpenAPI() {
   
   const blogsSpec = yaml.load(fs.readFileSync(blogsPath, 'utf8'));
   const coreSpec = yaml.load(fs.readFileSync(corePath, 'utf8'));
-  
-  console.log(`  - Blogs: ${Object.keys(blogsSpec.paths || {}).length} paths`);
-  console.log(`  - Core: ${Object.keys(coreSpec.paths || {}).length} paths`);
   
   // Create gateway specification
   const gatewaySpec = {
@@ -47,16 +42,12 @@ function mergeOpenAPI() {
     'core': '/tester'
   };
   
-  // Merge paths with prefixes
-  console.log('Merging paths with prefixes...');
-  
   // Add blogs paths with /blogs prefix
   const blogsPaths = {};
   for (const [path, methods] of Object.entries(blogsSpec.paths || {})) {
     const newPath = SERVICE_PREFIXES.blogs + path;
     blogsPaths[newPath] = methods;
   }
-  console.log(`  - Blogs: ${Object.keys(blogsPaths).length} paths with /blogs prefix`);
   
   // Add core paths with /tester prefix
   const corePaths = {};
@@ -64,14 +55,12 @@ function mergeOpenAPI() {
     const newPath = SERVICE_PREFIXES.core + path;
     corePaths[newPath] = methods;
   }
-  console.log(`  - Core: ${Object.keys(corePaths).length} paths with /tester prefix`);
   
   // Merge into gateway
   Object.assign(gatewaySpec.paths, blogsPaths);
   Object.assign(gatewaySpec.paths, corePaths);
   
   // Merge security schemes
-  console.log('Merging security schemes...');
   if (blogsSpec.components?.securitySchemes) {
     Object.assign(gatewaySpec.components.securitySchemes, blogsSpec.components.securitySchemes);
   }
@@ -80,7 +69,6 @@ function mergeOpenAPI() {
   }
   
   // Merge schemas (models)
-  console.log('Merging schemas...');
   if (blogsSpec.components?.schemas) {
     Object.assign(gatewaySpec.components.schemas, blogsSpec.components.schemas);
   }
@@ -120,13 +108,7 @@ function mergeOpenAPI() {
   
   // Write merged specification
   const outputPath = path.join(outputDir, 'openapi.yaml');
-  console.log(`Writing merged specification to ${outputPath}...`);
   fs.writeFileSync(outputPath, yaml.dump(gatewaySpec, { lineWidth: -1 }));
-  
-  console.log('✓ Gateway OpenAPI specification created successfully');
-  console.log(`  - Total paths: ${Object.keys(gatewaySpec.paths).length}`);
-  console.log(`  - Total schemas: ${Object.keys(gatewaySpec.components.schemas).length}`);
-  console.log(`  - Total security schemes: ${Object.keys(gatewaySpec.components.securitySchemes).length}`);
 }
 
 // Run merge

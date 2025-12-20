@@ -13,16 +13,7 @@ export type ContestModel = {
     submissions_review_scope: string;
     created_by: string;
     owner?: UserModel;
-    start_time?: string | null;
-    end_time?: string | null;
-    scoring_mode: ContestModel.scoring_mode;
     created_at: string;
     updated_at: string;
 };
-export namespace ContestModel {
-    export enum scoring_mode {
-        POINTS = 'points',
-        BINARY = 'binary',
-    }
-}
 
