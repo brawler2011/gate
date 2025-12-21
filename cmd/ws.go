@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/gate149/core/config"
-	"github.com/gate149/core/internal/ws"
+	ws "github.com/gate149/core/internal/transport/ws/observer"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"

@@ -12,29 +12,18 @@ import (
 
 	testerv1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/config"
-	"github.com/gate149/core/internal/cache"
-	"github.com/gate149/core/internal/contests"
-	"github.com/gate149/core/internal/health"
-	"github.com/gate149/core/internal/middleware"
-	"github.com/gate149/core/internal/outbox"
-	"github.com/gate149/core/internal/permissions"
-	"github.com/gate149/core/internal/problems"
-	"github.com/gate149/core/internal/submissions"
-	"github.com/gate149/core/internal/users"
+	"github.com/gate149/core/internal/repository/pg"
+	"github.com/gate149/core/internal/transport/middleware"
+	handlers "github.com/gate149/core/internal/transport/rest/core"
+	"github.com/gate149/core/internal/usecase"
+	"github.com/gate149/core/internal/worker/outbox"
+
 	"github.com/gate149/core/pkg"
 	"github.com/gofiber/fiber/v2"
 	"github.com/ilyakaznacheev/cleanenv"
 	ory "github.com/ory/client-go"
 	"github.com/spf13/cobra"
 )
-
-type MergedHandlers struct {
-	*users.UsersHandlers
-	*contests.ContestsHandlers
-	*problems.ProblemsHandlers
-	*submissions.SolutionsHandlers
-	*health.HealthHandlers
-}
 
 var serverCmd = &cobra.Command{
 	Use:   "server",
@@ -86,29 +75,23 @@ func runServer(envFile string) {
 	defer pool.Close()
 	logger.Info("successfully connected to postgres")
 
-	logger.Info("connecting to redis")
-	redisClient, err := pkg.NewRedisClient(cfg.RedisURL)
-	if err != nil {
-		panic(err)
-	}
-	defer redisClient.Close()
-	logger.Info("successfully connected to redis")
+	usersRepo := pg.NewUsersRepo(pool)
+	outboxRepo := pg.NewOutboxRepo(pool)
+	imagesRepo := pg.NewImagesRepo(pool)
+	txManager := pkg.NewTxManager(pool)
 
-	redisCache := cache.NewRedisCache(redisClient)
-
-	usersRepo := users.NewRepository(pool)
-	usersUC := users.NewUseCase(usersRepo, redisCache)
+	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, imagesRepo, txManager)
 
 	pandocClient := pkg.NewPandocClient(&http.Client{}, cfg.Pandoc)
 
-	problemsRepo := problems.NewRepository(pool)
+	problemsRepo := pg.NewProblemsRepo(pool)
 
-	problemsUC := problems.NewUseCase(problemsRepo, redisCache, pandocClient)
+	problemsUC := usecase.NewProblemsUseCase(problemsRepo, pandocClient)
 
-	contestsRepo := contests.NewRepository(pool)
-	contestsUC := contests.NewContestUseCase(contestsRepo, redisCache)
+	contestsRepo := pg.NewContestsRepo(pool)
+	contestsUC := usecase.NewContestsUseCase(contestsRepo)
 
-	permissionsUC := permissions.NewUseCase(contestsUC, usersUC, problemsUC, redisCache)
+	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC)
 	logger.Info("successfully initialized permissions system")
 
 	// Initialize Judge0 client
@@ -127,43 +110,39 @@ func runServer(envFile string) {
 	}
 	logger.Info("successfully initialized nats publisher", slog.String("url", cfg.NatsUrl))
 
-	// Initialize outbox repository
-	outboxRepo := outbox.NewRepository(pool)
-
-	solutionsRepo := submissions.NewRepository(pool)
-	solutionsUC := submissions.NewUseCase(solutionsRepo, contestsUC, problemsUC, outboxRepo, natsPublisher, logger)
+	submissionsRepo := pg.NewSubmissionsRepo(pool)
+	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, natsPublisher)
 
 	// Initialize and start outbox worker
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	worker := outbox.NewWorker(logger, outboxRepo, solutionsRepo, problemsRepo, judge0Client, natsPublisher)
+	worker := outbox.NewWorker(logger, outboxRepo, submissionsRepo, problemsRepo, judge0Client, natsPublisher)
 	go worker.Start(ctx)
 
 	server := fiber.New()
 
 	server.Use(middleware.RequestLoggerMiddleware(logger))
 
-	merged := &MergedHandlers{
-		UsersHandlers:     users.NewHandlers(usersUC, solutionsUC, permissionsUC),
-		ContestsHandlers:  contests.NewHandlers(contestsUC, permissionsUC, solutionsUC, usersUC),
-		ProblemsHandlers:  problems.NewHandlers(problemsUC, permissionsUC),
-		SolutionsHandlers: submissions.NewHandlers(solutionsUC, permissionsUC, usersUC),
-		HealthHandlers:    health.NewHandlers(),
-	}
+	coreServer := handlers.NewCoreServer(
+		contestsUC,
+		permissionsUC,
+		submissionsUC,
+		usersUC,
+		problemsUC,
+	)
 
-	// Public API client for session validation (port 4433)
 	oryPublicConfiguration := ory.NewConfiguration()
 	oryPublicConfiguration.Servers = []ory.ServerConfiguration{{
 		URL: cfg.KratosURl,
 	}}
 	oryPublicClient := ory.NewAPIClient(oryPublicConfiguration)
 
-	testerv1.RegisterHandlersWithOptions(server, merged, testerv1.FiberServerOptions{
+	testerv1.RegisterHandlersWithOptions(server, coreServer, testerv1.FiberServerOptions{
 		Middlewares: []testerv1.MiddlewareFunc{
 			middleware.ErrorHandlerMiddleware(logger),
 			middleware.AuthMiddleware(oryPublicClient.FrontendAPI),
-			middleware.NewUsersMiddleware(usersUC).AuthMiddleware(),
+			middleware.UsersMiddleware(usersUC),
 		},
 	})
 

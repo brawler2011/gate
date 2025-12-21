@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -42,7 +44,6 @@ func NewPostgresDB(dsn string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// NewPostgresDBForMigrations returns a sql.DB for use with goose migrations
 func NewPostgresDBForMigrations(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -56,3 +57,11 @@ func NewPostgresDBForMigrations(dsn string) (*sql.DB, error) {
 
 	return db, nil
 }
+
+type DBTX interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+type RepoFactory func(db DBTX) any

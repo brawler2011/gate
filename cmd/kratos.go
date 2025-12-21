@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/gate149/core/config"
-	"github.com/gate149/core/internal/cache"
-	"github.com/gate149/core/internal/kratos"
-	"github.com/gate149/core/internal/users"
+	"github.com/gate149/core/internal/repository/pg"
+	"github.com/gate149/core/internal/transport/rest/kratos"
+	"github.com/gate149/core/internal/usecase"
 	"github.com/gate149/core/pkg"
 	"github.com/gofiber/fiber/v2"
 	"github.com/ilyakaznacheev/cleanenv"
@@ -70,18 +70,12 @@ func runKratos(envFile string) {
 	defer pool.Close()
 	logger.Info("successfully connected to postgres")
 
-	logger.Info("connecting to redis")
-	redisClient, err := pkg.NewRedisClient(cfg.RedisURL)
-	if err != nil {
-		panic(err)
-	}
-	defer redisClient.Close()
-	logger.Info("successfully connected to redis")
+	usersRepo := pg.NewUsersRepo(pool)
+	outboxRepo := pg.NewOutboxRepo(pool)
+	imagesRepo := pg.NewImagesRepo(pool)
+	txManager := pkg.NewTxManager(pool)
 
-	redisCache := cache.NewRedisCache(redisClient)
-
-	usersRepo := users.NewRepository(pool)
-	usersUC := users.NewUseCase(usersRepo, redisCache)
+	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, imagesRepo, txManager)
 
 	// Admin API client for identity management (port 4434)
 	oryAdminConfiguration := ory.NewConfiguration()

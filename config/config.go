@@ -22,7 +22,6 @@ type Config struct {
 	KratosAdminURL string `env:"KRATOS_ADMIN_URL" env-default:"http://localhost:4434"`
 }
 
-// WsConfig is a minimal config for WebSocket server
 type WsConfig struct {
 	Env       string `env:"ENV" env-default:"prod"`
 	WsAddress string `env:"WS_ADDRESS" env-default:":8081"`

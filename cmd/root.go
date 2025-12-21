@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gate149/core/cmd/migrate"
 	"github.com/spf13/cobra"
 )
 
@@ -20,8 +19,3 @@ func Execute() {
 		os.Exit(1)
 	}
 }
-
-func init() {
-	rootCmd.AddCommand(migrate.NewMigrateCmd())
-}
-
