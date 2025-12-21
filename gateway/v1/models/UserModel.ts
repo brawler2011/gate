@@ -12,6 +12,6 @@ export type UserModel = {
     name?: string;
     surname?: string;
     bio?: string;
-    img?: string;
+    imgId?: string;
 };
 

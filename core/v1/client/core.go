@@ -125,10 +125,10 @@ type ContestModel struct {
 // ContestProblemListItemModel defines model for ContestProblemListItemModel.
 type ContestProblemListItemModel struct {
 	CreatedAt   time.Time          `json:"created_at"`
-	MemoryLimit int64              `json:"memory_limit"`
-	Position    int64              `json:"position"`
+	MemoryLimit int32              `json:"memory_limit"`
+	Position    int32              `json:"position"`
 	ProblemId   openapi_types.UUID `json:"problem_id"`
-	TimeLimit   int64              `json:"time_limit"`
+	TimeLimit   int32              `json:"time_limit"`
 	Title       string             `json:"title"`
 	UpdatedAt   time.Time          `json:"updated_at"`
 }
@@ -138,13 +138,13 @@ type ContestProblemModel struct {
 	CreatedAt        time.Time          `json:"created_at"`
 	InputFormatHtml  string             `json:"input_format_html"`
 	LegendHtml       string             `json:"legend_html"`
-	MemoryLimit      int64              `json:"memory_limit"`
+	MemoryLimit      int32              `json:"memory_limit"`
 	NotesHtml        string             `json:"notes_html"`
 	OutputFormatHtml string             `json:"output_format_html"`
-	Position         int64              `json:"position"`
+	Position         int32              `json:"position"`
 	ProblemId        openapi_types.UUID `json:"problem_id"`
 	ScoringHtml      string             `json:"scoring_html"`
-	TimeLimit        int64              `json:"time_limit"`
+	TimeLimit        int32              `json:"time_limit"`
 	Title            string             `json:"title"`
 	UpdatedAt        time.Time          `json:"updated_at"`
 }
@@ -235,8 +235,8 @@ type ListUsersResponseModel struct {
 
 // PaginationModel defines model for PaginationModel.
 type PaginationModel struct {
-	Page  int64 `json:"page"`
-	Total int64 `json:"total"`
+	Page  int32 `json:"page"`
+	Total int32 `json:"total"`
 }
 
 // ProblemModel defines model for ProblemModel.
@@ -249,14 +249,14 @@ type ProblemModel struct {
 	IsPrivate        *bool              `json:"is_private,omitempty"`
 	Legend           string             `json:"legend"`
 	LegendHtml       string             `json:"legend_html"`
-	MemoryLimit      int64              `json:"memory_limit"`
+	MemoryLimit      int32              `json:"memory_limit"`
 	Notes            string             `json:"notes"`
 	NotesHtml        string             `json:"notes_html"`
 	OutputFormat     string             `json:"output_format"`
 	OutputFormatHtml string             `json:"output_format_html"`
 	Scoring          string             `json:"scoring"`
 	ScoringHtml      string             `json:"scoring_html"`
-	TimeLimit        int64              `json:"time_limit"`
+	TimeLimit        int32              `json:"time_limit"`
 	Title            string             `json:"title"`
 	UpdatedAt        time.Time          `json:"updated_at"`
 	Visibility       string             `json:"visibility"`
@@ -266,8 +266,8 @@ type ProblemModel struct {
 type ProblemsListItemModel struct {
 	CreatedAt   time.Time          `json:"created_at"`
 	Id          openapi_types.UUID `json:"id"`
-	MemoryLimit int64              `json:"memory_limit"`
-	TimeLimit   int64              `json:"time_limit"`
+	MemoryLimit int32              `json:"memory_limit"`
+	TimeLimit   int32              `json:"time_limit"`
 	Title       string             `json:"title"`
 	UpdatedAt   time.Time          `json:"updated_at"`
 }
@@ -278,16 +278,16 @@ type SubmissionModel struct {
 	ContestTitle string             `json:"contest_title"`
 	CreatedAt    time.Time          `json:"created_at"`
 	Id           openapi_types.UUID `json:"id"`
-	Language     int64              `json:"language"`
-	MemoryStat   int64              `json:"memory_stat"`
-	Penalty      int64              `json:"penalty"`
-	Position     int64              `json:"position"`
+	Language     int32              `json:"language"`
+	MemoryStat   int32              `json:"memory_stat"`
+	Penalty      int32              `json:"penalty"`
+	Position     int32              `json:"position"`
 	ProblemId    openapi_types.UUID `json:"problem_id"`
 	ProblemTitle string             `json:"problem_title"`
-	Score        int64              `json:"score"`
-	State        int64              `json:"state"`
+	Score        int32              `json:"score"`
+	State        int32              `json:"state"`
 	Submission   string             `json:"submission"`
-	TimeStat     int64              `json:"time_stat"`
+	TimeStat     int32              `json:"time_stat"`
 	UpdatedAt    time.Time          `json:"updated_at"`
 	UserId       openapi_types.UUID `json:"user_id"`
 	Username     string             `json:"username"`
@@ -298,19 +298,16 @@ type SubmissionsListItemModel struct {
 	ContestId    openapi_types.UUID `json:"contest_id"`
 	ContestTitle string             `json:"contest_title"`
 	CreatedAt    time.Time          `json:"created_at"`
-
-	// FailedTest The test number (1-indexed) where the submission failed. NULL for AC submissions.
-	FailedTest   *int               `json:"failed_test"`
 	Id           openapi_types.UUID `json:"id"`
-	Language     int64              `json:"language"`
-	MemoryStat   int64              `json:"memory_stat"`
-	Penalty      int64              `json:"penalty"`
-	Position     int64              `json:"position"`
+	Language     int32              `json:"language"`
+	MemoryStat   int32              `json:"memory_stat"`
+	Penalty      int32              `json:"penalty"`
+	Position     int32              `json:"position"`
 	ProblemId    openapi_types.UUID `json:"problem_id"`
 	ProblemTitle string             `json:"problem_title"`
-	Score        int64              `json:"score"`
-	State        int64              `json:"state"`
-	TimeStat     int64              `json:"time_stat"`
+	Score        int32              `json:"score"`
+	State        int32              `json:"state"`
+	TimeStat     int32              `json:"time_stat"`
 	UpdatedAt    time.Time          `json:"updated_at"`
 	UserId       openapi_types.UUID `json:"user_id"`
 	Username     string             `json:"username"`
@@ -330,33 +327,33 @@ type UpdateContestRequestModel struct {
 type UpdateProblemRequestModel struct {
 	InputFormat  *string `json:"input_format,omitempty"`
 	Legend       *string `json:"legend,omitempty"`
-	MemoryLimit  *int64  `json:"memory_limit,omitempty"`
+	MemoryLimit  *int32  `json:"memory_limit,omitempty"`
 	Notes        *string `json:"notes,omitempty"`
 	OutputFormat *string `json:"output_format,omitempty"`
 	Scoring      *string `json:"scoring,omitempty"`
-	TimeLimit    *int64  `json:"time_limit,omitempty"`
+	TimeLimit    *int32  `json:"time_limit,omitempty"`
 	Title        *string `json:"title,omitempty"`
 	Visibility   *string `json:"visibility,omitempty"`
 }
 
 // UserModel defines model for UserModel.
 type UserModel struct {
-	Bio       *string              `json:"bio,omitempty"`
-	CreatedAt time.Time            `json:"createdAt"`
-	Email     *openapi_types.Email `json:"email,omitempty"`
-	Id        openapi_types.UUID   `json:"id"`
-	Img       *string              `json:"img,omitempty"`
-	Name      *string              `json:"name,omitempty"`
-	Role      string               `json:"role"`
-	Surname   *string              `json:"surname,omitempty"`
-	UpdatedAt time.Time            `json:"updatedAt"`
-	Username  string               `json:"username"`
+	Bio       *string             `json:"bio,omitempty"`
+	CreatedAt time.Time           `json:"createdAt"`
+	Email     *string             `json:"email,omitempty"`
+	Id        openapi_types.UUID  `json:"id"`
+	ImgId     *openapi_types.UUID `json:"imgId,omitempty"`
+	Name      *string             `json:"name,omitempty"`
+	Role      string              `json:"role"`
+	Surname   *string             `json:"surname,omitempty"`
+	UpdatedAt time.Time           `json:"updatedAt"`
+	Username  string              `json:"username"`
 }
 
 // ListAdminContestsParams defines parameters for ListAdminContests.
 type ListAdminContestsParams struct {
-	Page       int64                              `form:"page" json:"page"`
-	PageSize   int64                              `form:"pageSize" json:"pageSize"`
+	Page       int32                              `form:"page" json:"page"`
+	PageSize   int32                              `form:"pageSize" json:"pageSize"`
 	Search     *string                            `form:"search,omitempty" json:"search,omitempty"`
 	Visibility *ListAdminContestsParamsVisibility `form:"visibility,omitempty" json:"visibility,omitempty"`
 	SortBy     *ListAdminContestsParamsSortBy     `form:"sortBy,omitempty" json:"sortBy,omitempty"`
@@ -384,8 +381,8 @@ type DeleteContestMemberParams struct {
 
 // ListContestMembersParams defines parameters for ListContestMembers.
 type ListContestMembersParams struct {
-	Page     int64 `form:"page" json:"page"`
-	PageSize int64 `form:"pageSize" json:"pageSize"`
+	Page     int32 `form:"page" json:"page"`
+	PageSize int32 `form:"pageSize" json:"pageSize"`
 }
 
 // UpdateContestMemberParams defines parameters for UpdateContestMember.
@@ -406,13 +403,13 @@ type CreateContestProblemParams struct {
 
 // ListContestSubmissionsParams defines parameters for ListContestSubmissions.
 type ListContestSubmissionsParams struct {
-	Page      int64                                  `form:"page" json:"page"`
-	PageSize  int64                                  `form:"pageSize" json:"pageSize"`
+	Page      int32                                  `form:"page" json:"page"`
+	PageSize  int32                                  `form:"pageSize" json:"pageSize"`
 	UserId    *openapi_types.UUID                    `form:"userId,omitempty" json:"userId,omitempty"`
 	ProblemId *openapi_types.UUID                    `form:"problemId,omitempty" json:"problemId,omitempty"`
-	State     *int64                                 `form:"state,omitempty" json:"state,omitempty"`
+	State     *int32                                 `form:"state,omitempty" json:"state,omitempty"`
 	SortOrder *ListContestSubmissionsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
-	Language  *int64                                 `form:"language,omitempty" json:"language,omitempty"`
+	Language  *int32                                 `form:"language,omitempty" json:"language,omitempty"`
 }
 
 // ListContestSubmissionsParamsSortOrder defines parameters for ListContestSubmissions.
@@ -420,8 +417,8 @@ type ListContestSubmissionsParamsSortOrder string
 
 // ListProblemsParams defines parameters for ListProblems.
 type ListProblemsParams struct {
-	Page       int64   `form:"page" json:"page"`
-	PageSize   int64   `form:"pageSize" json:"pageSize"`
+	Page       int32   `form:"page" json:"page"`
+	PageSize   int32   `form:"pageSize" json:"pageSize"`
 	Search     *string `form:"search,omitempty" json:"search,omitempty"`
 	Descending *bool   `form:"descending,omitempty" json:"descending,omitempty"`
 	Owner      *bool   `form:"owner,omitempty" json:"owner,omitempty"`
@@ -434,8 +431,8 @@ type CreateProblemParams struct {
 
 // ListPublicContestsParams defines parameters for ListPublicContests.
 type ListPublicContestsParams struct {
-	Page      int64                              `form:"page" json:"page"`
-	PageSize  int64                              `form:"pageSize" json:"pageSize"`
+	Page      int32                              `form:"page" json:"page"`
+	PageSize  int32                              `form:"pageSize" json:"pageSize"`
 	Search    *string                            `form:"search,omitempty" json:"search,omitempty"`
 	SortBy    *ListPublicContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 	SortOrder *ListPublicContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
@@ -449,14 +446,14 @@ type ListPublicContestsParamsSortOrder string
 
 // ListSubmissionsParams defines parameters for ListSubmissions.
 type ListSubmissionsParams struct {
-	Page      int64                           `form:"page" json:"page"`
-	PageSize  int64                           `form:"pageSize" json:"pageSize"`
+	Page      int32                           `form:"page" json:"page"`
+	PageSize  int32                           `form:"pageSize" json:"pageSize"`
 	ContestId *openapi_types.UUID             `form:"contestId,omitempty" json:"contestId,omitempty"`
 	UserId    *openapi_types.UUID             `form:"userId,omitempty" json:"userId,omitempty"`
 	ProblemId *openapi_types.UUID             `form:"problemId,omitempty" json:"problemId,omitempty"`
-	State     *int64                          `form:"state,omitempty" json:"state,omitempty"`
+	State     *int32                          `form:"state,omitempty" json:"state,omitempty"`
 	SortOrder *ListSubmissionsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
-	Language  *int64                          `form:"language,omitempty" json:"language,omitempty"`
+	Language  *int32                          `form:"language,omitempty" json:"language,omitempty"`
 }
 
 // ListSubmissionsParamsSortOrder defines parameters for ListSubmissions.
@@ -466,13 +463,13 @@ type ListSubmissionsParamsSortOrder string
 type CreateSubmissionParams struct {
 	ProblemId openapi_types.UUID `form:"problem_id" json:"problem_id"`
 	ContestId openapi_types.UUID `form:"contest_id" json:"contest_id"`
-	Language  int64              `form:"language" json:"language"`
+	Language  int32              `form:"language" json:"language"`
 }
 
 // ListUserContestsParams defines parameters for ListUserContests.
 type ListUserContestsParams struct {
-	Page      int64                            `form:"page" json:"page"`
-	PageSize  int64                            `form:"pageSize" json:"pageSize"`
+	Page      int32                            `form:"page" json:"page"`
+	PageSize  int32                            `form:"pageSize" json:"pageSize"`
 	Search    *string                          `form:"search,omitempty" json:"search,omitempty"`
 	SortBy    *ListUserContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 	SortOrder *ListUserContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
@@ -486,19 +483,19 @@ type ListUserContestsParamsSortOrder string
 
 // ListUsersParams defines parameters for ListUsers.
 type ListUsersParams struct {
-	Page     int64   `form:"page" json:"page"`
-	PageSize int64   `form:"pageSize" json:"pageSize"`
+	Page     int32   `form:"page" json:"page"`
+	PageSize int32   `form:"pageSize" json:"pageSize"`
 	Search   *string `form:"search,omitempty" json:"search,omitempty"`
 	Role     *string `form:"role,omitempty" json:"role,omitempty"`
 }
 
 // ListUserSubmissionsParams defines parameters for ListUserSubmissions.
 type ListUserSubmissionsParams struct {
-	Page      int64                               `form:"page" json:"page"`
-	PageSize  int64                               `form:"pageSize" json:"pageSize"`
+	Page      int32                               `form:"page" json:"page"`
+	PageSize  int32                               `form:"pageSize" json:"pageSize"`
 	ContestId *openapi_types.UUID                 `form:"contestId,omitempty" json:"contestId,omitempty"`
 	ProblemId *openapi_types.UUID                 `form:"problemId,omitempty" json:"problemId,omitempty"`
-	State     *int64                              `form:"state,omitempty" json:"state,omitempty"`
+	State     *int32                              `form:"state,omitempty" json:"state,omitempty"`
 	SortOrder *ListUserSubmissionsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
 }
 
@@ -507,8 +504,8 @@ type ListUserSubmissionsParamsSortOrder string
 
 // ListWorkshopContestsParams defines parameters for ListWorkshopContests.
 type ListWorkshopContestsParams struct {
-	Page      int64                                `form:"page" json:"page"`
-	PageSize  int64                                `form:"pageSize" json:"pageSize"`
+	Page      int32                                `form:"page" json:"page"`
+	PageSize  int32                                `form:"pageSize" json:"pageSize"`
 	Search    *string                              `form:"search,omitempty" json:"search,omitempty"`
 	SortBy    *ListWorkshopContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
 	SortOrder *ListWorkshopContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`

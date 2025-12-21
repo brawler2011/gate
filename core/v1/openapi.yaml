@@ -12,14 +12,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
         - name: search
           in: query
@@ -133,14 +133,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
         - name: search
           in: query
@@ -193,14 +193,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
         - name: search
           in: query
@@ -241,14 +241,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
         - name: search
           in: query
@@ -288,14 +288,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
         - name: search
           in: query
@@ -452,14 +452,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
       responses:
         "200":
@@ -563,14 +563,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
         - name: userId
           in: query
@@ -586,7 +586,7 @@ paths:
           in: query
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: sortOrder
           in: query
@@ -600,7 +600,7 @@ paths:
           in: query
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
       responses:
         "200":
@@ -630,7 +630,7 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
       requestBody:
         required: true
@@ -653,14 +653,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
         - name: contestId
           in: query
@@ -681,7 +681,7 @@ paths:
           in: query
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: sortOrder
           in: query
@@ -695,7 +695,7 @@ paths:
           in: query
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
       responses:
         "200":
@@ -740,14 +740,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
         - name: search
           in: query
@@ -798,14 +798,14 @@ paths:
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: pageSize
           in: query
           required: true
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 10
         - name: contestId
           in: query
@@ -821,7 +821,7 @@ paths:
           in: query
           schema:
             type: integer
-            format: int64
+            format: int32
           example: 1
         - name: sortOrder
           in: query
@@ -866,11 +866,11 @@ components:
       properties:
         page:
           type: integer
-          format: int64
+          format: int32
           example: 1
         total:
           type: integer
-          format: int64
+          format: int32
           example: 10
     ProblemModel:
       type: object
@@ -912,11 +912,11 @@ components:
           example: "Test problem"
         time_limit:
           type: integer
-          format: int64
+          format: int32
           example: 1000
         memory_limit:
           type: integer
-          format: int64
+          format: int32
           example: 256
 
         legend:
@@ -968,10 +968,10 @@ components:
           type: string
         memory_limit:
           type: integer
-          format: int64
+          format: int32
         time_limit:
           type: integer
-          format: int64
+          format: int32
         created_at:
           type: string
           format: date-time
@@ -1024,16 +1024,16 @@ components:
           example: "Test problem"
         time_limit:
           type: integer
-          format: int64
+          format: int32
           example: 1000
         memory_limit:
           type: integer
-          format: int64
+          format: int32
           example: 256
 
         position:
           type: integer
-          format: int64
+          format: int32
 
         legend_html:
           type: string
@@ -1140,17 +1140,17 @@ components:
           format: uuid
         position:
           type: integer
-          format: int64
+          format: int32
         title:
           type: string
           example: "Test task"
         memory_limit:
           type: integer
-          format: int64
+          format: int32
           example: 256
         time_limit:
           type: integer
-          format: int64
+          format: int32
           example: 1000
         created_at:
           type: string
@@ -1188,11 +1188,11 @@ components:
           type: string
         memory_limit:
           type: integer
-          format: int64
+          format: int32
           example: 256
         time_limit:
           type: integer
-          format: int64
+          format: int32
           example: 1000
         visibility:
           type: string
@@ -1277,27 +1277,27 @@ components:
 
         state:
           type: integer
-          format: int64
+          format: int32
           example: 1
         score:
           type: integer
-          format: int64
+          format: int32
           example: 100
         penalty:
           type: integer
-          format: int64
+          format: int32
           example: 28
         time_stat:
           type: integer
-          format: int64
+          format: int32
           example: 1000
         memory_stat:
           type: integer
-          format: int64
+          format: int32
           example: 256
         language:
           type: integer
-          format: int64
+          format: int32
           example: 1
 
         problem_id:
@@ -1309,7 +1309,7 @@ components:
 
         position:
           type: integer
-          format: int64
+          format: int32
           example: 1
 
         contest_id:
@@ -1318,12 +1318,6 @@ components:
         contest_title:
           type: string
           example: "Contest title"
-
-        failed_test:
-          type: integer
-          nullable: true
-          example: 3
-          description: "The test number (1-indexed) where the submission failed. NULL for AC submissions."
 
         updated_at:
           type: string
@@ -1376,27 +1370,27 @@ components:
 
         state:
           type: integer
-          format: int64
+          format: int32
           example: 1
         score:
           type: integer
-          format: int64
+          format: int32
           example: 100
         penalty:
           type: integer
-          format: int64
+          format: int32
           example: 28
         time_stat:
           type: integer
-          format: int64
+          format: int32
           example: 1000
         memory_stat:
           type: integer
-          format: int64
+          format: int32
           example: 256
         language:
           type: integer
-          format: int64
+          format: int32
           example: 1
 
         problem_id:
@@ -1408,7 +1402,7 @@ components:
 
         position:
           type: integer
-          format: int64
+          format: int32
           example: 1
 
         contest_id:
@@ -1463,7 +1457,6 @@ components:
           type: string
         email:
           type: string
-          format: email
           example: user@example.com
         name:
           type: string
@@ -1474,9 +1467,9 @@ components:
         bio:
           type: string
           example: Software developer passionate about coding
-        img:
+        imgId:
           type: string
-          example: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA...
+          format: uuid
     ListUsersResponseModel:
       type: object
       required:
@@ -1713,7 +1706,7 @@ components:
           description: Problem ID (for filtering)
         language:
           type: integer
-          format: int64
+          format: int32
           description: Programming language (for filtering)
       description: |
         WebSocket event sent to clients for submission list updates.
