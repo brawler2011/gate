@@ -13,20 +13,12 @@ RUN --mount=type=cache,id=bun-cache,target=/root/.bun/install/cache \
 # Копируем contracts/ (нужны для импортов)
 COPY contracts/ ../contracts/
 
-# Копируем остальные файлы frontend/ (включая .env.production, исключая папку deploy)
-COPY frontend/ .
-RUN rm -rf deploy
-
-# Переменные окружения для сборки
-# Только NEXT_PUBLIC_* переменные нужно передавать как build args
-# Остальные (BACKEND_API_URL и т.д.) читаются из .env.production
-ARG NEXT_PUBLIC_APP_URL
-
-ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+# Переменные окружения для сборки (читаем из .env.production внутри контейнера)
 ENV NODE_ENV=production
-
-# Отключаем телеметрию для небольшого ускорения
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Копируем остальные файлы frontend/
+COPY frontend/ .
 
 # Собираем приложение с использованием кэша Next.js
 # Это позволяет не пересобирать неизмененные компоненты и страницы
@@ -38,10 +30,11 @@ FROM oven/bun:1-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Создаем пользователя для безопасности
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
 # Копируем необходимые файлы из builder
 COPY --from=builder /app/public ./public

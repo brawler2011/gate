@@ -1,6 +1,6 @@
 {
-  "name": "nextjs-app-router-example",
-  "version": "0.1.0",
+  "name": "gate149-frontend",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

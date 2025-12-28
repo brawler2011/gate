@@ -170,12 +170,22 @@ async function main() {
         console.log("\x1b[33mWarning: .env.production not found!\x1b[0m");
       }
 
-      console.log("\x1b[36mBuilding Docker image...\x1b[0m");
-      
-      const composeFile = join(import.meta.dir, "docker-compose.yml");
-      
-      // Use Bun.spawn for TTY inheritance
-      await run(["docker", "compose", "-f", composeFile, "--env-file", envFilePath, "build"]);
+      console.log("\x1b[36mBuilding Docker image (docker build, без compose)...\x1b[0m");
+
+      const imageName = "deploy-frontend";
+
+      // Чистый docker build вместо локального compose: он лишь мешал и путал.
+      // NEXT_PUBLIC_* подтянутся из frontend/.env.production, который копируется в образ.
+      await run([
+        "docker",
+        "build",
+        "-f",
+        join(import.meta.dir, "Dockerfile"),
+        "-t",
+        imageName,
+        // контекст: корень репозитория (нужен contracts/ + frontend/)
+        join(import.meta.dir, "../.."),
+      ]);
       console.log("");
     }
 
@@ -186,9 +196,9 @@ async function main() {
       console.log("\x1b[36mStep 2: Saving Docker image to tar...\x1b[0m");
       console.log("\x1b[36m========================================\x1b[0m");
 
-      const composedImageName = "deploy-frontend"; // From docker-compose (папка deploy + service name)
+      const imageName = "deploy-frontend";
       // Use Bun.spawn for consistency (though save output is minimal)
-      await run(["docker", "save", "-o", tarPath, composedImageName]);
+      await run(["docker", "save", "-o", tarPath, imageName]);
       
       console.log(`\x1b[32mSaved to: ${tarPath}\x1b[0m`);
       console.log("");

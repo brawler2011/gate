@@ -1,37 +1,48 @@
-# Node modules (будут установлены в контейнере)
+# Node modules
 node_modules/
+**/node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun.lockb
 
-# Next.js build output (будет создан в контейнере)
+# Next.js build output
 .next/
 out/
+build/
+dist/
 *.tsbuildinfo
 
 # Git
 .git/
 .gitignore
+.gitattributes
 
 # IDE
 .vscode/
 .idea/
 .cursor/
+*.swp
+*.swo
 
-# Deployment files (не нужны в образе)
-deploy/
-
-# Documentation
-*.md
-!README.md
-
-# Environment files (передаются через docker-compose)
+# Environment files
 .env*.local
+.env.development
+.env.test
 
 # OS
 .DS_Store
+Thumbs.db
 
 # Testing
 coverage/
+__tests__/
 
-# Misc
-dist/
-build/
+# Deployment
+deploy/
+server-deploy.sh
+
+# Markdown
+*.md
+!README.md
+

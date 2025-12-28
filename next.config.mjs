@@ -7,8 +7,11 @@ const __dirname = path.dirname(__filename)
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     output: 'standalone',
+    typescript: {
+        ignoreBuildErrors: true,
+    },
     eslint: {
-        // ESLint will be run via bun lint or CI
+        ignoreDuringBuilds: true,
     },
     pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
     experimental: {

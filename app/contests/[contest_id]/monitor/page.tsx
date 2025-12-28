@@ -35,9 +35,9 @@ const Page = async ({params}: PageProps) => {
                     {/* Main Content */}
                     <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
                         <Container size="xl" py="md" px={0} mx={0} style={{ maxWidth: '100%' }}>
-                            <Title order={2}>Положение</Title>
+                            <Title order={2}>Монитор</Title>
                             <Text c="dimmed" mt="md">
-                                Функция мониторинга находится в разработке.
+                                Монитор скоро будет здесь!
                             </Text>
                         </Container>
                     </Box>
