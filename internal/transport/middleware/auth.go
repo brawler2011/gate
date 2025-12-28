@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/gate149/core/pkg"
-	"github.com/gofiber/fiber/v2"
 	ory "github.com/ory/client-go"
 )
 
@@ -16,44 +16,48 @@ const sessionKey contextKey = "session"
 const kratosSessionCookieName = "ory_kratos_session"
 
 // AuthMiddleware checks for a valid Kratos session cookie and retrieves the session
-func AuthMiddleware(frontendAPI ory.FrontendAPI) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.UserContext()
+func AuthMiddleware(frontendAPI ory.FrontendAPI) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
 
-		cookie := c.Cookies(kratosSessionCookieName, "")
-		if cookie == "" {
-			slog.Debug("no kratos session cookie found, skipping auth middleware")
-			return c.Next()
-		}
+			cookie, err := r.Cookie(kratosSessionCookieName)
+			if err != nil || cookie.Value == "" {
+				slog.Debug("no kratos session cookie found, skipping auth middleware")
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		session, _, err := frontendAPI.
-			ToSession(ctx).
-			Cookie(fmt.Sprintf("%s=%s", kratosSessionCookieName, cookie)).
-			Execute()
-		if err != nil {
-			slog.Error("kratos session cookie found, but failed to get session", "error", err)
-			return c.Next()
-		}
+			session, _, err := frontendAPI.
+				ToSession(ctx).
+				Cookie(fmt.Sprintf("%s=%s", kratosSessionCookieName, cookie.Value)).
+				Execute()
+			if err != nil {
+				slog.Error("kratos session cookie found, but failed to get session", "error", err)
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		if session == nil {
-			slog.Error("kratos session cookie found, but session is nil")
-			return c.Next()
-		}
+			if session == nil {
+				slog.Error("kratos session cookie found, but session is nil")
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		if !*session.Active {
-			slog.Error("kratos session cookie found, but session is not active")
-			return c.Next()
-		}
+			if !*session.Active {
+				slog.Error("kratos session cookie found, but session is not active")
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		ctx = context.WithValue(ctx, sessionKey, session)
-		c.SetUserContext(ctx)
-
-		return c.Next()
+			ctx = context.WithValue(ctx, sessionKey, session)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }
 
-// GetSession extracts Kratos session from context
-func GetSession(ctx context.Context) (*ory.Session, error) {
+// getSession extracts Kratos session from context
+func getSession(ctx context.Context) (*ory.Session, error) {
 	session, ok := ctx.Value(sessionKey).(*ory.Session)
 	if !ok {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "no session in context")

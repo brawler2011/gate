@@ -3,45 +3,50 @@ package middleware
 import (
 	"context"
 	"log/slog"
+	"net/http"
 
 	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/domain/models"
-	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
 const userKey = "user"
 
 // UsersMiddleware loads user from session into context
-func UsersMiddleware(usersUC interfaces.UsersUC) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.UserContext()
+func UsersMiddleware(usersUC interfaces.UsersUC) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
 
-		session, err := GetSession(ctx)
-		if err != nil {
-			slog.Error("failed to get session", "error", err)
-			return c.Next()
-		}
+			session, err := getSession(ctx)
+			if err != nil {
+				slog.Error("failed to get session", "error", err)
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		if session == nil {
-			return c.Next()
-		}
+			if session == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		kratosId, err := uuid.Parse(session.Identity.Id)
-		if err != nil {
-			slog.Error("failed to parse kratos id", "error", err, "kratos_id", session.Identity.Id)
-			return c.Next()
-		}
+			kratosId, err := uuid.Parse(session.Identity.Id)
+			if err != nil {
+				slog.Error("failed to parse kratos id", "error", err, "kratos_id", session.Identity.Id)
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		user, err := usersUC.GetUserByKratosId(ctx, kratosId)
-		if err != nil {
-			slog.Error("failed to get user by kratos id", "error", err, "kratos_id", session.Identity.Id)
-			return c.Next()
-		}
+			user, err := usersUC.GetUserByKratosId(ctx, kratosId)
+			if err != nil {
+				slog.Error("failed to get user by kratos id", "error", err, "kratos_id", session.Identity.Id)
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		c.SetUserContext(context.WithValue(ctx, userKey, user))
-
-		return c.Next()
+			ctx = context.WithValue(ctx, userKey, user)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }
 

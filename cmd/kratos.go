@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,7 +15,6 @@ import (
 	"github.com/gate149/core/internal/transport/rest/kratos"
 	"github.com/gate149/core/internal/usecase"
 	"github.com/gate149/core/pkg"
-	"github.com/gofiber/fiber/v2"
 	"github.com/ilyakaznacheev/cleanenv"
 	ory "github.com/ory/client-go"
 	"github.com/spf13/cobra"
@@ -86,16 +86,18 @@ func runKratos(envFile string) {
 
 	// Start private server for Kratos webhooks
 	kratosHandler := kratos.NewKratosHandler(usersUC, oryAdminClient.IdentityAPI)
-	privateServer := fiber.New(fiber.Config{
-		BodyLimit: 1024 * 1024, // 1 MB for webhook requests
-	})
 
-	// Setup private server routes
-	privateServer.Post("/webhook/kratos", kratosHandler.HandleKratosWebhook)
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /webhook/kratos", kratosHandler.HandleKratosWebhook)
+
+	privateServer := &http.Server{
+		Addr:    cfg.PrivateAddress,
+		Handler: mux,
+	}
 
 	go func() {
-		err := privateServer.Listen(cfg.PrivateAddress)
-		if err != nil {
+		err := privateServer.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
 			logger.Error("error starting private server", slog.Any("error", err))
 			os.Exit(1)
 		}
@@ -114,7 +116,7 @@ func runKratos(envFile string) {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
 
-	if err := privateServer.ShutdownWithContext(shutdownCtx); err != nil {
+	if err := privateServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("error shutting down private server", slog.Any("error", err))
 	}
 

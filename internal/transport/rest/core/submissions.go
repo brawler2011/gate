@@ -1,50 +1,46 @@
 package handlers
 
 import (
+	"context"
+
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/transport/middleware"
 	"github.com/gate149/core/pkg"
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 )
 
-func (h *CoreServer) CreateSubmission(c *fiber.Ctx, params corev1.CreateSubmissionParams) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) CreateSubmission(ctx context.Context, request corev1.CreateSubmissionRequestObject) (corev1.CreateSubmissionResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
 	// Check if user can create solution in this contest
-	canCreate, err := h.permissionsUC.HasContestPermission(ctx, params.ContestId, user.Id, models.ActionCreateSubmission)
+	canCreate, err := h.permissionsUC.HasContestPermission(ctx, request.Params.ContestId, user.Id, models.ActionCreateSubmission)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !canCreate {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to create solution")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to create solution")
 	}
 
-	// Parse request body
-	var req corev1.CreateSubmissionRequestModel
-	err = c.BodyParser(&req)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to parse request body")
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
+	req := *request.Body
 
 	// Validate solution size
 	solutionSize := int64(len(req.Submission))
 	if solutionSize == 0 || solutionSize > maxSolutionSize {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid solution size")
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid solution size")
 	}
 
-	langName := models.LanguageName(params.Language)
+	langName := models.LanguageName(request.Params.Language)
 	if err := models.LanguageNameValid(langName); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid language")
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid language")
 	}
 
 	solutionCreation := &models.SubmissionCreation{
 		UserId:    user.Id,
-		ProblemId: params.ProblemId,
-		ContestId: params.ContestId,
+		ProblemId: request.Params.ProblemId,
+		ContestId: request.Params.ContestId,
 		Language:  langName,
 		Solution:  req.Submission,
 		Penalty:   20,
@@ -52,47 +48,43 @@ func (h *CoreServer) CreateSubmission(c *fiber.Ctx, params corev1.CreateSubmissi
 
 	solutionID, err := h.submissionsUC.CreateSubmission(ctx, solutionCreation)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(corev1.CreationResponseModel{Id: solutionID})
+	return corev1.CreateSubmission200JSONResponse{Id: solutionID}, nil
 }
 
-func (h *CoreServer) GetSubmission(c *fiber.Ctx, id uuid.UUID) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmissionRequestObject) (corev1.GetSubmissionResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
-	submission, err := h.submissionsUC.GetSubmission(ctx, id)
+	submission, err := h.submissionsUC.GetSubmission(ctx, request.SubmissionId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// User can only view their own submission (simplified for now)
 	if submission.CreatedBy == nil || *submission.CreatedBy != user.Id {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
 	}
 
-	return c.JSON(corev1.GetSubmissionResponseModel{Submission: SolutionDTO(submission)})
+	return corev1.GetSubmission200JSONResponse{Submission: SolutionDTO(submission)}, nil
 }
 
-func (h *CoreServer) ListSubmissions(c *fiber.Ctx, params corev1.ListSubmissionsParams) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) ListSubmissions(ctx context.Context, request corev1.ListSubmissionsRequestObject) (corev1.ListSubmissionsResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
 	if !user.IsAdmin() {
-		return pkg.Wrap(pkg.NoPermission, nil, "only admins can list submissions")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "only admins can list submissions")
 	}
 
-	filter := ListSolutionsParamsDTO(params)
+	filter := ListSolutionsParamsDTO(request.Params)
 
 	solutionsList, err := h.submissionsUC.ListSubmissions(ctx, filter)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(ListSolutionsResponseDTO(solutionsList))
+	return corev1.ListSubmissions200JSONResponse(*ListSolutionsResponseDTO(solutionsList)), nil
 }
 
 func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) models.SubmissionsFilter {

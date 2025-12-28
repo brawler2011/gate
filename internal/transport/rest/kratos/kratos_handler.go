@@ -1,12 +1,12 @@
 package kratos
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
 
 	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/domain/models"
-	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	ory "github.com/ory/client-go"
 )
@@ -40,31 +40,34 @@ func NewKratosHandler(usersUC interfaces.UsersUC, identityAPI ory.IdentityAPI) *
 	}
 }
 
-func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
-	ctx := c.Context()
+func (h *KratosHandler) HandleKratosWebhook(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
 	slog.Info("Received webhook from Kratos",
-		"method", c.Method(),
-		"path", c.Path(),
-		"content_type", c.Get("Content-Type"),
+		"method", r.Method,
+		"path", r.URL.Path,
+		"content_type", r.Header.Get("Content-Type"),
 	)
 
 	var req KratosWebhookRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		slog.Error("Failed to parse webhook body", "error", err)
-		return c.Status(http.StatusBadRequest).JSON(&ErrorResponse{
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(&ErrorResponse{
 			Error: "Invalid request body",
 		})
+		return
 	}
 
 	slog.Info("Processing webhook", "user_id", req.UserId, "username", req.Username)
 
 	if req.UserId == "" || req.Username == "" {
 		slog.Error("Missing required fields in webhook")
-
-		return c.Status(http.StatusBadRequest).JSON(&ErrorResponse{
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(&ErrorResponse{
 			Error: "Missing required fields: userId and username",
 		})
+		return
 	}
 
 	defaultRole := models.UserRoleUser
@@ -72,9 +75,11 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 	kratosId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		slog.Error("Invalid userId format", "error", err, "user_id", req.UserId)
-		return c.Status(http.StatusBadRequest).JSON(&ErrorResponse{
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(&ErrorResponse{
 			Error: "Invalid userId format",
 		})
+		return
 	}
 
 	userCreation := models.CreateUserInput{
@@ -88,7 +93,9 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 		existingUser, fetchErr := h.usersUC.GetUserByKratosId(ctx, kratosId)
 		if fetchErr == nil && existingUser.Id != uuid.Nil {
 			slog.Info("User already exists", "kratos_id", req.UserId)
-			return c.Status(http.StatusOK).JSON(KratosWebhookResponse{})
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(KratosWebhookResponse{})
+			return
 		}
 
 		slog.Error("Failed to create user",
@@ -97,9 +104,11 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 			"username", req.Username,
 		)
 
-		return c.Status(http.StatusInternalServerError).JSON(&ErrorResponse{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(&ErrorResponse{
 			Error: "Failed to create user in database",
 		})
+		return
 	}
 
 	slog.Info("Successfully created user",
@@ -109,5 +118,6 @@ func (h *KratosHandler) HandleKratosWebhook(c *fiber.Ctx) error {
 		"role", defaultRole,
 	)
 
-	return c.Status(http.StatusOK).JSON(KratosWebhookResponse{})
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(KratosWebhookResponse{})
 }

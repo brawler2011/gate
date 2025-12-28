@@ -10,16 +10,16 @@ import (
 	"syscall"
 	"time"
 
-	testerv1 "github.com/gate149/contracts/core/v1"
+	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/config"
 	"github.com/gate149/core/internal/repository/pg"
 	"github.com/gate149/core/internal/transport/middleware"
 	handlers "github.com/gate149/core/internal/transport/rest/core"
+	"github.com/gate149/core/internal/transport/rest/kratos"
 	"github.com/gate149/core/internal/usecase"
 	"github.com/gate149/core/internal/worker/outbox"
 
 	"github.com/gate149/core/pkg"
-	"github.com/gofiber/fiber/v2"
 	"github.com/ilyakaznacheev/cleanenv"
 	ory "github.com/ory/client-go"
 	"github.com/spf13/cobra"
@@ -120,9 +120,7 @@ func runServer(envFile string) {
 	worker := outbox.NewWorker(logger, outboxRepo, submissionsRepo, problemsRepo, judge0Client, natsPublisher)
 	go worker.Start(ctx)
 
-	server := fiber.New()
-
-	server.Use(middleware.RequestLoggerMiddleware(logger))
+	server := http.NewServeMux()
 
 	coreServer := handlers.NewCoreServer(
 		contestsUC,
@@ -138,18 +136,36 @@ func runServer(envFile string) {
 	}}
 	oryPublicClient := ory.NewAPIClient(oryPublicConfiguration)
 
-	testerv1.RegisterHandlersWithOptions(server, coreServer, testerv1.FiberServerOptions{
-		Middlewares: []testerv1.MiddlewareFunc{
-			middleware.ErrorHandlerMiddleware(logger),
+	kratosHandler := kratos.NewKratosHandler(usersUC, oryPublicClient.IdentityAPI)
+	server.HandleFunc("POST /kratos/webhook", kratosHandler.HandleKratosWebhook)
+
+	// Create strict handler
+	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, nil, corev1.StrictHTTPServerOptions{
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		},
+		ResponseErrorHandlerFunc: middleware.ResponseErrorHandler(logger),
+	})
+
+	// Register handlers with middlewares
+	corev1.HandlerWithOptions(strictHandler, corev1.StdHTTPServerOptions{
+		BaseRouter: server,
+		Middlewares: []corev1.MiddlewareFunc{
+			middleware.RequestLoggerMiddleware(logger),
 			middleware.AuthMiddleware(oryPublicClient.FrontendAPI),
 			middleware.UsersMiddleware(usersUC),
 		},
 	})
 
+	httpServer := &http.Server{
+		Handler: server,
+		Addr:    cfg.Address,
+	}
+
 	// Start public server
 	go func() {
-		err := server.Listen(cfg.Address)
-		if err != nil {
+		err := httpServer.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
 			logger.Error("error starting server", slog.Any("error", err))
 			os.Exit(1)
 		}
@@ -164,13 +180,12 @@ func runServer(envFile string) {
 	<-stop
 
 	logger.Info("shutting down server and worker...")
-	cancel() // Stop the outbox worker
+	cancel()
 
-	// Give some time for graceful shutdown
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
 
-	if err := server.ShutdownWithContext(shutdownCtx); err != nil {
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("error shutting down public server", slog.Any("error", err))
 	}
 

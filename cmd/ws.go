@@ -1,17 +1,18 @@
 package cmd
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gate149/core/config"
 	ws "github.com/gate149/core/internal/transport/ws/observer"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/spf13/cobra"
 )
@@ -98,33 +99,12 @@ func runWsServer(envFile string) {
 	go hub.Run()
 	log.Info("websocket hub started")
 
-	// Create Fiber app
-	app := fiber.New(fiber.Config{
-		DisableStartupMessage: true,
-	})
-
-	// Add middlewares
-	app.Use(logger.New(logger.Config{
-		Format: "[${time}] ${status} - ${latency} ${method} ${path}\n",
-	}))
-
-	// Configure CORS based on environment
-	allowOrigins := "https://gate149.ru,https://dev.gate149.ru"
-	if cfg.Env == "dev" {
-		// In dev mode, also allow localhost
-		allowOrigins = "https://gate149.ru,https://dev.gate149.ru,http://localhost:3000,http://localhost:3001"
-	}
-
-	app.Use(cors.New(cors.Config{
-		AllowOrigins:     allowOrigins,
-		AllowMethods:     "GET,OPTIONS",
-		AllowHeaders:     "*",
-		AllowCredentials: true,
-	}))
+	mux := http.NewServeMux()
 
 	// Health check endpoint
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
 			"status":  "ok",
 			"service": "websocket",
 		})
@@ -132,11 +112,44 @@ func runWsServer(envFile string) {
 
 	// Register WebSocket routes
 	handler := ws.NewHandler(log, hub)
-	handler.RegisterRoutes(app)
+	mux.HandleFunc("/ws/submissions", handler.HandleSubmissions)
+
+	// Configure CORS based on environment
+	allowOrigins := map[string]bool{
+		"https://gate149.ru":     true,
+		"https://dev.gate149.ru": true,
+	}
+	if cfg.Env == "dev" {
+		allowOrigins["http://localhost:3000"] = true
+		allowOrigins["http://localhost:3001"] = true
+	}
+
+	// CORS Middleware
+	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if allowOrigins[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "*")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		mux.ServeHTTP(w, r)
+	})
+
+	httpServer := &http.Server{
+		Addr:    cfg.WsAddress,
+		Handler: corsHandler,
+	}
 
 	// Start server in background
 	go func() {
-		if err := app.Listen(cfg.WsAddress); err != nil {
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error("websocket server error", slog.Any("error", err))
 			os.Exit(1)
 		}
@@ -153,7 +166,10 @@ func runWsServer(envFile string) {
 
 	log.Info("shutting down websocket server...")
 
-	if err := app.Shutdown(); err != nil {
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		log.Error("error shutting down server", slog.Any("error", err))
 	}
 

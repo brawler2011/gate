@@ -41,8 +41,10 @@ func (f UsersListFilter) Validate() error {
 	if !pkg.IsLengthBetween(f.Search, 0, 70) {
 		errs = append(errs, errors.New("search must be at most 70 characters"))
 	}
-	if err := UserRoleValidate(f.Role); err != nil {
-		errs = append(errs, err)
+	if f.Role != "" {
+		if err := UserRoleValidate(f.Role); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return errors.Join(errs...)

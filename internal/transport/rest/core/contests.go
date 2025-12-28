@@ -1,100 +1,91 @@
 package handlers
 
 import (
+	"context"
+
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/transport/middleware"
 	"github.com/gate149/core/pkg"
-	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
-func (h *CoreServer) CreateContest(c *fiber.Ctx, params corev1.CreateContestParams) error {
-	ctx := c.UserContext()
-
-	err := validateCreateContestParams(params)
+func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateContestRequestObject) (corev1.CreateContestResponseObject, error) {
+	err := validateCreateContestParams(request.Params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	user := middleware.GetUser(ctx)
-	if err != nil {
-		return err
-	}
 
 	contestCreation := &models.CreateContestInput{
-		Title:  params.Title,
+		Title:  request.Params.Title,
 		UserId: user.Id,
 	}
 
 	contestID, err := h.contestsUC.CreateContest(ctx, contestCreation)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(&corev1.CreationResponseModel{Id: contestID})
+	return corev1.CreateContest200JSONResponse{Id: contestID}, nil
 }
 
-func (h *CoreServer) GetContest(c *fiber.Ctx, id uuid.UUID) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) GetContest(ctx context.Context, request corev1.GetContestRequestObject) (corev1.GetContestResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
-	contest, err := h.contestsUC.GetContest(ctx, id)
+	contest, err := h.contestsUC.GetContest(ctx, request.ContestId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	canView, err := h.permissionsUC.HasContestPermission(ctx, id, user.Id, models.ActionGetContest)
+	canView, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetContest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !canView {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
 	}
 
-	ps, err := h.contestsUC.GetContestProblems(ctx, id)
+	ps, err := h.contestsUC.GetContestProblems(ctx, request.ContestId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	owner, err := h.usersUC.GetUserById(ctx, contest.CreatedBy)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(GetContestResponseDTO(contest, ps, &owner))
+	return corev1.GetContest200JSONResponse(*GetContestResponseDTO(contest, ps, &owner)), nil
 }
 
-func (h *CoreServer) UpdateContest(c *fiber.Ctx, id uuid.UUID) error {
-	ctx := c.UserContext()
-
-	var req corev1.UpdateContestRequestModel
-	err := c.BodyParser(&req)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to parse request body")
+func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateContestRequestObject) (corev1.UpdateContestResponseObject, error) {
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
+	req := *request.Body
 
-	err = validateUpdateContestRequest(req)
+	err := validateUpdateContestRequest(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, id, user.Id, models.ActionUpdateContest)
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !canUpdate {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
 	}
 
 	err = h.contestsUC.UpdateContest(ctx, models.ContestUpdateInput{
-		Id:                     id,
+		Id:                     request.ContestId,
 		Title:                  req.Title,
 		Description:            req.Description,
 		Visibility:             req.Visibility,
@@ -103,76 +94,72 @@ func (h *CoreServer) UpdateContest(c *fiber.Ctx, id uuid.UUID) error {
 		SubmissionsReviewScope: req.SubmissionsReviewScope,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.SendStatus(fiber.StatusOK)
+	return corev1.UpdateContest200Response{}, nil
 }
 
-func (h *CoreServer) DeleteContest(c *fiber.Ctx, id uuid.UUID) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) DeleteContest(ctx context.Context, request corev1.DeleteContestRequestObject) (corev1.DeleteContestResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	canAdmin, err := h.permissionsUC.HasContestPermission(ctx, id, user.Id, models.ActionAdminContest)
+	canAdmin, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionAdminContest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !canAdmin {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to delete contest")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to delete contest")
 	}
 
-	err = h.contestsUC.DeleteContest(ctx, id)
+	err = h.contestsUC.DeleteContest(ctx, request.ContestId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.SendStatus(fiber.StatusOK)
+	return corev1.DeleteContest200Response{}, nil
 }
 
-func (h *CoreServer) ListAdminContests(c *fiber.Ctx, params corev1.ListAdminContestsParams) error {
-	ctx := c.UserContext()
-
-	err := validateListContestsParams(params.Page, params.PageSize, params.Search)
+func (h *CoreServer) ListAdminContests(ctx context.Context, request corev1.ListAdminContestsRequestObject) (corev1.ListAdminContestsResponseObject, error) {
+	err := validateListContestsParams(request.Params.Page, request.Params.PageSize, request.Params.Search)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
 	if !user.IsAdmin() {
-		return pkg.Wrap(pkg.NoPermission, nil, "admin access required")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "admin access required")
 	}
 
 	var visibility *string
-	if params.Visibility != nil {
-		v := string(*params.Visibility)
+	if request.Params.Visibility != nil {
+		v := string(*request.Params.Visibility)
 		visibility = &v
 	}
 	sortBy := "created_at"
-	if params.SortBy != nil {
-		sortBy = string(*params.SortBy)
+	if request.Params.SortBy != nil {
+		sortBy = string(*request.Params.SortBy)
 	}
 	sortOrder := models.SortOrderAsc
-	if params.SortOrder != nil {
-		s := string(*params.SortOrder)
+	if request.Params.SortOrder != nil {
+		s := string(*request.Params.SortOrder)
 		sortOrder = s
 	}
 
 	search := ""
-	if params.Search != nil {
-		search = *params.Search
+	if request.Params.Search != nil {
+		search = *request.Params.Search
 	}
 
 	filter := models.AdminContestsFilter{
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       request.Params.Page,
+		PageSize:   request.Params.PageSize,
 		Search:     search,
 		Visibility: visibility,
 		SortBy:     sortBy,
@@ -181,48 +168,46 @@ func (h *CoreServer) ListAdminContests(c *fiber.Ctx, params corev1.ListAdminCont
 
 	contestsList, err := h.contestsUC.ListAdminContests(ctx, filter)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(ListContestsResponseDTO(contestsList))
+	return corev1.ListAdminContests200JSONResponse(*ListContestsResponseDTO(contestsList)), nil
 }
 
-func (h *CoreServer) ListUserContests(c *fiber.Ctx, id uuid.UUID, params corev1.ListUserContestsParams) error {
-	ctx := c.UserContext()
-
-	err := validateListContestsParams(params.Page, params.PageSize, params.Search)
+func (h *CoreServer) ListUserContests(ctx context.Context, request corev1.ListUserContestsRequestObject) (corev1.ListUserContestsResponseObject, error) {
+	err := validateListContestsParams(request.Params.Page, request.Params.PageSize, request.Params.Search)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
 	// Only allow user to see their own contests or admins
-	if id != user.Id && !user.IsAdmin() {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
+	if request.Id != user.Id && !user.IsAdmin() {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
 	}
 
 	var sortBy string
-	if params.SortBy != nil {
-		sortBy = string(*params.SortBy)
+	if request.Params.SortBy != nil {
+		sortBy = string(*request.Params.SortBy)
 	}
 	var sortOrder string
-	if params.SortOrder != nil {
-		sortOrder = string(*params.SortOrder)
+	if request.Params.SortOrder != nil {
+		sortOrder = string(*request.Params.SortOrder)
 	}
 
 	search := ""
-	if params.Search != nil {
-		search = *params.Search
+	if request.Params.Search != nil {
+		search = *request.Params.Search
 	}
 
 	filter := models.UserContestsFilter{
-		Page:      params.Page,
-		PageSize:  params.PageSize,
-		UserId:    id,
+		Page:      request.Params.Page,
+		PageSize:  request.Params.PageSize,
+		UserId:    request.Id,
 		Search:    search,
 		SortBy:    sortBy,
 		SortOrder: sortOrder,
@@ -230,42 +215,40 @@ func (h *CoreServer) ListUserContests(c *fiber.Ctx, id uuid.UUID, params corev1.
 
 	contestsList, err := h.contestsUC.ListUserContests(ctx, filter)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(ListUserContestsResponseDTO(contestsList))
+	return corev1.ListUserContests200JSONResponse(*ListUserContestsResponseDTO(contestsList)), nil
 }
 
-func (h *CoreServer) ListWorkshopContests(c *fiber.Ctx, params corev1.ListWorkshopContestsParams) error {
-	ctx := c.UserContext()
-
-	err := validateListContestsParams(params.Page, params.PageSize, params.Search)
+func (h *CoreServer) ListWorkshopContests(ctx context.Context, request corev1.ListWorkshopContestsRequestObject) (corev1.ListWorkshopContestsResponseObject, error) {
+	err := validateListContestsParams(request.Params.Page, request.Params.PageSize, request.Params.Search)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
 	var sortBy string
-	if params.SortBy != nil {
-		sortBy = string(*params.SortBy)
+	if request.Params.SortBy != nil {
+		sortBy = string(*request.Params.SortBy)
 	}
 	var sortOrder string
-	if params.SortOrder != nil {
-		sortOrder = string(*params.SortOrder)
+	if request.Params.SortOrder != nil {
+		sortOrder = string(*request.Params.SortOrder)
 	}
 
 	search := ""
-	if params.Search != nil {
-		search = *params.Search
+	if request.Params.Search != nil {
+		search = *request.Params.Search
 	}
 
 	filter := models.WorkshopContestsFilter{
-		Page:      params.Page,
-		PageSize:  params.PageSize,
+		Page:      request.Params.Page,
+		PageSize:  request.Params.PageSize,
 		UserId:    user.Id,
 		Search:    search,
 		SortBy:    sortBy,
@@ -274,37 +257,35 @@ func (h *CoreServer) ListWorkshopContests(c *fiber.Ctx, params corev1.ListWorksh
 
 	contestsList, err := h.contestsUC.ListWorkshopContests(ctx, filter)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(ListContestsResponseDTO(contestsList))
+	return corev1.ListWorkshopContests200JSONResponse(*ListContestsResponseDTO(contestsList)), nil
 }
 
-func (h *CoreServer) ListPublicContests(c *fiber.Ctx, params corev1.ListPublicContestsParams) error {
-	ctx := c.UserContext()
-
-	err := validateListContestsParams(params.Page, params.PageSize, params.Search)
+func (h *CoreServer) ListPublicContests(ctx context.Context, request corev1.ListPublicContestsRequestObject) (corev1.ListPublicContestsResponseObject, error) {
+	err := validateListContestsParams(request.Params.Page, request.Params.PageSize, request.Params.Search)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var sortBy string
-	if params.SortBy != nil {
-		sortBy = string(*params.SortBy)
+	if request.Params.SortBy != nil {
+		sortBy = string(*request.Params.SortBy)
 	}
 	var sortOrder string
-	if params.SortOrder != nil {
-		sortOrder = string(*params.SortOrder)
+	if request.Params.SortOrder != nil {
+		sortOrder = string(*request.Params.SortOrder)
 	}
 
 	search := ""
-	if params.Search != nil {
-		search = *params.Search
+	if request.Params.Search != nil {
+		search = *request.Params.Search
 	}
 
 	filter := models.PublicContestsFilter{
-		Page:      params.Page,
-		PageSize:  params.PageSize,
+		Page:      request.Params.Page,
+		PageSize:  request.Params.PageSize,
 		Search:    search,
 		SortBy:    sortBy,
 		SortOrder: sortOrder,
@@ -312,164 +293,152 @@ func (h *CoreServer) ListPublicContests(c *fiber.Ctx, params corev1.ListPublicCo
 
 	contestsList, err := h.contestsUC.ListPublicContests(ctx, filter)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(ListContestsResponseDTO(contestsList))
+	return corev1.ListPublicContests200JSONResponse(*ListContestsResponseDTO(contestsList)), nil
 }
 
-func (h *CoreServer) CreateContestProblem(c *fiber.Ctx, contestId uuid.UUID, params corev1.CreateContestProblemParams) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) CreateContestProblem(ctx context.Context, request corev1.CreateContestProblemRequestObject) (corev1.CreateContestProblemResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionUpdateContest)
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !canUpdate {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
 	}
 
 	err = h.contestsUC.CreateContestProblem(ctx, models.ContestProblemCreation{
-		ContestId: contestId,
-		ProblemId: params.ProblemId,
+		ContestId: request.ContestId,
+		ProblemId: request.Params.ProblemId,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.SendStatus(fiber.StatusOK)
+	return corev1.CreateContestProblem200JSONResponse{}, nil
 }
 
-func (h *CoreServer) GetContestProblem(c *fiber.Ctx, contestId uuid.UUID, problemId uuid.UUID) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) GetContestProblem(ctx context.Context, request corev1.GetContestProblemRequestObject) (corev1.GetContestProblemResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionGetContest)
+	canView, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetContest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !canView {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest problem")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest problem")
 	}
 
 	p, err := h.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
-		ContestId: contestId,
-		ProblemId: problemId,
+		ContestId: request.ContestId,
+		ProblemId: request.ProblemId,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(GetContestProblemResponseDTO(p))
+	return corev1.GetContestProblem200JSONResponse(*GetContestProblemResponseDTO(p)), nil
 }
 
-func (h *CoreServer) DeleteContestProblem(c *fiber.Ctx, contestId uuid.UUID, problemId uuid.UUID) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) DeleteContestProblem(ctx context.Context, request corev1.DeleteContestProblemRequestObject) (corev1.DeleteContestProblemResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionUpdateContest)
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !canUpdate {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
 	}
 
 	// Delete the problem
 	err = h.contestsUC.DeleteContestProblem(ctx, models.ContestProblemDeletion{
-		ContestId: contestId,
-		ProblemId: problemId,
+		ContestId: request.ContestId,
+		ProblemId: request.ProblemId,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.SendStatus(fiber.StatusOK)
+	return corev1.DeleteContestProblem200Response{}, nil
 }
 
-func (h *CoreServer) CreateContestMember(c *fiber.Ctx, contestId uuid.UUID, params corev1.CreateContestMemberParams) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) CreateContestMember(ctx context.Context, request corev1.CreateContestMemberRequestObject) (corev1.CreateContestMemberResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionUpdateContest)
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !canUpdate {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
 	}
 
 	err = h.contestsUC.CreateParticipant(ctx, models.ParticipantCreation{
-		ContestId: contestId,
-		UserId:    params.UserId,
+		ContestId: request.ContestId,
+		UserId:    request.Params.UserId,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.SendStatus(fiber.StatusOK)
+	return corev1.CreateContestMember200JSONResponse{}, nil
 }
 
-func (h *CoreServer) DeleteContestMember(c *fiber.Ctx, contestId uuid.UUID, params corev1.DeleteContestMemberParams) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) DeleteContestMember(ctx context.Context, request corev1.DeleteContestMemberRequestObject) (corev1.DeleteContestMemberResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionUpdateContest)
+	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !canUpdate {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
 	}
 
 	err = h.contestsUC.DeleteParticipant(ctx, models.ParticipantDeletion{
-		ContestId: contestId,
-		UserId:    params.UserId,
+		ContestId: request.ContestId,
+		UserId:    request.Params.UserId,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.SendStatus(fiber.StatusOK)
+	return corev1.DeleteContestMember200Response{}, nil
 }
 
-func (h *CoreServer) UpdateContestMember(c *fiber.Ctx, contestId uuid.UUID, params corev1.UpdateContestMemberParams) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) UpdateContestMember(ctx context.Context, request corev1.UpdateContestMemberRequestObject) (corev1.UpdateContestMemberResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	userId, err := uuid.Parse(params.UserId.String())
+	userId, err := uuid.Parse(request.Params.UserId.String())
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid user_id")
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid user_id")
 	}
 
 	// Prevent user from updating their own role
 	if userId == user.Id {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot update own role")
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "cannot update own role")
 	}
 
 	// Check if user is contest owner or global admin
@@ -479,61 +448,59 @@ func (h *CoreServer) UpdateContestMember(c *fiber.Ctx, contestId uuid.UUID, para
 	// If not admin, check if user is contest owner
 	if !isAdmin {
 		contestMember, err := h.contestsUC.GetContestMember(ctx, &models.ContestPermissionGet{
-			ContestId: contestId,
+			ContestId: request.ContestId,
 			UserId:    user.Id,
 		})
 		if err != nil {
-			return pkg.Wrap(pkg.NoPermission, err, "insufficient permission to update contest member")
+			return nil, pkg.Wrap(pkg.NoPermission, err, "insufficient permission to update contest member")
 		}
 		if contestMember.ContestRole != models.ContestRoleOwner {
-			return pkg.Wrap(pkg.NoPermission, nil, "only contest owner or admin can update contest member role")
+			return nil, pkg.Wrap(pkg.NoPermission, nil, "only contest owner or admin can update contest member role")
 		}
 	}
 
 	// Validate role value
-	if params.Role != models.ContestRoleOwner && params.Role != models.ContestRoleModerator && params.Role != models.ContestRoleParticipant {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
+	if request.Params.Role != models.ContestRoleOwner && request.Params.Role != models.ContestRoleModerator && request.Params.Role != models.ContestRoleParticipant {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
 	}
 
 	// Call usecase to update the member
-	err = h.contestsUC.UpdateContestMember(ctx, contestId, userId, params.Role)
+	err = h.contestsUC.UpdateContestMember(ctx, request.ContestId, userId, request.Params.Role)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.SendStatus(fiber.StatusOK)
+	return corev1.UpdateContestMember200Response{}, nil
 }
 
-func (h *CoreServer) ListContestMembers(c *fiber.Ctx, contestId uuid.UUID, params corev1.ListContestMembersParams) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) ListContestMembers(ctx context.Context, request corev1.ListContestMembersRequestObject) (corev1.ListContestMembersResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionGetMonitor)
+	canView, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetMonitor)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if !canView {
-		canView, err = h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionListOwnSubmissions)
+		canView, err = h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionListOwnSubmissions)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if !canView {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
 	}
 
 	participantsList, err := h.contestsUC.ListParticipants(ctx, models.ParticipantsFilter{
-		Page:      params.Page,
-		PageSize:  params.PageSize,
-		ContestId: contestId,
+		Page:      request.Params.Page,
+		PageSize:  request.Params.PageSize,
+		ContestId: request.ContestId,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	resp := corev1.ListContestMembersResponseModel{
@@ -543,7 +510,7 @@ func (h *CoreServer) ListContestMembers(c *fiber.Ctx, contestId uuid.UUID, param
 
 	for i, user := range participantsList.Members {
 		resp.Members[i] = corev1.ContestMemberModel{
-			ContestId:   contestId,
+			ContestId:   request.ContestId,
 			ContestRole: user.ContestRole,
 			UserId:      user.UserID,
 			KratosId:    user.KratosID,
@@ -554,77 +521,73 @@ func (h *CoreServer) ListContestMembers(c *fiber.Ctx, contestId uuid.UUID, param
 		}
 	}
 
-	return c.JSON(resp)
+	return corev1.ListContestMembers200JSONResponse(resp), nil
 }
 
-func (h *CoreServer) GetMyContestRole(c *fiber.Ctx, contestId uuid.UUID) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) GetMyContestRole(ctx context.Context, request corev1.GetMyContestRoleRequestObject) (corev1.GetMyContestRoleResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
 	contestMember, err := h.contestsUC.GetContestMember(ctx, &models.ContestPermissionGet{
-		ContestId: contestId,
+		ContestId: request.ContestId,
 		UserId:    user.Id,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(corev1.GetMyContestRoleResponseModel{
+	return corev1.GetMyContestRole200JSONResponse{
 		Role: contestMember.Role,
-	})
+	}, nil
 }
 
-func (h *CoreServer) ListContestSubmissions(c *fiber.Ctx, contestId uuid.UUID, params corev1.ListContestSubmissionsParams) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) ListContestSubmissions(ctx context.Context, request corev1.ListContestSubmissionsRequestObject) (corev1.ListContestSubmissionsResponseObject, error) {
 	// Allow unauthenticated access for public contests
 	user := middleware.GetUser(ctx)
 
 	// Determine which userId to filter by and check permissions
 	var filterUserId *uuid.UUID
 
-	if params.UserId == nil {
+	if request.Params.UserId == nil {
 		// No userId specified - request to get all members' submissions
 		// Need permission to list all users' submissions
-		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionListUsersSubmissions)
+		canList, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionListUsersSubmissions)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !canList {
-			return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to list all contest submissions")
+			return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to list all contest submissions")
 		}
 		// Don't filter by userId - get all submissions
 		filterUserId = nil
-	} else if *params.UserId == user.Id {
+	} else if *request.Params.UserId == user.Id {
 		// UserId matches current user - check permission to view own submissions
-		canView, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionListOwnSubmissions)
+		canView, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionListOwnSubmissions)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !canView {
-			return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view own submissions in this contest")
+			return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view own submissions in this contest")
 		}
 		filterUserId = &user.Id
 	} else {
 		// UserId is different - need permission to list other users' submissions
-		canList, err := h.permissionsUC.HasContestPermission(ctx, contestId, user.Id, models.ActionListUsersSubmissions)
+		canList, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionListUsersSubmissions)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !canList {
-			return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view other users' submissions")
+			return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view other users' submissions")
 		}
-		filterUserId = params.UserId
+		filterUserId = request.Params.UserId
 	}
 
 	var order *int32
-	if params.SortOrder != nil {
+	if request.Params.SortOrder != nil {
 		var orderVal int32
-		if *params.SortOrder == corev1.ListContestSubmissionsParamsSortOrderDesc {
+		if *request.Params.SortOrder == corev1.ListContestSubmissionsParamsSortOrderDesc {
 			orderVal = -1
 		} else {
 			orderVal = 0
@@ -633,30 +596,30 @@ func (h *CoreServer) ListContestSubmissions(c *fiber.Ctx, contestId uuid.UUID, p
 	}
 
 	var state *models.State
-	if params.State != nil {
-		stateVal := models.State(*params.State)
+	if request.Params.State != nil {
+		stateVal := models.State(*request.Params.State)
 		state = &stateVal
 	}
 
 	var langName *models.LanguageName
-	if params.Language != nil {
-		lang := models.LanguageName(*params.Language)
+	if request.Params.Language != nil {
+		lang := models.LanguageName(*request.Params.Language)
 		langName = &lang
 	}
 
 	submissionsList, err := h.submissionsUC.ListSubmissions(ctx, models.SubmissionsFilter{
-		ContestId: &contestId,
-		Page:      params.Page,
-		PageSize:  params.PageSize,
+		ContestId: &request.ContestId,
+		Page:      request.Params.Page,
+		PageSize:  request.Params.PageSize,
 		UserId:    filterUserId,
-		ProblemId: params.ProblemId,
+		ProblemId: request.Params.ProblemId,
 		Language:  langName,
 		State:     state,
 		Order:     order,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(SubmissionsListToDTO(submissionsList))
+	return corev1.ListContestSubmissions200JSONResponse(*ListSolutionsResponseDTO(submissionsList)), nil
 }

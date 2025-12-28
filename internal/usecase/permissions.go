@@ -69,13 +69,23 @@ func (uc *PermissionsUseCase) HasContestPermission(
 		UserId:    userID,
 	})
 
+	isStarted := true
+	if contest.StartTime != nil {
+		isStarted = contest.StartTime.Before(time.Now())
+	}
+
+	isFinished := false
+	if contest.EndTime != nil {
+		isFinished = contest.EndTime.Before(time.Now())
+	}
+
 	cc := &contestContext{
 		user:       &user,
 		contest:    &contest,
 		member:     &member,
 		isPublic:   contest.Visibility == models.ContestVisibilityPublic,
-		isStarted:  contest.StartTime.Before(time.Now()),
-		isFinished: contest.EndTime.Before(time.Now()),
+		isStarted:  isStarted,
+		isFinished: isFinished,
 		isOwner:    contest.CreatedBy == userID,
 		isAdmin:    user.Role == models.UserRoleAdmin,
 	}
@@ -227,13 +237,23 @@ func (uc *PermissionsUseCase) GetContestPermissions(
 		UserId:    userID,
 	})
 
+	isStarted := true
+	if contest.StartTime != nil {
+		isStarted = contest.StartTime.Before(time.Now())
+	}
+
+	isFinished := false
+	if contest.EndTime != nil {
+		isFinished = contest.EndTime.Before(time.Now())
+	}
+
 	cc := &contestContext{
 		user:       &user,
 		contest:    &contest,
 		member:     &member,
 		isPublic:   contest.Visibility == models.ContestVisibilityPublic,
-		isStarted:  contest.StartTime.Before(time.Now()),
-		isFinished: contest.EndTime.Before(time.Now()),
+		isStarted:  isStarted,
+		isFinished: isFinished,
 		isOwner:    contest.CreatedBy == userID,
 		isAdmin:    user.Role == models.UserRoleAdmin,
 	}

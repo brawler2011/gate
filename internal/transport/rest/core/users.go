@@ -1,81 +1,73 @@
 package handlers
 
 import (
+	"context"
+
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/transport/middleware"
 	"github.com/gate149/core/pkg"
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 )
 
-func (h *CoreServer) GetUser(c *fiber.Ctx, id uuid.UUID) error {
-	ctx := c.UserContext()
-
-	user, err := h.usersUC.GetUserById(ctx, id)
+func (h *CoreServer) GetUser(ctx context.Context, request corev1.GetUserRequestObject) (corev1.GetUserResponseObject, error) {
+	user, err := h.usersUC.GetUserById(ctx, request.Id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(corev1.GetUserResponseModel{
+	return corev1.GetUser200JSONResponse{
 		User: userDTO(user),
-	})
+	}, nil
 }
 
-func (h *CoreServer) GetMe(c *fiber.Ctx) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) GetMe(ctx context.Context, request corev1.GetMeRequestObject) (corev1.GetMeResponseObject, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+		return nil, pkg.ErrUnauthenticated
 	}
 
-	return c.JSON(corev1.GetUserResponseModel{
+	return corev1.GetMe200JSONResponse{
 		User: userDTO(user),
-	})
+	}, nil
 }
 
-func (h *CoreServer) ListUsers(c *fiber.Ctx, params corev1.ListUsersParams) error {
-	ctx := c.UserContext()
-
-	filter, err := validateGetUsersParams(params)
+func (h *CoreServer) ListUsers(ctx context.Context, request corev1.ListUsersRequestObject) (corev1.ListUsersResponseObject, error) {
+	filter, err := validateGetUsersParams(request.Params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	users, err := h.usersUC.ListUsers(ctx, *filter)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(usersListDTO(&users))
+	return corev1.ListUsers200JSONResponse(usersListDTO(&users)), nil
 }
 
-func (h *CoreServer) ListUserSubmissions(c *fiber.Ctx, userId uuid.UUID, params corev1.ListUserSubmissionsParams) error {
-	ctx := c.UserContext()
-
+func (h *CoreServer) ListUserSubmissions(ctx context.Context, request corev1.ListUserSubmissionsRequestObject) (corev1.ListUserSubmissionsResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
-	if userId != user.Id {
+	if request.UserId != user.Id {
 		if !user.IsAdmin() {
-			return pkg.Wrap(pkg.NoPermission, nil, "only admins can view other users' submissions")
+			return nil, pkg.Wrap(pkg.NoPermission, nil, "only admins can view other users' submissions")
 		}
-	} else if params.ContestId != nil {
-		canView, err := h.permissionsUC.HasContestPermission(ctx, *params.ContestId, user.Id, models.ActionListOwnSubmissions)
+	} else if request.Params.ContestId != nil {
+		canView, err := h.permissionsUC.HasContestPermission(ctx, *request.Params.ContestId, user.Id, models.ActionListOwnSubmissions)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !canView {
-			return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view own submissions in this contest")
+			return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view own submissions in this contest")
 		}
 	}
 
-	filter := listUserSubmissionsParamsToFilter(userId, params)
+	filter := listUserSubmissionsParamsToFilter(request.UserId, request.Params)
 
 	submissions, err := h.submissionsUC.ListSubmissions(ctx, filter)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return c.JSON(submissionsListToDTO(submissions))
+	return corev1.ListUserSubmissions200JSONResponse(*ListSolutionsResponseDTO(submissions)), nil
 }

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gate149/core/pkg"
-	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
@@ -23,52 +23,77 @@ const (
 	requestIDKey contextKey = "request_id"
 )
 
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+	length int
+}
+
+func (w *statusWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *statusWriter) Write(b []byte) (int, error) {
+	if w.status == 0 {
+		w.status = 200
+	}
+	n, err := w.ResponseWriter.Write(b)
+	w.length += n
+	return n, err
+}
+
 // RequestLoggerMiddleware logs all incoming requests with timing and context
-func RequestLoggerMiddleware(logger *slog.Logger) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		start := time.Now()
+func RequestLoggerMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
 
-		// Generate or retrieve request ID
-		requestID := c.Get("X-Request-ID")
-		if requestID == "" {
-			requestID = uuid.New().String()
-		}
-		c.Set("X-Request-ID", requestID)
+			// Generate or retrieve request ID
+			requestID := r.Header.Get("X-Request-ID")
+			if requestID == "" {
+				requestID = uuid.New().String()
+			}
+			w.Header().Set("X-Request-ID", requestID)
 
-		// Store requestID in context so it propagates to the entire app
-		ctx := context.WithValue(c.UserContext(), requestIDKey, requestID)
-		c.SetUserContext(ctx)
+			// Store requestID in context so it propagates to the entire app
+			ctx := context.WithValue(r.Context(), requestIDKey, requestID)
+			r = r.WithContext(ctx)
 
-		err := c.Next()
+			sw := &statusWriter{ResponseWriter: w}
 
-		duration := time.Since(start)
-		statusCode := c.Response().StatusCode()
+			next.ServeHTTP(sw, r)
 
-		// Build log message
-		logMsg := fmt.Sprintf("%s %s -> %d %s (%dms)",
-			c.Method(),
-			c.Path(),
-			statusCode,
-			http.StatusText(statusCode),
-			duration.Milliseconds(),
-		)
+			duration := time.Since(start)
+			statusCode := sw.status
+			if statusCode == 0 {
+				statusCode = 200
+			}
 
-		// Build log attributes
-		logAttrs := []any{
-			slog.String("request_id", requestID),
-			slog.String("method", c.Method()),
-			slog.String("path", c.Path()),
-			slog.Int("status", statusCode),
-			slog.Int64("duration_ms", duration.Milliseconds()),
-			slog.String("ip", c.IP()),
-		}
+			// Build log message
+			logMsg := fmt.Sprintf("%s %s -> %d %s (%dms)",
+				r.Method,
+				r.URL.Path,
+				statusCode,
+				http.StatusText(statusCode),
+				duration.Milliseconds(),
+			)
 
-		if len(c.Queries()) > 0 {
-			logAttrs = append(logAttrs, slog.Any("query", c.Queries()))
-		}
+			// Build log attributes
+			logAttrs := []any{
+				slog.String("request_id", requestID),
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+				slog.Int("status", statusCode),
+				slog.Int64("duration_ms", duration.Milliseconds()),
+				slog.String("ip", r.RemoteAddr),
+			}
 
-		// Log based on status code
-		if err == nil {
+			if len(r.URL.Query()) > 0 {
+				logAttrs = append(logAttrs, slog.Any("query", r.URL.Query()))
+			}
+
+			// Log based on status code
 			logLevel := slog.LevelInfo
 			if statusCode >= 500 {
 				logLevel = slog.LevelError
@@ -76,69 +101,57 @@ func RequestLoggerMiddleware(logger *slog.Logger) fiber.Handler {
 				logLevel = slog.LevelWarn
 			}
 			logger.Log(ctx, logLevel, logMsg, logAttrs...)
-		}
-
-		return err
+		})
 	}
 }
 
-// ErrorHandlerMiddleware handles errors, maps them to HTTP status codes and logs them
-func ErrorHandlerMiddleware(logger *slog.Logger) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		err := c.Next()
-		if err == nil {
-			return nil
-		}
-
+// ResponseErrorHandler handles errors returned by strict handlers
+func ResponseErrorHandler(logger *slog.Logger) func(w http.ResponseWriter, r *http.Request, err error) {
+	return func(w http.ResponseWriter, r *http.Request, err error) {
 		// Retrieve Request ID from context
-		ctx := c.UserContext()
+		ctx := r.Context()
 		requestID, _ := ctx.Value(requestIDKey).(string)
 		if requestID == "" {
-			// Fallback if context was lost or not set (shouldn't happen with correct middleware order)
-			requestID = c.Get("X-Request-ID")
+			requestID = r.Header.Get("X-Request-ID")
 		}
 
-		statusCode := c.Response().StatusCode()
-
-		var cErr *pkg.CustomError
-		if errors.As(err, &cErr) {
-			statusCode = pkg.ToREST(err)
-		}
-
+		statusCode := http.StatusInternalServerError
 		resp := errorResponse{
 			Err:       http.StatusText(statusCode),
 			Msg:       "",
 			RequestID: requestID,
 		}
 
-		var fErr *fiber.Error
-		if errors.As(err, &fErr) {
-			statusCode = fErr.Code
+		var cErr *pkg.CustomError
+		if errors.As(err, &cErr) {
+			statusCode = pkg.ToREST(err)
 			resp.Err = http.StatusText(statusCode)
-			resp.Msg = fErr.Message
+			resp.Msg = cErr.Message
+		} else {
+			resp.Msg = err.Error()
 		}
 
 		logMsg := fmt.Sprintf("%s %s -> %d %s",
-			c.Method(),
-			c.Path(),
+			r.Method,
+			r.URL.Path,
 			statusCode,
 			http.StatusText(statusCode),
 		)
 
 		logAttrs := []any{
 			slog.String("request_id", requestID),
-			slog.String("method", c.Method()),
-			slog.String("path", c.Path()),
+			slog.String("method", r.Method),
+			slog.String("path", r.URL.Path),
 			slog.Int("status", statusCode),
 			slog.String("error", err.Error()),
-			slog.String("ip", c.IP()),
+			slog.String("ip", r.RemoteAddr),
 		}
 
 		// Add user/session context if available in the context
 		if user := GetUser(ctx); !user.IsGuest() {
 			logAttrs = append(logAttrs, slog.String("user_id", user.Id.String()))
 		}
-		if session, _ := GetSession(ctx); session != nil {
+		if session, _ := getSession(ctx); session != nil {
 			logAttrs = append(logAttrs, slog.String("session_id", session.Id))
 		}
 
@@ -165,6 +178,8 @@ func ErrorHandlerMiddleware(logger *slog.Logger) fiber.Handler {
 		}
 		logger.Log(ctx, logLevel, logMsg, logAttrs...)
 
-		return c.Status(statusCode).JSON(resp)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(resp)
 	}
 }
