@@ -21,7 +21,7 @@ deps: go.sum go.mod package.json
 	@command -v "$(NODE)" >/dev/null || { echo "Error: node is not installed"; exit 1; }
 
 merge-gateway: deps
-	@node tools/merge-openapi.js
+	@node tools/merge-openapi.js`
 
 go-gen: deps
 	@if [ -z "$(SPECS)" ]; then \
@@ -38,18 +38,27 @@ go-gen: deps
 		\
 		mkdir -p "$$dir"; \
 		\
-		go run $(OAPI_CODEGEN) \
-			-generate fiber-server,models \
-			-package "$$pkg_name" \
-			-o "$$dir/$$service.go" \
-			"$$spec_path" || exit 1; \
-		\
-		mkdir -p "$$dir/client"; \
-		go run $(OAPI_CODEGEN) \
-			-generate client,models \
-			-package "$$pkg_name" \
-			-o "$$dir/client/$$service.go" \
-			"$$spec_path" || exit 1; \
+		if [ "$$service" = "core" ]; then \
+			go run $(OAPI_CODEGEN) \
+				-generate std-http-server,models,strict-server,client \
+				-package "$$pkg_name" \
+				-o "$$dir/$$service.go" \
+				"$$spec_path" || exit 1; \
+		elif [ "$$service" = "blogs" ]; then \
+			go run $(OAPI_CODEGEN) \
+				-generate fiber,models \
+				-package "$$pkg_name" \
+				-o "$$dir/$$service.go" \
+				"$$spec_path" || exit 1; \
+		elif [ "$$service" = "gateway" ]; then \
+			:; \
+		else \
+			go run $(OAPI_CODEGEN) \
+				-generate std-http-server,models,strict-server \
+				-package "$$pkg_name" \
+				-o "$$dir/$$service.go" \
+				"$$spec_path" || exit 1; \
+		fi; \
 	done
 
 ts-gen: deps
