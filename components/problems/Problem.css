@@ -1,22 +1,39 @@
 .container {
     max-width: var(--contest-problem-max-width);
-    padding: 0 10px 10px 10px;
-    hyphens: auto;
-    overflow-wrap: break-word;
     text-rendering: optimizeLegibility;
     font-kerning: normal;
     color: var(--mantine-color-text);
 }
 
 .content {
+    & img {
+        max-width: 100%;
+    }
+
+    & p {
+        margin-top: 0;
+        margin-bottom: 0.5em;
+    }
+
+    & ul, & ol {
+        margin-top: 0;
+        margin-bottom: 0.5em;
+        padding-left: 1.5em;
+    }
+
+    & pre {
+        margin-top: 0;
+        margin-bottom: 0.5em;
+    }
+
     & table {
-        margin: 1em 0;
+        margin: 0.5em 0;
         overflow-x: auto;
         font-variant-numeric: lining-nums tabular-nums;
     }
 
     & table & caption {
-        margin-bottom: 0.75em;
+        margin-bottom: 0.5em;
     }
 
     & table, & th, & td {
@@ -35,15 +52,6 @@
     .center {
         display: flex;
         justify-content: center;
-    }
-
-    & ul, & ol {
-        margin: 0;
-    }
-
-    & p {
-        margin: 0.5em 0;
-        line-height: 1.2;
     }
 
     & a {

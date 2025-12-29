@@ -142,7 +142,9 @@ export async function updateProblem(
 }
 
 export async function uploadProblemTests(id: string, file: File) {
-    return Call((client) => client.default.uploadProblemTests({id, formData: {file: file}}));
+    // FIXME: Bring back this functions to contract
+    //return Call((client) => client.default.uploadProblemTests({id, formData: {file: file}}));
+    return null;
 }
 
 export async function updateContest(
@@ -179,7 +181,7 @@ export async function searchProblems(title: string, owner?: boolean) {
     const params: {
         page: number;
         pageSize: number;
-        title?: string;
+        search?: string;
         owner?: boolean;
     } = {
         page: 1,
@@ -188,7 +190,7 @@ export async function searchProblems(title: string, owner?: boolean) {
     };
 
     if (title && title.trim() !== "") {
-        params.title = title.trim();
+        params.search = title.trim();
     }
 
     return Call((client) => client.default.listProblems(params));

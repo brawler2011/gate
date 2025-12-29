@@ -71,10 +71,10 @@ const Problem = ({problem, letter}: Props) => {
     }, [problem, letter]);
 
     return (
-        <Stack className="container" ref={ref}>
-            <Stack align="center" gap={0} w="fit-content" mx="auto" my="0">
-                <Title order={2} mb="sm">{letter}. {problem.title}</Title>
-                <Stack mx="auto" my="0" align="flex-start" gap={0}>
+        <Stack className="container" ref={ref} gap="md">
+            <Stack align="center" gap={0} w="fit-content" mx="auto" mb="sm">
+                <Title order={2}>{letter}. {problem.title}</Title>
+                <Stack align="center" gap={0}>
                     <Text>
                         ограничение по времени: {prettifyTimeLimit(problem.time_limit)}
                     </Text>
@@ -87,28 +87,28 @@ const Problem = ({problem, letter}: Props) => {
                 <div className="content" dangerouslySetInnerHTML={{__html: problem.legend_html}}/>
             )}
             {problem.input_format_html && (
-                <>
+                <Stack gap="xs">
                     <Title order={3}>Входные данные</Title>
                     <div className="content" dangerouslySetInnerHTML={{__html: problem.input_format_html}}/>
-                </>
+                </Stack>
             )}
             {problem.output_format_html && (
-                <>
+                <Stack gap="xs">
                     <Title order={3}>Выходные данные</Title>
                     <div className="content" dangerouslySetInnerHTML={{__html: problem.output_format_html}}/>
-                </>
+                </Stack>
             )}
             {problem.scoring_html && (
-                <>
+                <Stack gap="xs">
                     <Title order={3}>Система оценки</Title>
                     <div className="content" dangerouslySetInnerHTML={{__html: problem.scoring_html}}/>
-                </>
+                </Stack>
             )}
             {problem.notes_html && (
-                <>
+                <Stack gap="xs">
                     <Title order={3}>Примечание</Title>
                     <div className="content" dangerouslySetInnerHTML={{__html: problem.notes_html}}/>
-                </>
+                </Stack>
             )}
         </Stack>
     );
