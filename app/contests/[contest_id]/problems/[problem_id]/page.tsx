@@ -61,8 +61,9 @@ const Page = async (props: Props) => {
       ? getMySubmissions({
           userId: user.id,
           contestId: params.contest_id,
+          problemId: params.problem_id,
           page: 1,
-          pageSize: 20,
+          pageSize: 5,
           sortOrder: "desc",
         })
       : Promise.resolve([null, { submissions: [], pagination: { page: 1, total: 0 } }] as const),
