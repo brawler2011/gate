@@ -172,7 +172,7 @@ async function main() {
 
       console.log("\x1b[36mBuilding Docker image (docker build, без compose)...\x1b[0m");
 
-      const imageName = "deploy-frontend";
+      const imageName = "frontend-frontend";
 
       // Чистый docker build вместо локального compose: он лишь мешал и путал.
       // NEXT_PUBLIC_* подтянутся из frontend/.env.production, который копируется в образ.
@@ -196,7 +196,7 @@ async function main() {
       console.log("\x1b[36mStep 2: Saving Docker image to tar...\x1b[0m");
       console.log("\x1b[36m========================================\x1b[0m");
 
-      const imageName = "deploy-frontend";
+      const imageName = "frontend-frontend";
       // Use Bun.spawn for consistency (though save output is minimal)
       await run(["docker", "save", "-o", tarPath, imageName]);
       
