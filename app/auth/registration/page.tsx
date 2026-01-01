@@ -23,6 +23,7 @@ import Image from "next/image";
 
 type FlowData = {
   id: string;
+  return_to?: string;
   ui: {
     action: string;
     method: string;
@@ -42,6 +43,7 @@ export default function RegistrationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const flowId = searchParams.get("flow");
+  const returnTo = searchParams.get("return_to");
 
   const [flow, setFlow] = useState<FlowData | null>(null);
   const [username, setUsername] = useState("");
@@ -52,7 +54,7 @@ export default function RegistrationPage() {
 
   useEffect(() => {
     if (!flowId) {
-      window.location.href = "/api/.ory/self-service/registration/browser";
+      window.location.href = `/api/.ory/self-service/registration/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
       return;
     }
 
@@ -61,7 +63,7 @@ export default function RegistrationPage() {
     })
       .then((res) => {
         if (res.status === 410 || res.status === 404 || res.status === 403) {
-          window.location.href = "/api/.ory/self-service/registration/browser";
+          window.location.href = `/api/.ory/self-service/registration/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
           return null;
         }
         return res.json();
@@ -70,9 +72,9 @@ export default function RegistrationPage() {
         if (data) setFlow(data);
       })
       .catch(() => {
-        window.location.href = "/api/.ory/self-service/registration/browser";
+        window.location.href = `/api/.ory/self-service/registration/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
       });
-  }, [flowId]);
+  }, [flowId, returnTo]);
 
   if (!flowId || !flow) {
     return (
@@ -91,6 +93,9 @@ export default function RegistrationPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    
+    // Get return_to from flow object, fallback to URL param, then to "/"
+    const targetReturnTo = flow.return_to || returnTo || "/";
     
     try {
       const response = await fetch(`/api/.ory/self-service/registration?flow=${flowId}`, {
@@ -111,16 +116,25 @@ export default function RegistrationPage() {
         credentials: "include",
       });
 
+      const data = await response.json();
+
+      // Check if registration was successful (session exists)
+      if (response.ok && data.session) {
+        // Kratos successfully registered, redirect to return_to URL from flow
+        router.push(targetReturnTo);
+        router.refresh();
+        return;
+      }
+      
+      // If response is ok but no session, still redirect (edge case)
       if (response.ok) {
-        router.push("/");
+        router.push(targetReturnTo);
         router.refresh();
         return;
       }
 
-      const data = await response.json();
-
       if (response.status === 410 || response.status === 404 || response.status === 403) {
-        window.location.href = "/api/.ory/self-service/registration/browser";
+        window.location.href = `/api/.ory/self-service/registration/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
         return;
       }
 
@@ -240,7 +254,7 @@ export default function RegistrationPage() {
 
           <Text c="dimmed" ta="center" mt={24} fz={14}>
             Уже есть аккаунт?{" "}
-            <Anchor component={Link} href="/auth/login" fz={14} fw={600}>
+            <Anchor component={Link} href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`} fz={14} fw={600}>
               Войти
             </Anchor>
           </Text>

@@ -24,10 +24,18 @@ import type { SessionUser } from "@/lib/auth";
 import cx from "clsx";
 import NextImage from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LogoutLink } from './LogoutLink';
 import classes from "./Header.module.css";
 
 const Profile = ({ user }: { user?: SessionUser }) => {
+  const pathname = usePathname();
+  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const returnUrl = pathname && pathname !== '/' && !pathname.startsWith('/auth') 
+    ? (isLocalhost ? `${window.location.origin}${pathname}` : pathname) 
+    : null;
+  const returnTo = returnUrl ? `?return_to=${encodeURIComponent(returnUrl)}` : '';
+
   if (user) {
     return (
       <Group justify="flex-end">
@@ -49,7 +57,7 @@ const Profile = ({ user }: { user?: SessionUser }) => {
     <Group justify="flex-end">
       <Button
         component={Link}
-        href="/auth/login"
+        href={`/auth/login${returnTo}`}
         variant="filled"
         color={APP_COLORS.actions.primary}
       >
@@ -60,8 +68,13 @@ const Profile = ({ user }: { user?: SessionUser }) => {
 };
 
 const Header = ({ user }: { user?: SessionUser }) => {
-  const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] =
-    useDisclosure(false);
+  const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] = useDisclosure(false);
+  const pathname = usePathname();
+  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const returnUrl = pathname && pathname !== '/' && !pathname.startsWith('/auth') 
+    ? (isLocalhost ? `${window.location.origin}${pathname}` : pathname) 
+    : null;
+  const returnTo = returnUrl ? `?return_to=${encodeURIComponent(returnUrl)}` : '';
 
   const { setColorScheme } = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme("dark", {
@@ -270,7 +283,7 @@ const Header = ({ user }: { user?: SessionUser }) => {
             ) : (
               <Button
                 component={Link}
-                href="/auth/login"
+                href={`/auth/login${returnTo}`}
                 variant="filled"
                 color={APP_COLORS.actions.primary}
                 fullWidth

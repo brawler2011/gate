@@ -1,5 +1,8 @@
+"use client";
+
 import { Container, Title, Text, Button, Stack, Paper, Code, Group } from "@mantine/core";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ApiError } from "@/lib/api";
 import { RefreshButton } from "./RefreshButton";
 
@@ -39,6 +42,12 @@ function getErrorDisplay(status: number): { title: string; description: string }
 
 export function ErrorDisplay({ error }: Props) {
   const display = getErrorDisplay(error.status);
+  const pathname = usePathname();
+  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const returnUrl = pathname && pathname !== '/' && !pathname.startsWith('/auth') 
+    ? (isLocalhost ? `${window.location.origin}${pathname}` : pathname) 
+    : null;
+  const returnTo = returnUrl ? `?return_to=${encodeURIComponent(returnUrl)}` : '';
 
   return (
     <Container size="sm" py="xl">
@@ -56,7 +65,7 @@ export function ErrorDisplay({ error }: Props) {
 
           <Group>
             {error.status === 401 ? (
-              <Button component={Link} href="/auth/login" variant="filled">
+              <Button component={Link} href={`/auth/login${returnTo}`} variant="filled">
                 Войти
               </Button>
             ) : (
