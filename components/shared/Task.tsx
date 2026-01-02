@@ -2,7 +2,6 @@
 
 import React from 'react';
 import {
-    Anchor,
     AppShellFooter,
     AppShellHeader,
     AppShellMain,
@@ -11,6 +10,7 @@ import {
     NavLink,
     Paper,
     Stack,
+    Text,
     Title
 } from "@mantine/core";
 import {CreateSubmissionForm} from '@/components/submissions/CreateSubmissionForm';
@@ -78,11 +78,11 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
                             }}
                         >
                             <Stack w="100%" gap="xs">
-                                <Anchor component={Link} href={`/contests/${contest.id}`} c="var(--mantine-color-bright)">
-                                    <Title c="var(--mantine-color-text)" order={4} ta="center">
+                                <Link href={`/contests/${contest.id}`} style={{ textDecoration: 'none' }}>
+                                    <Title c="var(--mantine-color-text)" order={4} ta="center" style={{ cursor: 'pointer' }}>
                                         Задачи
                                     </Title>
-                                </Anchor>
+                                </Link>
                                 <Stack gap={0}>
                                     {tasks.map((item) => (
                                         <NavLink

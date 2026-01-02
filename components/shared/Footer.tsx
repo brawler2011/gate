@@ -1,4 +1,4 @@
-import { Container, Group, Text, Anchor } from '@mantine/core';
+import { Container, Group, Text } from '@mantine/core';
 import Link from 'next/link';
 import classes from './Footer.module.css';
 
@@ -13,9 +13,14 @@ const Footer = () => {
                 </Text>
 
                 <Group className={classes.links}>
-                    <Anchor component={Link} href="/privacy" c="dimmed" size="sm">
-                        Политика конфиденциальности
-                    </Anchor>
+                    <Link 
+                        href="/privacy" 
+                        className={classes.link}
+                    >
+                        <Text c="dimmed" size="sm">
+                            Политика конфиденциальности
+                        </Text>
+                    </Link>
                 </Group>
             </Container>
         </div>

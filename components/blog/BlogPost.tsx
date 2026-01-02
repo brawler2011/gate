@@ -21,15 +21,13 @@ export function BlogPost({ id, title, author, avatarUrl, description, date, prev
     ? `/api/blogs/posts/${previewImageUrl}/image`  // используем image ID, а не post ID
     : undefined;
   return (
-    <Card 
-      component={Link} 
-      href={`/blog/${id}`}
-      shadow="sm" 
-      padding={0} 
-      radius="lg" 
-      className={classes.card}
-      style={{ textDecoration: 'none', color: 'inherit' }}
-    >
+    <Link href={`/blog/${id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+      <Card 
+        shadow="sm" 
+        padding={0} 
+        radius="lg" 
+        className={classes.card}
+      >
       <Stack gap={0}>
         {imageUrl && (
           <div className={classes.imageContainer}>
@@ -67,6 +65,7 @@ export function BlogPost({ id, title, author, avatarUrl, description, date, prev
         </Stack>
       </Stack>
     </Card>
+    </Link>
   );
 }
 

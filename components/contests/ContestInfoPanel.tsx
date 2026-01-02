@@ -80,17 +80,18 @@ export function ContestInfoPanel({ contest, user, contestRole, width }: ContestI
 
         {/* Manage Button - only for moderators and owners */}
         {canManage && (
-          <Button
-            component={Link}
-            href={`/contests/${contest.id}/manage`}
-            className={classes.manageButton}
-            leftSection={<IconSettings size={16} />}
-            size="sm"
-            mt="xs"
-            variant="transparent"
-          >
-            Управление
-          </Button>
+          <Link href={`/contests/${contest.id}/manage`} style={{ textDecoration: 'none', display: 'block' }}>
+            <Button
+              className={classes.manageButton}
+              leftSection={<IconSettings size={16} />}
+              size="sm"
+              mt="xs"
+              variant="transparent"
+              fullWidth
+            >
+              Управление
+            </Button>
+          </Link>
         )}
       </Stack>
     </Paper>

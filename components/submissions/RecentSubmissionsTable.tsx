@@ -1,6 +1,6 @@
 "use client";
 
-import { Anchor, Loader, Table, Text } from "@mantine/core";
+import { Loader, Table, Text } from "@mantine/core";
 import Link from "next/link";
 import type { SubmissionsListItemModel } from "@contracts/core/v1";
 import { StateColor, StateString, TimeBeautify } from "@/lib/lib";
@@ -113,15 +113,20 @@ export function RecentSubmissionsTable({
     <>
       <Text fw={500}>
         Последние посылки{" "}
-        <Anchor
-          component={Link}
+        <Link 
           href={`/contests/${contestId}/mysubmissions?order=desc&userId=${userId}`}
-          fs="italic"
-          c="var(--mantine-color-text)"
-          fw={500}
+          style={{ textDecoration: 'underline', display: 'inline', color: 'inherit' }}
         >
-          (посмотреть все)
-        </Anchor>
+          <Text 
+            span
+            fs="italic"
+            c="var(--mantine-color-text)"
+            fw={500}
+            style={{ cursor: 'pointer' }}
+          >
+            (посмотреть все)
+          </Text>
+        </Link>
         :
       </Text>
       <Table verticalSpacing="xs" horizontalSpacing="sm">

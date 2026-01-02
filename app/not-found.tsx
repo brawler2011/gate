@@ -22,9 +22,11 @@ export default function NotFound() {
             Запрашиваемая страница не существует или была удалена.
           </Text>
 
-          <Button component={Link} href="/" variant="filled">
-            Вернуться на главную
-          </Button>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <Button variant="filled">
+              Вернуться на главную
+            </Button>
+          </Link>
         </Stack>
       </Paper>
     </Container>

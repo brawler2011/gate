@@ -50,22 +50,18 @@ const Page = async (props: Props) => {
         <Text>{TimeBeautify(submission.created_at)}</Text>
       </TableTd>
       <TableTd ta="center">
-        <Text
-          component={Link}
-          href={`/users/${submission.user_id}`}
-          td="underline"
-        >
-          {submission.username}
-        </Text>
+        <Link href={`/users/${submission.user_id}`} style={{ color: 'inherit' }}>
+          <Text span td="underline">
+            {submission.username}
+          </Text>
+        </Link>
       </TableTd>
       <TableTd ta="center">
-        <Text
-          component={Link}
-          href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`}
-          td="underline"
-        >
-          {ProblemTitle(submission.position, submission.problem_title)}
-        </Text>
+        <Link href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`} style={{ color: 'inherit' }}>
+          <Text span td="underline">
+            {ProblemTitle(submission.position, submission.problem_title)}
+          </Text>
+        </Link>
       </TableTd>
       <TableTd ta="center">
         <Text>{LangString(submission.language)}</Text>

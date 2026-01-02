@@ -114,64 +114,64 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children,
         <Collapse in={mobileNavOpened}>
           <Stack gap="xs">
             {checker.canViewProblems(contest) && (
-              <Button
-                component={Link}
-                href={`/contests/${contest.id}`}
-                variant={activeTab === "tasks" ? "filled" : "light"}
-                size="md"
-                leftSection={<IconPuzzle size={18} />}
-                fullWidth
-              >
-                Задачи
-              </Button>
+              <Link href={`/contests/${contest.id}`} style={{ textDecoration: 'none' }}>
+                <Button
+                  variant={activeTab === "tasks" ? "filled" : "light"}
+                  size="md"
+                  leftSection={<IconPuzzle size={18} />}
+                  fullWidth
+                >
+                  Задачи
+                </Button>
+              </Link>
             )}
             {checker.canSubmitSolution(contest) && (
-              <Button
-                component={Link}
-                href={`/contests/${contest.id}/submit`}
-                variant={activeTab === "submit" ? "filled" : "light"}
-                size="md"
-                leftSection={<IconSend size={18} />}
-                fullWidth
-              >
-                Послать решение
-              </Button>
+              <Link href={`/contests/${contest.id}/submit`} style={{ textDecoration: 'none' }}>
+                <Button
+                  variant={activeTab === "submit" ? "filled" : "light"}
+                  size="md"
+                  leftSection={<IconSend size={18} />}
+                  fullWidth
+                >
+                  Послать решение
+                </Button>
+              </Link>
             )}
             {checker.canViewMySubmissions(contest) && (
-              <Button
-                component={Link}
-                href={`/contests/${contest.id}/mysubmissions?sortOrder=desc&userId=${user?.id}`}
-                variant={activeTab === "mysubmissions" ? "filled" : "light"}
-                size="md"
-                leftSection={<IconUser size={18} />}
-                fullWidth
-              >
-                Мои посылки
-              </Button>
+              <Link href={`/contests/${contest.id}/mysubmissions?sortOrder=desc&userId=${user?.id}`} style={{ textDecoration: 'none' }}>
+                <Button
+                  variant={activeTab === "mysubmissions" ? "filled" : "light"}
+                  size="md"
+                  leftSection={<IconUser size={18} />}
+                  fullWidth
+                >
+                  Мои посылки
+                </Button>
+              </Link>
             )}
             {checker.canViewAllSubmissions(contest) && (
-              <Button
-                component={Link}
-                href={`/contests/${contest.id}/submissions?sortOrder=desc`}
-                variant={activeTab === "allsubmissions" ? "filled" : "light"}
-                size="md"
-                leftSection={<IconMail size={18} />}
-                fullWidth
-              >
-                Все посылки
-              </Button>
+              <Link href={`/contests/${contest.id}/submissions?sortOrder=desc`} style={{ textDecoration: 'none' }}>
+                <Button
+                  variant={activeTab === "allsubmissions" ? "filled" : "light"}
+                  size="md"
+                  leftSection={<IconMail size={18} />}
+                  fullWidth
+                >
+                  Все посылки
+                </Button>
+              </Link>
             )}
             {checker.canViewMonitor(contest) && (
-              <Button
-                component={Link}
-                href={`/contests/${contest.id}/monitor`}
-                variant={activeTab === "monitor" ? "filled" : "light"}
-                size="md"
-                leftSection={<IconDeviceDesktop size={18} />}
-                fullWidth
-              >
-                Монитор
-              </Button>
+              <Link href={`/contests/${contest.id}/monitor`} style={{ textDecoration: 'none' }}>
+                <Button
+                  variant={activeTab === "monitor" ? "filled" : "light"}
+                  size="md"
+                  leftSection={<IconDeviceDesktop size={18} />}
+                  fullWidth
+                >
+                  Монитор
+                </Button>
+              </Link>
             )}
           </Stack>
         </Collapse>

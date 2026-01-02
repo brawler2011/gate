@@ -18,9 +18,11 @@ export default function ForbiddenPage() {
             У вас нет прав для просмотра этого ресурса.
           </Text>
 
-          <Button component={Link} href="/" variant="filled">
-            Вернуться на главную
-          </Button>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <Button variant="filled">
+              Вернуться на главную
+            </Button>
+          </Link>
         </Stack>
       </Paper>
     </Container>

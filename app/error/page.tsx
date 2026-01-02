@@ -27,9 +27,11 @@ export default async function ErrorPage({ searchParams }: PageProps) {
             </Stack>
           )}
 
-          <Button component={Link} href="/" variant="light">
-            Вернуться на главную
-          </Button>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <Button variant="light">
+              Вернуться на главную
+            </Button>
+          </Link>
         </Stack>
       </Paper>
     </Container>

@@ -65,15 +65,19 @@ export function ErrorDisplay({ error }: Props) {
 
           <Group>
             {error.status === 401 ? (
-              <Button component={Link} href={`/auth/login${returnTo}`} variant="filled">
-                Войти
-              </Button>
+              <Link href={`/auth/login${returnTo}`} style={{ textDecoration: 'none' }}>
+                <Button variant="filled">
+                  Войти
+                </Button>
+              </Link>
             ) : (
               <RefreshButton />
             )}
-            <Button component={Link} href="/" variant="light">
-              На главную
-            </Button>
+            <Link href="/" style={{ textDecoration: 'none' }}>
+              <Button variant="light">
+                На главную
+              </Button>
+            </Link>
           </Group>
         </Stack>
       </Paper>

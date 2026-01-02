@@ -254,7 +254,7 @@ export default function RegistrationPage() {
 
           <Text c="dimmed" ta="center" mt={24} fz={14}>
             Уже есть аккаунт?{" "}
-            <Anchor component={Link} href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`} fz={14} fw={600}>
+            <Anchor component={Link} href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`} fz={14} fw={600} underline="hover">
               Войти
             </Anchor>
           </Text>

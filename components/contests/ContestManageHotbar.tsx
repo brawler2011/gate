@@ -66,16 +66,16 @@ export function ContestManageHotbar({
         >
           <div className={classes.tabsHeader}>
             {/* Go back button on the left */}
-            <Button
-              component={Link}
-              href={`/contests/${contestId}`}
-              variant="subtle"
-              size="sm"
-              leftSection={<IconArrowLeft size={16} />}
-              className={classes.backButton}
-            >
-              Назад к контесту
-            </Button>
+            <Link href={`/contests/${contestId}`} style={{ textDecoration: 'none' }}>
+              <Button
+                variant="subtle"
+                size="sm"
+                leftSection={<IconArrowLeft size={16} />}
+                className={classes.backButton}
+              >
+                Назад к контесту
+              </Button>
+            </Link>
 
             {/* Tabs on the right */}
             <div className={classes.tabRow}>
@@ -108,16 +108,16 @@ export function ContestManageHotbar({
         style={{ maxWidth: maxWidth || CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}
       >
         {/* Back button on mobile */}
-        <Button
-          component={Link}
-          href={`/contests/${contestId}`}
-          variant="light"
-          size="md"
-          leftSection={<IconArrowLeft size={18} />}
-          fullWidth
-        >
-          Назад к контесту
-        </Button>
+        <Link href={`/contests/${contestId}`} style={{ textDecoration: 'none' }}>
+          <Button
+            variant="light"
+            size="md"
+            leftSection={<IconArrowLeft size={18} />}
+            fullWidth
+          >
+            Назад к контесту
+          </Button>
+        </Link>
 
         {/* Mobile menu toggle */}
         <Button
@@ -138,17 +138,20 @@ export function ContestManageHotbar({
             {NAV_SECTIONS.map((section) => {
               const Icon = section.icon.type;
               return (
-                <Button
-                  key={section.key}
-                  component={Link}
+                <Link 
+                  key={section.key} 
                   href={`/contests/${contestId}/manage?section=${section.key}`}
-                  variant={activeSection === section.key ? "filled" : "light"}
-                  size="md"
-                  leftSection={<Icon size={18} />}
-                  fullWidth
+                  style={{ textDecoration: 'none' }}
                 >
-                  {section.label}
-                </Button>
+                  <Button
+                    variant={activeSection === section.key ? "filled" : "light"}
+                    size="md"
+                    leftSection={<Icon size={18} />}
+                    fullWidth
+                  >
+                    {section.label}
+                  </Button>
+                </Link>
               );
             })}
           </Stack>

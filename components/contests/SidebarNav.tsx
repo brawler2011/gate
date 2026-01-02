@@ -27,18 +27,21 @@ export function SidebarNav({ contestId, activeSection, sections }: SidebarNavPro
                 {sections.map((section) => {
                     const Icon = section.icon;
                     return (
-                        <Button
-                            key={section.key}
-                            component={Link}
+                        <Link 
+                            key={section.key} 
                             href={`/contests/${contestId}/manage?section=${section.key}`}
-                            variant={activeSection === section.key ? "filled" : "light"}
-                            size="sm"
-                            leftSection={<Icon size={20} />}
-                            fullWidth
-                            justify="flex-start"
+                            style={{ textDecoration: 'none' }}
                         >
-                            {section.label}
-                        </Button>
+                            <Button
+                                variant={activeSection === section.key ? "filled" : "light"}
+                                size="sm"
+                                leftSection={<Icon size={20} />}
+                                fullWidth
+                                justify="flex-start"
+                            >
+                                {section.label}
+                            </Button>
+                        </Link>
                     );
                 })}
             </Stack>

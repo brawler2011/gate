@@ -128,7 +128,7 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
       <Paper shadow="sm" p="md" mb="lg" withBorder>
         <Group justify="space-between">
           <Group gap="sm">
-            <Anchor component={Link} href="/workshop?view=problems">
+            <Link href="/workshop?view=problems" style={{ textDecoration: 'none' }}>
               <Button
                 variant="default"
                 size="sm"
@@ -136,7 +136,7 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
               >
                 Назад
               </Button>
-            </Anchor>
+            </Link>
             <div>
               <Title order={3} size="h5">
                 Редактирование задачи

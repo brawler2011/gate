@@ -21,16 +21,19 @@ export function MobileNav({ contestId, activeSection, sections }: MobileNavProps
                 {sections.map((section) => {
                     const Icon = section.icon;
                     return (
-                        <Button
-                            key={section.key}
-                            component={Link}
+                        <Link 
+                            key={section.key} 
                             href={`/contests/${contestId}/manage?section=${section.key}`}
-                            variant={activeSection === section.key ? "filled" : "light"}
-                            size="xs"
-                            leftSection={<Icon size={16} />}
+                            style={{ textDecoration: 'none' }}
                         >
-                            {section.label}
-                        </Button>
+                            <Button
+                                variant={activeSection === section.key ? "filled" : "light"}
+                                size="xs"
+                                leftSection={<Icon size={16} />}
+                            >
+                                {section.label}
+                            </Button>
+                        </Link>
                     );
                 })}
             </Group>
