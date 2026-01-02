@@ -19,10 +19,10 @@ const nextConfig = {
         serverActions: {
             bodySizeLimit: '20mb',
         },
-        turbo: {
-            resolveAlias: {
-                '@contracts': path.resolve(__dirname, '../contracts'),
-            },
+    },
+    turbopack: {
+        resolveAlias: {
+            '@contracts': path.resolve(__dirname, '../contracts'),
         },
     },
     async rewrites() {
