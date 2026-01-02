@@ -27,7 +27,7 @@
         "./*"
       ],
       "@contracts/*": [
-        "../contracts/*"
+        "./contracts/*"
       ],
       "@components/*": [
         "./components/*"

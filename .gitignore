@@ -41,5 +41,8 @@ deploy/*.tar.gz
 
 # Don't exclude these - they're needed
 !frontend/
-!contracts/
+
+# Contracts junction (created for local dev, copied in Dockerfile for production)
+# Must be after the !contracts/ line to properly ignore the junction
+/contracts/
 

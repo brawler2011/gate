@@ -10,18 +10,17 @@ COPY frontend/package.json frontend/bun.lock ./
 RUN --mount=type=cache,id=bun-cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile
 
-# Копируем contracts/ (нужны для импортов)
-COPY contracts/ ../contracts/
-
-# Переменные окружения для сборки (читаем из .env.production внутри контейнера)
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
 # Копируем остальные файлы frontend/
 COPY frontend/ .
 
+# Копируем contracts/ внутрь frontend для Turbopack
+COPY contracts/ ./contracts/
+
+# Переменные окружения для сборки
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
 # Собираем приложение с использованием кэша Next.js
-# Это позволяет не пересобирать неизмененные компоненты и страницы
 RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
     bun run build
 
