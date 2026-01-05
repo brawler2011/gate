@@ -21,7 +21,7 @@ deps: go.sum go.mod package.json
 	@command -v "$(NODE)" >/dev/null || { echo "Error: node is not installed"; exit 1; }
 
 merge-gateway: deps
-	@node tools/merge-openapi.js`
+	@node tools/merge-openapi.js
 
 go-gen: deps
 	@if [ -z "$(SPECS)" ]; then \
