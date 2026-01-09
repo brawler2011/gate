@@ -1,4 +1,3 @@
--- Submission CRUD operations
 -- name: CreateSubmission :one
 INSERT INTO submissions (
     contest_id,
@@ -124,14 +123,3 @@ WHERE (
     sqlc.narg('state')::integer IS NULL
     OR s.state = sqlc.narg('state')::integer
   );
--- name: GetUntestedSubmissions :many
-SELECT s.id,
-  s.contest_id,
-  s.problem_id,
-  s.created_by,
-  s.language
-FROM submissions s
-WHERE s.state = 1 -- Saved state
-  AND s.created_at < now() - interval '1 minute' -- Only submissions older than 1 minute
-ORDER BY s.created_at ASC
-LIMIT sqlc.arg('limit');

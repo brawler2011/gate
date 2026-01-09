@@ -1,4 +1,4 @@
-package pkg
+package pg
 
 import (
 	"context"
@@ -8,17 +8,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type TxManager struct {
+type Transactor struct {
 	db *pgxpool.Pool
 }
 
-func NewTxManager(db *pgxpool.Pool) *TxManager {
-	return &TxManager{
+func NewTransactor(db *pgxpool.Pool) *Transactor {
+	return &Transactor{
 		db: db,
 	}
 }
 
-func (m *TxManager) WithTx(ctx context.Context, fn func(ctx context.Context, tx pgx.Tx) error) error {
+func (m *Transactor) WithTx(ctx context.Context, fn func(ctx context.Context, tx pgx.Tx) error) error {
 	tx, err := m.db.Begin(ctx)
 	if err != nil {
 		return HandlePgErr(err)

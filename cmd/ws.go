@@ -30,9 +30,9 @@ Endpoint: GET /ws/submissions?sortOrder=desc&contestId=uuid&userId=uuid&problemI
 
 Parameters:
   sortOrder (required): Must be "desc" for real-time updates (page=1, sortOrder=desc)
-  contestId (optional): Filter by contest ID
-  userId (optional): Filter by user ID  
-  problemId (optional): Filter by problem ID
+  contestId (optional): Filter by contest Id
+  userId (optional): Filter by user Id  
+  problemId (optional): Filter by problem Id
   state (optional): Filter by submission state
   language (optional): Filter by programming language
 

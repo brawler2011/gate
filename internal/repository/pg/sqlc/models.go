@@ -302,16 +302,17 @@ type Image struct {
 }
 
 type OutboxEvent struct {
-	ID            uuid.UUID                `json:"id"`
-	AggregateID   uuid.UUID                `json:"aggregate_id"`
-	AggregateType string                   `json:"aggregate_type"`
-	EventType     models.OutboxEventType   `json:"event_type"`
-	Payload       []byte                   `json:"payload"`
-	Status        models.OutboxEventStatus `json:"status"`
-	CreatedAt     time.Time                `json:"created_at"`
-	ProcessedAt   pgtype.Timestamptz       `json:"processed_at"`
-	RetryCount    int32                    `json:"retry_count"`
-	ErrorMessage  *string                  `json:"error_message"`
+	ID           uuid.UUID                `json:"id"`
+	AggregateID  uuid.UUID                `json:"aggregate_id"`
+	EventType    models.OutboxEventType   `json:"event_type"`
+	Payload      []byte                   `json:"payload"`
+	Status       models.OutboxEventStatus `json:"status"`
+	RetryCount   int32                    `json:"retry_count"`
+	ErrorMessage *string                  `json:"error_message"`
+	CreatedAt    time.Time                `json:"created_at"`
+	ProcessedAt  *time.Time               `json:"processed_at"`
+	LockedAt     *time.Time               `json:"locked_at"`
+	DeadlineAt   *time.Time               `json:"deadline_at"`
 }
 
 type Problem struct {
@@ -371,11 +372,11 @@ type User struct {
 	Username  string     `json:"username"`
 	Role      UserRole   `json:"role"`
 	KratosID  uuid.UUID  `json:"kratos_id"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
 	Email     string     `json:"email"`
 	Name      string     `json:"name"`
 	Surname   string     `json:"surname"`
 	Bio       string     `json:"bio"`
 	ImgID     *uuid.UUID `json:"img_id"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 }

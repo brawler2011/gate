@@ -35,6 +35,22 @@ sql:
             go_type: "github.com/gate149/core/internal/domain/models.OutboxEventStatus"
           - column: "outbox_events.event_type"
             go_type: "github.com/gate149/core/internal/domain/models.OutboxEventType"
+          - column: "outbox_events.processed_at"
+            go_type:
+              import: "time"
+              type: "Time"
+              pointer: true
+          - column: "outbox_events.locked_at"
+            go_type:
+              import: "time"
+              type: "Time"
+              pointer: true
+          - column: "outbox_events.deadline_at"
+            go_type:
+              import: "time"
+              type: "Time"
+              pointer: true
+
           - column: "images.id"
             go_type: "github.com/google/uuid.UUID"
           - column: "users.img_id"

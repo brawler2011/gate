@@ -181,7 +181,7 @@ func (j *Judge0Client) WaitForSubmission(ctx context.Context, token string, maxW
 			}
 
 			// Check if submission is complete
-			// Status ID 1 = In Queue, 2 = Processing
+			// Status Id 1 = In Queue, 2 = Processing
 			if result.Status != nil && result.Status.Id > 2 {
 				return result, nil
 			}

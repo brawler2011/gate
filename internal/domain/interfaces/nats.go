@@ -1,5 +1,7 @@
 package interfaces
 
-type NatsPublisher interface {
-	Publish(subject string, data []byte) error
+import "context"
+
+type Publisher interface {
+	Publish(ctx context.Context, subject string, data []byte) error
 }

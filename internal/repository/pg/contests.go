@@ -6,7 +6,6 @@ import (
 
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/repository/pg/sqlc"
-	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,7 +28,7 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *models.CreateC
 		CreatedBy: params.UserId,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -37,7 +36,7 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *models.CreateC
 func (r *ContestsRepo) GetContest(ctx context.Context, id uuid.UUID) (models.Contest, error) {
 	contest, err := r.queries.GetContest(ctx, id)
 	if err != nil {
-		return models.Contest{}, pkg.HandlePgErr(err)
+		return models.Contest{}, HandlePgErr(err)
 	}
 	return mapContest(contest), nil
 }
@@ -53,7 +52,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdate
 		SubmissionsReviewScope: stringToNullContestRole(c.SubmissionsReviewScope),
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -61,7 +60,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdate
 func (r *ContestsRepo) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	err := r.queries.DeleteContest(ctx, id)
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -76,7 +75,7 @@ func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter models.Admi
 		SortOrder:  sortOrderToStringPtr(filter.SortOrder),
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountAdminContests(ctx, sqlc.CountAdminContestsParams{
@@ -84,7 +83,7 @@ func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter models.Admi
 		Visibility: contestVisibilityToStringPtr(filter.Visibility),
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	contests := make([]models.Contest, len(rows))
@@ -105,7 +104,7 @@ func (r *ContestsRepo) ListUserContests(ctx context.Context, filter models.UserC
 		SortOrder: sortOrderToStringPtr(filter.SortOrder),
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountUserContests(ctx, sqlc.CountUserContestsParams{
@@ -113,7 +112,7 @@ func (r *ContestsRepo) ListUserContests(ctx context.Context, filter models.UserC
 		Search: stringToStringPtr(filter.Search),
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	contests := make([]models.Contest, len(rows))
@@ -134,7 +133,7 @@ func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter models.W
 		SortOrder: sortOrderToStringPtr(filter.SortOrder),
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountWorkshopContests(ctx, sqlc.CountWorkshopContestsParams{
@@ -142,7 +141,7 @@ func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter models.W
 		Search: stringToStringPtr(filter.Search),
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	contests := make([]models.Contest, len(rows))
@@ -162,12 +161,12 @@ func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter models.Pub
 		SortOrder: sortOrderToStringPtr(filter.SortOrder),
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountPublicContests(ctx, filter.Search)
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	contests := make([]models.Contest, len(rows))
@@ -184,7 +183,7 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c models.Contes
 		ContestID: c.ContestId,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -195,7 +194,7 @@ func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c models.Contes
 		ProblemID: c.ProblemId,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -206,7 +205,7 @@ func (r *ContestsRepo) GetContestProblem(ctx context.Context, c models.ContestPr
 		ProblemID: c.ProblemId,
 	})
 	if err != nil {
-		return models.ContestProblem{}, pkg.HandlePgErr(err)
+		return models.ContestProblem{}, HandlePgErr(err)
 	}
 	return mapGetContestProblemRow(row), nil
 }
@@ -214,7 +213,7 @@ func (r *ContestsRepo) GetContestProblem(ctx context.Context, c models.ContestPr
 func (r *ContestsRepo) GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]models.ContestProblem, error) {
 	rows, err := r.queries.GetContestProblems(ctx, contestId)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+		return nil, HandlePgErr(err)
 	}
 
 	problems := make([]models.ContestProblem, len(rows))
@@ -232,12 +231,12 @@ func (r *ContestsRepo) ListContestMembers(ctx context.Context, filter models.Par
 		Offset:    Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountContestMembers(ctx, filter.ContestId)
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	members := make([]models.ContestMember, len(rows))
@@ -255,7 +254,7 @@ func (r *ContestsRepo) CreateContestMember(ctx context.Context, c *models.Create
 		Role:      c.Role,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -266,7 +265,7 @@ func (r *ContestsRepo) GetContestMember(ctx context.Context, c *models.ContestPe
 		UserID:    c.UserId,
 	})
 	if err != nil {
-		return models.ContestMember{}, pkg.HandlePgErr(err)
+		return models.ContestMember{}, HandlePgErr(err)
 	}
 	return mapGetContestMemberRow(row), nil
 }
@@ -277,7 +276,7 @@ func (r *ContestsRepo) DeleteContestMember(ctx context.Context, userId uuid.UUID
 		ContestID: contestId,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -289,7 +288,7 @@ func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.U
 		Role:      role,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }

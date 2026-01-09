@@ -9,12 +9,11 @@ import (
 )
 
 type OutboxRepo interface {
-	DeleteOldEvents(ctx context.Context, retentionDays int) error
-	GetPendingEvents(ctx context.Context, limit int) ([]models.OutboxEvent, error)
-	InsertEvent(ctx context.Context, event *models.OutboxEvent) error
+	DeleteOldEvents(ctx context.Context, retentionDays int32) error
+	PickEvents(ctx context.Context, limit int32, timeoutSec int32) ([]models.OutboxEvent, error)
+	CreateEvent(ctx context.Context, event *models.CreateOutboxEventParams) error
 	MarkAsCompleted(ctx context.Context, id uuid.UUID) error
 	MarkAsFailed(ctx context.Context, id uuid.UUID, errorMsg string) error
-	MarkAsProcessing(ctx context.Context, id uuid.UUID) error
-	ResetFailedToPending(ctx context.Context, maxRetries int) error
-	WithTx(tx pgx.Tx) OutboxRepo // FIXME: layers violation
+	ResetFailedToPending(ctx context.Context, maxRetries int32, retryDelaySec int32) error
+	WithTx(tx pgx.Tx) OutboxRepo
 }

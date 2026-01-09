@@ -2,11 +2,9 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/domain/models"
-	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -15,14 +13,14 @@ type UsersUseCase struct {
 	usersRepo  interfaces.UsersRepo
 	outboxRepo interfaces.OutboxRepo
 	imagesRepo interfaces.ImagesRepo
-	txManager  *pkg.TxManager
+	txManager  interfaces.Transactor
 }
 
 func NewUsersUseCase(
 	repo interfaces.UsersRepo,
 	outboxRepo interfaces.OutboxRepo,
 	imagesRepo interfaces.ImagesRepo,
-	txManager *pkg.TxManager,
+	txManager interfaces.Transactor,
 ) *UsersUseCase {
 	return &UsersUseCase{
 		usersRepo:  repo,
@@ -35,7 +33,7 @@ func NewUsersUseCase(
 func (u *UsersUseCase) CreateUser(ctx context.Context, input models.CreateUserInput) (uuid.UUID, error) {
 	id := uuid.New()
 
-	// Prepare image ID if image data is provided
+	// Prepare image Id if image data is provided
 	var imgId *uuid.UUID
 	var imageParams *models.CreateImageParams
 
@@ -126,35 +124,5 @@ func (u *UsersUseCase) UpdateUser(ctx context.Context, input models.UpdateUserIn
 		ImgId:    input.ImgId,
 	}
 
-	payload := models.UserUpdatedPayload{
-		UserId:   input.Id,
-		Username: input.Username,
-		Role:     role,
-		Email:    input.Email,
-		Name:     input.Name,
-		Surname:  input.Surname,
-		Bio:      input.Bio,
-		ImgId:    input.ImgId,
-	}
-
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	event := &models.OutboxEvent{
-		AggregateID:   input.Id,
-		AggregateType: "user",
-		EventType:     models.EventTypeUserUpdated,
-		Payload:       payloadBytes,
-		Status:        models.OutboxEventStatusPending,
-		RetryCount:    0,
-	}
-
-	return u.txManager.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		if err := u.usersRepo.WithTx(tx).UpdateUser(ctx, params); err != nil {
-			return err
-		}
-		return u.outboxRepo.WithTx(tx).InsertEvent(ctx, event)
-	})
+	return u.usersRepo.UpdateUser(ctx, params)
 }

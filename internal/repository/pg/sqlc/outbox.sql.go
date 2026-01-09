@@ -7,53 +7,104 @@ package sqlc
 
 import (
 	"context"
-	"time"
 
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const deleteOldEvents = `-- name: DeleteOldEvents :exec
 DELETE FROM outbox_events
 WHERE status = $1
-       AND processed_at < $2
+  AND created_at < NOW() - ($2::int * INTERVAL '1 day')
 `
 
 type DeleteOldEventsParams struct {
-	Status     models.OutboxEventStatus `json:"status"`
-	BeforeDate pgtype.Timestamptz       `json:"before_date"`
+	Status        models.OutboxEventStatus `json:"status"`
+	RetentionDays int32                    `json:"retention_days"`
 }
 
 func (q *Queries) DeleteOldEvents(ctx context.Context, arg DeleteOldEventsParams) error {
-	_, err := q.db.Exec(ctx, deleteOldEvents, arg.Status, arg.BeforeDate)
+	_, err := q.db.Exec(ctx, deleteOldEvents, arg.Status, arg.RetentionDays)
 	return err
 }
 
-const getPendingEvents = `-- name: GetPendingEvents :many
-SELECT id,
-       aggregate_id,
-       aggregate_type,
-       event_type,
-       payload,
-       status,
-       created_at,
-       processed_at,
-       retry_count,
-       error_message
-FROM outbox_events
-WHERE status = $1
-ORDER BY created_at ASC
-LIMIT $2
+const insertEvent = `-- name: InsertEvent :exec
+INSERT INTO outbox_events (id, aggregate_id, event_type, payload)
+VALUES ($1::uuid, $2::uuid, $3, $4)
 `
 
-type GetPendingEventsParams struct {
-	Status models.OutboxEventStatus `json:"status"`
-	Limit  int32                    `json:"limit"`
+type InsertEventParams struct {
+	ID          uuid.UUID              `json:"id"`
+	AggregateID uuid.UUID              `json:"aggregate_id"`
+	EventType   models.OutboxEventType `json:"event_type"`
+	Payload     []byte                 `json:"payload"`
 }
 
-func (q *Queries) GetPendingEvents(ctx context.Context, arg GetPendingEventsParams) ([]OutboxEvent, error) {
-	rows, err := q.db.Query(ctx, getPendingEvents, arg.Status, arg.Limit)
+func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error {
+	_, err := q.db.Exec(ctx, insertEvent,
+		arg.ID,
+		arg.AggregateID,
+		arg.EventType,
+		arg.Payload,
+	)
+	return err
+}
+
+const markAsCompleted = `-- name: MarkAsCompleted :exec
+UPDATE outbox_events
+SET status       = 'completed',
+    processed_at = NOW()
+WHERE id = $1::uuid
+`
+
+func (q *Queries) MarkAsCompleted(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, markAsCompleted, id)
+	return err
+}
+
+const markAsFailed = `-- name: MarkAsFailed :exec
+UPDATE outbox_events
+SET status        = 'failed',
+    retry_count   = retry_count + 1,
+    processed_at  = NOW(),
+    error_message = $1::text
+WHERE id = $2::uuid
+`
+
+type MarkAsFailedParams struct {
+	ErrorMessage string    `json:"error_message"`
+	ID           uuid.UUID `json:"id"`
+}
+
+func (q *Queries) MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) error {
+	_, err := q.db.Exec(ctx, markAsFailed, arg.ErrorMessage, arg.ID)
+	return err
+}
+
+const pickEvents = `-- name: PickEvents :many
+UPDATE outbox_events
+SET status = 'processing',
+    locked_at = NOW(),
+    deadline_at = NOW() + ($1::int * INTERVAL '1 second')
+WHERE id IN (
+    SELECT id
+    FROM outbox_events
+    WHERE status = 'pending' 
+       OR (status = 'processing' AND deadline_at < NOW())
+    ORDER BY created_at ASC
+    LIMIT $2::int
+    FOR UPDATE SKIP LOCKED
+)
+RETURNING id, aggregate_id, event_type, payload, status, retry_count, error_message, created_at, processed_at, locked_at, deadline_at
+`
+
+type PickEventsParams struct {
+	TimeoutSec int32 `json:"timeout_sec"`
+	LimitCount int32 `json:"limit_count"`
+}
+
+func (q *Queries) PickEvents(ctx context.Context, arg PickEventsParams) ([]OutboxEvent, error) {
+	rows, err := q.db.Query(ctx, pickEvents, arg.TimeoutSec, arg.LimitCount)
 	if err != nil {
 		return nil, err
 	}
@@ -64,14 +115,15 @@ func (q *Queries) GetPendingEvents(ctx context.Context, arg GetPendingEventsPara
 		if err := rows.Scan(
 			&i.ID,
 			&i.AggregateID,
-			&i.AggregateType,
 			&i.EventType,
 			&i.Payload,
 			&i.Status,
-			&i.CreatedAt,
-			&i.ProcessedAt,
 			&i.RetryCount,
 			&i.ErrorMessage,
+			&i.CreatedAt,
+			&i.ProcessedAt,
+			&i.LockedAt,
+			&i.DeadlineAt,
 		); err != nil {
 			return nil, err
 		}
@@ -83,123 +135,20 @@ func (q *Queries) GetPendingEvents(ctx context.Context, arg GetPendingEventsPara
 	return items, nil
 }
 
-const insertEvent = `-- name: InsertEvent :one
-INSERT INTO outbox_events (
-              aggregate_id,
-              aggregate_type,
-              event_type,
-              payload,
-              status,
-              retry_count
-       )
-VALUES (
-              $1::uuid,
-              $2,
-              $3,
-              $4,
-              $5,
-              $6
-       )
-RETURNING id,
-       created_at
-`
-
-type InsertEventParams struct {
-	AggregateID   uuid.UUID                `json:"aggregate_id"`
-	AggregateType string                   `json:"aggregate_type"`
-	EventType     models.OutboxEventType   `json:"event_type"`
-	Payload       []byte                   `json:"payload"`
-	Status        models.OutboxEventStatus `json:"status"`
-	RetryCount    int32                    `json:"retry_count"`
-}
-
-type InsertEventRow struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-// Outbox event operations
-func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) (InsertEventRow, error) {
-	row := q.db.QueryRow(ctx, insertEvent,
-		arg.AggregateID,
-		arg.AggregateType,
-		arg.EventType,
-		arg.Payload,
-		arg.Status,
-		arg.RetryCount,
-	)
-	var i InsertEventRow
-	err := row.Scan(&i.ID, &i.CreatedAt)
-	return i, err
-}
-
-const markAsCompleted = `-- name: MarkAsCompleted :exec
-UPDATE outbox_events
-SET status = $1,
-       processed_at = $2
-WHERE id = $3::uuid
-`
-
-type MarkAsCompletedParams struct {
-	Status      models.OutboxEventStatus `json:"status"`
-	ProcessedAt pgtype.Timestamptz       `json:"processed_at"`
-	ID          uuid.UUID                `json:"id"`
-}
-
-func (q *Queries) MarkAsCompleted(ctx context.Context, arg MarkAsCompletedParams) error {
-	_, err := q.db.Exec(ctx, markAsCompleted, arg.Status, arg.ProcessedAt, arg.ID)
-	return err
-}
-
-const markAsFailed = `-- name: MarkAsFailed :exec
-UPDATE outbox_events
-SET status = $1,
-       retry_count = retry_count + 1,
-       error_message = $2
-WHERE id = $3::uuid
-`
-
-type MarkAsFailedParams struct {
-	Status       models.OutboxEventStatus `json:"status"`
-	ErrorMessage *string                  `json:"error_message"`
-	ID           uuid.UUID                `json:"id"`
-}
-
-func (q *Queries) MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) error {
-	_, err := q.db.Exec(ctx, markAsFailed, arg.Status, arg.ErrorMessage, arg.ID)
-	return err
-}
-
-const markAsProcessing = `-- name: MarkAsProcessing :exec
-UPDATE outbox_events
-SET status = $1
-WHERE id = $2::uuid
-`
-
-type MarkAsProcessingParams struct {
-	Status models.OutboxEventStatus `json:"status"`
-	ID     uuid.UUID                `json:"id"`
-}
-
-func (q *Queries) MarkAsProcessing(ctx context.Context, arg MarkAsProcessingParams) error {
-	_, err := q.db.Exec(ctx, markAsProcessing, arg.Status, arg.ID)
-	return err
-}
-
 const resetFailedToPending = `-- name: ResetFailedToPending :exec
 UPDATE outbox_events
-SET status = $1
-WHERE status = $2
-       AND retry_count < $3
+SET status = 'pending'
+WHERE status = 'failed' 
+  AND retry_count < $1::int 
+  AND processed_at < NOW() - ($2::int * INTERVAL '1 second')
 `
 
 type ResetFailedToPendingParams struct {
-	Status     models.OutboxEventStatus `json:"status"`
-	StatusOld  models.OutboxEventStatus `json:"status_old"`
-	MaxRetries int32                    `json:"max_retries"`
+	MaxRetries    int32 `json:"max_retries"`
+	RetryDelaySec int32 `json:"retry_delay_sec"`
 }
 
 func (q *Queries) ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error {
-	_, err := q.db.Exec(ctx, resetFailedToPending, arg.Status, arg.StatusOld, arg.MaxRetries)
+	_, err := q.db.Exec(ctx, resetFailedToPending, arg.MaxRetries, arg.RetryDelaySec)
 	return err
 }

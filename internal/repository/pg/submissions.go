@@ -3,10 +3,11 @@ package pg
 import (
 	"context"
 
+	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/repository/pg/sqlc"
-	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -21,10 +22,16 @@ func NewSubmissionsRepo(db *pgxpool.Pool) *SubmissionsRepo {
 	}
 }
 
+func (r *SubmissionsRepo) WithTx(tx pgx.Tx) interfaces.SubmissionsRepo {
+	return &SubmissionsRepo{
+		queries: sqlc.New(tx),
+	}
+}
+
 func (r *SubmissionsRepo) GetSubmission(ctx context.Context, id uuid.UUID) (models.Submission, error) {
 	row, err := r.queries.GetSubmission(ctx, id)
 	if err != nil {
-		return models.Submission{}, pkg.HandlePgErr(err)
+		return models.Submission{}, HandlePgErr(err)
 	}
 	return mapGetSubmissionRow(row), nil
 }
@@ -39,7 +46,7 @@ func (r *SubmissionsRepo) CreateSubmission(ctx context.Context, creation *models
 		Penalty:    int32(creation.Penalty),
 	})
 	if err != nil {
-		return uuid.Nil, pkg.HandlePgErr(err)
+		return uuid.Nil, HandlePgErr(err)
 	}
 	return id, nil
 }
@@ -53,7 +60,7 @@ func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, up
 		ID:         id,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -73,12 +80,12 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.Sub
 		State:     statePtrToInt32Ptr(filter.State),
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	rows, err := r.queries.ListSubmissions(ctx, sqlc.ListSubmissionsParams{
 		Limit:     int32(filter.PageSize),
-		Offset:    int32(filter.Offset()),
+		Offset:    int32((filter.Page - 1) * filter.PageSize),
 		ContestID: nullableUUIDToPgtype(filter.ContestId),
 		CreatedBy: nullableUUIDToPgtype(filter.UserId),
 		ProblemID: nullableUUIDToPgtype(filter.ProblemId),
@@ -87,7 +94,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.Sub
 		SortOrder: sortOrder,
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	submissions := make([]models.Submission, len(rows))
@@ -96,19 +103,6 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.Sub
 	}
 
 	return submissions, int32(totalCount), nil
-}
-
-func (r *SubmissionsRepo) GetUntestedSubmissions(ctx context.Context, limit int32) ([]models.Submission, error) {
-	rows, err := r.queries.GetUntestedSubmissions(ctx, limit)
-	if err != nil {
-		return nil, pkg.HandlePgErr(err)
-	}
-
-	submissions := make([]models.Submission, len(rows))
-	for i, row := range rows {
-		submissions[i] = mapGetUntestedSubmissionsRow(row)
-	}
-	return submissions, nil
 }
 
 func nullableUUIDToPgtype(id *uuid.UUID) pgtype.UUID {
@@ -253,33 +247,5 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 		ContestTitle: contestTitle,
 		UpdatedAt:    row.UpdatedAt,
 		CreatedAt:    row.CreatedAt,
-	}
-}
-
-func mapGetUntestedSubmissionsRow(row sqlc.GetUntestedSubmissionsRow) models.Submission {
-	var createdBy *uuid.UUID
-	if row.CreatedBy.Valid {
-		cb := uuid.UUID(row.CreatedBy.Bytes)
-		createdBy = &cb
-	}
-
-	var problemID *uuid.UUID
-	if row.ProblemID.Valid {
-		pid := uuid.UUID(row.ProblemID.Bytes)
-		problemID = &pid
-	}
-
-	var contestID *uuid.UUID
-	if row.ContestID.Valid {
-		cid := uuid.UUID(row.ContestID.Bytes)
-		contestID = &cid
-	}
-
-	return models.Submission{
-		ID:        row.ID,
-		CreatedBy: createdBy,
-		Language:  row.Language,
-		ProblemID: problemID,
-		ContestID: contestID,
 	}
 }

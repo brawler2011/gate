@@ -2,15 +2,11 @@ package pkg
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
 	"strings"
-
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 var (
@@ -93,25 +89,4 @@ func HandleContextErr(err error) error {
 		return Wrap(ErrInternal, err, "context deadline exceeded")
 	}
 	return nil
-}
-
-func HandlePgErr(err error) error {
-	if ctxErr := HandleContextErr(err); ctxErr != nil {
-		return ctxErr
-	}
-
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return Wrap(ErrBadInput, err, "integrity constraint violation")
-		}
-
-		return Wrap(ErrUnhandled, err, "unexpected postgres error")
-	}
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return Wrap(ErrNotFound, err, "no rows found")
-	}
-
-	return Wrap(ErrUnhandled, err, "unexpected error")
 }

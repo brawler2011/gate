@@ -6,7 +6,6 @@ import (
 	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/repository/pg/sqlc"
-	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -45,7 +44,7 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params models.CreateUserPara
 		ImgID:    params.ImgId,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -53,7 +52,7 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params models.CreateUserPara
 func (r *UsersRepo) GetUserById(ctx context.Context, id uuid.UUID) (models.User, error) {
 	user, err := r.queries.GetUserById(ctx, id)
 	if err != nil {
-		return models.User{}, pkg.HandlePgErr(err)
+		return models.User{}, HandlePgErr(err)
 	}
 	return mapUserToModel(user), nil
 }
@@ -77,7 +76,7 @@ func mapUserToModel(user sqlc.User) models.User {
 func (r *UsersRepo) GetUserByKratosId(ctx context.Context, kratosId uuid.UUID) (models.User, error) {
 	user, err := r.queries.GetUserByKratosId(ctx, kratosId)
 	if err != nil {
-		return models.User{}, pkg.HandlePgErr(err)
+		return models.User{}, HandlePgErr(err)
 	}
 	return mapUserToModel(user), nil
 }
@@ -92,7 +91,7 @@ func (r *UsersRepo) ListUsers(ctx context.Context, filter models.UsersListFilter
 		Role:   filter.Role,
 	})
 	if err != nil {
-		return models.UsersList{}, pkg.HandlePgErr(err)
+		return models.UsersList{}, HandlePgErr(err)
 	}
 
 	users, err := r.queries.ListUsers(ctx, sqlc.ListUsersParams{
@@ -102,7 +101,7 @@ func (r *UsersRepo) ListUsers(ctx context.Context, filter models.UsersListFilter
 		Role:   filter.Role,
 	})
 	if err != nil {
-		return models.UsersList{}, pkg.HandlePgErr(err)
+		return models.UsersList{}, HandlePgErr(err)
 	}
 
 	userRecords := make([]models.User, len(users))
@@ -143,7 +142,7 @@ func (r *UsersRepo) UpdateUser(
 		ImgID:    params.ImgId,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 
 	return nil

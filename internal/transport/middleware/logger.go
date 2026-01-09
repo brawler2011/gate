@@ -49,7 +49,7 @@ func RequestLoggerMiddleware(logger *slog.Logger) func(http.Handler) http.Handle
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
-			// Generate or retrieve request ID
+			// Generate or retrieve request Id
 			requestID := r.Header.Get("X-Request-ID")
 			if requestID == "" {
 				requestID = uuid.New().String()
@@ -108,7 +108,7 @@ func RequestLoggerMiddleware(logger *slog.Logger) func(http.Handler) http.Handle
 // ResponseErrorHandler handles errors returned by strict handlers
 func ResponseErrorHandler(logger *slog.Logger) func(w http.ResponseWriter, r *http.Request, err error) {
 	return func(w http.ResponseWriter, r *http.Request, err error) {
-		// Retrieve Request ID from context
+		// Retrieve Request Id from context
 		ctx := r.Context()
 		requestID, _ := ctx.Value(requestIDKey).(string)
 		if requestID == "" {

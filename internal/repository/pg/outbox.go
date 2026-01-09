@@ -2,15 +2,12 @@ package pg
 
 import (
 	"context"
-	"time"
 
 	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/repository/pg/sqlc"
-	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,31 +27,27 @@ func (r *OutboxRepo) WithTx(tx pgx.Tx) interfaces.OutboxRepo {
 	}
 }
 
-func (r *OutboxRepo) InsertEvent(ctx context.Context, event *models.OutboxEvent) error {
-	row, err := r.queries.InsertEvent(ctx, sqlc.InsertEventParams{
-		AggregateID:   event.AggregateID,
-		AggregateType: event.AggregateType,
-		EventType:     models.OutboxEventType(event.EventType),
-		Payload:       event.Payload,
-		Status:        models.OutboxEventStatus(event.Status),
-		RetryCount:    event.RetryCount,
+func (r *OutboxRepo) CreateEvent(ctx context.Context, event *models.CreateOutboxEventParams) error {
+	err := r.queries.InsertEvent(ctx, sqlc.InsertEventParams{
+		ID:          event.Id,
+		AggregateID: event.AggregateID,
+		EventType:   event.EventType,
+		Payload:     event.Payload,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 
-	event.ID = row.ID
-	event.CreatedAt = row.CreatedAt
 	return nil
 }
 
-func (r *OutboxRepo) GetPendingEvents(ctx context.Context, limit int) ([]models.OutboxEvent, error) {
-	rows, err := r.queries.GetPendingEvents(ctx, sqlc.GetPendingEventsParams{
-		Status: models.OutboxEventStatusPending,
-		Limit:  int32(limit),
+func (r *OutboxRepo) PickEvents(ctx context.Context, limit int32, timeoutSec int32) ([]models.OutboxEvent, error) {
+	rows, err := r.queries.PickEvents(ctx, sqlc.PickEventsParams{
+		LimitCount: limit,
+		TimeoutSec: timeoutSec,
 	})
 	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+		return nil, HandlePgErr(err)
 	}
 
 	events := make([]models.OutboxEvent, len(rows))
@@ -64,98 +57,59 @@ func (r *OutboxRepo) GetPendingEvents(ctx context.Context, limit int) ([]models.
 	return events, nil
 }
 
-func (r *OutboxRepo) MarkAsProcessing(ctx context.Context, id uuid.UUID) error {
-	err := r.queries.MarkAsProcessing(ctx, sqlc.MarkAsProcessingParams{
-		Status: models.OutboxEventStatusProcessing,
-		ID:     id,
-	})
-	if err != nil {
-		return pkg.HandlePgErr(err)
-	}
-	return nil
-}
-
 func (r *OutboxRepo) MarkAsCompleted(ctx context.Context, id uuid.UUID) error {
-	now := time.Now()
-	err := r.queries.MarkAsCompleted(ctx, sqlc.MarkAsCompletedParams{
-		Status:      models.OutboxEventStatusCompleted,
-		ProcessedAt: timeToPgtype(now),
-		ID:          id,
-	})
+	err := r.queries.MarkAsCompleted(ctx, id)
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
 
 func (r *OutboxRepo) MarkAsFailed(ctx context.Context, id uuid.UUID, errorMsg string) error {
 	err := r.queries.MarkAsFailed(ctx, sqlc.MarkAsFailedParams{
-		Status:       models.OutboxEventStatusFailed,
-		ErrorMessage: textFromString(errorMsg),
+		ErrorMessage: errorMsg,
 		ID:           id,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
 
-func (r *OutboxRepo) ResetFailedToPending(ctx context.Context, maxRetries int) error {
+func (r *OutboxRepo) ResetFailedToPending(ctx context.Context, maxRetries int32, retryDelaySec int32) error {
 	err := r.queries.ResetFailedToPending(ctx, sqlc.ResetFailedToPendingParams{
-		Status:     models.OutboxEventStatusPending,
-		StatusOld:  models.OutboxEventStatusFailed,
-		MaxRetries: int32(maxRetries),
+		MaxRetries:    maxRetries,
+		RetryDelaySec: retryDelaySec,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
 
-func (r *OutboxRepo) DeleteOldEvents(ctx context.Context, retentionDays int) error {
-	cutoffTime := time.Now().AddDate(0, 0, -retentionDays)
+func (r *OutboxRepo) DeleteOldEvents(ctx context.Context, retentionDays int32) error {
 	err := r.queries.DeleteOldEvents(ctx, sqlc.DeleteOldEventsParams{
-		Status:     models.OutboxEventStatusCompleted,
-		BeforeDate: timeToPgtype(cutoffTime),
+		Status:        models.OutboxEventStatusCompleted,
+		RetentionDays: retentionDays,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
-}
-
-func timeToPgtype(t time.Time) pgtype.Timestamptz {
-	return pgtype.Timestamptz{Time: t, Valid: true}
-}
-
-func textFromString(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
 }
 
 func mapOutboxEvent(e sqlc.OutboxEvent) models.OutboxEvent {
-	var errorMsg string
-	if e.ErrorMessage != nil {
-		errorMsg = *e.ErrorMessage
-	}
-
-	var processedAt *time.Time
-	if e.ProcessedAt.Valid {
-		processedAt = &e.ProcessedAt.Time
-	}
-
 	return models.OutboxEvent{
-		ID:            e.ID,
-		AggregateID:   e.AggregateID,
-		AggregateType: e.AggregateType,
-		EventType:     e.EventType,
-		Payload:       e.Payload,
-		Status:        models.OutboxEventStatus(e.Status),
-		RetryCount:    e.RetryCount,
-		ErrorMessage:  errorMsg,
-		CreatedAt:     e.CreatedAt,
-		ProcessedAt:   processedAt,
+		Id:           e.ID,
+		AggregateID:  e.AggregateID,
+		EventType:    e.EventType,
+		Payload:      e.Payload,
+		Status:       e.Status,
+		RetryCount:   e.RetryCount,
+		ErrorMessage: e.ErrorMessage,
+		CreatedAt:    e.CreatedAt,
+		ProcessedAt:  e.ProcessedAt,
+		LockedAt:     e.LockedAt,
+		DeadlineAt:   e.DeadlineAt,
 	}
 }

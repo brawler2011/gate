@@ -5,7 +5,6 @@ import (
 
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/repository/pg/sqlc"
-	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -29,7 +28,7 @@ func (r *ProblemsRepo) CreateProblem(ctx context.Context, params *models.CreateP
 		CreatedBy: params.UserId,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -37,7 +36,7 @@ func (r *ProblemsRepo) CreateProblem(ctx context.Context, params *models.CreateP
 func (r *ProblemsRepo) GetProblemById(ctx context.Context, id uuid.UUID) (models.Problem, error) {
 	problem, err := r.queries.GetProblemById(ctx, id)
 	if err != nil {
-		return models.Problem{}, pkg.HandlePgErr(err)
+		return models.Problem{}, HandlePgErr(err)
 	}
 	return mapProblem(problem), nil
 }
@@ -45,7 +44,7 @@ func (r *ProblemsRepo) GetProblemById(ctx context.Context, id uuid.UUID) (models
 func (r *ProblemsRepo) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	err := r.queries.DeleteProblem(ctx, id)
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -61,7 +60,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 		Search: filter.Search,
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	rows, err := r.queries.ListProblems(ctx, sqlc.ListProblemsParams{
@@ -72,7 +71,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 		SortOrder: &sortOrder,
 	})
 	if err != nil {
-		return nil, 0, pkg.HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	problems := make([]models.Problem, len(rows))
@@ -114,7 +113,7 @@ func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem 
 		ScoringHtml:      problem.ScoringHtml,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -126,7 +125,7 @@ func (r *ProblemsRepo) CreateProblemMember(ctx context.Context, params *models.C
 		Role:      sqlc.ProblemRole(params.Role),
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -137,7 +136,7 @@ func (r *ProblemsRepo) GetProblemMember(ctx context.Context, problemId uuid.UUID
 		UserID:    userId,
 	})
 	if err != nil {
-		return models.ProblemMember{}, pkg.HandlePgErr(err)
+		return models.ProblemMember{}, HandlePgErr(err)
 	}
 	return mapProblemMember(row), nil
 }
@@ -145,15 +144,16 @@ func (r *ProblemsRepo) GetProblemMember(ctx context.Context, problemId uuid.UUID
 func (r *ProblemsRepo) DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error {
 	err := r.queries.DeleteProblemTests(ctx, problemId)
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
 
+// FIXME: multi insert
 func (r *ProblemsRepo) CreateProblemTests(ctx context.Context, tests models.ProblemTests) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -166,12 +166,12 @@ func (r *ProblemsRepo) CreateProblemTests(ctx context.Context, tests models.Prob
 			Output:    test.Output,
 		})
 		if err != nil {
-			return pkg.HandlePgErr(err)
+			return HandlePgErr(err)
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -179,7 +179,7 @@ func (r *ProblemsRepo) CreateProblemTests(ctx context.Context, tests models.Prob
 func (r *ProblemsRepo) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTest, error) {
 	rows, err := r.queries.GetProblemTests(ctx, problemId)
 	if err != nil {
-		return nil, pkg.HandlePgErr(err)
+		return nil, HandlePgErr(err)
 	}
 
 	tests := make([]models.ProblemTest, len(rows))

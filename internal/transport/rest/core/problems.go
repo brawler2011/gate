@@ -1,14 +1,12 @@
-package handlers
+package core
 
 import (
 	"context"
-	"io"
 
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/transport/middleware"
 	"github.com/gate149/core/pkg"
-	"github.com/google/uuid"
 )
 
 func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProblemsRequestObject) (corev1.ListProblemsResponseObject, error) {
@@ -156,13 +154,4 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdatePro
 	}
 
 	return corev1.UpdateProblem200Response{}, nil
-}
-
-func (h *CoreServer) UploadProblemTests(ctx context.Context, id uuid.UUID, body io.Reader) error {
-	// This method is not part of the generated interface yet or handled differently (multipart)
-	// The generated code usually handles multipart via a specific request object or stream
-	// But looking at core.go, there is no UploadProblemTests in StrictServerInterface
-	// It might be missing from OpenAPI or I missed it.
-	// Let's check core.go again.
-	return nil
 }

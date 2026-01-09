@@ -12,13 +12,13 @@ import (
 
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/core/config"
+	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/repository/pg"
 	"github.com/gate149/core/internal/transport/middleware"
 	handlers "github.com/gate149/core/internal/transport/rest/core"
 	"github.com/gate149/core/internal/transport/rest/kratos"
 	"github.com/gate149/core/internal/usecase"
 	"github.com/gate149/core/internal/worker/outbox"
-
 	"github.com/gate149/core/pkg"
 	"github.com/ilyakaznacheev/cleanenv"
 	ory "github.com/ory/client-go"
@@ -103,7 +103,7 @@ func runServer(envFile string) {
 	logger.Info("successfully initialized judge0 client", slog.String("url", cfg.Judge0URL))
 
 	// Initialize NATS publisher
-	natsPublisher, err := pkg.NewNatsPublisher(cfg.NatsUrl)
+	natsPublisher, err := pkg.NewNatsConn(cfg.NatsUrl)
 	if err != nil {
 		logger.Error("failed to create nats publisher", slog.Any("error", err))
 		return
@@ -113,11 +113,22 @@ func runServer(envFile string) {
 	submissionsRepo := pg.NewSubmissionsRepo(pool)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, natsPublisher)
 
+	// Initialize services
+	notificationService := outbox.NewNotificationService(logger, natsPublisher)
+	judgeService := outbox.NewJudgeService(logger, judge0Client, notificationService)
+
+	// Initialize handlers
+	testHandler := outbox.NewSubmissionTestHandler(logger, submissionsRepo, problemsRepo, outboxRepo, judgeService, notificationService, pool)
+
+	// Initialize dispatcher
+	dispatcher := outbox.NewEventDispatcher()
+	dispatcher.Register(models.EventTypeSubmissionTest, testHandler)
+
 	// Initialize and start outbox worker
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	worker := outbox.NewWorker(logger, outboxRepo, submissionsRepo, problemsRepo, judge0Client, natsPublisher)
+	worker := outbox.NewWorker(logger, outboxRepo, submissionsRepo, dispatcher)
 	go worker.Start(ctx)
 
 	server := http.NewServeMux()

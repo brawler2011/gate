@@ -66,21 +66,6 @@ type SubmissionsFilter struct {
 	Order     *int32
 }
 
-func (f SubmissionsFilter) Offset() int32 {
-	return (f.Page - 1) * f.PageSize
-}
-
-type WebSocketMessageType string
-
-const (
-	MessageTypeSubmissionCreated WebSocketMessageType = "submission_created"
-	MessageTypeSubmissionUpdated WebSocketMessageType = "submission_updated"
-
-	MessageTypeTestingStarted   WebSocketMessageType = "testing_started"
-	MessageTypeTestCompleted    WebSocketMessageType = "test_completed"
-	MessageTypeTestingCompleted WebSocketMessageType = "testing_completed"
-)
-
 type SubmissionListItem struct {
 	ID           uuid.UUID `json:"id"`
 	UserID       uuid.UUID `json:"user_id"`
@@ -98,81 +83,6 @@ type SubmissionListItem struct {
 	ContestTitle string    `json:"contest_title"`
 	UpdatedAt    string    `json:"updated_at"`
 	CreatedAt    string    `json:"created_at"`
-}
-
-type SubmissionWebSocketEvent struct {
-	MessageType WebSocketMessageType `json:"message_type"`
-	Submission  *SubmissionListItem  `json:"submission,omitempty"`
-	Message     string               `json:"message,omitempty"`
-
-	SubmissionID *uuid.UUID `json:"submission_id,omitempty"`
-	TestNumber   int        `json:"test_number,omitempty"`
-	TotalTests   int        `json:"total_tests,omitempty"`
-	Passed       *bool      `json:"passed,omitempty"`
-	State        *State     `json:"state,omitempty"`
-
-	ContestID         *uuid.UUID `json:"contest_id,omitempty"`
-	UserID            *uuid.UUID `json:"user_id,omitempty"`
-	ProblemID         *uuid.UUID `json:"problem_id,omitempty"`
-	Language          *int32     `json:"language,omitempty"`
-	ContestVisibility string     `json:"contest_visibility,omitempty"`
-}
-
-type WebSocketFilter struct {
-	ContestID *uuid.UUID
-	UserID    *uuid.UUID
-	ProblemID *uuid.UUID
-	State     *State
-	Language  *LanguageName
-}
-
-func (f WebSocketFilter) MatchesSubmission(submission *SubmissionListItem) bool {
-	if f.ContestID != nil && *f.ContestID != submission.ContestID {
-		return false
-	}
-	if f.UserID != nil && *f.UserID != submission.UserID {
-		return false
-	}
-	if f.ProblemID != nil && *f.ProblemID != submission.ProblemID {
-		return false
-	}
-	if f.State != nil && int32(*f.State) != int32(submission.State) {
-		return false
-	}
-	if f.Language != nil && int32(*f.Language) != submission.Language {
-		return false
-	}
-	return true
-}
-
-func (f WebSocketFilter) MatchesEvent(event *SubmissionWebSocketEvent) bool {
-	if event.Submission != nil {
-		return f.MatchesSubmission(event.Submission)
-	}
-
-	if event.ContestVisibility == "private" {
-		if f.ContestID == nil {
-			return false
-		}
-		if event.ContestID != nil && *f.ContestID != *event.ContestID {
-			return false
-		}
-	}
-
-	if f.ContestID != nil && event.ContestID != nil && *f.ContestID != *event.ContestID {
-		return false
-	}
-	if f.UserID != nil && event.UserID != nil && *f.UserID != *event.UserID {
-		return false
-	}
-	if f.ProblemID != nil && event.ProblemID != nil && *f.ProblemID != *event.ProblemID {
-		return false
-	}
-	if f.Language != nil && event.Language != nil && int32(*f.Language) != *event.Language {
-		return false
-	}
-
-	return true
 }
 
 type Submission struct {
@@ -198,4 +108,75 @@ type Submission struct {
 type SubmissionsList struct {
 	Submissions []Submission `json:"submissions"`
 	Pagination  Pagination   `json:"pagination"`
+}
+
+type SubmissionEventType = string
+
+const (
+	SubmissionEventCreated          SubmissionEventType = "submissions.created"
+	SubmissionEventQueued           SubmissionEventType = "submissions.queued"
+	SubmissionEventCompilingStarted SubmissionEventType = "submissions.compiling_started"
+	SubmissionEventTestingStarted   SubmissionEventType = "submissions.testing_started"
+	SubmissionEventTestStarted      SubmissionEventType = "submissions.test_started"
+	SubmissionEventCompleted        SubmissionEventType = "submissions.completed"
+)
+
+type SubmissionEventMeta struct {
+	UserId   *uuid.UUID `json:"user_id,omitempty"`
+	Username string     `json:"username"`
+
+	ContestId    *uuid.UUID `json:"contest_id,omitempty"`
+	ContestTitle string     `json:"contest_title"`
+
+	ProblemId    *uuid.UUID `json:"problem_id,omitempty"`
+	ProblemTitle string     `json:"problem_title"`
+	Position     *int32     `json:"position"`
+
+	Language LanguageName `json:"language,omitempty"`
+
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type SubmissionCreatedEvent struct {
+	SubmissionEventMeta
+
+	Id     uuid.UUID `json:"id"`
+	State  State     `json:"state"`
+	Source string    `json:"source"`
+}
+
+type SubmissionQueuedEvent struct {
+	SubmissionEventMeta
+
+	Id uuid.UUID `json:"id"`
+}
+
+type SubmissionCompilingStartedEvent struct {
+	SubmissionEventMeta
+
+	Id uuid.UUID `json:"id"`
+}
+
+type SubmissionTestingStartedEvent struct {
+	SubmissionEventMeta
+
+	Id uuid.UUID `json:"id"`
+}
+
+type SubmissionTestStartedEvent struct {
+	SubmissionEventMeta
+
+	Id     uuid.UUID `json:"id"`
+	Number int32     `json:"number"`
+}
+
+type SubmissionCompletedEvent struct {
+	SubmissionEventMeta
+
+	Id         uuid.UUID `json:"id"`
+	State      State     `json:"state"`
+	Score      int32     `json:"score"`
+	Penalty    int32     `json:"penalty"`
+	TimeStat   int32     `json:"time_stat"`
+	MemoryStat int32     `json:"memory_stat"`
 }

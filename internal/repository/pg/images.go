@@ -6,7 +6,6 @@ import (
 	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/repository/pg/sqlc"
-	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -38,7 +37,7 @@ func (r *ImagesRepo) CreateImage(ctx context.Context, params models.CreateImageP
 		Image: params.Image,
 	})
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }
@@ -46,7 +45,7 @@ func (r *ImagesRepo) CreateImage(ctx context.Context, params models.CreateImageP
 func (r *ImagesRepo) GetImageById(ctx context.Context, id uuid.UUID) (models.ImageRecord, error) {
 	image, err := r.queries.GetImageById(ctx, id)
 	if err != nil {
-		return models.ImageRecord{}, pkg.HandlePgErr(err)
+		return models.ImageRecord{}, HandlePgErr(err)
 	}
 	return models.ImageRecord{
 		Id:        image.ID,
@@ -59,7 +58,7 @@ func (r *ImagesRepo) GetImageById(ctx context.Context, id uuid.UUID) (models.Ima
 func (r *ImagesRepo) DeleteImage(ctx context.Context, id uuid.UUID) error {
 	err := r.queries.DeleteImage(ctx, id)
 	if err != nil {
-		return pkg.HandlePgErr(err)
+		return HandlePgErr(err)
 	}
 	return nil
 }

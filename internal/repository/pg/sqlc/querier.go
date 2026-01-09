@@ -32,7 +32,6 @@ type Querier interface {
 	CreateProblemMember(ctx context.Context, arg CreateProblemMemberParams) error
 	// Problem tests operations
 	CreateProblemTest(ctx context.Context, arg CreateProblemTestParams) error
-	// Submission CRUD operations
 	CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (uuid.UUID, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
@@ -47,16 +46,13 @@ type Querier interface {
 	GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error)
 	GetContestProblems(ctx context.Context, contestID uuid.UUID) ([]GetContestProblemsRow, error)
 	GetImageById(ctx context.Context, id uuid.UUID) (Image, error)
-	GetPendingEvents(ctx context.Context, arg GetPendingEventsParams) ([]OutboxEvent, error)
 	GetProblemById(ctx context.Context, id uuid.UUID) (Problem, error)
 	GetProblemMember(ctx context.Context, arg GetProblemMemberParams) (ProblemMember, error)
 	GetProblemTests(ctx context.Context, problemID uuid.UUID) ([]ProblemTest, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error)
-	GetUntestedSubmissions(ctx context.Context, limit int32) ([]GetUntestedSubmissionsRow, error)
 	GetUserById(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByKratosId(ctx context.Context, kratosID uuid.UUID) (User, error)
-	// Outbox event operations
-	InsertEvent(ctx context.Context, arg InsertEventParams) (InsertEventRow, error)
+	InsertEvent(ctx context.Context, arg InsertEventParams) error
 	// Admin contests listing
 	ListAdminContests(ctx context.Context, arg ListAdminContestsParams) ([]Contest, error)
 	ListContestMembers(ctx context.Context, arg ListContestMembersParams) ([]ListContestMembersRow, error)
@@ -71,9 +67,9 @@ type Querier interface {
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	// Workshop contests listing
 	ListWorkshopContests(ctx context.Context, arg ListWorkshopContestsParams) ([]Contest, error)
-	MarkAsCompleted(ctx context.Context, arg MarkAsCompletedParams) error
+	MarkAsCompleted(ctx context.Context, id uuid.UUID) error
 	MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) error
-	MarkAsProcessing(ctx context.Context, arg MarkAsProcessingParams) error
+	PickEvents(ctx context.Context, arg PickEventsParams) ([]OutboxEvent, error)
 	ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error
 	UpdateContestMember(ctx context.Context, arg UpdateContestMemberParams) error

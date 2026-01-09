@@ -89,7 +89,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, username, role, kratos_id, created_at, updated_at, email, name, surname, bio, img_id
+SELECT id, username, role, kratos_id, email, name, surname, bio, img_id, created_at, updated_at
 FROM users
 WHERE id = $1::uuid
 LIMIT 1
@@ -103,19 +103,19 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Username,
 		&i.Role,
 		&i.KratosID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.Email,
 		&i.Name,
 		&i.Surname,
 		&i.Bio,
 		&i.ImgID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getUserByKratosId = `-- name: GetUserByKratosId :one
-SELECT id, username, role, kratos_id, created_at, updated_at, email, name, surname, bio, img_id
+SELECT id, username, role, kratos_id, email, name, surname, bio, img_id, created_at, updated_at
 FROM users
 WHERE kratos_id = $1::uuid
 LIMIT 1
@@ -129,19 +129,19 @@ func (q *Queries) GetUserByKratosId(ctx context.Context, kratosID uuid.UUID) (Us
 		&i.Username,
 		&i.Role,
 		&i.KratosID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.Email,
 		&i.Name,
 		&i.Surname,
 		&i.Bio,
 		&i.ImgID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, role, kratos_id, created_at, updated_at, email, name, surname, bio, img_id
+SELECT id, username, role, kratos_id, email, name, surname, bio, img_id, created_at, updated_at
 FROM users
 WHERE (
         $1::text = ''
@@ -184,13 +184,13 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.Username,
 			&i.Role,
 			&i.KratosID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.Email,
 			&i.Name,
 			&i.Surname,
 			&i.Bio,
 			&i.ImgID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

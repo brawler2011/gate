@@ -1,19 +1,26 @@
 package pkg
 
-import "github.com/nats-io/nats.go"
+import (
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+)
 
-type NatsPublisher struct {
-	conn *nats.Conn
-}
-
-func NewNatsPublisher(natsUrl string) (*NatsPublisher, error) {
+func NewNatsConn(natsUrl string) (*nats.Conn, error) {
 	conn, err := nats.Connect(natsUrl)
 	if err != nil {
 		return nil, err
 	}
-	return &NatsPublisher{conn: conn}, nil
+	return conn, nil
 }
 
-func (p *NatsPublisher) Publish(subject string, data []byte) error {
-	return p.conn.Publish(subject, data)
+func NewNatsJetStream(natsUrl string) (jetstream.JetStream, error) {
+	conn, err := nats.Connect(natsUrl)
+	if err != nil {
+		return nil, err
+	}
+	js, err := jetstream.New(conn)
+	if err != nil {
+		return nil, err
+	}
+	return js, nil
 }

@@ -3,11 +3,12 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/domain/models"
-	"github.com/gate149/core/pkg"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type SubmissionsUseCase struct {
@@ -15,7 +16,7 @@ type SubmissionsUseCase struct {
 	contestsUC      interfaces.ContestsUC
 	problemsUC      interfaces.ProblemsUC
 	outboxRepo      interfaces.OutboxRepo
-	natsPublisher   interfaces.NatsPublisher
+	transactor      interfaces.Transactor
 }
 
 func NewSubmissionsUseCase(
@@ -23,14 +24,14 @@ func NewSubmissionsUseCase(
 	contestsUC interfaces.ContestsUC,
 	problemsUC interfaces.ProblemsUC,
 	outboxRepo interfaces.OutboxRepo,
-	natsPublisher interfaces.NatsPublisher,
+	transactor interfaces.Transactor,
 ) *SubmissionsUseCase {
 	return &SubmissionsUseCase{
 		submissionsRepo: submissionsRepo,
 		contestsUC:      contestsUC,
 		problemsUC:      problemsUC,
 		outboxRepo:      outboxRepo,
-		natsPublisher:   natsPublisher,
+		transactor:      transactor,
 	}
 }
 
@@ -39,86 +40,78 @@ func (uc *SubmissionsUseCase) GetSubmission(ctx context.Context, id uuid.UUID) (
 }
 
 func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error) {
-	// Validate contest exists
-	contest, err := uc.contestsUC.GetContest(ctx, creation.ContestId)
-	if err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "contest not found")
-	}
-
-	// Validate problem exists
-	problem, err := uc.problemsUC.GetProblemById(ctx, creation.ProblemId)
-	if err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "problem not found")
-	}
-
-	// Save submission to database (state will be Saved (1) by default)
-	id, err := uc.submissionsRepo.CreateSubmission(ctx, creation)
+	_, err := uc.contestsUC.GetContest(ctx, creation.ContestId)
 	if err != nil {
 		return uuid.Nil, err
 	}
 
-	// Publish submission.created event directly to NATS (immediate WebSocket notification)
-	uc.publishSubmissionCreated(id, creation, contest, problem)
-
-	// Create outbox event for submission.test (async testing via Judge0)
-	testPayload := models.SubmissionTestPayload{
-		SubmissionId: id,
-		ProblemId:    creation.ProblemId,
-		ContestId:    creation.ContestId,
-		Language:     int32(creation.Language),
-		CreatedBy:    creation.UserId,
-	}
-
-	testPayloadBytes, err := json.Marshal(testPayload)
+	_, err = uc.problemsUC.GetProblemById(ctx, creation.ProblemId)
 	if err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrInternal, err, "failed to marshal test payload")
+		return uuid.Nil, err
 	}
 
-	testEvent := &models.OutboxEvent{
-		AggregateID:   id,
-		AggregateType: "submission",
-		EventType:     models.EventTypeSubmissionTest,
-		Payload:       testPayloadBytes,
-		Status:        models.OutboxEventStatusPending,
-		RetryCount:    0,
-	}
+	var id uuid.UUID
 
-	if err := uc.outboxRepo.InsertEvent(ctx, testEvent); err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrInternal, err, "failed to insert submission.test event")
+	err = uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		id, err = uc.submissionsRepo.WithTx(tx).CreateSubmission(ctx, creation)
+		if err != nil {
+			return err
+		}
+
+		submission, err := uc.submissionsRepo.WithTx(tx).GetSubmission(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		eventParams, err := newOutboxEventParams(submission)
+		if err != nil {
+			return err
+		}
+
+		if err := uc.outboxRepo.WithTx(tx).CreateEvent(ctx, eventParams); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return uuid.Nil, err
 	}
 
 	return id, nil
 }
 
-// publishSubmissionCreated publishes submission.created event directly to NATS
-func (uc *SubmissionsUseCase) publishSubmissionCreated(id uuid.UUID, creation *models.SubmissionCreation, contest models.Contest, problem models.Problem) {
-	event := &models.SubmissionWebSocketEvent{
-		MessageType: models.MessageTypeSubmissionCreated,
-		Submission: &models.SubmissionListItem{
-			ID:           id,
-			UserID:       creation.UserId,
-			State:        models.Saved, // Initial state
-			Score:        0,
-			Penalty:      creation.Penalty,
-			TimeStat:     0,
-			MemoryStat:   0,
-			Language:     creation.Language,
-			ProblemID:    creation.ProblemId,
-			ProblemTitle: problem.Title,
-			Position:     0, // Position is set when problem is added to contest
-			ContestID:    creation.ContestId,
-			ContestTitle: contest.Title,
+func newOutboxEventParams(submission models.Submission) (*models.CreateOutboxEventParams, error) {
+	submissionCreatedEvent := models.SubmissionCreatedEvent{
+		SubmissionEventMeta: models.SubmissionEventMeta{
+			UserId:       submission.CreatedBy,
+			Username:     submission.Username,
+			ContestId:    submission.ContestID,
+			ContestTitle: submission.ContestTitle,
+			ProblemId:    submission.ProblemID,
+			ProblemTitle: submission.ProblemTitle,
+			Position:     submission.Position,
+			Language:     submission.Language,
 		},
+		Id:     submission.ID,
+		State:  submission.State,
+		Source: submission.Submission,
 	}
 
-	eventBytes, err := json.Marshal(event)
+	payload, err := json.Marshal(submissionCreatedEvent)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("failed to marshal: %w", err)
 	}
 
-	if err := uc.natsPublisher.Publish("submissions.list", eventBytes); err != nil {
-		return
+	eventParams := &models.CreateOutboxEventParams{
+		Id:          uuid.New(),
+		AggregateID: submission.ID,
+		EventType:   models.OutboxEventSubmissionCreated,
+		Payload:     payload,
 	}
+
+	return eventParams, nil
 }
 
 func (uc *SubmissionsUseCase) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {

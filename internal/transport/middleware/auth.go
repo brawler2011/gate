@@ -56,7 +56,6 @@ func AuthMiddleware(frontendAPI ory.FrontendAPI) func(http.Handler) http.Handler
 	}
 }
 
-// getSession extracts Kratos session from context
 func getSession(ctx context.Context) (*ory.Session, error) {
 	session, ok := ctx.Value(sessionKey).(*ory.Session)
 	if !ok {
