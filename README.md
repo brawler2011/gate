@@ -14,8 +14,6 @@ participants, and their submissions, as well as user authentication and manageme
 the Fiber framework. PostgreSQL serves as the relational database, Valkey (or Redis) is used for caching and session
 management. Pandoc is used to convert problem statements from LaTeX to HTML.
 
-For understanding the architecture, see the [documentation](https://github.com/gate149/docs).
-
 ## Features
 
 - Manage programming contests, problems, and participant submissions.
@@ -38,7 +36,7 @@ The service depends on PostgreSQL, Pandoc, and Valkey, which can be run using Do
 example `docker-compose.yml` configuration:
 
 ```yaml
-version: '3.8'
+version: "3.8"
 services:
   pandoc:
     image: pandoc/latex
@@ -53,7 +51,7 @@ services:
       POSTGRES_PASSWORD: supersecretpassword
       POSTGRES_DB: tester
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -66,9 +64,9 @@ services:
     volumes:
       - ./conf/valkey.conf:/usr/local/etc/valkey/valkey.conf
       - ./valkey-data:/data
-    command: [ "valkey-server", "/usr/local/etc/valkey/valkey.conf" ]
+    command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
     healthcheck:
-      test: [ "CMD-SHELL", "valkey-cli ping | grep PONG" ]
+      test: ["CMD-SHELL", "valkey-cli ping | grep PONG"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -189,10 +187,12 @@ go run . ws --env .env
 ```
 
 The WebSocket server runs on a separate port (default: `:8081`) and provides:
+
 - **Endpoint**: `GET /ws/submissions?ids=uuid1,uuid2,...`
 - **Health check**: `GET /health`
 
 **Environment variables for WebSocket server:**
+
 ```dotenv
 WS_ADDRESS=:8081           # WebSocket server address
 NATS_URL=nats://localhost:4222  # NATS connection URL

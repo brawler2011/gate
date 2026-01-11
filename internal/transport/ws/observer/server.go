@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/transport/middleware"
 	"github.com/google/uuid"
@@ -14,11 +13,9 @@ import (
 )
 
 type Observer struct {
-	upgrader      *websocket.Upgrader
-	server        *http.Server
-	hub           *Hub
-	contestsUC    interfaces.ContestsUC
-	permissionsUC interfaces.PermissionsUC
+	upgrader *websocket.Upgrader
+	server   *http.Server
+	hub      *Hub
 }
 
 func NewObserver(addr string, ringSize int) *Observer {
@@ -149,33 +146,8 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		contestPermissions, err := s.permissionsUC.GetContestPermissions(ctx, *filter.ContestId, user.Id)
-		// FIXME: this error can actually mean anything in this world
-		if err != nil {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-
-		if !contestPermissions.GetContest {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-
-		// shit
-		if !contestPermissions.ListUsersSubmissions && (filter.UserId == nil || filter.UserId != nil && *filter.UserId != user.Id) {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-
-		// shit
-		if !contestPermissions.ListOwnSubmissions && filter.UserId != nil && *filter.UserId == user.Id {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-
-		// what about the fucking SUBMISSION page ???
+		// FIXME: fucking permissions
 	}
-
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("failed to upgrade connection", "error", err)
