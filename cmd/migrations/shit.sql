@@ -34,19 +34,17 @@ CREATE TABLE problem_special_files
     id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
 
     -- код программы 
-    --
-    -- всё ещё вопрос про расширение файла
-    -- 
-    -- возможно имеет смысл хранить прямо в бд в виде строки, 
-    -- потому что он небольшой + хочется быстро отображать этот код в интерфейсе
     src_file_id  uuid NOT NULL REFERENCES files (id) ON DELETE CASCADE,
 
     -- исполняемый файл (после компиляции).
     --
-    -- если не компилируемый, то просто копируем src_file_id в exec_file_id?
+    -- если не компилируемый, то просто копируем src_file_id в exec_file_id!
     -- (здесь типо нужно подумать про всякие питоны и тп)
     exec_file_id uuid NOT NULL REFERENCES files (id) ON DELETE CASCADE,
 
+    -- храним ли мы вообще команды для компиляции и для выполнения в базе данных?
+    -- это же просто от языка программирования зависит, а не от задачи.
+    -- 
     -- команды для компиляции (null = no compilation)
     compile_cmd  text, 
 
@@ -66,8 +64,7 @@ CREATE TABLE IF NOT EXISTS problems
     owner_id        uuid               REFERENCES users (id) ON DELETE SET NULL,
     visibility      problem_visibility NOT NULL DEFAULT 'private',
 
-    -- titles звучит лучше?
-    names           jsonb              NOT NULL DEFAULT '{
+    titles           jsonb              NOT NULL DEFAULT '{
       "en": ""
     }',
 
@@ -88,8 +85,7 @@ CREATE TABLE IF NOT EXISTS problems
 
     -- Про программы:
     -- файл (чекер, валидатор и тп) - это код, 
-    -- поэтому нужно дополнительно хранить название языка (cpp, python, etc)?
-    -- или по расширению файла определять язык?
+    -- поэтому нужно дополнительно хранить название языка (cpp, python, etc)!
 
     -- Где будут храниться чекеры (и тп), доступные всем по умолчанию?
     --
