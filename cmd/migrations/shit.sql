@@ -38,8 +38,6 @@ CREATE TABLE IF NOT EXISTS problems
 
     checker            uuid              REFERENCES files (id) ON DELETE SET NULL, 
 
-    -- нужен чтобы проверить правильность тестов на авторском решении (?),
-    -- а где же авторское решение?
     validator          uuid              REFERENCES files (id) ON DELETE SET NULL,
 
     -- генератор тестов 
