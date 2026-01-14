@@ -7,6 +7,9 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- (аватарки, файлы задач, исполняемые файлы и тп)
 -- 
 -- сам файл храним в s3, а в бд есть запись о файле
+--
+-- не стоит привязываться к S3,
+-- ибо может быть несколько хранилищ (например, локальное хранилище)
 CREATE TABLE files
 (
     id          uuid PRIMARY KEY     DEFAULT uuid_generate_v7(),
