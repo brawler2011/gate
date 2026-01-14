@@ -1,0 +1,107 @@
+-- +goose Up
+-- +goose StatementBegin
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE TYPE problem_type AS ENUM ('pass-fail', 'scoring', 'interactive', 'multi-pass', 'submit-answer');
+
+
+CREATE TABLE IF NOT EXISTS problems
+(
+    id                 uuid PRIMARY KEY   DEFAULT uuid_generate_v7(),
+    created_by         uuid               REFERENCES users (id) ON DELETE SET NULL,
+    visibility         problem_visibility NOT NULL DEFAULT 'private',
+    
+    names              jsonb              NOT NULL DEFAULT '{"en": ""}',
+    short_name         varchar(100),                    -- короткий ID (example-a-plus-b)
+    source             varchar(255),                    -- источник (Codeforces, ICPC, etc)
+    -- Тип задачи
+    problem_type       problem_type       NOT NULL DEFAULT 'pass-fail',
+    
+    --
+    time_limit         integer            NOT NULL DEFAULT 1000,
+    memory_limit       integer            NOT NULL DEFAULT 128,
+    
+    --
+    stdout_limit       integer            DEFAULT 8,                -- МБ, лимит на вывод
+    code_size_limit    integer            DEFAULT 256,              -- КБ, лимит на размер кода
+
+    max_score          integer,                                     -- NULL = unbounded ?????
+
+    checker            uuid              REFERENCES files (id) ON DELETE SET NULL,
+    validator          uuid
+    generator
+
+    interactive_communicator uuid
+
+    gen_commands uuid
+    
+    some more shit
+
+
+    legend             varchar(10240)     NOT NULL DEFAULT '',
+    input_format       varchar(10240)     NOT NULL DEFAULT '',
+    output_format      varchar(10240)     NOT NULL DEFAULT '',
+    notes              varchar(10240)     NOT NULL DEFAULT '',
+    scoring            varchar(10240)     NOT NULL DEFAULT '',
+    
+    legend_html        varchar(10240)     NOT NULL DEFAULT '',
+    input_format_html  varchar(10240)     NOT NULL DEFAULT '',
+    output_format_html varchar(10240)     NOT NULL DEFAULT '',
+    notes_html         varchar(10240)     NOT NULL DEFAULT '',
+    scoring_html       varchar(10240)     NOT NULL DEFAULT '',
+    
+    created_at         timestamptz        NOT NULL DEFAULT now(),
+    updated_at         timestamptz        NOT NULL DEFAULT now(),
+    
+    CHECK (length(title) != 0),
+    CHECK (memory_limit BETWEEN 4 AND 1024),
+    CHECK (time_limit BETWEEN 100 AND 60000),
+    CHECK (output_limit IS NULL OR output_limit > 0),
+    CHECK (max_score IS NULL OR max_score >= 0)
+
+
+);
+
+
+-- Группы тестов (опционально, если нужна гибкость)
+CREATE TABLE problem_test_groups (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+    problem_id uuid NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
+    ordinal integer NOT NULL,
+    points integer NOT NULL DEFAULT 0, -- ?????
+    points_policy varchar(20) NOT NULL DEFAULT 'complete-group', -- ????
+    
+    UNIQUE (problem_id, ordinal),
+    CHECK (ordinal > 0)
+);
+
+-- Тесты
+CREATE TABLE problem_tests (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+    problem_id uuid NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
+    test_group_id uuid REFERENCES problem_test_groups (id) ON DELETE CASCADE,
+    
+    ordinal integer NOT NULL,
+    
+    -- S3 пути:
+    input_s3_key varchar(512) NOT NULL,   -- "problems/123/tests/01.in"
+    output_s3_key varchar(512) NOT NULL,  -- "problems/123/tests/01.out"
+    
+    -- Метаданные:
+    input_size_bytes bigint,              -- размер для оптимизации
+    output_size_bytes bigint,
+    
+    is_sample boolean NOT NULL DEFAULT false,
+    
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    
+    UNIQUE (test_group_id, ordinal),
+    CHECK (ordinal > 0),
+    CHECK (length(input_s3_key) > 0),
+    CHECK (length(output_s3_key) > 0)
+);
+
+CREATE INDEX problem_tests_problem_id_idx ON problem_tests (problem_id);
+CREATE INDEX problem_tests_group_id_idx ON problem_tests (test_group_id, ordinal);
