@@ -48,30 +48,22 @@ CREATE TABLE IF NOT EXISTS problems
     -- команды для генератора тестов в формате:
     -- gen 3 3
     -- gen 4 100
-    gen_commands uuid
+    gen_commands       uuid              REFERENCES files (id) ON DELETE SET NULL,
 
     -- нужна для интерактивных задач
     interactor         uuid              REFERENCES files (id) ON DELETE SET NULL,
 
     -- Если не ошибаюсь, то icpc формат не разделяет условие на блоки, не уверен
     -- Hydro: content?: string (json)
-    legend             varchar(10240)     NOT NULL DEFAULT '',
-    input_format       varchar(10240)     NOT NULL DEFAULT '',
-    output_format      varchar(10240)     NOT NULL DEFAULT '',
-    notes              varchar(10240)     NOT NULL DEFAULT '',
-    scoring            varchar(10240)     NOT NULL DEFAULT '',
+    legend             varchar(4096)     NOT NULL DEFAULT '',
+    input_format       varchar(4096)     NOT NULL DEFAULT '',
+    output_format      varchar(4096)     NOT NULL DEFAULT '',
+    notes              varchar(4096)     NOT NULL DEFAULT '',
+    scoring            varchar(4096)     NOT NULL DEFAULT '',
+    interaction        varchar(4096)     NOT NULL DEFAULT '',
+    statement          varchar(10240)    NOT NULL DEFAULT '',
 
     -- теперь, html - юзлесс, потому что мы больше ничего не компилируем из latex в html
-    --
-    -- важно учитывать, что условный codeforces всё равно использует таблицы latex,
-    -- которые как-то надо будет сконвертировать в таблицы markdown,
-    -- но это уже про парсинг и конвертацию в унифицированный формат
-    --
-    legend_html        varchar(10240)     NOT NULL DEFAULT '',
-    input_format_html  varchar(10240)     NOT NULL DEFAULT '',
-    output_format_html varchar(10240)     NOT NULL DEFAULT '',
-    notes_html         varchar(10240)     NOT NULL DEFAULT '',
-    scoring_html       varchar(10240)     NOT NULL DEFAULT '',
     
     created_at         timestamptz        NOT NULL DEFAULT now(),
     updated_at         timestamptz        NOT NULL DEFAULT now(),
