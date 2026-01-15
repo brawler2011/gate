@@ -45,14 +45,11 @@ CREATE TABLE problem_special_files
     -- (здесь типо нужно подумать про всякие питоны и тп)
     exec_file_id uuid NOT NULL REFERENCES files (id) ON DELETE CASCADE,
 
-    -- храним ли мы вообще команды для компиляции и для выполнения в базе данных?
-    -- это же просто от языка программирования зависит, а не от задачи.
+    -- хочется быстро понимать какими командами компилить или запускать прогу.
+    -- типо из exec_file ты никак не поймешь, какой язык программирования используется.
     -- 
-    -- команды для компиляции (null = no compilation)
-    compile_cmd  text, 
-
-    -- команды для выполнения
-    exec_cmd  text NOT NULL,
+    -- поэтому нужно хранить язык программирования
+    -- lang_name     language_name NOT NULL,
 
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
