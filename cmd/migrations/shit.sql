@@ -155,13 +155,7 @@ CREATE TABLE problem_tests
 
     ordinal           integer      NOT NULL,
 
-    -- S3 пути:
-    input_s3_key      varchar(512) NOT NULL, -- "problems/123/tests/01.in"
-    output_s3_key     varchar(512) NOT NULL, -- "problems/123/tests/01.out"
-
-    -- Метаданные:
-    input_size_bytes  bigint,                -- размер для оптимизации
-    output_size_bytes bigint,
+    file_id         uuid NOT NULL REFERENCES files (id) ON DELETE CASCADE,
 
     is_sample         boolean      NOT NULL DEFAULT false,
 
