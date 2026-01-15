@@ -13,6 +13,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE TABLE files
 (
     id          uuid PRIMARY KEY     DEFAULT uuid_generate_v7(),
+
     owner_id    uuid        REFERENCES users (id) ON DELETE SET NULL,
 
     storage_key text        NOT NULL,
@@ -20,6 +21,8 @@ CREATE TABLE files
     mime_type   text,
     extension   text,
     size_bytes  bigint      NOT NULL,
+
+    -- по идее, файл нельзя удалять
     sha256      bytea UNIQUE,
 
     created_at  timestamptz NOT NULL DEFAULT now()
@@ -27,6 +30,9 @@ CREATE TABLE files
 
 CREATE TABLE problem_extra_files
 (
+    -- нужен ли id? Или можно использовать (problem_id,file_id)?
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+
     problem_id uuid        NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
     file_id    uuid        NOT NULL REFERENCES files (id) ON DELETE CASCADE,
     created_at timestamptz NOT NULL DEFAULT now()
@@ -53,6 +59,22 @@ CREATE TABLE problem_special_files
 
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Пакеты для судейства
+CREATE TABLE problem_packages
+(
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+    
+    -- файл с чекером, интерактором и тестами и тп
+    file_id uuid NOT NULL REFERENCES files (id) ON DELETE CASCADE,
+
+    problem_id uuid NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
+    
+    -- версия задачи, для которой был сгенерирован пакет
+    problem_version integer NOT NULL,
+
+    created_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TYPE problem_type AS ENUM ('pass-fail', 'scoring', 'interactive', 'multi-pass', 'submit-answer');
@@ -108,8 +130,17 @@ CREATE TABLE IF NOT EXISTS problems
     -- нужна для интерактивных задач
     interactor      uuid REFERENCES problem_special_files (id) ON DELETE CASCADE,
 
+    -- версия задачи
+    --
+    -- нужна, чтобы понимать, какая версия задачи используется в пакете для судейства
+    version         integer NOT NULL DEFAULT 1,
+
+    -- Здесь ещё нужно добавить вычисляемое поле,
+    -- чтобы сразу понимать есть ли готовый пакет для судейства?
+
     -- Если не ошибаюсь, то icpc формат не разделяет условие на блоки, не уверен
-    -- Hydro: content?: string (json)
+    --
+    -- А как хендлить условия на разных языках? Снова jsonb?
     legend          varchar(4096)      NOT NULL DEFAULT '',
     input_format    varchar(4096)      NOT NULL DEFAULT '',
     output_format   varchar(4096)      NOT NULL DEFAULT '',
@@ -135,7 +166,11 @@ CREATE TABLE problem_test_groups
 (
     id            uuid PRIMARY KEY     DEFAULT uuid_generate_v7(),
     problem_id    uuid        NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
+
+    -- номер группы тестов
     ordinal       integer     NOT NULL,
+
+    -- очки за группу тестов
     points        integer     NOT NULL DEFAULT 0,                -- ?????
     points_policy varchar(20) NOT NULL DEFAULT 'complete-group', -- ????
 
@@ -147,22 +182,27 @@ CREATE TABLE problem_test_groups
 CREATE TABLE problem_tests
 (
     id                uuid PRIMARY KEY      DEFAULT uuid_generate_v7(),
-    problem_id        uuid         NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
+    problem_id        uuid         NOT NULL REFERENCES problems (id) ON DELETE CASCADE,    
     test_group_id     uuid REFERENCES problem_test_groups (id) ON DELETE CASCADE,
 
+    -- номер теста
     ordinal           integer      NOT NULL,
 
-    file_id         uuid NOT NULL REFERENCES files (id) ON DELETE CASCADE,
+    -- всегда ли есть ввод?
+    input_file_id     uuid NOT NULL REFERENCES files (id) ON DELETE CASCADE,
 
+     -- всегда ли есть вывод?
+    output_file_id    uuid NOT NULL REFERENCES files (id) ON DELETE CASCADE,
+
+    -- что насчёт тестов, которые являются самплами, 
+    -- но которые не хотим использовать для судейства? (или это bad practice?)
     is_sample         boolean      NOT NULL DEFAULT false,
 
     created_at        timestamptz  NOT NULL DEFAULT now(),
     updated_at        timestamptz  NOT NULL DEFAULT now(),
 
-    UNIQUE (test_group_id, ordinal),
-    CHECK (ordinal > 0),
-    CHECK (length(input_s3_key) > 0),
-    CHECK (length(output_s3_key) > 0)
+    UNIQUE (problem_id, ordinal),
+    CHECK (ordinal > 0)
 );
 
 CREATE INDEX problem_tests_problem_id_idx ON problem_tests (problem_id);
