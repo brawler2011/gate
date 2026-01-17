@@ -104,107 +104,123 @@ CREATE INDEX problems_titles_search_idx ON problems USING GIN(to_tsvector('engli
 -- ============================================================================
 -- 
 -- s3://gate149-problems/
+-- │
 -- └── problems/
---     └── {problem_id}/                    # UUID из таблицы problems
+--     │
+--     └── {problem_id}/                    # UUID задачи из таблицы problems
 --         │
---         ├── manifest.json                # Главный манифест задачи
---         │                                # (версия, файлы, метаданные)
+--         ├── metadata.json                
 --         │
---         ├── statement/                   # Условие (опционально, если большое)
---         │   ├── en.md                    # Или в БД поле statement
---         │   ├── ru.md
---         │   └── assets/
---         │       └── images/
+--         ├── statement/                   # Условие задачи
+--         │   ├── en.md                    
+--         │   ├── ru.md                    
+--         │   └── assets/                  # Ассеты для условия
+--         │       └── image1.png
 --         │
---         ├── tests/                       # Тесты
---         │   ├── tests.json               # Метаданные: groups, ordinals, samples
+--         ├── tests/                       # ТЕСТЫ
+--         │   ├── tests.json               # Метаданные тестов (groups, ordinals, etc)
 --         │   ├── 01.in
 --         │   ├── 01.out
+--         │   ├── 02.in
+--         │   ├── 02.out
 --         │   └── ...
 --         │
---         ├── checker/                     # Чекер
---         │   ├── checker.cpp
---         │   ├── checker                  # Скомпилированный (опционально)
---         │   └── meta.json                # {lang: "cpp17", compile_cmd: "..."}
+--         ├── checker/                     # ЧЕКЕР
+--         │   ├── checker.cpp              
+--         │   ├── checker                  
+--         │   └── meta.json                
 --         │
---         ├── validator/                   # Валидатор (опционально)
+--         ├── validator/                   # ВАЛИДАТОР
 --         │   ├── validator.cpp
+--         │   ├── validator
 --         │   └── meta.json
 --         │
---         ├── generator/                   # Генератор (опционально)
---         │   ├── generator.cpp
---         │   ├── gen_commands.txt         # Команды: "gen 3 3", "gen 4 100"
+--         ├── generators/                  # ГЕНЕРАТОРЫ
+--         │   ├── gen.cpp
+--         │   ├── gen
+--         │   ├── gen_border.cpp
+--         │   ├── gen_border
 --         │   └── meta.json
 --         │
---         ├── interactor/                  # Интерактор (для interactive задач)
+--         ├── interactor/                  # ИНТЕРАКТОР
 --         │   ├── interactor.cpp
+--         │   ├── interactor
 --         │   └── meta.json
 --         │
---         ├── solutions/                   # Авторские решения (опционально)
---         │   ├── main.cpp
---         │   └── slow.py
+--         ├── solutions/                   # АВТОРСКИЕ РЕШЕНИЯ (опционально)
+--         │   └── main.cpp                 
 --         │
---         └── packages/                    # Готовые пакеты для judge
---             ├── v1.zip
---             └── latest.zip
---
+--         └── packages/                    # ПОХУЙ ПОКА ЧТО ВООБЩЕ КРИСТАЛЬНО ПОХУЙ
+--             ├── v1.zip                   # Версия 1
+--             ├── v2.zip                   # Версия 2
+--             └── latest.zip               # Symlink
+
 -- ============================================================================
--- ФОРМАТ manifest.json
+-- ФОРМАТ metadata.json
 -- ============================================================================
 -- {
---   "problem_id": "uuid",
 --   "version": 2,
 --   "last_updated": "2026-01-15T20:30:00Z",
---   
---   "files": {
---     "checker": {"source": "checker/checker.cpp", "language": "cpp17"},
---     "validator": {"source": "validator/validator.cpp"},
---     "generator": {"source": "generator/generator.cpp"},
---     "interactor": null
---   },
---   
---   "tests": {
---     "manifest_path": "tests/tests.json",
---     "total_tests": 50,
---     "total_groups": 5,
---     "total_size_bytes": 12458960
---   }
+--   "title": {"en": "A + B Problem", "ru": "Задача A + B"},
+--   "short_name": "a-plus-b",
+--   "source": "Codeforces Round 900",
+--   "problem_type": "pass-fail",
+--   "time_limit_ms": 1000,
+--   "memory_limit_mb": 128,
+--   "max_score": null
+--   "languages": ["en", "ru"]
 -- }
 --
+-- ============================================================================
+-- ФОРМАТ любого файла meta.json
+-- ============================================================================
+-- {[
+--   {
+--     "filename": "geb_border.cpp"
+--     "compiler": "сpp17",
+--     "dependencies": ["testlib.h": "0.9.41"],  // список зависимостей
+--     "hash": "sha256:abcd1234..."
+--   },
+--   ...
+-- ]}
+-- 
+-- 
+-- 
 -- ============================================================================
 -- ФОРМАТ tests/tests.json
 -- ============================================================================
 -- {
---   "version": 2,
---   "last_updated": "2026-01-15T20:30:00Z",
---   
 --   "groups": [
 --     {
 --       "ordinal": 1,
 --       "name": "Samples",
 --       "points": 0,
 --       "points_policy": "complete-group",
---       "tests": [1, 2]
+--       "depends_on": null,
+--       "tests": [1, 2] // Диапазон
 --     },
 --     {
 --       "ordinal": 2,
 --       "name": "Main tests",
 --       "points": 100,
 --       "points_policy": "each-test",
---       "tests": [3, 4, 5, ...]
+--       "depends_on": null,
+--       "tests": [3, 7] // Диапазон
 --     }
 --   ],
 --   
 --   "tests": [
 --     {
 --       "ordinal": 1,
---       "group": 1,
---       "input_path": "01.in",
---       "output_path": "01.out",
---       "input_content": "1 2\n",      -- для samples (опционально)
---       "output_content": "3\n",        -- для samples (опционально)
+--       "method": "manual"
+--       "generator": null
 --       "is_sample": true,
---       "size_bytes": 15
+--     },
+--     {
+--       "ordinal": 2,
+--       "method": "generated"
+--       "generator": "gen_border 1 2 3"
+--       "is_sample": false,
 --     }
 --   ]
 -- }
