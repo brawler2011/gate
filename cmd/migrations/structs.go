@@ -6,24 +6,52 @@ import (
 
 // ProblemMetadata соответствует формату metadata.json в корне папки задачи
 type ProblemMetadata struct {
-	Version       int               `json:"version"`
-	LastUpdated   time.Time         `json:"last_updated"`
-	Title         map[string]string `json:"title"`        // {"en": "A + B Problem", "ru": "Задача A + B"}
-	ProblemType   string            `json:"problem_type"` // "pass-fail", "scoring", etc
-	TimeLimitMs   int               `json:"time_limit_ms"`
-	MemoryLimitMb int               `json:"memory_limit_mb"`
-	MaxScore      *int              `json:"max_score"` // null для pass-fail задач
-	Languages     []string          `json:"languages"` // ["en", "ru"]
+	LastUpdated time.Time `json:"last_updated"`
+	ProblemType string    `json:"problem_type"` // "pass-fail", "scoring", etc
+
+	MaxScore  *int               `json:"max_score"` // null для pass-fail задач
+	MetaFiles []SpecialFileEntry `json:"meta_files"`
+
+	TimeLimitMs     int `json:"time_limit_ms"`
+	MemoryLimitMb   int `json:"memory_limit_mb"`
+	StdoutLimitMb   int `json:"stdout_limit"`
+	CodeSizeLimitKb int `json:"code_size_limit"`
+
+	// {"en": {}, "ru": {}}
+	Statements map[string]Statement `json:"statements"`
 }
 
-// SpecialFileMeta соответствует формату meta.json для checker/validator/generator/interactor
-type SpecialFileMeta []SpecialFileEntry
+type Media struct {
+	Images []Image `json:"images"`
+}
+
+type Image struct {
+	Filename string `json:"filename"`
+}
+
+type Statement struct {
+	Title string `json:"title"`
+
+	Legend       string `json:"legend"`
+	InputFormat  string `json:"input_format"`
+	OutputFormat string `json:"output_format"`
+	Notes        string `json:"notes"`
+	Interaction  string `json:"interaction"`
+	Scoring      string `json:"scoring"`
+
+	// Tutorial??
+}
+
+type Dependency struct {
+	Filename string `json:"filename"` // "testlib.h"
+	Version  int    `json:"version"`  // "0.9.41"
+}
 
 type SpecialFileEntry struct {
-	Filename     string             `json:"filename"`
-	Compiler     string             `json:"compiler"`     // "cpp17", "python3", etc
-	Dependencies *map[string]string `json:"dependencies"` // {"testlib.h": "0.9.41"}
-	Hash         string             `json:"hash"`         // "sha256:abcd1234..."
+	Type         string       `json:"type"` // "checker", "validator", "generator", "interactor"
+	Filename     string       `json:"filename"`
+	Compiler     string       `json:"compiler"` // "cpp17", "python3", etc
+	Dependencies []Dependency `json:"dependencies"`
 }
 
 // TestsMetadata соответствует формату tests/tests.json
@@ -37,7 +65,7 @@ type TestGroup struct {
 	Name         string `json:"name"`
 	Points       int    `json:"points"`
 	PointsPolicy string `json:"points_policy"` // "complete-group", "each-test"
-	DependsOn    *int   `json:"depends_on"`    // номер группы или null
+	DependsOn    []int  `json:"depends_on"`    // номера групп или null
 	Tests        [2]int `json:"tests"`         // диапазон [start, end]
 }
 

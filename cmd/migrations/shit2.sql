@@ -41,7 +41,6 @@ CREATE TABLE problems
     owner_id        uuid               REFERENCES users (id) ON DELETE SET NULL,
     visibility      problem_visibility NOT NULL DEFAULT 'private',
 
-    titles          jsonb              NOT NULL DEFAULT '{"en": ""}',
     short_name      varchar(100) UNIQUE,
     source          varchar(255),
     problem_type    problem_type       NOT NULL DEFAULT 'pass-fail',
@@ -51,6 +50,7 @@ CREATE TABLE problems
     memory_limit    integer            NOT NULL DEFAULT 128,   -- МБ
     stdout_limit    integer                     DEFAULT 8,     -- МБ
     code_size_limit integer                     DEFAULT 256,   -- КБ
+
     max_score       integer,
 
     -- ============================================
@@ -63,10 +63,9 @@ CREATE TABLE problems
     --
     s3_bucket_path  text               NOT NULL,
 
-    -- Версия задачи (увеличивается при изменении тестов/чекера)
-    version         integer            NOT NULL DEFAULT 1,
-
-    
+    -- эту парашу тоже в статемент запихать!
+    -- titles          jsonb              NOT NULL DEFAULT '{"en": ""}',
+    -- samples         jsonb              NOT NULL DEFAULT '{}',
     -- Условие задачи в БД (для быстрого доступа и full-text search)
     -- Структура: jsonb с полями по языкам
     -- Пример: {"en": {"legend": "...", "input": "...", "output": "..."}, "ru": {...}}
@@ -109,14 +108,7 @@ CREATE INDEX problems_titles_search_idx ON problems USING GIN(to_tsvector('engli
 --     │
 --     └── {problem_id}/                    # UUID задачи из таблицы problems
 --         │
---         ├── metadata.json                
---         │
---         ├── statement/                   # Условие задачи
---         │   ├── en.md                    
---         │   ├── ru.md                    
---         │   └── assets/                  # Ассеты для условия
---         │       └── image1.png
---         │
+--         ├── metadata.json
 --         ├── tests/                       # ТЕСТЫ
 --         │   ├── tests.json               # Метаданные тестов (groups, ordinals, etc)
 --         │   ├── 01.in
@@ -127,101 +119,32 @@ CREATE INDEX problems_titles_search_idx ON problems USING GIN(to_tsvector('engli
 --         │
 --         ├── checker/                     # ЧЕКЕР
 --         │   ├── checker.cpp              
---         │   ├── checker                  
---         │   └── meta.json                
+--         │   ├── checker               
 --         │
 --         ├── validator/                   # ВАЛИДАТОР
 --         │   ├── validator.cpp
 --         │   ├── validator
---         │   └── meta.json
 --         │
 --         ├── generators/                  # ГЕНЕРАТОРЫ
 --         │   ├── gen.cpp
 --         │   ├── gen
 --         │   ├── gen_border.cpp
 --         │   ├── gen_border
---         │   └── meta.json
 --         │
 --         ├── interactor/                  # ИНТЕРАКТОР
 --         │   ├── interactor.cpp
 --         │   ├── interactor
---         │   └── meta.json
 --         │
 --         ├── solutions/                   # АВТОРСКИЕ РЕШЕНИЯ (опционально)
---         │   └── main.cpp                 
+--         │   └── main.cpp                  
+--         ├── media/
+--         │    └── image1.png                 
 --         │
 --         └── packages/                    # ПОХУЙ ПОКА ЧТО ВООБЩЕ КРИСТАЛЬНО ПОХУЙ
 --             ├── v1.zip                   # Версия 1
 --             ├── v2.zip                   # Версия 2
 --             └── latest.zip               # Symlink
-
--- ============================================================================
--- ФОРМАТ metadata.json
--- ============================================================================
--- {
---   "version": 2,
---   "last_updated": "2026-01-15T20:30:00Z",
---   "title": {"en": "A + B Problem", "ru": "Задача A + B"},
---   "problem_type": "pass-fail",
---   "time_limit_ms": 1000,
---   "memory_limit_mb": 128,
---   "max_score": null
---   "languages": ["en", "ru"]
--- }
 --
--- ============================================================================
--- ФОРМАТ любого файла meta.json
--- ============================================================================
--- {[
---   {
---     "filename": "geb_border.cpp"
---     "compiler": "сpp17",
---     "dependencies": ["testlib.h": "0.9.41"],  // список зависимостей
---     "hash": "sha256:abcd1234..."
---   },
---   ...
--- ]}
--- 
--- 
--- 
--- ============================================================================
--- ФОРМАТ tests/tests.json
--- ============================================================================
--- {
---   "groups": [
---     {
---       "ordinal": 1,
---       "name": "Samples",
---       "points": 0,
---       "points_policy": "complete-group",
---       "depends_on": null,
---       "tests": [1, 2] // Диапазон
---     },
---     {
---       "ordinal": 2,
---       "name": "Main tests",
---       "points": 100,
---       "points_policy": "each-test",
---       "depends_on": null,
---       "tests": [3, 7] // Диапазон
---     }
---   ],
---   
---   "tests": [
---     {
---       "ordinal": 1,
---       "method": "manual"
---       "generator": null
---       "is_sample": true,
---     },
---     {
---       "ordinal": 2,
---       "method": "generated"
---       "generator": "gen_border 1 2 3"
---       "is_sample": false,
---     }
---   ]
--- }
 --
 -- ============================================================================
 -- УДАЛЕННЫЕ ТАБЛИЦЫ (переносим в S3):
