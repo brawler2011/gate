@@ -27,7 +27,32 @@ CREATE INDEX problems_visibility_idx ON problems (visibility);
 CREATE INDEX problems_created_at_idx ON problems (created_at DESC);
 
 -- Full-text search по названиям задач
-CREATE INDEX problems_titles_search_idx ON problems USING GIN (to_tsvector('english', titles::text));
+-- CREATE INDEX problems_titles_search_idx ON problems USING GIN (to_tsvector('english', titles::text));
+
+CREATE TABLE contests 
+(
+    id         uuid PRIMARY KEY             DEFAULT uuid_generate_v7(),
+ 
+    owner_id   uuid                REFERENCES users (id) ON DELETE SET NULL,
+
+    titles     jsonb               NOT NULL,
+
+    short_name varchar(100) UNIQUE NOT NULL,
+
+    created_at timestamptz         NOT NULL DEFAULT now(),
+    updated_at timestamptz         NOT NULL DEFAULT now()
+);
+
+CREATE TABLE contest_problems
+(
+    contest_id  uuid REFERENCES contests (id) ON DELETE CASCADE,
+    problem_id  uuid REFERENCES problems (id) ON DELETE CASCADE,
+    ordinal     integer NOT NULL,
+
+    package_hash varchar(64) NOT NULL,
+
+    PRIMARY KEY (contest_id, problem_id)
+);
 
 -- ============================================================================
 -- СТРУКТУРА S3 BUCKET для задач
