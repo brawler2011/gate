@@ -162,8 +162,6 @@ CREATE INDEX problems_titles_search_idx ON problems USING GIN(to_tsvector('engli
 --   "version": 2,
 --   "last_updated": "2026-01-15T20:30:00Z",
 --   "title": {"en": "A + B Problem", "ru": "Задача A + B"},
---   "short_name": "a-plus-b",
---   "source": "Codeforces Round 900",
 --   "problem_type": "pass-fail",
 --   "time_limit_ms": 1000,
 --   "memory_limit_mb": 128,

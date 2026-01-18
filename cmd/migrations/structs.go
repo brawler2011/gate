@@ -6,11 +6,9 @@ import (
 
 // ProblemMetadata соответствует формату metadata.json в корне папки задачи
 type ProblemMetadata struct {
-	Version       int               `json:"version"` // Не уверен как лучше версию хранить.
+	Version       int               `json:"version"`
 	LastUpdated   time.Time         `json:"last_updated"`
-	Title         map[string]string `json:"title"` // {"en": "A + B Problem", "ru": "Задача A + B"}
-	ShortName     string            `json:"short_name"`
-	Source        string            `json:"source,omitempty"`
+	Title         map[string]string `json:"title"`        // {"en": "A + B Problem", "ru": "Задача A + B"}
 	ProblemType   string            `json:"problem_type"` // "pass-fail", "scoring", etc
 	TimeLimitMs   int               `json:"time_limit_ms"`
 	MemoryLimitMb int               `json:"memory_limit_mb"`
