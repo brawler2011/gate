@@ -4,18 +4,18 @@ import (
 	"time"
 )
 
-// ProblemMetadata соответствует формату metadata.json в корне папки задачи
-type ProblemMetadata struct {
+// ProblemManifest соответствует формату manifest.json в корне папки задачи
+type ProblemManifest struct {
 	LastUpdated time.Time `json:"last_updated"`
 	ProblemType string    `json:"problem_type"` // "pass-fail", "scoring", etc
 
-	MaxScore  *int               `json:"max_score"` // null для pass-fail задач
-	MetaFiles []SpecialFileEntry `json:"meta_files"`
+	MaxScore      *int           `json:"max_score"` // null для pass-fail задач
+	FilesMetadata []FileMetadata `json:"meta_files"`
 
 	TimeLimitMs     int `json:"time_limit_ms"`
 	MemoryLimitMb   int `json:"memory_limit_mb"`
-	StdoutLimitMb   int `json:"stdout_limit"`
-	CodeSizeLimitKb int `json:"code_size_limit"`
+	StdoutLimitMb   int `json:"stdout_limit_mb"`
+	CodeSizeLimitKb int `json:"code_size_limit_kb"`
 
 	// {"en": {}, "ru": {}}
 	Statements map[string]Statement `json:"statements"`
@@ -44,13 +44,14 @@ type Statement struct {
 
 type Dependency struct {
 	Filename string `json:"filename"` // "testlib.h"
-	Version  int    `json:"version"`  // "0.9.41"
+	Version  string `json:"version"`  // "0.9.41"
 }
 
-type SpecialFileEntry struct {
+type FileMetadata struct {
 	Type         string       `json:"type"` // "checker", "validator", "generator", "interactor"
 	Filename     string       `json:"filename"`
 	Compiler     string       `json:"compiler"` // "cpp17", "python3", etc
+	BinarySha256 *string      `json:"binary_sha256"`
 	Dependencies []Dependency `json:"dependencies"`
 }
 
