@@ -4,18 +4,10 @@ const nextConfig = {
     typescript: {
         ignoreBuildErrors: true,
     },
-    eslint: {
-        ignoreDuringBuilds: true,
-    },
     pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
     experimental: {
         serverActions: {
             bodySizeLimit: '20mb',
-        },
-    },
-    turbopack: {
-        resolveAlias: {
-            '@contracts': './contracts',
         },
     },
     async rewrites() {
