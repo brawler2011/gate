@@ -25,7 +25,8 @@ RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
     bun run build
 
 # Этап 2: Production образ
-FROM oven/bun:1-alpine AS runner
+# Очень важно!!! Использовать oven/bun:1-slim Не alpine! Bun не оптимизирован под alpine
+FROM oven/bun:1-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
