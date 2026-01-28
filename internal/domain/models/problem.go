@@ -69,6 +69,14 @@ type TestCase struct {
 	IsSample  bool    `json:"is_sample"`
 }
 
+type Media struct {
+	Images []Image `json:"images"`
+}
+
+type Image struct {
+	Filename string `json:"filename"`
+}
+
 // ============================================================================
 // МОДЕЛИ БД (новая схема problems)
 // ============================================================================
