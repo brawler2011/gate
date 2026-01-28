@@ -212,6 +212,13 @@ type ContestProblem struct {
 	UpdatedAt        time.Time
 }
 
+type ConstestProblemSlop struct {
+	ContestID   uuid.UUID
+	ProblemID   uuid.UUID
+	Ordinal     int
+	PackageHash string
+}
+
 type ContestMember struct {
 	UserID      uuid.UUID
 	ContestID   uuid.UUID
