@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: ObserverService API
+  version: 0.0.1
+paths:
+  /submissions:
+    get:
+      operationId: ObserveSubmissions
+      parameters:
+        - name: since
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: contestId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: problemId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+    responses:
+      "101":
+        description: Switching protocols
+components:
+  schemas:
+    SubmissionsMessageType:
+      type: string
+      enum:
+        - created
+        - queued
+        - compiling_started
+        - testing_started
+        - test_started
+        - completed
+    SubmissionsMessage:
+      type: object
+      required:
+        - message_type
+      properties:
+        message_type:
+          $ref: "#/components/schemas/SubmissionsMessageType"
+        message:
+          oneOf:
+            - $ref: "#/components/schemas/MessageSubmissionCreated"
+            - $ref: "#/components/schemas/MessageSubmissionQueued"
+            - $ref: "#/components/schemas/MessageSubmissionTestingStarted"
+            - $ref: "#/components/schemas/MessageSubmissionCompilingStarted"
+            - $ref: "#/components/schemas/MessageSubmissionCompilingCompleted"
+            - $ref: "#/components/schemas/MessageSubmissionTestStarted"
+            - $ref: "#/components/schemas/MessageSubmissionTestCompleted"
+            - $ref: "#/components/schemas/MessageSubmissionTestingCompleted"
+    MessageSubmissionCreated:
+      type: object
+    MessageSubmissionQueued:
+      type: object
+    MessageSubmissionTestingStarted:
+      type: object
+    MessageSubmissionCompilingStarted:
+      type: object
+    MessageSubmissionCompilingCompleted:
+      type: object
+    MessageSubmissionTestStarted:
+      type: object
+    MessageSubmissionTestCompleted:
+      type: object
+    MessageSubmissionTestingCompleted:
+      type: object
