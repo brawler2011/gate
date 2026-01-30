@@ -2,23 +2,37 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { Commit } from '../models/Commit';
+import type { CompileResult } from '../models/CompileResult';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
 import type { CreationResponseModel } from '../models/CreationResponseModel';
+import type { FileEntry } from '../models/FileEntry';
 import type { GetContestProblemResponseModel } from '../models/GetContestProblemResponseModel';
 import type { GetContestResponseModel } from '../models/GetContestResponseModel';
 import type { GetHealthResponseModel } from '../models/GetHealthResponseModel';
 import type { GetMyContestRoleResponseModel } from '../models/GetMyContestRoleResponseModel';
+import type { GetOrganizationResponseModel } from '../models/GetOrganizationResponseModel';
 import type { GetProblemResponseModel } from '../models/GetProblemResponseModel';
 import type { GetSubmissionResponseModel } from '../models/GetSubmissionResponseModel';
+import type { GetTeamResponseModel } from '../models/GetTeamResponseModel';
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
 import type { ListContestMembersResponseModel } from '../models/ListContestMembersResponseModel';
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
+import type { ListOrganizationMembersResponseModel } from '../models/ListOrganizationMembersResponseModel';
+import type { ListOrganizationsResponseModel } from '../models/ListOrganizationsResponseModel';
 import type { ListProblemsResponseModel } from '../models/ListProblemsResponseModel';
 import type { ListSubmissionsResponseModel } from '../models/ListSubmissionsResponseModel';
+import type { ListTeamMembersResponseModel } from '../models/ListTeamMembersResponseModel';
+import type { ListTeamsResponseModel } from '../models/ListTeamsResponseModel';
 import type { ListUserContestsResponseModel } from '../models/ListUserContestsResponseModel';
 import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
+import type { TestReport } from '../models/TestReport';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
+import type { UpdateOrganizationRequestModel } from '../models/UpdateOrganizationRequestModel';
 import type { UpdateProblemRequestModel } from '../models/UpdateProblemRequestModel';
+import type { UpdateTeamRequestModel } from '../models/UpdateTeamRequestModel';
+import type { ValidationReport } from '../models/ValidationReport';
+import type { WorkshopStatus } from '../models/WorkshopStatus';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class DefaultService {
@@ -713,6 +727,763 @@ export class DefaultService {
         return this.httpRequest.request({
             method: 'GET',
             url: '/users/me',
+        });
+    }
+    /**
+     * Upload user avatar
+     * @returns any Avatar uploaded successfully
+     * @throws ApiError
+     */
+    public uploadAvatar({
+        id,
+        formData,
+    }: {
+        id: string,
+        formData: {
+            avatar?: Blob;
+        },
+    }): CancelablePromise<{
+        imgId?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/users/{id}/avatar',
+            path: {
+                'id': id,
+            },
+            formData: formData,
+            mediaType: 'multipart/form-data',
+        });
+    }
+    /**
+     * Delete user avatar
+     * @returns any Avatar deleted successfully
+     * @throws ApiError
+     */
+    public deleteAvatar({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/users/{id}/avatar',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * Import problem from package
+     * @returns CreationResponseModel Problem imported successfully
+     * @throws ApiError
+     */
+    public importProblem({
+        formData,
+    }: {
+        formData: {
+            /**
+             * Problem package archive (zip)
+             */
+            package?: Blob;
+        },
+    }): CancelablePromise<CreationResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/import',
+            formData: formData,
+            mediaType: 'multipart/form-data',
+        });
+    }
+    /**
+     * Publish problem package
+     * @returns any Problem published successfully
+     * @throws ApiError
+     */
+    public publishProblem({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<{
+        version?: number;
+        message?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{id}/publish',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * Download published problem package
+     * @returns binary Problem package file
+     * @throws ApiError
+     */
+    public getPublishedPackage({
+        id,
+        version,
+    }: {
+        id: string,
+        version: number,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{id}/package/{version}',
+            path: {
+                'id': id,
+                'version': version,
+            },
+        });
+    }
+    /**
+     * Initialize problem workshop with Git repository
+     * @returns any Workshop initialized successfully
+     * @throws ApiError
+     */
+    public initProblemWorkshop({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<{
+        message?: string;
+        commit_sha?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/workshop/init',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * List files in problem repository
+     * @returns any List of files
+     * @throws ApiError
+     */
+    public listWorkshopFiles({
+        problemId,
+        path = '',
+    }: {
+        problemId: string,
+        /**
+         * Directory path to list (empty for root)
+         */
+        path?: string,
+    }): CancelablePromise<{
+        files?: Array<FileEntry>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/workshop/files',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'path': path,
+            },
+        });
+    }
+    /**
+     * Read file content from repository
+     * @returns binary File content
+     * @throws ApiError
+     */
+    public getWorkshopFile({
+        problemId,
+        path,
+    }: {
+        problemId: string,
+        path: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/workshop/files/{path}',
+            path: {
+                'problemId': problemId,
+                'path': path,
+            },
+        });
+    }
+    /**
+     * Update file content in repository
+     * @returns any File updated successfully
+     * @throws ApiError
+     */
+    public updateWorkshopFile({
+        problemId,
+        path,
+        requestBody,
+    }: {
+        problemId: string,
+        path: string,
+        requestBody: Blob,
+    }): CancelablePromise<{
+        message?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/problems/{problemId}/workshop/files/{path}',
+            path: {
+                'problemId': problemId,
+                'path': path,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Delete file from repository
+     * @returns any File deleted successfully
+     * @throws ApiError
+     */
+    public deleteWorkshopFile({
+        problemId,
+        path,
+    }: {
+        problemId: string,
+        path: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{problemId}/workshop/files/{path}',
+            path: {
+                'problemId': problemId,
+                'path': path,
+            },
+        });
+    }
+    /**
+     * Commit changes to repository
+     * @returns any Changes committed successfully
+     * @throws ApiError
+     */
+    public commitWorkshopChanges({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: {
+            /**
+             * Commit message
+             */
+            message: string;
+            /**
+             * Author name
+             */
+            author_name?: string;
+            /**
+             * Author email
+             */
+            author_email?: string;
+        },
+    }): CancelablePromise<{
+        commit_sha?: string;
+        message?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/workshop/commit',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Get current workshop status
+     * @returns WorkshopStatus Workshop status
+     * @throws ApiError
+     */
+    public getWorkshopStatus({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<WorkshopStatus> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/workshop/status',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Get commit history
+     * @returns any Commit history
+     * @throws ApiError
+     */
+    public getWorkshopHistory({
+        problemId,
+        limit = 20,
+    }: {
+        problemId: string,
+        limit?: number,
+    }): CancelablePromise<{
+        commits?: Array<Commit>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/workshop/history',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'limit': limit,
+            },
+        });
+    }
+    /**
+     * Compile checker/validator/generator/interactor
+     * @returns CompileResult Compilation result
+     * @throws ApiError
+     */
+    public compileProblemComponent({
+        problemId,
+        componentType,
+    }: {
+        problemId: string,
+        componentType: 'checker' | 'validator' | 'generator' | 'interactor',
+    }): CancelablePromise<CompileResult> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/workshop/components/{componentType}/compile',
+            path: {
+                'problemId': problemId,
+                'componentType': componentType,
+            },
+        });
+    }
+    /**
+     * Generate tests using generator
+     * @returns any Tests generated successfully
+     * @throws ApiError
+     */
+    public generateTests({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: {
+            generator_name: string;
+            test_numbers: Array<number>;
+            arguments?: Array<Array<string>>;
+        },
+    }): CancelablePromise<{
+        message?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/workshop/tests/generate',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Validate all test inputs
+     * @returns ValidationReport Validation report
+     * @throws ApiError
+     */
+    public validateAllTests({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<ValidationReport> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/workshop/tests/validate',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Test solution against tests
+     * @returns TestReport Test report
+     * @throws ApiError
+     */
+    public testSolution({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: {
+            /**
+             * Path to solution file in repository
+             */
+            solution_path: string;
+            /**
+             * Specific test numbers to run (empty = all tests)
+             */
+            test_numbers?: Array<number>;
+        },
+    }): CancelablePromise<TestReport> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/workshop/solutions/test',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * List organizations
+     * @returns ListOrganizationsResponseModel List of organizations
+     * @throws ApiError
+     */
+    public listOrganizations({
+        page,
+        pageSize,
+        search,
+    }: {
+        page: number,
+        pageSize: number,
+        search?: string,
+    }): CancelablePromise<ListOrganizationsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations',
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'search': search,
+            },
+        });
+    }
+    /**
+     * Create a new organization
+     * @returns CreationResponseModel Organization created successfully
+     * @throws ApiError
+     */
+    public createOrganization({
+        name,
+    }: {
+        name: string,
+    }): CancelablePromise<CreationResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations',
+            query: {
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Get organization by ID
+     * @returns GetOrganizationResponseModel Organization details
+     * @throws ApiError
+     */
+    public getOrganization({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<GetOrganizationResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{id}',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * Update organization
+     * @returns any Organization updated successfully
+     * @throws ApiError
+     */
+    public updateOrganization({
+        id,
+        requestBody,
+    }: {
+        id: string,
+        requestBody: UpdateOrganizationRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/organizations/{id}',
+            path: {
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Delete organization
+     * @returns any Organization deleted successfully
+     * @throws ApiError
+     */
+    public deleteOrganization({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/organizations/{id}',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * List organization members
+     * @returns ListOrganizationMembersResponseModel List of organization members
+     * @throws ApiError
+     */
+    public listOrganizationMembers({
+        id,
+        page,
+        pageSize,
+    }: {
+        id: string,
+        page: number,
+        pageSize: number,
+    }): CancelablePromise<ListOrganizationMembersResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+            },
+        });
+    }
+    /**
+     * Add member to organization
+     * @returns any Member added successfully
+     * @throws ApiError
+     */
+    public addOrganizationMember({
+        id,
+        userId,
+        role,
+    }: {
+        id: string,
+        userId: string,
+        role: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'user_id': userId,
+                'role': role,
+            },
+        });
+    }
+    /**
+     * Remove member from organization
+     * @returns any Member removed successfully
+     * @throws ApiError
+     */
+    public removeOrganizationMember({
+        id,
+        userId,
+    }: {
+        id: string,
+        userId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/organizations/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'user_id': userId,
+            },
+        });
+    }
+    /**
+     * List teams
+     * @returns ListTeamsResponseModel List of teams
+     * @throws ApiError
+     */
+    public listTeams({
+        page,
+        pageSize,
+        search,
+        organizationId,
+    }: {
+        page: number,
+        pageSize: number,
+        search?: string,
+        organizationId?: string,
+    }): CancelablePromise<ListTeamsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/teams',
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'search': search,
+                'organization_id': organizationId,
+            },
+        });
+    }
+    /**
+     * Create a new team
+     * @returns CreationResponseModel Team created successfully
+     * @throws ApiError
+     */
+    public createTeam({
+        requestBody,
+    }: {
+        requestBody: {
+            name: string;
+            organization_id: string;
+        },
+    }): CancelablePromise<CreationResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/teams',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Get team by ID
+     * @returns GetTeamResponseModel Team details
+     * @throws ApiError
+     */
+    public getTeam({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<GetTeamResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/teams/{id}',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * Update team
+     * @returns any Team updated successfully
+     * @throws ApiError
+     */
+    public updateTeam({
+        id,
+        requestBody,
+    }: {
+        id: string,
+        requestBody: UpdateTeamRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/teams/{id}',
+            path: {
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Delete team
+     * @returns any Team deleted successfully
+     * @throws ApiError
+     */
+    public deleteTeam({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/teams/{id}',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * List team members
+     * @returns ListTeamMembersResponseModel List of team members
+     * @throws ApiError
+     */
+    public listTeamMembers({
+        id,
+        page,
+        pageSize,
+    }: {
+        id: string,
+        page: number,
+        pageSize: number,
+    }): CancelablePromise<ListTeamMembersResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/teams/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+            },
+        });
+    }
+    /**
+     * Add member to team
+     * @returns any Member added successfully
+     * @throws ApiError
+     */
+    public addTeamMember({
+        id,
+        userId,
+    }: {
+        id: string,
+        userId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/teams/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'user_id': userId,
+            },
+        });
+    }
+    /**
+     * Remove member from team
+     * @returns any Member removed successfully
+     * @throws ApiError
+     */
+    public removeTeamMember({
+        id,
+        userId,
+    }: {
+        id: string,
+        userId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/teams/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'user_id': userId,
+            },
         });
     }
 }

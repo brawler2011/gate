@@ -27,7 +27,7 @@ type ObserveSubmissionsParams struct {
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
-	// (GET /ws/submissions)
+	// (GET /submissions)
 	ObserveSubmissions(w http.ResponseWriter, r *http.Request, params ObserveSubmissionsParams)
 }
 
@@ -226,7 +226,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
-	m.HandleFunc("GET "+options.BaseURL+"/ws/submissions", wrapper.ObserveSubmissions)
+	m.HandleFunc("GET "+options.BaseURL+"/submissions", wrapper.ObserveSubmissions)
 
 	return m
 }
@@ -242,7 +242,7 @@ type ObserveSubmissionsResponseObject interface {
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
-	// (GET /ws/submissions)
+	// (GET /submissions)
 	ObserveSubmissions(ctx context.Context, request ObserveSubmissionsRequestObject) (ObserveSubmissionsResponseObject, error)
 }
 

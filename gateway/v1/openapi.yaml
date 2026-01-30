@@ -1079,6 +1079,810 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetUserResponseModel'
+  /tester/users/{id}/avatar:
+    post:
+      operationId: UploadAvatar
+      summary: Upload user avatar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imgId:
+                    type: string
+                    format: uuid
+    delete:
+      operationId: DeleteAvatar
+      summary: Delete user avatar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Avatar deleted successfully
+  /tester/problems/import:
+    post:
+      operationId: ImportProblem
+      summary: Import problem from package
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                package:
+                  type: string
+                  format: binary
+                  description: Problem package archive (zip)
+      responses:
+        '200':
+          description: Problem imported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreationResponseModel'
+  /tester/problems/{id}/publish:
+    post:
+      operationId: PublishProblem
+      summary: Publish problem package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Problem published successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+  /tester/problems/{id}/package/{version}:
+    get:
+      operationId: GetPublishedPackage
+      summary: Download published problem package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Problem package file
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+  /tester/problems/{problemId}/workshop/init:
+    post:
+      operationId: InitProblemWorkshop
+      summary: Initialize problem workshop with Git repository
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workshop initialized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  commit_sha:
+                    type: string
+  /tester/problems/{problemId}/workshop/files:
+    get:
+      operationId: ListWorkshopFiles
+      summary: List files in problem repository
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: path
+          in: query
+          schema:
+            type: string
+            default: ''
+          description: Directory path to list (empty for root)
+      responses:
+        '200':
+          description: List of files
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  files:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FileEntry'
+  /tester/problems/{problemId}/workshop/files/{path}:
+    get:
+      operationId: GetWorkshopFile
+      summary: Read file content from repository
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      operationId: UpdateWorkshopFile
+      summary: Update file content in repository
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: File updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    delete:
+      operationId: DeleteWorkshopFile
+      summary: Delete file from repository
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File deleted successfully
+  /tester/problems/{problemId}/workshop/commit:
+    post:
+      operationId: CommitWorkshopChanges
+      summary: Commit changes to repository
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  description: Commit message
+                author_name:
+                  type: string
+                  description: Author name
+                author_email:
+                  type: string
+                  description: Author email
+      responses:
+        '200':
+          description: Changes committed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  commit_sha:
+                    type: string
+                  message:
+                    type: string
+  /tester/problems/{problemId}/workshop/status:
+    get:
+      operationId: GetWorkshopStatus
+      summary: Get current workshop status
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workshop status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkshopStatus'
+  /tester/problems/{problemId}/workshop/history:
+    get:
+      operationId: GetWorkshopHistory
+      summary: Get commit history
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Commit history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  commits:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Commit'
+  /tester/problems/{problemId}/workshop/components/{componentType}/compile:
+    post:
+      operationId: CompileProblemComponent
+      summary: Compile checker/validator/generator/interactor
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: componentType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - checker
+              - validator
+              - generator
+              - interactor
+      responses:
+        '200':
+          description: Compilation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompileResult'
+  /tester/problems/{problemId}/workshop/tests/generate:
+    post:
+      operationId: GenerateTests
+      summary: Generate tests using generator
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - generator_name
+                - test_numbers
+              properties:
+                generator_name:
+                  type: string
+                test_numbers:
+                  type: array
+                  items:
+                    type: integer
+                arguments:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: string
+      responses:
+        '200':
+          description: Tests generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /tester/problems/{problemId}/workshop/tests/validate:
+    post:
+      operationId: ValidateAllTests
+      summary: Validate all test inputs
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Validation report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationReport'
+  /tester/problems/{problemId}/workshop/solutions/test:
+    post:
+      operationId: TestSolution
+      summary: Test solution against tests
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - solution_path
+              properties:
+                solution_path:
+                  type: string
+                  description: Path to solution file in repository
+                test_numbers:
+                  type: array
+                  items:
+                    type: integer
+                  description: Specific test numbers to run (empty = all tests)
+      responses:
+        '200':
+          description: Test report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestReport'
+  /tester/organizations:
+    get:
+      operationId: ListOrganizations
+      summary: List organizations
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of organizations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOrganizationsResponseModel'
+    post:
+      operationId: CreateOrganization
+      summary: Create a new organization
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Organization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreationResponseModel'
+  /tester/organizations/{id}:
+    get:
+      operationId: GetOrganization
+      summary: Get organization by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOrganizationResponseModel'
+    patch:
+      operationId: UpdateOrganization
+      summary: Update organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganizationRequestModel'
+      responses:
+        '200':
+          description: Organization updated successfully
+    delete:
+      operationId: DeleteOrganization
+      summary: Delete organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Organization deleted successfully
+  /tester/organizations/{id}/members:
+    get:
+      operationId: ListOrganizationMembers
+      summary: List organization members
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 10
+      responses:
+        '200':
+          description: List of organization members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOrganizationMembersResponseModel'
+    post:
+      operationId: AddOrganizationMember
+      summary: Add member to organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: role
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Member added successfully
+    delete:
+      operationId: RemoveOrganizationMember
+      summary: Remove member from organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Member removed successfully
+  /tester/teams:
+    get:
+      operationId: ListTeams
+      summary: List teams
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of teams
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTeamsResponseModel'
+    post:
+      operationId: CreateTeam
+      summary: Create a new team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - organization_id
+              properties:
+                name:
+                  type: string
+                organization_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Team created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreationResponseModel'
+  /tester/teams/{id}:
+    get:
+      operationId: GetTeam
+      summary: Get team by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Team details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTeamResponseModel'
+    patch:
+      operationId: UpdateTeam
+      summary: Update team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamRequestModel'
+      responses:
+        '200':
+          description: Team updated successfully
+    delete:
+      operationId: DeleteTeam
+      summary: Delete team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Team deleted successfully
+  /tester/teams/{id}/members:
+    get:
+      operationId: ListTeamMembers
+      summary: List team members
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 10
+      responses:
+        '200':
+          description: List of team members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTeamMembersResponseModel'
+    post:
+      operationId: AddTeamMember
+      summary: Add member to team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Member added successfully
+    delete:
+      operationId: RemoveTeamMember
+      summary: Remove member from team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Member removed successfully
 components:
   securitySchemes:
     cookieAuth:
@@ -1990,3 +2794,275 @@ components:
         test_number: 3
         total_tests: 10
         passed: true
+    FileEntry:
+      type: object
+      properties:
+        path:
+          type: string
+        is_directory:
+          type: boolean
+        size:
+          type: integer
+          format: int64
+    FileStatus:
+      type: object
+      properties:
+        path:
+          type: string
+        staging:
+          type: string
+        worktree:
+          type: string
+    WorkshopStatus:
+      type: object
+      properties:
+        current_sha:
+          type: string
+        modified_files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileStatus'
+        has_uncommitted_changes:
+          type: boolean
+    Commit:
+      type: object
+      properties:
+        sha:
+          type: string
+        message:
+          type: string
+        author:
+          type: string
+        email:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    CompileResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        file_id:
+          type: string
+        sha256:
+          type: string
+        compile_log:
+          type: string
+        compile_error:
+          type: string
+    ValidationReport:
+      type: object
+      properties:
+        total_tests:
+          type: integer
+        valid_tests:
+          type: integer
+        invalid_tests:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestValidationResult'
+    TestValidationResult:
+      type: object
+      properties:
+        test_number:
+          type: integer
+        valid:
+          type: boolean
+        message:
+          type: string
+        error:
+          type: string
+    TestReport:
+      type: object
+      properties:
+        total_tests:
+          type: integer
+        passed_tests:
+          type: integer
+        failed_tests:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestResult'
+    TestResult:
+      type: object
+      properties:
+        test_number:
+          type: integer
+        verdict:
+          type: string
+        time:
+          type: integer
+          format: int64
+        memory:
+          type: integer
+          format: int64
+        message:
+          type: string
+    OrganizationModel:
+      type: object
+      required:
+        - id
+        - name
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ListOrganizationsResponseModel:
+      type: object
+      required:
+        - organizations
+        - pagination
+      properties:
+        organizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationModel'
+        pagination:
+          $ref: '#/components/schemas/PaginationModel'
+    GetOrganizationResponseModel:
+      type: object
+      required:
+        - organization
+      properties:
+        organization:
+          $ref: '#/components/schemas/OrganizationModel'
+    UpdateOrganizationRequestModel:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    OrganizationMemberModel:
+      type: object
+      required:
+        - user_id
+        - organization_id
+        - username
+        - role
+        - created_at
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        role:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ListOrganizationMembersResponseModel:
+      type: object
+      required:
+        - members
+        - pagination
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationMemberModel'
+        pagination:
+          $ref: '#/components/schemas/PaginationModel'
+    TeamModel:
+      type: object
+      required:
+        - id
+        - name
+        - organization_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organization_id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ListTeamsResponseModel:
+      type: object
+      required:
+        - teams
+        - pagination
+      properties:
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamModel'
+        pagination:
+          $ref: '#/components/schemas/PaginationModel'
+    GetTeamResponseModel:
+      type: object
+      required:
+        - team
+      properties:
+        team:
+          $ref: '#/components/schemas/TeamModel'
+    UpdateTeamRequestModel:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    TeamMemberModel:
+      type: object
+      required:
+        - user_id
+        - team_id
+        - username
+        - created_at
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        team_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ListTeamMembersResponseModel:
+      type: object
+      required:
+        - members
+        - pagination
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMemberModel'
+        pagination:
+          $ref: '#/components/schemas/PaginationModel'

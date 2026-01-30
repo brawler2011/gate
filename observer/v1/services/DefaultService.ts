@@ -24,7 +24,7 @@ export class DefaultService {
     }): CancelablePromise<void> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/ws/submissions',
+            url: '/submissions',
             query: {
                 'since': since,
                 'contestId': contestId,
