@@ -1,4 +1,4 @@
-module github.com/gate149/contracts
+module github.com/gate149/gate/contracts
 
 go 1.24.6
 
