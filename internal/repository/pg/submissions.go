@@ -38,12 +38,12 @@ func (r *SubmissionsRepo) GetSubmission(ctx context.Context, id uuid.UUID) (mode
 
 func (r *SubmissionsRepo) CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error) {
 	id, err := r.queries.CreateSubmission(ctx, sqlc.CreateSubmissionParams{
-		ContestID:  creation.ContestId,
-		ProblemID:  creation.ProblemId,
-		CreatedBy:  creation.UserId,
-		Submission: creation.Solution,
-		Language:   creation.Language,
-		Penalty:    int32(creation.Penalty),
+		ContestID: creation.ContestId,
+		ProblemID: creation.ProblemId,
+		OwnerID:   creation.UserId,
+		Source:    creation.Solution,
+		Language:  creation.Language,
+		Penalty:   int32(creation.Penalty),
 	})
 	if err != nil {
 		return uuid.Nil, HandlePgErr(err)
@@ -74,7 +74,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.Sub
 
 	totalCount, err := r.queries.CountSubmissions(ctx, sqlc.CountSubmissionsParams{
 		ContestID: nullableUUIDToPgtype(filter.ContestId),
-		CreatedBy: nullableUUIDToPgtype(filter.UserId),
+		OwnerID:   nullableUUIDToPgtype(filter.UserId),
 		ProblemID: nullableUUIDToPgtype(filter.ProblemId),
 		Language:  languagePtrToInt32Ptr(filter.Language),
 		State:     statePtrToInt32Ptr(filter.State),
@@ -87,7 +87,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.Sub
 		Limit:     int32(filter.PageSize),
 		Offset:    int32((filter.Page - 1) * filter.PageSize),
 		ContestID: nullableUUIDToPgtype(filter.ContestId),
-		CreatedBy: nullableUUIDToPgtype(filter.UserId),
+		OwnerID:   nullableUUIDToPgtype(filter.UserId),
 		ProblemID: nullableUUIDToPgtype(filter.ProblemId),
 		Language:  languagePtrToInt32Ptr(filter.Language),
 		State:     statePtrToInt32Ptr(filter.State),
@@ -130,8 +130,8 @@ func statePtrToInt32Ptr(s *models.State) *int32 {
 
 func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 	var createdBy *uuid.UUID
-	if row.CreatedBy.Valid {
-		cb := uuid.UUID(row.CreatedBy.Bytes)
+	if row.OwnerID.Valid {
+		cb := uuid.UUID(row.OwnerID.Bytes)
 		createdBy = &cb
 	}
 
@@ -148,9 +148,8 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 	}
 
 	var position *int32
-	if row.Position != nil {
-		pos := int32(*row.Position)
-		position = &pos
+	if row.ProblemOrdinal != nil {
+		position = row.ProblemOrdinal
 	}
 
 	var username string
@@ -158,21 +157,22 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 		username = *row.Username
 	}
 
+	// Extract title from JSONB titles (just use short name for now)
 	var problemTitle string
-	if row.ProblemTitle != nil {
-		problemTitle = *row.ProblemTitle
+	if row.ProblemShortName != nil {
+		problemTitle = *row.ProblemShortName
 	}
 
 	var contestTitle string
-	if row.ContestTitle != nil {
-		contestTitle = *row.ContestTitle
+	if row.ContestShortName != nil {
+		contestTitle = *row.ContestShortName
 	}
 
 	return models.Submission{
 		ID:           row.ID,
 		CreatedBy:    createdBy,
 		Username:     username,
-		Submission:   row.Submission,
+		Submission:   row.Source,
 		State:        row.State,
 		Score:        row.Score,
 		Penalty:      row.Penalty,
@@ -191,8 +191,8 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 
 func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 	var createdBy *uuid.UUID
-	if row.CreatedBy.Valid {
-		cb := uuid.UUID(row.CreatedBy.Bytes)
+	if row.OwnerID.Valid {
+		cb := uuid.UUID(row.OwnerID.Bytes)
 		createdBy = &cb
 	}
 
@@ -209,9 +209,8 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 	}
 
 	var position *int32
-	if row.Position != nil {
-		pos := int32(*row.Position)
-		position = &pos
+	if row.ProblemOrdinal != nil {
+		position = row.ProblemOrdinal
 	}
 
 	var username string
@@ -219,14 +218,15 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 		username = *row.Username
 	}
 
+	// Extract title from JSONB titles (just use short name for now)
 	var problemTitle string
-	if row.ProblemTitle != nil {
-		problemTitle = *row.ProblemTitle
+	if row.ProblemShortName != nil {
+		problemTitle = *row.ProblemShortName
 	}
 
 	var contestTitle string
-	if row.ContestTitle != nil {
-		contestTitle = *row.ContestTitle
+	if row.ContestShortName != nil {
+		contestTitle = *row.ContestShortName
 	}
 
 	return models.Submission{

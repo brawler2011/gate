@@ -11,70 +11,125 @@ import (
 )
 
 type Querier interface {
-	CountAdminContests(ctx context.Context, arg CountAdminContestsParams) (int64, error)
-	CountContestMembers(ctx context.Context, contestID uuid.UUID) (int64, error)
+	// Contest Members (direct access control)
+	AddContestMember(ctx context.Context, arg AddContestMemberParams) error
+	// Contest Problems (linking to packages)
+	AddContestProblem(ctx context.Context, arg AddContestProblemParams) error
+	// Contest Teams queries (team-based access control)
+	AddContestTeam(ctx context.Context, arg AddContestTeamParams) error
+	// Organization Members
+	AddOrganizationMember(ctx context.Context, arg AddOrganizationMemberParams) error
+	// Problem Members (direct access control)
+	AddProblemMember(ctx context.Context, arg AddProblemMemberParams) error
+	// Problem Teams queries (team-based access control)
+	AddProblemTeam(ctx context.Context, arg AddProblemTeamParams) error
+	// Team Members
+	AddTeamMember(ctx context.Context, arg AddTeamMemberParams) error
+	// Access check helpers
+	CheckUserHasContestAccess(ctx context.Context, arg CheckUserHasContestAccessParams) (bool, error)
+	// Access check helpers
+	CheckUserHasProblemAccess(ctx context.Context, arg CheckUserHasProblemAccessParams) (bool, error)
+	CheckUserIsContestModerator(ctx context.Context, arg CheckUserIsContestModeratorParams) (bool, error)
+	CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error)
+	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
+	CountContests(ctx context.Context, arg CountContestsParams) (int64, error)
+	CountOrganizations(ctx context.Context, dollar_1 string) (int64, error)
+	CountProblemPackages(ctx context.Context, problemID uuid.UUID) (int64, error)
 	CountProblems(ctx context.Context, arg CountProblemsParams) (int64, error)
-	CountPublicContests(ctx context.Context, search string) (int64, error)
 	CountSubmissions(ctx context.Context, arg CountSubmissionsParams) (int64, error)
-	CountUserContests(ctx context.Context, arg CountUserContestsParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int32, error)
-	CountWorkshopContests(ctx context.Context, arg CountWorkshopContestsParams) (int64, error)
-	// Contest CRUD operations
-	CreateContest(ctx context.Context, arg CreateContestParams) (uuid.UUID, error)
-	// Contest member operations
-	CreateContestMember(ctx context.Context, arg CreateContestMemberParams) error
-	// Contest problem operations
-	CreateContestProblem(ctx context.Context, arg CreateContestProblemParams) error
-	CreateImage(ctx context.Context, arg CreateImageParams) error
-	// Problem CRUD operations
-	CreateProblem(ctx context.Context, arg CreateProblemParams) (uuid.UUID, error)
-	// Problem member operations
-	CreateProblemMember(ctx context.Context, arg CreateProblemMemberParams) error
-	// Problem tests operations
-	CreateProblemTest(ctx context.Context, arg CreateProblemTestParams) error
+	// Contests queries (new schema with Organizations)
+	CreateContest(ctx context.Context, arg CreateContestParams) (Contest, error)
+	// Organizations queries
+	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
+	// Problems queries (new schema with Organizations)
+	CreateProblem(ctx context.Context, arg CreateProblemParams) (Problem, error)
+	// Problem Packages queries
+	CreateProblemPackage(ctx context.Context, arg CreateProblemPackageParams) (ProblemPackage, error)
 	CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (uuid.UUID, error)
+	// Teams queries
+	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
-	DeleteContestMember(ctx context.Context, arg DeleteContestMemberParams) error
-	DeleteContestProblem(ctx context.Context, arg DeleteContestProblemParams) error
-	DeleteImage(ctx context.Context, id uuid.UUID) error
 	DeleteOldEvents(ctx context.Context, arg DeleteOldEventsParams) error
+	DeleteOrganization(ctx context.Context, id uuid.UUID) error
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
-	DeleteProblemTests(ctx context.Context, problemID uuid.UUID) error
-	GetContest(ctx context.Context, id uuid.UUID) (Contest, error)
-	GetContestMember(ctx context.Context, arg GetContestMemberParams) (GetContestMemberRow, error)
+	DeleteProblemPackage(ctx context.Context, id uuid.UUID) error
+	DeleteTeam(ctx context.Context, id uuid.UUID) error
+	GetContestByID(ctx context.Context, id uuid.UUID) (Contest, error)
+	GetContestByShortName(ctx context.Context, arg GetContestByShortNameParams) (Contest, error)
+	GetContestMember(ctx context.Context, arg GetContestMemberParams) (ContestMember, error)
 	GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error)
-	GetContestProblems(ctx context.Context, contestID uuid.UUID) ([]GetContestProblemsRow, error)
-	GetImageById(ctx context.Context, id uuid.UUID) (Image, error)
-	GetProblemById(ctx context.Context, id uuid.UUID) (Problem, error)
+	GetContestTeam(ctx context.Context, arg GetContestTeamParams) (ContestTeam, error)
+	GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organization, error)
+	GetOrganizationByLogin(ctx context.Context, login string) (Organization, error)
+	GetOrganizationMember(ctx context.Context, arg GetOrganizationMemberParams) (OrganizationMember, error)
+	GetProblemByID(ctx context.Context, id uuid.UUID) (Problem, error)
+	GetProblemByShortName(ctx context.Context, arg GetProblemByShortNameParams) (Problem, error)
 	GetProblemMember(ctx context.Context, arg GetProblemMemberParams) (ProblemMember, error)
-	GetProblemTests(ctx context.Context, problemID uuid.UUID) ([]ProblemTest, error)
+	GetProblemPackageByHash(ctx context.Context, packageHash string) (ProblemPackage, error)
+	GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error)
+	GetProblemTeam(ctx context.Context, arg GetProblemTeamParams) (ProblemTeam, error)
+	GetProblemWorkshopStatus(ctx context.Context, id uuid.UUID) (GetProblemWorkshopStatusRow, error)
+	GetReadyPackage(ctx context.Context, problemID uuid.UUID) (ProblemPackage, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error)
+	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
+	GetTeamBySlug(ctx context.Context, arg GetTeamBySlugParams) (Team, error)
+	GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]Contest, error)
+	GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (TeamMember, error)
+	GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]Problem, error)
 	GetUserById(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByKratosId(ctx context.Context, kratosID uuid.UUID) (User, error)
+	GetUserByUsername(ctx context.Context, username string) (User, error)
+	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]Organization, error)
+	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]Team, error)
+	GetUserTeamsByOrganization(ctx context.Context, arg GetUserTeamsByOrganizationParams) ([]Team, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) error
-	// Admin contests listing
-	ListAdminContests(ctx context.Context, arg ListAdminContestsParams) ([]Contest, error)
-	ListContestMembers(ctx context.Context, arg ListContestMembersParams) ([]ListContestMembersRow, error)
-	// Problem listing
-	ListProblems(ctx context.Context, arg ListProblemsParams) ([]ListProblemsRow, error)
-	// Public contests listing
-	ListPublicContests(ctx context.Context, arg ListPublicContestsParams) ([]Contest, error)
+	ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]Contest, error)
+	ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]Problem, error)
+	ListContestMembers(ctx context.Context, contestID uuid.UUID) ([]ListContestMembersRow, error)
+	ListContestProblems(ctx context.Context, contestID uuid.UUID) ([]ListContestProblemsRow, error)
+	ListContestTeams(ctx context.Context, contestID uuid.UUID) ([]ListContestTeamsRow, error)
+	ListContests(ctx context.Context, arg ListContestsParams) ([]Contest, error)
+	ListOrganizationMembers(ctx context.Context, organizationID uuid.UUID) ([]ListOrganizationMembersRow, error)
+	ListOrganizationTeams(ctx context.Context, organizationID uuid.UUID) ([]Team, error)
+	ListOrganizations(ctx context.Context, arg ListOrganizationsParams) ([]Organization, error)
+	ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]ListProblemMembersRow, error)
+	ListProblemPackages(ctx context.Context, arg ListProblemPackagesParams) ([]ProblemPackage, error)
+	ListProblemTeams(ctx context.Context, problemID uuid.UUID) ([]ListProblemTeamsRow, error)
+	ListProblems(ctx context.Context, arg ListProblemsParams) ([]Problem, error)
 	// Submission listing
 	ListSubmissions(ctx context.Context, arg ListSubmissionsParams) ([]ListSubmissionsRow, error)
-	// User contests listing
-	ListUserContests(ctx context.Context, arg ListUserContestsParams) ([]Contest, error)
+	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]ListTeamMembersRow, error)
+	ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]Contest, error)
+	ListUserAccessibleProblems(ctx context.Context, arg ListUserAccessibleProblemsParams) ([]Problem, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
-	// Workshop contests listing
-	ListWorkshopContests(ctx context.Context, arg ListWorkshopContestsParams) ([]Contest, error)
 	MarkAsCompleted(ctx context.Context, id uuid.UUID) error
 	MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) error
 	PickEvents(ctx context.Context, arg PickEventsParams) ([]OutboxEvent, error)
+	RemoveContestMember(ctx context.Context, arg RemoveContestMemberParams) error
+	RemoveContestProblem(ctx context.Context, arg RemoveContestProblemParams) error
+	RemoveContestTeam(ctx context.Context, arg RemoveContestTeamParams) error
+	RemoveOrganizationMember(ctx context.Context, arg RemoveOrganizationMemberParams) error
+	RemoveProblemMember(ctx context.Context, arg RemoveProblemMemberParams) error
+	RemoveProblemTeam(ctx context.Context, arg RemoveProblemTeamParams) error
+	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error
-	UpdateContestMember(ctx context.Context, arg UpdateContestMemberParams) error
+	UpdateContestMemberRole(ctx context.Context, arg UpdateContestMemberRoleParams) error
+	UpdateContestProblemOrdinal(ctx context.Context, arg UpdateContestProblemOrdinalParams) error
+	UpdateContestTeamRole(ctx context.Context, arg UpdateContestTeamRoleParams) error
+	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error
+	UpdateOrganizationMemberRole(ctx context.Context, arg UpdateOrganizationMemberRoleParams) error
+	UpdatePackageStatus(ctx context.Context, arg UpdatePackageStatusParams) error
 	UpdateProblem(ctx context.Context, arg UpdateProblemParams) error
+	// Workshop integration queries
+	UpdateProblemGitCommit(ctx context.Context, arg UpdateProblemGitCommitParams) error
+	UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error
+	UpdateProblemTeamPermission(ctx context.Context, arg UpdateProblemTeamPermissionParams) error
 	UpdateSubmission(ctx context.Context, arg UpdateSubmissionParams) error
+	UpdateTeam(ctx context.Context, arg UpdateTeamParams) error
+	UpdateTeamMemberRole(ctx context.Context, arg UpdateTeamMemberRoleParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error
 }
 

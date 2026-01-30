@@ -41,7 +41,7 @@ func (d *EventDispatcher) Dispatch(ctx context.Context, eventType string, payloa
 		return fmt.Errorf("no handler registered for event type: %s", eventType)
 	}
 
-	err := handler.Handle(ctx, payload)
+	err := handler.Handle(ctx, eventType, payload)
 	if err != nil {
 		return err
 	}

@@ -32,9 +32,12 @@ func (uc *ProblemsUseCase) CreateProblem(ctx context.Context, input *models.Crea
 	id := uuid.New()
 
 	params := &models.CreateProblemParams{
-		Id:     id,
-		Title:  input.Title,
-		UserId: input.UserId,
+		ID:             id,
+		OrganizationID: input.OrganizationID,
+		Titles:         input.Titles,
+		ShortName:      input.ShortName,
+		Visibility:     input.Visibility,
+		OwnerID:        input.OwnerID,
 	}
 
 	if err := uc.repo.CreateProblem(ctx, params); err != nil {
@@ -42,14 +45,16 @@ func (uc *ProblemsUseCase) CreateProblem(ctx context.Context, input *models.Crea
 	}
 
 	// Add creator as owner
-	memberParams := &models.CreateProblemMemberParams{
-		ProblemId: id,
-		UserId:    input.UserId,
-		Role:      models.ProblemRoleOwner,
-	}
+	if input.OwnerID != nil {
+		memberParams := &models.CreateProblemMemberParams{
+			ProblemID: id,
+			UserID:    *input.OwnerID,
+			Role:      models.ProblemRoleOwner,
+		}
 
-	if err := uc.repo.CreateProblemMember(ctx, memberParams); err != nil {
-		return uuid.Nil, err
+		if err := uc.repo.CreateProblemMember(ctx, memberParams); err != nil {
+			return uuid.Nil, err
+		}
 	}
 
 	return id, nil
@@ -60,47 +65,6 @@ func (uc *ProblemsUseCase) GetProblemById(ctx context.Context, id uuid.UUID) (mo
 }
 
 func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
-	// Process latex if needed
-	if problem.Legend != nil || problem.InputFormat != nil || problem.OutputFormat != nil || problem.Notes != nil || problem.Scoring != nil {
-		texts := make([]string, 5)
-		if problem.Legend != nil {
-			texts[0] = *problem.Legend
-		}
-		if problem.InputFormat != nil {
-			texts[1] = *problem.InputFormat
-		}
-		if problem.OutputFormat != nil {
-			texts[2] = *problem.OutputFormat
-		}
-		if problem.Notes != nil {
-			texts[3] = *problem.Notes
-		}
-		if problem.Scoring != nil {
-			texts[4] = *problem.Scoring
-		}
-
-		htmls, err := uc.pandocClient.BatchConvertLatexToHtml5(ctx, texts)
-		if err != nil {
-			return pkg.Wrap(err, nil, "failed to convert latex to html")
-		}
-
-		if problem.Legend != nil {
-			problem.LegendHtml = &htmls[0]
-		}
-		if problem.InputFormat != nil {
-			problem.InputFormatHtml = &htmls[1]
-		}
-		if problem.OutputFormat != nil {
-			problem.OutputFormatHtml = &htmls[2]
-		}
-		if problem.Notes != nil {
-			problem.NotesHtml = &htmls[3]
-		}
-		if problem.Scoring != nil {
-			problem.ScoringHtml = &htmls[4]
-		}
-	}
-
 	if err := uc.repo.UpdateProblem(ctx, id, problem); err != nil {
 		return err
 	}
@@ -118,20 +82,8 @@ func (uc *ProblemsUseCase) ListProblems(ctx context.Context, filter *models.Prob
 		return nil, err
 	}
 
-	domainProblems := make([]models.Problem, len(problems))
-	for i, p := range problems {
-		domainProblems[i] = models.Problem{
-			ID:          p.ID,
-			Title:       p.Title,
-			MemoryLimit: p.MemoryLimit,
-			TimeLimit:   p.TimeLimit,
-			CreatedAt:   p.CreatedAt,
-			UpdatedAt:   p.UpdatedAt,
-		}
-	}
-
 	return &models.ProblemsList{
-		Problems:   domainProblems,
+		Problems:   problems,
 		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
 	}, nil
 }
@@ -149,6 +101,7 @@ func (uc *ProblemsUseCase) CreateProblemTests(ctx context.Context, problemId uui
 			Ordinal:   t.Ordinal,
 			Input:     t.Input,
 			Output:    t.Output,
+			IsSample:  t.IsSample,
 		}
 	}
 

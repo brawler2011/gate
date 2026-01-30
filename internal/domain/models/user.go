@@ -51,15 +51,15 @@ func (f UsersListFilter) Validate() error {
 }
 
 type CreateUserParams struct {
-	Id       uuid.UUID
-	Username string
-	Role     UserRole
-	KratosId uuid.UUID
-	Email    string
-	Name     string
-	Surname  string
-	Bio      string
-	ImgId    *uuid.UUID
+	Id        uuid.UUID
+	Username  string
+	Role      UserRole
+	KratosId  uuid.UUID
+	Email     string
+	Name      string
+	Surname   string
+	Bio       string
+	AvatarUrl *string
 }
 
 func UsernameValidate(username string) error {
@@ -111,14 +111,14 @@ func (p CreateUserParams) Validate() error {
 }
 
 type CreateUserInput struct {
-	Username string
-	Role     string
-	KratosId uuid.UUID
-	Email    string
-	Name     string
-	Surname  string
-	Bio      string
-	Image    *string
+	Username  string
+	Role      string
+	KratosId  uuid.UUID
+	Email     string
+	Name      string
+	Surname   string
+	Bio       string
+	AvatarUrl *string
 }
 
 type UsersListFilter struct {
@@ -129,14 +129,14 @@ type UsersListFilter struct {
 }
 
 type UpdateUserParams struct {
-	Id       uuid.UUID
-	Username *string
-	Role     *UserRole
-	Email    *string
-	Name     *string
-	Surname  *string
-	Bio      *string
-	ImgId    *uuid.UUID
+	Id        uuid.UUID
+	Username  *string
+	Role      *UserRole
+	Email     *string
+	Name      *string
+	Surname   *string
+	Bio       *string
+	AvatarUrl *string
 }
 
 func (p UpdateUserParams) Validate() error {
@@ -165,14 +165,14 @@ func (p UpdateUserParams) Validate() error {
 }
 
 type UpdateUserInput struct {
-	Id       uuid.UUID
-	Username *string
-	Role     *string
-	Email    *string
-	Name     *string
-	Surname  *string
-	Bio      *string
-	ImgId    *uuid.UUID
+	Id        uuid.UUID
+	Username  *string
+	Role      *string
+	Email     *string
+	Name      *string
+	Surname   *string
+	Bio       *string
+	AvatarUrl *string
 }
 
 type User struct {
@@ -184,7 +184,7 @@ type User struct {
 	Name      string
 	Surname   string
 	Bio       string
-	ImgId     *uuid.UUID
+	AvatarUrl *string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

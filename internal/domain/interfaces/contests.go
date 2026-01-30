@@ -29,6 +29,7 @@ type ContestsRepo interface {
 	DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error
 
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]models.ContestProblem, error)
+	GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]models.ContestTeam, error)
 
 	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]models.Contest, int32, error)
 }

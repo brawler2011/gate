@@ -23,7 +23,7 @@ WHERE (
   )
   AND (
     $2::uuid IS NULL
-    OR s.created_by = $2::uuid
+    OR s.owner_id = $2::uuid
   )
   AND (
     $3::uuid IS NULL
@@ -41,7 +41,7 @@ WHERE (
 
 type CountSubmissionsParams struct {
 	ContestID pgtype.UUID `json:"contest_id"`
-	CreatedBy pgtype.UUID `json:"created_by"`
+	OwnerID   pgtype.UUID `json:"owner_id"`
 	ProblemID pgtype.UUID `json:"problem_id"`
 	Language  *int32      `json:"language"`
 	State     *int32      `json:"state"`
@@ -50,7 +50,7 @@ type CountSubmissionsParams struct {
 func (q *Queries) CountSubmissions(ctx context.Context, arg CountSubmissionsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countSubmissions,
 		arg.ContestID,
-		arg.CreatedBy,
+		arg.OwnerID,
 		arg.ProblemID,
 		arg.Language,
 		arg.State,
@@ -64,8 +64,8 @@ const createSubmission = `-- name: CreateSubmission :one
 INSERT INTO submissions (
     contest_id,
     problem_id,
-    created_by,
-    submission,
+    owner_id,
+    source,
     language,
     penalty
   )
@@ -81,20 +81,20 @@ RETURNING id
 `
 
 type CreateSubmissionParams struct {
-	ContestID  uuid.UUID           `json:"contest_id"`
-	ProblemID  uuid.UUID           `json:"problem_id"`
-	CreatedBy  uuid.UUID           `json:"created_by"`
-	Submission string              `json:"submission"`
-	Language   models.LanguageName `json:"language"`
-	Penalty    int32               `json:"penalty"`
+	ContestID uuid.UUID           `json:"contest_id"`
+	ProblemID uuid.UUID           `json:"problem_id"`
+	OwnerID   uuid.UUID           `json:"owner_id"`
+	Source    string              `json:"source"`
+	Language  models.LanguageName `json:"language"`
+	Penalty   int32               `json:"penalty"`
 }
 
 func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, createSubmission,
 		arg.ContestID,
 		arg.ProblemID,
-		arg.CreatedBy,
-		arg.Submission,
+		arg.OwnerID,
+		arg.Source,
 		arg.Language,
 		arg.Penalty,
 	)
@@ -105,9 +105,9 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 
 const getSubmission = `-- name: GetSubmission :one
 SELECT s.id,
-  s.created_by,
+  s.owner_id,
   u.username,
-  s.submission,
+  s.source,
   s.state,
   s.score,
   s.penalty,
@@ -115,17 +115,19 @@ SELECT s.id,
   s.memory_stat,
   s.language,
   s.problem_id,
-  p.title AS problem_title,
-  cp.position,
+  p.titles AS problem_titles,
+  p.short_name AS problem_short_name,
+  cp.ordinal AS problem_ordinal,
   s.contest_id,
-  c.title AS contest_title,
+  c.titles AS contest_titles,
+  c.short_name AS contest_short_name,
   c.visibility AS contest_visibility,
   s.updated_at,
   s.created_at
 FROM submissions s
-  LEFT JOIN users u ON s.created_by = u.id
+  LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problems p ON s.problem_id = p.id
-  LEFT JOIN contest_problem cp ON p.id = cp.problem_id
+  LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
   LEFT JOIN contests c ON s.contest_id = c.id
 WHERE s.id = $1::uuid
@@ -133,9 +135,9 @@ WHERE s.id = $1::uuid
 
 type GetSubmissionRow struct {
 	ID                uuid.UUID             `json:"id"`
-	CreatedBy         pgtype.UUID           `json:"created_by"`
+	OwnerID           pgtype.UUID           `json:"owner_id"`
 	Username          *string               `json:"username"`
-	Submission        string                `json:"submission"`
+	Source            string                `json:"source"`
 	State             models.State          `json:"state"`
 	Score             int32                 `json:"score"`
 	Penalty           int32                 `json:"penalty"`
@@ -143,10 +145,12 @@ type GetSubmissionRow struct {
 	MemoryStat        int32                 `json:"memory_stat"`
 	Language          models.LanguageName   `json:"language"`
 	ProblemID         pgtype.UUID           `json:"problem_id"`
-	ProblemTitle      *string               `json:"problem_title"`
-	Position          *int32                `json:"position"`
+	ProblemTitles     []byte                `json:"problem_titles"`
+	ProblemShortName  *string               `json:"problem_short_name"`
+	ProblemOrdinal    *int32                `json:"problem_ordinal"`
 	ContestID         pgtype.UUID           `json:"contest_id"`
-	ContestTitle      *string               `json:"contest_title"`
+	ContestTitles     []byte                `json:"contest_titles"`
+	ContestShortName  *string               `json:"contest_short_name"`
 	ContestVisibility NullContestVisibility `json:"contest_visibility"`
 	UpdatedAt         time.Time             `json:"updated_at"`
 	CreatedAt         time.Time             `json:"created_at"`
@@ -157,9 +161,9 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 	var i GetSubmissionRow
 	err := row.Scan(
 		&i.ID,
-		&i.CreatedBy,
+		&i.OwnerID,
 		&i.Username,
-		&i.Submission,
+		&i.Source,
 		&i.State,
 		&i.Score,
 		&i.Penalty,
@@ -167,10 +171,12 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.MemoryStat,
 		&i.Language,
 		&i.ProblemID,
-		&i.ProblemTitle,
-		&i.Position,
+		&i.ProblemTitles,
+		&i.ProblemShortName,
+		&i.ProblemOrdinal,
 		&i.ContestID,
-		&i.ContestTitle,
+		&i.ContestTitles,
+		&i.ContestShortName,
 		&i.ContestVisibility,
 		&i.UpdatedAt,
 		&i.CreatedAt,
@@ -180,7 +186,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 
 const listSubmissions = `-- name: ListSubmissions :many
 SELECT s.id,
-  s.created_by,
+  s.owner_id,
   u.username,
   s.state,
   s.score,
@@ -189,16 +195,18 @@ SELECT s.id,
   s.memory_stat,
   s.language,
   s.problem_id,
-  p.title AS problem_title,
-  cp.position,
+  p.titles AS problem_titles,
+  p.short_name AS problem_short_name,
+  cp.ordinal AS problem_ordinal,
   s.contest_id,
-  c.title AS contest_title,
+  c.titles AS contest_titles,
+  c.short_name AS contest_short_name,
   s.updated_at,
   s.created_at
 FROM submissions s
-  LEFT JOIN users u ON s.created_by = u.id
+  LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problems p ON s.problem_id = p.id
-  LEFT JOIN contest_problem cp ON p.id = cp.problem_id
+  LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
   LEFT JOIN contests c ON s.contest_id = c.id
 WHERE (
@@ -207,7 +215,7 @@ WHERE (
   )
   AND (
     $2::uuid IS NULL
-    OR s.created_by = $2::uuid
+    OR s.owner_id = $2::uuid
   )
   AND (
     $3::uuid IS NULL
@@ -232,7 +240,7 @@ LIMIT $8 OFFSET $7
 
 type ListSubmissionsParams struct {
 	ContestID pgtype.UUID `json:"contest_id"`
-	CreatedBy pgtype.UUID `json:"created_by"`
+	OwnerID   pgtype.UUID `json:"owner_id"`
 	ProblemID pgtype.UUID `json:"problem_id"`
 	Language  *int32      `json:"language"`
 	State     *int32      `json:"state"`
@@ -242,29 +250,31 @@ type ListSubmissionsParams struct {
 }
 
 type ListSubmissionsRow struct {
-	ID           uuid.UUID           `json:"id"`
-	CreatedBy    pgtype.UUID         `json:"created_by"`
-	Username     *string             `json:"username"`
-	State        models.State        `json:"state"`
-	Score        int32               `json:"score"`
-	Penalty      int32               `json:"penalty"`
-	TimeStat     int32               `json:"time_stat"`
-	MemoryStat   int32               `json:"memory_stat"`
-	Language     models.LanguageName `json:"language"`
-	ProblemID    pgtype.UUID         `json:"problem_id"`
-	ProblemTitle *string             `json:"problem_title"`
-	Position     *int32              `json:"position"`
-	ContestID    pgtype.UUID         `json:"contest_id"`
-	ContestTitle *string             `json:"contest_title"`
-	UpdatedAt    time.Time           `json:"updated_at"`
-	CreatedAt    time.Time           `json:"created_at"`
+	ID               uuid.UUID           `json:"id"`
+	OwnerID          pgtype.UUID         `json:"owner_id"`
+	Username         *string             `json:"username"`
+	State            models.State        `json:"state"`
+	Score            int32               `json:"score"`
+	Penalty          int32               `json:"penalty"`
+	TimeStat         int32               `json:"time_stat"`
+	MemoryStat       int32               `json:"memory_stat"`
+	Language         models.LanguageName `json:"language"`
+	ProblemID        pgtype.UUID         `json:"problem_id"`
+	ProblemTitles    []byte              `json:"problem_titles"`
+	ProblemShortName *string             `json:"problem_short_name"`
+	ProblemOrdinal   *int32              `json:"problem_ordinal"`
+	ContestID        pgtype.UUID         `json:"contest_id"`
+	ContestTitles    []byte              `json:"contest_titles"`
+	ContestShortName *string             `json:"contest_short_name"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+	CreatedAt        time.Time           `json:"created_at"`
 }
 
 // Submission listing
 func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams) ([]ListSubmissionsRow, error) {
 	rows, err := q.db.Query(ctx, listSubmissions,
 		arg.ContestID,
-		arg.CreatedBy,
+		arg.OwnerID,
 		arg.ProblemID,
 		arg.Language,
 		arg.State,
@@ -281,7 +291,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 		var i ListSubmissionsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.CreatedBy,
+			&i.OwnerID,
 			&i.Username,
 			&i.State,
 			&i.Score,
@@ -290,10 +300,12 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.MemoryStat,
 			&i.Language,
 			&i.ProblemID,
-			&i.ProblemTitle,
-			&i.Position,
+			&i.ProblemTitles,
+			&i.ProblemShortName,
+			&i.ProblemOrdinal,
 			&i.ContestID,
-			&i.ContestTitle,
+			&i.ContestTitles,
+			&i.ContestShortName,
 			&i.UpdatedAt,
 			&i.CreatedAt,
 		); err != nil {

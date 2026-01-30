@@ -1,0 +1,237 @@
+package problemformat
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// ValidateManifest проверяет корректность манифеста
+func ValidateManifest(manifest *ProblemManifest) error {
+	var errs []error
+
+	// Validate problem type
+	validTypes := map[string]bool{
+		"pass-fail":   true,
+		"scoring":     true,
+		"interactive": true,
+	}
+	if !validTypes[manifest.ProblemType] {
+		errs = append(errs, fmt.Errorf("invalid problem_type: %s (must be one of: pass-fail, scoring, interactive)", manifest.ProblemType))
+	}
+
+	// Validate max_score for scoring problems
+	if manifest.ProblemType == "scoring" && manifest.MaxScore == nil {
+		errs = append(errs, errors.New("max_score is required for scoring problems"))
+	}
+	if manifest.ProblemType == "pass-fail" && manifest.MaxScore != nil {
+		errs = append(errs, errors.New("max_score must be null for pass-fail problems"))
+	}
+
+	// Validate limits
+	if manifest.TimeLimitMs <= 0 {
+		errs = append(errs, errors.New("time_limit_ms must be positive"))
+	}
+	if manifest.MemoryLimitMb <= 0 {
+		errs = append(errs, errors.New("memory_limit_mb must be positive"))
+	}
+	if manifest.StdoutLimitMb <= 0 {
+		errs = append(errs, errors.New("stdout_limit_mb must be positive"))
+	}
+	if manifest.CodeSizeLimitKb <= 0 {
+		errs = append(errs, errors.New("code_size_limit_kb must be positive"))
+	}
+
+	// Validate statements
+	if len(manifest.Statements) == 0 {
+		errs = append(errs, errors.New("at least one statement is required"))
+	}
+	for lang, stmt := range manifest.Statements {
+		if strings.TrimSpace(stmt.Title) == "" {
+			errs = append(errs, fmt.Errorf("statement[%s].title is required", lang))
+		}
+		if strings.TrimSpace(stmt.Legend) == "" {
+			errs = append(errs, fmt.Errorf("statement[%s].legend is required", lang))
+		}
+	}
+
+	// Validate file metadata
+	validFileTypes := map[string]bool{
+		"checker":    true,
+		"validator":  true,
+		"generator":  true,
+		"interactor": true,
+	}
+	for i, file := range manifest.FilesMetadata {
+		if !validFileTypes[file.Type] {
+			errs = append(errs, fmt.Errorf("meta_files[%d].type: invalid type %s", i, file.Type))
+		}
+		if strings.TrimSpace(file.Filename) == "" {
+			errs = append(errs, fmt.Errorf("meta_files[%d].filename is required", i))
+		}
+		if strings.TrimSpace(file.Compiler) == "" {
+			errs = append(errs, fmt.Errorf("meta_files[%d].compiler is required", i))
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
+}
+
+// ValidateTestsMetadata проверяет корректность tests.json
+func ValidateTestsMetadata(tests *TestsMetadata, manifest *ProblemManifest) error {
+	var errs []error
+
+	if len(tests.Tests) == 0 {
+		errs = append(errs, errors.New("at least one test is required"))
+	}
+
+	// Validate test ordinals are unique and sequential
+	testOrdinals := make(map[int]bool)
+	for i, test := range tests.Tests {
+		if test.Ordinal < 1 {
+			errs = append(errs, fmt.Errorf("tests[%d].ordinal must be >= 1", i))
+		}
+		if testOrdinals[test.Ordinal] {
+			errs = append(errs, fmt.Errorf("duplicate test ordinal: %d", test.Ordinal))
+		}
+		testOrdinals[test.Ordinal] = true
+
+		// Validate method
+		if test.Method != "manual" && test.Method != "generated" {
+			errs = append(errs, fmt.Errorf("tests[%d].method must be 'manual' or 'generated'", i))
+		}
+
+		// Validate generator for generated tests
+		if test.Method == "generated" && (test.Generator == nil || strings.TrimSpace(*test.Generator) == "") {
+			errs = append(errs, fmt.Errorf("tests[%d].generator is required for generated tests", i))
+		}
+	}
+
+	// Validate groups
+	groupOrdinals := make(map[int]bool)
+	for i, group := range tests.Groups {
+		if group.Ordinal < 0 {
+			errs = append(errs, fmt.Errorf("groups[%d].ordinal must be >= 0", i))
+		}
+		if groupOrdinals[group.Ordinal] {
+			errs = append(errs, fmt.Errorf("duplicate group ordinal: %d", group.Ordinal))
+		}
+		groupOrdinals[group.Ordinal] = true
+
+		// Validate test range
+		if group.Tests[0] > group.Tests[1] {
+			errs = append(errs, fmt.Errorf("groups[%d].tests: invalid range [%d, %d]", i, group.Tests[0], group.Tests[1]))
+		}
+
+		// Validate points policy
+		if group.PointsPolicy != "complete-group" && group.PointsPolicy != "each-test" {
+			errs = append(errs, fmt.Errorf("groups[%d].points_policy must be 'complete-group' or 'each-test'", i))
+		}
+
+		// Validate dependencies
+		for _, depOrdinal := range group.DependsOn {
+			if !groupOrdinals[depOrdinal] && depOrdinal != group.Ordinal {
+				// Allow forward dependencies, just check for circular
+				if depOrdinal >= group.Ordinal {
+					errs = append(errs, fmt.Errorf("groups[%d].depends_on: forward or circular dependency detected", i))
+				}
+			}
+		}
+	}
+
+	// Validate points for scoring problems
+	if manifest != nil && manifest.ProblemType == "scoring" {
+		totalPoints := 0
+		for _, group := range tests.Groups {
+			totalPoints += group.Points
+		}
+		if manifest.MaxScore != nil && totalPoints != *manifest.MaxScore {
+			errs = append(errs, fmt.Errorf("sum of group points (%d) does not match max_score (%d)", totalPoints, *manifest.MaxScore))
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
+}
+
+// ValidateProblemStructure проверяет структуру папки задачи
+func ValidateProblemStructure(problemDir string) error {
+	var errs []error
+
+	// Check if directory exists
+	if _, err := os.Stat(problemDir); os.IsNotExist(err) {
+		return fmt.Errorf("problem directory does not exist: %s", problemDir)
+	}
+
+	// Required files
+	requiredFiles := []string{
+		"manifest.json",
+		"tests/tests.json",
+	}
+
+	for _, file := range requiredFiles {
+		path := filepath.Join(problemDir, file)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			errs = append(errs, fmt.Errorf("required file not found: %s", file))
+		}
+	}
+
+	// Load and validate manifest
+	manifest, err := LoadManifest(problemDir)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to load manifest: %w", err))
+		// Can't continue validation without manifest
+		if len(errs) > 0 {
+			return errors.Join(errs...)
+		}
+	}
+
+	if err := ValidateManifest(manifest); err != nil {
+		errs = append(errs, fmt.Errorf("manifest validation failed: %w", err))
+	}
+
+	// Validate tests metadata
+	testsMetadata, err := LoadTestsMetadata(problemDir)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to load tests metadata: %w", err))
+	} else {
+		if err := ValidateTestsMetadata(testsMetadata, manifest); err != nil {
+			errs = append(errs, fmt.Errorf("tests metadata validation failed: %w", err))
+		}
+
+		// Check if test files exist
+		for _, test := range testsMetadata.Tests {
+			inputPath := filepath.Join(problemDir, "tests", fmt.Sprintf("%d.in", test.Ordinal))
+			outputPath := filepath.Join(problemDir, "tests", fmt.Sprintf("%d.out", test.Ordinal))
+
+			if _, err := os.Stat(inputPath); os.IsNotExist(err) {
+				errs = append(errs, fmt.Errorf("test input file not found: %d.in", test.Ordinal))
+			}
+			if _, err := os.Stat(outputPath); os.IsNotExist(err) {
+				errs = append(errs, fmt.Errorf("test output file not found: %d.out", test.Ordinal))
+			}
+		}
+	}
+
+	// Check if meta files exist
+	if manifest != nil {
+		for _, file := range manifest.FilesMetadata {
+			filePath := filepath.Join(problemDir, file.Filename)
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				errs = append(errs, fmt.Errorf("meta file not found: %s", file.Filename))
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
+}

@@ -26,9 +26,17 @@ func (uc *ContestsUseCase) CreateContest(
 	c *models.CreateContestInput,
 ) (uuid.UUID, error) {
 	params := &models.CreateContestParams{
-		Id:     uuid.New(),
-		Title:  c.Title,
-		UserId: c.UserId,
+		ID:             uuid.New(),
+		OrganizationID: c.OrganizationID,
+		OwnerID:        c.OwnerID,
+		Visibility:     c.Visibility,
+		Titles:         c.Titles,
+		ShortName:      c.ShortName,
+		Description:    c.Description,
+		Settings:       c.Settings,
+		AccessPolicy:   c.AccessPolicy,
+		StartTime:      c.StartTime,
+		EndTime:        c.EndTime,
 	}
 
 	err := uc.contestRepo.CreateContest(ctx, params)
@@ -36,16 +44,19 @@ func (uc *ContestsUseCase) CreateContest(
 		return uuid.Nil, pkg.Wrap(err, nil, "can't create contest")
 	}
 
-	err = uc.contestRepo.CreateContestMember(ctx, &models.CreateContestMemberParams{
-		ContestId: params.Id,
-		UserId:    c.UserId,
-		Role:      models.ContestRoleOwner,
-	})
-	if err != nil {
-		return uuid.Nil, pkg.Wrap(err, nil, "can't create contest member")
+	// If an owner ID was provided, add them as a contest member with owner role
+	if c.OwnerID != nil {
+		err = uc.contestRepo.CreateContestMember(ctx, &models.CreateContestMemberParams{
+			ContestId: params.ID,
+			UserId:    *c.OwnerID,
+			Role:      models.ContestRoleOwner,
+		})
+		if err != nil {
+			return uuid.Nil, pkg.Wrap(err, nil, "can't create contest member")
+		}
 	}
 
-	return params.Id, nil
+	return params.ID, nil
 }
 
 func (uc *ContestsUseCase) GetContest(ctx context.Context, id uuid.UUID) (models.Contest, error) {
@@ -106,15 +117,15 @@ func (uc *ContestsUseCase) ListPublicContests(ctx context.Context, filter models
 
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c models.ContestUpdateInput) error {
 	params := models.ContestUpdateParams{
-		Id:                     c.Id,
-		Title:                  c.Title,
-		Description:            c.Description,
-		Visibility:             c.Visibility,
-		MonitorScope:           c.MonitorScope,
-		SubmissionsListScope:   c.SubmissionsListScope,
-		SubmissionsReviewScope: c.SubmissionsReviewScope,
-		StartTime:              c.StartTime,
-		EndTime:                c.EndTime,
+		ID:           c.ID,
+		Titles:       c.Titles,
+		Description:  c.Description,
+		Visibility:   c.Visibility,
+		Settings:     c.Settings,
+		AccessPolicy: c.AccessPolicy,
+		StartTime:    c.StartTime,
+		EndTime:      c.EndTime,
+		OwnerID:      c.OwnerID,
 	}
 
 	return uc.contestRepo.UpdateContest(ctx, params)

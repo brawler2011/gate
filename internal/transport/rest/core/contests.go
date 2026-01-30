@@ -18,9 +18,23 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 
 	user := middleware.GetUser(ctx)
 
+	// Create titles map from single title
+	titles := make(map[string]string)
+	if request.Params.Title != "" {
+		titles["en"] = request.Params.Title
+	}
+	
 	contestCreation := &models.CreateContestInput{
-		Title:  request.Params.Title,
-		UserId: user.Id,
+		OrganizationID: user.Id, // TODO: get proper organization ID
+		OwnerID:        &user.Id,
+		Titles:         titles,
+		ShortName:      "",      // TODO: generate from title
+		Description:    "",
+		Visibility:     models.ContestVisibilityPrivate,
+		Settings:       make(map[string]interface{}),
+		AccessPolicy:   make(map[string]interface{}),
+		StartTime:      nil,
+		EndTime:        nil,
 	}
 
 	contestID, err := h.contestsUC.CreateContest(ctx, contestCreation)
@@ -52,7 +66,14 @@ func (h *CoreServer) GetContest(ctx context.Context, request corev1.GetContestRe
 		return nil, err
 	}
 
-	owner, err := h.usersUC.GetUserById(ctx, contest.CreatedBy)
+	var owner models.User
+	if contest.OwnerID != nil {
+		owner, err = h.usersUC.GetUserById(ctx, *contest.OwnerID)
+	} else {
+		// Use default user if no owner
+		owner = models.User{}
+		err = nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -84,14 +105,24 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
 	}
 
+	// Build titles map if Title is provided
+	var titles *map[string]string
+	if req.Title != nil {
+		t := make(map[string]string)
+		t["en"] = *req.Title
+		titles = &t
+	}
+	
 	err = h.contestsUC.UpdateContest(ctx, models.ContestUpdateInput{
-		Id:                     request.ContestId,
-		Title:                  req.Title,
-		Description:            req.Description,
-		Visibility:             req.Visibility,
-		MonitorScope:           req.MonitorScope,
-		SubmissionsListScope:   req.SubmissionsListScope,
-		SubmissionsReviewScope: req.SubmissionsReviewScope,
+		ID:           request.ContestId,
+		Titles:       titles,
+		Description:  req.Description,
+		Visibility:   req.Visibility,
+		Settings:     nil, // TODO: map from old fields
+		AccessPolicy: nil, // TODO: map from old fields
+		StartTime:    nil,
+		EndTime:      nil,
+		OwnerID:      nil,
 	})
 	if err != nil {
 		return nil, err

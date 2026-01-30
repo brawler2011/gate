@@ -82,50 +82,114 @@ type Image struct {
 // ============================================================================
 
 const (
-	ProblemVisibilityPrivate = "private"
-	ProblemVisibilityPublic  = "public"
+	ProblemVisibilityPrivate  = "private"
+	ProblemVisibilityPublic   = "public"
+	ProblemVisibilityUnlisted = "unlisted"
+)
+
+// ProblemRole defines roles for direct problem access
+type ProblemRole string
+
+const (
+	ProblemRoleOwner     ProblemRole = "owner"
+	ProblemRoleModerator ProblemRole = "moderator"
+	ProblemRoleViewer    ProblemRole = "viewer"
 )
 
 // Problem - новая модель задачи (метаданные в БД, контент в SeaweedFS)
 type Problem struct {
-	ID         uuid.UUID
-	OwnerID    *uuid.UUID
-	Visibility string
-	Titles     map[string]string
-	ShortName  string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	OwnerID        *uuid.UUID
+	Visibility     string
+	Titles         map[string]string // {"en": "Sum", "ru": "Сумма"}
+	ShortName      string
+	GitCommitHash  *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// ProblemMember represents a user's direct membership to a problem
+type ProblemMember struct {
+	ProblemID uuid.UUID
+	UserID    uuid.UUID
+	Role      ProblemRole
+	Username  string
+	Email     string
+	CreatedAt time.Time
+}
+
+// ProblemPackage represents a compiled, immutable version of a problem
+type ProblemPackage struct {
+	ID             uuid.UUID
+	ProblemID      uuid.UUID
+	OrganizationID uuid.UUID
+	GitCommitHash  string
+	PackageHash    string
+	URL            *string
+	Status         string // "pending", "building", "ready", "failed"
+	BuildLog       *string
+	CreatedAt      time.Time
+	CompiledAt     *time.Time
 }
 
 type CreateProblemInput struct {
-	Titles     map[string]string // {"en": "Sum", "ru": "Сумма"}
-	ShortName  string
-	Visibility string
-	OwnerID    uuid.UUID
+	OrganizationID uuid.UUID
+	Titles         map[string]string // {"en": "Sum", "ru": "Сумма"}
+	ShortName      string
+	Visibility     string
+	OwnerID        *uuid.UUID
 }
 
 type CreateProblemParams struct {
-	ID         uuid.UUID
-	Titles     map[string]string
-	ShortName  string
-	Visibility string
-	OwnerID    uuid.UUID
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Titles         map[string]string
+	ShortName      string
+	Visibility     string
+	OwnerID        *uuid.UUID
 }
 
 type UpdateProblemInput struct {
 	Titles     *map[string]string
 	Visibility *string
+	OwnerID    *uuid.UUID
 }
 
 type ProblemsFilter struct {
-	Page       int32
-	PageSize   int32
-	OwnerID    *uuid.UUID
-	Search     *string
-	Descending bool
+	Page           int32
+	PageSize       int32
+	OrganizationID *uuid.UUID
+	OwnerID        *uuid.UUID
+	Search         string
+	Visibility     string
 }
 
-type ProblemList struct {
+type ProblemsList struct {
 	Problems   []Problem  `json:"problems"`
 	Pagination Pagination `json:"pagination"`
 }
+
+type ProblemUpdate struct {
+	Titles        *map[string]string
+	Visibility    *string
+	OwnerID       *uuid.UUID
+	GitCommitHash *string
+}
+
+type CreateProblemMemberParams struct {
+	ProblemID uuid.UUID
+	UserID    uuid.UUID
+	Role      ProblemRole
+}
+
+type ProblemTest struct {
+	ID        uuid.UUID
+	ProblemID uuid.UUID
+	Ordinal   int32
+	Input     string
+	Output    string
+	IsSample  bool
+}
+
+type ProblemTests []ProblemTest

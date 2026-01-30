@@ -5,11 +5,43 @@
 -- EXTENSIONS
 -- ============================================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ============================================================================
 -- FUNCTIONS
 -- ============================================================================
+
+-- Generate UUID v7 (time-ordered UUID with millisecond precision)
+-- Format: 48-bit timestamp | 12-bit random | 2-bit version | 62-bit random
+CREATE FUNCTION uuid_generate_v7() RETURNS UUID
+    LANGUAGE plpgsql
+AS $$
+DECLARE
+    unix_ts_ms BIGINT;
+    uuid_bytes BYTEA;
+BEGIN
+    -- Get Unix timestamp in milliseconds
+    unix_ts_ms := (EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::BIGINT;
+    
+    -- Generate UUID v7
+    uuid_bytes := 
+        -- 48-bit timestamp
+        substring(int8send(unix_ts_ms) from 3 for 6) ||
+        -- 12-bit random + 4-bit version (0x7)
+        substring(gen_random_bytes(2) from 1 for 2) ||
+        -- 2-bit variant (0b10) + 62-bit random
+        substring(gen_random_bytes(8) from 1 for 8);
+    
+    -- Set version (7) in bits 48-51
+    uuid_bytes := set_byte(uuid_bytes, 6, (get_byte(uuid_bytes, 6) & 15) | 112);
+    
+    -- Set variant (RFC 4122) in bits 64-65
+    uuid_bytes := set_byte(uuid_bytes, 8, (get_byte(uuid_bytes, 8) & 63) | 128);
+    
+    RETURN encode(uuid_bytes, 'hex')::UUID;
+END;
+$$;
 
 -- Auto-update updated_at timestamp on row update
 CREATE FUNCTION updated_at_update() RETURNS TRIGGER
@@ -360,7 +392,7 @@ CREATE TABLE users
     name                 VARCHAR(100) NOT NULL,
     surname              VARCHAR(100) NOT NULL,
     bio                  VARCHAR(500) NOT NULL DEFAULT '',
-    avatar_url           VARCHAR(512),
+    avatar_url           TEXT,
     created_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CHECK (length(username) > 0)
@@ -450,6 +482,7 @@ CREATE TABLE problems
     visibility      problem_visibility  NOT NULL DEFAULT 'private',
     titles          JSONB               NOT NULL,
     short_name      VARCHAR(100)        NOT NULL,
+    git_commit_hash VARCHAR(40),
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     UNIQUE (organization_id, short_name),
@@ -824,6 +857,7 @@ DROP FUNCTION IF EXISTS user_has_contest_access(UUID, UUID);
 DROP FUNCTION IF EXISTS user_has_problem_access(UUID, UUID);
 DROP FUNCTION IF EXISTS check_max_problems_on_contest();
 DROP FUNCTION IF EXISTS updated_at_update();
+DROP FUNCTION IF EXISTS uuid_generate_v7();
 
 -- Drop extensions
 DROP EXTENSION IF EXISTS pg_trgm;

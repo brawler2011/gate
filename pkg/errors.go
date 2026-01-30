@@ -16,6 +16,7 @@ var (
 	ErrNotFound        = errors.New("not found")
 	ErrBadInput        = errors.New("bad input")
 	ErrInternal        = errors.New("internal")
+	NotImplemented     = errors.New("not implemented")
 )
 
 type CustomError struct {

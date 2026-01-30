@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -87,77 +85,16 @@ func runWsServer(envFile string) {
 		slog.String("nats_url", cfg.NatsUrl),
 		slog.String("env", cfg.Env))
 
-	// Initialize WebSocket hub
-	hub, err := ws.NewHub(log, cfg.NatsUrl)
-	if err != nil {
-		log.Error("failed to create websocket hub", slog.Any("error", err))
-		os.Exit(1)
-	}
-	defer hub.Close()
+	// Initialize WebSocket observer with ring buffer size
+	const ringBufferSize = 10000
+	observer := ws.NewObserver(cfg.WsAddress, ringBufferSize)
+	log.Info("websocket observer initialized")
 
-	// Start hub in background
-	go hub.Run()
-	log.Info("websocket hub started")
-
-	mux := http.NewServeMux()
-
-	// Health check endpoint
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"status":  "ok",
-			"service": "websocket",
-		})
-	})
-
-	// Register WebSocket routes
-	handler := ws.NewHandler(log, hub)
-	mux.HandleFunc("/ws/submissions", handler.HandleSubmissions)
-
-	// Configure CORS based on environment
-	allowOrigins := map[string]bool{
-		"https://gate149.ru":     true,
-		"https://dev.gate149.ru": true,
-	}
-	if cfg.Env == "dev" {
-		allowOrigins["http://localhost:3000"] = true
-		allowOrigins["http://localhost:3001"] = true
-	}
-
-	// CORS Middleware
-	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if allowOrigins[origin] {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "*")
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-		}
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		mux.ServeHTTP(w, r)
-	})
-
-	httpServer := &http.Server{
-		Addr:    cfg.WsAddress,
-		Handler: corsHandler,
-	}
-
-	// Start server in background
+	// Start observer server in background
 	go func() {
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Error("websocket server error", slog.Any("error", err))
-			os.Exit(1)
-		}
+		log.Info("websocket server listening", slog.String("address", cfg.WsAddress))
+		observer.Start()
 	}()
-
-	log.Info("websocket server started",
-		slog.String("address", cfg.WsAddress),
-		slog.String("endpoint", "/ws/submissions"))
 
 	// Wait for shutdown signal
 	stop := make(chan os.Signal, 1)
@@ -169,7 +106,7 @@ func runWsServer(envFile string) {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+	if err := observer.Close(shutdownCtx); err != nil {
 		log.Error("error shutting down server", slog.Any("error", err))
 	}
 

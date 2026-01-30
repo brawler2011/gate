@@ -72,10 +72,9 @@ func runKratos(envFile string) {
 
 	usersRepo := pg.NewUsersRepo(pool)
 	outboxRepo := pg.NewOutboxRepo(pool)
-	imagesRepo := pg.NewImagesRepo(pool)
-	txManager := pkg.NewTxManager(pool)
+	txManager := pg.NewTransactor(pool)
 
-	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, imagesRepo, txManager)
+	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, txManager)
 
 	// Admin API client for identity management (port 4434)
 	oryAdminConfiguration := ory.NewConfiguration()

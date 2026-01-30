@@ -12,6 +12,7 @@ import (
 	"time"
 
 	corev1 "github.com/gate149/contracts/core/v1"
+	"github.com/gate149/core/internal/domain/interfaces"
 	"github.com/gate149/core/internal/repository/pg"
 	handlers "github.com/gate149/core/internal/transport/rest/core"
 	"github.com/gate149/core/internal/usecase"
@@ -43,8 +44,9 @@ type IntegrationTestSuite struct {
 	mockPandoc *mocks.MockPandocClient
 
 	// Repositories (for direct DB access in tests)
-	usersRepo    *pg.UsersRepo
-	contestsRepo *pg.ContestsRepo
+	usersRepo         *pg.UsersRepo
+	contestsRepo      *pg.ContestsRepo
+	organizationsRepo interfaces.OrganizationsRepo
 }
 
 func TestIntegrationSuite(t *testing.T) {
@@ -110,8 +112,8 @@ func (s *IntegrationTestSuite) SetupTest() {
 
 func (s *IntegrationTestSuite) TearDownTest() {
 	s.ctrl.Finish()
-	// Clean up tables
-	_, err := s.dbPool.Exec(s.ctx, "TRUNCATE TABLE users, contests, problems, submissions, contest_members, contest_problem CASCADE")
+	// Clean up tables (in reverse dependency order with CASCADE)
+	_, err := s.dbPool.Exec(s.ctx, "TRUNCATE TABLE organizations CASCADE")
 	s.Require().NoError(err)
 }
 
@@ -119,18 +121,21 @@ func (s *IntegrationTestSuite) initApp() {
 	// Repositories
 	s.usersRepo = pg.NewUsersRepo(s.dbPool)
 	s.contestsRepo = pg.NewContestsRepo(s.dbPool)
+	s.organizationsRepo = pg.NewOrganizationsRepo(s.dbPool)
 	problemsRepo := pg.NewProblemsRepo(s.dbPool)
 	submissionsRepo := pg.NewSubmissionsRepo(s.dbPool)
 	outboxRepo := pg.NewOutboxRepo(s.dbPool)
-	imagesRepo := pg.NewImagesRepo(s.dbPool)
-	txManager := pkg.NewTxManager(s.dbPool)
+	teamsRepo := pg.NewTeamsRepo(s.dbPool)
+	txManager := pg.NewTransactor(s.dbPool)
 
 	// UseCases
-	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, imagesRepo, txManager)
+	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, txManager)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo, s.mockPandoc)
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo)
-	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, s.mockNats)
 	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC)
+	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
+	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
+	teamsUC := usecase.NewTeamsUseCase(teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
@@ -139,6 +144,8 @@ func (s *IntegrationTestSuite) initApp() {
 		submissionsUC,
 		usersUC,
 		problemsUC,
+		organizationsUC,
+		teamsUC,
 	)
 
 	// Strict Handler

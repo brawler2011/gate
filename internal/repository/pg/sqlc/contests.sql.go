@@ -7,231 +7,184 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countAdminContests = `-- name: CountAdminContests :one
-SELECT COUNT(*)
-FROM contests c
-WHERE (
-        $1::text = ''
-        OR (
-            CASE
-                WHEN LENGTH($1) < 3 THEN c.title ILIKE '%' || $1 || '%'
-                ELSE word_similarity(c.title, $1) > 0.1
-            END
-        )
-    )
-    AND (
-        $2::text IS NULL
-        OR c.visibility::text = $2::text
-    )
+const addContestMember = `-- name: AddContestMember :exec
+
+INSERT INTO contest_members (contest_id, user_id, role)
+VALUES ($1, $2, $3)
 `
 
-type CountAdminContestsParams struct {
-	Search     string  `json:"search"`
-	Visibility *string `json:"visibility"`
+type AddContestMemberParams struct {
+	ContestID uuid.UUID          `json:"contest_id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	Role      models.ContestRole `json:"role"`
 }
 
-func (q *Queries) CountAdminContests(ctx context.Context, arg CountAdminContestsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countAdminContests, arg.Search, arg.Visibility)
+// Contest Members (direct access control)
+func (q *Queries) AddContestMember(ctx context.Context, arg AddContestMemberParams) error {
+	_, err := q.db.Exec(ctx, addContestMember, arg.ContestID, arg.UserID, arg.Role)
+	return err
+}
+
+const addContestProblem = `-- name: AddContestProblem :exec
+
+INSERT INTO contest_problems (contest_id, problem_id, package_id, ordinal)
+VALUES ($1, $2, $3, $4)
+`
+
+type AddContestProblemParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	PackageID uuid.UUID `json:"package_id"`
+	Ordinal   int32     `json:"ordinal"`
+}
+
+// Contest Problems (linking to packages)
+func (q *Queries) AddContestProblem(ctx context.Context, arg AddContestProblemParams) error {
+	_, err := q.db.Exec(ctx, addContestProblem,
+		arg.ContestID,
+		arg.ProblemID,
+		arg.PackageID,
+		arg.Ordinal,
+	)
+	return err
+}
+
+const checkUserHasContestAccess = `-- name: CheckUserHasContestAccess :one
+
+SELECT user_has_contest_access($1, $2) as has_access
+`
+
+type CheckUserHasContestAccessParams struct {
+	PUserID    uuid.UUID `json:"p_user_id"`
+	PContestID uuid.UUID `json:"p_contest_id"`
+}
+
+// Access check helpers
+func (q *Queries) CheckUserHasContestAccess(ctx context.Context, arg CheckUserHasContestAccessParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserHasContestAccess, arg.PUserID, arg.PContestID)
+	var has_access bool
+	err := row.Scan(&has_access)
+	return has_access, err
+}
+
+const checkUserIsContestModerator = `-- name: CheckUserIsContestModerator :one
+SELECT user_is_contest_moderator($1, $2) as is_moderator
+`
+
+type CheckUserIsContestModeratorParams struct {
+	PUserID    uuid.UUID `json:"p_user_id"`
+	PContestID uuid.UUID `json:"p_contest_id"`
+}
+
+func (q *Queries) CheckUserIsContestModerator(ctx context.Context, arg CheckUserIsContestModeratorParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserIsContestModerator, arg.PUserID, arg.PContestID)
+	var is_moderator bool
+	err := row.Scan(&is_moderator)
+	return is_moderator, err
+}
+
+const countAllContests = `-- name: CountAllContests :one
+SELECT COUNT(*) FROM contests c
+WHERE ($1::text = '' OR (c.titles->>'en') ILIKE '%' || $1 || '%' OR (c.titles->>'ru') ILIKE '%' || $1 || '%')
+  AND ($2::text = '' OR c.visibility = $2::contest_visibility)
+`
+
+type CountAllContestsParams struct {
+	Column1 string `json:"column_1"`
+	Column2 string `json:"column_2"`
+}
+
+func (q *Queries) CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAllContests, arg.Column1, arg.Column2)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
-const countContestMembers = `-- name: CountContestMembers :one
-SELECT COUNT(*)
-FROM contest_members
-WHERE contest_id = $1::uuid
+const countContests = `-- name: CountContests :one
+SELECT COUNT(*) FROM contests
+WHERE organization_id = $1
+  AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
+  AND ($3::text = '' OR visibility = $3::contest_visibility)
 `
 
-func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countContestMembers, contestID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+type CountContestsParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Column2        string    `json:"column_2"`
+	Column3        string    `json:"column_3"`
 }
 
-const countPublicContests = `-- name: CountPublicContests :one
-SELECT COUNT(*)
-FROM contests c
-WHERE c.visibility = 'public'
-    AND (
-        $1::text = ''
-        OR (
-            CASE
-                WHEN LENGTH($1) < 3 THEN c.title ILIKE '%' || $1 || '%'
-                ELSE word_similarity(c.title, $1) > 0.1
-            END
-        )
-    )
-`
-
-func (q *Queries) CountPublicContests(ctx context.Context, search string) (int64, error) {
-	row := q.db.QueryRow(ctx, countPublicContests, search)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countUserContests = `-- name: CountUserContests :one
-SELECT COUNT(DISTINCT c.id)
-FROM contests c
-WHERE (
-        -- Private contests where user is member
-        (
-            c.visibility = 'private'
-            AND EXISTS(
-                SELECT 1
-                FROM contest_members cm
-                WHERE cm.contest_id = c.id
-                    AND cm.user_id = $1::uuid
-            )
-        )
-        OR -- Public contests where user is member OR has submissions
-        (
-            c.visibility = 'public'
-            AND (
-                EXISTS(
-                    SELECT 1
-                    FROM contest_members cm
-                    WHERE cm.contest_id = c.id
-                        AND cm.user_id = $1::uuid
-                )
-                OR EXISTS(
-                    SELECT 1
-                    FROM submissions sub
-                    WHERE sub.contest_id = c.id
-                        AND sub.created_by = $1::uuid
-                )
-            )
-        )
-    )
-    AND (
-        $2::text IS NULL
-        OR $2 = ''
-        OR (
-            CASE
-                WHEN LENGTH($2) < 3 THEN c.title ILIKE '%' || $2 || '%'
-                ELSE word_similarity(c.title, $2) > 0.1
-            END
-        )
-    )
-`
-
-type CountUserContestsParams struct {
-	UserID uuid.UUID `json:"user_id"`
-	Search *string   `json:"search"`
-}
-
-func (q *Queries) CountUserContests(ctx context.Context, arg CountUserContestsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countUserContests, arg.UserID, arg.Search)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countWorkshopContests = `-- name: CountWorkshopContests :one
-SELECT COUNT(DISTINCT c.id)
-FROM contests c
-    INNER JOIN contest_members cm ON cm.contest_id = c.id
-WHERE cm.user_id = $1::uuid
-    AND cm.role IN ('owner', 'moderator')
-    AND (
-        $2::text IS NULL
-        OR $2 = ''
-        OR (
-            CASE
-                WHEN LENGTH($2) < 3 THEN c.title ILIKE '%' || $2 || '%'
-                ELSE word_similarity(c.title, $2) > 0.1
-            END
-        )
-    )
-`
-
-type CountWorkshopContestsParams struct {
-	UserID uuid.UUID `json:"user_id"`
-	Search *string   `json:"search"`
-}
-
-func (q *Queries) CountWorkshopContests(ctx context.Context, arg CountWorkshopContestsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countWorkshopContests, arg.UserID, arg.Search)
+func (q *Queries) CountContests(ctx context.Context, arg CountContestsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countContests, arg.OrganizationID, arg.Column2, arg.Column3)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const createContest = `-- name: CreateContest :one
-INSERT INTO contests (id, title, created_by)
-VALUES ($1::uuid, $2, $3::uuid)
-RETURNING id
+
+INSERT INTO contests (id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at
 `
 
 type CreateContestParams struct {
-	ID        uuid.UUID `json:"id"`
-	Title     string    `json:"title"`
-	CreatedBy uuid.UUID `json:"created_by"`
+	ID             uuid.UUID                `json:"id"`
+	OrganizationID uuid.UUID                `json:"organization_id"`
+	OwnerID        pgtype.UUID              `json:"owner_id"`
+	Visibility     models.ContestVisibility `json:"visibility"`
+	Titles         []byte                   `json:"titles"`
+	ShortName      string                   `json:"short_name"`
+	Description    string                   `json:"description"`
+	Settings       []byte                   `json:"settings"`
+	AccessPolicy   []byte                   `json:"access_policy"`
+	StartTime      pgtype.Timestamptz       `json:"start_time"`
+	EndTime        pgtype.Timestamptz       `json:"end_time"`
 }
 
-// Contest CRUD operations
-func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, createContest, arg.ID, arg.Title, arg.CreatedBy)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
-}
-
-const createContestMember = `-- name: CreateContestMember :exec
-INSERT INTO contest_members (contest_id, user_id, role)
-VALUES ($1::uuid, $2::uuid, $3)
-`
-
-type CreateContestMemberParams struct {
-	ContestID uuid.UUID          `json:"contest_id"`
-	UserID    uuid.UUID          `json:"user_id"`
-	Role      models.ContestRole `json:"role"`
-}
-
-// Contest member operations
-func (q *Queries) CreateContestMember(ctx context.Context, arg CreateContestMemberParams) error {
-	_, err := q.db.Exec(ctx, createContestMember, arg.ContestID, arg.UserID, arg.Role)
-	return err
-}
-
-const createContestProblem = `-- name: CreateContestProblem :exec
-INSERT INTO contest_problem (problem_id, contest_id, position)
-VALUES (
-        $1::uuid,
-        $2::uuid,
-        COALESCE(
-            (
-                SELECT MAX(position)
-                FROM contest_problem
-                WHERE contest_id = $2::uuid
-            ),
-            0
-        ) + 1
-    )
-`
-
-type CreateContestProblemParams struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	ContestID uuid.UUID `json:"contest_id"`
-}
-
-// Contest problem operations
-func (q *Queries) CreateContestProblem(ctx context.Context, arg CreateContestProblemParams) error {
-	_, err := q.db.Exec(ctx, createContestProblem, arg.ProblemID, arg.ContestID)
-	return err
+// Contests queries (new schema with Organizations)
+func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (Contest, error) {
+	row := q.db.QueryRow(ctx, createContest,
+		arg.ID,
+		arg.OrganizationID,
+		arg.OwnerID,
+		arg.Visibility,
+		arg.Titles,
+		arg.ShortName,
+		arg.Description,
+		arg.Settings,
+		arg.AccessPolicy,
+		arg.StartTime,
+		arg.EndTime,
+	)
+	var i Contest
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.OwnerID,
+		&i.Visibility,
+		&i.Titles,
+		&i.ShortName,
+		&i.Description,
+		&i.Settings,
+		&i.AccessPolicy,
+		&i.StartTime,
+		&i.EndTime,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const deleteContest = `-- name: DeleteContest :exec
-DELETE FROM contests
-WHERE id = $1::uuid
+DELETE FROM contests WHERE id = $1
 `
 
 func (q *Queries) DeleteContest(ctx context.Context, id uuid.UUID) error {
@@ -239,65 +192,56 @@ func (q *Queries) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const deleteContestMember = `-- name: DeleteContestMember :exec
-DELETE FROM contest_members
-WHERE user_id = $1::uuid
-    AND contest_id = $2::uuid
+const getContestByID = `-- name: GetContestByID :one
+SELECT id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests WHERE id = $1
 `
 
-type DeleteContestMemberParams struct {
-	UserID    uuid.UUID `json:"user_id"`
-	ContestID uuid.UUID `json:"contest_id"`
-}
-
-func (q *Queries) DeleteContestMember(ctx context.Context, arg DeleteContestMemberParams) error {
-	_, err := q.db.Exec(ctx, deleteContestMember, arg.UserID, arg.ContestID)
-	return err
-}
-
-const deleteContestProblem = `-- name: DeleteContestProblem :exec
-DELETE FROM contest_problem
-WHERE contest_id = $1::uuid
-    AND problem_id = $2::uuid
-`
-
-type DeleteContestProblemParams struct {
-	ContestID uuid.UUID `json:"contest_id"`
-	ProblemID uuid.UUID `json:"problem_id"`
-}
-
-func (q *Queries) DeleteContestProblem(ctx context.Context, arg DeleteContestProblemParams) error {
-	_, err := q.db.Exec(ctx, deleteContestProblem, arg.ContestID, arg.ProblemID)
-	return err
-}
-
-const getContest = `-- name: GetContest :one
-SELECT id,
-    title,
-    description,
-    visibility,
-    monitor_scope,
-    submissions_list_scope,
-    submissions_review_scope,
-    created_by,
-    created_at,
-    updated_at
-FROM contests
-WHERE id = $1::uuid
-`
-
-func (q *Queries) GetContest(ctx context.Context, id uuid.UUID) (Contest, error) {
-	row := q.db.QueryRow(ctx, getContest, id)
+func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (Contest, error) {
+	row := q.db.QueryRow(ctx, getContestByID, id)
 	var i Contest
 	err := row.Scan(
 		&i.ID,
-		&i.Title,
-		&i.Description,
+		&i.OrganizationID,
+		&i.OwnerID,
 		&i.Visibility,
-		&i.MonitorScope,
-		&i.SubmissionsListScope,
-		&i.SubmissionsReviewScope,
-		&i.CreatedBy,
+		&i.Titles,
+		&i.ShortName,
+		&i.Description,
+		&i.Settings,
+		&i.AccessPolicy,
+		&i.StartTime,
+		&i.EndTime,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getContestByShortName = `-- name: GetContestByShortName :one
+SELECT id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests
+WHERE organization_id = $1 AND short_name = $2
+`
+
+type GetContestByShortNameParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ShortName      string    `json:"short_name"`
+}
+
+func (q *Queries) GetContestByShortName(ctx context.Context, arg GetContestByShortNameParams) (Contest, error) {
+	row := q.db.QueryRow(ctx, getContestByShortName, arg.OrganizationID, arg.ShortName)
+	var i Contest
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.OwnerID,
+		&i.Visibility,
+		&i.Titles,
+		&i.ShortName,
+		&i.Description,
+		&i.Settings,
+		&i.AccessPolicy,
+		&i.StartTime,
+		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -305,12 +249,8 @@ func (q *Queries) GetContest(ctx context.Context, id uuid.UUID) (Contest, error)
 }
 
 const getContestMember = `-- name: GetContestMember :one
-SELECT contest_id,
-    user_id,
-    role
-FROM contest_members
-WHERE contest_id = $1::uuid
-    AND user_id = $2::uuid
+SELECT contest_id, user_id, role, created_at FROM contest_members
+WHERE contest_id = $1 AND user_id = $2
 `
 
 type GetContestMemberParams struct {
@@ -318,36 +258,23 @@ type GetContestMemberParams struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-type GetContestMemberRow struct {
-	ContestID uuid.UUID          `json:"contest_id"`
-	UserID    uuid.UUID          `json:"user_id"`
-	Role      models.ContestRole `json:"role"`
-}
-
-func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberParams) (GetContestMemberRow, error) {
+func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberParams) (ContestMember, error) {
 	row := q.db.QueryRow(ctx, getContestMember, arg.ContestID, arg.UserID)
-	var i GetContestMemberRow
-	err := row.Scan(&i.ContestID, &i.UserID, &i.Role)
+	var i ContestMember
+	err := row.Scan(
+		&i.ContestID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
 const getContestProblem = `-- name: GetContestProblem :one
-SELECT cp.problem_id,
-    p.title,
-    p.time_limit,
-    p.memory_limit,
-    cp.position,
-    p.legend_html,
-    p.input_format_html,
-    p.output_format_html,
-    p.notes_html,
-    p.scoring_html,
-    p.created_at,
-    p.updated_at
-FROM contest_problem cp
-    LEFT JOIN problems p ON cp.problem_id = p.id
-WHERE cp.contest_id = $1::uuid
-    AND cp.problem_id = $2::uuid
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.titles, p.short_name, p.visibility
+FROM contest_problems cp
+JOIN problems p ON cp.problem_id = p.id
+WHERE cp.contest_id = $1 AND cp.problem_id = $2
 `
 
 type GetContestProblemParams struct {
@@ -356,171 +283,53 @@ type GetContestProblemParams struct {
 }
 
 type GetContestProblemRow struct {
-	ProblemID        pgtype.UUID        `json:"problem_id"`
-	Title            *string            `json:"title"`
-	TimeLimit        *int32             `json:"time_limit"`
-	MemoryLimit      *int32             `json:"memory_limit"`
-	Position         int32              `json:"position"`
-	LegendHtml       *string            `json:"legend_html"`
-	InputFormatHtml  *string            `json:"input_format_html"`
-	OutputFormatHtml *string            `json:"output_format_html"`
-	NotesHtml        *string            `json:"notes_html"`
-	ScoringHtml      *string            `json:"scoring_html"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	ContestID  uuid.UUID         `json:"contest_id"`
+	ProblemID  uuid.UUID         `json:"problem_id"`
+	PackageID  uuid.UUID         `json:"package_id"`
+	Ordinal    int32             `json:"ordinal"`
+	CreatedAt  time.Time         `json:"created_at"`
+	Titles     []byte            `json:"titles"`
+	ShortName  string            `json:"short_name"`
+	Visibility ProblemVisibility `json:"visibility"`
 }
 
 func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error) {
 	row := q.db.QueryRow(ctx, getContestProblem, arg.ContestID, arg.ProblemID)
 	var i GetContestProblemRow
 	err := row.Scan(
+		&i.ContestID,
 		&i.ProblemID,
-		&i.Title,
-		&i.TimeLimit,
-		&i.MemoryLimit,
-		&i.Position,
-		&i.LegendHtml,
-		&i.InputFormatHtml,
-		&i.OutputFormatHtml,
-		&i.NotesHtml,
-		&i.ScoringHtml,
+		&i.PackageID,
+		&i.Ordinal,
 		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.Titles,
+		&i.ShortName,
+		&i.Visibility,
 	)
 	return i, err
 }
 
-const getContestProblems = `-- name: GetContestProblems :many
-SELECT cp.problem_id,
-    p.title,
-    p.time_limit,
-    p.memory_limit,
-    cp.position,
-    p.created_at,
-    p.updated_at
-FROM contest_problem cp
-    LEFT JOIN problems p ON cp.problem_id = p.id
-WHERE cp.contest_id = $1::uuid
-ORDER BY cp.position
+const listAllContests = `-- name: ListAllContests :many
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.titles, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+WHERE ($1::text = '' OR (c.titles->>'en') ILIKE '%' || $1 || '%' OR (c.titles->>'ru') ILIKE '%' || $1 || '%')
+  AND ($2::text = '' OR c.visibility = $2::contest_visibility)
+ORDER BY c.created_at DESC
+LIMIT $3 OFFSET $4
 `
 
-type GetContestProblemsRow struct {
-	ProblemID   pgtype.UUID        `json:"problem_id"`
-	Title       *string            `json:"title"`
-	TimeLimit   *int32             `json:"time_limit"`
-	MemoryLimit *int32             `json:"memory_limit"`
-	Position    int32              `json:"position"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+type ListAllContestsParams struct {
+	Column1 string `json:"column_1"`
+	Column2 string `json:"column_2"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
 }
 
-func (q *Queries) GetContestProblems(ctx context.Context, contestID uuid.UUID) ([]GetContestProblemsRow, error) {
-	rows, err := q.db.Query(ctx, getContestProblems, contestID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetContestProblemsRow{}
-	for rows.Next() {
-		var i GetContestProblemsRow
-		if err := rows.Scan(
-			&i.ProblemID,
-			&i.Title,
-			&i.TimeLimit,
-			&i.MemoryLimit,
-			&i.Position,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listAdminContests = `-- name: ListAdminContests :many
-SELECT c.id,
-    c.title,
-    c.description,
-    c.visibility,
-    c.monitor_scope,
-    c.submissions_list_scope,
-    c.submissions_review_scope,
-    c.created_by,
-    c.created_at,
-    c.updated_at
-FROM contests c
-WHERE (
-        $1::text = ''
-        OR (
-            CASE
-                WHEN LENGTH($1) < 3 THEN c.title ILIKE '%' || $1 || '%'
-                ELSE word_similarity(c.title, $1) > 0.1
-            END
-        )
-    )
-    AND (
-        $2::text IS NULL
-        OR c.visibility::text = $2::text
-    )
-ORDER BY CASE
-        WHEN $1::text IS NOT NULL
-        AND $1 != ''
-        AND LENGTH($1) >= 3 THEN word_similarity(c.title, $1)
-    END DESC NULLS LAST,
-    CASE
-        WHEN $3::text = 'created_at'
-        AND $4::text = 'desc' THEN c.created_at
-    END DESC,
-    CASE
-        WHEN $3::text = 'created_at'
-        AND $4::text = 'asc' THEN c.created_at
-    END,
-    CASE
-        WHEN $3::text = 'updated_at'
-        AND $4::text = 'desc' THEN c.updated_at
-    END DESC,
-    CASE
-        WHEN $3::text = 'updated_at'
-        AND $4::text = 'asc' THEN c.updated_at
-    END,
-    CASE
-        WHEN $3::text = 'title'
-        AND $4::text = 'desc' THEN c.title
-    END DESC,
-    CASE
-        WHEN $3::text = 'title'
-        AND $4::text = 'asc' THEN c.title
-    END,
-    CASE
-        WHEN $3::text IS NULL
-        OR $3 = '' THEN c.created_at
-    END DESC
-LIMIT $6 OFFSET $5
-`
-
-type ListAdminContestsParams struct {
-	Search     string  `json:"search"`
-	Visibility *string `json:"visibility"`
-	SortBy     *string `json:"sort_by"`
-	SortOrder  *string `json:"sort_order"`
-	Offset     int32   `json:"offset"`
-	Limit      int32   `json:"limit"`
-}
-
-// Admin contests listing
-func (q *Queries) ListAdminContests(ctx context.Context, arg ListAdminContestsParams) ([]Contest, error) {
-	rows, err := q.db.Query(ctx, listAdminContests,
-		arg.Search,
-		arg.Visibility,
-		arg.SortBy,
-		arg.SortOrder,
-		arg.Offset,
+func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]Contest, error) {
+	rows, err := q.db.Query(ctx, listAllContests,
+		arg.Column1,
+		arg.Column2,
 		arg.Limit,
+		arg.Offset,
 	)
 	if err != nil {
 		return nil, err
@@ -531,13 +340,16 @@ func (q *Queries) ListAdminContests(ctx context.Context, arg ListAdminContestsPa
 		var i Contest
 		if err := rows.Scan(
 			&i.ID,
-			&i.Title,
-			&i.Description,
+			&i.OrganizationID,
+			&i.OwnerID,
 			&i.Visibility,
-			&i.MonitorScope,
-			&i.SubmissionsListScope,
-			&i.SubmissionsReviewScope,
-			&i.CreatedBy,
+			&i.Titles,
+			&i.ShortName,
+			&i.Description,
+			&i.Settings,
+			&i.AccessPolicy,
+			&i.StartTime,
+			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -552,39 +364,26 @@ func (q *Queries) ListAdminContests(ctx context.Context, arg ListAdminContestsPa
 }
 
 const listContestMembers = `-- name: ListContestMembers :many
-SELECT u.id AS user_id,
-    cm.contest_id,
-    u.username,
-    u.role AS role,
-    cm.role AS contest_role,
-    u.kratos_id,
-    u.created_at,
-    u.updated_at
+SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username, u.email, u.name, u.surname
 FROM contest_members cm
-    LEFT JOIN users u ON cm.user_id = u.id
-WHERE contest_id = $1::uuid
-LIMIT $3 OFFSET $2
+JOIN users u ON cm.user_id = u.id
+WHERE cm.contest_id = $1
+ORDER BY cm.created_at
 `
 
-type ListContestMembersParams struct {
-	ContestID uuid.UUID `json:"contest_id"`
-	Offset    int32     `json:"offset"`
-	Limit     int32     `json:"limit"`
-}
-
 type ListContestMembersRow struct {
-	UserID      pgtype.UUID        `json:"user_id"`
-	ContestID   uuid.UUID          `json:"contest_id"`
-	Username    *string            `json:"username"`
-	Role        NullUserRole       `json:"role"`
-	ContestRole models.ContestRole `json:"contest_role"`
-	KratosID    pgtype.UUID        `json:"kratos_id"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	ContestID uuid.UUID          `json:"contest_id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	Role      models.ContestRole `json:"role"`
+	CreatedAt time.Time          `json:"created_at"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	Name      string             `json:"name"`
+	Surname   string             `json:"surname"`
 }
 
-func (q *Queries) ListContestMembers(ctx context.Context, arg ListContestMembersParams) ([]ListContestMembersRow, error) {
-	rows, err := q.db.Query(ctx, listContestMembers, arg.ContestID, arg.Offset, arg.Limit)
+func (q *Queries) ListContestMembers(ctx context.Context, contestID uuid.UUID) ([]ListContestMembersRow, error) {
+	rows, err := q.db.Query(ctx, listContestMembers, contestID)
 	if err != nil {
 		return nil, err
 	}
@@ -593,14 +392,14 @@ func (q *Queries) ListContestMembers(ctx context.Context, arg ListContestMembers
 	for rows.Next() {
 		var i ListContestMembersRow
 		if err := rows.Scan(
-			&i.UserID,
 			&i.ContestID,
-			&i.Username,
+			&i.UserID,
 			&i.Role,
-			&i.ContestRole,
-			&i.KratosID,
 			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.Username,
+			&i.Email,
+			&i.Name,
+			&i.Surname,
 		); err != nil {
 			return nil, err
 		}
@@ -612,80 +411,81 @@ func (q *Queries) ListContestMembers(ctx context.Context, arg ListContestMembers
 	return items, nil
 }
 
-const listPublicContests = `-- name: ListPublicContests :many
-SELECT c.id,
-    c.title,
-    c.description,
-    c.visibility,
-    c.monitor_scope,
-    c.submissions_list_scope,
-    c.submissions_review_scope,
-    c.created_by,
-    c.created_at,
-    c.updated_at
-FROM contests c
-WHERE c.visibility = 'public'
-    AND (
-        $1::text = ''
-        OR (
-            CASE
-                WHEN LENGTH($1) < 3 THEN c.title ILIKE '%' || $1 || '%'
-                ELSE word_similarity(c.title, $1) > 0.1
-            END
-        )
-    )
-ORDER BY CASE
-        WHEN $1::text IS NOT NULL
-        AND $1 != ''
-        AND LENGTH($1) >= 3 THEN word_similarity(c.title, $1)
-    END DESC NULLS LAST,
-    CASE
-        WHEN $2::text = 'created_at'
-        AND $3::text = 'desc' THEN c.created_at
-    END DESC,
-    CASE
-        WHEN $2::text = 'created_at'
-        AND $3::text = 'asc' THEN c.created_at
-    END,
-    CASE
-        WHEN $2::text = 'updated_at'
-        AND $3::text = 'desc' THEN c.updated_at
-    END DESC,
-    CASE
-        WHEN $2::text = 'updated_at'
-        AND $3::text = 'asc' THEN c.updated_at
-    END,
-    CASE
-        WHEN $2::text = 'title'
-        AND $3::text = 'desc' THEN c.title
-    END DESC,
-    CASE
-        WHEN $2::text = 'title'
-        AND $3::text = 'asc' THEN c.title
-    END,
-    CASE
-        WHEN $2::text IS NULL
-        OR $2 = '' THEN c.created_at
-    END DESC
-LIMIT $5 OFFSET $4
+const listContestProblems = `-- name: ListContestProblems :many
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.titles, p.short_name, p.visibility, pp.url as package_url
+FROM contest_problems cp
+JOIN problems p ON cp.problem_id = p.id
+JOIN problem_packages pp ON cp.package_id = pp.id
+WHERE cp.contest_id = $1
+ORDER BY cp.ordinal
 `
 
-type ListPublicContestsParams struct {
-	Search    string  `json:"search"`
-	SortBy    *string `json:"sort_by"`
-	SortOrder *string `json:"sort_order"`
-	Offset    int32   `json:"offset"`
-	Limit     int32   `json:"limit"`
+type ListContestProblemsRow struct {
+	ContestID  uuid.UUID         `json:"contest_id"`
+	ProblemID  uuid.UUID         `json:"problem_id"`
+	PackageID  uuid.UUID         `json:"package_id"`
+	Ordinal    int32             `json:"ordinal"`
+	CreatedAt  time.Time         `json:"created_at"`
+	Titles     []byte            `json:"titles"`
+	ShortName  string            `json:"short_name"`
+	Visibility ProblemVisibility `json:"visibility"`
+	PackageUrl *string           `json:"package_url"`
 }
 
-// Public contests listing
-func (q *Queries) ListPublicContests(ctx context.Context, arg ListPublicContestsParams) ([]Contest, error) {
-	rows, err := q.db.Query(ctx, listPublicContests,
-		arg.Search,
-		arg.SortBy,
-		arg.SortOrder,
-		arg.Offset,
+func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) ([]ListContestProblemsRow, error) {
+	rows, err := q.db.Query(ctx, listContestProblems, contestID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListContestProblemsRow{}
+	for rows.Next() {
+		var i ListContestProblemsRow
+		if err := rows.Scan(
+			&i.ContestID,
+			&i.ProblemID,
+			&i.PackageID,
+			&i.Ordinal,
+			&i.CreatedAt,
+			&i.Titles,
+			&i.ShortName,
+			&i.Visibility,
+			&i.PackageUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listContests = `-- name: ListContests :many
+SELECT id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests
+WHERE organization_id = $1
+  AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
+  AND ($3::text = '' OR visibility = $3::contest_visibility)
+ORDER BY created_at DESC
+LIMIT $4 OFFSET $5
+`
+
+type ListContestsParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Column2        string    `json:"column_2"`
+	Column3        string    `json:"column_3"`
+	Limit          int32     `json:"limit"`
+	Offset         int32     `json:"offset"`
+}
+
+func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]Contest, error) {
+	rows, err := q.db.Query(ctx, listContests,
+		arg.OrganizationID,
+		arg.Column2,
+		arg.Column3,
 		arg.Limit,
+		arg.Offset,
 	)
 	if err != nil {
 		return nil, err
@@ -696,13 +496,16 @@ func (q *Queries) ListPublicContests(ctx context.Context, arg ListPublicContests
 		var i Contest
 		if err := rows.Scan(
 			&i.ID,
-			&i.Title,
-			&i.Description,
+			&i.OrganizationID,
+			&i.OwnerID,
 			&i.Visibility,
-			&i.MonitorScope,
-			&i.SubmissionsListScope,
-			&i.SubmissionsReviewScope,
-			&i.CreatedBy,
+			&i.Titles,
+			&i.ShortName,
+			&i.Description,
+			&i.Settings,
+			&i.AccessPolicy,
+			&i.StartTime,
+			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -716,124 +519,21 @@ func (q *Queries) ListPublicContests(ctx context.Context, arg ListPublicContests
 	return items, nil
 }
 
-const listUserContests = `-- name: ListUserContests :many
-SELECT c.id,
-    c.title,
-    c.description,
-    c.visibility,
-    c.monitor_scope,
-    c.submissions_list_scope,
-    c.submissions_review_scope,
-    c.created_by,
-    c.created_at,
-    c.updated_at
-FROM contests c
-    LEFT JOIN submissions s ON s.contest_id = c.id
-    AND s.created_by = $1::uuid
-WHERE (
-        -- Private contests where user is member
-        (
-            c.visibility = 'private'
-            AND EXISTS(
-                SELECT 1
-                FROM contest_members cm
-                WHERE cm.contest_id = c.id
-                    AND cm.user_id = $1::uuid
-            )
-        )
-        OR -- Public contests where user is member OR has submissions
-        (
-            c.visibility = 'public'
-            AND (
-                EXISTS(
-                    SELECT 1
-                    FROM contest_members cm
-                    WHERE cm.contest_id = c.id
-                        AND cm.user_id = $1::uuid
-                )
-                OR EXISTS(
-                    SELECT 1
-                    FROM submissions sub
-                    WHERE sub.contest_id = c.id
-                        AND sub.created_by = $1::uuid
-                )
-            )
-        )
-    )
-    AND (
-        $2::text IS NULL
-        OR $2 = ''
-        OR (
-            CASE
-                WHEN LENGTH($2) < 3 THEN c.title ILIKE '%' || $2 || '%'
-                ELSE word_similarity(c.title, $2) > 0.1
-            END
-        )
-    )
-GROUP BY c.id
-ORDER BY CASE
-        WHEN $2::text IS NOT NULL
-        AND $2 != ''
-        AND LENGTH($2) >= 3 THEN word_similarity(c.title, $2)
-    END DESC NULLS LAST,
-    CASE
-        WHEN $3::text = 'last_submission_time'
-        AND $4::text = 'desc' THEN MAX(s.created_at)
-    END DESC NULLS LAST,
-    CASE
-        WHEN $3::text = 'last_submission_time'
-        AND $4::text = 'asc' THEN MAX(s.created_at)
-    END NULLS LAST,
-    CASE
-        WHEN $3::text = 'created_at'
-        AND $4::text = 'desc' THEN c.created_at
-    END DESC,
-    CASE
-        WHEN $3::text = 'created_at'
-        AND $4::text = 'asc' THEN c.created_at
-    END,
-    CASE
-        WHEN $3::text = 'updated_at'
-        AND $4::text = 'desc' THEN c.updated_at
-    END DESC,
-    CASE
-        WHEN $3::text = 'updated_at'
-        AND $4::text = 'asc' THEN c.updated_at
-    END,
-    CASE
-        WHEN $3::text = 'title'
-        AND $4::text = 'desc' THEN c.title
-    END DESC,
-    CASE
-        WHEN $3::text = 'title'
-        AND $4::text = 'asc' THEN c.title
-    END,
-    CASE
-        WHEN $3::text IS NULL
-        OR $3 = '' THEN MAX(s.created_at)
-    END DESC NULLS LAST
-LIMIT $6 OFFSET $5
+const listUserAccessibleContests = `-- name: ListUserAccessibleContests :many
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.titles, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+WHERE user_has_contest_access($1, c.id)
+ORDER BY c.created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-type ListUserContestsParams struct {
-	CreatedBy uuid.UUID `json:"created_by"`
-	Search    *string   `json:"search"`
-	SortBy    *string   `json:"sort_by"`
-	SortOrder *string   `json:"sort_order"`
-	Offset    int32     `json:"offset"`
-	Limit     int32     `json:"limit"`
+type ListUserAccessibleContestsParams struct {
+	PUserID uuid.UUID `json:"p_user_id"`
+	Limit   int32     `json:"limit"`
+	Offset  int32     `json:"offset"`
 }
 
-// User contests listing
-func (q *Queries) ListUserContests(ctx context.Context, arg ListUserContestsParams) ([]Contest, error) {
-	rows, err := q.db.Query(ctx, listUserContests,
-		arg.CreatedBy,
-		arg.Search,
-		arg.SortBy,
-		arg.SortOrder,
-		arg.Offset,
-		arg.Limit,
-	)
+func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]Contest, error) {
+	rows, err := q.db.Query(ctx, listUserAccessibleContests, arg.PUserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -843,13 +543,16 @@ func (q *Queries) ListUserContests(ctx context.Context, arg ListUserContestsPara
 		var i Contest
 		if err := rows.Scan(
 			&i.ID,
-			&i.Title,
-			&i.Description,
+			&i.OrganizationID,
+			&i.OwnerID,
 			&i.Visibility,
-			&i.MonitorScope,
-			&i.SubmissionsListScope,
-			&i.SubmissionsReviewScope,
-			&i.CreatedBy,
+			&i.Titles,
+			&i.ShortName,
+			&i.Description,
+			&i.Settings,
+			&i.AccessPolicy,
+			&i.StartTime,
+			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -863,169 +566,106 @@ func (q *Queries) ListUserContests(ctx context.Context, arg ListUserContestsPara
 	return items, nil
 }
 
-const listWorkshopContests = `-- name: ListWorkshopContests :many
-SELECT c.id,
-    c.title,
-    c.description,
-    c.visibility,
-    c.monitor_scope,
-    c.submissions_list_scope,
-    c.submissions_review_scope,
-    c.created_by,
-    c.created_at,
-    c.updated_at
-FROM contests c
-    INNER JOIN contest_members cm ON cm.contest_id = c.id
-WHERE cm.user_id = $1::uuid
-    AND cm.role IN ('owner', 'moderator')
-    AND (
-        $2::text IS NULL
-        OR $2 = ''
-        OR (
-            CASE
-                WHEN LENGTH($2) < 3 THEN c.title ILIKE '%' || $2 || '%'
-                ELSE word_similarity(c.title, $2) > 0.1
-            END
-        )
-    )
-ORDER BY CASE
-        WHEN $2::text IS NOT NULL
-        AND $2 != ''
-        AND LENGTH($2) >= 3 THEN word_similarity(c.title, $2)
-    END DESC NULLS LAST,
-    CASE
-        WHEN $3::text = 'created_at'
-        AND $4::text = 'desc' THEN c.created_at
-    END DESC,
-    CASE
-        WHEN $3::text = 'created_at'
-        AND $4::text = 'asc' THEN c.created_at
-    END,
-    CASE
-        WHEN $3::text = 'updated_at'
-        AND $4::text = 'desc' THEN c.updated_at
-    END DESC,
-    CASE
-        WHEN $3::text = 'updated_at'
-        AND $4::text = 'asc' THEN c.updated_at
-    END,
-    CASE
-        WHEN $3::text = 'title'
-        AND $4::text = 'desc' THEN c.title
-    END DESC,
-    CASE
-        WHEN $3::text = 'title'
-        AND $4::text = 'asc' THEN c.title
-    END,
-    CASE
-        WHEN $3::text IS NULL
-        OR $3 = '' THEN c.created_at
-    END DESC
-LIMIT $6 OFFSET $5
+const removeContestMember = `-- name: RemoveContestMember :exec
+DELETE FROM contest_members
+WHERE contest_id = $1 AND user_id = $2
 `
 
-type ListWorkshopContestsParams struct {
+type RemoveContestMemberParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
 	UserID    uuid.UUID `json:"user_id"`
-	Search    *string   `json:"search"`
-	SortBy    *string   `json:"sort_by"`
-	SortOrder *string   `json:"sort_order"`
-	Offset    int32     `json:"offset"`
-	Limit     int32     `json:"limit"`
 }
 
-// Workshop contests listing
-func (q *Queries) ListWorkshopContests(ctx context.Context, arg ListWorkshopContestsParams) ([]Contest, error) {
-	rows, err := q.db.Query(ctx, listWorkshopContests,
-		arg.UserID,
-		arg.Search,
-		arg.SortBy,
-		arg.SortOrder,
-		arg.Offset,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Contest{}
-	for rows.Next() {
-		var i Contest
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Description,
-			&i.Visibility,
-			&i.MonitorScope,
-			&i.SubmissionsListScope,
-			&i.SubmissionsReviewScope,
-			&i.CreatedBy,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) RemoveContestMember(ctx context.Context, arg RemoveContestMemberParams) error {
+	_, err := q.db.Exec(ctx, removeContestMember, arg.ContestID, arg.UserID)
+	return err
+}
+
+const removeContestProblem = `-- name: RemoveContestProblem :exec
+DELETE FROM contest_problems
+WHERE contest_id = $1 AND problem_id = $2
+`
+
+type RemoveContestProblemParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+}
+
+func (q *Queries) RemoveContestProblem(ctx context.Context, arg RemoveContestProblemParams) error {
+	_, err := q.db.Exec(ctx, removeContestProblem, arg.ContestID, arg.ProblemID)
+	return err
 }
 
 const updateContest = `-- name: UpdateContest :exec
 UPDATE contests
-SET title = COALESCE($1, title),
-    description = COALESCE($2, description),
-    visibility = COALESCE($3, visibility),
-    monitor_scope = COALESCE($4, monitor_scope),
-    submissions_list_scope = COALESCE(
-        $5,
-        submissions_list_scope
-    ),
-    submissions_review_scope = COALESCE(
-        $6,
-        submissions_review_scope
-    )
-WHERE id = $7::uuid
+SET titles = COALESCE($2, titles),
+    description = COALESCE($3, description),
+    visibility = COALESCE($4, visibility),
+    settings = COALESCE($5, settings),
+    access_policy = COALESCE($6, access_policy),
+    start_time = COALESCE($7, start_time),
+    end_time = COALESCE($8, end_time),
+    owner_id = COALESCE($9, owner_id)
+WHERE id = $1
 `
 
 type UpdateContestParams struct {
-	Title                  *string               `json:"title"`
-	Description            *string               `json:"description"`
-	Visibility             NullContestVisibility `json:"visibility"`
-	MonitorScope           NullContestRole       `json:"monitor_scope"`
-	SubmissionsListScope   NullContestRole       `json:"submissions_list_scope"`
-	SubmissionsReviewScope NullContestRole       `json:"submissions_review_scope"`
-	ID                     uuid.UUID             `json:"id"`
+	ID           uuid.UUID             `json:"id"`
+	Titles       []byte                `json:"titles"`
+	Description  *string               `json:"description"`
+	Visibility   NullContestVisibility `json:"visibility"`
+	Settings     []byte                `json:"settings"`
+	AccessPolicy []byte                `json:"access_policy"`
+	StartTime    pgtype.Timestamptz    `json:"start_time"`
+	EndTime      pgtype.Timestamptz    `json:"end_time"`
+	OwnerID      pgtype.UUID           `json:"owner_id"`
 }
 
 func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) error {
 	_, err := q.db.Exec(ctx, updateContest,
-		arg.Title,
+		arg.ID,
+		arg.Titles,
 		arg.Description,
 		arg.Visibility,
-		arg.MonitorScope,
-		arg.SubmissionsListScope,
-		arg.SubmissionsReviewScope,
-		arg.ID,
+		arg.Settings,
+		arg.AccessPolicy,
+		arg.StartTime,
+		arg.EndTime,
+		arg.OwnerID,
 	)
 	return err
 }
 
-const updateContestMember = `-- name: UpdateContestMember :exec
+const updateContestMemberRole = `-- name: UpdateContestMemberRole :exec
 UPDATE contest_members
-SET role = $1
-WHERE contest_id = $2::uuid
-    AND user_id = $3::uuid
+SET role = $3
+WHERE contest_id = $1 AND user_id = $2
 `
 
-type UpdateContestMemberParams struct {
-	Role      models.ContestRole `json:"role"`
+type UpdateContestMemberRoleParams struct {
 	ContestID uuid.UUID          `json:"contest_id"`
 	UserID    uuid.UUID          `json:"user_id"`
+	Role      models.ContestRole `json:"role"`
 }
 
-func (q *Queries) UpdateContestMember(ctx context.Context, arg UpdateContestMemberParams) error {
-	_, err := q.db.Exec(ctx, updateContestMember, arg.Role, arg.ContestID, arg.UserID)
+func (q *Queries) UpdateContestMemberRole(ctx context.Context, arg UpdateContestMemberRoleParams) error {
+	_, err := q.db.Exec(ctx, updateContestMemberRole, arg.ContestID, arg.UserID, arg.Role)
+	return err
+}
+
+const updateContestProblemOrdinal = `-- name: UpdateContestProblemOrdinal :exec
+UPDATE contest_problems
+SET ordinal = $3
+WHERE contest_id = $1 AND problem_id = $2
+`
+
+type UpdateContestProblemOrdinalParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	Ordinal   int32     `json:"ordinal"`
+}
+
+func (q *Queries) UpdateContestProblemOrdinal(ctx context.Context, arg UpdateContestProblemOrdinalParams) error {
+	_, err := q.db.Exec(ctx, updateContestProblemOrdinal, arg.ContestID, arg.ProblemID, arg.Ordinal)
 	return err
 }

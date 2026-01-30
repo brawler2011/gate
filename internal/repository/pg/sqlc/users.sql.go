@@ -46,7 +46,7 @@ INSERT INTO users (
         name,
         surname,
         bio,
-        img_id
+        avatar_url
     )
 VALUES (
         $1::uuid,
@@ -62,15 +62,15 @@ VALUES (
 `
 
 type CreateUserParams struct {
-	ID       uuid.UUID  `json:"id"`
-	Username string     `json:"username"`
-	Role     UserRole   `json:"role"`
-	KratosID uuid.UUID  `json:"kratos_id"`
-	Email    string     `json:"email"`
-	Name     string     `json:"name"`
-	Surname  string     `json:"surname"`
-	Bio      string     `json:"bio"`
-	ImgID    *uuid.UUID `json:"img_id"`
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	Role      UserRole  `json:"role"`
+	KratosID  uuid.UUID `json:"kratos_id"`
+	Email     string    `json:"email"`
+	Name      string    `json:"name"`
+	Surname   string    `json:"surname"`
+	Bio       string    `json:"bio"`
+	AvatarUrl *string   `json:"avatar_url"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -83,13 +83,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.Name,
 		arg.Surname,
 		arg.Bio,
-		arg.ImgID,
+		arg.AvatarUrl,
 	)
 	return err
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, username, role, kratos_id, email, name, surname, bio, img_id, created_at, updated_at
+SELECT id, username, role, kratos_id, email, name, surname, bio, avatar_url, created_at, updated_at
 FROM users
 WHERE id = $1::uuid
 LIMIT 1
@@ -107,7 +107,7 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Name,
 		&i.Surname,
 		&i.Bio,
-		&i.ImgID,
+		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -115,7 +115,7 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const getUserByKratosId = `-- name: GetUserByKratosId :one
-SELECT id, username, role, kratos_id, email, name, surname, bio, img_id, created_at, updated_at
+SELECT id, username, role, kratos_id, email, name, surname, bio, avatar_url, created_at, updated_at
 FROM users
 WHERE kratos_id = $1::uuid
 LIMIT 1
@@ -133,7 +133,33 @@ func (q *Queries) GetUserByKratosId(ctx context.Context, kratosID uuid.UUID) (Us
 		&i.Name,
 		&i.Surname,
 		&i.Bio,
-		&i.ImgID,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT id, username, role, kratos_id, email, name, surname, bio, avatar_url, created_at, updated_at
+FROM users
+WHERE username = $1
+LIMIT 1
+`
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Role,
+		&i.KratosID,
+		&i.Email,
+		&i.Name,
+		&i.Surname,
+		&i.Bio,
+		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -141,7 +167,7 @@ func (q *Queries) GetUserByKratosId(ctx context.Context, kratosID uuid.UUID) (Us
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, role, kratos_id, email, name, surname, bio, img_id, created_at, updated_at
+SELECT id, username, role, kratos_id, email, name, surname, bio, avatar_url, created_at, updated_at
 FROM users
 WHERE (
         $1::text = ''
@@ -188,7 +214,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.Name,
 			&i.Surname,
 			&i.Bio,
-			&i.ImgID,
+			&i.AvatarUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -210,19 +236,19 @@ SET username = COALESCE($1, username),
     name = COALESCE($4, name),
     surname = COALESCE($5, surname),
     bio = COALESCE($6, bio),
-    img_id = COALESCE($7, img_id)
+    avatar_url = COALESCE($7, avatar_url)
 WHERE id = $8::uuid
 `
 
 type UpdateUserParams struct {
-	Username *string      `json:"username"`
-	Role     NullUserRole `json:"role"`
-	Email    *string      `json:"email"`
-	Name     *string      `json:"name"`
-	Surname  *string      `json:"surname"`
-	Bio      *string      `json:"bio"`
-	ImgID    *uuid.UUID   `json:"img_id"`
-	ID       uuid.UUID    `json:"id"`
+	Username  *string      `json:"username"`
+	Role      NullUserRole `json:"role"`
+	Email     *string      `json:"email"`
+	Name      *string      `json:"name"`
+	Surname   *string      `json:"surname"`
+	Bio       *string      `json:"bio"`
+	AvatarUrl *string      `json:"avatar_url"`
+	ID        uuid.UUID    `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
@@ -233,7 +259,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 		arg.Name,
 		arg.Surname,
 		arg.Bio,
-		arg.ImgID,
+		arg.AvatarUrl,
 		arg.ID,
 	)
 	return err

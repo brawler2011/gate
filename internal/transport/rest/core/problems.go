@@ -7,14 +7,19 @@ import (
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/transport/middleware"
 	"github.com/gate149/core/pkg"
+	"github.com/google/uuid"
 )
 
 func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProblemsRequestObject) (corev1.ListProblemsResponseObject, error) {
+	searchStr := ""
+	if request.Params.Search != nil {
+		searchStr = *request.Params.Search
+	}
+	
 	filter := &models.ProblemsFilter{
 		Page:       request.Params.Page,
 		PageSize:   request.Params.PageSize,
-		Search:     request.Params.Search,
-		Descending: false,
+		Search:     searchStr,
 	}
 
 	if request.Params.PageSize < minPageSize || request.Params.PageSize > maxPageSize {
@@ -29,17 +34,13 @@ func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProble
 		if !isLengthBetween(*request.Params.Search, 0, maxSearchLength) {
 			return nil, badSearch
 		}
-		filter.Search = request.Params.Search
+		filter.Search = *request.Params.Search
 	}
 
 	if request.Params.Owner != nil {
 		user := middleware.GetUser(ctx)
 
-		filter.OwnerId = &user.Id
-	}
-
-	if request.Params.Descending != nil {
-		filter.Descending = *request.Params.Descending
+		filter.OwnerID = &user.Id
 	}
 
 	problemsList, err := h.problemsUC.ListProblems(ctx, filter)
@@ -69,9 +70,19 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
 	}
 
+	// Create titles map from title
+	titles := make(map[string]string)
+	titles["en"] = request.Params.Title
+	
+	// Generate short_name from UUID to ensure uniqueness
+	shortName := "problem-" + uuid.New().String()[:8]
+	
 	input := &models.CreateProblemInput{
-		Title:  request.Params.Title,
-		UserId: user.Id,
+		OrganizationID: user.Id, // TODO: use proper organization ID
+		OwnerID:        &user.Id,
+		Titles:         titles,
+		ShortName:      shortName,
+		Visibility:     models.ProblemVisibilityPrivate,
 	}
 
 	problemID, err := h.problemsUC.CreateProblem(ctx, input)
@@ -104,7 +115,7 @@ func (h *CoreServer) DeleteProblem(ctx context.Context, request corev1.DeletePro
 func (h *CoreServer) GetProblem(ctx context.Context, request corev1.GetProblemRequestObject) (corev1.GetProblemResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
-	canView, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionGetProblem)
+	canView, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionViewProblem)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +134,7 @@ func (h *CoreServer) GetProblem(ctx context.Context, request corev1.GetProblemRe
 func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdateProblemRequestObject) (corev1.UpdateProblemResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
-	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionUpdateProblem)
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionEditProblem)
 	if err != nil {
 		return nil, err
 	}
@@ -136,19 +147,25 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdatePro
 	}
 	req := *request.Body
 
-	err = h.problemsUC.UpdateProblem(ctx, request.Id, &models.ProblemUpdate{
-		Title:       req.Title,
-		MemoryLimit: req.MemoryLimit,
-		TimeLimit:   req.TimeLimit,
-		Visibility:  req.Visibility,
+	// Build update params
+	update := &models.ProblemUpdate{}
+	
+	// Handle title update - convert to titles map
+	if req.Title != nil {
+		titles := make(map[string]string)
+		titles["en"] = *req.Title
+		update.Titles = &titles
+	}
+	
+	// Handle visibility update
+	if req.Visibility != nil {
+		update.Visibility = req.Visibility
+	}
+	
+	// Note: Other fields (Legend, InputFormat, etc.) are now stored in git repos
+	// and managed through the workshop/publish workflow
 
-		Legend:       req.Legend,
-		InputFormat:  req.InputFormat,
-		OutputFormat: req.OutputFormat,
-		Notes:        req.Notes,
-		Scoring:      req.Scoring,
-	})
-
+	err = h.problemsUC.UpdateProblem(ctx, request.Id, update)
 	if err != nil {
 		return nil, err
 	}

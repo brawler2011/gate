@@ -5,11 +5,13 @@ import (
 )
 
 type CoreServer struct {
-	contestsUC    interfaces.ContestsUC
-	permissionsUC interfaces.PermissionsUC
-	submissionsUC interfaces.SubmissionsUC
-	usersUC       interfaces.UsersUC
-	problemsUC    interfaces.ProblemsUC
+	contestsUC       interfaces.ContestsUC
+	permissionsUC    interfaces.PermissionsUC
+	submissionsUC    interfaces.SubmissionsUC
+	usersUC          interfaces.UsersUC
+	problemsUC       interfaces.ProblemsUC
+	organizationsUC  interfaces.OrganizationsUC
+	teamsUC          interfaces.TeamsUC
 }
 
 func NewCoreServer(
@@ -18,12 +20,16 @@ func NewCoreServer(
 	submissionsUC interfaces.SubmissionsUC,
 	usersUC interfaces.UsersUC,
 	problemsUC interfaces.ProblemsUC,
+	organizationsUC interfaces.OrganizationsUC,
+	teamsUC interfaces.TeamsUC,
 ) *CoreServer {
 	return &CoreServer{
-		contestsUC:    contestsUC,
-		permissionsUC: permissionsUC,
-		submissionsUC: submissionsUC,
-		usersUC:       usersUC,
-		problemsUC:    problemsUC,
+		contestsUC:      contestsUC,
+		permissionsUC:   permissionsUC,
+		submissionsUC:   submissionsUC,
+		usersUC:         usersUC,
+		problemsUC:      problemsUC,
+		organizationsUC: organizationsUC,
+		teamsUC:         teamsUC,
 	}
 }

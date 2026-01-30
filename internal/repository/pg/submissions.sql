@@ -2,25 +2,26 @@
 INSERT INTO submissions (
     contest_id,
     problem_id,
-    created_by,
-    submission,
+    owner_id,
+    source,
     language,
     penalty
   )
 VALUES (
     @contest_id::uuid,
     @problem_id::uuid,
-    @created_by::uuid,
-    @submission,
+    @owner_id::uuid,
+    @source,
     @language,
     @penalty
   )
 RETURNING id;
+
 -- name: GetSubmission :one
 SELECT s.id,
-  s.created_by,
+  s.owner_id,
   u.username,
-  s.submission,
+  s.source,
   s.state,
   s.score,
   s.penalty,
@@ -28,20 +29,23 @@ SELECT s.id,
   s.memory_stat,
   s.language,
   s.problem_id,
-  p.title AS problem_title,
-  cp.position,
+  p.titles AS problem_titles,
+  p.short_name AS problem_short_name,
+  cp.ordinal AS problem_ordinal,
   s.contest_id,
-  c.title AS contest_title,
+  c.titles AS contest_titles,
+  c.short_name AS contest_short_name,
   c.visibility AS contest_visibility,
   s.updated_at,
   s.created_at
 FROM submissions s
-  LEFT JOIN users u ON s.created_by = u.id
+  LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problems p ON s.problem_id = p.id
-  LEFT JOIN contest_problem cp ON p.id = cp.problem_id
+  LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
   LEFT JOIN contests c ON s.contest_id = c.id
 WHERE s.id = @id::uuid;
+
 -- name: UpdateSubmission :exec
 UPDATE submissions
 SET state = @state,
@@ -49,10 +53,11 @@ SET state = @state,
   time_stat = @time_stat,
   memory_stat = @memory_stat
 WHERE id = @id::uuid;
+
 -- Submission listing
 -- name: ListSubmissions :many
 SELECT s.id,
-  s.created_by,
+  s.owner_id,
   u.username,
   s.state,
   s.score,
@@ -61,16 +66,18 @@ SELECT s.id,
   s.memory_stat,
   s.language,
   s.problem_id,
-  p.title AS problem_title,
-  cp.position,
+  p.titles AS problem_titles,
+  p.short_name AS problem_short_name,
+  cp.ordinal AS problem_ordinal,
   s.contest_id,
-  c.title AS contest_title,
+  c.titles AS contest_titles,
+  c.short_name AS contest_short_name,
   s.updated_at,
   s.created_at
 FROM submissions s
-  LEFT JOIN users u ON s.created_by = u.id
+  LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problems p ON s.problem_id = p.id
-  LEFT JOIN contest_problem cp ON p.id = cp.problem_id
+  LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
   LEFT JOIN contests c ON s.contest_id = c.id
 WHERE (
@@ -78,8 +85,8 @@ WHERE (
     OR s.contest_id = sqlc.narg('contest_id')::uuid
   )
   AND (
-    sqlc.narg('created_by')::uuid IS NULL
-    OR s.created_by = sqlc.narg('created_by')::uuid
+    sqlc.narg('owner_id')::uuid IS NULL
+    OR s.owner_id = sqlc.narg('owner_id')::uuid
   )
   AND (
     sqlc.narg('problem_id')::uuid IS NULL
@@ -100,6 +107,7 @@ ORDER BY CASE
     WHEN sqlc.narg('sort_order')::int >= 0 THEN s.created_at
   END ASC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
 -- name: CountSubmissions :one
 SELECT COUNT(*)
 FROM submissions s
@@ -108,8 +116,8 @@ WHERE (
     OR s.contest_id = sqlc.narg('contest_id')::uuid
   )
   AND (
-    sqlc.narg('created_by')::uuid IS NULL
-    OR s.created_by = sqlc.narg('created_by')::uuid
+    sqlc.narg('owner_id')::uuid IS NULL
+    OR s.owner_id = sqlc.narg('owner_id')::uuid
   )
   AND (
     sqlc.narg('problem_id')::uuid IS NULL

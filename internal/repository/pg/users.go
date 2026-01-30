@@ -33,15 +33,15 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params models.CreateUserPara
 	}
 
 	err := r.queries.CreateUser(ctx, sqlc.CreateUserParams{
-		ID:       params.Id,
-		Username: params.Username,
-		Role:     sqlc.UserRole(params.Role),
-		KratosID: params.KratosId,
-		Email:    params.Email,
-		Name:     params.Name,
-		Surname:  params.Surname,
-		Bio:      params.Bio,
-		ImgID:    params.ImgId,
+		ID:        params.Id,
+		Username:  params.Username,
+		Role:      sqlc.UserRole(params.Role),
+		KratosID:  params.KratosId,
+		Email:     params.Email,
+		Name:      params.Name,
+		Surname:   params.Surname,
+		Bio:       params.Bio,
+		AvatarUrl: params.AvatarUrl,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -67,7 +67,7 @@ func mapUserToModel(user sqlc.User) models.User {
 		Name:      user.Name,
 		Surname:   user.Surname,
 		Bio:       user.Bio,
-		ImgId:     user.ImgID,
+		AvatarUrl: user.AvatarUrl,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 	}
@@ -132,14 +132,14 @@ func (r *UsersRepo) UpdateUser(
 	}
 
 	err := r.queries.UpdateUser(ctx, sqlc.UpdateUserParams{
-		ID:       params.Id,
-		Username: params.Username,
-		Role:     role,
-		Email:    params.Email,
-		Name:     params.Name,
-		Surname:  params.Surname,
-		Bio:      params.Bio,
-		ImgID:    params.ImgId,
+		ID:        params.Id,
+		Username:  params.Username,
+		Role:      role,
+		Email:     params.Email,
+		Name:      params.Name,
+		Surname:   params.Surname,
+		Bio:       params.Bio,
+		AvatarUrl: params.AvatarUrl,
 	})
 	if err != nil {
 		return HandlePgErr(err)

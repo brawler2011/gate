@@ -86,7 +86,7 @@ func (uc *PermissionsUseCase) HasContestPermission(
 		isPublic:   contest.Visibility == models.ContestVisibilityPublic,
 		isStarted:  isStarted,
 		isFinished: isFinished,
-		isOwner:    contest.CreatedBy == userID,
+		isOwner:    contest.OwnerID != nil && *contest.OwnerID == userID,
 		isAdmin:    user.Role == models.UserRoleAdmin,
 	}
 
@@ -134,14 +134,14 @@ func (uc *PermissionsUseCase) canViewMonitor(cc *contestContext) bool {
 	if cc.isAdmin || cc.isOwner {
 		return true
 	}
-	return cc.member != nil && models.RoleGraterOrEquals(cc.member.ContestRole, cc.contest.MonitorScope)
+	return cc.member != nil && models.RoleGraterOrEquals(cc.member.ContestRole, cc.contest.MonitorScope())
 }
 
 func (uc *PermissionsUseCase) canListAllSubmissions(cc *contestContext) bool {
 	if cc.isAdmin || cc.isOwner {
 		return true
 	}
-	return cc.member != nil && models.RoleGraterOrEquals(cc.member.ContestRole, cc.contest.SubmissionsListScope)
+	return cc.member != nil && models.RoleGraterOrEquals(cc.member.ContestRole, cc.contest.SubmissionsListScope())
 }
 
 func (uc *PermissionsUseCase) canViewOwnSubmissions(cc *contestContext) bool {
@@ -152,7 +152,7 @@ func (uc *PermissionsUseCase) canViewOtherSubmission(cc *contestContext) bool {
 	if cc.isAdmin || cc.isOwner {
 		return true
 	}
-	return cc.member != nil && models.RoleGraterOrEquals(cc.member.ContestRole, cc.contest.SubmissionsListScope)
+	return cc.member != nil && models.RoleGraterOrEquals(cc.member.ContestRole, cc.contest.SubmissionsListScope())
 }
 
 func (uc *PermissionsUseCase) canSubmit(cc *contestContext) bool {
@@ -186,14 +186,14 @@ func (uc *PermissionsUseCase) HasProblemPermission(
 		problem:  &problem,
 		member:   &member,
 		isPublic: problem.Visibility == models.ProblemVisibilityPublic,
-		isOwner:  problem.CreatedBy == userID,
+		isOwner:  problem.OwnerID != nil && *problem.OwnerID == userID,
 		isAdmin:  user.Role == models.UserRoleAdmin,
 	}
 
 	switch action {
-	case models.ActionGetProblem:
+	case models.ActionViewProblem:
 		return uc.canViewProblem(pc), nil
-	case models.ActionUpdateProblem:
+	case models.ActionEditProblem:
 		return uc.canEditProblem(pc), nil
 	case models.ActionAdminProblem:
 		return uc.canAdminProblem(pc), nil
@@ -254,7 +254,7 @@ func (uc *PermissionsUseCase) GetContestPermissions(
 		isPublic:   contest.Visibility == models.ContestVisibilityPublic,
 		isStarted:  isStarted,
 		isFinished: isFinished,
-		isOwner:    contest.CreatedBy == userID,
+		isOwner:    contest.OwnerID != nil && *contest.OwnerID == userID,
 		isAdmin:    user.Role == models.UserRoleAdmin,
 	}
 
@@ -294,7 +294,7 @@ func (uc *PermissionsUseCase) GetProblemPermissions(
 		problem:  &problem,
 		member:   &member,
 		isPublic: problem.Visibility == models.ProblemVisibilityPublic,
-		isOwner:  problem.CreatedBy == userID,
+		isOwner:  problem.OwnerID != nil && *problem.OwnerID == userID,
 		isAdmin:  user.Role == models.UserRoleAdmin,
 	}
 
@@ -303,4 +303,32 @@ func (uc *PermissionsUseCase) GetProblemPermissions(
 		EditProblem:  uc.canEditProblem(pc),
 		AdminProblem: uc.canAdminProblem(pc),
 	}, nil
+}
+
+// HasOrganizationPermission checks if a user has permission to perform an action on an organization
+// This is a stub implementation - full implementation would check organization membership and roles
+func (uc *PermissionsUseCase) HasOrganizationPermission(
+	ctx context.Context,
+	orgID uuid.UUID,
+	userID uuid.UUID,
+	action models.OrgAction,
+) (bool, error) {
+	user, err := uc.usersUC.GetUserById(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf("get user: %w", err)
+	}
+
+	// Admins have full access
+	if user.Role == models.UserRoleAdmin {
+		return true, nil
+	}
+
+	// TODO: Check organization membership and roles
+	// For now, allow all authenticated users to view organizations
+	if action == models.ActionViewOrganization {
+		return true, nil
+	}
+
+	// For other actions, deny by default (should check membership)
+	return false, nil
 }

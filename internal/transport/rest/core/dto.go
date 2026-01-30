@@ -67,20 +67,28 @@ func ListUserContestsResponseDTO(contestsList *models.ContestsList) *corev1.List
 }
 
 func GetContestProblemResponseDTO(p models.ContestProblem) *corev1.GetContestProblemResponseModel {
+	// Extract english title from titles map
+	title := ""
+	if t, ok := p.Titles["en"]; ok {
+		title = t
+	}
+	
+	position := int32(p.Ordinal)
+	
 	return &corev1.GetContestProblemResponseModel{
 		Problem: corev1.ContestProblemModel{
 			ProblemId:        p.ProblemID,
-			Title:            p.Title,
-			TimeLimit:        p.TimeLimit,
-			MemoryLimit:      p.MemoryLimit,
-			Position:         p.Position,
-			LegendHtml:       p.LegendHtml,
-			InputFormatHtml:  p.InputFormatHtml,
-			OutputFormatHtml: p.OutputFormatHtml,
-			NotesHtml:        p.NotesHtml,
-			ScoringHtml:      p.ScoringHtml,
+			Title:            title,
+			TimeLimit:        0, // Not available in new model
+			MemoryLimit:      0, // Not available in new model
+			Position:         position,
+			LegendHtml:       "", // Not available in new model
+			InputFormatHtml:  "", // Not available in new model
+			OutputFormatHtml: "", // Not available in new model
+			NotesHtml:        "", // Not available in new model
+			ScoringHtml:      "", // Not available in new model
 			CreatedAt:        p.CreatedAt,
-			UpdatedAt:        p.UpdatedAt,
+			UpdatedAt:        p.CreatedAt, // UpdatedAt not available in new model
 		},
 	}
 }
@@ -99,15 +107,30 @@ func SubmissionsListToDTO(submissionsList *models.SubmissionsList) *corev1.ListS
 }
 
 func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
+	// Extract title from titles map
+	title := ""
+	if t, ok := c.Titles["en"]; ok {
+		title = t
+	}
+	
+	// Extract owner ID
+	var createdBy uuid.UUID
+	if c.OwnerID != nil {
+		createdBy = *c.OwnerID
+	}
+	
+	// Convert visibility
+	visibility := string(c.Visibility)
+	
 	model := corev1.ContestModel{
 		Id:                     c.ID,
-		Title:                  c.Title,
+		Title:                  title,
 		Description:            c.Description,
-		Visibility:             c.Visibility,
-		MonitorScope:           c.MonitorScope,
-		SubmissionsListScope:   c.SubmissionsListScope,
-		SubmissionsReviewScope: c.SubmissionsReviewScope,
-		CreatedBy:              c.CreatedBy,
+		Visibility:             visibility,
+		MonitorScope:           string(c.MonitorScope()),
+		SubmissionsListScope:   string(c.SubmissionsListScope()),
+		SubmissionsReviewScope: string(c.SubmissionsReviewScope()),
+		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,
 	}
@@ -121,14 +144,20 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 }
 
 func ContestProblemsListItemDTO(t models.ContestProblem) corev1.ContestProblemListItemModel {
+	// Extract title from titles map
+	title := ""
+	if tt, ok := t.Titles["en"]; ok {
+		title = tt
+	}
+	
 	return corev1.ContestProblemListItemModel{
 		ProblemId:   t.ProblemID,
-		Position:    t.Position,
-		Title:       t.Title,
-		MemoryLimit: t.MemoryLimit,
-		TimeLimit:   t.TimeLimit,
+		Position:    int32(t.Ordinal),
+		Title:       title,
+		MemoryLimit: 0, // Not available
+		TimeLimit:   0, // Not available
 		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
+		UpdatedAt:   t.CreatedAt, // Not available
 	}
 }
 
@@ -153,34 +182,46 @@ func ParticipantDTO(p models.ContestMember) corev1.UserModel {
 }
 
 func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
+	// Extract title from titles map
+	title := ""
+	if t, ok := p.Titles["en"]; ok {
+		title = t
+	}
+	
 	return corev1.ProblemsListItemModel{
 		Id:          p.ID,
-		Title:       p.Title,
-		MemoryLimit: p.MemoryLimit,
-		TimeLimit:   p.TimeLimit,
+		Title:       title,
+		MemoryLimit: 0, // Not available in new model
+		TimeLimit:   0, // Not available in new model
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
 	}
 }
 
 func ProblemDTO(p models.Problem) *corev1.ProblemModel {
+	// Extract title from titles map
+	title := ""
+	if t, ok := p.Titles["en"]; ok {
+		title = t
+	}
+	
 	return &corev1.ProblemModel{
 		Id:          p.ID,
-		Title:       p.Title,
-		TimeLimit:   p.TimeLimit,
-		MemoryLimit: p.MemoryLimit,
+		Title:       title,
+		TimeLimit:   0, // Not available in new model
+		MemoryLimit: 0, // Not available in new model
 
-		Legend:       p.Legend,
-		InputFormat:  p.InputFormat,
-		OutputFormat: p.OutputFormat,
-		Notes:        p.Notes,
-		Scoring:      p.Scoring,
+		Legend:       "", // Not available in new model
+		InputFormat:  "", // Not available in new model
+		OutputFormat: "", // Not available in new model
+		Notes:        "", // Not available in new model
+		Scoring:      "", // Not available in new model
 
-		LegendHtml:       p.LegendHtml,
-		InputFormatHtml:  p.InputFormatHtml,
-		OutputFormatHtml: p.OutputFormatHtml,
-		NotesHtml:        p.NotesHtml,
-		ScoringHtml:      p.ScoringHtml,
+		LegendHtml:       "", // Not available in new model
+		InputFormatHtml:  "", // Not available in new model
+		OutputFormatHtml: "", // Not available in new model
+		NotesHtml:        "", // Not available in new model
+		ScoringHtml:      "", // Not available in new model
 
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
@@ -250,7 +291,7 @@ func userDTO(u models.User) corev1.UserModel {
 		Name:      &u.Name,
 		Surname:   &u.Surname,
 		Bio:       &u.Bio,
-		ImgId:     u.ImgId,
+		ImgId:     nil, // Avatar URL not compatible with UUID type
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,
 	}

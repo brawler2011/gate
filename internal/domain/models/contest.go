@@ -9,8 +9,9 @@ import (
 type ContestVisibility = string
 
 const (
-	ContestVisibilityPublic  ContestVisibility = "public"
-	ContestVisibilityPrivate ContestVisibility = "private"
+	ContestVisibilityPublic   ContestVisibility = "public"
+	ContestVisibilityPrivate  ContestVisibility = "private"
+	ContestVisibilityUnlisted ContestVisibility = "unlisted"
 )
 
 type ContestRole = string
@@ -22,14 +23,30 @@ const (
 )
 
 type CreateContestParams struct {
-	Id     uuid.UUID
-	Title  string
-	UserId uuid.UUID
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	OwnerID        *uuid.UUID
+	Visibility     ContestVisibility
+	Titles         map[string]string
+	ShortName      string
+	Description    string
+	Settings       map[string]interface{}
+	AccessPolicy   map[string]interface{}
+	StartTime      *time.Time
+	EndTime        *time.Time
 }
 
 type CreateContestInput struct {
-	Title  string
-	UserId uuid.UUID
+	OrganizationID uuid.UUID
+	OwnerID        *uuid.UUID
+	Titles         map[string]string
+	ShortName      string
+	Description    string
+	Visibility     ContestVisibility
+	Settings       map[string]interface{}
+	AccessPolicy   map[string]interface{}
+	StartTime      *time.Time
+	EndTime        *time.Time
 }
 
 type ContestsFilter struct {
@@ -76,27 +93,27 @@ type PublicContestsFilter struct {
 }
 
 type ContestUpdateInput struct {
-	Id                     uuid.UUID
-	Title                  *string
-	Description            *string
-	Visibility             *string
-	MonitorScope           *string
-	SubmissionsListScope   *string
-	SubmissionsReviewScope *string
-	StartTime              *time.Time
-	EndTime                *time.Time
+	ID           uuid.UUID
+	Titles       *map[string]string
+	Description  *string
+	Visibility   *ContestVisibility
+	Settings     *map[string]interface{}
+	AccessPolicy *map[string]interface{}
+	StartTime    *time.Time
+	EndTime      *time.Time
+	OwnerID      *uuid.UUID
 }
 
 type ContestUpdateParams struct {
-	Id                     uuid.UUID
-	Title                  *string
-	Description            *string
-	Visibility             *ContestVisibility
-	MonitorScope           *ContestRole
-	SubmissionsListScope   *ContestRole
-	SubmissionsReviewScope *ContestRole
-	StartTime              *time.Time
-	EndTime                *time.Time
+	ID           uuid.UUID
+	Titles       *map[string]string
+	Description  *string
+	Visibility   *ContestVisibility
+	Settings     *map[string]interface{}
+	AccessPolicy *map[string]interface{}
+	StartTime    *time.Time
+	EndTime      *time.Time
+	OwnerID      *uuid.UUID
 }
 
 type ContestProblemGet struct {
@@ -107,6 +124,7 @@ type ContestProblemGet struct {
 type ContestProblemCreation struct {
 	ContestId uuid.UUID
 	ProblemId uuid.UUID
+	PackageId uuid.UUID
 }
 
 type ContestProblemDeletion struct {
@@ -133,19 +151,6 @@ type ParticipantsFilter struct {
 type ContestPermissionGet struct {
 	ContestId uuid.UUID
 	UserId    uuid.UUID
-}
-
-type ContestPermissions struct {
-	GetContest             bool
-	UpdateContest          bool
-	ManageContest          bool
-	AdminContest           bool
-	GetMonitor             bool
-	ListUsersSubmissions   bool
-	ListOwnSubmissions     bool
-	GetOtherUserSubmission bool
-	GetOwnSubmission       bool
-	CreateSubmission       bool
 }
 
 var roleHierarchy = map[ContestRole]int{
@@ -178,18 +183,41 @@ type CreateContestMemberParams struct {
 }
 
 type Contest struct {
-	ID                     uuid.UUID
-	Title                  string
-	Description            string
-	Visibility             ContestRole
-	MonitorScope           ContestRole
-	SubmissionsListScope   ContestRole
-	SubmissionsReviewScope ContestRole
-	CreatedBy              uuid.UUID
-	StartTime              *time.Time
-	EndTime                *time.Time
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	OwnerID        *uuid.UUID
+	Visibility     ContestVisibility
+	Titles         map[string]string // {"en": "Contest", "ru": "Контест"}
+	ShortName      string
+	Description    string
+	Settings       map[string]interface{} // JSONB for contest settings
+	AccessPolicy   map[string]interface{} // JSONB for access policies
+	StartTime      *time.Time
+	EndTime        *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Legacy fields for backward compatibility (can be derived from Settings/AccessPolicy)
+func (c *Contest) MonitorScope() ContestRole {
+	if scope, ok := c.Settings["monitor_scope"].(string); ok {
+		return ContestRole(scope)
+	}
+	return ContestRoleModerator
+}
+
+func (c *Contest) SubmissionsListScope() ContestRole {
+	if scope, ok := c.Settings["submissions_list_scope"].(string); ok {
+		return ContestRole(scope)
+	}
+	return ContestRoleModerator
+}
+
+func (c *Contest) SubmissionsReviewScope() ContestRole {
+	if scope, ok := c.Settings["submissions_review_scope"].(string); ok {
+		return ContestRole(scope)
+	}
+	return ContestRoleModerator
 }
 
 type ContestsList struct {
@@ -198,25 +226,15 @@ type ContestsList struct {
 }
 
 type ContestProblem struct {
-	ProblemID        uuid.UUID
-	Title            string
-	TimeLimit        int32
-	MemoryLimit      int32
-	Position         int32
-	LegendHtml       string
-	InputFormatHtml  string
-	OutputFormatHtml string
-	NotesHtml        string
-	ScoringHtml      string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-}
-
-type ConstestProblemSlop struct {
-	ContestID   uuid.UUID
-	ProblemID   uuid.UUID
-	Ordinal     int
-	PackageHash string
+	ContestID  uuid.UUID
+	ProblemID  uuid.UUID
+	PackageID  uuid.UUID
+	Ordinal    int
+	Titles     map[string]string
+	ShortName  string
+	Visibility string
+	PackageURL *string
+	CreatedAt  time.Time
 }
 
 type ContestMember struct {

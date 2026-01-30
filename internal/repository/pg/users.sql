@@ -8,7 +8,7 @@ INSERT INTO users (
         name,
         surname,
         bio,
-        img_id
+        avatar_url
     )
 VALUES (
         @id::uuid,
@@ -19,18 +19,27 @@ VALUES (
         @name,
         @surname,
         @bio,
-        @img_id
+        @avatar_url
     );
+
 -- name: GetUserById :one
 SELECT *
 FROM users
 WHERE id = @id::uuid
 LIMIT 1;
+
 -- name: GetUserByKratosId :one
 SELECT *
 FROM users
 WHERE kratos_id = @kratos_id::uuid
 LIMIT 1;
+
+-- name: GetUserByUsername :one
+SELECT *
+FROM users
+WHERE username = @username
+LIMIT 1;
+
 -- name: ListUsers :many
 SELECT *
 FROM users
@@ -47,6 +56,7 @@ ORDER BY CASE
     END DESC NULLS LAST,
     created_at DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
 -- name: CountUsers :one
 SELECT COUNT(*)::int4
 FROM users
@@ -58,6 +68,7 @@ WHERE (
         sqlc.arg('role')::text = ''
         OR role::text = sqlc.arg('role')
     );
+
 -- name: UpdateUser :exec
 UPDATE users
 SET username = COALESCE(sqlc.narg(username), username),
@@ -66,5 +77,5 @@ SET username = COALESCE(sqlc.narg(username), username),
     name = COALESCE(sqlc.narg(name), name),
     surname = COALESCE(sqlc.narg(surname), surname),
     bio = COALESCE(sqlc.narg(bio), bio),
-    img_id = COALESCE(sqlc.narg(img_id), img_id)
+    avatar_url = COALESCE(sqlc.narg(avatar_url), avatar_url)
 WHERE id = @id::uuid;

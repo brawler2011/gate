@@ -63,6 +63,8 @@ func (s *IntegrationTestSuite) createUser(username string, role models.UserRole)
 		Role:     role,
 		KratosID: uuid.New(),
 		Email:    username + "@example.com",
+		Name:     username,
+		Surname:  "Test",
 	}
 	err := s.usersRepo.CreateUser(s.ctx, models.CreateUserParams{
 		Id:       user.Id,
@@ -70,7 +72,49 @@ func (s *IntegrationTestSuite) createUser(username string, role models.UserRole)
 		Role:     user.Role,
 		KratosId: user.KratosID,
 		Email:    user.Email,
+		Name:     user.Name,
+		Surname:  user.Surname,
 	})
 	s.Require().NoError(err)
 	return user
+}
+
+func (s *IntegrationTestSuite) createOrganization(login string, name string, ownerID uuid.UUID) *models.Organization {
+	org, err := s.organizationsRepo.CreateOrganization(s.ctx, &models.CreateOrganizationInput{
+		Login:     login,
+		Name:      name,
+		CreatorID: ownerID,
+	})
+	s.Require().NoError(err)
+
+	return org
+}
+
+// createOrganizationWithID creates an organization with a specific ID (for test scenarios)
+func (s *IntegrationTestSuite) createOrganizationWithID(id uuid.UUID, login string, name string) *models.Organization {
+	// Directly insert using SQL to set a specific ID
+	_, err := s.dbPool.Exec(s.ctx, 
+		"INSERT INTO organizations (id, login, name, description) VALUES ($1, $2, $3, $4)",
+		id, login, name, "")
+	s.Require().NoError(err)
+
+	return &models.Organization{
+		ID:    id,
+		Login: login,
+		Name:  name,
+	}
+}
+
+// createDummyProblemPackage creates a dummy problem package for testing
+func (s *IntegrationTestSuite) createDummyProblemPackage(problemID uuid.UUID, orgID uuid.UUID) uuid.UUID {
+	packageID := uuid.New()
+	// Git commit hash must be 40 characters (SHA-1)
+	gitCommitHash := "0000000000000000000000000000000000000000"
+	// Package hash must be 64 characters (SHA-256)
+	packageHash := "0000000000000000000000000000000000000000000000000000000000000000"
+	_, err := s.dbPool.Exec(s.ctx,
+		"INSERT INTO problem_packages (id, problem_id, organization_id, git_commit_hash, package_hash, status) VALUES ($1, $2, $3, $4, $5, $6)",
+		packageID, problemID, orgID, gitCommitHash, packageHash, "ready")
+	s.Require().NoError(err)
+	return packageID
 }

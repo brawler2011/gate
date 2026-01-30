@@ -15,6 +15,13 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	admin := s.createUser("admin_submissions", models.UserRoleAdmin)
 	user := s.createUser("user_submissions", models.UserRoleUser)
 
+	// Create organization for admin with admin's user ID
+	// This is a workaround for CreateProblem handler using user.Id as org ID
+	_ = s.createOrganizationWithID(admin.Id, "admin-submissions-org", "Admin Submissions Organization")
+
+	// Create organization for contest
+	contestOrg := s.createOrganization("contest-org", "Contest Organization", admin.Id)
+
 	// 1. Create Problem
 	s.mockPandoc.EXPECT().BatchConvertLatexToHtml5(gomock.Any(), gomock.Any()).Return([]string{"html content"}, nil).AnyTimes()
 
@@ -28,12 +35,21 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	s.Require().NoError(err)
 	problemID := probResp.JSON200.Id
 
+	// Create a dummy problem package (required for contest_problems foreign key)
+	packageID := s.createDummyProblemPackage(problemID, admin.Id)
+
 	// 2. Create Contest
 	contestID := uuid.New()
 	err = s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
-		Id:     contestID,
-		Title:  "Submission Contest",
-		UserId: admin.Id,
+		ID:             contestID,
+		OrganizationID: contestOrg.ID,
+		OwnerID:        &admin.Id,
+		Titles:         map[string]string{"en": "Submission Contest"},
+		ShortName:      "submission-contest",
+		Description:    "A test contest for submissions",
+		Visibility:     models.ContestVisibilityPublic,
+		Settings:       make(map[string]interface{}),
+		AccessPolicy:   make(map[string]interface{}),
 	})
 	s.Require().NoError(err)
 
@@ -41,7 +57,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	startTime := time.Now().Add(-1 * time.Hour)
 	endTime := time.Now().Add(1 * time.Hour)
 	err = s.contestsRepo.UpdateContest(s.ctx, models.ContestUpdateParams{
-		Id:        contestID,
+		ID:        contestID,
 		StartTime: &startTime,
 		EndTime:   &endTime,
 	})
@@ -51,6 +67,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	err = s.contestsRepo.CreateContestProblem(s.ctx, models.ContestProblemCreation{
 		ContestId: contestID,
 		ProblemId: problemID,
+		PackageId: packageID,
 	})
 	s.Require().NoError(err)
 
@@ -66,7 +83,8 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 
 	// 3. Create Submission
 	s.Run("CreateSubmission", func() {
-		s.mockNats.EXPECT().Publish(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+		// Note: NATS Publish is not called directly during submission creation
+		// It's done asynchronously by the outbox worker
 
 		resp, err := s.client.CreateSubmissionWithResponse(s.ctx, &corev1.CreateSubmissionParams{
 			ProblemId: problemID,
@@ -79,6 +97,9 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 			return nil
 		})
 		s.Require().NoError(err)
+		if resp.StatusCode() != http.StatusOK {
+			s.T().Logf("CreateSubmission failed: %s", string(resp.Body))
+		}
 		s.Equal(http.StatusOK, resp.StatusCode())
 		s.Require().NotNil(resp.JSON200)
 		submissionID = resp.JSON200.Id

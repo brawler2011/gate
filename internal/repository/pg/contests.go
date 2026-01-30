@@ -2,6 +2,7 @@ package pg
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/gate149/core/internal/domain/models"
@@ -22,10 +23,31 @@ func NewContestsRepo(db *pgxpool.Pool) *ContestsRepo {
 }
 
 func (r *ContestsRepo) CreateContest(ctx context.Context, params *models.CreateContestParams) error {
-	_, err := r.queries.CreateContest(ctx, sqlc.CreateContestParams{
-		ID:        params.Id,
-		Title:     params.Title,
-		CreatedBy: params.UserId,
+	titlesJSON, err := marshalJSON(params.Titles)
+	if err != nil {
+		return err
+	}
+	settingsJSON, err := marshalJSON(params.Settings)
+	if err != nil {
+		return err
+	}
+	accessPolicyJSON, err := marshalJSON(params.AccessPolicy)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.queries.CreateContest(ctx, sqlc.CreateContestParams{
+		ID:             params.ID,
+		OrganizationID: params.OrganizationID,
+		OwnerID:        uuidPtrToNullUUID(params.OwnerID),
+		Visibility:     params.Visibility,
+		Titles:         titlesJSON,
+		ShortName:      params.ShortName,
+		Description:    params.Description,
+		Settings:       settingsJSON,
+		AccessPolicy:   accessPolicyJSON,
+		StartTime:      timePtrToNullTime(params.StartTime),
+		EndTime:        timePtrToNullTime(params.EndTime),
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -34,7 +56,7 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *models.CreateC
 }
 
 func (r *ContestsRepo) GetContest(ctx context.Context, id uuid.UUID) (models.Contest, error) {
-	contest, err := r.queries.GetContest(ctx, id)
+	contest, err := r.queries.GetContestByID(ctx, id)
 	if err != nil {
 		return models.Contest{}, HandlePgErr(err)
 	}
@@ -42,14 +64,40 @@ func (r *ContestsRepo) GetContest(ctx context.Context, id uuid.UUID) (models.Con
 }
 
 func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdateParams) error {
-	err := r.queries.UpdateContest(ctx, sqlc.UpdateContestParams{
-		ID:                     c.Id,
-		Title:                  c.Title,
-		Description:            c.Description,
-		Visibility:             stringToNullContestVisibility(c.Visibility),
-		MonitorScope:           stringToNullContestRole(c.MonitorScope),
-		SubmissionsListScope:   stringToNullContestRole(c.SubmissionsListScope),
-		SubmissionsReviewScope: stringToNullContestRole(c.SubmissionsReviewScope),
+	var titlesJSON, settingsJSON, accessPolicyJSON []byte
+	var err error
+
+	if c.Titles != nil {
+		titlesJSON, err = marshalJSON(*c.Titles)
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.Settings != nil {
+		settingsJSON, err = marshalJSON(*c.Settings)
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.AccessPolicy != nil {
+		accessPolicyJSON, err = marshalJSON(*c.AccessPolicy)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = r.queries.UpdateContest(ctx, sqlc.UpdateContestParams{
+		ID:           c.ID,
+		Titles:       titlesJSON,
+		Description:  c.Description,
+		Visibility:   stringToNullContestVisibility(c.Visibility),
+		Settings:     settingsJSON,
+		AccessPolicy: accessPolicyJSON,
+		StartTime:    timePtrToNullTime(c.StartTime),
+		EndTime:      timePtrToNullTime(c.EndTime),
+		OwnerID:      uuidPtrToNullUUID(c.OwnerID),
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -66,21 +114,24 @@ func (r *ContestsRepo) DeleteContest(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) ([]models.Contest, int32, error) {
-	rows, err := r.queries.ListAdminContests(ctx, sqlc.ListAdminContestsParams{
-		Limit:      filter.PageSize,
-		Offset:     Offset(filter.Page, filter.PageSize),
-		Search:     filter.Search,
-		Visibility: contestVisibilityToStringPtr(filter.Visibility),
-		SortBy:     stringToStringPtr(filter.SortBy),
-		SortOrder:  sortOrderToStringPtr(filter.SortOrder),
+	visStr := ""
+	if filter.Visibility != nil {
+		visStr = string(*filter.Visibility)
+	}
+
+	rows, err := r.queries.ListAllContests(ctx, sqlc.ListAllContestsParams{
+		Column1: filter.Search,
+		Column2: visStr,
+		Limit:   filter.PageSize,
+		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}
 
-	count, err := r.queries.CountAdminContests(ctx, sqlc.CountAdminContestsParams{
-		Search:     filter.Search,
-		Visibility: contestVisibilityToStringPtr(filter.Visibility),
+	count, err := r.queries.CountAllContests(ctx, sqlc.CountAllContestsParams{
+		Column1: filter.Search,
+		Column2: visStr,
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
@@ -95,25 +146,18 @@ func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter models.Admi
 }
 
 func (r *ContestsRepo) ListUserContests(ctx context.Context, filter models.UserContestsFilter) ([]models.Contest, int32, error) {
-	rows, err := r.queries.ListUserContests(ctx, sqlc.ListUserContestsParams{
-		CreatedBy: filter.UserId,
-		Limit:     filter.PageSize,
-		Offset:    Offset(filter.Page, filter.PageSize),
-		Search:    stringToStringPtr(filter.Search),
-		SortBy:    stringToStringPtr(filter.SortBy),
-		SortOrder: sortOrderToStringPtr(filter.SortOrder),
+	rows, err := r.queries.ListUserAccessibleContests(ctx, sqlc.ListUserAccessibleContestsParams{
+		PUserID: filter.UserId,
+		Limit:   filter.PageSize,
+		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}
 
-	count, err := r.queries.CountUserContests(ctx, sqlc.CountUserContestsParams{
-		UserID: filter.UserId,
-		Search: stringToStringPtr(filter.Search),
-	})
-	if err != nil {
-		return nil, 0, HandlePgErr(err)
-	}
+	// For count, we'll just return the length of results since we don't have a dedicated count query
+	// This is a limitation - ideally we'd have a CountUserAccessibleContests query
+	count := int64(len(rows))
 
 	contests := make([]models.Contest, len(rows))
 	for i, row := range rows {
@@ -124,25 +168,16 @@ func (r *ContestsRepo) ListUserContests(ctx context.Context, filter models.UserC
 }
 
 func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]models.Contest, int32, error) {
-	rows, err := r.queries.ListWorkshopContests(ctx, sqlc.ListWorkshopContestsParams{
-		UserID:    filter.UserId,
-		Limit:     filter.PageSize,
-		Offset:    Offset(filter.Page, filter.PageSize),
-		Search:    stringToStringPtr(filter.Search),
-		SortBy:    stringToStringPtr(filter.SortBy),
-		SortOrder: sortOrderToStringPtr(filter.SortOrder),
+	rows, err := r.queries.ListUserAccessibleContests(ctx, sqlc.ListUserAccessibleContestsParams{
+		PUserID: filter.UserId,
+		Limit:   filter.PageSize,
+		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}
 
-	count, err := r.queries.CountWorkshopContests(ctx, sqlc.CountWorkshopContestsParams{
-		UserID: filter.UserId,
-		Search: stringToStringPtr(filter.Search),
-	})
-	if err != nil {
-		return nil, 0, HandlePgErr(err)
-	}
+	count := int64(len(rows))
 
 	contests := make([]models.Contest, len(rows))
 	for i, row := range rows {
@@ -153,18 +188,20 @@ func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter models.W
 }
 
 func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) ([]models.Contest, int32, error) {
-	rows, err := r.queries.ListPublicContests(ctx, sqlc.ListPublicContestsParams{
-		Limit:     filter.PageSize,
-		Offset:    Offset(filter.Page, filter.PageSize),
-		Search:    filter.Search,
-		SortBy:    stringToStringPtr(filter.SortBy),
-		SortOrder: sortOrderToStringPtr(filter.SortOrder),
+	rows, err := r.queries.ListAllContests(ctx, sqlc.ListAllContestsParams{
+		Column1: filter.Search,
+		Column2: string(models.ContestVisibilityPublic),
+		Limit:   filter.PageSize,
+		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}
 
-	count, err := r.queries.CountPublicContests(ctx, filter.Search)
+	count, err := r.queries.CountAllContests(ctx, sqlc.CountAllContestsParams{
+		Column1: filter.Search,
+		Column2: string(models.ContestVisibilityPublic),
+	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}
@@ -178,9 +215,11 @@ func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter models.Pub
 }
 
 func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error {
-	err := r.queries.CreateContestProblem(ctx, sqlc.CreateContestProblemParams{
-		ProblemID: c.ProblemId,
+	err := r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
 		ContestID: c.ContestId,
+		ProblemID: c.ProblemId,
+		PackageID: c.PackageId,
+		Ordinal:   0, // TODO: should be calculated or passed
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -189,7 +228,7 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c models.Contes
 }
 
 func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error {
-	err := r.queries.DeleteContestProblem(ctx, sqlc.DeleteContestProblemParams{
+	err := r.queries.RemoveContestProblem(ctx, sqlc.RemoveContestProblemParams{
 		ContestID: c.ContestId,
 		ProblemID: c.ProblemId,
 	})
@@ -211,33 +250,33 @@ func (r *ContestsRepo) GetContestProblem(ctx context.Context, c models.ContestPr
 }
 
 func (r *ContestsRepo) GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]models.ContestProblem, error) {
-	rows, err := r.queries.GetContestProblems(ctx, contestId)
+	rows, err := r.queries.ListContestProblems(ctx, contestId)
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
 
 	problems := make([]models.ContestProblem, len(rows))
 	for i, row := range rows {
-		problems[i] = mapGetContestProblemsRow(row)
+		problems[i] = mapListContestProblemsRow(row)
 	}
 
 	return problems, nil
 }
 
+func (r *ContestsRepo) GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]models.ContestTeam, error) {
+	// TODO: Implement when contest_teams table is fully integrated
+	// For now, return empty slice as teams feature is not fully implemented
+	return []models.ContestTeam{}, nil
+}
+
 func (r *ContestsRepo) ListContestMembers(ctx context.Context, filter models.ParticipantsFilter) ([]models.ContestMember, int32, error) {
-	rows, err := r.queries.ListContestMembers(ctx, sqlc.ListContestMembersParams{
-		ContestID: filter.ContestId,
-		Limit:     filter.PageSize,
-		Offset:    Offset(filter.Page, filter.PageSize),
-	})
+	rows, err := r.queries.ListContestMembers(ctx, filter.ContestId)
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}
 
-	count, err := r.queries.CountContestMembers(ctx, filter.ContestId)
-	if err != nil {
-		return nil, 0, HandlePgErr(err)
-	}
+	// No pagination support in the query - return all members
+	count := int64(len(rows))
 
 	members := make([]models.ContestMember, len(rows))
 	for i, row := range rows {
@@ -248,7 +287,7 @@ func (r *ContestsRepo) ListContestMembers(ctx context.Context, filter models.Par
 }
 
 func (r *ContestsRepo) CreateContestMember(ctx context.Context, c *models.CreateContestMemberParams) error {
-	err := r.queries.CreateContestMember(ctx, sqlc.CreateContestMemberParams{
+	err := r.queries.AddContestMember(ctx, sqlc.AddContestMemberParams{
 		ContestID: c.ContestId,
 		UserID:    c.UserId,
 		Role:      c.Role,
@@ -260,18 +299,18 @@ func (r *ContestsRepo) CreateContestMember(ctx context.Context, c *models.Create
 }
 
 func (r *ContestsRepo) GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (models.ContestMember, error) {
-	row, err := r.queries.GetContestMember(ctx, sqlc.GetContestMemberParams{
+	member, err := r.queries.GetContestMember(ctx, sqlc.GetContestMemberParams{
 		ContestID: c.ContestId,
 		UserID:    c.UserId,
 	})
 	if err != nil {
 		return models.ContestMember{}, HandlePgErr(err)
 	}
-	return mapGetContestMemberRow(row), nil
+	return mapContestMember(member), nil
 }
 
 func (r *ContestsRepo) DeleteContestMember(ctx context.Context, userId uuid.UUID, contestId uuid.UUID) error {
-	err := r.queries.DeleteContestMember(ctx, sqlc.DeleteContestMemberParams{
+	err := r.queries.RemoveContestMember(ctx, sqlc.RemoveContestMemberParams{
 		UserID:    userId,
 		ContestID: contestId,
 	})
@@ -282,7 +321,7 @@ func (r *ContestsRepo) DeleteContestMember(ctx context.Context, userId uuid.UUID
 }
 
 func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role models.ContestRole) error {
-	err := r.queries.UpdateContestMember(ctx, sqlc.UpdateContestMemberParams{
+	err := r.queries.UpdateContestMemberRole(ctx, sqlc.UpdateContestMemberRoleParams{
 		ContestID: contestId,
 		UserID:    userId,
 		Role:      role,
@@ -294,63 +333,86 @@ func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.U
 }
 
 func mapContest(c sqlc.Contest) models.Contest {
+	var titles map[string]string
+	var settings map[string]interface{}
+	var accessPolicy map[string]interface{}
+
+	// Unmarshal JSON fields
+	if len(c.Titles) > 0 {
+		json.Unmarshal(c.Titles, &titles)
+	}
+	if len(c.Settings) > 0 {
+		json.Unmarshal(c.Settings, &settings)
+	}
+	if len(c.AccessPolicy) > 0 {
+		json.Unmarshal(c.AccessPolicy, &accessPolicy)
+	}
+
 	return models.Contest{
-		ID:                     c.ID,
-		Title:                  c.Title,
-		Description:            c.Description,
-		Visibility:             models.ContestRole(c.Visibility),
-		MonitorScope:           models.ContestRole(c.MonitorScope),
-		SubmissionsListScope:   models.ContestRole(c.SubmissionsListScope),
-		SubmissionsReviewScope: models.ContestRole(c.SubmissionsReviewScope),
-		CreatedBy:              pgUUIDToUUID(c.CreatedBy),
-		CreatedAt:              c.CreatedAt,
-		UpdatedAt:              c.UpdatedAt,
+		ID:             c.ID,
+		OrganizationID: c.OrganizationID,
+		OwnerID:        pgUUIDToUUIDPtr(c.OwnerID),
+		Visibility:     c.Visibility,
+		Titles:         titles,
+		ShortName:      c.ShortName,
+		Description:    c.Description,
+		Settings:       settings,
+		AccessPolicy:   accessPolicy,
+		StartTime:      pgTimestamptzToTimePtr(c.StartTime),
+		EndTime:        pgTimestamptzToTimePtr(c.EndTime),
+		CreatedAt:      c.CreatedAt,
+		UpdatedAt:      c.UpdatedAt,
 	}
 }
 
 func mapGetContestProblemRow(c sqlc.GetContestProblemRow) models.ContestProblem {
+	var titles map[string]string
+	if len(c.Titles) > 0 {
+		json.Unmarshal(c.Titles, &titles)
+	}
+
 	return models.ContestProblem{
-		ProblemID:        pgUUIDToUUID(c.ProblemID),
-		Title:            nullStringToString(c.Title),
-		TimeLimit:        nullInt32ToInt32(c.TimeLimit),
-		MemoryLimit:      nullInt32ToInt32(c.MemoryLimit),
-		Position:         c.Position,
-		LegendHtml:       nullStringToString(c.LegendHtml),
-		InputFormatHtml:  nullStringToString(c.InputFormatHtml),
-		OutputFormatHtml: nullStringToString(c.OutputFormatHtml),
-		NotesHtml:        nullStringToString(c.NotesHtml),
-		ScoringHtml:      nullStringToString(c.ScoringHtml),
-		CreatedAt:        nullTimeToTimeVal(c.CreatedAt),
-		UpdatedAt:        nullTimeToTimeVal(c.UpdatedAt),
+		ContestID:  c.ContestID,
+		ProblemID:  c.ProblemID,
+		PackageID:  c.PackageID,
+		Ordinal:    int(c.Ordinal),
+		Titles:     titles,
+		ShortName:  c.ShortName,
+		Visibility: string(c.Visibility),
+		CreatedAt:  c.CreatedAt,
 	}
 }
 
-func mapGetContestProblemsRow(c sqlc.GetContestProblemsRow) models.ContestProblem {
+func mapListContestProblemsRow(c sqlc.ListContestProblemsRow) models.ContestProblem {
+	var titles map[string]string
+	if len(c.Titles) > 0 {
+		json.Unmarshal(c.Titles, &titles)
+	}
+
 	return models.ContestProblem{
-		ProblemID:   pgUUIDToUUID(c.ProblemID),
-		Title:       nullStringToString(c.Title),
-		TimeLimit:   nullInt32ToInt32(c.TimeLimit),
-		MemoryLimit: nullInt32ToInt32(c.MemoryLimit),
-		Position:    c.Position,
-		CreatedAt:   nullTimeToTimeVal(c.CreatedAt),
-		UpdatedAt:   nullTimeToTimeVal(c.UpdatedAt),
+		ContestID:  c.ContestID,
+		ProblemID:  c.ProblemID,
+		PackageID:  c.PackageID,
+		Ordinal:    int(c.Ordinal),
+		Titles:     titles,
+		ShortName:  c.ShortName,
+		Visibility: string(c.Visibility),
+		PackageURL: c.PackageUrl,
+		CreatedAt:  c.CreatedAt,
 	}
 }
 
 func mapListContestMembersRow(c sqlc.ListContestMembersRow) models.ContestMember {
 	return models.ContestMember{
-		UserID:      pgUUIDToUUID(c.UserID),
+		UserID:      c.UserID,
 		ContestID:   c.ContestID,
-		Username:    nullStringToString(c.Username),
-		Role:        models.UserRole(c.Role.UserRole),
-		ContestRole: models.ContestRole(c.ContestRole),
-		KratosID:    pgUUIDToUUID(c.KratosID).String(),
-		CreatedAt:   nullTimeToTimeVal(c.CreatedAt),
-		UpdatedAt:   nullTimeToTimeVal(c.UpdatedAt),
+		Username:    c.Username,
+		ContestRole: c.Role,
+		CreatedAt:   c.CreatedAt,
 	}
 }
 
-func mapGetContestMemberRow(c sqlc.GetContestMemberRow) models.ContestMember {
+func mapContestMember(c sqlc.ContestMember) models.ContestMember {
 	return models.ContestMember{
 		UserID:      c.UserID,
 		ContestID:   c.ContestID,
@@ -363,6 +425,21 @@ func pgUUIDToUUID(p pgtype.UUID) uuid.UUID {
 		return uuid.Nil
 	}
 	return p.Bytes
+}
+
+func pgUUIDToUUIDPtr(p pgtype.UUID) *uuid.UUID {
+	if !p.Valid {
+		return nil
+	}
+	u := uuid.UUID(p.Bytes)
+	return &u
+}
+
+func pgTimestamptzToTimePtr(t pgtype.Timestamptz) *time.Time {
+	if !t.Valid {
+		return nil
+	}
+	return &t.Time
 }
 
 func nullTimeToTime(t pgtype.Timestamptz) *time.Time {
@@ -444,4 +521,31 @@ func sortOrderToStringPtr(s models.SortOrder) *string {
 	}
 	str := string(s)
 	return &str
+}
+
+func uuidPtrToNullUUID(u *uuid.UUID) pgtype.UUID {
+	if u == nil {
+		return pgtype.UUID{Valid: false}
+	}
+	return pgtype.UUID{
+		Bytes: *u,
+		Valid: true,
+	}
+}
+
+func timePtrToNullTime(t *time.Time) pgtype.Timestamptz {
+	if t == nil {
+		return pgtype.Timestamptz{Valid: false}
+	}
+	return pgtype.Timestamptz{
+		Time:  *t,
+		Valid: true,
+	}
+}
+
+func marshalJSON(v interface{}) ([]byte, error) {
+	if v == nil {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(v)
 }

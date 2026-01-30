@@ -60,8 +60,9 @@ func (ns NullContestRole) Value() (driver.Value, error) {
 type ContestVisibility string
 
 const (
-	ContestVisibilityPrivate ContestVisibility = "private"
-	ContestVisibilityPublic  ContestVisibility = "public"
+	ContestVisibilityPrivate  ContestVisibility = "private"
+	ContestVisibilityPublic   ContestVisibility = "public"
+	ContestVisibilityUnlisted ContestVisibility = "unlisted"
 )
 
 func (e *ContestVisibility) Scan(src interface{}) error {
@@ -97,6 +98,49 @@ func (ns NullContestVisibility) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.ContestVisibility), nil
+}
+
+type OrganizationRole string
+
+const (
+	OrganizationRoleOwner  OrganizationRole = "owner"
+	OrganizationRoleAdmin  OrganizationRole = "admin"
+	OrganizationRoleMember OrganizationRole = "member"
+)
+
+func (e *OrganizationRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OrganizationRole(s)
+	case string:
+		*e = OrganizationRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OrganizationRole: %T", src)
+	}
+	return nil
+}
+
+type NullOrganizationRole struct {
+	OrganizationRole OrganizationRole `json:"organization_role"`
+	Valid            bool             `json:"valid"` // Valid is true if OrganizationRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOrganizationRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.OrganizationRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OrganizationRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOrganizationRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OrganizationRole), nil
 }
 
 type OutboxEventStatus string
@@ -143,11 +187,99 @@ func (ns NullOutboxEventStatus) Value() (driver.Value, error) {
 	return string(ns.OutboxEventStatus), nil
 }
 
+type PackageStatus string
+
+const (
+	PackageStatusPending  PackageStatus = "pending"
+	PackageStatusBuilding PackageStatus = "building"
+	PackageStatusReady    PackageStatus = "ready"
+	PackageStatusFailed   PackageStatus = "failed"
+)
+
+func (e *PackageStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PackageStatus(s)
+	case string:
+		*e = PackageStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PackageStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPackageStatus struct {
+	PackageStatus PackageStatus `json:"package_status"`
+	Valid         bool          `json:"valid"` // Valid is true if PackageStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPackageStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PackageStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PackageStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPackageStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PackageStatus), nil
+}
+
+type ProblemPermission string
+
+const (
+	ProblemPermissionAdmin ProblemPermission = "admin"
+	ProblemPermissionWrite ProblemPermission = "write"
+	ProblemPermissionRead  ProblemPermission = "read"
+)
+
+func (e *ProblemPermission) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProblemPermission(s)
+	case string:
+		*e = ProblemPermission(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProblemPermission: %T", src)
+	}
+	return nil
+}
+
+type NullProblemPermission struct {
+	ProblemPermission ProblemPermission `json:"problem_permission"`
+	Valid             bool              `json:"valid"` // Valid is true if ProblemPermission is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProblemPermission) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProblemPermission, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProblemPermission.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProblemPermission) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProblemPermission), nil
+}
+
 type ProblemRole string
 
 const (
 	ProblemRoleOwner     ProblemRole = "owner"
 	ProblemRoleModerator ProblemRole = "moderator"
+	ProblemRoleViewer    ProblemRole = "viewer"
 )
 
 func (e *ProblemRole) Scan(src interface{}) error {
@@ -188,8 +320,9 @@ func (ns NullProblemRole) Value() (driver.Value, error) {
 type ProblemVisibility string
 
 const (
-	ProblemVisibilityPrivate ProblemVisibility = "private"
-	ProblemVisibilityPublic  ProblemVisibility = "public"
+	ProblemVisibilityPrivate  ProblemVisibility = "private"
+	ProblemVisibilityPublic   ProblemVisibility = "public"
+	ProblemVisibilityUnlisted ProblemVisibility = "unlisted"
 )
 
 func (e *ProblemVisibility) Scan(src interface{}) error {
@@ -225,6 +358,48 @@ func (ns NullProblemVisibility) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.ProblemVisibility), nil
+}
+
+type TeamRole string
+
+const (
+	TeamRoleMaintainer TeamRole = "maintainer"
+	TeamRoleMember     TeamRole = "member"
+)
+
+func (e *TeamRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TeamRole(s)
+	case string:
+		*e = TeamRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TeamRole: %T", src)
+	}
+	return nil
+}
+
+type NullTeamRole struct {
+	TeamRole TeamRole `json:"team_role"`
+	Valid    bool     `json:"valid"` // Valid is true if TeamRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTeamRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.TeamRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TeamRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTeamRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TeamRole), nil
 }
 
 type UserRole string
@@ -270,35 +445,58 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 }
 
 type Contest struct {
-	ID                     uuid.UUID                `json:"id"`
-	Title                  string                   `json:"title"`
-	Description            string                   `json:"description"`
-	Visibility             models.ContestVisibility `json:"visibility"`
-	MonitorScope           models.ContestRole       `json:"monitor_scope"`
-	SubmissionsListScope   models.ContestRole       `json:"submissions_list_scope"`
-	SubmissionsReviewScope models.ContestRole       `json:"submissions_review_scope"`
-	CreatedBy              pgtype.UUID              `json:"created_by"`
-	CreatedAt              time.Time                `json:"created_at"`
-	UpdatedAt              time.Time                `json:"updated_at"`
+	ID             uuid.UUID                `json:"id"`
+	OrganizationID uuid.UUID                `json:"organization_id"`
+	OwnerID        pgtype.UUID              `json:"owner_id"`
+	Visibility     models.ContestVisibility `json:"visibility"`
+	Titles         []byte                   `json:"titles"`
+	ShortName      string                   `json:"short_name"`
+	Description    string                   `json:"description"`
+	Settings       []byte                   `json:"settings"`
+	AccessPolicy   []byte                   `json:"access_policy"`
+	StartTime      pgtype.Timestamptz       `json:"start_time"`
+	EndTime        pgtype.Timestamptz       `json:"end_time"`
+	CreatedAt      time.Time                `json:"created_at"`
+	UpdatedAt      time.Time                `json:"updated_at"`
 }
 
 type ContestMember struct {
-	UserID    uuid.UUID          `json:"user_id"`
 	ContestID uuid.UUID          `json:"contest_id"`
+	UserID    uuid.UUID          `json:"user_id"`
 	Role      models.ContestRole `json:"role"`
+	CreatedAt time.Time          `json:"created_at"`
 }
 
 type ContestProblem struct {
-	ProblemID pgtype.UUID `json:"problem_id"`
-	ContestID pgtype.UUID `json:"contest_id"`
-	Position  int32       `json:"position"`
+	ContestID uuid.UUID `json:"contest_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	PackageID uuid.UUID `json:"package_id"`
+	Ordinal   int32     `json:"ordinal"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
-type Image struct {
-	ID        uuid.UUID `json:"id"`
-	Image     string    `json:"image"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+type ContestTeam struct {
+	ContestID uuid.UUID          `json:"contest_id"`
+	TeamID    uuid.UUID          `json:"team_id"`
+	Role      models.ContestRole `json:"role"`
+	CreatedAt time.Time          `json:"created_at"`
+}
+
+type Organization struct {
+	ID          uuid.UUID `json:"id"`
+	Login       string    `json:"login"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	AvatarUrl   *string   `json:"avatar_url"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type OrganizationMember struct {
+	OrganizationID uuid.UUID        `json:"organization_id"`
+	UserID         uuid.UUID        `json:"user_id"`
+	Role           OrganizationRole `json:"role"`
+	CreatedAt      time.Time        `json:"created_at"`
 }
 
 type OutboxEvent struct {
@@ -316,67 +514,89 @@ type OutboxEvent struct {
 }
 
 type Problem struct {
-	ID               uuid.UUID         `json:"id"`
-	CreatedBy        pgtype.UUID       `json:"created_by"`
-	Visibility       ProblemVisibility `json:"visibility"`
-	Title            string            `json:"title"`
-	TimeLimit        int32             `json:"time_limit"`
-	MemoryLimit      int32             `json:"memory_limit"`
-	Legend           string            `json:"legend"`
-	InputFormat      string            `json:"input_format"`
-	OutputFormat     string            `json:"output_format"`
-	Notes            string            `json:"notes"`
-	Scoring          string            `json:"scoring"`
-	LegendHtml       string            `json:"legend_html"`
-	InputFormatHtml  string            `json:"input_format_html"`
-	OutputFormatHtml string            `json:"output_format_html"`
-	NotesHtml        string            `json:"notes_html"`
-	ScoringHtml      string            `json:"scoring_html"`
-	CreatedAt        time.Time         `json:"created_at"`
-	UpdatedAt        time.Time         `json:"updated_at"`
+	ID             uuid.UUID         `json:"id"`
+	OrganizationID uuid.UUID         `json:"organization_id"`
+	OwnerID        pgtype.UUID       `json:"owner_id"`
+	Visibility     ProblemVisibility `json:"visibility"`
+	Titles         []byte            `json:"titles"`
+	ShortName      string            `json:"short_name"`
+	GitCommitHash  *string           `json:"git_commit_hash"`
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
 }
 
 type ProblemMember struct {
-	ProblemID pgtype.UUID `json:"problem_id"`
+	ProblemID uuid.UUID   `json:"problem_id"`
 	UserID    uuid.UUID   `json:"user_id"`
 	Role      ProblemRole `json:"role"`
+	CreatedAt time.Time   `json:"created_at"`
 }
 
-type ProblemTest struct {
-	ID        uuid.UUID `json:"id"`
-	ProblemID uuid.UUID `json:"problem_id"`
-	Ordinal   int32     `json:"ordinal"`
-	Input     string    `json:"input"`
-	Output    string    `json:"output"`
-	CreatedAt time.Time `json:"created_at"`
+type ProblemPackage struct {
+	ID             uuid.UUID          `json:"id"`
+	ProblemID      uuid.UUID          `json:"problem_id"`
+	OrganizationID uuid.UUID          `json:"organization_id"`
+	GitCommitHash  string             `json:"git_commit_hash"`
+	PackageHash    string             `json:"package_hash"`
+	Url            *string            `json:"url"`
+	Status         PackageStatus      `json:"status"`
+	BuildLog       *string            `json:"build_log"`
+	CreatedAt      time.Time          `json:"created_at"`
+	CompiledAt     pgtype.Timestamptz `json:"compiled_at"`
+}
+
+type ProblemTeam struct {
+	ProblemID  uuid.UUID         `json:"problem_id"`
+	TeamID     uuid.UUID         `json:"team_id"`
+	Permission ProblemPermission `json:"permission"`
+	CreatedAt  time.Time         `json:"created_at"`
 }
 
 type Submission struct {
 	ID         uuid.UUID           `json:"id"`
 	ContestID  pgtype.UUID         `json:"contest_id"`
 	ProblemID  pgtype.UUID         `json:"problem_id"`
-	CreatedBy  pgtype.UUID         `json:"created_by"`
-	Submission string              `json:"submission"`
+	OwnerID    pgtype.UUID         `json:"owner_id"`
+	Source     string              `json:"source"`
 	Language   models.LanguageName `json:"language"`
 	State      models.State        `json:"state"`
 	Score      int32               `json:"score"`
 	Penalty    int32               `json:"penalty"`
 	TimeStat   int32               `json:"time_stat"`
 	MemoryStat int32               `json:"memory_stat"`
-	UpdatedAt  time.Time           `json:"updated_at"`
 	CreatedAt  time.Time           `json:"created_at"`
+	UpdatedAt  time.Time           `json:"updated_at"`
+}
+
+type Team struct {
+	ID             uuid.UUID   `json:"id"`
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	Name           string      `json:"name"`
+	Slug           string      `json:"slug"`
+	Description    string      `json:"description"`
+	Privacy        string      `json:"privacy"`
+	ParentTeamID   pgtype.UUID `json:"parent_team_id"`
+	CreatedAt      time.Time   `json:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at"`
+}
+
+type TeamMember struct {
+	TeamID    uuid.UUID `json:"team_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Role      TeamRole  `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type User struct {
-	ID        uuid.UUID  `json:"id"`
-	Username  string     `json:"username"`
-	Role      UserRole   `json:"role"`
-	KratosID  uuid.UUID  `json:"kratos_id"`
-	Email     string     `json:"email"`
-	Name      string     `json:"name"`
-	Surname   string     `json:"surname"`
-	Bio       string     `json:"bio"`
-	ImgID     *uuid.UUID `json:"img_id"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	Role      UserRole  `json:"role"`
+	KratosID  uuid.UUID `json:"kratos_id"`
+	Email     string    `json:"email"`
+	Name      string    `json:"name"`
+	Surname   string    `json:"surname"`
+	Bio       string    `json:"bio"`
+	AvatarUrl *string   `json:"avatar_url"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

@@ -18,6 +18,7 @@ type ProblemsRepo interface {
 	GetProblemById(ctx context.Context, id uuid.UUID) (models.Problem, error)
 	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (models.ProblemMember, error)
 	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTest, error)
+	GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTeam, error)
 	ListProblems(ctx context.Context, filter *models.ProblemsFilter) ([]models.Problem, int32, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error
 }

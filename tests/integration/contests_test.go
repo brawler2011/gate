@@ -11,42 +11,35 @@ import (
 
 func (s *IntegrationTestSuite) TestListContests() {
 	// 1. Create User
-	userID := uuid.New()
-	kratosID := uuid.New()
-	user := models.User{
-		Id:       userID,
-		Username: "testuser",
-		Role:     models.UserRoleUser,
-		KratosID: kratosID,
-		Email:    "test@example.com",
-	}
-	err := s.usersRepo.CreateUser(s.ctx, models.CreateUserParams{
-		Id:       user.Id,
-		Username: user.Username,
-		Role:     user.Role,
-		KratosId: user.KratosID,
-		Email:    user.Email,
-	})
-	s.Require().NoError(err)
+	user := s.createUser("testuser_contests", models.UserRoleUser)
 
-	// 2. Create Contest
+	// 2. Create Organization
+	org := s.createOrganization("test-org", "Test Organization", user.Id)
+
+	// 3. Create Contest
 	contestID := uuid.New()
-	err = s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
-		Id:     contestID,
-		Title:  "Test Contest",
-		UserId: userID,
+	err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		ID:             contestID,
+		OrganizationID: org.ID,
+		OwnerID:        &user.Id,
+		Titles:         map[string]string{"en": "Test Contest"},
+		ShortName:      "test-contest",
+		Description:    "A test contest",
+		Visibility:     models.ContestVisibilityPublic,
+		Settings:       make(map[string]interface{}),
+		AccessPolicy:   make(map[string]interface{}),
 	})
 	s.Require().NoError(err)
 
-	// Update to Public
+	// 4. Update to Public
 	visibility := models.ContestVisibilityPublic
 	err = s.contestsRepo.UpdateContest(s.ctx, models.ContestUpdateParams{
-		Id:         contestID,
+		ID:         contestID,
 		Visibility: &visibility,
 	})
 	s.Require().NoError(err)
 
-	// 3. Make Request
+	// 5. Make Request
 	resp, err := s.client.ListPublicContestsWithResponse(s.ctx, &corev1.ListPublicContestsParams{
 		Page:     1,
 		PageSize: 10,
@@ -56,7 +49,7 @@ func (s *IntegrationTestSuite) TestListContests() {
 	})
 	s.Require().NoError(err)
 
-	// 4. Assert Response
+	// 6. Assert Response
 	s.Equal(http.StatusOK, resp.StatusCode())
 	s.NotNil(resp.JSON200)
 	s.Len(resp.JSON200.Contests, 1)

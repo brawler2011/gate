@@ -14,6 +14,11 @@ func (s *IntegrationTestSuite) TestProblems() {
 	admin := s.createUser("admin_problems", models.UserRoleAdmin)
 	// user := s.createUser("user_problems", models.UserRoleUser)
 
+	// Create organization with admin's user ID as the organization ID
+	// This is a workaround for the TODO in CreateProblem handler (line 78 of problems.go)
+	// which currently uses user.Id as OrganizationID
+	_ = s.createOrganizationWithID(admin.Id, "admin-org", "Admin Organization")
+
 	var problemID uuid.UUID
 
 	// 1. Create Problem (Admin)

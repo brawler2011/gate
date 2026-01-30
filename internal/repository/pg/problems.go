@@ -2,6 +2,8 @@ package pg
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/gate149/core/internal/domain/models"
 	"github.com/gate149/core/internal/repository/pg/sqlc"
@@ -22,10 +24,19 @@ func NewProblemsRepo(db *pgxpool.Pool) *ProblemsRepo {
 }
 
 func (r *ProblemsRepo) CreateProblem(ctx context.Context, params *models.CreateProblemParams) error {
-	_, err := r.queries.CreateProblem(ctx, sqlc.CreateProblemParams{
-		ID:        params.Id,
-		Title:     params.Title,
-		CreatedBy: params.UserId,
+	// Marshal titles to JSON
+	titlesJSON, err := json.Marshal(params.Titles)
+	if err != nil {
+		return fmt.Errorf("failed to marshal titles: %w", err)
+	}
+	
+	_, err = r.queries.CreateProblem(ctx, sqlc.CreateProblemParams{
+		ID:             params.ID,
+		OrganizationID: params.OrganizationID,
+		OwnerID:        uuidPtrToNullUUID(params.OwnerID),
+		Visibility:     sqlc.ProblemVisibility(params.Visibility),
+		Titles:         titlesJSON,
+		ShortName:      params.ShortName,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -34,7 +45,7 @@ func (r *ProblemsRepo) CreateProblem(ctx context.Context, params *models.CreateP
 }
 
 func (r *ProblemsRepo) GetProblemById(ctx context.Context, id uuid.UUID) (models.Problem, error) {
-	problem, err := r.queries.GetProblemById(ctx, id)
+	problem, err := r.queries.GetProblemByID(ctx, id)
 	if err != nil {
 		return models.Problem{}, HandlePgErr(err)
 	}
@@ -50,25 +61,53 @@ func (r *ProblemsRepo) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.ProblemsFilter) ([]models.Problem, int32, error) {
-	sortOrder := int32(1)
-	if filter.Descending {
-		sortOrder = -1
+	// Calculate offset
+	offset := (filter.Page - 1) * filter.PageSize
+	
+	// If no organization filter, list all problems
+	if filter.OrganizationID == nil {
+		total, err := r.queries.CountAllProblems(ctx, sqlc.CountAllProblemsParams{
+			Column1: filter.Search,
+			Column2: filter.Visibility,
+		})
+		if err != nil {
+			return nil, 0, HandlePgErr(err)
+		}
+
+		rows, err := r.queries.ListAllProblems(ctx, sqlc.ListAllProblemsParams{
+			Column1: filter.Search,
+			Column2: filter.Visibility,
+			Limit:   filter.PageSize,
+			Offset:  offset,
+		})
+		if err != nil {
+			return nil, 0, HandlePgErr(err)
+		}
+
+		problems := make([]models.Problem, len(rows))
+		for i, row := range rows {
+			problems[i] = mapProblem(row)
+		}
+
+		return problems, int32(total), nil
 	}
 
+	// Filter by organization
 	total, err := r.queries.CountProblems(ctx, sqlc.CountProblemsParams{
-		UserID: nullableUUIDToPgtype(filter.OwnerId),
-		Search: filter.Search,
+		OrganizationID: *filter.OrganizationID,
+		Column2:        filter.Search,
+		Column3:        filter.Visibility,
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}
 
 	rows, err := r.queries.ListProblems(ctx, sqlc.ListProblemsParams{
-		Limit:     int32(filter.PageSize),
-		Offset:    int32(filter.Offset()),
-		UserID:    nullableUUIDToPgtype(filter.OwnerId),
-		Search:    filter.Search,
-		SortOrder: &sortOrder,
+		OrganizationID: *filter.OrganizationID,
+		Column2:        filter.Search,
+		Column3:        filter.Visibility,
+		Limit:          filter.PageSize,
+		Offset:         offset,
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
@@ -76,41 +115,29 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 
 	problems := make([]models.Problem, len(rows))
 	for i, row := range rows {
-		problems[i] = mapListProblemsRow(row)
+		problems[i] = mapProblem(row)
 	}
 
 	return problems, int32(total), nil
 }
 
 func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
-	var timeLimit *int32
-	if problem.TimeLimit != nil {
-		tl := int32(*problem.TimeLimit)
-		timeLimit = &tl
+	// Marshal titles to JSON if provided
+	var titlesJSON []byte
+	var err error
+	if problem.Titles != nil {
+		titlesJSON, err = json.Marshal(*problem.Titles)
+		if err != nil {
+			return fmt.Errorf("failed to marshal titles: %w", err)
+		}
 	}
 
-	var memoryLimit *int32
-	if problem.MemoryLimit != nil {
-		ml := int32(*problem.MemoryLimit)
-		memoryLimit = &ml
-	}
-
-	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
-		ID:               id,
-		Title:            problem.Title,
-		TimeLimit:        timeLimit,
-		MemoryLimit:      memoryLimit,
-		Visibility:       stringToNullProblemVisibility(problem.Visibility),
-		Legend:           problem.Legend,
-		InputFormat:      problem.InputFormat,
-		OutputFormat:     problem.OutputFormat,
-		Notes:            problem.Notes,
-		Scoring:          problem.Scoring,
-		LegendHtml:       problem.LegendHtml,
-		InputFormatHtml:  problem.InputFormatHtml,
-		OutputFormatHtml: problem.OutputFormatHtml,
-		NotesHtml:        problem.NotesHtml,
-		ScoringHtml:      problem.ScoringHtml,
+	err = r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
+		ID:            id,
+		Titles:        titlesJSON,
+		Visibility:    stringToNullProblemVisibility(problem.Visibility),
+		OwnerID:       uuidPtrToNullUUID(problem.OwnerID),
+		GitCommitHash: problem.GitCommitHash,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -119,9 +146,9 @@ func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem 
 }
 
 func (r *ProblemsRepo) CreateProblemMember(ctx context.Context, params *models.CreateProblemMemberParams) error {
-	err := r.queries.CreateProblemMember(ctx, sqlc.CreateProblemMemberParams{
-		ProblemID: params.ProblemId,
-		UserID:    params.UserId,
+	err := r.queries.AddProblemMember(ctx, sqlc.AddProblemMemberParams{
+		ProblemID: params.ProblemID,
+		UserID:    params.UserID,
 		Role:      sqlc.ProblemRole(params.Role),
 	})
 	if err != nil {
@@ -141,52 +168,28 @@ func (r *ProblemsRepo) GetProblemMember(ctx context.Context, problemId uuid.UUID
 	return mapProblemMember(row), nil
 }
 
+// Tests are now stored in git repos, not in database
+// These methods are kept for interface compatibility but return errors or empty results
+
 func (r *ProblemsRepo) DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error {
-	err := r.queries.DeleteProblemTests(ctx, problemId)
-	if err != nil {
-		return HandlePgErr(err)
-	}
+	// Tests are now in git repos, not in database
 	return nil
 }
 
-// FIXME: multi insert
 func (r *ProblemsRepo) CreateProblemTests(ctx context.Context, tests models.ProblemTests) error {
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return HandlePgErr(err)
-	}
-	defer tx.Rollback(ctx)
-
-	qtx := r.queries.WithTx(tx)
-	for _, test := range tests {
-		err := qtx.CreateProblemTest(ctx, sqlc.CreateProblemTestParams{
-			ProblemID: test.ProblemID,
-			Ordinal:   int32(test.Ordinal),
-			Input:     test.Input,
-			Output:    test.Output,
-		})
-		if err != nil {
-			return HandlePgErr(err)
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return HandlePgErr(err)
-	}
+	// Tests are now in git repos, not in database
 	return nil
 }
 
 func (r *ProblemsRepo) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTest, error) {
-	rows, err := r.queries.GetProblemTests(ctx, problemId)
-	if err != nil {
-		return nil, HandlePgErr(err)
-	}
+	// Tests are now in git repos, not in database
+	return []models.ProblemTest{}, nil
+}
 
-	tests := make([]models.ProblemTest, len(rows))
-	for i, row := range rows {
-		tests[i] = mapProblemTest(row)
-	}
-	return tests, nil
+func (r *ProblemsRepo) GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTeam, error) {
+	// TODO: Implement when problem_teams table is fully integrated
+	// For now, return empty slice as teams feature is not fully implemented
+	return []models.ProblemTeam{}, nil
 }
 
 func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
@@ -200,54 +203,58 @@ func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
 }
 
 func mapProblem(p sqlc.Problem) models.Problem {
+	// Unmarshal titles from JSON
+	var titles map[string]string
+	if len(p.Titles) > 0 {
+		json.Unmarshal(p.Titles, &titles)
+	}
+	
 	return models.Problem{
-		ID:               p.ID,
-		CreatedBy:        pgUUIDToUUID(p.CreatedBy),
-		Visibility:       string(p.Visibility),
-		Title:            p.Title,
-		TimeLimit:        p.TimeLimit,
-		MemoryLimit:      p.MemoryLimit,
-		Legend:           p.Legend,
-		InputFormat:      p.InputFormat,
-		OutputFormat:     p.OutputFormat,
-		Notes:            p.Notes,
-		Scoring:          p.Scoring,
-		LegendHtml:       p.LegendHtml,
-		InputFormatHtml:  p.InputFormatHtml,
-		OutputFormatHtml: p.OutputFormatHtml,
-		NotesHtml:        p.NotesHtml,
-		ScoringHtml:      p.ScoringHtml,
-		CreatedAt:        p.CreatedAt,
-		UpdatedAt:        p.UpdatedAt,
+		ID:             p.ID,
+		OrganizationID: p.OrganizationID,
+		OwnerID:        pgUUIDToUUIDPtr(p.OwnerID),
+		Visibility:     string(p.Visibility),
+		Titles:         titles,
+		ShortName:      p.ShortName,
+		GitCommitHash:  p.GitCommitHash,
+		CreatedAt:      p.CreatedAt,
+		UpdatedAt:      p.UpdatedAt,
 	}
 }
 
-func mapListProblemsRow(row sqlc.ListProblemsRow) models.Problem {
-	return models.Problem{
-		ID:          row.ID,
-		Title:       row.Title,
-		TimeLimit:   row.TimeLimit,
-		MemoryLimit: row.MemoryLimit,
-		CreatedAt:   row.CreatedAt,
-		UpdatedAt:   row.UpdatedAt,
-	}
-}
+// mapListProblemsRow is no longer used - removed as ListProblemsRow type doesn't exist
+// func mapListProblemsRow(row sqlc.ListProblemsRow) models.Problem {
+// 	return models.Problem{
+// 		ID:          row.ID,
+// 		Title:       row.Title,
+// 		TimeLimit:   row.TimeLimit,
+// 		MemoryLimit: row.MemoryLimit,
+// 		CreatedAt:   row.CreatedAt,
+// 		UpdatedAt:   row.UpdatedAt,
+// 	}
+// }
 
 func mapProblemMember(pm sqlc.ProblemMember) models.ProblemMember {
 	return models.ProblemMember{
-		ProblemId: pgUUIDToUUID(pm.ProblemID),
-		UserId:    pm.UserID,
-		Role:      string(pm.Role),
+		ProblemID: pm.ProblemID,
+		UserID:    pm.UserID,
+		Role:      models.ProblemRole(pm.Role),
+		// Username and Email would need to be joined from users table
+		// For now, leave empty
+		Username:  "",
+		Email:     "",
+		CreatedAt: pm.CreatedAt,
 	}
 }
 
-func mapProblemTest(row sqlc.ProblemTest) models.ProblemTest {
-	return models.ProblemTest{
-		ID:        row.ID,
-		ProblemID: row.ProblemID,
-		Ordinal:   row.Ordinal,
-		Input:     row.Input,
-		Output:    row.Output,
-		CreatedAt: row.CreatedAt,
-	}
-}
+// mapProblemTest is no longer used - removed as ProblemTest type doesn't exist in current schema
+// func mapProblemTest(row sqlc.ProblemTest) models.ProblemTest {
+// 	return models.ProblemTest{
+// 		ID:        row.ID,
+// 		ProblemID: row.ProblemID,
+// 		Ordinal:   row.Ordinal,
+// 		Input:     row.Input,
+// 		Output:    row.Output,
+// 		CreatedAt: row.CreatedAt,
+// 	}
+// }
