@@ -1,0 +1,52 @@
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.row {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+  height: 56px; /* Enforce consistent height */
+}
+
+/* Use :global to ensure the hover selector works if Mantine is overriding it */
+.row:hover {
+  background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+  border-left-color: var(--mantine-color-yellow-5);
+}
+
+.iconCell {
+  width: 50px;
+  text-align: center;
+  padding: 0 0 0 var(--mantine-spacing-sm);
+  vertical-align: middle;
+}
+
+.trophyIcon {
+  color: var(--mantine-color-yellow-6);
+}
+
+.infoCell {
+  padding: 0 var(--mantine-spacing-sm) 0 var(--mantine-spacing-md);
+  vertical-align: middle;
+}
+
+.dateCell {
+  width: 120px;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  padding: 0 var(--mantine-spacing-md) 0 0;
+  vertical-align: middle;
+}
+
+.arrowCell {
+  width: 30px;
+  text-align: center;
+  color: var(--mantine-color-dimmed);
+  padding: 0 var(--mantine-spacing-sm);
+  vertical-align: middle;
+}

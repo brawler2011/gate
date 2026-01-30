@@ -1,0 +1,73 @@
+.header {
+    height: 70px;
+    padding-left: var(--mantine-spacing-md);
+    padding-right: var(--mantine-spacing-md);
+}
+
+.leftSection {
+    /* On mobile: no flex, just wrap content */
+}
+
+.rightSection {
+    /* On mobile: no flex, just wrap content */
+}
+
+.logoLink {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    text-decoration: none;
+    color: var(--mantine-color-text);
+}
+
+.logoImage {
+    filter: none !important;
+    color: transparent !important;
+}
+
+.link {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding-left: var(--mantine-spacing-sm);
+    padding-right: var(--mantine-spacing-sm);
+    text-decoration: none;
+    color: var(--mantine-color-text);
+    font-weight: 600;
+    font-size: var(--mantine-font-size-md);
+
+
+    @mixin hover {
+        background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+    }
+
+    @media (max-width: var(--mantine-breakpoint-sm)) {
+        padding-left: var(--mantine-spacing-sm);
+        padding-right: var(--mantine-spacing-sm);
+    }
+}
+
+.icon {
+    width: 22px;
+    height: 22px;
+}
+
+.dark {
+    @mixin dark {
+        display: none;
+    }
+
+    @mixin light {
+        display: block;
+    }
+}
+
+.light {
+    @mixin light {
+        display: none;
+    }
+
+    @mixin dark {
+        display: block;
+    }
+}

@@ -1,0 +1,58 @@
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  height: 56px; /* Enforce consistent height */
+}
+
+/* Use :global to ensure the hover selector works if Mantine is overriding it */
+.row:hover {
+  background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+}
+
+.positionCell {
+  width: 40px;
+  text-align: center;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.badge {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+  color: var(--mantine-color-text);
+  font-weight: 700;
+  font-size: var(--mantine-font-size-xs);
+  margin: 0 auto;
+}
+
+.titleCell {
+  padding: 0 var(--mantine-spacing-sm);
+  vertical-align: middle;
+}
+
+.limitsCell {
+  text-align: right;
+  white-space: nowrap;
+  width: 150px;
+  padding: 0 var(--mantine-spacing-sm);
+  vertical-align: middle;
+}
+
+.iconCell {
+  width: 30px;
+  text-align: center;
+  color: var(--mantine-color-dimmed);
+  padding: 0 var(--mantine-spacing-sm);
+  vertical-align: middle;
+}

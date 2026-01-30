@@ -1,0 +1,64 @@
+.container {
+    max-width: var(--contest-problem-max-width);
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+    color: var(--mantine-color-text);
+}
+
+.content {
+    & img {
+        max-width: 100%;
+    }
+
+    & p {
+        margin-top: 0;
+        margin-bottom: 0.5em;
+    }
+
+    & ul, & ol {
+        margin-top: 0;
+        margin-bottom: 0.5em;
+        padding-left: 1.5em;
+    }
+
+    & pre {
+        margin-top: 0;
+        margin-bottom: 0.5em;
+    }
+
+    & table {
+        margin: 0.5em 0;
+        overflow-x: auto;
+        font-variant-numeric: lining-nums tabular-nums;
+    }
+
+    & table & caption {
+        margin-bottom: 0.5em;
+    }
+
+    & table, & th, & td {
+        border: 1px solid var(--mantine-color-text);
+        border-collapse: collapse;
+    }
+
+    & th {
+        padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+
+    & td {
+        padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+
+    .center {
+        display: flex;
+        justify-content: center;
+    }
+
+    & a {
+        color: var(--mantine-color-text);
+    }
+
+    & a:visited {
+        color: var(--mantine-color-text);
+    }
+}

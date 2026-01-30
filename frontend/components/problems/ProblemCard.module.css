@@ -1,0 +1,14 @@
+.problemCard {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 100%;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  border-left: 3px solid var(--mantine-color-blue-6);
+}
+
+.problemCard:hover {
+  transform: translate3d(0, -2px, 0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+

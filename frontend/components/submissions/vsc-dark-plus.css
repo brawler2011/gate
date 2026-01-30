@@ -1,0 +1,157 @@
+/**
+ * VS Code Dark+ theme for code editor
+ * Based on prism-vsc-dark-plus but adapted for react-simple-code-editor
+ */
+
+/* Base token styles - these apply to all .token elements */
+.token.comment,
+.token.prolog {
+    color: #6a9955;
+}
+
+.token.punctuation {
+    color: #d4d4d4;
+}
+
+.token.property,
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.inserted,
+.token.unit {
+    color: #b5cea8;
+}
+
+.token.number {
+    color: #b5cea8;
+}
+
+.token.boolean {
+    color: #569cd6;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.deleted {
+    color: #ce9178;
+}
+
+/* Builtin functions like int, sum, input, print, len, range - yellow like functions */
+.token.builtin {
+    color: #dcdcaa;
+}
+
+.token.operator {
+    color: #d4d4d4;
+}
+
+.token.entity {
+    color: #569cd6;
+}
+
+.token.keyword {
+    color: #569CD6;
+}
+
+/* Control flow keywords like if, for, while, return */
+.token.keyword.control-flow,
+.token.keyword-control-flow {
+    color: #c586c0;
+}
+
+/* Import/export keywords */
+.token.keyword.module,
+.token.keyword-module {
+    color: #c586c0;
+}
+
+.token.function,
+.token.function-variable {
+    color: #dcdcaa;
+}
+
+.token.regex {
+    color: #d16969;
+}
+
+.token.important {
+    color: #569cd6;
+}
+
+.token.italic {
+    font-style: italic;
+}
+
+/* Class names */
+.token.class-name,
+.token.maybe-class-name {
+    color: #4ec9b0;
+}
+
+/* Variables and parameters - light blue like VS Code */
+.token.variable,
+.token.parameter,
+.token.property-access {
+    color: #9cdcfe;
+}
+
+.token.console {
+    color: #9cdcfe;
+}
+
+.token.interpolation {
+    color: #9cdcfe;
+}
+
+.token.punctuation.interpolation-punctuation {
+    color: #569cd6;
+}
+
+/* Namespace */
+.token.namespace {
+    color: #4ec9b0;
+    opacity: 0.7;
+}
+
+/* Escape sequences */
+.token.escape {
+    color: #d7ba7d;
+}
+
+/* Attributes */
+.token.attr-value {
+    color: #ce9178;
+}
+
+/* Python specific */
+.token.decorator,
+.token.annotation {
+    color: #dcdcaa;
+}
+
+.token.triple-quoted-string {
+    color: #ce9178;
+}
+
+/* C/C++ specific */
+.token.directive,
+.token.directive-hash {
+    color: #c586c0;
+}
+
+.token.macro {
+    color: #569cd6;
+}
+
+/* Go specific */
+.token.package {
+    color: #c586c0;
+}
+
+/* Function definition names */
+.token.function-definition {
+    color: #dcdcaa;
+}
+

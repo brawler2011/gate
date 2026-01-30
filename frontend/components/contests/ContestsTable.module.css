@@ -1,0 +1,45 @@
+.tableContainer {
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.thead tr th {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  font-weight: 600;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tbody tr td {
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+  border-top: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+  font-size: var(--mantine-font-size-sm);
+}
+
+.tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tbody tr:hover {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.titleCell {
+  font-weight: 600;
+  color: var(--mantine-color-text);
+}
+
+.metaCell {
+  color: var(--mantine-color-dimmed);
+}
+
