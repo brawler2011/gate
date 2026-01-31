@@ -126,6 +126,7 @@ func (s *IntegrationTestSuite) initApp() {
 	submissionsRepo := pg.NewSubmissionsRepo(s.dbPool)
 	outboxRepo := pg.NewOutboxRepo(s.dbPool)
 	teamsRepo := pg.NewTeamsRepo(s.dbPool)
+	blogsRepo := pg.NewBlogsRepo(s.dbPool)
 	txManager := pg.NewTransactor(s.dbPool)
 
 	// UseCases
@@ -136,6 +137,7 @@ func (s *IntegrationTestSuite) initApp() {
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
 	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
+	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
@@ -146,6 +148,7 @@ func (s *IntegrationTestSuite) initApp() {
 		problemsUC,
 		organizationsUC,
 		teamsUC,
+		blogsUC,
 	)
 
 	// Strict Handler
