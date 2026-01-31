@@ -942,7 +942,7 @@ paths:
   /problems/{id}/package/{version}:
     get:
       operationId: GetPublishedPackage
-      summary: Download published problem package
+      summary: Get redirect to published problem package
       parameters:
         - name: id
           in: path
@@ -954,16 +954,15 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-            format: int32
+            type: string
       responses:
-        "200":
-          description: Problem package file
-          content:
-            application/zip:
+        "302":
+          description: Redirect to package download URL
+          headers:
+            Location:
               schema:
                 type: string
-                format: binary
+                description: Presigned S3 URL for package download
   /problems/{problemId}/workshop/init:
     post:
       operationId: InitProblemWorkshop

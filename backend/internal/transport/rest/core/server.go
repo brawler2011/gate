@@ -14,6 +14,9 @@ type CoreServer struct {
 	organizationsUC interfaces.OrganizationsUC
 	teamsUC         interfaces.TeamsUC
 	blogsUC         *usecase.BlogsUseCase
+	avatarsUC       *usecase.AvatarsUseCase
+	importUC        *usecase.ProblemImportUseCase
+	publishUC       *usecase.ProblemPublishUseCase
 }
 
 func NewCoreServer(
@@ -25,6 +28,9 @@ func NewCoreServer(
 	organizationsUC interfaces.OrganizationsUC,
 	teamsUC interfaces.TeamsUC,
 	blogsUC *usecase.BlogsUseCase,
+	avatarsUC *usecase.AvatarsUseCase,
+	importUC *usecase.ProblemImportUseCase,
+	publishUC *usecase.ProblemPublishUseCase,
 ) *CoreServer {
 	return &CoreServer{
 		contestsUC:      contestsUC,
@@ -35,5 +41,8 @@ func NewCoreServer(
 		organizationsUC: organizationsUC,
 		teamsUC:         teamsUC,
 		blogsUC:         blogsUC,
+		avatarsUC:       avatarsUC,
+		importUC:        importUC,
+		publishUC:       publishUC,
 	}
 }

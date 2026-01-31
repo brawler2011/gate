@@ -186,10 +186,10 @@ func runServer(envFile string) {
 		orgsUC,
 		teamsUC,
 		blogsUC,
+		avatarsUC,
+		problemImportUC,
+		problemPublishUC,
 	)
-	avatarsHandler := handlers.NewAvatarsHandler(avatarsUC)
-	problemImportHandler := handlers.NewProblemImportHandler(problemImportUC)
-	problemPublishHandler := handlers.NewProblemPublishHandler(problemPublishUC)
 
 	// Register workshop routes if available
 	if workshopUC != nil {
@@ -205,15 +205,6 @@ func runServer(envFile string) {
 	oryPublicClient := ory.NewAPIClient(oryPublicConfiguration)
 
 	// Note: Kratos webhook is handled by separate kratos server (see cmd/kratos.go)
-
-	// Register avatar routes
-	server.HandleFunc("POST /api/v1/users/{id}/avatar", avatarsHandler.UploadAvatar)
-	server.HandleFunc("DELETE /api/v1/users/{id}/avatar", avatarsHandler.DeleteAvatar)
-
-	// Register problem import and publish routes
-	server.HandleFunc("POST /api/v1/problems/import", problemImportHandler.ImportProblem)
-	server.HandleFunc("POST /api/v1/problems/{id}/publish", problemPublishHandler.PublishProblem)
-	server.HandleFunc("GET /api/v1/problems/{id}/package/{version}", problemPublishHandler.GetPublishedPackage)
 
 	// TODO: Implement Organizations and Teams handlers
 	// orgsHandler := handlers.NewOrganizationsHandler(orgsUC)

@@ -1093,7 +1093,7 @@ type ClientInterface interface {
 	UpdateProblem(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPublishedPackage request
-	GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version int32, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PublishProblem request
 	PublishProblem(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1663,7 +1663,7 @@ func (c *Client) UpdateProblem(ctx context.Context, id openapi_types.UUID, body 
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version int32, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPublishedPackageRequest(c.Server, id, version)
 	if err != nil {
 		return nil, err
@@ -3951,7 +3951,7 @@ func NewUpdateProblemRequestWithBody(server string, id openapi_types.UUID, conte
 }
 
 // NewGetPublishedPackageRequest generates requests for GetPublishedPackage
-func NewGetPublishedPackageRequest(server string, id openapi_types.UUID, version int32) (*http.Request, error) {
+func NewGetPublishedPackageRequest(server string, id openapi_types.UUID, version string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -6052,7 +6052,7 @@ type ClientWithResponsesInterface interface {
 	UpdateProblemWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemResponse, error)
 
 	// GetPublishedPackageWithResponse request
-	GetPublishedPackageWithResponse(ctx context.Context, id openapi_types.UUID, version int32, reqEditors ...RequestEditorFn) (*GetPublishedPackageResponse, error)
+	GetPublishedPackageWithResponse(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*GetPublishedPackageResponse, error)
 
 	// PublishProblemWithResponse request
 	PublishProblemWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*PublishProblemResponse, error)
@@ -8036,7 +8036,7 @@ func (c *ClientWithResponses) UpdateProblemWithResponse(ctx context.Context, id 
 }
 
 // GetPublishedPackageWithResponse request returning *GetPublishedPackageResponse
-func (c *ClientWithResponses) GetPublishedPackageWithResponse(ctx context.Context, id openapi_types.UUID, version int32, reqEditors ...RequestEditorFn) (*GetPublishedPackageResponse, error) {
+func (c *ClientWithResponses) GetPublishedPackageWithResponse(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*GetPublishedPackageResponse, error) {
 	rsp, err := c.GetPublishedPackage(ctx, id, version, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -10203,9 +10203,9 @@ type ServerInterface interface {
 
 	// (PATCH /problems/{id})
 	UpdateProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Download published problem package
+	// Get redirect to published problem package
 	// (GET /problems/{id}/package/{version})
-	GetPublishedPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, version int32)
+	GetPublishedPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, version string)
 	// Publish problem package
 	// (POST /problems/{id}/publish)
 	PublishProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -11667,7 +11667,7 @@ func (siw *ServerInterfaceWrapper) GetPublishedPackage(w http.ResponseWriter, r 
 	}
 
 	// ------------- Path parameter "version" -------------
-	var version int32
+	var version string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "version", r.PathValue("version"), &version, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -13961,30 +13961,25 @@ func (response UpdateProblem200Response) VisitUpdateProblemResponse(w http.Respo
 
 type GetPublishedPackageRequestObject struct {
 	Id      openapi_types.UUID `json:"id"`
-	Version int32              `json:"version"`
+	Version string             `json:"version"`
 }
 
 type GetPublishedPackageResponseObject interface {
 	VisitGetPublishedPackageResponse(w http.ResponseWriter) error
 }
 
-type GetPublishedPackage200ApplicationzipResponse struct {
-	Body          io.Reader
-	ContentLength int64
+type GetPublishedPackage302ResponseHeaders struct {
+	Location string
 }
 
-func (response GetPublishedPackage200ApplicationzipResponse) VisitGetPublishedPackageResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/zip")
-	if response.ContentLength != 0 {
-		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
-	}
-	w.WriteHeader(200)
+type GetPublishedPackage302Response struct {
+	Headers GetPublishedPackage302ResponseHeaders
+}
 
-	if closer, ok := response.Body.(io.ReadCloser); ok {
-		defer closer.Close()
-	}
-	_, err := io.Copy(w, response.Body)
-	return err
+func (response GetPublishedPackage302Response) VisitGetPublishedPackageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Location", fmt.Sprint(response.Headers.Location))
+	w.WriteHeader(302)
+	return nil
 }
 
 type PublishProblemRequestObject struct {
@@ -14695,7 +14690,7 @@ type StrictServerInterface interface {
 
 	// (PATCH /problems/{id})
 	UpdateProblem(ctx context.Context, request UpdateProblemRequestObject) (UpdateProblemResponseObject, error)
-	// Download published problem package
+	// Get redirect to published problem package
 	// (GET /problems/{id}/package/{version})
 	GetPublishedPackage(ctx context.Context, request GetPublishedPackageRequestObject) (GetPublishedPackageResponseObject, error)
 	// Publish problem package
@@ -15786,7 +15781,7 @@ func (sh *strictHandler) UpdateProblem(w http.ResponseWriter, r *http.Request, i
 }
 
 // GetPublishedPackage operation middleware
-func (sh *strictHandler) GetPublishedPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, version int32) {
+func (sh *strictHandler) GetPublishedPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, version string) {
 	var request GetPublishedPackageRequestObject
 
 	request.Id = id
