@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type PaginationModel = {
+export type BlogPaginationModel = {
     /**
      * Total number of posts
      */

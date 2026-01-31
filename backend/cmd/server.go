@@ -83,6 +83,7 @@ func runServer(envFile string) {
 	teamsRepo := pg.NewTeamsRepo(pool)
 	problemsRepo := pg.NewProblemsRepo(pool)
 	contestsRepo := pg.NewContestsRepo(pool)
+	blogsRepo := pg.NewBlogsRepo(pool)
 	logger.Info("successfully initialized repositories")
 
 	// Initialize S3 client
@@ -101,6 +102,9 @@ func runServer(envFile string) {
 	if err := s3Client.EnsureBucket(context.Background(), cfg.S3PackageBucket); err != nil {
 		logger.Warn("failed to ensure package bucket exists", slog.Any("error", err))
 	}
+	if err := s3Client.EnsureBucket(context.Background(), cfg.S3BlogBucket); err != nil {
+		logger.Warn("failed to ensure blog bucket exists", slog.Any("error", err))
+	}
 
 	// Initialize use cases
 	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, txManager)
@@ -110,6 +114,7 @@ func runServer(envFile string) {
 	pandocClient := pkg.NewPandocClient(&http.Client{}, cfg.Pandoc)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo, pandocClient)
 	contestsUC := usecase.NewContestsUseCase(contestsRepo)
+	blogsUC := usecase.NewBlogsUseCase(blogsRepo, s3Client, cfg.S3BlogBucket)
 
 	// Initialize new permissions system with Organizations/Teams support
 	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC)
@@ -180,6 +185,7 @@ func runServer(envFile string) {
 		problemsUC,
 		orgsUC,
 		teamsUC,
+		blogsUC,
 	)
 	avatarsHandler := handlers.NewAvatarsHandler(avatarsUC)
 	problemImportHandler := handlers.NewProblemImportHandler(problemImportUC)

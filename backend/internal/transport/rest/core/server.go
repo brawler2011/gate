@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
+	"github.com/gate149/gate/backend/internal/usecase"
 )
 
 type CoreServer struct {
@@ -12,6 +13,7 @@ type CoreServer struct {
 	problemsUC      interfaces.ProblemsUC
 	organizationsUC interfaces.OrganizationsUC
 	teamsUC         interfaces.TeamsUC
+	blogsUC         *usecase.BlogsUseCase
 }
 
 func NewCoreServer(
@@ -22,6 +24,7 @@ func NewCoreServer(
 	problemsUC interfaces.ProblemsUC,
 	organizationsUC interfaces.OrganizationsUC,
 	teamsUC interfaces.TeamsUC,
+	blogsUC *usecase.BlogsUseCase,
 ) *CoreServer {
 	return &CoreServer{
 		contestsUC:      contestsUC,
@@ -31,5 +34,6 @@ func NewCoreServer(
 		problemsUC:      problemsUC,
 		organizationsUC: organizationsUC,
 		teamsUC:         teamsUC,
+		blogsUC:         blogsUC,
 	}
 }

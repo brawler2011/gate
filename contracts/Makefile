@@ -20,9 +20,6 @@ deps: go.sum go.mod package.json
 	@command -v "$(NPX)"  >/dev/null || { echo "Error: npx is not installed"; exit 1; }
 	@command -v "$(NODE)" >/dev/null || { echo "Error: node is not installed"; exit 1; }
 
-merge-gateway: deps
-	@node tools/merge-openapi.js
-
 go-gen: deps
 	@if [ -z "$(SPECS)" ]; then \
 		echo "Error: No OpenAPI specs found matching */v*/openapi.yaml"; \
@@ -41,12 +38,6 @@ go-gen: deps
 		if [ "$$service" = "core" ]; then \
 			go run $(OAPI_CODEGEN) \
 				-generate std-http-server,models,strict-server,client \
-				-package "$$pkg_name" \
-				-o "$$dir/$$service.go" \
-				"$$spec_path" || exit 1; \
-		elif [ "$$service" = "blogs" ]; then \
-			go run $(OAPI_CODEGEN) \
-				-generate fiber,models \
 				-package "$$pkg_name" \
 				-o "$$dir/$$service.go" \
 				"$$spec_path" || exit 1; \
@@ -75,7 +66,7 @@ ts-gen: deps
 		npx openapi --input "$$spec_path" --output "$$dir" --client fetch --name "$$service" --useOptions || exit 1; \
 	done
 
-all: merge-gateway go-gen ts-gen
+all: go-gen ts-gen
 
 clean:
 	@for spec in $(SPECS); do \

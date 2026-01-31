@@ -32,6 +32,7 @@ type Config struct {
 	S3Region        string `env:"S3_REGION" env-default:"us-east-1"`
 	S3AvatarBucket  string `env:"S3_AVATAR_BUCKET" env-default:"avatars"`
 	S3PackageBucket string `env:"S3_PACKAGE_BUCKET" env-default:"problem-packages"`
+	S3BlogBucket    string `env:"S3_BLOG_BUCKET" env-default:"blog-images"`
 
 	// Judging configuration
 	JudgeWorkerCount int    `env:"JUDGE_WORKER_COUNT" env-default:"4"`

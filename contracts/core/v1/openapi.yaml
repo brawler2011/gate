@@ -1648,8 +1648,241 @@ paths:
       responses:
         "200":
           description: Member removed successfully
+  /posts:
+    get:
+      operationId: ListPosts
+      summary: Get a list of posts
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: sort_order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ asc, desc ]
+            default: desc
+      responses:
+        "200":
+          description: A list of posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPostsResponseModel"
+    post:
+      security:
+        - cookieAuth: [ ]
+      operationId: CreatePost
+      summary: Create a new post
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                text:
+                  type: string
+                preview_image:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedPost"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /posts/{id}:
+    get:
+      operationId: GetPostById
+      summary: Get a single post by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: A single post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostModel"
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      security:
+        - cookieAuth: [ ]
+      operationId: PatchPostById
+      summary: Partially update a post by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                text:
+                  type: string
+                preview_image:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Post partially updated successfully
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      security:
+        - cookieAuth: [ ]
+      operationId: DeletePostById
+      summary: Delete a post by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Post deleted successfully
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /posts/{id}/image:
+    get:
+      operationId: GetPostImage
+      summary: Get image of the post by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Post image
+          content:
+            image/png: { }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
     CreationResponseModel:
       type: object
       required:
@@ -2803,3 +3036,63 @@ components:
             $ref: "#/components/schemas/TeamMemberModel"
         pagination:
           $ref: "#/components/schemas/PaginationModel"
+    PostModel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        title:
+          type: string
+        text:
+          type: string
+        description:
+          type: string
+        preview_image_id:
+          type: string
+        author_id:
+          type: string
+          format: uuid
+        author_username:
+          type: string
+    PostPatchRequestModel:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        text:
+          type: string
+        preview_image_id:
+          type: string
+    BlogPaginationModel:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total number of posts
+        page:
+          type: integer
+          description: Current page number
+    ListPostsResponseModel:
+      type: object
+      properties:
+        pagination:
+          $ref: "#/components/schemas/BlogPaginationModel"
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PostModel"
+    CreatedPost:
+      type: object
+      properties:
+        post_id:
+          type: string
+          format: uuid

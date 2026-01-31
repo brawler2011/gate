@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { Commit } from '../models/Commit';
 import type { CompileResult } from '../models/CompileResult';
+import type { CreatedPost } from '../models/CreatedPost';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
 import type { CreationResponseModel } from '../models/CreationResponseModel';
 import type { FileEntry } from '../models/FileEntry';
@@ -20,12 +21,14 @@ import type { ListContestMembersResponseModel } from '../models/ListContestMembe
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
 import type { ListOrganizationMembersResponseModel } from '../models/ListOrganizationMembersResponseModel';
 import type { ListOrganizationsResponseModel } from '../models/ListOrganizationsResponseModel';
+import type { ListPostsResponseModel } from '../models/ListPostsResponseModel';
 import type { ListProblemsResponseModel } from '../models/ListProblemsResponseModel';
 import type { ListSubmissionsResponseModel } from '../models/ListSubmissionsResponseModel';
 import type { ListTeamMembersResponseModel } from '../models/ListTeamMembersResponseModel';
 import type { ListTeamsResponseModel } from '../models/ListTeamsResponseModel';
 import type { ListUserContestsResponseModel } from '../models/ListUserContestsResponseModel';
 import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
+import type { PostModel } from '../models/PostModel';
 import type { TestReport } from '../models/TestReport';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
 import type { UpdateOrganizationRequestModel } from '../models/UpdateOrganizationRequestModel';
@@ -1483,6 +1486,158 @@ export class DefaultService {
             },
             query: {
                 'user_id': userId,
+            },
+        });
+    }
+    /**
+     * Get a list of posts
+     * @returns ListPostsResponseModel A list of posts
+     * @throws ApiError
+     */
+    public listPosts({
+        page = 1,
+        pageSize = 10,
+        sortOrder = 'desc',
+    }: {
+        page?: number,
+        pageSize?: number,
+        sortOrder?: 'asc' | 'desc',
+    }): CancelablePromise<ListPostsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/posts',
+            query: {
+                'page': page,
+                'page_size': pageSize,
+                'sort_order': sortOrder,
+            },
+        });
+    }
+    /**
+     * Create a new post
+     * @returns CreatedPost Post created successfully
+     * @throws ApiError
+     */
+    public createPost({
+        formData,
+    }: {
+        formData: {
+            title?: string;
+            description?: string;
+            text?: string;
+            preview_image?: Blob;
+        },
+    }): CancelablePromise<CreatedPost> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/posts',
+            formData: formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                400: `bad request`,
+                401: `unauthorized`,
+                403: `forbidden`,
+            },
+        });
+    }
+    /**
+     * Get a single post by ID
+     * @returns PostModel A single post
+     * @throws ApiError
+     */
+    public getPostById({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<PostModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/posts/{id}',
+            path: {
+                'id': id,
+            },
+            errors: {
+                400: `bad request`,
+                404: `not found`,
+            },
+        });
+    }
+    /**
+     * Partially update a post by ID
+     * @returns any Post partially updated successfully
+     * @throws ApiError
+     */
+    public patchPostById({
+        id,
+        formData,
+    }: {
+        id: string,
+        formData?: {
+            title?: string;
+            description?: string;
+            text?: string;
+            preview_image?: Blob;
+        },
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/posts/{id}',
+            path: {
+                'id': id,
+            },
+            formData: formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                400: `bad request`,
+                401: `unauthorized`,
+                403: `forbidden`,
+                404: `not found`,
+            },
+        });
+    }
+    /**
+     * Delete a post by ID
+     * @returns any Post deleted successfully
+     * @throws ApiError
+     */
+    public deletePostById({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/posts/{id}',
+            path: {
+                'id': id,
+            },
+            errors: {
+                400: `bad request`,
+                401: `unauthorized`,
+                403: `forbidden`,
+                404: `not found`,
+            },
+        });
+    }
+    /**
+     * Get image of the post by ID
+     * @returns any Post image
+     * @throws ApiError
+     */
+    public getPostImage({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/posts/{id}/image',
+            path: {
+                'id': id,
+            },
+            errors: {
+                400: `bad request`,
+                404: `not found`,
             },
         });
     }

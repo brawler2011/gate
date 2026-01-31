@@ -22,6 +22,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+const (
+	CookieAuthScopes = "cookieAuth.Scopes"
+)
+
 // Defines values for ListAdminContestsParamsVisibility.
 const (
 	Private ListAdminContestsParamsVisibility = "private"
@@ -45,6 +49,12 @@ const (
 const (
 	ListContestSubmissionsParamsSortOrderAsc  ListContestSubmissionsParamsSortOrder = "asc"
 	ListContestSubmissionsParamsSortOrderDesc ListContestSubmissionsParamsSortOrder = "desc"
+)
+
+// Defines values for ListPostsParamsSortOrder.
+const (
+	ListPostsParamsSortOrderAsc  ListPostsParamsSortOrder = "asc"
+	ListPostsParamsSortOrderDesc ListPostsParamsSortOrder = "desc"
 )
 
 // Defines values for CompileProblemComponentParamsComponentType.
@@ -103,9 +113,18 @@ const (
 
 // Defines values for ListWorkshopContestsParamsSortOrder.
 const (
-	Asc  ListWorkshopContestsParamsSortOrder = "asc"
-	Desc ListWorkshopContestsParamsSortOrder = "desc"
+	ListWorkshopContestsParamsSortOrderAsc  ListWorkshopContestsParamsSortOrder = "asc"
+	ListWorkshopContestsParamsSortOrderDesc ListWorkshopContestsParamsSortOrder = "desc"
 )
+
+// BlogPaginationModel defines model for BlogPaginationModel.
+type BlogPaginationModel struct {
+	// Page Current page number
+	Page *int `json:"page,omitempty"`
+
+	// Total Total number of posts
+	Total *int `json:"total,omitempty"`
+}
 
 // Commit defines model for Commit.
 type Commit struct {
@@ -184,9 +203,19 @@ type CreateSubmissionRequestModel struct {
 	Submission string `json:"submission"`
 }
 
+// CreatedPost defines model for CreatedPost.
+type CreatedPost struct {
+	PostId *openapi_types.UUID `json:"post_id,omitempty"`
+}
+
 // CreationResponseModel defines model for CreationResponseModel.
 type CreationResponseModel struct {
 	Id openapi_types.UUID `json:"id"`
+}
+
+// Error defines model for Error.
+type Error struct {
+	Error *string `json:"error,omitempty"`
 }
 
 // FileEntry defines model for FileEntry.
@@ -274,6 +303,12 @@ type ListOrganizationsResponseModel struct {
 	Pagination    PaginationModel     `json:"pagination"`
 }
 
+// ListPostsResponseModel defines model for ListPostsResponseModel.
+type ListPostsResponseModel struct {
+	Pagination *BlogPaginationModel `json:"pagination,omitempty"`
+	Posts      *[]PostModel         `json:"posts,omitempty"`
+}
+
 // ListProblemsResponseModel defines model for ListProblemsResponseModel.
 type ListProblemsResponseModel struct {
 	Pagination PaginationModel         `json:"pagination"`
@@ -333,6 +368,19 @@ type OrganizationModel struct {
 type PaginationModel struct {
 	Page  int32 `json:"page"`
 	Total int32 `json:"total"`
+}
+
+// PostModel defines model for PostModel.
+type PostModel struct {
+	AuthorId       *openapi_types.UUID `json:"author_id,omitempty"`
+	AuthorUsername *string             `json:"author_username,omitempty"`
+	CreatedAt      *time.Time          `json:"created_at,omitempty"`
+	Description    *string             `json:"description,omitempty"`
+	Id             *openapi_types.UUID `json:"id,omitempty"`
+	PreviewImageId *string             `json:"preview_image_id,omitempty"`
+	Text           *string             `json:"text,omitempty"`
+	Title          *string             `json:"title,omitempty"`
+	UpdatedAt      *time.Time          `json:"updated_at,omitempty"`
 }
 
 // ProblemModel defines model for ProblemModel.
@@ -610,6 +658,32 @@ type AddOrganizationMemberParams struct {
 	Role   string             `form:"role" json:"role"`
 }
 
+// ListPostsParams defines parameters for ListPosts.
+type ListPostsParams struct {
+	Page      *int                      `form:"page,omitempty" json:"page,omitempty"`
+	PageSize  *int                      `form:"page_size,omitempty" json:"page_size,omitempty"`
+	SortOrder *ListPostsParamsSortOrder `form:"sort_order,omitempty" json:"sort_order,omitempty"`
+}
+
+// ListPostsParamsSortOrder defines parameters for ListPosts.
+type ListPostsParamsSortOrder string
+
+// CreatePostMultipartBody defines parameters for CreatePost.
+type CreatePostMultipartBody struct {
+	Description  *string             `json:"description,omitempty"`
+	PreviewImage *openapi_types.File `json:"preview_image,omitempty"`
+	Text         *string             `json:"text,omitempty"`
+	Title        *string             `json:"title,omitempty"`
+}
+
+// PatchPostByIdMultipartBody defines parameters for PatchPostById.
+type PatchPostByIdMultipartBody struct {
+	Description  *string             `json:"description,omitempty"`
+	PreviewImage *openapi_types.File `json:"preview_image,omitempty"`
+	Text         *string             `json:"text,omitempty"`
+	Title        *string             `json:"title,omitempty"`
+}
+
 // ListProblemsParams defines parameters for ListProblems.
 type ListProblemsParams struct {
 	Page       int32   `form:"page" json:"page"`
@@ -801,6 +875,12 @@ type UpdateContestJSONRequestBody = UpdateContestRequestModel
 // UpdateOrganizationJSONRequestBody defines body for UpdateOrganization for application/json ContentType.
 type UpdateOrganizationJSONRequestBody = UpdateOrganizationRequestModel
 
+// CreatePostMultipartRequestBody defines body for CreatePost for multipart/form-data ContentType.
+type CreatePostMultipartRequestBody CreatePostMultipartBody
+
+// PatchPostByIdMultipartRequestBody defines body for PatchPostById for multipart/form-data ContentType.
+type PatchPostByIdMultipartRequestBody PatchPostByIdMultipartBody
+
 // ImportProblemMultipartRequestBody defines body for ImportProblem for multipart/form-data ContentType.
 type ImportProblemMultipartRequestBody ImportProblemMultipartBody
 
@@ -973,6 +1053,24 @@ type ClientInterface interface {
 
 	// AddOrganizationMember request
 	AddOrganizationMember(ctx context.Context, id openapi_types.UUID, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListPosts request
+	ListPosts(ctx context.Context, params *ListPostsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreatePostWithBody request with any body
+	CreatePostWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeletePostById request
+	DeletePostById(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetPostById request
+	GetPostById(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PatchPostByIdWithBody request with any body
+	PatchPostByIdWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetPostImage request
+	GetPostImage(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListProblems request
 	ListProblems(ctx context.Context, params *ListProblemsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1399,6 +1497,78 @@ func (c *Client) ListOrganizationMembers(ctx context.Context, id openapi_types.U
 
 func (c *Client) AddOrganizationMember(ctx context.Context, id openapi_types.UUID, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAddOrganizationMemberRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListPosts(ctx context.Context, params *ListPostsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListPostsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreatePostWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreatePostRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeletePostById(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeletePostByIdRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetPostById(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPostByIdRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PatchPostByIdWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchPostByIdRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetPostImage(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPostImageRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -3231,6 +3401,254 @@ func NewAddOrganizationMemberRequest(server string, id openapi_types.UUID, param
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListPostsRequest generates requests for ListPosts
+func NewListPostsRequest(server string, params *ListPostsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/posts")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page_size", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sort_order", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreatePostRequestWithBody generates requests for CreatePost with any type of body
+func NewCreatePostRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/posts")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeletePostByIdRequest generates requests for DeletePostById
+func NewDeletePostByIdRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/posts/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetPostByIdRequest generates requests for GetPostById
+func NewGetPostByIdRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/posts/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPatchPostByIdRequestWithBody generates requests for PatchPostById with any type of body
+func NewPatchPostByIdRequestWithBody(server string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/posts/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetPostImageRequest generates requests for GetPostImage
+func NewGetPostImageRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/posts/%s/image", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -5595,6 +6013,24 @@ type ClientWithResponsesInterface interface {
 	// AddOrganizationMemberWithResponse request
 	AddOrganizationMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*AddOrganizationMemberResponse, error)
 
+	// ListPostsWithResponse request
+	ListPostsWithResponse(ctx context.Context, params *ListPostsParams, reqEditors ...RequestEditorFn) (*ListPostsResponse, error)
+
+	// CreatePostWithBodyWithResponse request with any body
+	CreatePostWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreatePostResponse, error)
+
+	// DeletePostByIdWithResponse request
+	DeletePostByIdWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeletePostByIdResponse, error)
+
+	// GetPostByIdWithResponse request
+	GetPostByIdWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetPostByIdResponse, error)
+
+	// PatchPostByIdWithBodyWithResponse request with any body
+	PatchPostByIdWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchPostByIdResponse, error)
+
+	// GetPostImageWithResponse request
+	GetPostImageWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetPostImageResponse, error)
+
 	// ListProblemsWithResponse request
 	ListProblemsWithResponse(ctx context.Context, params *ListProblemsParams, reqEditors ...RequestEditorFn) (*ListProblemsResponse, error)
 
@@ -6221,6 +6657,150 @@ func (r AddOrganizationMemberResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r AddOrganizationMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListPostsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListPostsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListPostsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListPostsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreatePostResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *CreatedPost
+	JSON400      *Error
+	JSON401      *Error
+	JSON403      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r CreatePostResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreatePostResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeletePostByIdResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *Error
+	JSON401      *Error
+	JSON403      *Error
+	JSON404      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r DeletePostByIdResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeletePostByIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetPostByIdResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *PostModel
+	JSON400      *Error
+	JSON404      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPostByIdResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPostByIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PatchPostByIdResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *Error
+	JSON401      *Error
+	JSON403      *Error
+	JSON404      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r PatchPostByIdResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PatchPostByIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetPostImageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *Error
+	JSON404      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPostImageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPostImageResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -7339,6 +7919,60 @@ func (c *ClientWithResponses) AddOrganizationMemberWithResponse(ctx context.Cont
 	return ParseAddOrganizationMemberResponse(rsp)
 }
 
+// ListPostsWithResponse request returning *ListPostsResponse
+func (c *ClientWithResponses) ListPostsWithResponse(ctx context.Context, params *ListPostsParams, reqEditors ...RequestEditorFn) (*ListPostsResponse, error) {
+	rsp, err := c.ListPosts(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListPostsResponse(rsp)
+}
+
+// CreatePostWithBodyWithResponse request with arbitrary body returning *CreatePostResponse
+func (c *ClientWithResponses) CreatePostWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreatePostResponse, error) {
+	rsp, err := c.CreatePostWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreatePostResponse(rsp)
+}
+
+// DeletePostByIdWithResponse request returning *DeletePostByIdResponse
+func (c *ClientWithResponses) DeletePostByIdWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeletePostByIdResponse, error) {
+	rsp, err := c.DeletePostById(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeletePostByIdResponse(rsp)
+}
+
+// GetPostByIdWithResponse request returning *GetPostByIdResponse
+func (c *ClientWithResponses) GetPostByIdWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetPostByIdResponse, error) {
+	rsp, err := c.GetPostById(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPostByIdResponse(rsp)
+}
+
+// PatchPostByIdWithBodyWithResponse request with arbitrary body returning *PatchPostByIdResponse
+func (c *ClientWithResponses) PatchPostByIdWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchPostByIdResponse, error) {
+	rsp, err := c.PatchPostByIdWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchPostByIdResponse(rsp)
+}
+
+// GetPostImageWithResponse request returning *GetPostImageResponse
+func (c *ClientWithResponses) GetPostImageWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetPostImageResponse, error) {
+	rsp, err := c.GetPostImage(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPostImageResponse(rsp)
+}
+
 // ListProblemsWithResponse request returning *ListProblemsResponse
 func (c *ClientWithResponses) ListProblemsWithResponse(ctx context.Context, params *ListProblemsParams, reqEditors ...RequestEditorFn) (*ListProblemsResponse, error) {
 	rsp, err := c.ListProblems(ctx, params, reqEditors...)
@@ -8258,6 +8892,246 @@ func ParseAddOrganizationMemberResponse(rsp *http.Response) (*AddOrganizationMem
 	response := &AddOrganizationMemberResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseListPostsResponse parses an HTTP response from a ListPostsWithResponse call
+func ParseListPostsResponse(rsp *http.Response) (*ListPostsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListPostsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListPostsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreatePostResponse parses an HTTP response from a CreatePostWithResponse call
+func ParseCreatePostResponse(rsp *http.Response) (*CreatePostResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreatePostResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest CreatedPost
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeletePostByIdResponse parses an HTTP response from a DeletePostByIdWithResponse call
+func ParseDeletePostByIdResponse(rsp *http.Response) (*DeletePostByIdResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeletePostByIdResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetPostByIdResponse parses an HTTP response from a GetPostByIdWithResponse call
+func ParseGetPostByIdResponse(rsp *http.Response) (*GetPostByIdResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPostByIdResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PostModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePatchPostByIdResponse parses an HTTP response from a PatchPostByIdWithResponse call
+func ParsePatchPostByIdResponse(rsp *http.Response) (*PatchPostByIdResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PatchPostByIdResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetPostImageResponse parses an HTTP response from a GetPostImageWithResponse call
+func ParseGetPostImageResponse(rsp *http.Response) (*GetPostImageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPostImageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
 	}
 
 	return response, nil
@@ -9293,6 +10167,24 @@ type ServerInterface interface {
 	// Add member to organization
 	// (POST /organizations/{id}/members)
 	AddOrganizationMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params AddOrganizationMemberParams)
+	// Get a list of posts
+	// (GET /posts)
+	ListPosts(w http.ResponseWriter, r *http.Request, params ListPostsParams)
+	// Create a new post
+	// (POST /posts)
+	CreatePost(w http.ResponseWriter, r *http.Request)
+	// Delete a post by ID
+	// (DELETE /posts/{id})
+	DeletePostById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Get a single post by ID
+	// (GET /posts/{id})
+	GetPostById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Partially update a post by ID
+	// (PATCH /posts/{id})
+	PatchPostById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Get image of the post by ID
+	// (GET /posts/{id}/image)
+	GetPostImage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 
 	// (GET /problems)
 	ListProblems(w http.ResponseWriter, r *http.Request, params ListProblemsParams)
@@ -10380,6 +11272,181 @@ func (siw *ServerInterfaceWrapper) AddOrganizationMember(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AddOrganizationMember(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListPosts operation middleware
+func (siw *ServerInterfaceWrapper) ListPosts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPostsParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "page", r.URL.Query(), &params.Page)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "page_size" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "page_size", r.URL.Query(), &params.PageSize)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_size", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sort_order" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "sort_order", r.URL.Query(), &params.SortOrder)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort_order", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPosts(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreatePost operation middleware
+func (siw *ServerInterfaceWrapper) CreatePost(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreatePost(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeletePostById operation middleware
+func (siw *ServerInterfaceWrapper) DeletePostById(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeletePostById(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPostById operation middleware
+func (siw *ServerInterfaceWrapper) GetPostById(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPostById(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchPostById operation middleware
+func (siw *ServerInterfaceWrapper) PatchPostById(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchPostById(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPostImage operation middleware
+func (siw *ServerInterfaceWrapper) GetPostImage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPostImage(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -12101,6 +13168,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{id}/members", wrapper.RemoveOrganizationMember)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{id}/members", wrapper.ListOrganizationMembers)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{id}/members", wrapper.AddOrganizationMember)
+	m.HandleFunc("GET "+options.BaseURL+"/posts", wrapper.ListPosts)
+	m.HandleFunc("POST "+options.BaseURL+"/posts", wrapper.CreatePost)
+	m.HandleFunc("DELETE "+options.BaseURL+"/posts/{id}", wrapper.DeletePostById)
+	m.HandleFunc("GET "+options.BaseURL+"/posts/{id}", wrapper.GetPostById)
+	m.HandleFunc("PATCH "+options.BaseURL+"/posts/{id}", wrapper.PatchPostById)
+	m.HandleFunc("GET "+options.BaseURL+"/posts/{id}/image", wrapper.GetPostImage)
 	m.HandleFunc("GET "+options.BaseURL+"/problems", wrapper.ListProblems)
 	m.HandleFunc("POST "+options.BaseURL+"/problems", wrapper.CreateProblem)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/import", wrapper.ImportProblem)
@@ -12537,6 +13610,252 @@ type AddOrganizationMember200Response struct {
 func (response AddOrganizationMember200Response) VisitAddOrganizationMemberResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
+}
+
+type ListPostsRequestObject struct {
+	Params ListPostsParams
+}
+
+type ListPostsResponseObject interface {
+	VisitListPostsResponse(w http.ResponseWriter) error
+}
+
+type ListPosts200JSONResponse ListPostsResponseModel
+
+func (response ListPosts200JSONResponse) VisitListPostsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreatePostRequestObject struct {
+	Body *multipart.Reader
+}
+
+type CreatePostResponseObject interface {
+	VisitCreatePostResponse(w http.ResponseWriter) error
+}
+
+type CreatePost201JSONResponse CreatedPost
+
+func (response CreatePost201JSONResponse) VisitCreatePostResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreatePost400JSONResponse Error
+
+func (response CreatePost400JSONResponse) VisitCreatePostResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreatePost401JSONResponse Error
+
+func (response CreatePost401JSONResponse) VisitCreatePostResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreatePost403JSONResponse Error
+
+func (response CreatePost403JSONResponse) VisitCreatePostResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePostByIdRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeletePostByIdResponseObject interface {
+	VisitDeletePostByIdResponse(w http.ResponseWriter) error
+}
+
+type DeletePostById200Response struct {
+}
+
+func (response DeletePostById200Response) VisitDeletePostByIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type DeletePostById400JSONResponse Error
+
+func (response DeletePostById400JSONResponse) VisitDeletePostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePostById401JSONResponse Error
+
+func (response DeletePostById401JSONResponse) VisitDeletePostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePostById403JSONResponse Error
+
+func (response DeletePostById403JSONResponse) VisitDeletePostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeletePostById404JSONResponse Error
+
+func (response DeletePostById404JSONResponse) VisitDeletePostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostByIdRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetPostByIdResponseObject interface {
+	VisitGetPostByIdResponse(w http.ResponseWriter) error
+}
+
+type GetPostById200JSONResponse PostModel
+
+func (response GetPostById200JSONResponse) VisitGetPostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostById400JSONResponse Error
+
+func (response GetPostById400JSONResponse) VisitGetPostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostById404JSONResponse Error
+
+func (response GetPostById404JSONResponse) VisitGetPostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchPostByIdRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *multipart.Reader
+}
+
+type PatchPostByIdResponseObject interface {
+	VisitPatchPostByIdResponse(w http.ResponseWriter) error
+}
+
+type PatchPostById200Response struct {
+}
+
+func (response PatchPostById200Response) VisitPatchPostByIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type PatchPostById400JSONResponse Error
+
+func (response PatchPostById400JSONResponse) VisitPatchPostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchPostById401JSONResponse Error
+
+func (response PatchPostById401JSONResponse) VisitPatchPostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchPostById403JSONResponse Error
+
+func (response PatchPostById403JSONResponse) VisitPatchPostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchPostById404JSONResponse Error
+
+func (response PatchPostById404JSONResponse) VisitPatchPostByIdResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostImageRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetPostImageResponseObject interface {
+	VisitGetPostImageResponse(w http.ResponseWriter) error
+}
+
+type GetPostImage200ImagepngResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetPostImage200ImagepngResponse) VisitGetPostImageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "image/png")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetPostImage400JSONResponse Error
+
+func (response GetPostImage400JSONResponse) VisitGetPostImageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPostImage404JSONResponse Error
+
+func (response GetPostImage404JSONResponse) VisitGetPostImageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type ListProblemsRequestObject struct {
@@ -13340,6 +14659,24 @@ type StrictServerInterface interface {
 	// Add member to organization
 	// (POST /organizations/{id}/members)
 	AddOrganizationMember(ctx context.Context, request AddOrganizationMemberRequestObject) (AddOrganizationMemberResponseObject, error)
+	// Get a list of posts
+	// (GET /posts)
+	ListPosts(ctx context.Context, request ListPostsRequestObject) (ListPostsResponseObject, error)
+	// Create a new post
+	// (POST /posts)
+	CreatePost(ctx context.Context, request CreatePostRequestObject) (CreatePostResponseObject, error)
+	// Delete a post by ID
+	// (DELETE /posts/{id})
+	DeletePostById(ctx context.Context, request DeletePostByIdRequestObject) (DeletePostByIdResponseObject, error)
+	// Get a single post by ID
+	// (GET /posts/{id})
+	GetPostById(ctx context.Context, request GetPostByIdRequestObject) (GetPostByIdResponseObject, error)
+	// Partially update a post by ID
+	// (PATCH /posts/{id})
+	PatchPostById(ctx context.Context, request PatchPostByIdRequestObject) (PatchPostByIdResponseObject, error)
+	// Get image of the post by ID
+	// (GET /posts/{id}/image)
+	GetPostImage(ctx context.Context, request GetPostImageRequestObject) (GetPostImageResponseObject, error)
 
 	// (GET /problems)
 	ListProblems(ctx context.Context, request ListProblemsRequestObject) (ListProblemsResponseObject, error)
@@ -14105,6 +15442,174 @@ func (sh *strictHandler) AddOrganizationMember(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AddOrganizationMemberResponseObject); ok {
 		if err := validResponse.VisitAddOrganizationMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPosts operation middleware
+func (sh *strictHandler) ListPosts(w http.ResponseWriter, r *http.Request, params ListPostsParams) {
+	var request ListPostsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPosts(ctx, request.(ListPostsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPosts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPostsResponseObject); ok {
+		if err := validResponse.VisitListPostsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreatePost operation middleware
+func (sh *strictHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
+	var request CreatePostRequestObject
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreatePost(ctx, request.(CreatePostRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreatePost")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreatePostResponseObject); ok {
+		if err := validResponse.VisitCreatePostResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeletePostById operation middleware
+func (sh *strictHandler) DeletePostById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeletePostByIdRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeletePostById(ctx, request.(DeletePostByIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeletePostById")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeletePostByIdResponseObject); ok {
+		if err := validResponse.VisitDeletePostByIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPostById operation middleware
+func (sh *strictHandler) GetPostById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetPostByIdRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPostById(ctx, request.(GetPostByIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPostById")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPostByIdResponseObject); ok {
+		if err := validResponse.VisitGetPostByIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchPostById operation middleware
+func (sh *strictHandler) PatchPostById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request PatchPostByIdRequestObject
+
+	request.Id = id
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchPostById(ctx, request.(PatchPostByIdRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchPostById")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchPostByIdResponseObject); ok {
+		if err := validResponse.VisitPatchPostByIdResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPostImage operation middleware
+func (sh *strictHandler) GetPostImage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetPostImageRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPostImage(ctx, request.(GetPostImageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPostImage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPostImageResponseObject); ok {
+		if err := validResponse.VisitGetPostImageResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
