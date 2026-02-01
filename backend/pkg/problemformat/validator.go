@@ -14,20 +14,22 @@ func ValidateManifest(manifest *ProblemManifest) error {
 
 	// Validate problem type
 	validTypes := map[string]bool{
-		"pass-fail":   true,
-		"scoring":     true,
-		"interactive": true,
+		"pass-fail":     true,
+		"scoring":       true,
+		"interactive":   true,
+		"multi-pass":    true,
+		"submit-answer": true,
 	}
 	if !validTypes[manifest.ProblemType] {
-		errs = append(errs, fmt.Errorf("invalid problem_type: %s (must be one of: pass-fail, scoring, interactive)", manifest.ProblemType))
+		errs = append(errs, fmt.Errorf("invalid problem_type: %s (must be one of: pass-fail, scoring, interactive, multi-pass, submit-answer)", manifest.ProblemType))
 	}
 
 	// Validate max_score for scoring problems
 	if manifest.ProblemType == "scoring" && manifest.MaxScore == nil {
 		errs = append(errs, errors.New("max_score is required for scoring problems"))
 	}
-	if manifest.ProblemType == "pass-fail" && manifest.MaxScore != nil {
-		errs = append(errs, errors.New("max_score must be null for pass-fail problems"))
+	if manifest.ProblemType != "scoring" && manifest.MaxScore != nil {
+		errs = append(errs, errors.New("max_score must be null for non-scoring problems"))
 	}
 
 	// Validate limits
@@ -86,11 +88,7 @@ func ValidateManifest(manifest *ProblemManifest) error {
 func ValidateTestsMetadata(tests *TestsMetadata, manifest *ProblemManifest) error {
 	var errs []error
 
-	if len(tests.Tests) == 0 {
-		errs = append(errs, errors.New("at least one test is required"))
-	}
-
-	// Validate test ordinals are unique and sequential
+	// Validate tests
 	testOrdinals := make(map[int]bool)
 	for i, test := range tests.Tests {
 		if test.Ordinal < 1 {
@@ -109,6 +107,15 @@ func ValidateTestsMetadata(tests *TestsMetadata, manifest *ProblemManifest) erro
 		// Validate generator for generated tests
 		if test.Method == "generated" && (test.Generator == nil || strings.TrimSpace(*test.Generator) == "") {
 			errs = append(errs, fmt.Errorf("tests[%d].generator is required for generated tests", i))
+		}
+	}
+
+	// Validate test ordinals are sequential (1, 2, 3, ..., n)
+	if len(tests.Tests) > 0 {
+		for expected := 1; expected <= len(tests.Tests); expected++ {
+			if !testOrdinals[expected] {
+				errs = append(errs, fmt.Errorf("test ordinals are not sequential: missing ordinal %d", expected))
+			}
 		}
 	}
 
@@ -140,6 +147,15 @@ func ValidateTestsMetadata(tests *TestsMetadata, manifest *ProblemManifest) erro
 				if depOrdinal >= group.Ordinal {
 					errs = append(errs, fmt.Errorf("groups[%d].depends_on: forward or circular dependency detected", i))
 				}
+			}
+		}
+	}
+
+	// Validate group ordinals are sequential (0, 1, 2, ..., n-1)
+	if len(tests.Groups) > 0 {
+		for expected := 0; expected < len(tests.Groups); expected++ {
+			if !groupOrdinals[expected] {
+				errs = append(errs, fmt.Errorf("group ordinals are not sequential: missing ordinal %d", expected))
 			}
 		}
 	}

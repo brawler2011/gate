@@ -29,9 +29,9 @@ func MarshalTestsMetadata(tests *TestsMetadata) ([]byte, error) {
 func SaveManifest(problemDir string, manifest *ProblemManifest) error {
 	manifestPath := filepath.Join(problemDir, "manifest.json")
 
-	data, err := json.MarshalIndent(manifest, "", "  ")
+	data, err := MarshalManifest(manifest)
 	if err != nil {
-		return fmt.Errorf("failed to marshal manifest: %w", err)
+		return err
 	}
 
 	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
@@ -43,18 +43,11 @@ func SaveManifest(problemDir string, manifest *ProblemManifest) error {
 
 // SaveTestsMetadata сохраняет tests/tests.json
 func SaveTestsMetadata(problemDir string, tests *TestsMetadata) error {
-	testsDir := filepath.Join(problemDir, "tests")
+	testsMetaPath := filepath.Join(problemDir, "tests", "tests.json")
 
-	// Create tests directory if it doesn't exist
-	if err := os.MkdirAll(testsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create tests directory: %w", err)
-	}
-
-	testsMetaPath := filepath.Join(testsDir, "tests.json")
-
-	data, err := json.MarshalIndent(tests, "", "  ")
+	data, err := MarshalTestsMetadata(tests)
 	if err != nil {
-		return fmt.Errorf("failed to marshal tests metadata: %w", err)
+		return err
 	}
 
 	if err := os.WriteFile(testsMetaPath, data, 0644); err != nil {
@@ -67,11 +60,6 @@ func SaveTestsMetadata(problemDir string, tests *TestsMetadata) error {
 // SaveTestData сохраняет тест (создает tests/{num}.in и tests/{num}.out)
 func SaveTestData(problemDir string, testNum int, input, output []byte) error {
 	testsDir := filepath.Join(problemDir, "tests")
-
-	// Create tests directory if it doesn't exist
-	if err := os.MkdirAll(testsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create tests directory: %w", err)
-	}
 
 	inputPath := filepath.Join(testsDir, fmt.Sprintf("%d.in", testNum))
 	outputPath := filepath.Join(testsDir, fmt.Sprintf("%d.out", testNum))
