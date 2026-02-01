@@ -74,26 +74,3 @@ func SaveTestData(problemDir string, testNum int, input, output []byte) error {
 
 	return nil
 }
-
-// SaveMedia сохраняет media/media.json
-func SaveMedia(problemDir string, media *Media) error {
-	mediaDir := filepath.Join(problemDir, "media")
-
-	// Create media directory if it doesn't exist
-	if err := os.MkdirAll(mediaDir, 0755); err != nil {
-		return fmt.Errorf("failed to create media directory: %w", err)
-	}
-
-	mediaPath := filepath.Join(mediaDir, "media.json")
-
-	data, err := json.MarshalIndent(media, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal media: %w", err)
-	}
-
-	if err := os.WriteFile(mediaPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write media/media.json: %w", err)
-	}
-
-	return nil
-}

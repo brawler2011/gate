@@ -60,25 +60,3 @@ func LoadTestData(problemDir string, testNum int) (input, output []byte, err err
 
 	return input, output, nil
 }
-
-// LoadMedia читает media/media.json
-func LoadMedia(problemDir string) (*Media, error) {
-	mediaPath := filepath.Join(problemDir, "media", "media.json")
-
-	// Media is optional
-	if _, err := os.Stat(mediaPath); os.IsNotExist(err) {
-		return &Media{Images: []Image{}}, nil
-	}
-
-	data, err := os.ReadFile(mediaPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read media/media.json: %w", err)
-	}
-
-	var media Media
-	if err := json.Unmarshal(data, &media); err != nil {
-		return nil, fmt.Errorf("failed to parse media/media.json: %w", err)
-	}
-
-	return &media, nil
-}
