@@ -45,7 +45,7 @@ func BuildPackage(problemDir string) (*Package, error) {
 	for _, test := range testsMetadata.Tests {
 		input, output, err := problemformat.LoadTestData(problemDir, test.Ordinal)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load test %d: %w", test.Ordinal, err)
+			return nil, fmt.Errorf("failed to load test %02d: %w", test.Ordinal, err)
 		}
 		testFiles[test.Ordinal] = TestFile{
 			Input:  input,
@@ -136,7 +136,7 @@ func ValidatePackage(pkg *Package) error {
 	// Validate that all tests have files
 	for _, test := range pkg.TestsMetadata.Tests {
 		if _, ok := pkg.TestFiles[test.Ordinal]; !ok {
-			return fmt.Errorf("missing test files for test %d", test.Ordinal)
+			return fmt.Errorf("missing test files for test %02d", test.Ordinal)
 		}
 	}
 
@@ -184,7 +184,7 @@ func WritePackageToZip(pkg *Package, writer io.Writer) error {
 	// Write test files
 	for ordinal, testFile := range pkg.TestFiles {
 		// Write input file
-		inputFile, err := zipWriter.Create(fmt.Sprintf("tests/%d.in", ordinal))
+		inputFile, err := zipWriter.Create(fmt.Sprintf("tests/%02d.in", ordinal))
 		if err != nil {
 			return err
 		}
@@ -193,7 +193,7 @@ func WritePackageToZip(pkg *Package, writer io.Writer) error {
 		}
 
 		// Write output file
-		outputFile, err := zipWriter.Create(fmt.Sprintf("tests/%d.out", ordinal))
+		outputFile, err := zipWriter.Create(fmt.Sprintf("tests/%02d.out", ordinal))
 		if err != nil {
 			return err
 		}

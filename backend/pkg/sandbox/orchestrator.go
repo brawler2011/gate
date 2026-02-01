@@ -258,7 +258,7 @@ func (o *Orchestrator) TestSolutionOnMultipleTests(ctx context.Context, solution
 		if err != nil {
 			results[i] = JudgeResult{
 				Verdict:        "IE",
-				Message:        fmt.Sprintf("Failed to judge test %d: %v", i+1, err),
+				Message:        fmt.Sprintf("Failed to judge test %02d: %v", i+1, err),
 				ExecutionError: err.Error(),
 			}
 			continue

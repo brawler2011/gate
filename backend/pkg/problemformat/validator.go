@@ -224,14 +224,14 @@ func ValidateProblemStructure(problemDir string) error {
 
 		// Check if test files exist
 		for _, test := range testsMetadata.Tests {
-			inputPath := filepath.Join(problemDir, "tests", fmt.Sprintf("%d.in", test.Ordinal))
-			outputPath := filepath.Join(problemDir, "tests", fmt.Sprintf("%d.out", test.Ordinal))
+			inputPath := filepath.Join(problemDir, "tests", fmt.Sprintf("%02d.in", test.Ordinal))
+			outputPath := filepath.Join(problemDir, "tests", fmt.Sprintf("%02d.out", test.Ordinal))
 
 			if _, err := os.Stat(inputPath); os.IsNotExist(err) {
-				errs = append(errs, fmt.Errorf("test input file not found: %d.in", test.Ordinal))
+				errs = append(errs, fmt.Errorf("test input file not found: %02d.in", test.Ordinal))
 			}
 			if _, err := os.Stat(outputPath); os.IsNotExist(err) {
-				errs = append(errs, fmt.Errorf("test output file not found: %d.out", test.Ordinal))
+				errs = append(errs, fmt.Errorf("test output file not found: %02d.out", test.Ordinal))
 			}
 		}
 	}

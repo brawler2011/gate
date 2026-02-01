@@ -45,17 +45,17 @@ func LoadTestsMetadata(problemDir string) (*TestsMetadata, error) {
 func LoadTestData(problemDir string, testNum int) (input, output []byte, err error) {
 	testsDir := filepath.Join(problemDir, "tests")
 
-	inputPath := filepath.Join(testsDir, fmt.Sprintf("%d.in", testNum))
-	outputPath := filepath.Join(testsDir, fmt.Sprintf("%d.out", testNum))
+	inputPath := filepath.Join(testsDir, fmt.Sprintf("%02d.in", testNum))
+	outputPath := filepath.Join(testsDir, fmt.Sprintf("%02d.out", testNum))
 
 	input, err = os.ReadFile(inputPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read input file %d.in: %w", testNum, err)
+		return nil, nil, fmt.Errorf("failed to read input file %02d.in: %w", testNum, err)
 	}
 
 	output, err = os.ReadFile(outputPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read output file %d.out: %w", testNum, err)
+		return nil, nil, fmt.Errorf("failed to read output file %02d.out: %w", testNum, err)
 	}
 
 	return input, output, nil

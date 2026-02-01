@@ -61,15 +61,15 @@ func SaveTestsMetadata(problemDir string, tests *TestsMetadata) error {
 func SaveTestData(problemDir string, testNum int, input, output []byte) error {
 	testsDir := filepath.Join(problemDir, "tests")
 
-	inputPath := filepath.Join(testsDir, fmt.Sprintf("%d.in", testNum))
-	outputPath := filepath.Join(testsDir, fmt.Sprintf("%d.out", testNum))
+	inputPath := filepath.Join(testsDir, fmt.Sprintf("%02d.in", testNum))
+	outputPath := filepath.Join(testsDir, fmt.Sprintf("%02d.out", testNum))
 
 	if err := os.WriteFile(inputPath, input, 0644); err != nil {
-		return fmt.Errorf("failed to write input file %d.in: %w", testNum, err)
+		return fmt.Errorf("failed to write input file %02d.in: %w", testNum, err)
 	}
 
 	if err := os.WriteFile(outputPath, output, 0644); err != nil {
-		return fmt.Errorf("failed to write output file %d.out: %w", testNum, err)
+		return fmt.Errorf("failed to write output file %02d.out: %w", testNum, err)
 	}
 
 	return nil

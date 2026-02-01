@@ -320,8 +320,9 @@ func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.
 
 	for _, test := range testsMeta.Tests {
 		// Check if test files exist
-		inputPath := fmt.Sprintf("tests/%d.in", test.Ordinal)
+		inputPath := fmt.Sprintf("tests/%02d.in", test.Ordinal)
 		_, err := uc.vcsService.ReadFile(ctx, problemID, inputPath)
+		// FIXME: Where is validation of %02d.out??? This should validate both .in and .out
 
 		if err != nil {
 			report.Results = append(report.Results, models.TestValidationResult{
@@ -395,8 +396,8 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 		report.TotalTests++
 
 		// Read test input and answer
-		inputPath := fmt.Sprintf("tests/%d.in", test.Ordinal)
-		answerPath := fmt.Sprintf("tests/%d.out", test.Ordinal)
+		inputPath := fmt.Sprintf("tests/%02d.in", test.Ordinal)
+		answerPath := fmt.Sprintf("tests/%02d.out", test.Ordinal)
 
 		input, err := uc.vcsService.ReadFile(ctx, req.ProblemID, inputPath)
 		if err != nil {

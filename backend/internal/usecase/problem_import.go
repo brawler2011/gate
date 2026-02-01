@@ -156,9 +156,9 @@ func copyTestFiles(srcDir, destDir string, format string) error {
 				if filepath.Ext(name) == ".in" {
 					baseName := name[:len(name)-3]
 					// Copy .in file
-					copyFile(filepath.Join(sampleDir, name), filepath.Join(testsDir, fmt.Sprintf("%d.in", testNum)))
+					copyFile(filepath.Join(sampleDir, name), filepath.Join(testsDir, fmt.Sprintf("%02d.in", testNum)))
 					// Copy .ans file as .out
-					copyFile(filepath.Join(sampleDir, baseName+".ans"), filepath.Join(testsDir, fmt.Sprintf("%d.out", testNum)))
+					copyFile(filepath.Join(sampleDir, baseName+".ans"), filepath.Join(testsDir, fmt.Sprintf("%02d.out", testNum)))
 					testNum++
 				}
 			}
@@ -174,9 +174,9 @@ func copyTestFiles(srcDir, destDir string, format string) error {
 				if filepath.Ext(name) == ".in" {
 					baseName := name[:len(name)-3]
 					// Copy .in file
-					copyFile(filepath.Join(secretDir, name), filepath.Join(testsDir, fmt.Sprintf("%d.in", testNum)))
+					copyFile(filepath.Join(secretDir, name), filepath.Join(testsDir, fmt.Sprintf("%02d.in", testNum)))
 					// Copy .ans file as .out
-					copyFile(filepath.Join(secretDir, baseName+".ans"), filepath.Join(testsDir, fmt.Sprintf("%d.out", testNum)))
+					copyFile(filepath.Join(secretDir, baseName+".ans"), filepath.Join(testsDir, fmt.Sprintf("%02d.out", testNum)))
 					testNum++
 				}
 			}

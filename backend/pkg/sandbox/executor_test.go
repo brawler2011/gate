@@ -37,13 +37,13 @@ func TestExtractScore(t *testing.T) {
 
 		if test.expected == nil {
 			if result != nil {
-				t.Errorf("Test %d: expected nil, got %v", i, *result)
+				t.Errorf("Test %02d: expected nil, got %v", i, *result)
 			}
 		} else {
 			if result == nil {
-				t.Errorf("Test %d: expected %v, got nil", i, *test.expected)
+				t.Errorf("Test %02d: expected %v, got nil", i, *test.expected)
 			} else if *result != *test.expected {
-				t.Errorf("Test %d: expected %v, got %v", i, *test.expected, *result)
+				t.Errorf("Test %02d: expected %v, got %v", i, *test.expected, *result)
 			}
 		}
 	}
@@ -106,7 +106,7 @@ func TestCheckerVerdictParsing(t *testing.T) {
 		}
 
 		if verdict != test.expected {
-			t.Errorf("Test %d: expected verdict %s, got %s", i, test.expected, verdict)
+			t.Errorf("Test %02d: expected verdict %s, got %s", i, test.expected, verdict)
 		}
 	}
 }

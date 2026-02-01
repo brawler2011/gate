@@ -132,17 +132,17 @@ func (pl *PackageLoader) loadPackageContents(extractDir string) (*ProblemPackage
 	// Load test cases
 	testsDir := filepath.Join(extractDir, "tests")
 	for _, test := range pkg.TestsMetadata.Tests {
-		inputPath := filepath.Join(testsDir, fmt.Sprintf("%d.in", test.Ordinal))
-		outputPath := filepath.Join(testsDir, fmt.Sprintf("%d.out", test.Ordinal))
+		inputPath := filepath.Join(testsDir, fmt.Sprintf("%02d.in", test.Ordinal))
+		outputPath := filepath.Join(testsDir, fmt.Sprintf("%02d.out", test.Ordinal))
 
 		input, err := os.ReadFile(inputPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read test %d input: %w", test.Ordinal, err)
+			return nil, fmt.Errorf("failed to read test %02d input: %w", test.Ordinal, err)
 		}
 
 		output, err := os.ReadFile(outputPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read test %d output: %w", test.Ordinal, err)
+			return nil, fmt.Errorf("failed to read test %02d output: %w", test.Ordinal, err)
 		}
 
 		pkg.TestCases = append(pkg.TestCases, LoadedTestCase{
