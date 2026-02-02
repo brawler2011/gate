@@ -148,7 +148,11 @@ func (s *IntegrationTestSuite) initApp() {
 		problemsUC,
 		organizationsUC,
 		teamsUC,
+		nil, // workshopUC - not needed for integration tests
 		blogsUC,
+		nil, // avatarsUC - not needed for integration tests
+		nil, // importUC - not needed for integration tests
+		nil, // publishUC - not needed for integration tests
 	)
 
 	// Strict Handler

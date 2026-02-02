@@ -185,17 +185,17 @@ func runServer(envFile string) {
 		problemsUC,
 		orgsUC,
 		teamsUC,
+		workshopUC,
 		blogsUC,
 		avatarsUC,
 		problemImportUC,
 		problemPublishUC,
 	)
 
-	// Register workshop routes if available
 	if workshopUC != nil {
-		// Note: Workshop routes will be registered separately using Fiber
-		// since the main server uses net/http
-		logger.Info("workshop routes available (will need Fiber integration)")
+		logger.Info("workshop routes registered with net/http")
+	} else {
+		logger.Warn("workshop use case not initialized, workshop endpoints will not be available")
 	}
 
 	oryPublicConfiguration := ory.NewConfiguration()

@@ -375,3 +375,118 @@ func submissionsListToDTO(solutionsList *models.SubmissionsList) *corev1.ListSub
 
 	return &resp
 }
+
+// Organizations DTOs
+
+func organizationDTO(o models.Organization) corev1.OrganizationModel {
+	description := ""
+	if o.Description != "" {
+		description = o.Description
+	}
+
+	return corev1.OrganizationModel{
+		Id:          o.ID,
+		Name:        o.Name,
+		Description: &description,
+		CreatedAt:   o.CreatedAt,
+		UpdatedAt:   o.UpdatedAt,
+	}
+}
+
+func listOrganizationsDTO(ol *models.OrganizationList) *corev1.ListOrganizationsResponseModel {
+	resp := corev1.ListOrganizationsResponseModel{
+		Organizations: make([]corev1.OrganizationModel, len(ol.Organizations)),
+		Pagination:    PaginationDTO(ol.Pagination),
+	}
+
+	for i, org := range ol.Organizations {
+		resp.Organizations[i] = organizationDTO(org)
+	}
+
+	return &resp
+}
+
+func organizationMemberDTO(m models.OrganizationMember) corev1.OrganizationMemberModel {
+	return corev1.OrganizationMemberModel{
+		UserId:         m.UserID,
+		OrganizationId: m.OrganizationID,
+		Username:       m.Username,
+		Role:           string(m.Role),
+		CreatedAt:      m.CreatedAt,
+	}
+}
+
+func listOrganizationMembersDTO(members []models.OrganizationMember, page, total int32) *corev1.ListOrganizationMembersResponseModel {
+	resp := corev1.ListOrganizationMembersResponseModel{
+		Members: make([]corev1.OrganizationMemberModel, len(members)),
+		Pagination: corev1.PaginationModel{
+			Page:  page,
+			Total: total,
+		},
+	}
+
+	for i, member := range members {
+		resp.Members[i] = organizationMemberDTO(member)
+	}
+
+	return &resp
+}
+
+// Teams DTOs
+
+func teamDTO(t models.Team) corev1.TeamModel {
+	description := ""
+	if t.Description != "" {
+		description = t.Description
+	}
+
+	return corev1.TeamModel{
+		Id:             t.ID,
+		Name:           t.Name,
+		OrganizationId: t.OrganizationID,
+		Description:    &description,
+		CreatedAt:      t.CreatedAt,
+		UpdatedAt:      t.UpdatedAt,
+	}
+}
+
+func listTeamsDTO(teams []models.Team, page, total int32) *corev1.ListTeamsResponseModel {
+	resp := corev1.ListTeamsResponseModel{
+		Teams: make([]corev1.TeamModel, len(teams)),
+		Pagination: corev1.PaginationModel{
+			Page:  page,
+			Total: total,
+		},
+	}
+
+	for i, team := range teams {
+		resp.Teams[i] = teamDTO(team)
+	}
+
+	return &resp
+}
+
+func teamMemberDTO(m models.TeamMember) corev1.TeamMemberModel {
+	return corev1.TeamMemberModel{
+		UserId:    m.UserID,
+		TeamId:    m.TeamID,
+		Username:  m.Username,
+		CreatedAt: m.CreatedAt,
+	}
+}
+
+func listTeamMembersDTO(members []models.TeamMember, page, total int32) *corev1.ListTeamMembersResponseModel {
+	resp := corev1.ListTeamMembersResponseModel{
+		Members: make([]corev1.TeamMemberModel, len(members)),
+		Pagination: corev1.PaginationModel{
+			Page:  page,
+			Total: total,
+		},
+	}
+
+	for i, member := range members {
+		resp.Members[i] = teamMemberDTO(member)
+	}
+
+	return &resp
+}

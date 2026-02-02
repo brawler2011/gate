@@ -7,6 +7,7 @@ import (
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/pkg"
+	"github.com/google/uuid"
 )
 
 func isLengthBetween(s string, min, max int) bool {
@@ -150,4 +151,90 @@ func validateGetUsersParams(params corev1.ListUsersParams) (*models.UsersListFil
 
 func isUserOrAdmin(role string) bool {
 	return role == string(models.UserRoleUser) || role == string(models.UserRoleAdmin)
+}
+
+// Organizations validation
+
+func validateListOrganizationsParams(page, pageSize int32, search *string) error {
+	if page < 1 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "page must be greater than 0")
+	}
+
+	if pageSize < 1 || pageSize > 100 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "page size must be between 1 and 100")
+	}
+
+	if search != nil && !checkLength(*search, 0, 64) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "search length must be less than 64 characters")
+	}
+
+	return nil
+}
+
+func validateCreateOrganizationParams(name string) error {
+	if !checkLength(name, 3, 64) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "name must be between 3 and 64 characters")
+	}
+
+	return nil
+}
+
+func validateUpdateOrganizationRequest(params corev1.UpdateOrganizationRequestModel) error {
+	if params.Name != nil && !checkLength(*params.Name, 3, 64) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "name must be between 3 and 64 characters")
+	}
+
+	if params.Description != nil && !checkLength(*params.Description, 0, 2048) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "description length must be less than 2048 characters")
+	}
+
+	return nil
+}
+
+func validateOrganizationRole(role string) bool {
+	return role == string(models.OrgRoleOwner) ||
+		role == string(models.OrgRoleAdmin) ||
+		role == string(models.OrgRoleMember)
+}
+
+// Teams validation
+
+func validateListTeamsParams(page, pageSize int32, search *string) error {
+	if page < 1 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "page must be greater than 0")
+	}
+
+	if pageSize < 1 || pageSize > 100 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "page size must be between 1 and 100")
+	}
+
+	if search != nil && !checkLength(*search, 0, 64) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "search length must be less than 64 characters")
+	}
+
+	return nil
+}
+
+func validateCreateTeamRequest(name string, organizationID uuid.UUID) error {
+	if !checkLength(name, 3, 64) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "name must be between 3 and 64 characters")
+	}
+
+	if organizationID == uuid.Nil {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "organization_id is required")
+	}
+
+	return nil
+}
+
+func validateUpdateTeamRequest(params corev1.UpdateTeamRequestModel) error {
+	if params.Name != nil && !checkLength(*params.Name, 3, 64) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "name must be between 3 and 64 characters")
+	}
+
+	if params.Description != nil && !checkLength(*params.Description, 0, 2048) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "description length must be less than 2048 characters")
+	}
+
+	return nil
 }

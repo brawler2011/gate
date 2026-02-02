@@ -13,6 +13,7 @@ type CoreServer struct {
 	problemsUC      interfaces.ProblemsUC
 	organizationsUC interfaces.OrganizationsUC
 	teamsUC         interfaces.TeamsUC
+	workshopUC      interfaces.WorkshopUC
 	blogsUC         *usecase.BlogsUseCase
 	avatarsUC       *usecase.AvatarsUseCase
 	importUC        *usecase.ProblemImportUseCase
@@ -27,6 +28,7 @@ func NewCoreServer(
 	problemsUC interfaces.ProblemsUC,
 	organizationsUC interfaces.OrganizationsUC,
 	teamsUC interfaces.TeamsUC,
+	workshopUC interfaces.WorkshopUC,
 	blogsUC *usecase.BlogsUseCase,
 	avatarsUC *usecase.AvatarsUseCase,
 	importUC *usecase.ProblemImportUseCase,
@@ -40,6 +42,7 @@ func NewCoreServer(
 		problemsUC:      problemsUC,
 		organizationsUC: organizationsUC,
 		teamsUC:         teamsUC,
+		workshopUC:      workshopUC,
 		blogsUC:         blogsUC,
 		avatarsUC:       avatarsUC,
 		importUC:        importUC,
