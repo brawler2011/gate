@@ -17,14 +17,12 @@ import (
 )
 
 type ProblemsUseCase struct {
-	repo         interfaces.ProblemsRepo
-	pandocClient interfaces.PandocClient
+	repo interfaces.ProblemsRepo
 }
 
-func NewProblemsUseCase(repo interfaces.ProblemsRepo, pandocClient interfaces.PandocClient) *ProblemsUseCase {
+func NewProblemsUseCase(repo interfaces.ProblemsRepo) *ProblemsUseCase {
 	return &ProblemsUseCase{
-		repo:         repo,
-		pandocClient: pandocClient,
+		repo: repo,
 	}
 }
 

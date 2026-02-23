@@ -54,7 +54,7 @@ func runJudge(cmd *cobra.Command, args []string) {
 	)
 
 	// Initialize PostgreSQL connection
-	pool, err := pkg.NewPostgresDB(cfg.PostgresDSN)
+	pool, err := pkg.NewPostgresDB(cfg.GetPostgresDSN())
 	if err != nil {
 		logger.Error("failed to connect to postgres", slog.Any("error", err))
 		return
@@ -87,12 +87,12 @@ func runJudge(cmd *cobra.Command, args []string) {
 	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudgeGRPCAddr))
 
 	// Initialize NATS JetStream
-	js, err := pkg.NewNatsJetStream(cfg.NatsUrl)
+	js, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
 	if err != nil {
 		logger.Error("failed to connect to NATS JetStream", slog.Any("error", err))
 		return
 	}
-	logger.Info("successfully connected to NATS JetStream", slog.String("url", cfg.NatsUrl))
+	logger.Info("successfully connected to NATS JetStream", slog.String("url", cfg.GetNatsURL()))
 
 	// Create event publisher
 	eventPublisher := judge.NewEventPublisher(js)

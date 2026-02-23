@@ -7,7 +7,6 @@ import (
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
-	"go.uber.org/mock/gomock"
 )
 
 func (s *IntegrationTestSuite) TestProblems() {
@@ -23,9 +22,6 @@ func (s *IntegrationTestSuite) TestProblems() {
 
 	// 1. Create Problem (Admin)
 	s.Run("CreateProblem", func() {
-		// Expect Pandoc call
-		s.mockPandoc.EXPECT().BatchConvertLatexToHtml5(gomock.Any(), gomock.Any()).Return([]string{"html content"}, nil).AnyTimes()
-
 		title := "Test Problem"
 		resp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
 			Title: title,

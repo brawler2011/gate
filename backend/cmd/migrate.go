@@ -36,7 +36,7 @@ var migrateCmd = &cobra.Command{
 			}
 		}
 
-		db, err := pkg.NewPostgresDBForMigrations(cfg.PostgresDSN)
+		db, err := pkg.NewPostgresDBForMigrations(cfg.GetPostgresDSN())
 		if err != nil {
 			panic(err)
 		}

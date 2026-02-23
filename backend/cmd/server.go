@@ -68,7 +68,7 @@ func runServer(envFile string) {
 	}
 
 	logger.Info("connecting to postgres")
-	pool, err := pkg.NewPostgresDB(cfg.PostgresDSN)
+	pool, err := pkg.NewPostgresDB(cfg.GetPostgresDSN())
 	if err != nil {
 		panic(err)
 	}
@@ -111,8 +111,7 @@ func runServer(envFile string) {
 	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, s3Client, cfg.S3AvatarBucket)
 	problemImportUC := usecase.NewProblemImportUseCase(cfg.WorkshopReposDir)
 	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, s3Client, cfg.S3PackageBucket, cfg.WorkshopReposDir)
-	pandocClient := pkg.NewPandocClient(&http.Client{}, cfg.Pandoc)
-	problemsUC := usecase.NewProblemsUseCase(problemsRepo, pandocClient)
+	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(contestsRepo)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, s3Client, cfg.S3BlogBucket)
 
@@ -125,20 +124,12 @@ func runServer(envFile string) {
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, txManager)
 	logger.Info("successfully initialized Organizations and Teams use cases")
 
-	// Initialize Judge0 client (for future use)
-	_, err = pkg.NewJudge0Client(cfg.Judge0URL)
-	if err != nil {
-		logger.Warn("failed to create judge0 client", slog.Any("error", err))
-	} else {
-		logger.Info("successfully initialized judge0 client", slog.String("url", cfg.Judge0URL))
-	}
-
 	// Initialize NATS publisher (for future use)
-	_, err = pkg.NewNatsConn(cfg.NatsUrl)
+	_, err = pkg.NewNatsConn(cfg.GetNatsURL())
 	if err != nil {
 		logger.Warn("failed to create nats publisher", slog.Any("error", err))
 	} else {
-		logger.Info("successfully initialized nats publisher", slog.String("url", cfg.NatsUrl))
+		logger.Info("successfully initialized nats publisher", slog.String("url", cfg.GetNatsURL()))
 	}
 
 	submissionsRepo := pg.NewSubmissionsRepo(pool)

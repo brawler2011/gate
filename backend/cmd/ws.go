@@ -82,7 +82,7 @@ func runWsServer(envFile string) {
 
 	log.Info("starting websocket server",
 		slog.String("address", cfg.WsAddress),
-		slog.String("nats_url", cfg.NatsUrl),
+		slog.String("nats_url", cfg.GetNatsURL()),
 		slog.String("env", cfg.Env))
 
 	// Initialize WebSocket observer with ring buffer size

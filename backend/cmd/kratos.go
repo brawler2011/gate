@@ -63,7 +63,7 @@ func runKratos(envFile string) {
 	}
 
 	logger.Info("connecting to postgres")
-	pool, err := pkg.NewPostgresDB(cfg.PostgresDSN)
+	pool, err := pkg.NewPostgresDB(cfg.GetPostgresDSN())
 	if err != nil {
 		panic(err)
 	}

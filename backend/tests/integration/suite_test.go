@@ -40,8 +40,7 @@ type IntegrationTestSuite struct {
 
 	ctrl *gomock.Controller
 
-	mockNats   *mocks.MockNatsPublisher
-	mockPandoc *mocks.MockPandocClient
+	mockNats *mocks.MockNatsPublisher
 
 	// Repositories (for direct DB access in tests)
 	usersRepo         *pg.UsersRepo
@@ -105,7 +104,6 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 func (s *IntegrationTestSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
 	s.mockNats = mocks.NewMockNatsPublisher(s.ctrl)
-	s.mockPandoc = mocks.NewMockPandocClient(s.ctrl)
 
 	s.initApp()
 }
@@ -131,7 +129,7 @@ func (s *IntegrationTestSuite) initApp() {
 
 	// UseCases
 	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, txManager)
-	problemsUC := usecase.NewProblemsUseCase(problemsRepo, s.mockPandoc)
+	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo)
 	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
