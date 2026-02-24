@@ -18,6 +18,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      backend-migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_started
       nats:
@@ -31,6 +33,23 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  backend-migrate:
+    build:
+      context: ../../
+      dockerfile: backend/Dockerfile
+    container_name: gate-backend-migrate-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_APP_DB}?sslmode=disable
+    networks:
+      - gate-dev
+    command: ["migrate"]
+    restart: "no"
 
   frontend:
     build:

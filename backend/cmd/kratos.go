@@ -54,12 +54,12 @@ func runKratos(envFile string) {
 		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelInfo,
 		}))
-	} else if cfg.Env == "dev" {
+	} else if cfg.Env == "dev" || cfg.Env == "local" {
 		logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelDebug,
 		}))
 	} else {
-		panic(fmt.Sprintf(`error reading config: env expected "prod" or "dev", got "%s"`, cfg.Env))
+		panic(fmt.Sprintf(`error reading config: env expected "prod", "dev", or "local", got "%s"`, cfg.Env))
 	}
 
 	logger.Info("connecting to postgres")

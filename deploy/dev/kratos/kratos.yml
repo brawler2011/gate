@@ -40,7 +40,6 @@ session:
     same_site: Lax
     domain: dev.gate149.ru
     path: /
-    secure: true
 
 identity:
   default_schema_id: default

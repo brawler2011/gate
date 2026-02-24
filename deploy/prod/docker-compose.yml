@@ -18,6 +18,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      backend-migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_started
       nats:
@@ -39,6 +41,31 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
+
+  backend-migrate:
+    build:
+      context: ../../
+      dockerfile: backend/Dockerfile
+    container_name: gate-backend-migrate-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_APP_DB}?sslmode=disable
+    networks:
+      - gate-prod
+    command: ["migrate"]
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
 
   frontend:
     build:
