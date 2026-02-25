@@ -9,6 +9,8 @@ services:
     env_file:
       - .env
     environment:
+      - ADDRESS=${BACKEND_ADDRESS}
+      - PRIVATE_ADDRESS=${BACKEND_PRIVATE_ADDRESS}
       - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_APP_DB}?sslmode=disable
       - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB_INDEX}
       - NATS_URL=nats://${NATS_HOST}:${NATS_PORT}
@@ -27,12 +29,6 @@ services:
       go-judge:
         condition: service_started
     command: ["server"]
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   backend-migrate:
     build:
@@ -58,10 +54,16 @@ services:
       args:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
         BACKEND_API_URL: ${BACKEND_API_URL}
+        KRATOS_PUBLIC_URL: ${KRATOS_PUBLIC_URL}
         WEBSOCKET_URL: ${WEBSOCKET_URL}
     container_name: gate-frontend-dev
     hostname: frontend
     restart: unless-stopped
+    environment:
+      - BACKEND_API_URL=${BACKEND_API_URL}
+      - KRATOS_PUBLIC_URL=${KRATOS_PUBLIC_URL}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - WEBSOCKET_URL=${WEBSOCKET_URL}
     networks:
       - gate-dev
     healthcheck:

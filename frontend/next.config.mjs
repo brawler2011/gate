@@ -14,7 +14,7 @@ const nextConfig = {
         return [
             {
                 source: '/api/.ory/:path*',
-                destination: `${process.env.BACKEND_API_URL}/api/.ory/:path*`,
+                destination: `${process.env.KRATOS_PUBLIC_URL}/:path*`,
             },
         ];
     },

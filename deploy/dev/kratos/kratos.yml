@@ -89,3 +89,5 @@ selfservice:
   methods:
     password:
       enabled: true
+      config:
+        ignore_network_errors: true
