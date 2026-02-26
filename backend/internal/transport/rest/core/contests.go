@@ -24,11 +24,14 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 		titles["en"] = request.Params.Title
 	}
 
+	// Generate short_name from UUID to ensure uniqueness
+	shortName := "contest-" + uuid.New().String()[:8]
+
 	contestCreation := &models.CreateContestInput{
 		OrganizationID: user.Id, // TODO: get proper organization ID
 		OwnerID:        &user.Id,
 		Titles:         titles,
-		ShortName:      "", // TODO: generate from title
+		ShortName:      shortName,
 		Description:    "",
 		Visibility:     models.ContestVisibilityPrivate,
 		Settings:       make(map[string]interface{}),
