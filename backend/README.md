@@ -1,232 +1,179 @@
-# tester
+# backend
 
 [![Go](https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white)](https://golang.org/)
-[![Fiber](https://img.shields.io/badge/Fiber-008080?style=flat-square&logo=go&logoColor=white)](https://gofiber.io/)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Valkey](https://img.shields.io/badge/Valkey-A00?style=flat-square&logo=redis&logoColor=white)](https://valkey.io/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-B00?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
-[![Pandoc](https://img.shields.io/badge/Pandoc-4A4A4A?style=flat-square)](https://pandoc.org/)
 [![OpenAPI v3](https://img.shields.io/badge/OpenAPI-v3-6BA81E?style=flat-square&logo=swagger&logoColor=white)](https://swagger.io/specification/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Valkey%2FRedis-A00?style=flat-square&logo=redis&logoColor=white)](https://valkey.io/)
+[![NATS](https://img.shields.io/badge/NATS-27AAE1?style=flat-square)](https://nats.io/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 
-`tester` is a backend service designed for managing programming competitions. It handles problems, contests,
-participants, and their submissions, as well as user authentication and management. The service is developed in Go using
-the Fiber framework. PostgreSQL serves as the relational database, Valkey (or Redis) is used for caching and session
-management. Pandoc is used to convert problem statements from LaTeX to HTML.
+Go backend for a competitive programming platform. Handles problems, contests, submissions, judging, organizations, and teams. Authentication is delegated to [Ory Kratos](https://www.ory.sh/kratos/).
 
-## Features
+## Architecture overview
 
-- Manage programming contests, problems, and participant submissions.
-- User authentication and management via JWT.
-- LaTeX to HTML conversion for problem statements using Pandoc.
-- RESTful API defined with OpenAPI.
-- Websocket support for real-time updates.
+The backend runs as several independent processes that communicate via **NATS JetStream**:
+
+| Process | Command | Purpose |
+|---|---|---|
+| API server | `go run . server` | Main REST API |
+| WebSocket server | `go run . ws` | Real-time submission events |
+| Kratos webhook | `go run . kratos` | Private webhook for Ory Kratos user lifecycle |
+| Judge worker | `go run . judge` | Async code judging via go-judge sandbox |
+| Migrations | `go run . migrate` | Apply DB migrations (goose, embedded SQL) |
+
+### External dependencies
+
+| Service | Role |
+|---|---|
+| PostgreSQL | Primary datastore |
+| Valkey / Redis | Cache |
+| NATS JetStream | Async messaging (submission events) |
+| Ory Kratos | Identity & authentication |
+| go-judge | Sandboxed code compilation and execution |
+| S3-compatible storage (SeaweedFS) | Avatars, problem packages, blog images |
 
 ## Prerequisites
 
-Before you begin, ensure you have the following dependencies installed:
+- Go 1.24+
+- Docker (for running dependencies)
+- [`sqlc`](https://sqlc.dev/) — SQL code generation (`go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest`)
+- [`oapi-codegen`](https://github.com/oapi-codegen/oapi-codegen) — OpenAPI handler generation
 
-- **Docker** and **Docker Compose**: To run PostgreSQL, Pandoc, and Valkey.
-- **Goose**: For applying database migrations (`go install github.com/pressly/goose/v3/cmd/goose@latest`).
-- **oapi-codegen**: For generating OpenAPI code (`go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@latest`).
+## Configuration
 
-## 1. Running Dependencies
-
-The service depends on PostgreSQL, Pandoc, and Valkey, which can be run using Docker Compose. Below is an
-example `docker-compose.yml` configuration:
-
-```yaml
-version: "3.8"
-services:
-  pandoc:
-    image: pandoc/latex
-    ports:
-      - "4000:3030"
-    command: "server"
-  postgres:
-    image: postgres:14.1-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: supersecretpassword
-      POSTGRES_DB: tester
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: pg_isready -U postgres -d tester
-      interval: 10s
-      timeout: 3s
-      retries: 5
-  valkey:
-    image: valkey/valkey:latest
-    volumes:
-      - ./conf/valkey.conf:/usr/local/etc/valkey/valkey.conf
-      - ./valkey-data:/data
-    command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
-    healthcheck:
-      test: ["CMD-SHELL", "valkey-cli ping | grep PONG"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    ports:
-      - "6379:6379"
-  nats:
-    image: nats:2.10
-    ports:
-      - "4222:4222"
-      - "8222:8222"
-    volumes:
-      - nats-data:/data
-      - ./nats.conf:/etc/nats/nats.conf
-    command: ["-c", "/etc/nats/nats.conf"]
-
-volumes:
-  postgres-data:
-  valkey-data:
-  nats-data:
-    name: nats-data
-```
-
-Start the services in detached mode:
-
-```bash
-docker-compose up -d
-```
-
-#### NATS Configuration
-
-```
-port: 4222
-http: 8222
-logfile: "/data/nats.log"
-```
-
-## 2. Configuration
-
-The application uses environment variables for configuration. Create a .env file in the project root with the following
-variables:
+All configuration is read from environment variables (or a `.env` file passed via `--env`).
 
 ```dotenv
-# Environment type (development or production)
-ENV=dev
+# General
+ENV=dev                          # dev | local | prod
+ADDRESS=0.0.0.0:13000            # Main API listen address
+PRIVATE_ADDRESS=:13011           # Kratos webhook server address
+WS_ADDRESS=:8081                 # WebSocket server address
 
-# Address and port where the tester service will listen
-ADDRESS=0.0.0.0:13000
+# PostgreSQL
+POSTGRES_DSN=                    # Full DSN (overrides individual vars below)
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=gate
+POSTGRES_SSLMODE=disable
 
-# Address of the running Pandoc service
-PANDOC=http://localhost:4000
+# Redis / Valkey
+REDIS_URL=                       # Full URL (overrides individual vars below)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB_INDEX=0
 
-# PostgreSQL connection string (Data Source Name)
-POSTGRES_DSN=host=localhost port=5432 user=postgres password=supersecretpassword dbname=tester sslmode=disable
+# NATS
+NATS_URL=                        # Full URL (overrides individual vars below)
+NATS_HOST=localhost
+NATS_PORT=4222
 
-# Valkey/Redis connection string
-REDIS_DSN=valkey://localhost:6379/0
+# Ory Kratos
+KRATOS_URL=http://localhost:4433
+KRATOS_ADMIN_URL=http://localhost:4434
 
-# Secret key for signing and verifying JWT tokens
-JWT_SECRET=secret
+# S3-compatible storage
+S3_ENDPOINT=                     # required
+S3_ACCESS_KEY=                   # required
+S3_SECRET_KEY=                   # required
+S3_REGION=us-east-1
+S3_AVATAR_BUCKET=avatars
+S3_PACKAGE_BUCKET=problem-packages
+S3_BLOG_BUCKET=blog-images
 
-# Default admin credentials
+# Problem workshop
+WORKSHOP_REPOS_DIR=./workshop-repos
+
+# go-judge
+GOJUDGE_GRPC_ADDR=localhost:5051
+
+# Judge worker
+JUDGE_WORKER_COUNT=4
+JUDGE_TEMP_DIR=/tmp/judge
+JUDGE_TIMEOUT=300000             # ms
+JUDGE_MAX_RETRIES=3
+
+# Default admin account
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=admin
-
-# Cache configuration
-CACHE_DIR=C:\Users\You\gate7\tester\cache
-
-NATS_URL=nats://localhost:4222
 ```
 
-Important: Replace supersecretpassword, secret, admin, and other sensitive values with secure, unique
-values for production.
+## Running
 
-## 3. Database Migrations
-
-The project uses goose to manage the database schema.
-Ensure goose is installed:
+### 1. Start dependencies
 
 ```bash
-go install github.com/pressly/goose/v3/cmd/goose@latest
+docker compose up -d
 ```
 
-Apply migrations to the PostgreSQL database:
+### 2. Apply migrations
 
 ```bash
-goose -dir ./migrations postgres "host=localhost port=5432 user=postgres password=supersecretpassword dbname=tester sslmode=disable" up
+go run . migrate --env .env
 ```
 
-## 4. OpenAPI Code Generation
-
-The API is defined using OpenAPI, and Go code for handlers and models is generated with oapi-codegen.
-Run the generation command:
+### 3. Start processes
 
 ```bash
+# Main REST API
+go run . server --env .env
+
+# WebSocket server (separate terminal)
+go run . ws --env .env
+
+# Kratos webhook server (separate terminal)
+go run . kratos --env .env
+
+# Judge worker (separate terminal)
+go run . judge --env .env
+```
+
+## Development
+
+### Code generation
+
+```bash
+# Regenerate SQLC queries
+sqlc generate
+
+# Regenerate OpenAPI handlers (from contracts module)
 make gen
 ```
 
-## 5. Running the Application
-
-The tester service has multiple commands:
-
-### Main API Server
-
-Start the main REST API server:
+### Tests
 
 ```bash
-go run . server --env .env
+# Unit tests
+go test ./...
+
+# Integration tests (require Docker)
+go test -v -tags=integration ./tests/integration/...
+
+# Sandbox integration tests (require go-judge)
+go test -v -tags=integration ./pkg/sandbox/...
 ```
 
-The service will be available at the address specified in the `ADDRESS` variable (e.g., http://localhost:13000).
+### Docker
 
-### WebSocket Server (Separate Process)
-
-Start the WebSocket server for real-time testing progress updates:
+Build from the repository root (the Dockerfile expects a sibling `contracts/` directory):
 
 ```bash
-go run . ws --env .env
+docker build -f backend/Dockerfile -t backend .
 ```
 
-The WebSocket server runs on a separate port (default: `:8081`) and provides:
+## WebSocket API
 
-- **Endpoint**: `GET /ws/submissions?ids=uuid1,uuid2,...`
-- **Health check**: `GET /health`
+Connect to `GET /ws/submissions` on the WebSocket server. Supported query parameters:
 
-**Environment variables for WebSocket server:**
+| Parameter | Description |
+|---|---|
+| `contestId` | Filter by contest |
+| `userId` | Filter by user |
+| `problemId` | Filter by problem |
+| `language` | Filter by language |
+| `since` | Sequence number to replay history from |
 
-```dotenv
-WS_ADDRESS=:8081           # WebSocket server address
-NATS_URL=nats://localhost:4222  # NATS connection URL
-ENV=dev                    # Environment (dev/prod)
-```
-
-### Running Both Servers
-
-In production, run both servers as separate processes:
-
-```bash
-# Terminal 1 - Main API
-go run . server --env .env
-
-# Terminal 2 - WebSocket
-go run . ws --env .env
-```
-
-Or with Docker/systemd as separate services.
-
-### Available Commands
-
-```bash
-go run . --help
-
-# Commands:
-#   server    Start the public API server
-#   ws        Start the WebSocket server for submission testing progress
-#   kratos    Start the private Kratos webhook server
-#   migrate   Run database migrations
-```
-
-## 6. Authentication and User Management
-
-The service handles user authentication using JWT tokens, with credentials stored in PostgreSQL and sessions managed via
-Valkey. Default admin credentials are set via ADMIN_USERNAME and ADMIN_PASSWORD in the .env file. Users can be managed
-through API endpoints defined in the OpenAPI specification.
+The server maintains a 10,000-event ring buffer, so clients can catch up on missed events after reconnecting.
