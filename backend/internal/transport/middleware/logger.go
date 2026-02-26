@@ -128,6 +128,9 @@ func ResponseErrorHandler(logger *slog.Logger) func(w http.ResponseWriter, r *ht
 			resp.Err = http.StatusText(statusCode)
 			resp.Msg = cErr.Message
 		} else {
+			// Handle sentinel errors (e.g. pkg.ErrUnauthenticated returned directly without Wrap)
+			statusCode = pkg.ToREST(err)
+			resp.Err = http.StatusText(statusCode)
 			resp.Msg = err.Error()
 		}
 

@@ -45,7 +45,9 @@ export const Call = async <T>(
 
   const kratosCookie = await getKratosCookie();
 
-  headers["Cookie"] = kratosCookie || "";
+  if (kratosCookie) {
+    headers["Cookie"] = kratosCookie;
+  }
 
   const client = new gateway({
     BASE: process.env.BACKEND_API_URL,
