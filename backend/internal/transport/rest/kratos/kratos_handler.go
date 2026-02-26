@@ -14,6 +14,7 @@ import (
 type KratosWebhookRequest struct {
 	UserId   string `json:"userId"`
 	Username string `json:"username"`
+	Email    string `json:"email"`
 }
 
 type KratosWebhookResponse struct {
@@ -61,11 +62,11 @@ func (h *KratosHandler) HandleKratosWebhook(w http.ResponseWriter, r *http.Reque
 
 	slog.Info("Processing webhook", "user_id", req.UserId, "username", req.Username)
 
-	if req.UserId == "" || req.Username == "" {
+	if req.UserId == "" || req.Username == "" || req.Email == "" {
 		slog.Error("Missing required fields in webhook")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(&ErrorResponse{
-			Error: "Missing required fields: userId and username",
+			Error: "Missing required fields: userId, username and email",
 		})
 		return
 	}
@@ -86,6 +87,7 @@ func (h *KratosHandler) HandleKratosWebhook(w http.ResponseWriter, r *http.Reque
 		Username: req.Username,
 		Role:     defaultRole,
 		KratosId: kratosId,
+		Email:    req.Email,
 	}
 
 	kratosId, err = h.usersUC.CreateUser(ctx, userCreation)

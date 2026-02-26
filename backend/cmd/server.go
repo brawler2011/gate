@@ -215,9 +215,9 @@ func runServer(envFile string) {
 	corev1.HandlerWithOptions(strictHandler, corev1.StdHTTPServerOptions{
 		BaseRouter: server,
 		Middlewares: []corev1.MiddlewareFunc{
-			middleware.RequestLoggerMiddleware(logger),
-			middleware.AuthMiddleware(oryPublicClient.FrontendAPI),
 			middleware.UsersMiddleware(usersUC),
+			middleware.AuthMiddleware(oryPublicClient.FrontendAPI),
+			middleware.RequestLoggerMiddleware(logger),
 		},
 	})
 
