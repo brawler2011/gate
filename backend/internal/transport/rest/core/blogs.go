@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 
+	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/transport/middleware"
 )
@@ -225,16 +226,26 @@ func (s *CoreServer) GetPostImage(ctx context.Context, request corev1.GetPostIma
 	}
 
 	// Get image from S3
-	imageReader, contentType, err := s.blogsUC.GetPostImage(ctx, post.ImageKey)
-	if err != nil {
+	postImage, err := s.blogsUC.GetPostImage(ctx, post.ImageKey, request.Params.IfNoneMatch)
+
+	var re *http.ResponseError
+	if errors.As(err, &re) && re.HTTPStatusCode() == 304 {
+		return corev1.GetPostImage304Response{
+			Headers: corev1.GetPostImage304ResponseHeaders{
+				ETag: *request.Params.IfNoneMatch,
+			},
+		}, nil
+	} else if err != nil {
 		return corev1.GetPostImage404JSONResponse{
 			Error: stringPtr("image not found"),
 		}, nil
 	}
 
-	_ = contentType // ContentType is set automatically by the response type
 	return corev1.GetPostImage200ImagepngResponse{
-		Body: imageReader,
+		Body: postImage.ReadCloser(),
+		Headers: corev1.GetPostImage200ResponseHeaders{
+			ETag: postImage.Etag(),
+		},
 	}, nil
 }
 

@@ -820,8 +820,8 @@ export class DefaultService {
         });
     }
     /**
-     * Download published problem package
-     * @returns binary Problem package file
+     * Get redirect to published problem package
+     * @returns void
      * @throws ApiError
      */
     public getPublishedPackage({
@@ -829,14 +829,17 @@ export class DefaultService {
         version,
     }: {
         id: string,
-        version: number,
-    }): CancelablePromise<Blob> {
+        version: string,
+    }): CancelablePromise<void> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/problems/{id}/package/{version}',
             path: {
                 'id': id,
                 'version': version,
+            },
+            errors: {
+                302: `Redirect to package download URL`,
             },
         });
     }
@@ -1621,21 +1624,28 @@ export class DefaultService {
     }
     /**
      * Get image of the post by ID
-     * @returns any Post image
+     * @returns string Post image
      * @throws ApiError
      */
     public getPostImage({
         id,
+        ifNoneMatch,
     }: {
         id: string,
-    }): CancelablePromise<any> {
+        ifNoneMatch?: string,
+    }): CancelablePromise<string> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/posts/{id}/image',
             path: {
                 'id': id,
             },
+            headers: {
+                'If-None-Match': ifNoneMatch,
+            },
+            responseHeader: 'ETag',
             errors: {
+                304: `Not modified`,
                 400: `bad request`,
                 404: `not found`,
             },

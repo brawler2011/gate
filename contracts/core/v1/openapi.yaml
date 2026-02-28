@@ -1852,6 +1852,11 @@ paths:
       operationId: GetPostImage
       summary: Get image of the post by ID
       parameters:
+        - name: If-None-Match
+          in: header
+          required: false
+          schema:
+            type: string
         - name: id
           in: path
           required: true
@@ -1861,8 +1866,18 @@ paths:
       responses:
         "200":
           description: Post image
+          headers:
+            ETag:
+              schema:
+                type: string
           content:
             image/png: { }
+        "304":
+          description: Not modified
+          headers:
+            ETag:
+              schema:
+                type: string
         "400":
           description: bad request
           content:

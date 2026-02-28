@@ -127,8 +127,9 @@ func TestS3ClientOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test: Download file
-	reader, err := s3Client.DownloadFile(ctx, bucket, testKey)
+	file, err := s3Client.DownloadFile(ctx, bucket, testKey, nil)
 	require.NoError(t, err)
+	reader := file.Body
 	defer reader.Close()
 
 	downloadedContent := make([]byte, len(testContent))

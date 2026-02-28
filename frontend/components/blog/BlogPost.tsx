@@ -1,7 +1,17 @@
-import { Card, Text, Group, Avatar, Stack, Title, Skeleton, Image } from '@mantine/core';
-import Link from 'next/link';
-import classes from './BlogPost.module.css';
-import { formatDate } from '@/lib/formatDate';
+import { formatDate } from "@/lib/formatDate";
+import {
+  Avatar,
+  Card,
+  Group,
+  Image,
+  Skeleton,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
+import NextImage from "next/image";
+import Link from "next/link";
+import classes from "./BlogPost.module.css";
 
 export interface BlogPostProps {
   id: string;
@@ -15,56 +25,59 @@ export interface BlogPostProps {
   useApiImage?: boolean;
 }
 
-export function BlogPost({ id, title, author, avatarUrl, description, date, previewImageUrl }: BlogPostProps) {
-  // Determine the image source - use preview image ID if available
-  const imageUrl = previewImageUrl 
-    ? `/api/blogs/posts/${previewImageUrl}/image`  // используем image ID, а не post ID
-    : undefined;
+export function BlogPost({
+  id,
+  title,
+  author,
+  avatarUrl,
+  description,
+  date,
+  previewImageUrl,
+}: BlogPostProps) {
+  const imageUrl = previewImageUrl ? `/api/posts/${id}/image` : undefined;
   return (
-    <Link href={`/blog/${id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-      <Card 
-        shadow="sm" 
-        padding={0} 
-        radius="lg" 
-        className={classes.card}
-      >
-      <Stack gap={0}>
-        {imageUrl && (
-          <div className={classes.imageContainer}>
-            <Image
-              src={imageUrl}
-              alt={title}
-              className={classes.previewImage}
-              fallbackSrc="https://placehold.co/1200x500/e0e0e0/666?text=Blog+Post"
-            />
-          </div>
-        )}
-        
-        <Stack gap="md" p="xl">
-          <Title order={3} size="h3" className={classes.title}>
-            {title}
-          </Title>
+    <Link
+      href={`/blog/${id}`}
+      style={{ textDecoration: "none", color: "inherit", display: "block" }}
+    >
+      <Card shadow="sm" padding={0} radius="lg" className={classes.card}>
+        <Stack gap={0}>
+          {imageUrl && (
+            <div className={classes.imageContainer}>
+              <Image
+                component={NextImage}
+                src={imageUrl}
+                alt={title}
+                className={classes.previewImage}
+              />
+            </div>
+          )}
 
-          <Group gap="xs">
-            <Avatar src={avatarUrl} name={author} size={32} radius="xl" />
-            <Stack gap={2}>
-              <Text size="sm" fw={600} style={{ lineHeight: 1.2 }}>
-                {author}
-              </Text>
-              {date && (
-                <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>
-                  {formatDate(date)}
+          <Stack gap="md" p="xl">
+            <Title order={3} size="h3" className={classes.title}>
+              {title}
+            </Title>
+
+            <Group gap="xs">
+              <Avatar src={avatarUrl} name={author} size={32} radius="xl" />
+              <Stack gap={2}>
+                <Text size="sm" fw={600} style={{ lineHeight: 1.2 }}>
+                  {author}
                 </Text>
-              )}
-            </Stack>
-          </Group>
+                {date && (
+                  <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>
+                    {formatDate(date)}
+                  </Text>
+                )}
+              </Stack>
+            </Group>
 
-          <Text className={classes.description} lineClamp={3}>
-            {description}
-          </Text>
+            <Text className={classes.description} lineClamp={3}>
+              {description}
+            </Text>
+          </Stack>
         </Stack>
-      </Stack>
-    </Card>
+      </Card>
     </Link>
   );
 }
@@ -78,7 +91,7 @@ export function BlogPostSkeleton() {
             <Skeleton height={28} width="70%" radius="sm" />
             <Skeleton height={24} width={100} radius="sm" />
           </Group>
-          
+
           <Group gap="xs">
             <Skeleton height={26} width={26} circle />
             <Skeleton height={20} width={120} radius="sm" />
@@ -94,4 +107,3 @@ export function BlogPostSkeleton() {
     </Card>
   );
 }
-

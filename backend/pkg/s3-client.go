@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -52,10 +53,14 @@ func NewS3Client(cfg S3Config) *S3Client {
 
 // UploadFile uploads a file to S3
 func (c *S3Client) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error {
-	_, err := c.client.PutObject(ctx, &s3.PutObjectInput{
+	all, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+	_, err = c.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(bucket),
 		Key:         aws.String(key),
-		Body:        reader,
+		Body:        bytes.NewReader(all),
 		ContentType: aws.String(contentType),
 	})
 	if err != nil {
@@ -65,15 +70,17 @@ func (c *S3Client) UploadFile(ctx context.Context, bucket, key string, reader io
 }
 
 // DownloadFile downloads a file from S3
-func (c *S3Client) DownloadFile(ctx context.Context, bucket, key string) (io.ReadCloser, error) {
+func (c *S3Client) DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (*s3.GetObjectOutput, error) {
 	result, err := c.client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(key),
+		IfNoneMatch: ifNoneMatch,
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to download file from S3: %w", err)
 	}
-	return result.Body, nil
+	return result, nil
 }
 
 // GetPresignedURL generates a presigned URL for accessing an object

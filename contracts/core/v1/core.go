@@ -684,6 +684,11 @@ type PatchPostByIdMultipartBody struct {
 	Title        *string             `json:"title,omitempty"`
 }
 
+// GetPostImageParams defines parameters for GetPostImage.
+type GetPostImageParams struct {
+	IfNoneMatch *string `json:"If-None-Match,omitempty"`
+}
+
 // ListProblemsParams defines parameters for ListProblems.
 type ListProblemsParams struct {
 	Page       int32   `form:"page" json:"page"`
@@ -1070,7 +1075,7 @@ type ClientInterface interface {
 	PatchPostByIdWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPostImage request
-	GetPostImage(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetPostImage(ctx context.Context, id openapi_types.UUID, params *GetPostImageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListProblems request
 	ListProblems(ctx context.Context, params *ListProblemsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1567,8 +1572,8 @@ func (c *Client) PatchPostByIdWithBody(ctx context.Context, id openapi_types.UUI
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetPostImage(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetPostImageRequest(c.Server, id)
+func (c *Client) GetPostImage(ctx context.Context, id openapi_types.UUID, params *GetPostImageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPostImageRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3623,7 +3628,7 @@ func NewPatchPostByIdRequestWithBody(server string, id openapi_types.UUID, conte
 }
 
 // NewGetPostImageRequest generates requests for GetPostImage
-func NewGetPostImageRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+func NewGetPostImageRequest(server string, id openapi_types.UUID, params *GetPostImageParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3651,6 +3656,21 @@ func NewGetPostImageRequest(server string, id openapi_types.UUID) (*http.Request
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+
+		if params.IfNoneMatch != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "If-None-Match", runtime.ParamLocationHeader, *params.IfNoneMatch)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("If-None-Match", headerParam0)
+		}
+
 	}
 
 	return req, nil
@@ -6029,7 +6049,7 @@ type ClientWithResponsesInterface interface {
 	PatchPostByIdWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchPostByIdResponse, error)
 
 	// GetPostImageWithResponse request
-	GetPostImageWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetPostImageResponse, error)
+	GetPostImageWithResponse(ctx context.Context, id openapi_types.UUID, params *GetPostImageParams, reqEditors ...RequestEditorFn) (*GetPostImageResponse, error)
 
 	// ListProblemsWithResponse request
 	ListProblemsWithResponse(ctx context.Context, params *ListProblemsParams, reqEditors ...RequestEditorFn) (*ListProblemsResponse, error)
@@ -7965,8 +7985,8 @@ func (c *ClientWithResponses) PatchPostByIdWithBodyWithResponse(ctx context.Cont
 }
 
 // GetPostImageWithResponse request returning *GetPostImageResponse
-func (c *ClientWithResponses) GetPostImageWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetPostImageResponse, error) {
-	rsp, err := c.GetPostImage(ctx, id, reqEditors...)
+func (c *ClientWithResponses) GetPostImageWithResponse(ctx context.Context, id openapi_types.UUID, params *GetPostImageParams, reqEditors ...RequestEditorFn) (*GetPostImageResponse, error) {
+	rsp, err := c.GetPostImage(ctx, id, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -10184,7 +10204,7 @@ type ServerInterface interface {
 	PatchPostById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get image of the post by ID
 	// (GET /posts/{id}/image)
-	GetPostImage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	GetPostImage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetPostImageParams)
 
 	// (GET /problems)
 	ListProblems(w http.ResponseWriter, r *http.Request, params ListProblemsParams)
@@ -11445,8 +11465,32 @@ func (siw *ServerInterfaceWrapper) GetPostImage(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPostImageParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-None-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-None-Match")]; found {
+		var IfNoneMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-None-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-None-Match", valueList[0], &IfNoneMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-None-Match", Err: err})
+			return
+		}
+
+		params.IfNoneMatch = &IfNoneMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPostImage(w, r, id)
+		siw.Handler.GetPostImage(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -13814,15 +13858,21 @@ func (response PatchPostById404JSONResponse) VisitPatchPostByIdResponse(w http.R
 }
 
 type GetPostImageRequestObject struct {
-	Id openapi_types.UUID `json:"id"`
+	Id     openapi_types.UUID `json:"id"`
+	Params GetPostImageParams
 }
 
 type GetPostImageResponseObject interface {
 	VisitGetPostImageResponse(w http.ResponseWriter) error
 }
 
+type GetPostImage200ResponseHeaders struct {
+	ETag string
+}
+
 type GetPostImage200ImagepngResponse struct {
 	Body          io.Reader
+	Headers       GetPostImage200ResponseHeaders
 	ContentLength int64
 }
 
@@ -13831,6 +13881,7 @@ func (response GetPostImage200ImagepngResponse) VisitGetPostImageResponse(w http
 	if response.ContentLength != 0 {
 		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
 	}
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
 	w.WriteHeader(200)
 
 	if closer, ok := response.Body.(io.ReadCloser); ok {
@@ -13838,6 +13889,20 @@ func (response GetPostImage200ImagepngResponse) VisitGetPostImageResponse(w http
 	}
 	_, err := io.Copy(w, response.Body)
 	return err
+}
+
+type GetPostImage304ResponseHeaders struct {
+	ETag string
+}
+
+type GetPostImage304Response struct {
+	Headers GetPostImage304ResponseHeaders
+}
+
+func (response GetPostImage304Response) VisitGetPostImageResponse(w http.ResponseWriter) error {
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(304)
+	return nil
 }
 
 type GetPostImage400JSONResponse Error
@@ -15587,10 +15652,11 @@ func (sh *strictHandler) PatchPostById(w http.ResponseWriter, r *http.Request, i
 }
 
 // GetPostImage operation middleware
-func (sh *strictHandler) GetPostImage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (sh *strictHandler) GetPostImage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetPostImageParams) {
 	var request GetPostImageRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetPostImage(ctx, request.(GetPostImageRequestObject))

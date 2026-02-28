@@ -33,6 +33,14 @@ services:
         condition: service_started
       go-judge:
         condition: service_started
+      master:
+        condition: service_started
+      volume:
+        condition: service_started
+      filer:
+        condition: service_started
+      s3:
+        condition: service_started
     command: ["server"]
 
   backend-kratos:
@@ -67,6 +75,14 @@ services:
       redis:
         condition: service_started
       nats:
+        condition: service_started
+      master:
+        condition: service_started
+      volume:
+        condition: service_started
+      filer:
+        condition: service_started
+      s3:
         condition: service_started
     command: ["kratos"]
     deploy:
@@ -323,6 +339,56 @@ services:
     profiles:
       - tools
 
+  master:
+    image: chrislusf/seaweedfs:3.77_full
+    container_name: gate-seaweed-master-prod
+    volumes:
+      - seaweedfs-master:/data
+    networks:
+      - gate-prod
+    command: "-v 9 master -ip=master -ip.bind=0.0.0.0 -metricsPort=9324"
+    restart: always
+
+  volume:
+    image: chrislusf/seaweedfs:3.77_full
+    container_name: gate-seaweed-volume-prod
+    volumes:
+      - seaweedfs-volume:/data
+    networks:
+      - gate-prod
+    command: '-v 9 volume -mserver="master:9333" -ip=volume -ip.bind=0.0.0.0 -port=2 -dir=/data -metricsPort=9325'
+    depends_on:
+      - master
+    restart: always
+
+  filer:
+    image: chrislusf/seaweedfs:3.77_full
+    container_name: gate-seaweed-filer-prod
+    volumes:
+      - seaweedfs-filer:/data
+    networks:
+      - gate-prod
+    command: '-v 9 filer -master="master:9333" -ip.bind=0.0.0.0 -metricsPort=9326'
+    depends_on:
+      - master
+      - volume
+    restart: always
+
+  s3:
+    image: chrislusf/seaweedfs:3.77_full
+    container_name: gate-seaweed-s3-prod
+    hostname: s3
+    networks:
+      - gate-prod
+    command: '-v 9 s3 -filer="filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327 -config=/etc/seaweedfs/s3.json'
+    volumes:
+      - ./s3.json:/etc/seaweedfs/s3.json
+    depends_on:
+      - master
+      - volume
+      - filer
+    restart: always
+
   certbot-renew:
     image: certbot/certbot:latest
     container_name: gate-certbot-renew-prod
@@ -345,6 +411,12 @@ volumes:
     name: gate-certbot-conf-prod
   certbot-www:
     name: gate-certbot-www-prod
+  seaweedfs-master:
+    name: gate-seaweedfs-master-prod
+  seaweedfs-volume:
+    name: gate-seaweedfs-volume-prod
+  seaweedfs-filer:
+    name: gate-seaweedfs-filer-prod
 
 networks:
   gate-prod:

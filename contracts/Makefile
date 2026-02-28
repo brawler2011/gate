@@ -63,7 +63,7 @@ ts-gen: deps
 		parent="$${dir%/*}"; \
 		service="$${parent##*/}"; \
 		version="$${dir##*/}"; \
-		npx openapi --input "$$spec_path" --output "$$dir" --client fetch --name "$$service" --useOptions || exit 1; \
+		bunx openapi-typescript-codegen --input "$$spec_path" --output "$$dir" --client fetch --name "$$service" --useOptions || exit 1; \
 	done
 
 all: go-gen ts-gen

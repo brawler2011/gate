@@ -63,11 +63,12 @@ func (pl *PackageLoader) LoadPackage(ctx context.Context, problemID, version str
 
 	// Download package from S3
 	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID, version)
-	reader, err := pl.s3Client.DownloadFile(ctx, pl.bucket, s3Key)
-	if err != nil {
+	file, err := pl.s3Client.DownloadFile(ctx, pl.bucket, s3Key, nil)
+	if file == nil || err != nil {
 		os.RemoveAll(tempDir)
 		return nil, fmt.Errorf("failed to download package: %w", err)
 	}
+	reader := file.Body
 	defer reader.Close()
 
 	// Save to temporary file

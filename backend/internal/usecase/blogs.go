@@ -26,6 +26,24 @@ type BlogsUseCase struct {
 	imageBucket string
 }
 
+type PostImage struct {
+	readCloser  io.ReadCloser
+	contentType string
+	etag        string
+}
+
+func (p PostImage) ReadCloser() io.ReadCloser {
+	return p.readCloser
+}
+
+func (p PostImage) ContentType() string {
+	return p.contentType
+}
+
+func (p PostImage) Etag() string {
+	return p.etag
+}
+
 // NewBlogsUseCase creates a new BlogsUseCase
 func NewBlogsUseCase(
 	blogsRepo interfaces.BlogsRepo,
@@ -188,13 +206,17 @@ func (uc *BlogsUseCase) DeletePost(ctx context.Context, id uuid.UUID) error {
 }
 
 // GetPostImage retrieves a post image from S3
-func (uc *BlogsUseCase) GetPostImage(ctx context.Context, imageKey string) (io.ReadCloser, string, error) {
-	reader, err := uc.s3Client.DownloadFile(ctx, uc.imageBucket, imageKey)
+func (uc *BlogsUseCase) GetPostImage(ctx context.Context, imageKey string, ifNoneMatch *string) (PostImage, error) {
+	file, err := uc.s3Client.DownloadFile(ctx, uc.imageBucket, imageKey, ifNoneMatch)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to download image: %w", err)
+		return PostImage{}, fmt.Errorf("failed to download image: %w", err)
 	}
 
-	return reader, "image/png", nil
+	return PostImage{
+		readCloser:  file.Body,
+		contentType: "image/png",
+		etag:        *file.ETag,
+	}, nil
 }
 
 // uploadImage validates, processes, and uploads an image to S3
