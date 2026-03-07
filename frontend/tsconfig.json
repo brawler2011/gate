@@ -29,6 +29,7 @@
       "@contracts/*": [
         "./contracts/*"
       ],
+
       "@components/*": [
         "./components/*"
       ],

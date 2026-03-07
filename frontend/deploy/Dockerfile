@@ -10,11 +10,8 @@ COPY frontend/package.json frontend/bun.lock ./
 RUN --mount=type=cache,id=bun-cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile
 
-# Копируем остальные файлы frontend/
+# Копируем остальные файлы frontend/ (включает contracts/)
 COPY frontend/ .
-
-# Копируем contracts/ внутрь frontend для Turbopack
-COPY contracts/ ./contracts/
 
 # Переменные окружения для сборки
 ENV NODE_ENV=production

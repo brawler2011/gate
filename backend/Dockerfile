@@ -1,10 +1,7 @@
 FROM golang:1.24-alpine AS base
 RUN apk add --no-cache git
-WORKDIR /workspace
-
-COPY contracts /workspace/contracts
-
 WORKDIR /workspace/backend
+
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download -x
 

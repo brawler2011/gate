@@ -41,7 +41,4 @@ tsconfig.tsbuildinfo
 # Don't exclude these - they're needed
 !frontend/
 
-# Contracts junction (created for local dev, copied in Dockerfile for production)
-# Must be after the !contracts/ line to properly ignore the junction
-/contracts/
 

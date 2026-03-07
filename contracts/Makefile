@@ -1,4 +1,4 @@
-.PHONY: all go-gen ts-gen dependencies go-dependencies ts-dependencies clean help list-specs
+.PHONY: all go-gen ts-gen deps clean help list-specs
 
 .DEFAULT_GOAL := all
 
@@ -13,6 +13,9 @@ NPX  ?= npx
 NODE ?= node
 
 OAPI_CODEGEN = github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
+
+GO_OUT := ../backend/contracts
+TS_OUT := ../frontend/contracts
 
 deps: go.sum go.mod package.json
 	@command -v "$(GO)"   >/dev/null || { echo "Error: go is not installed";  exit 1; }
@@ -32,14 +35,15 @@ go-gen: deps
 		service="$${parent##*/}"; \
 		version="$${dir##*/}"; \
 		pkg_name="$${service}$${version}"; \
+		out_dir="$(GO_OUT)/$$service/$$version"; \
 		\
-		mkdir -p "$$dir"; \
+		mkdir -p "$$out_dir"; \
 		\
 		if [ "$$service" = "core" ]; then \
 			go run $(OAPI_CODEGEN) \
 				-generate std-http-server,models,strict-server,client \
 				-package "$$pkg_name" \
-				-o "$$dir/$$service.go" \
+				-o "$$out_dir/$$service.go" \
 				"$$spec_path" || exit 1; \
 		elif [ "$$service" = "gateway" ]; then \
 			:; \
@@ -47,7 +51,7 @@ go-gen: deps
 			go run $(OAPI_CODEGEN) \
 				-generate std-http-server,models,strict-server \
 				-package "$$pkg_name" \
-				-o "$$dir/$$service.go" \
+				-o "$$out_dir/$$service.go" \
 				"$$spec_path" || exit 1; \
 		fi; \
 	done
@@ -63,7 +67,9 @@ ts-gen: deps
 		parent="$${dir%/*}"; \
 		service="$${parent##*/}"; \
 		version="$${dir##*/}"; \
-		bunx openapi-typescript-codegen --input "$$spec_path" --output "$$dir" --client fetch --name "$$service" --useOptions || exit 1; \
+		out_dir="$(TS_OUT)/$$service/$$version"; \
+		\
+		bunx openapi-typescript-codegen --input "$$spec_path" --output "$$out_dir" --client fetch --name "$$service" --useOptions || exit 1; \
 	done
 
 all: go-gen ts-gen
@@ -74,10 +80,8 @@ clean:
 		dir="$${spec_path%/*}"; \
 		parent="$${dir%/*}"; \
 		service="$${parent##*/}"; \
-		rm -rf "$$dir/$$service.go" \
-			"$$dir/client/" \
-			"$$dir"/*.ts \
-			"$$dir/models" \
-			"$$dir/services" \
-			"$$dir/core"; \
+		version="$${dir##*/}"; \
+		rm -rf \
+			"$(GO_OUT)/$$service/$$version/$$service.go" \
+			"$(TS_OUT)/$$service/$$version"; \
 	done
