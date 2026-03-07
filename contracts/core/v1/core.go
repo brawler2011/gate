@@ -158,17 +158,18 @@ type ContestMemberModel struct {
 
 // ContestModel defines model for ContestModel.
 type ContestModel struct {
-	CreatedAt              time.Time          `json:"created_at"`
-	CreatedBy              openapi_types.UUID `json:"created_by"`
-	Description            string             `json:"description"`
-	Id                     openapi_types.UUID `json:"id"`
-	MonitorScope           string             `json:"monitor_scope"`
-	Owner                  *UserModel         `json:"owner,omitempty"`
-	SubmissionsListScope   string             `json:"submissions_list_scope"`
-	SubmissionsReviewScope string             `json:"submissions_review_scope"`
-	Title                  string             `json:"title"`
-	UpdatedAt              time.Time          `json:"updated_at"`
-	Visibility             string             `json:"visibility"`
+	CreatedAt              time.Time           `json:"created_at"`
+	CreatedBy              openapi_types.UUID  `json:"created_by"`
+	Description            string              `json:"description"`
+	Id                     openapi_types.UUID  `json:"id"`
+	MonitorScope           string              `json:"monitor_scope"`
+	OrganizationId         *openapi_types.UUID `json:"organization_id,omitempty"`
+	Owner                  *UserModel          `json:"owner,omitempty"`
+	SubmissionsListScope   string              `json:"submissions_list_scope"`
+	SubmissionsReviewScope string              `json:"submissions_review_scope"`
+	Title                  string              `json:"title"`
+	UpdatedAt              time.Time           `json:"updated_at"`
+	Visibility             string              `json:"visibility"`
 }
 
 // ContestProblemListItemModel defines model for ContestProblemListItemModel.
@@ -385,25 +386,26 @@ type PostModel struct {
 
 // ProblemModel defines model for ProblemModel.
 type ProblemModel struct {
-	CreatedAt        time.Time          `json:"created_at"`
-	CreatedBy        openapi_types.UUID `json:"created_by"`
-	Id               openapi_types.UUID `json:"id"`
-	InputFormat      string             `json:"input_format"`
-	InputFormatHtml  string             `json:"input_format_html"`
-	IsPrivate        *bool              `json:"is_private,omitempty"`
-	Legend           string             `json:"legend"`
-	LegendHtml       string             `json:"legend_html"`
-	MemoryLimit      int32              `json:"memory_limit"`
-	Notes            string             `json:"notes"`
-	NotesHtml        string             `json:"notes_html"`
-	OutputFormat     string             `json:"output_format"`
-	OutputFormatHtml string             `json:"output_format_html"`
-	Scoring          string             `json:"scoring"`
-	ScoringHtml      string             `json:"scoring_html"`
-	TimeLimit        int32              `json:"time_limit"`
-	Title            string             `json:"title"`
-	UpdatedAt        time.Time          `json:"updated_at"`
-	Visibility       string             `json:"visibility"`
+	CreatedAt        time.Time           `json:"created_at"`
+	CreatedBy        openapi_types.UUID  `json:"created_by"`
+	Id               openapi_types.UUID  `json:"id"`
+	InputFormat      string              `json:"input_format"`
+	InputFormatHtml  string              `json:"input_format_html"`
+	IsPrivate        *bool               `json:"is_private,omitempty"`
+	Legend           string              `json:"legend"`
+	LegendHtml       string              `json:"legend_html"`
+	MemoryLimit      int32               `json:"memory_limit"`
+	Notes            string              `json:"notes"`
+	NotesHtml        string              `json:"notes_html"`
+	OrganizationId   *openapi_types.UUID `json:"organization_id,omitempty"`
+	OutputFormat     string              `json:"output_format"`
+	OutputFormatHtml string              `json:"output_format_html"`
+	Scoring          string              `json:"scoring"`
+	ScoringHtml      string              `json:"scoring_html"`
+	TimeLimit        int32               `json:"time_limit"`
+	Title            string              `json:"title"`
+	UpdatedAt        time.Time           `json:"updated_at"`
+	Visibility       string              `json:"visibility"`
 }
 
 // ProblemsListItemModel defines model for ProblemsListItemModel.
@@ -414,6 +416,7 @@ type ProblemsListItemModel struct {
 	TimeLimit   int32              `json:"time_limit"`
 	Title       string             `json:"title"`
 	UpdatedAt   time.Time          `json:"updated_at"`
+	Visibility  *string            `json:"visibility,omitempty"`
 }
 
 // SubmissionModel defines model for SubmissionModel.
@@ -585,7 +588,8 @@ type ListAdminContestsParamsSortOrder string
 
 // CreateContestParams defines parameters for CreateContest.
 type CreateContestParams struct {
-	Title string `form:"title" json:"title"`
+	Title          string              `form:"title" json:"title"`
+	OrganizationId *openapi_types.UUID `form:"organization_id,omitempty" json:"organization_id,omitempty"`
 }
 
 // DeleteContestMemberParams defines parameters for DeleteContestMember.
@@ -691,16 +695,18 @@ type GetPostImageParams struct {
 
 // ListProblemsParams defines parameters for ListProblems.
 type ListProblemsParams struct {
-	Page       int32   `form:"page" json:"page"`
-	PageSize   int32   `form:"pageSize" json:"pageSize"`
-	Search     *string `form:"search,omitempty" json:"search,omitempty"`
-	Descending *bool   `form:"descending,omitempty" json:"descending,omitempty"`
-	Owner      *bool   `form:"owner,omitempty" json:"owner,omitempty"`
+	Page           int32               `form:"page" json:"page"`
+	PageSize       int32               `form:"pageSize" json:"pageSize"`
+	Search         *string             `form:"search,omitempty" json:"search,omitempty"`
+	Descending     *bool               `form:"descending,omitempty" json:"descending,omitempty"`
+	Owner          *bool               `form:"owner,omitempty" json:"owner,omitempty"`
+	OrganizationId *openapi_types.UUID `form:"organization_id,omitempty" json:"organization_id,omitempty"`
 }
 
 // CreateProblemParams defines parameters for CreateProblem.
 type CreateProblemParams struct {
-	Title string `form:"title" json:"title"`
+	Title          string              `form:"title" json:"title"`
+	OrganizationId *openapi_types.UUID `form:"organization_id,omitempty" json:"organization_id,omitempty"`
 }
 
 // ImportProblemMultipartBody defines parameters for ImportProblem.
@@ -861,11 +867,12 @@ type ListUserSubmissionsParamsSortOrder string
 
 // ListWorkshopContestsParams defines parameters for ListWorkshopContests.
 type ListWorkshopContestsParams struct {
-	Page      int32                                `form:"page" json:"page"`
-	PageSize  int32                                `form:"pageSize" json:"pageSize"`
-	Search    *string                              `form:"search,omitempty" json:"search,omitempty"`
-	SortBy    *ListWorkshopContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
-	SortOrder *ListWorkshopContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+	Page           int32                                `form:"page" json:"page"`
+	PageSize       int32                                `form:"pageSize" json:"pageSize"`
+	Search         *string                              `form:"search,omitempty" json:"search,omitempty"`
+	SortBy         *ListWorkshopContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+	SortOrder      *ListWorkshopContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+	OrganizationId *openapi_types.UUID                  `form:"organization_id,omitempty" json:"organization_id,omitempty"`
 }
 
 // ListWorkshopContestsParamsSortBy defines parameters for ListWorkshopContests.
@@ -2301,6 +2308,22 @@ func NewCreateContestRequest(server string, params *CreateContestParams) (*http.
 					queryValues.Add(k, v2)
 				}
 			}
+		}
+
+		if params.OrganizationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "organization_id", runtime.ParamLocationQuery, *params.OrganizationId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
 		}
 
 		queryURL.RawQuery = queryValues.Encode()
@@ -3770,6 +3793,22 @@ func NewListProblemsRequest(server string, params *ListProblemsParams) (*http.Re
 
 		}
 
+		if params.OrganizationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "organization_id", runtime.ParamLocationQuery, *params.OrganizationId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
 		queryURL.RawQuery = queryValues.Encode()
 	}
 
@@ -3813,6 +3852,22 @@ func NewCreateProblemRequest(server string, params *CreateProblemParams) (*http.
 					queryValues.Add(k, v2)
 				}
 			}
+		}
+
+		if params.OrganizationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "organization_id", runtime.ParamLocationQuery, *params.OrganizationId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
 		}
 
 		queryURL.RawQuery = queryValues.Encode()
@@ -5893,6 +5948,22 @@ func NewListWorkshopContestsRequest(server string, params *ListWorkshopContestsP
 		if params.SortOrder != nil {
 
 			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.OrganizationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "organization_id", runtime.ParamLocationQuery, *params.OrganizationId); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -10440,6 +10511,14 @@ func (siw *ServerInterfaceWrapper) CreateContest(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "organization_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "organization_id", r.URL.Query(), &params.OrganizationId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "organization_id", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateContest(w, r, params)
 	}))
@@ -11562,6 +11641,14 @@ func (siw *ServerInterfaceWrapper) ListProblems(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "organization_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "organization_id", r.URL.Query(), &params.OrganizationId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "organization_id", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListProblems(w, r, params)
 	}))
@@ -11593,6 +11680,14 @@ func (siw *ServerInterfaceWrapper) CreateProblem(w http.ResponseWriter, r *http.
 	err = runtime.BindQueryParameter("form", true, true, "title", r.URL.Query(), &params.Title)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "title", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "organization_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "organization_id", r.URL.Query(), &params.OrganizationId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "organization_id", Err: err})
 		return
 	}
 
@@ -13055,6 +13150,14 @@ func (siw *ServerInterfaceWrapper) ListWorkshopContests(w http.ResponseWriter, r
 	err = runtime.BindQueryParameter("form", true, false, "sortOrder", r.URL.Query(), &params.SortOrder)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sortOrder", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "organization_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "organization_id", r.URL.Query(), &params.OrganizationId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "organization_id", Err: err})
 		return
 	}
 

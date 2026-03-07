@@ -35,6 +35,11 @@ paths:
           schema:
             type: boolean
           example: true
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: OK
@@ -51,6 +56,11 @@ paths:
           schema:
             type: string
           example: "Problem 1"
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: OK
@@ -117,6 +127,11 @@ paths:
           schema:
             type: string
           example: "Contest 1"
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: OK
@@ -272,6 +287,11 @@ paths:
               - asc
               - desc
           example: "desc"
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: OK
@@ -1934,6 +1954,9 @@ components:
         id:
           type: string
           format: uuid
+        organization_id:
+          type: string
+          format: uuid
         created_by:
           type: string
           format: uuid
@@ -2106,6 +2129,9 @@ components:
         - updated_at
       properties:
         id:
+          type: string
+          format: uuid
+        organization_id:
           type: string
           format: uuid
         title:

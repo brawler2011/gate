@@ -43,6 +43,13 @@ func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProble
 		filter.OwnerID = &user.Id
 	}
 
+	if request.Params.OrganizationId != nil {
+		orgID, err := uuid.Parse(request.Params.OrganizationId.String())
+		if err == nil {
+			filter.OrganizationID = &orgID
+		}
+	}
+
 	problemsList, err := h.problemsUC.ListProblems(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -70,15 +77,27 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
 	}
 
-	// Create titles map from title
+	var orgID uuid.UUID
+	if request.Params.OrganizationId != nil {
+		orgID = uuid.UUID(*request.Params.OrganizationId)
+	} else {
+		orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
+		if err != nil {
+			return nil, err
+		}
+		if len(orgs) == 0 {
+			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "user has no organizations")
+		}
+		orgID = orgs[0].ID
+	}
+
 	titles := make(map[string]string)
 	titles["en"] = request.Params.Title
 
-	// Generate short_name from UUID to ensure uniqueness
 	shortName := "problem-" + uuid.New().String()[:8]
 
 	input := &models.CreateProblemInput{
-		OrganizationID: user.Id, // TODO: use proper organization ID
+		OrganizationID: orgID,
 		OwnerID:        &user.Id,
 		Titles:         titles,
 		ShortName:      shortName,

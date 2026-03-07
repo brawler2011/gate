@@ -17,6 +17,14 @@ const ROLE_HIERARCHY: Record<ContestRole, number> = {
   participant: 1,
 };
 
+export type OrgRole = 'owner' | 'admin' | 'member';
+
+const ORG_ROLE_HIERARCHY: Record<OrgRole, number> = {
+  owner: 3,
+  admin: 2,
+  member: 1,
+};
+
 /**
  * Check if user's role meets the required scope
  * @param userRole - User's role in the contest
@@ -30,10 +38,16 @@ function hasRequiredRole(userRole: ContestRole, requiredScope: ContestScope): bo
 export class PermissionChecker {
   private user: SessionUser;
   private contestRole: ContestRole | null;
+  private orgRole: OrgRole | null;
 
-  constructor(user: SessionUser, contestRole: ContestRole | null = null) {
+  constructor(
+    user: SessionUser,
+    contestRole: ContestRole | null = null,
+    orgRole: OrgRole | null = null
+  ) {
     this.user = user;
     this.contestRole = contestRole;
+    this.orgRole = orgRole;
   }
 
   isAuthenticated(): boolean {
@@ -264,6 +278,27 @@ export class PermissionChecker {
     // Only admin can delete users
     return this.isGlobalAdmin();
   }
+
+  // Org permissions
+
+  canManageOrgMembers(): boolean {
+    if (this.isGlobalAdmin()) return true;
+    if (!this.orgRole) return false;
+    return ORG_ROLE_HIERARCHY[this.orgRole] >= ORG_ROLE_HIERARCHY['admin'];
+  }
+
+  canCreateTeam(): boolean {
+    return this.canManageOrgMembers();
+  }
+
+  canDeleteOrg(): boolean {
+    if (this.isGlobalAdmin()) return true;
+    return this.orgRole === 'owner';
+  }
+
+  canManageTeamMembers(): boolean {
+    return this.canManageOrgMembers();
+  }
 }
 
 /**
@@ -271,7 +306,8 @@ export class PermissionChecker {
  */
 export function createPermissionChecker(
   user: SessionUser,
-  contestRole: ContestRole | null = null
+  contestRole: ContestRole | null = null,
+  orgRole: OrgRole | null = null
 ): PermissionChecker {
-  return new PermissionChecker(user, contestRole);
+  return new PermissionChecker(user, contestRole, orgRole);
 }

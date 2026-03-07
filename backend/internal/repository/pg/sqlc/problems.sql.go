@@ -91,7 +91,7 @@ const createProblem = `-- name: CreateProblem :one
 
 INSERT INTO problems (id, organization_id, owner_id, visibility, titles, short_name)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at
+RETURNING id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb
 `
 
 type CreateProblemParams struct {
@@ -124,6 +124,8 @@ func (q *Queries) CreateProblem(ctx context.Context, arg CreateProblemParams) (P
 		&i.GitCommitHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TimeLimitMs,
+		&i.MemoryLimitMb,
 	)
 	return i, err
 }
@@ -138,7 +140,7 @@ func (q *Queries) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 }
 
 const getProblemByID = `-- name: GetProblemByID :one
-SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at FROM problems WHERE id = $1
+SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1
 `
 
 func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (Problem, error) {
@@ -154,12 +156,14 @@ func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (Problem, er
 		&i.GitCommitHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TimeLimitMs,
+		&i.MemoryLimitMb,
 	)
 	return i, err
 }
 
 const getProblemByShortName = `-- name: GetProblemByShortName :one
-SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at FROM problems 
+SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems 
 WHERE organization_id = $1 AND short_name = $2
 `
 
@@ -181,6 +185,8 @@ func (q *Queries) GetProblemByShortName(ctx context.Context, arg GetProblemBySho
 		&i.GitCommitHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TimeLimitMs,
+		&i.MemoryLimitMb,
 	)
 	return i, err
 }
@@ -233,7 +239,7 @@ func (q *Queries) GetProblemWorkshopStatus(ctx context.Context, id uuid.UUID) (G
 }
 
 const listAllProblems = `-- name: ListAllProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.titles, p.short_name, p.git_commit_hash, p.created_at, p.updated_at FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.titles, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
 WHERE ($1::text = '' OR (p.titles->>'en') ILIKE '%' || $1 || '%' OR (p.titles->>'ru') ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR p.visibility = $2::problem_visibility)
 ORDER BY p.created_at DESC
@@ -271,6 +277,8 @@ func (q *Queries) ListAllProblems(ctx context.Context, arg ListAllProblemsParams
 			&i.GitCommitHash,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TimeLimitMs,
+			&i.MemoryLimitMb,
 		); err != nil {
 			return nil, err
 		}
@@ -327,7 +335,7 @@ func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) (
 }
 
 const listProblems = `-- name: ListProblems :many
-SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at FROM problems
+SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems
 WHERE organization_id = $1
   AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::problem_visibility)
@@ -368,6 +376,8 @@ func (q *Queries) ListProblems(ctx context.Context, arg ListProblemsParams) ([]P
 			&i.GitCommitHash,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TimeLimitMs,
+			&i.MemoryLimitMb,
 		); err != nil {
 			return nil, err
 		}
@@ -380,7 +390,7 @@ func (q *Queries) ListProblems(ctx context.Context, arg ListProblemsParams) ([]P
 }
 
 const listUserAccessibleProblems = `-- name: ListUserAccessibleProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.titles, p.short_name, p.git_commit_hash, p.created_at, p.updated_at FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.titles, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
 WHERE user_has_problem_access($1, p.id)
 ORDER BY p.created_at DESC
 LIMIT $2 OFFSET $3
@@ -411,6 +421,8 @@ func (q *Queries) ListUserAccessibleProblems(ctx context.Context, arg ListUserAc
 			&i.GitCommitHash,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TimeLimitMs,
+			&i.MemoryLimitMb,
 		); err != nil {
 			return nil, err
 		}
@@ -497,5 +509,22 @@ type UpdateProblemMemberRoleParams struct {
 
 func (q *Queries) UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error {
 	_, err := q.db.Exec(ctx, updateProblemMemberRole, arg.ProblemID, arg.UserID, arg.Role)
+	return err
+}
+
+const updateProblemLimits = `-- name: UpdateProblemLimits :exec
+UPDATE problems
+SET time_limit_ms = $2, memory_limit_mb = $3
+WHERE id = $1
+`
+
+type UpdateProblemLimitsParams struct {
+	ID            uuid.UUID `json:"id"`
+	TimeLimitMs   int32     `json:"time_limit_ms"`
+	MemoryLimitMb int32     `json:"memory_limit_mb"`
+}
+
+func (q *Queries) UpdateProblemLimits(ctx context.Context, arg UpdateProblemLimitsParams) error {
+	_, err := q.db.Exec(ctx, updateProblemLimits, arg.ID, arg.TimeLimitMs, arg.MemoryLimitMb)
 	return err
 }

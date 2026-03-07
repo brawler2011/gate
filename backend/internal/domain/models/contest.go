@@ -76,12 +76,13 @@ type UserContestsFilter struct {
 }
 
 type WorkshopContestsFilter struct {
-	Page      int32
-	PageSize  int32
-	UserId    uuid.UUID
-	Search    string
-	SortBy    string
-	SortOrder SortOrder
+	Page           int32
+	PageSize       int32
+	UserId         uuid.UUID
+	Search         string
+	SortBy         string
+	SortOrder      SortOrder
+	OrganizationID *uuid.UUID
 }
 
 type PublicContestsFilter struct {

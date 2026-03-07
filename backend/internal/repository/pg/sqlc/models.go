@@ -523,6 +523,8 @@ type Problem struct {
 	GitCommitHash  *string           `json:"git_commit_hash"`
 	CreatedAt      time.Time         `json:"created_at"`
 	UpdatedAt      time.Time         `json:"updated_at"`
+	TimeLimitMs    int32             `json:"time_limit_ms"`
+	MemoryLimitMb  int32             `json:"memory_limit_mb"`
 }
 
 type ProblemMember struct {

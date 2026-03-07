@@ -168,11 +168,23 @@ func (r *ContestsRepo) ListUserContests(ctx context.Context, filter models.UserC
 }
 
 func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]models.Contest, int32, error) {
-	rows, err := r.queries.ListUserAccessibleContests(ctx, sqlc.ListUserAccessibleContestsParams{
-		PUserID: filter.UserId,
-		Limit:   filter.PageSize,
-		Offset:  Offset(filter.Page, filter.PageSize),
-	})
+	var rows []sqlc.Contest
+	var err error
+
+	if filter.OrganizationID != nil {
+		rows, err = r.queries.ListUserAccessibleContestsByOrg(ctx, sqlc.ListUserAccessibleContestsByOrgParams{
+			PUserID:        filter.UserId,
+			OrganizationID: *filter.OrganizationID,
+			Limit:          filter.PageSize,
+			Offset:         Offset(filter.Page, filter.PageSize),
+		})
+	} else {
+		rows, err = r.queries.ListUserAccessibleContests(ctx, sqlc.ListUserAccessibleContestsParams{
+			PUserID: filter.UserId,
+			Limit:   filter.PageSize,
+			Offset:  Offset(filter.Page, filter.PageSize),
+		})
+	}
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}

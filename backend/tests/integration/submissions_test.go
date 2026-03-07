@@ -8,7 +8,6 @@ import (
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
-	"go.uber.org/mock/gomock"
 )
 
 func (s *IntegrationTestSuite) TestSubmissions() {
@@ -23,8 +22,6 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	contestOrg := s.createOrganization("contest-org", "Contest Organization", admin.Id)
 
 	// 1. Create Problem
-	s.mockPandoc.EXPECT().BatchConvertLatexToHtml5(gomock.Any(), gomock.Any()).Return([]string{"html content"}, nil).AnyTimes()
-
 	problemTitle := "Submission Problem"
 	probResp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
 		Title: problemTitle,

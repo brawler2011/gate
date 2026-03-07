@@ -566,6 +566,55 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 	return items, nil
 }
 
+const listUserAccessibleContestsByOrg = `-- name: ListUserAccessibleContestsByOrg :many
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.titles, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+WHERE user_has_contest_access($1, c.id)
+  AND c.organization_id = $2
+ORDER BY c.created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type ListUserAccessibleContestsByOrgParams struct {
+	PUserID        uuid.UUID `json:"p_user_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Limit          int32     `json:"limit"`
+	Offset         int32     `json:"offset"`
+}
+
+func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]Contest, error) {
+	rows, err := q.db.Query(ctx, listUserAccessibleContestsByOrg, arg.PUserID, arg.OrganizationID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Contest{}
+	for rows.Next() {
+		var i Contest
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.OwnerID,
+			&i.Visibility,
+			&i.Titles,
+			&i.ShortName,
+			&i.Description,
+			&i.Settings,
+			&i.AccessPolicy,
+			&i.StartTime,
+			&i.EndTime,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeContestMember = `-- name: RemoveContestMember :exec
 DELETE FROM contest_members
 WHERE contest_id = $1 AND user_id = $2

@@ -127,6 +127,14 @@ const Header = ({ user }: { user?: SessionUser }) => {
             </Anchor>
             <Anchor
               component={Link}
+              href="/orgs"
+              className={classes.link}
+              underline="never"
+            >
+              Организации
+            </Anchor>
+            <Anchor
+              component={Link}
               href="/workshop"
               className={classes.link}
               underline="never"
@@ -205,6 +213,15 @@ const Header = ({ user }: { user?: SessionUser }) => {
               onClick={closeDrawer}
             >
               Контесты
+            </Anchor>
+            <Anchor
+              component={Link}
+              href="/orgs"
+              className={classes.link}
+              underline="never"
+              onClick={closeDrawer}
+            >
+              Организации
             </Anchor>
             <Anchor
               component={Link}

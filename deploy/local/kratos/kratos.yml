@@ -46,7 +46,7 @@ identity:
       url: file:///etc/config/kratos/identity.schema.json
 
 selfservice:
-  default_browser_return_url: http://localhost/
+  default_browser_return_url: http://localhost:3000/
   allowed_return_urls:
     - http://localhost/
     - http://localhost:3000/
@@ -87,3 +87,4 @@ selfservice:
       enabled: true
       config:
         ignore_network_errors: true
+        haveibeenpwned_enabled: false

@@ -13,6 +13,8 @@ export const APP_COLORS = {
   users: 'gray',
   /** Администрирование */
   admin: 'violet',
+  /** Организации */
+  orgs: 'teal',
   /** Успешные действия, статусы */
   success: 'green',
   /** Цвета для различных действий */

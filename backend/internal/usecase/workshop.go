@@ -78,11 +78,15 @@ func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uu
 		return fmt.Errorf("failed to commit initial structure: %w", err)
 	}
 
-	// Update problem in database with git commit hash
+	// Update problem in database with git commit hash and default limits from manifest
 	if err := uc.problemsRepo.UpdateProblem(ctx, problemID, &models.ProblemUpdate{
 		GitCommitHash: &commitSHA,
 	}); err != nil {
 		return fmt.Errorf("failed to update problem metadata: %w", err)
+	}
+
+	if err := uc.problemsRepo.UpdateProblemLimits(ctx, problemID, 1000, 256); err != nil {
+		return fmt.Errorf("failed to update problem limits: %w", err)
 	}
 
 	return nil
@@ -95,11 +99,14 @@ func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.Upd
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
-	// Validate if it's manifest.json
+	// Validate and sync limits if it's manifest.json
 	if req.Path == "manifest.json" {
-		_, err := uc.vcsService.LoadManifest(ctx, req.ProblemID)
+		manifest, err := uc.vcsService.LoadManifest(ctx, req.ProblemID)
 		if err != nil {
 			return fmt.Errorf("invalid manifest.json: %w", err)
+		}
+		if err := uc.problemsRepo.UpdateProblemLimits(ctx, req.ProblemID, manifest.TimeLimitMs, manifest.MemoryLimitMb); err != nil {
+			return fmt.Errorf("failed to sync problem limits: %w", err)
 		}
 	}
 

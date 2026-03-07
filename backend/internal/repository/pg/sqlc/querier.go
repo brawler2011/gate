@@ -102,6 +102,7 @@ type Querier interface {
 	ListSubmissions(ctx context.Context, arg ListSubmissionsParams) ([]ListSubmissionsRow, error)
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]ListTeamMembersRow, error)
 	ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]Contest, error)
+	ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]Contest, error)
 	ListUserAccessibleProblems(ctx context.Context, arg ListUserAccessibleProblemsParams) ([]Problem, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	MarkAsCompleted(ctx context.Context, id uuid.UUID) error

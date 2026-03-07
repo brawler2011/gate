@@ -4,6 +4,7 @@
 /* eslint-disable */
 export type ProblemModel = {
     id: string;
+    organization_id?: string;
     created_by: string;
     visibility: string;
     title: string;

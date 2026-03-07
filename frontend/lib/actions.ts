@@ -1,10 +1,18 @@
 "use server";
 
 import { Call, type ApiError } from './api';
-import type { ListSubmissionsResponseModel } from '@contracts/gateway/v1';
+import type {
+  ListSubmissionsResponseModel,
+  ListOrganizationsResponseModel,
+  GetOrganizationResponseModel,
+  ListOrganizationMembersResponseModel,
+  ListTeamsResponseModel,
+  GetTeamResponseModel,
+  ListTeamMembersResponseModel,
+} from '@contracts/gateway/v1';
 
-export async function getContests(page: number = 1, pageSize: number = 10, search?: string) {
-    return Call((client) => client.default.listWorkshopContests({page, pageSize, search}));
+export async function getContests(page: number = 1, pageSize: number = 10, search?: string, organizationId?: string) {
+    return Call((client) => client.default.listWorkshopContests({page, pageSize, search, organizationId}));
 }
 
 export async function getPublicContests(page: number = 1, pageSize: number = 10, search?: string) {
@@ -15,19 +23,21 @@ export async function getUserContests(userId: string, page: number = 1, pageSize
     return Call((client) => client.default.listUserContests({id: userId, page, pageSize, search}));
 }
 
-export async function getProblems(page: number = 1, pageSize: number = 10, search?: string, order?: number, owner?: boolean) {
+export async function getProblems(page: number = 1, pageSize: number = 10, search?: string, order?: number, owner?: boolean, organizationId?: string) {
     const params: {
         page: number;
         pageSize: number;
         search?: string;
         order?: number;
         owner?: boolean;
+        organizationId?: string;
     } = {
         page,
         pageSize,
         search,
         order,
         owner,
+        organizationId,
     };
 
     return Call((client) => client.default.listProblems(params));
@@ -116,12 +126,12 @@ export async function getSubmission(submissionId: string) {
     return Call((client) => client.default.getSubmission({submissionId}));
 }
 
-export async function createContest(title: string) {
-    return Call((client) => client.default.createContest({title}));
+export async function createContest(title: string, organizationId?: string) {
+    return Call((client) => client.default.createContest({title, organizationId}));
 }
 
-export async function createProblem(title: string) {
-    return Call((client) => client.default.createProblem({title}));
+export async function createProblem(title: string, organizationId?: string) {
+    return Call((client) => client.default.createProblem({title, organizationId}));
 }
 
 export async function updateProblem(
@@ -293,4 +303,72 @@ export async function patchPost(
 
 export async function deletePost(id: string) {
   return Call((client) => client.default.deletePostById({ id }));
+}
+
+// ─── Organizations ────────────────────────────────────────────────────────────
+
+export async function listOrganizations(page: number = 1, pageSize: number = 20, search?: string) {
+  return Call((client) => client.default.listOrganizations({ page, pageSize, search }));
+}
+
+export async function createOrganization(name: string) {
+  return Call((client) => client.default.createOrganization({ name }));
+}
+
+export async function getOrganization(id: string) {
+  return Call((client) => client.default.getOrganization({ id }));
+}
+
+export async function updateOrganization(id: string, data: { name?: string; description?: string }) {
+  return Call((client) => client.default.updateOrganization({ id, requestBody: data }));
+}
+
+export async function deleteOrganization(id: string) {
+  return Call((client) => client.default.deleteOrganization({ id }));
+}
+
+export async function listOrganizationMembers(orgId: string, page: number = 1, pageSize: number = 50) {
+  return Call((client) => client.default.listOrganizationMembers({ id: orgId, page, pageSize }));
+}
+
+export async function addOrganizationMember(orgId: string, userId: string, role: 'owner' | 'admin' | 'member') {
+  return Call((client) => client.default.addOrganizationMember({ id: orgId, userId, role }));
+}
+
+export async function removeOrganizationMember(orgId: string, userId: string) {
+  return Call((client) => client.default.removeOrganizationMember({ id: orgId, userId }));
+}
+
+// ─── Teams ────────────────────────────────────────────────────────────────────
+
+export async function listTeams(organizationId?: string, page: number = 1, pageSize: number = 50, search?: string) {
+  return Call((client) => client.default.listTeams({ page, pageSize, search, organizationId }));
+}
+
+export async function createTeam(organizationId: string, name: string) {
+  return Call((client) => client.default.createTeam({ requestBody: { name, organization_id: organizationId } }));
+}
+
+export async function getTeam(id: string) {
+  return Call((client) => client.default.getTeam({ id }));
+}
+
+export async function updateTeam(id: string, data: { name?: string; description?: string }) {
+  return Call((client) => client.default.updateTeam({ id, requestBody: data }));
+}
+
+export async function deleteTeam(id: string) {
+  return Call((client) => client.default.deleteTeam({ id }));
+}
+
+export async function listTeamMembers(teamId: string, page: number = 1, pageSize: number = 50) {
+  return Call((client) => client.default.listTeamMembers({ id: teamId, page, pageSize }));
+}
+
+export async function addTeamMember(teamId: string, userId: string) {
+  return Call((client) => client.default.addTeamMember({ id: teamId, userId }));
+}
+
+export async function removeTeamMember(teamId: string, userId: string) {
+  return Call((client) => client.default.removeTeamMember({ id: teamId, userId }));
 }

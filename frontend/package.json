@@ -3,15 +3,10 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "local": "bun --env-file=../deploy/local/.env next dev",
     "build": "next build",
-    "build:dev": "bun --env-file=.env.development next build",
     "start": "next start",
-    "start:dev": "bun --env-file=.env.development next start",
-    "lint": "eslint .",
-    "deploy": "bun run deploy/deploy.ts --AutoDeploy",
-    "deploy:redeploy": "bun run deploy/deploy.ts --StartFrom deploy --AutoDeploy",
-    "deploy:upload": "bun run deploy/deploy.ts --StartFrom upload --AutoDeploy"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@mantine/core": "^8.3.10",

@@ -124,6 +124,7 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 
 	model := corev1.ContestModel{
 		Id:                     c.ID,
+		OrganizationId:         &c.OrganizationID,
 		Title:                  title,
 		Description:            c.Description,
 		Visibility:             visibility,
@@ -191,8 +192,9 @@ func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
 	return corev1.ProblemsListItemModel{
 		Id:          p.ID,
 		Title:       title,
-		MemoryLimit: 0, // Not available in new model
-		TimeLimit:   0, // Not available in new model
+		Visibility:  &p.Visibility,
+		MemoryLimit: int32(p.MemoryLimitMb),
+		TimeLimit:   int32(p.TimeLimitMs),
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
 	}
@@ -205,11 +207,19 @@ func ProblemDTO(p models.Problem) *corev1.ProblemModel {
 		title = t
 	}
 
+	createdBy := uuid.Nil
+	if p.OwnerID != nil {
+		createdBy = *p.OwnerID
+	}
+
 	return &corev1.ProblemModel{
-		Id:          p.ID,
-		Title:       title,
-		TimeLimit:   0, // Not available in new model
-		MemoryLimit: 0, // Not available in new model
+		Id:             p.ID,
+		OrganizationId: &p.OrganizationID,
+		Title:          title,
+		Visibility:     p.Visibility,
+		CreatedBy:      createdBy,
+		TimeLimit:      0, // Not available in new model
+		MemoryLimit:    0, // Not available in new model
 
 		Legend:       "", // Not available in new model
 		InputFormat:  "", // Not available in new model

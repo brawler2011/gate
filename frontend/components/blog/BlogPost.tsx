@@ -1,3 +1,4 @@
+"use client";
 import { formatDate } from "@/lib/formatDate";
 import {
   Avatar,

@@ -6,14 +6,14 @@ VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetProblemByID :one
-SELECT * FROM problems WHERE id = $1;
+SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1;
 
 -- name: GetProblemByShortName :one
-SELECT * FROM problems 
+SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems 
 WHERE organization_id = $1 AND short_name = $2;
 
 -- name: ListProblems :many
-SELECT * FROM problems
+SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems
 WHERE organization_id = $1
   AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::problem_visibility)
@@ -27,7 +27,7 @@ WHERE organization_id = $1
   AND ($3::text = '' OR visibility = $3::problem_visibility);
 
 -- name: ListAllProblems :many
-SELECT p.* FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.titles, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
 WHERE ($1::text = '' OR (p.titles->>'en') ILIKE '%' || $1 || '%' OR (p.titles->>'ru') ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR p.visibility = $2::problem_visibility)
 ORDER BY p.created_at DESC
@@ -81,7 +81,7 @@ WHERE problem_id = $1 AND user_id = $2;
 SELECT user_has_problem_access($1, $2) as has_access;
 
 -- name: ListUserAccessibleProblems :many
-SELECT p.* FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.titles, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
 WHERE user_has_problem_access($1, p.id)
 ORDER BY p.created_at DESC
 LIMIT $2 OFFSET $3;
@@ -91,6 +91,11 @@ LIMIT $2 OFFSET $3;
 -- name: UpdateProblemGitCommit :exec
 UPDATE problems
 SET git_commit_hash = $2
+WHERE id = $1;
+
+-- name: UpdateProblemLimits :exec
+UPDATE problems
+SET time_limit_ms = $2, memory_limit_mb = $3
 WHERE id = $1;
 
 -- name: GetProblemWorkshopStatus :one

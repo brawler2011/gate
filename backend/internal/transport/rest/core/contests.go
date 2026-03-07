@@ -18,6 +18,32 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 
 	user := middleware.GetUser(ctx)
 
+	orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
+	if err != nil {
+		return nil, err
+	}
+	if len(orgs) == 0 {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "user has no organizations")
+	}
+
+	var orgID uuid.UUID
+	if request.Params.OrganizationId != nil {
+		requested := uuid.UUID(*request.Params.OrganizationId)
+		found := false
+		for _, org := range orgs {
+			if org.ID == requested {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "organization not found or user is not a member")
+		}
+		orgID = requested
+	} else {
+		orgID = orgs[0].ID
+	}
+
 	// Create titles map from single title
 	titles := make(map[string]string)
 	if request.Params.Title != "" {
@@ -28,7 +54,7 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 	shortName := "contest-" + uuid.New().String()[:8]
 
 	contestCreation := &models.CreateContestInput{
-		OrganizationID: user.Id, // TODO: get proper organization ID
+		OrganizationID: orgID,
 		OwnerID:        &user.Id,
 		Titles:         titles,
 		ShortName:      shortName,
@@ -116,13 +142,28 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 		titles = &t
 	}
 
+	var settings *map[string]interface{}
+	if req.MonitorScope != nil || req.SubmissionsListScope != nil || req.SubmissionsReviewScope != nil {
+		s := make(map[string]interface{})
+		if req.MonitorScope != nil {
+			s["monitor_scope"] = *req.MonitorScope
+		}
+		if req.SubmissionsListScope != nil {
+			s["submissions_list_scope"] = *req.SubmissionsListScope
+		}
+		if req.SubmissionsReviewScope != nil {
+			s["submissions_review_scope"] = *req.SubmissionsReviewScope
+		}
+		settings = &s
+	}
+
 	err = h.contestsUC.UpdateContest(ctx, models.ContestUpdateInput{
 		ID:           request.ContestId,
 		Titles:       titles,
 		Description:  req.Description,
 		Visibility:   req.Visibility,
-		Settings:     nil, // TODO: map from old fields
-		AccessPolicy: nil, // TODO: map from old fields
+		Settings:     settings,
+		AccessPolicy: nil,
 		StartTime:    nil,
 		EndTime:      nil,
 		OwnerID:      nil,
@@ -287,6 +328,13 @@ func (h *CoreServer) ListWorkshopContests(ctx context.Context, request corev1.Li
 		Search:    search,
 		SortBy:    sortBy,
 		SortOrder: sortOrder,
+	}
+
+	if request.Params.OrganizationId != nil {
+		orgID, err := uuid.Parse(request.Params.OrganizationId.String())
+		if err == nil {
+			filter.OrganizationID = &orgID
+		}
 	}
 
 	contestsList, err := h.contestsUC.ListWorkshopContests(ctx, filter)
@@ -573,7 +621,7 @@ func (h *CoreServer) GetMyContestRole(ctx context.Context, request corev1.GetMyC
 	}
 
 	return corev1.GetMyContestRole200JSONResponse{
-		Role: contestMember.Role,
+		Role: contestMember.ContestRole,
 	}, nil
 }
 

@@ -74,6 +74,9 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, request corev1.Crea
 
 	// Generate login from name
 	login := generateLogin(request.Params.Name)
+	if login == "" {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "name must contain at least one latin letter or digit")
+	}
 
 	// Create input
 	input := &models.CreateOrganizationInput{

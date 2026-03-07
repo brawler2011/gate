@@ -50,12 +50,14 @@ export class DefaultService {
         search,
         descending,
         owner,
+        organizationId,
     }: {
         page: number,
         pageSize: number,
         search?: string,
         descending?: boolean,
         owner?: boolean,
+        organizationId?: string,
     }): CancelablePromise<ListProblemsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
@@ -66,6 +68,7 @@ export class DefaultService {
                 'search': search,
                 'descending': descending,
                 'owner': owner,
+                'organization_id': organizationId,
             },
         });
     }
@@ -75,14 +78,17 @@ export class DefaultService {
      */
     public createProblem({
         title,
+        organizationId,
     }: {
         title: string,
+        organizationId?: string,
     }): CancelablePromise<CreationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/problems',
             query: {
                 'title': title,
+                'organization_id': organizationId,
             },
         });
     }
@@ -147,14 +153,17 @@ export class DefaultService {
      */
     public createContest({
         title,
+        organizationId,
     }: {
         title: string,
+        organizationId?: string,
     }): CancelablePromise<CreationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/contests',
             query: {
                 'title': title,
+                'organization_id': organizationId,
             },
         });
     }
@@ -234,12 +243,14 @@ export class DefaultService {
         search,
         sortBy,
         sortOrder,
+        organizationId,
     }: {
         page: number,
         pageSize: number,
         search?: string,
         sortBy?: 'created_at' | 'updated_at' | 'title',
         sortOrder?: 'asc' | 'desc',
+        organizationId?: string,
     }): CancelablePromise<ListContestsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
@@ -250,6 +261,7 @@ export class DefaultService {
                 'search': search,
                 'sortBy': sortBy,
                 'sortOrder': sortOrder,
+                'organization_id': organizationId,
             },
         });
     }

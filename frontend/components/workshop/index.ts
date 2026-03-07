@@ -1,3 +1,5 @@
+export * from './CreateContestModal';
+export * from './CreateProblemModal';
 export * from './WorkshopContestsContentSkeleton';
 export * from './WorkshopContestsDataWrapper';
 export * from './WorkshopContestsGridSkeleton';

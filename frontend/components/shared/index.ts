@@ -5,6 +5,7 @@ export * from './Footer';
 export * from './Header';
 export * from './HeaderWithSession';
 export * from './Layout';
+export * from './LinkAnchor';
 export * from './LogoutLink';
 export * from './Pagination';
 export * from './PresentationSlide';

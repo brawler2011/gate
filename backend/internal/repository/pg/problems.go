@@ -203,7 +203,6 @@ func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
 }
 
 func mapProblem(p sqlc.Problem) models.Problem {
-	// Unmarshal titles from JSON
 	var titles map[string]string
 	if len(p.Titles) > 0 {
 		json.Unmarshal(p.Titles, &titles)
@@ -217,9 +216,23 @@ func mapProblem(p sqlc.Problem) models.Problem {
 		Titles:         titles,
 		ShortName:      p.ShortName,
 		GitCommitHash:  p.GitCommitHash,
+		TimeLimitMs:    int(p.TimeLimitMs),
+		MemoryLimitMb:  int(p.MemoryLimitMb),
 		CreatedAt:      p.CreatedAt,
 		UpdatedAt:      p.UpdatedAt,
 	}
+}
+
+func (r *ProblemsRepo) UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error {
+	err := r.queries.UpdateProblemLimits(ctx, sqlc.UpdateProblemLimitsParams{
+		ID:            id,
+		TimeLimitMs:   int32(timeLimitMs),
+		MemoryLimitMb: int32(memoryLimitMb),
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
 }
 
 // mapListProblemsRow is no longer used - removed as ListProblemsRow type doesn't exist

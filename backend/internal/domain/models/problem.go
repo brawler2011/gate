@@ -105,6 +105,8 @@ type Problem struct {
 	Titles         map[string]string // {"en": "Sum", "ru": "Сумма"}
 	ShortName      string
 	GitCommitHash  *string
+	TimeLimitMs    int
+	MemoryLimitMb  int
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }

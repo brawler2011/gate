@@ -121,3 +121,10 @@ SELECT c.* FROM contests c
 WHERE user_has_contest_access($1, c.id)
 ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: ListUserAccessibleContestsByOrg :many
+SELECT c.* FROM contests c
+WHERE user_has_contest_access($1, c.id)
+  AND c.organization_id = $2
+ORDER BY c.created_at DESC
+LIMIT $3 OFFSET $4;

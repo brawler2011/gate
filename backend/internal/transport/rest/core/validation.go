@@ -18,7 +18,7 @@ func isLengthBetween(s string, min, max int) bool {
 const (
 	minPage         = 1
 	minPageSize     = 1
-	maxPageSize     = 20
+	maxPageSize     = 100
 	maxSearchLength = 50
 	maxArchiveSize  = 10 * 1024 * 1024 // 10 MB
 )
