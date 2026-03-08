@@ -30,41 +30,20 @@ local-% dev-% prod-%:
 
 # ---------------------------------------------------------------------------
 # Local native backend (runs outside Docker, infra still in Docker)
-# Reads env from deploy/local/.env.backend — copy from .env.backend.example
+# Copy deploy/local/.env.external.example to deploy/local/.env.external
 # and fill in your credentials before use.
 # ---------------------------------------------------------------------------
 
-LOCAL_BACKEND_ENV := deploy/local/.env
+LOCAL_BACKEND_ENV := deploy/local/.env.external
 
 local-backend-migrate:
-	cd backend && \
-	set -a && . ../$(LOCAL_BACKEND_ENV) && set +a && \
-	POSTGRES_DSN="postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:$$POSTGRES_PORT/$$POSTGRES_APP_DB?sslmode=disable" \
-	go run . migrate
+	cd backend && go run . migrate --env ../$(LOCAL_BACKEND_ENV)
 
 local-backend-server:
-	cd backend && \
-	set -a && . ../$(LOCAL_BACKEND_ENV) && set +a && \
-	POSTGRES_DSN="postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:$$POSTGRES_PORT/$$POSTGRES_APP_DB?sslmode=disable" \
-	REDIS_URL="redis://:$$REDIS_PASSWORD@localhost:$$REDIS_PORT/$$REDIS_DB_INDEX" \
-	NATS_URL="nats://localhost:$$NATS_PORT" \
-	KRATOS_URL="http://localhost:4433" \
-	KRATOS_ADMIN_URL="http://localhost:4434" \
-	GOJUDGE_GRPC_ADDR="localhost:5051" \
-	ADDRESS="$$BACKEND_ADDRESS" \
-	PRIVATE_ADDRESS="$$BACKEND_PRIVATE_ADDRESS" \
-	go run . server
+	cd backend && go run . server --env ../$(LOCAL_BACKEND_ENV)
 
 local-backend-kratos:
-	cd backend && \
-	set -a && . ../$(LOCAL_BACKEND_ENV) && set +a && \
-	POSTGRES_DSN="postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:$$POSTGRES_PORT/$$POSTGRES_APP_DB?sslmode=disable" \
-	REDIS_URL="redis://:$$REDIS_PASSWORD@localhost:$$REDIS_PORT/$$REDIS_DB_INDEX" \
-	NATS_URL="nats://localhost:$$NATS_PORT" \
-	KRATOS_URL="http://localhost:4433" \
-	KRATOS_ADMIN_URL="http://localhost:4434" \
-	PRIVATE_ADDRESS="$$BACKEND_PRIVATE_ADDRESS" \
-	go run . kratos
+	cd backend && go run . kratos --env ../$(LOCAL_BACKEND_ENV)
 
 prod-backup:
 	$(MAKE) -C deploy/ prod-backup
@@ -102,7 +81,7 @@ help:
 	@echo "  local-backend-migrate  Run DB migrations natively"
 	@echo "  local-backend-server   Run API server natively (port 8080)"
 	@echo "  local-backend-kratos   Run Kratos webhook server natively"
-	@echo "  (reads credentials from deploy/local/.env)"
+	@echo "  (reads credentials from deploy/local/.env.external)"
 	@echo ""
 	@echo "Deploy extras:"
 	@echo "  <env>-ssl-init   Obtain Let's Encrypt certificate"

@@ -15,6 +15,7 @@ import (
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/sandbox"
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
@@ -37,8 +38,12 @@ func runJudge(cmd *cobra.Command, args []string) {
 	// Load configuration
 	envPath, _ := cmd.Flags().GetString("env")
 	var cfg config.Config
-	if err := cleanenv.ReadConfig(envPath, &cfg); err != nil {
-		slog.Error("failed to read config", slog.Any("error", err))
+	if err := godotenv.Load(envPath); err != nil {
+		slog.Error("failed to load env file", slog.Any("error", err))
+		return
+	}
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		slog.Error("failed to read config from environment", slog.Any("error", err))
 		return
 	}
 

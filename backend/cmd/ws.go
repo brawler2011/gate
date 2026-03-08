@@ -12,6 +12,7 @@ import (
 	"github.com/gate149/gate/backend/config"
 	ws "github.com/gate149/gate/backend/internal/transport/ws/observer"
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
@@ -57,9 +58,13 @@ func runWsServer(envFile string) {
 	var err error
 
 	if envFile != "" {
-		err = cleanenv.ReadConfig(envFile, &cfg)
+		err = godotenv.Load(envFile)
 		if err != nil {
-			panic(fmt.Sprintf("error reading config from %s: %s", envFile, err.Error()))
+			panic(fmt.Sprintf("error loading env file %s: %s", envFile, err.Error()))
+		}
+		err = cleanenv.ReadEnv(&cfg)
+		if err != nil {
+			panic(fmt.Sprintf("error reading config from environment: %s", err.Error()))
 		}
 	} else {
 		err = cleanenv.ReadEnv(&cfg)

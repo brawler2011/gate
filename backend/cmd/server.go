@@ -21,6 +21,7 @@ import (
 	"github.com/gate149/gate/backend/pkg/sandbox"
 	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 	ory "github.com/ory/client-go"
 	"github.com/spf13/cobra"
 )
@@ -43,9 +44,15 @@ func runServer(envFile string) {
 	var cfg config.Config
 	var err error
 	if envFile != "" {
-		err = cleanenv.ReadConfig(envFile, &cfg)
+		// Load .env file first (works with any extension)
+		err = godotenv.Load(envFile)
 		if err != nil {
-			panic(fmt.Sprintf("error reading config from %s: %s", envFile, err.Error()))
+			panic(fmt.Sprintf("error loading env file %s: %s", envFile, err.Error()))
+		}
+		// Then read config from environment variables
+		err = cleanenv.ReadEnv(&cfg)
+		if err != nil {
+			panic(fmt.Sprintf("error reading config from environment: %s", err.Error()))
 		}
 	} else {
 		err = cleanenv.ReadEnv(&cfg)

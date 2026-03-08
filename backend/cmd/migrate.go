@@ -7,6 +7,7 @@ import (
 	"github.com/gate149/gate/backend/config"
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 	"github.com/spf13/cobra"
 )
@@ -24,16 +25,17 @@ var migrateCmd = &cobra.Command{
 		var err error
 
 		if envFile != "" {
-			err = cleanenv.ReadConfig(envFile, &cfg)
+			err = godotenv.Load(envFile)
+			if err != nil {
+				panic(fmt.Sprintf("error loading env file %s: %s", envFile, err.Error()))
+			}
+			err = cleanenv.ReadEnv(&cfg)
 		} else {
-			err = cleanenv.ReadConfig(".env", &cfg)
+			err = cleanenv.ReadEnv(&cfg)
 		}
 
 		if err != nil {
-			// Fallback to env vars if file not found or error
-			if err := cleanenv.ReadEnv(&cfg); err != nil {
-				panic(fmt.Sprintf("error reading config: %s", err.Error()))
-			}
+			panic(fmt.Sprintf("error reading config: %s", err.Error()))
 		}
 
 		db, err := pkg.NewPostgresDBForMigrations(cfg.GetPostgresDSN())
@@ -55,6 +57,6 @@ var migrateCmd = &cobra.Command{
 }
 
 func init() {
-	migrateCmd.Flags().String("env", ".env", "path to environment file")
+	migrateCmd.Flags().String("env", "", "path to environment file")
 	rootCmd.AddCommand(migrateCmd)
 }
