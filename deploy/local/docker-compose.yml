@@ -4,12 +4,11 @@ services:
     container_name: gate-postgres-local
     hostname: postgres
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     ports:
       - "5432:5432"
     volumes:
@@ -20,8 +19,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 10s
-      timeout: 3s
-      retries: 5
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   kratos-migrate:
     image: oryd/kratos:v1.3.1
@@ -32,10 +32,8 @@ services:
     volumes:
       - ./kratos/kratos.yml:/etc/config/kratos/kratos.yml:ro
     command: migrate sql -e --yes --config /etc/config/kratos/kratos.yml
-    env_file:
-      - .env
     environment:
-      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_KRATOS_DB}?sslmode=disable
+      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_KRATOS_DB}?sslmode=disable
     networks:
       - gate-local
     restart: "no"
@@ -56,12 +54,12 @@ services:
       - ./kratos/kratos.yml:/etc/config/kratos/kratos.yml:ro
       - ../base/kratos/identity.schema.json:/etc/config/kratos/identity.schema.json:ro
     command: serve --dev --config /etc/config/kratos/kratos.yml
-    env_file:
-      - .env
     environment:
-      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_KRATOS_DB}?sslmode=disable
+      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_KRATOS_DB}?sslmode=disable
     networks:
       - gate-local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   redis:
     image: redis:7.2.4-alpine

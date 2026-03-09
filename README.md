@@ -48,8 +48,9 @@ The fastest way to run the full stack locally is Docker Compose.
 **Prerequisites:** Docker, Docker Compose
 
 ```bash
-cd deploy
-cp local/.env.example local/.env   # Fill in passwords and S3 credentials
+cd deploy/local
+cp .env.example .env   # Fill in passwords and S3 credentials
+cd ..
 make local-up
 ```
 

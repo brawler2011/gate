@@ -30,11 +30,11 @@ local-% dev-% prod-%:
 
 # ---------------------------------------------------------------------------
 # Local native backend (runs outside Docker, infra still in Docker)
-# Copy deploy/local/.env.external.example to deploy/local/.env.external
+# Copy deploy/local/.env.example to deploy/local/.env
 # and fill in your credentials before use.
 # ---------------------------------------------------------------------------
 
-LOCAL_BACKEND_ENV := deploy/local/.env.external
+LOCAL_BACKEND_ENV := deploy/local/.env
 
 local-backend-migrate:
 	cd backend && go run . migrate --env ../$(LOCAL_BACKEND_ENV)
@@ -81,7 +81,7 @@ help:
 	@echo "  local-backend-migrate  Run DB migrations natively"
 	@echo "  local-backend-server   Run API server natively (port 8080)"
 	@echo "  local-backend-kratos   Run Kratos webhook server natively"
-	@echo "  (reads credentials from deploy/local/.env.external)"
+	@echo "  (reads credentials from deploy/local/.env)"
 	@echo ""
 	@echo "Deploy extras:"
 	@echo "  <env>-ssl-init   Obtain Let's Encrypt certificate"

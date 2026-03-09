@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "local": "bun --env-file=../deploy/local/.env.external next dev",
+    "local": "bun --env-file=../deploy/local/.env next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."
