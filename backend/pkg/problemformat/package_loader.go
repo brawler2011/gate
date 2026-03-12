@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gate149/gate/backend/pkg"
 )
@@ -217,8 +218,8 @@ func extractZip(zipPath, destDir string) error {
 	for _, file := range reader.File {
 		filePath := filepath.Join(destDir, file.Name)
 
-		// Check for ZipSlip vulnerability
-		if !filepath.HasPrefix(filePath, filepath.Clean(destDir)+string(os.PathSeparator)) {
+		// Guard against ZipSlip: ensure the resolved path stays inside destDir.
+		if !strings.HasPrefix(filePath, filepath.Clean(destDir)+string(os.PathSeparator)) {
 			return fmt.Errorf("illegal file path in zip: %s", file.Name)
 		}
 

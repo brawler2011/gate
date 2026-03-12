@@ -18,12 +18,23 @@ import (
 // GoGitService implements the Service interface using go-git
 type GoGitService struct {
 	baseDir string
-	mu      sync.RWMutex // Global lock for Git operations
+	// locks holds one *sync.RWMutex per problem UUID (created lazily, never
+	// deleted). Keeping entries in the map permanently prevents a race where a
+	// goroutine that fetched a mutex pointer before DeleteProblemRepo could
+	// race with InitProblemRepo obtaining a different mutex for the same ID.
+	locks sync.Map
 }
 
 // NewGoGitService creates a new GoGitService
 func NewGoGitService(baseDir string) *GoGitService {
 	return &GoGitService{baseDir: baseDir}
+}
+
+// repoLock returns the RWMutex for a specific problem repository, creating it
+// on first access. This allows concurrent operations on different problems.
+func (s *GoGitService) repoLock(problemID uuid.UUID) *sync.RWMutex {
+	mu, _ := s.locks.LoadOrStore(problemID, &sync.RWMutex{})
+	return mu.(*sync.RWMutex)
 }
 
 // getRepoPath returns the filesystem path to a problem's repository
@@ -46,8 +57,9 @@ func (s *GoGitService) RepoExists(ctx context.Context, problemID uuid.UUID) bool
 
 // InitProblemRepo creates a new Git repository for a problem
 func (s *GoGitService) InitProblemRepo(ctx context.Context, problemID uuid.UUID) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	mu := s.repoLock(problemID)
+	mu.Lock()
+	defer mu.Unlock()
 
 	repoPath := s.getRepoPath(problemID)
 
@@ -117,8 +129,9 @@ func (s *GoGitService) InitProblemRepo(ctx context.Context, problemID uuid.UUID)
 
 // DeleteProblemRepo deletes the repository for a problem
 func (s *GoGitService) DeleteProblemRepo(ctx context.Context, problemID uuid.UUID) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	mu := s.repoLock(problemID)
+	mu.Lock()
+	defer mu.Unlock()
 
 	repoPath := s.getRepoPath(problemID)
 	if err := os.RemoveAll(repoPath); err != nil {
@@ -129,8 +142,9 @@ func (s *GoGitService) DeleteProblemRepo(ctx context.Context, problemID uuid.UUI
 
 // ReadFile reads a file from the working copy
 func (s *GoGitService) ReadFile(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	mu := s.repoLock(problemID)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	fullPath := filepath.Join(s.getRepoPath(problemID), path)
 	content, err := os.ReadFile(fullPath)
@@ -142,8 +156,9 @@ func (s *GoGitService) ReadFile(ctx context.Context, problemID uuid.UUID, path s
 
 // WriteFile writes a file to the working copy (without committing)
 func (s *GoGitService) WriteFile(ctx context.Context, problemID uuid.UUID, path string, content []byte) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	mu := s.repoLock(problemID)
+	mu.Lock()
+	defer mu.Unlock()
 
 	fullPath := filepath.Join(s.getRepoPath(problemID), path)
 
@@ -161,8 +176,9 @@ func (s *GoGitService) WriteFile(ctx context.Context, problemID uuid.UUID, path 
 
 // DeleteFile deletes a file from the working copy
 func (s *GoGitService) DeleteFile(ctx context.Context, problemID uuid.UUID, path string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	mu := s.repoLock(problemID)
+	mu.Lock()
+	defer mu.Unlock()
 
 	fullPath := filepath.Join(s.getRepoPath(problemID), path)
 	if err := os.Remove(fullPath); err != nil {
@@ -174,8 +190,9 @@ func (s *GoGitService) DeleteFile(ctx context.Context, problemID uuid.UUID, path
 
 // ListFiles lists all files in a directory
 func (s *GoGitService) ListFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]FileEntry, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	mu := s.repoLock(problemID)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	fullPath := filepath.Join(s.getRepoPath(problemID), dirPath)
 
@@ -213,8 +230,9 @@ func (s *GoGitService) ListFiles(ctx context.Context, problemID uuid.UUID, dirPa
 
 // Commit commits changes to the repository
 func (s *GoGitService) Commit(ctx context.Context, problemID uuid.UUID, message, authorName, authorEmail string) (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	mu := s.repoLock(problemID)
+	mu.Lock()
+	defer mu.Unlock()
 
 	repo, err := git.PlainOpen(s.getRepoPath(problemID))
 	if err != nil {
@@ -253,8 +271,9 @@ func (s *GoGitService) Commit(ctx context.Context, problemID uuid.UUID, message,
 
 // GetStatus returns the list of modified files
 func (s *GoGitService) GetStatus(ctx context.Context, problemID uuid.UUID) ([]FileStatus, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	mu := s.repoLock(problemID)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	repo, err := git.PlainOpen(s.getRepoPath(problemID))
 	if err != nil {
@@ -285,8 +304,9 @@ func (s *GoGitService) GetStatus(ctx context.Context, problemID uuid.UUID) ([]Fi
 
 // GetHistory returns the commit history
 func (s *GoGitService) GetHistory(ctx context.Context, problemID uuid.UUID, limit int) ([]Commit, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	mu := s.repoLock(problemID)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	repo, err := git.PlainOpen(s.getRepoPath(problemID))
 	if err != nil {
@@ -328,8 +348,9 @@ func (s *GoGitService) GetHistory(ctx context.Context, problemID uuid.UUID, limi
 
 // GetCommitDiff returns the diff for a specific commit
 func (s *GoGitService) GetCommitDiff(ctx context.Context, problemID uuid.UUID, commitSHA string) ([]FileDiff, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	mu := s.repoLock(problemID)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	repo, err := git.PlainOpen(s.getRepoPath(problemID))
 	if err != nil {
@@ -397,8 +418,9 @@ func (s *GoGitService) GetCommitDiff(ctx context.Context, problemID uuid.UUID, c
 
 // GetCurrentSHA returns the current HEAD SHA
 func (s *GoGitService) GetCurrentSHA(ctx context.Context, problemID uuid.UUID) (string, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	mu := s.repoLock(problemID)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	repo, err := git.PlainOpen(s.getRepoPath(problemID))
 	if err != nil {

@@ -10,6 +10,9 @@ const (
 	ProtocolGRPC Protocol = "grpc"
 )
 
+// StatusAccepted is the go-judge status string for successful execution.
+const StatusAccepted = "Accepted"
+
 // ResourceLimits defines execution resource constraints
 type ResourceLimits struct {
 	CPUTimeMs int64 // CPU time limit in milliseconds

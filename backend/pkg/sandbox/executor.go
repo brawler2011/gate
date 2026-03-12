@@ -272,7 +272,8 @@ func (e *Executor) RunSolutionWithSource(ctx context.Context, sourceCode, langua
 	})
 }
 
-// runInterpretedSolution runs interpreted language solutions (Python, etc.)
+// runInterpretedSolution runs interpreted language solutions (Python, etc.) by
+// copying the source file into the sandbox and invoking the interpreter directly.
 func (e *Executor) runInterpretedSolution(ctx context.Context, sourceCode, language string, input []byte, limits ResourceLimits) (*SolutionResult, error) {
 	normalizedLang := NormalizeLanguageName(language)
 	langConfig, ok := GetLanguageConfig(normalizedLang)
@@ -284,28 +285,46 @@ func (e *Executor) runInterpretedSolution(ctx context.Context, sourceCode, langu
 		}, nil
 	}
 
-	// Create source file
 	sourceFile := "solution" + langConfig.Extension
-
-	// Build execute command
 	executeCmd := e.compiler.GetExecuteCommand(normalizedLang, "solution")
-
-	// Prepare files
-	files := map[string][]byte{
-		sourceFile: []byte(sourceCode),
+	if len(executeCmd) == 0 {
+		return &SolutionResult{
+			Success: false,
+			Error:   fmt.Sprintf("no execute command configured for language: %s", language),
+			Status:  "Internal Error",
+		}, nil
 	}
 
-	// For now, return error as this needs special handling
-	// Mark variables as used to avoid compile errors
-	_ = executeCmd
-	_ = files
-	_ = sourceFile
+	execReq := ExecuteRequest{
+		BinaryFileID:   "",
+		ExecutableName: executeCmd[0],
+		Args:           executeCmd[1:],
+		Stdin:          input,
+		Files:          map[string][]byte{sourceFile: []byte(sourceCode)},
+		Limits:         limits,
+	}
 
-	return &SolutionResult{
-		Success: false,
-		Error:   "interpreted language execution requires special handling",
-		Status:  "Internal Error",
-	}, nil
+	result, err := e.client.Execute(ctx, execReq)
+	if err != nil {
+		return &SolutionResult{
+			Success: false,
+			Error:   fmt.Sprintf("execution failed: %v", err),
+		}, nil
+	}
+
+	solutionResult := &SolutionResult{
+		Output:     result.Stdout,
+		Stderr:     result.Stderr,
+		ExitStatus: result.ExitStatus,
+		Status:     result.Status,
+		Time:       result.Time,
+		Memory:     result.Memory,
+		Success:    result.Status == StatusAccepted,
+	}
+	if !solutionResult.Success {
+		solutionResult.Error = result.Status
+	}
+	return solutionResult, nil
 }
 
 // Helper function to extract score from checker output

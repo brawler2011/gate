@@ -73,10 +73,9 @@ func (c *Compiler) CompileComponent(ctx context.Context, req ComponentCompileReq
 		}, nil
 	}
 
-	// For compiled languages, we need to compute the SHA256 of the binary
-	// In practice, we might need to download the binary from go-judge to compute the hash
-	// For now, we'll use a placeholder approach
-	binarySHA256 := result.FileID // Use FileID as a proxy for now
+	// go-judge doesn't expose the compiled binary for download, so we derive
+	// a stable cache key by hashing the FileID it returns.
+	binarySHA256 := ComputeSHA256([]byte(result.FileID))
 
 	return &ComponentBinary{
 		FileID:       result.FileID,
@@ -144,7 +143,7 @@ func (c *Compiler) CompileSolution(ctx context.Context, sourceCode, language str
 
 	return &ComponentBinary{
 		FileID:       result.FileID,
-		BinarySHA256: result.FileID, // Use FileID as proxy
+		BinarySHA256: ComputeSHA256([]byte(result.FileID)),
 		CompileLog:   fmt.Sprintf("Compilation successful\nstdout:\n%s\nstderr:\n%s", result.Stdout, result.Stderr),
 		Success:      true,
 	}, nil

@@ -146,7 +146,7 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// FIXME: fucking permissions
+		// TODO: verify the user is a participant or organizer of the requested contest.
 	}
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {

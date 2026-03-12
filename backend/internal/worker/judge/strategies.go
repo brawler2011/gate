@@ -199,15 +199,21 @@ func NewInteractiveStrategy(
 	}
 }
 
-// Judge executes interactive judging
+// Judge executes interactive judging.
+//
+// NOTE: True interactive judging requires bidirectional pipe communication
+// between the solution and interactor processes, which go-judge does not yet
+// support natively. Until that support is added, this strategy falls back to
+// running the interactor as a post-execution checker. This produces correct
+// verdicts for many interactive problems but does not faithfully simulate
+// real-time interaction.
+//
+// Full implementation would:
+//   1. Compile both solution and interactor.
+//   2. Run them in parallel with pipes (solution stdout → interactor stdin,
+//      interactor stdout → solution stdin).
+//   3. Let the interactor determine the final verdict.
 func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language models.LanguageName, meta models.SubmissionEventMeta) (*FinalVerdict, error) {
-	// TODO: Interactive judging requires special sandbox support for bidirectional communication
-	// For now, we'll use a simplified approach similar to standard judging
-	// In a full implementation, this would:
-	// 1. Compile both solution and interactor
-	// 2. Run them in parallel with pipe communication
-	// 3. Interactor controls the verdict
-
 	orchestrator := sandbox.NewOrchestrator(s.sandboxClient)
 
 	// Get interactor (required for interactive problems)
@@ -216,8 +222,7 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 		return nil, fmt.Errorf("interactor is required for interactive problems")
 	}
 
-	// For now, fallback to using interactor as a checker
-	// This is a simplified implementation
+	// Fallback: use interactor binary as a post-execution checker.
 	checkerFileID := interactorFileID
 
 	// Convert language
@@ -237,7 +242,6 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 			return nil, fmt.Errorf("failed to publish test started: %w", err)
 		}
 
-		// Judge solution on this test (using interactor as checker)
 		judgeReq := sandbox.JudgeSolutionRequest{
 			SolutionCode:     sourceCode,
 			SolutionLanguage: languageStr,
@@ -256,8 +260,6 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 		testResult := ConvertJudgeResultToTestResult(testCase.Ordinal, result)
 		results = append(results, testResult)
 
-		// For interactive, we might stop on first failure depending on the problem
-		// For now, continue like scoring problems
 	}
 
 	// Calculate final verdict
