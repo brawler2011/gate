@@ -1,19 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
+// FIXME: burn this
+
 import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 
 const oryKratosCookieName = 'ory_kratos_session';
 
-/**
- * API route для получения изображений постов через Gateway клиент
- * Использует сгенерированный клиент вместо прямого fetch
- */
 export async function GET(
-  request: NextRequest,
+  _: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   
-  // Получаем куку сессии Kratos
   const requestCookies = await cookies();
   const kratosCookie = requestCookies.get(oryKratosCookieName);
   
@@ -29,10 +26,10 @@ export async function GET(
   }
 
   try {
-    // Для бинарных данных (изображений) используем прямой fetch вместо OpenAPI клиента,
-    // чтобы избежать проблем с конвертацией raw binary в JavaScript строку
-    const imageUrl = `${backendUrl}/blogs/posts/${id}/image`;
+    const imageUrl = `${backendUrl}/posts/${id}/image`;
     
+    console.log('imageUrl', imageUrl);
+
     const fetchResponse = await fetch(imageUrl, {
       method: 'GET',
       headers: headers,
@@ -58,7 +55,3 @@ export async function GET(
     return new NextResponse('Image not found', { status: 404 });
   }
 }
-
-
-
-

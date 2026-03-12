@@ -21,9 +21,6 @@ export interface BlogPostProps {
   avatarUrl?: string;
   description: string;
   date?: string;
-  previewImageUrl?: string;
-  /** If true, uses API image endpoint instead of previewImageUrl */
-  useApiImage?: boolean;
 }
 
 export function BlogPost({
@@ -33,9 +30,9 @@ export function BlogPost({
   avatarUrl,
   description,
   date,
-  previewImageUrl,
 }: BlogPostProps) {
-  const imageUrl = previewImageUrl ? `/api/posts/${id}/image` : undefined;
+  const imageUrl = `/api/blogs/posts/${id}/image`;
+
   return (
     <Link
       href={`/blog/${id}`}
@@ -49,6 +46,8 @@ export function BlogPost({
                 component={NextImage}
                 src={imageUrl}
                 alt={title}
+                fill
+                sizes="(max-width: 768px) 100vw, 100vw"
                 className={classes.previewImage}
               />
             </div>

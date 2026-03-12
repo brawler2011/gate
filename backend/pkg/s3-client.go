@@ -3,6 +3,7 @@ package pkg
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 )
 
 // S3Client provides operations for interacting with S3-compatible storage (SeaweedFS)
@@ -137,8 +139,20 @@ func (c *S3Client) BucketExists(ctx context.Context, bucket string) (bool, error
 		Bucket: aws.String(bucket),
 	})
 	if err != nil {
-		// Check if error is "NotFound"
-		return false, nil
+		var notFound *types.NotFound
+		if errors.As(err, &notFound) {
+			return false, nil
+		}
+
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
+			switch apiErr.ErrorCode() {
+			case "NotFound", "NoSuchBucket":
+				return false, nil
+			}
+		}
+
+		return false, fmt.Errorf("failed to check bucket existence: %w", err)
 	}
 	return true, nil
 }
