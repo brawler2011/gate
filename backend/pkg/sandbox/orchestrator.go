@@ -98,7 +98,7 @@ func (o *Orchestrator) GenerateTest(ctx context.Context, req GenerateTestRequest
 // JudgeSolution compiles solution, runs on input, and checks with checker
 func (o *Orchestrator) JudgeSolution(ctx context.Context, req JudgeSolutionRequest) (*JudgeResult, error) {
 	// Step 1: Compile the solution
-	compileLimits := o.compiler.GetExecutionLimits(req.SolutionLanguage)
+	compileLimits := o.compiler.GetCompileLimits(req.SolutionLanguage)
 	compileLimits.CPUTimeMs = 30000 // 30 seconds for compilation
 	compileLimits.MemoryMB = 512
 

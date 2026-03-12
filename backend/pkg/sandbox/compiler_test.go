@@ -121,6 +121,22 @@ func TestCompilerGetExecutionLimits(t *testing.T) {
 	}
 }
 
+func TestCompilerGetCompileLimits(t *testing.T) {
+	client := &Client{}
+	compiler := NewCompiler(client)
+
+	limits := compiler.GetCompileLimits("cpp17")
+	if limits.CPUTimeMs == 0 {
+		t.Error("GetCompileLimits returned zero CPUTimeMs")
+	}
+	if limits.MemoryMB == 0 {
+		t.Error("GetCompileLimits returned zero MemoryMB")
+	}
+	if limits.ProcLimit <= 1 {
+		t.Errorf("GetCompileLimits returned too low ProcLimit: %d", limits.ProcLimit)
+	}
+}
+
 func TestResourceLimitsConversion(t *testing.T) {
 	limits := ResourceLimits{
 		CPUTimeMs: 1000, // 1 second

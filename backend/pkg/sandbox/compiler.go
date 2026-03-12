@@ -172,6 +172,20 @@ func (c *Compiler) GetExecutionLimits(language string) ResourceLimits {
 	}
 }
 
+// GetCompileLimits returns the default compilation limits for a language.
+func (c *Compiler) GetCompileLimits(language string) ResourceLimits {
+	normalizedLang := NormalizeLanguageName(language)
+	if config, ok := c.languages[normalizedLang]; ok {
+		return config.CompileLimits
+	}
+	return ResourceLimits{
+		CPUTimeMs: 30000,
+		MemoryMB:  512,
+		ProcLimit: 50,
+		StackMB:   256,
+	}
+}
+
 // NeedsCompilation returns whether a language needs compilation
 func (c *Compiler) NeedsCompilation(language string) bool {
 	normalizedLang := NormalizeLanguageName(language)

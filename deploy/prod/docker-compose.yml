@@ -278,7 +278,7 @@ services:
           memory: 128M
 
   go-judge:
-    image: criyle/go-judge:latest
+    image: criyle/go-judge:v1.11.3
     container_name: gate-go-judge-prod
     hostname: go-judge
     restart: unless-stopped
