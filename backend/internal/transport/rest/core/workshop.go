@@ -52,6 +52,10 @@ func (h *CoreServer) InitProblemWorkshop(ctx context.Context, request corev1.Ini
 
 // ListWorkshopFiles handles GET /problems/{problemId}/workshop/files
 func (h *CoreServer) ListWorkshopFiles(ctx context.Context, request corev1.ListWorkshopFilesRequestObject) (corev1.ListWorkshopFilesResponseObject, error) {
+	if !h.workshopUC.IsInitialized(ctx, request.ProblemId) {
+		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
+	}
+
 	path := ""
 	if request.Params.Path != nil {
 		path = *request.Params.Path

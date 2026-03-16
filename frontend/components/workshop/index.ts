@@ -14,3 +14,5 @@ export * from './WorkshopProblemsGridSkeleton';
 export * from './WorkshopProblemsSearchInput';
 export * from './WorkshopProblemsWrapper';
 export * from './WorkshopTabs';
+export * from './WorkshopEditor';
+export * from './WorkshopNotInitialized';

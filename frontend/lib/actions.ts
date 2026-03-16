@@ -372,3 +372,22 @@ export async function addTeamMember(teamId: string, userId: string) {
 export async function removeTeamMember(teamId: string, userId: string) {
   return Call((client) => client.default.removeTeamMember({ id: teamId, userId }));
 }
+
+// ─── Workshop Files ───────────────────────────────────────────────────────────
+
+export async function initProblemWorkshop(problemId: string) {
+  return Call((client) => client.default.initProblemWorkshop({ problemId }));
+}
+
+export async function listWorkshopFiles(problemId: string, path?: string) {
+  return Call((client) => client.default.listWorkshopFiles({ problemId, path }));
+}
+
+export async function getWorkshopFile(problemId: string, path: string) {
+  return Call((client) => client.default.getWorkshopFile({ problemId, path }));
+}
+
+export async function saveWorkshopFile(problemId: string, path: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.updateWorkshopFile({ problemId, path, requestBody: blob }));
+}

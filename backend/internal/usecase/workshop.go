@@ -36,6 +36,11 @@ func NewWorkshopUseCase(
 	}
 }
 
+// IsInitialized reports whether the workshop repository exists for a problem.
+func (uc *WorkshopUseCase) IsInitialized(ctx context.Context, problemID uuid.UUID) bool {
+	return uc.vcsService.RepoExists(ctx, problemID)
+}
+
 // InitProblemWorkshop creates Git repo and initial structure
 func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uuid.UUID, title string) error {
 	// Check if repo already exists
