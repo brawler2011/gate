@@ -8,32 +8,35 @@ import (
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func (s *IntegrationTestSuite) TestSubmissions() {
 	admin := s.createUser("admin_submissions", models.UserRoleAdmin)
 	user := s.createUser("user_submissions", models.UserRoleUser)
 
-	// Create organization for admin with admin's user ID
-	// This is a workaround for CreateProblem handler using user.Id as org ID
-	_ = s.createOrganizationWithID(admin.Id, "admin-submissions-org", "Admin Submissions Organization")
+	problemOrg := s.createOrganization("admin-submissions-org", "Admin Submissions Organization", admin.Id)
 
 	// Create organization for contest
 	contestOrg := s.createOrganization("contest-org", "Contest Organization", admin.Id)
 
 	// 1. Create Problem
 	problemTitle := "Submission Problem"
+	problemOrganizationID := openapi_types.UUID(problemOrg.ID)
 	probResp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
-		Title: problemTitle,
+		Title:          problemTitle,
+		OrganizationId: &problemOrganizationID,
 	}, func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("X-Test-User-ID", admin.Id.String())
 		return nil
 	})
 	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, probResp.StatusCode())
+	s.Require().NotNil(probResp.JSON200)
 	problemID := probResp.JSON200.Id
 
 	// Create a dummy problem package (required for contest_problems foreign key)
-	packageID := s.createDummyProblemPackage(problemID, admin.Id)
+	packageID := s.createDummyProblemPackage(problemID, problemOrg.ID)
 
 	// 2. Create Contest
 	contestID := uuid.New()

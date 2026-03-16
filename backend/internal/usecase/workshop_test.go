@@ -17,6 +17,85 @@ type MockVCSService struct {
 	mock.Mock
 }
 
+type MockProblemsRepo struct {
+	mock.Mock
+}
+
+func (m *MockProblemsRepo) CreateProblem(ctx context.Context, params *models.CreateProblemParams) error {
+	args := m.Called(ctx, params)
+	return args.Error(0)
+}
+
+func (m *MockProblemsRepo) CreateProblemMember(ctx context.Context, params *models.CreateProblemMemberParams) error {
+	args := m.Called(ctx, params)
+	return args.Error(0)
+}
+
+func (m *MockProblemsRepo) CreateProblemTests(ctx context.Context, tests models.ProblemTests) error {
+	args := m.Called(ctx, tests)
+	return args.Error(0)
+}
+
+func (m *MockProblemsRepo) DeleteProblem(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockProblemsRepo) DeleteProblemTests(ctx context.Context, problemID uuid.UUID) error {
+	args := m.Called(ctx, problemID)
+	return args.Error(0)
+}
+
+func (m *MockProblemsRepo) GetProblemById(ctx context.Context, id uuid.UUID) (models.Problem, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return models.Problem{}, args.Error(1)
+	}
+	return args.Get(0).(models.Problem), args.Error(1)
+}
+
+func (m *MockProblemsRepo) GetProblemMember(ctx context.Context, problemID uuid.UUID, userID uuid.UUID) (models.ProblemMember, error) {
+	args := m.Called(ctx, problemID, userID)
+	if args.Get(0) == nil {
+		return models.ProblemMember{}, args.Error(1)
+	}
+	return args.Get(0).(models.ProblemMember), args.Error(1)
+}
+
+func (m *MockProblemsRepo) GetProblemTests(ctx context.Context, problemID uuid.UUID) ([]models.ProblemTest, error) {
+	args := m.Called(ctx, problemID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.ProblemTest), args.Error(1)
+}
+
+func (m *MockProblemsRepo) GetProblemTeams(ctx context.Context, problemID uuid.UUID) ([]models.ProblemTeam, error) {
+	args := m.Called(ctx, problemID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.ProblemTeam), args.Error(1)
+}
+
+func (m *MockProblemsRepo) ListProblems(ctx context.Context, filter *models.ProblemsFilter) ([]models.Problem, int32, error) {
+	args := m.Called(ctx, filter)
+	if args.Get(0) == nil {
+		return nil, args.Get(1).(int32), args.Error(2)
+	}
+	return args.Get(0).([]models.Problem), args.Get(1).(int32), args.Error(2)
+}
+
+func (m *MockProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
+	args := m.Called(ctx, id, problem)
+	return args.Error(0)
+}
+
+func (m *MockProblemsRepo) UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error {
+	args := m.Called(ctx, id, timeLimitMs, memoryLimitMb)
+	return args.Error(0)
+}
+
 func (m *MockVCSService) InitProblemRepo(ctx context.Context, problemID uuid.UUID) error {
 	args := m.Called(ctx, problemID)
 	return args.Error(0)
@@ -155,6 +234,92 @@ func TestWorkshopUseCase_UpdateProblemFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	mockVCS.AssertExpectations(t)
+}
+
+func TestWorkshopUseCase_UpdateProblemFile_ManifestSyncsTitleAndLimits(t *testing.T) {
+	mockVCS := new(MockVCSService)
+	mockProblemsRepo := new(MockProblemsRepo)
+	ctx := context.Background()
+	problemID := uuid.New()
+
+	manifestContent := []byte(`{"statements":{"en":{"title":"New Title"}},"time_limit_ms":2000,"memory_limit_mb":512}`)
+	manifest := &problemformat.ProblemManifest{
+		TimeLimitMs:   2000,
+		MemoryLimitMb: 512,
+		Statements: map[string]problemformat.Statement{
+			"en": {Title: "New Title"},
+		},
+	}
+
+	mockVCS.On("WriteFile", ctx, problemID, "manifest.json", manifestContent).Return(nil)
+	mockVCS.On("LoadManifest", ctx, problemID).Return(manifest, nil)
+
+	mockProblemsRepo.On("UpdateProblemLimits", ctx, problemID, 2000, 512).Return(nil)
+	mockProblemsRepo.On("GetProblemById", ctx, problemID).Return(models.Problem{
+		Titles: map[string]string{
+			"en": "Old Title",
+			"ru": "Старый заголовок",
+		},
+	}, nil)
+	mockProblemsRepo.On("UpdateProblem", ctx, problemID, mock.MatchedBy(func(update *models.ProblemUpdate) bool {
+		if update == nil || update.Titles == nil {
+			return false
+		}
+		titles := *update.Titles
+		return titles["en"] == "New Title" && titles["ru"] == "Старый заголовок"
+	})).Return(nil)
+
+	uc := &WorkshopUseCase{
+		vcsService:   mockVCS,
+		problemsRepo: mockProblemsRepo,
+	}
+
+	err := uc.UpdateProblemFile(ctx, models.UpdateFileRequest{
+		ProblemID: problemID,
+		Path:      "manifest.json",
+		Content:   manifestContent,
+	})
+	assert.NoError(t, err)
+
+	mockVCS.AssertExpectations(t)
+	mockProblemsRepo.AssertExpectations(t)
+}
+
+func TestWorkshopUseCase_UpdateProblemFile_ManifestWithoutEnglishTitleSkipsTitleSync(t *testing.T) {
+	mockVCS := new(MockVCSService)
+	mockProblemsRepo := new(MockProblemsRepo)
+	ctx := context.Background()
+	problemID := uuid.New()
+
+	manifestContent := []byte(`{"statements":{"ru":{"title":"Новая задача"}},"time_limit_ms":3000,"memory_limit_mb":1024}`)
+	manifest := &problemformat.ProblemManifest{
+		TimeLimitMs:   3000,
+		MemoryLimitMb: 1024,
+		Statements: map[string]problemformat.Statement{
+			"ru": {Title: "Новая задача"},
+		},
+	}
+
+	mockVCS.On("WriteFile", ctx, problemID, "manifest.json", manifestContent).Return(nil)
+	mockVCS.On("LoadManifest", ctx, problemID).Return(manifest, nil)
+	mockProblemsRepo.On("UpdateProblemLimits", ctx, problemID, 3000, 1024).Return(nil)
+
+	uc := &WorkshopUseCase{
+		vcsService:   mockVCS,
+		problemsRepo: mockProblemsRepo,
+	}
+
+	err := uc.UpdateProblemFile(ctx, models.UpdateFileRequest{
+		ProblemID: problemID,
+		Path:      "manifest.json",
+		Content:   manifestContent,
+	})
+	assert.NoError(t, err)
+
+	mockProblemsRepo.AssertNotCalled(t, "GetProblemById", mock.Anything, mock.Anything)
+	mockProblemsRepo.AssertNotCalled(t, "UpdateProblem", mock.Anything, mock.Anything, mock.Anything)
+	mockVCS.AssertExpectations(t)
+	mockProblemsRepo.AssertExpectations(t)
 }
 
 func TestWorkshopUseCase_ReadProblemFile(t *testing.T) {

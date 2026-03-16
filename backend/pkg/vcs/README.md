@@ -29,7 +29,7 @@ err := vcsService.InitProblemRepo(ctx, problemID)
 
 This creates:
 - Git repository at `/path/to/repos/{problemID}/`
-- Directory structure: `statement/`, `tests/`, `solutions/`, `checkers/`, `validators/`, `generators/`, `interactors/`, `media/`
+- Directory structure: `tests/`, `solutions/`, `checkers/`, `validators/`, `generators/`, `interactors/`, `media/`
 - Initial `.gitignore` and `README.md`
 - Initial commit
 

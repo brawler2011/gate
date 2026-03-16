@@ -1,5 +1,7 @@
 "use client";
 
+import { getWorkshopFile, saveWorkshopFile } from "@/lib/actions";
+import type { FileEntry } from "@contracts/gateway/v1";
 import {
   ActionIcon,
   Box,
@@ -18,8 +20,6 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconFile, IconFolder, IconRefresh } from "@tabler/icons-react";
 import { useState, useTransition } from "react";
-import type { FileEntry } from "@contracts/gateway/v1";
-import { getWorkshopFile, saveWorkshopFile } from "@/lib/actions";
 
 type Props = {
   problemId: string;
@@ -84,7 +84,11 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
   });
 
   return (
-    <Group align="flex-start" gap={0} style={{ height: "calc(100vh - 120px)", minHeight: 400 }}>
+    <Group
+      align="flex-start"
+      gap={0}
+      style={{ height: "calc(100vh - 120px)", minHeight: 400 }}
+    >
       {/* File tree */}
       <Box
         style={{
@@ -97,7 +101,9 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
         <Box
           px="sm"
           py="xs"
-          style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}
+          style={{
+            borderBottom: "1px solid var(--mantine-color-default-border)",
+          }}
         >
           <Text size="xs" fw={600} c="dimmed" tt="uppercase">
             Файлы
@@ -125,7 +131,12 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
                 active={selectedPath === file.path}
                 disabled={!!file.is_directory}
                 onClick={() => handleSelectFile(file)}
-                styles={{ label: { fontFamily: "var(--mantine-font-family-monospace)", fontSize: 13 } }}
+                styles={{
+                  label: {
+                    fontFamily: "var(--mantine-font-family-monospace)",
+                    fontSize: 13,
+                  },
+                }}
               />
             ))
           )}
@@ -139,7 +150,10 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
           px="md"
           py="xs"
           justify="space-between"
-          style={{ borderBottom: "1px solid var(--mantine-color-default-border)", flexShrink: 0 }}
+          style={{
+            borderBottom: "1px solid var(--mantine-color-default-border)",
+            flexShrink: 0,
+          }}
         >
           <Group gap="xs">
             {selectedPath ? (
@@ -177,7 +191,13 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
         </Group>
 
         {/* Text area */}
-        <Box style={{ flex: 1, overflow: "hidden", padding: "var(--mantine-spacing-xs)" }}>
+        <Box
+          style={{
+            flex: 1,
+            overflow: "hidden",
+            padding: "var(--mantine-spacing-xs)",
+          }}
+        >
           {selectedPath ? (
             <Textarea
               value={content}

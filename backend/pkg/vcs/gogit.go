@@ -65,7 +65,6 @@ func (s *GoGitService) InitProblemRepo(ctx context.Context, problemID uuid.UUID)
 
 	// Create directories
 	dirs := []string{
-		filepath.Join(repoPath, "statement"),
 		filepath.Join(repoPath, "tests"),
 		filepath.Join(repoPath, "solutions"),
 		filepath.Join(repoPath, "checkers"),

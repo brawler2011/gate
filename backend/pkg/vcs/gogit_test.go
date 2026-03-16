@@ -30,7 +30,6 @@ func TestGoGitService_InitProblemRepo(t *testing.T) {
 
 	// Verify directories were created
 	repoPath := service.GetRepoPath(problemID)
-	assert.DirExists(t, filepath.Join(repoPath, "statement"))
 	assert.DirExists(t, filepath.Join(repoPath, "tests"))
 	assert.DirExists(t, filepath.Join(repoPath, "solutions"))
 	assert.DirExists(t, filepath.Join(repoPath, "checkers"))

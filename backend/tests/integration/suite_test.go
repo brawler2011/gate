@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	handlers "github.com/gate149/gate/backend/internal/transport/rest/core"
 	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/pkg"
+	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/gate149/gate/backend/tests/mocks"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -46,6 +48,7 @@ type IntegrationTestSuite struct {
 	usersRepo         *pg.UsersRepo
 	contestsRepo      *pg.ContestsRepo
 	organizationsRepo interfaces.OrganizationsRepo
+	workshopReposDir  string
 }
 
 func TestIntegrationSuite(t *testing.T) {
@@ -88,6 +91,9 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	err = goose.Up(db, migrationsPath)
 	s.Require().NoError(err)
+
+	s.workshopReposDir, err = os.MkdirTemp("", "workshop-repos-*")
+	s.Require().NoError(err)
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
@@ -97,6 +103,11 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	if s.pgContainer != nil {
 		if err := s.pgContainer.Terminate(s.ctx); err != nil {
 			log.Printf("failed to terminate container: %s", err)
+		}
+	}
+	if s.workshopReposDir != "" {
+		if err := os.RemoveAll(s.workshopReposDir); err != nil {
+			log.Printf("failed to remove workshop repos dir: %s", err)
 		}
 	}
 }
@@ -126,6 +137,7 @@ func (s *IntegrationTestSuite) initApp() {
 	teamsRepo := pg.NewTeamsRepo(s.dbPool)
 	blogsRepo := pg.NewBlogsRepo(s.dbPool)
 	txManager := pg.NewTransactor(s.dbPool)
+	vcsService := vcs.NewGoGitService(s.workshopReposDir)
 
 	// UseCases
 	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, txManager)
@@ -136,6 +148,7 @@ func (s *IntegrationTestSuite) initApp() {
 	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
+	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, vcsService, nil, txManager)
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
@@ -146,7 +159,7 @@ func (s *IntegrationTestSuite) initApp() {
 		problemsUC,
 		organizationsUC,
 		teamsUC,
-		nil, // workshopUC - not needed for integration tests
+		workshopUC,
 		blogsUC,
 		nil, // avatarsUC - not needed for integration tests
 		nil, // importUC - not needed for integration tests

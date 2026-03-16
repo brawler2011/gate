@@ -71,12 +71,6 @@ func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uu
 		return fmt.Errorf("failed to create sample output: %w", err)
 	}
 
-	// Create sample statement
-	statementContent := []byte("# " + title + "\n\nProblem statement goes here.\n")
-	if err := uc.vcsService.WriteFile(ctx, problemID, "statement/statement.md", statementContent); err != nil {
-		return fmt.Errorf("failed to create statement: %w", err)
-	}
-
 	// Commit initial structure
 	commitSHA, err := uc.vcsService.Commit(ctx, problemID, "Initialize problem structure", "System", "system@workshop")
 	if err != nil {
@@ -112,6 +106,34 @@ func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.Upd
 		}
 		if err := uc.problemsRepo.UpdateProblemLimits(ctx, req.ProblemID, manifest.TimeLimitMs, manifest.MemoryLimitMb); err != nil {
 			return fmt.Errorf("failed to sync problem limits: %w", err)
+		}
+
+		statementEn, hasEnglishStatement := manifest.Statements["en"]
+		if hasEnglishStatement {
+			title := strings.TrimSpace(statementEn.Title)
+			if title != "" {
+				problem, err := uc.problemsRepo.GetProblemById(ctx, req.ProblemID)
+				if err != nil {
+					return fmt.Errorf("failed to get problem for title sync: %w", err)
+				}
+
+				currentTitle := ""
+				if problem.Titles != nil {
+					currentTitle = strings.TrimSpace(problem.Titles["en"])
+				}
+
+				if currentTitle != title {
+					titles := make(map[string]string, len(problem.Titles)+1)
+					for lang, text := range problem.Titles {
+						titles[lang] = text
+					}
+					titles["en"] = title
+
+					if err := uc.problemsRepo.UpdateProblem(ctx, req.ProblemID, &models.ProblemUpdate{Titles: &titles}); err != nil {
+						return fmt.Errorf("failed to sync problem title: %w", err)
+					}
+				}
+			}
 		}
 	}
 

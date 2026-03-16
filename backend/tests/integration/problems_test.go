@@ -7,31 +7,31 @@ import (
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func (s *IntegrationTestSuite) TestProblems() {
 	admin := s.createUser("admin_problems", models.UserRoleAdmin)
 	// user := s.createUser("user_problems", models.UserRoleUser)
 
-	// Create organization with admin's user ID as the organization ID
-	// This is a workaround for the TODO in CreateProblem handler (line 78 of problems.go)
-	// which currently uses user.Id as OrganizationID
-	_ = s.createOrganizationWithID(admin.Id, "admin-org", "Admin Organization")
+	org := s.createOrganization("admin-org", "Admin Organization", admin.Id)
 
 	var problemID uuid.UUID
 
 	// 1. Create Problem (Admin)
 	s.Run("CreateProblem", func() {
 		title := "Test Problem"
+		organizationID := openapi_types.UUID(org.ID)
 		resp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
-			Title: title,
+			Title:          title,
+			OrganizationId: &organizationID,
 		}, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", admin.Id.String())
 			return nil
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.NotNil(resp.JSON200)
+		s.Require().Equal(http.StatusOK, resp.StatusCode())
+		s.Require().NotNil(resp.JSON200)
 		problemID = resp.JSON200.Id
 	})
 
@@ -42,7 +42,8 @@ func (s *IntegrationTestSuite) TestProblems() {
 			return nil
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Require().Equal(http.StatusOK, resp.StatusCode())
+		s.Require().NotNil(resp.JSON200)
 		s.Equal(problemID, resp.JSON200.Problem.Id)
 	})
 

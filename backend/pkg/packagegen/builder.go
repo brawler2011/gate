@@ -16,7 +16,6 @@ type Package struct {
 	TestsMetadata *problemformat.TestsMetadata
 	TestFiles     map[int]TestFile  // ordinal -> TestFile
 	Executables   map[string][]byte // filename -> content
-	Statements    map[string][]byte // lang -> content
 	Media         map[string][]byte // filename -> content
 }
 
@@ -65,22 +64,6 @@ func BuildPackage(problemDir string) (*Package, error) {
 		executables[fileMeta.Filename] = content
 	}
 
-	// Load statements (if they exist as separate files)
-	statements := make(map[string][]byte)
-	statementsDir := filepath.Join(problemDir, "statements")
-	if entries, err := os.ReadDir(statementsDir); err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
-			}
-			lang := entry.Name()[:len(entry.Name())-len(filepath.Ext(entry.Name()))]
-			content, err := os.ReadFile(filepath.Join(statementsDir, entry.Name()))
-			if err == nil {
-				statements[lang] = content
-			}
-		}
-	}
-
 	// Load media files
 	media := make(map[string][]byte)
 	mediaDir := filepath.Join(problemDir, "media")
@@ -93,7 +76,6 @@ func BuildPackage(problemDir string) (*Package, error) {
 		TestsMetadata: testsMetadata,
 		TestFiles:     testFiles,
 		Executables:   executables,
-		Statements:    statements,
 		Media:         media,
 	}, nil
 }
@@ -209,17 +191,6 @@ func WritePackageToZip(pkg *Package, writer io.Writer) error {
 			return err
 		}
 		if _, err := execFile.Write(content); err != nil {
-			return err
-		}
-	}
-
-	// Write statement files
-	for lang, content := range pkg.Statements {
-		stmtFile, err := zipWriter.Create(fmt.Sprintf("statements/%s.md", lang))
-		if err != nil {
-			return err
-		}
-		if _, err := stmtFile.Write(content); err != nil {
 			return err
 		}
 	}

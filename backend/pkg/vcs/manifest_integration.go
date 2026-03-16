@@ -50,7 +50,6 @@ func (s *GoGitService) ValidateRepoStructure(ctx context.Context, problemID uuid
 
 	// Check required directories
 	requiredDirs := []string{
-		"statement",
 		"tests",
 	}
 
