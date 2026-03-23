@@ -3,13 +3,14 @@ package core
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
+	"time"
 
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/transport/middleware"
 	"github.com/gate149/gate/backend/pkg"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/google/uuid"
 )
 
@@ -70,12 +71,10 @@ func (h *CoreServer) ImportProblem(ctx context.Context, request corev1.ImportPro
 func (h *CoreServer) PublishProblem(ctx context.Context, request corev1.PublishProblemRequestObject) (corev1.PublishProblemResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
-	// Check if user is authenticated
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "authentication required")
 	}
 
-	// Check permissions
 	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionEditProblem)
 	if err != nil {
 		return nil, err
@@ -84,23 +83,64 @@ func (h *CoreServer) PublishProblem(ctx context.Context, request corev1.PublishP
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to publish problem")
 	}
 
-	// Note: Current OpenAPI spec doesn't accept version in request body
-	// Using a default version for now
-	// TODO: Update OpenAPI spec to accept version and commit_sha in request body
-	version := int32(1) // Simplified for now
-	versionStr := fmt.Sprintf("v%d", version)
-
-	// Publish problem
-	err = h.publishUC.PublishProblem(ctx, request.Id, versionStr, "")
+	result, err := h.publishUC.PublishProblem(ctx, request.Id)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to publish problem")
 	}
 
 	message := "Problem published successfully"
 	return corev1.PublishProblem200JSONResponse{
-		Version: &version,
+		Version: &result.Version,
 		Message: &message,
 	}, nil
+}
+
+// ListProblemPackages handles GET /problems/{id}/packages
+func (h *CoreServer) ListProblemPackages(ctx context.Context, request corev1.ListProblemPackagesRequestObject) (corev1.ListProblemPackagesResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "authentication required")
+	}
+
+	canView, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionViewProblem)
+	if err != nil {
+		return nil, err
+	}
+	if !canView {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions")
+	}
+
+	packages, err := h.publishUC.ListPackages(ctx, request.Id)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list packages")
+	}
+
+	resp := corev1.ListProblemPackages200JSONResponse{}
+	items := make([]struct {
+		CompiledAt    *time.Time          `json:"compiled_at,omitempty"`
+		CreatedAt     *time.Time          `json:"created_at,omitempty"`
+		GitCommitHash *string             `json:"git_commit_hash,omitempty"`
+		Id            *openapi_types.UUID `json:"id,omitempty"`
+		Status        *string             `json:"status,omitempty"`
+		Version       *int32              `json:"version,omitempty"`
+	}, len(packages))
+	for i, p := range packages {
+		id := openapi_types.UUID(p.ID)
+		hash := p.GitCommitHash
+		status := p.Status
+		version := p.Version
+		createdAt := p.CreatedAt
+		items[i].Id = &id
+		items[i].GitCommitHash = &hash
+		items[i].Status = &status
+		items[i].Version = &version
+		items[i].CreatedAt = &createdAt
+		if p.CompiledAt != nil {
+			items[i].CompiledAt = p.CompiledAt
+		}
+	}
+	resp.Packages = &items
+	return resp, nil
 }
 
 // GetPublishedPackage handles GET /problems/{id}/package/{version}

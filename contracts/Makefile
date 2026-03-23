@@ -45,6 +45,7 @@ go-gen: deps
 				-package "$$pkg_name" \
 				-o "$$out_dir/$$service.go" \
 				"$$spec_path" || exit 1; \
+			sed -i 's|/workshop/files/{path}"|/workshop/files/{path...}"|g' "$$out_dir/$$service.go"; \
 		elif [ "$$service" = "gateway" ]; then \
 			:; \
 		else \

@@ -16,3 +16,7 @@ export * from './WorkshopProblemsWrapper';
 export * from './WorkshopTabs';
 export * from './WorkshopEditor';
 export * from './WorkshopNotInitialized';
+export * from './WorkshopHotbar';
+export * from './WorkshopFolderTab';
+export * from './WorkshopGeneralTab';
+export * from './WorkshopPackagesTab';

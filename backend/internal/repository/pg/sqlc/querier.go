@@ -34,7 +34,6 @@ type Querier interface {
 	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
 	CountContests(ctx context.Context, arg CountContestsParams) (int64, error)
 	CountOrganizations(ctx context.Context, dollar_1 string) (int64, error)
-	CountProblemPackages(ctx context.Context, problemID uuid.UUID) (int64, error)
 	CountProblems(ctx context.Context, arg CountProblemsParams) (int64, error)
 	CountSubmissions(ctx context.Context, arg CountSubmissionsParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int32, error)

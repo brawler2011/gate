@@ -1107,6 +1107,9 @@ type ClientInterface interface {
 	// GetPublishedPackage request
 	GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListProblemPackages request
+	ListProblemPackages(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// PublishProblem request
 	PublishProblem(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1677,6 +1680,18 @@ func (c *Client) UpdateProblem(ctx context.Context, id openapi_types.UUID, body 
 
 func (c *Client) GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPublishedPackageRequest(c.Server, id, version)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemPackages(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemPackagesRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -4066,6 +4081,40 @@ func NewGetPublishedPackageRequest(server string, id openapi_types.UUID, version
 	return req, nil
 }
 
+// NewListProblemPackagesRequest generates requests for ListProblemPackages
+func NewListProblemPackagesRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/packages", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewPublishProblemRequest generates requests for PublishProblem
 func NewPublishProblemRequest(server string, id openapi_types.UUID) (*http.Request, error) {
 	var err error
@@ -6145,6 +6194,9 @@ type ClientWithResponsesInterface interface {
 	// GetPublishedPackageWithResponse request
 	GetPublishedPackageWithResponse(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*GetPublishedPackageResponse, error)
 
+	// ListProblemPackagesWithResponse request
+	ListProblemPackagesWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemPackagesResponse, error)
+
 	// PublishProblemWithResponse request
 	PublishProblemWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*PublishProblemResponse, error)
 
@@ -7043,6 +7095,37 @@ func (r GetPublishedPackageResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetPublishedPackageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemPackagesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Packages *[]struct {
+			CompiledAt    *time.Time          `json:"compiled_at,omitempty"`
+			CreatedAt     *time.Time          `json:"created_at,omitempty"`
+			GitCommitHash *string             `json:"git_commit_hash,omitempty"`
+			Id            *openapi_types.UUID `json:"id,omitempty"`
+			Status        *string             `json:"status,omitempty"`
+			Version       *int32              `json:"version,omitempty"`
+		} `json:"packages,omitempty"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemPackagesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemPackagesResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -8133,6 +8216,15 @@ func (c *ClientWithResponses) GetPublishedPackageWithResponse(ctx context.Contex
 		return nil, err
 	}
 	return ParseGetPublishedPackageResponse(rsp)
+}
+
+// ListProblemPackagesWithResponse request returning *ListProblemPackagesResponse
+func (c *ClientWithResponses) ListProblemPackagesWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemPackagesResponse, error) {
+	rsp, err := c.ListProblemPackages(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemPackagesResponse(rsp)
 }
 
 // PublishProblemWithResponse request returning *PublishProblemResponse
@@ -9380,6 +9472,41 @@ func ParseGetPublishedPackageResponse(rsp *http.Response) (*GetPublishedPackageR
 	return response, nil
 }
 
+// ParseListProblemPackagesResponse parses an HTTP response from a ListProblemPackagesWithResponse call
+func ParseListProblemPackagesResponse(rsp *http.Response) (*ListProblemPackagesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemPackagesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Packages *[]struct {
+				CompiledAt    *time.Time          `json:"compiled_at,omitempty"`
+				CreatedAt     *time.Time          `json:"created_at,omitempty"`
+				GitCommitHash *string             `json:"git_commit_hash,omitempty"`
+				Id            *openapi_types.UUID `json:"id,omitempty"`
+				Status        *string             `json:"status,omitempty"`
+				Version       *int32              `json:"version,omitempty"`
+			} `json:"packages,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParsePublishProblemResponse parses an HTTP response from a PublishProblemWithResponse call
 func ParsePublishProblemResponse(rsp *http.Response) (*PublishProblemResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -10297,6 +10424,9 @@ type ServerInterface interface {
 	// Get redirect to published problem package
 	// (GET /problems/{id}/package/{version})
 	GetPublishedPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, version string)
+	// List all packages for a problem
+	// (GET /problems/{id}/packages)
+	ListProblemPackages(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Publish problem package
 	// (POST /problems/{id}/publish)
 	PublishProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -11825,6 +11955,31 @@ func (siw *ServerInterfaceWrapper) GetPublishedPackage(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListProblemPackages operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemPackages(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemPackages(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PublishProblem operation middleware
 func (siw *ServerInterfaceWrapper) PublishProblem(w http.ResponseWriter, r *http.Request) {
 
@@ -13328,13 +13483,14 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}", wrapper.GetProblem)
 	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{id}", wrapper.UpdateProblem)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/package/{version}", wrapper.GetPublishedPackage)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/packages", wrapper.ListProblemPackages)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{id}/publish", wrapper.PublishProblem)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/commit", wrapper.CommitWorkshopChanges)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/components/{componentType}/compile", wrapper.CompileProblemComponent)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/files", wrapper.ListWorkshopFiles)
-	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/workshop/files/{path}", wrapper.DeleteWorkshopFile)
-	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/files/{path}", wrapper.GetWorkshopFile)
-	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/workshop/files/{path}", wrapper.UpdateWorkshopFile)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/workshop/files/{path...}", wrapper.DeleteWorkshopFile)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/files/{path...}", wrapper.GetWorkshopFile)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/workshop/files/{path...}", wrapper.UpdateWorkshopFile)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/history", wrapper.GetWorkshopHistory)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/init", wrapper.InitProblemWorkshop)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/solutions/test", wrapper.TestSolution)
@@ -14150,6 +14306,32 @@ func (response GetPublishedPackage302Response) VisitGetPublishedPackageResponse(
 	return nil
 }
 
+type ListProblemPackagesRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type ListProblemPackagesResponseObject interface {
+	VisitListProblemPackagesResponse(w http.ResponseWriter) error
+}
+
+type ListProblemPackages200JSONResponse struct {
+	Packages *[]struct {
+		CompiledAt    *time.Time          `json:"compiled_at,omitempty"`
+		CreatedAt     *time.Time          `json:"created_at,omitempty"`
+		GitCommitHash *string             `json:"git_commit_hash,omitempty"`
+		Id            *openapi_types.UUID `json:"id,omitempty"`
+		Status        *string             `json:"status,omitempty"`
+		Version       *int32              `json:"version,omitempty"`
+	} `json:"packages,omitempty"`
+}
+
+func (response ListProblemPackages200JSONResponse) VisitListProblemPackagesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type PublishProblemRequestObject struct {
 	Id openapi_types.UUID `json:"id"`
 }
@@ -14861,6 +15043,9 @@ type StrictServerInterface interface {
 	// Get redirect to published problem package
 	// (GET /problems/{id}/package/{version})
 	GetPublishedPackage(ctx context.Context, request GetPublishedPackageRequestObject) (GetPublishedPackageResponseObject, error)
+	// List all packages for a problem
+	// (GET /problems/{id}/packages)
+	ListProblemPackages(ctx context.Context, request ListProblemPackagesRequestObject) (ListProblemPackagesResponseObject, error)
 	// Publish problem package
 	// (POST /problems/{id}/publish)
 	PublishProblem(ctx context.Context, request PublishProblemRequestObject) (PublishProblemResponseObject, error)
@@ -15969,6 +16154,32 @@ func (sh *strictHandler) GetPublishedPackage(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetPublishedPackageResponseObject); ok {
 		if err := validResponse.VisitGetPublishedPackageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemPackages operation middleware
+func (sh *strictHandler) ListProblemPackages(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request ListProblemPackagesRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemPackages(ctx, request.(ListProblemPackagesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemPackages")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemPackagesResponseObject); ok {
+		if err := validResponse.VisitListProblemPackagesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

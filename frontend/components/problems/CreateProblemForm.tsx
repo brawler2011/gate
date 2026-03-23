@@ -18,7 +18,7 @@ const CreateProblemForm = () => {
       return response.id;
     },
     onSuccess: (problemId: string) => {
-      router.push(`/problems/${problemId}/edit`);
+      router.push(`/problems/${problemId}/workshop`);
     },
     onError: (error) => {
       console.error("Не удалось создать задачу. Попробуйте позже.", error);

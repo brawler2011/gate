@@ -48,7 +48,7 @@ type Config struct {
 
 	// Judging configuration
 	JudgeWorkerCount int    `env:"JUDGE_WORKER_COUNT" env-default:"4"`
-	JudgeTempDir     string `env:"JUDGE_TEMP_DIR" env-default:"/tmp/judge"`
+	JudgeTempDir     string `env:"JUDGE_TEMP_DIR"` // defaults to os.TempDir()/judge at runtime
 	JudgeTimeout     int    `env:"JUDGE_TIMEOUT" env-default:"300000"` // milliseconds
 	JudgeMaxRetries  int    `env:"JUDGE_MAX_RETRIES" env-default:"3"`
 }

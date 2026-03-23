@@ -126,6 +126,7 @@ type ProblemPackage struct {
 	ID             uuid.UUID
 	ProblemID      uuid.UUID
 	OrganizationID uuid.UUID
+	Version        int32
 	GitCommitHash  string
 	PackageHash    string
 	URL            *string
@@ -133,6 +134,22 @@ type ProblemPackage struct {
 	BuildLog       *string
 	CreatedAt      time.Time
 	CompiledAt     *time.Time
+}
+
+type CreatePackageParams struct {
+	ID             uuid.UUID
+	ProblemID      uuid.UUID
+	OrganizationID uuid.UUID
+	GitCommitHash  string
+	PackageHash    string
+	Status         string
+}
+
+type UpdatePackageStatusParams struct {
+	ID       uuid.UUID
+	Status   string
+	URL      *string
+	BuildLog *string
 }
 
 type CreateProblemInput struct {

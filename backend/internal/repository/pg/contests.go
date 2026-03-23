@@ -3,11 +3,14 @@ package pg
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/repository/pg/sqlc"
+	"github.com/gate149/gate/backend/pkg"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -227,11 +230,23 @@ func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter models.Pub
 }
 
 func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error {
+	packageId := c.PackageId
+	if packageId == uuid.Nil {
+		readyPkg, err := r.queries.GetReadyPackage(ctx, c.ProblemId)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return pkg.Wrap(pkg.ErrBadInput, nil, "problem has no ready package")
+			}
+			return HandlePgErr(err)
+		}
+		packageId = readyPkg.ID
+	}
+
 	err := r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
 		ContestID: c.ContestId,
 		ProblemID: c.ProblemId,
-		PackageID: c.PackageId,
-		Ordinal:   0, // TODO: should be calculated or passed
+		PackageID: packageId,
+		Ordinal:   0,
 	})
 	if err != nil {
 		return HandlePgErr(err)

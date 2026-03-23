@@ -1,0 +1,49 @@
+/* File selector bar */
+.fileBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+
+.fileBar::-webkit-scrollbar {
+  display: none;
+}
+
+/* File pill button */
+.filePill {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: var(--mantine-font-family-monospace);
+  cursor: pointer;
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7));
+  color: light-dark(var(--mantine-color-dark-5), var(--mantine-color-dark-1));
+  white-space: nowrap;
+  transition: all 120ms ease;
+  flex-shrink: 0;
+}
+
+.filePill:hover {
+  border-color: light-dark(var(--mantine-color-blue-4), var(--mantine-color-blue-6));
+  color: light-dark(var(--mantine-color-blue-7), var(--mantine-color-blue-3));
+  background: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6));
+}
+
+.filePillActive {
+  background: light-dark(var(--mantine-color-blue-6), var(--mantine-color-blue-8));
+  border-color: light-dark(var(--mantine-color-blue-6), var(--mantine-color-blue-7));
+  color: #fff;
+}
+
+.filePillActive:hover {
+  background: light-dark(var(--mantine-color-blue-7), var(--mantine-color-blue-7));
+  border-color: light-dark(var(--mantine-color-blue-7), var(--mantine-color-blue-6));
+  color: #fff;
+}

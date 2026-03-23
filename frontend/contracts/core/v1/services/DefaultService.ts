@@ -832,6 +832,33 @@ export class DefaultService {
         });
     }
     /**
+     * List all packages for a problem
+     * @returns any List of problem packages
+     * @throws ApiError
+     */
+    public listProblemPackages({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<{
+        packages?: Array<{
+            id?: string;
+            version?: number;
+            status?: string;
+            git_commit_hash?: string;
+            created_at?: string;
+            compiled_at?: string;
+        }>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{id}/packages',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
      * Get redirect to published problem package
      * @returns void
      * @throws ApiError

@@ -1,8 +1,8 @@
 -- Problem Packages queries
 
 -- name: CreateProblemPackage :one
-INSERT INTO problem_packages (id, problem_id, organization_id, git_commit_hash, package_hash, status)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO problem_packages (id, problem_id, organization_id, git_commit_hash, package_hash, status, version)
+VALUES ($1, $2, $3, $4, $5, $6, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2))
 RETURNING *;
 
 -- name: GetProblemPackageByID :one
@@ -17,16 +17,12 @@ WHERE problem_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
--- name: CountProblemPackages :one
-SELECT COUNT(*) FROM problem_packages
-WHERE problem_id = $1;
-
 -- name: UpdatePackageStatus :exec
 UPDATE problem_packages
 SET status = $2,
     url = COALESCE(sqlc.narg('url'), url),
     build_log = COALESCE(sqlc.narg('build_log'), build_log),
-    compiled_at = CASE WHEN $2 = 'ready' THEN NOW() ELSE compiled_at END
+    compiled_at = CASE WHEN $2 = 'ready'::package_status THEN NOW() ELSE compiled_at END
 WHERE id = $1;
 
 -- name: DeleteProblemPackage :exec

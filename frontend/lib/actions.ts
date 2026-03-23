@@ -391,3 +391,11 @@ export async function saveWorkshopFile(problemId: string, path: string, content:
   const blob = new Blob([content], { type: 'application/octet-stream' });
   return Call((client) => client.default.updateWorkshopFile({ problemId, path, requestBody: blob }));
 }
+
+export async function publishProblem(problemId: string) {
+  return Call((client) => client.default.publishProblem({ id: problemId }));
+}
+
+export async function listProblemPackages(problemId: string) {
+  return Call((client) => client.default.listProblemPackages({ id: problemId }));
+}

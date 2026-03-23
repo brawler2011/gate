@@ -1,5 +1,5 @@
 .PHONY: help gen go-gen ts-gen gen-clean \
-        local-backend-migrate local-backend-server local-backend-kratos \
+        local-backend-migrate local-backend-server local-backend-kratos local-backend-judge \
         prod-backup build-all docker-prune
 
 .DEFAULT_GOAL := help
@@ -45,6 +45,9 @@ local-backend-server:
 local-backend-kratos:
 	cd backend && go run . kratos --env ../$(LOCAL_BACKEND_ENV)
 
+local-backend-judge:
+	cd backend && go run . judge --env ../$(LOCAL_BACKEND_ENV)
+
 prod-backup:
 	$(MAKE) -C deploy/ prod-backup
 
@@ -81,6 +84,7 @@ help:
 	@echo "  local-backend-migrate  Run DB migrations natively"
 	@echo "  local-backend-server   Run API server natively (port 8080)"
 	@echo "  local-backend-kratos   Run Kratos webhook server natively"
+	@echo "  local-backend-judge    Run judge worker natively"
 	@echo "  (reads credentials from deploy/local/.env)"
 	@echo ""
 	@echo "Deploy extras:"

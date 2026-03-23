@@ -12,11 +12,13 @@ import (
 
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/config"
+	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/repository/pg"
 	"github.com/gate149/gate/backend/internal/transport/middleware"
 	handlers "github.com/gate149/gate/backend/internal/transport/rest/core"
 	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/internal/worker/outbox"
+	"github.com/gate149/gate/backend/internal/worker/pubsub"
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/sandbox"
 	"github.com/gate149/gate/backend/pkg/vcs"
@@ -117,7 +119,6 @@ func runServer(envFile string) {
 	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, txManager)
 	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, s3Client, cfg.S3AvatarBucket)
 	problemImportUC := usecase.NewProblemImportUseCase(cfg.WorkshopReposDir)
-	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, s3Client, cfg.S3PackageBucket, cfg.WorkshopReposDir)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(contestsRepo)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, s3Client, cfg.S3BlogBucket)
@@ -131,12 +132,19 @@ func runServer(envFile string) {
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, txManager)
 	logger.Info("successfully initialized Organizations and Teams use cases")
 
-	// Initialize NATS publisher (for future use)
-	_, err = pkg.NewNatsConn(cfg.GetNatsURL())
+	// Initialize NATS JetStream connection
+	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
 	if err != nil {
-		logger.Warn("failed to create nats publisher", slog.Any("error", err))
+		logger.Warn("failed to create nats jetstream connection", slog.Any("error", err))
+		natsJS = nil
 	} else {
-		logger.Info("successfully initialized nats publisher", slog.String("url", cfg.GetNatsURL()))
+		logger.Info("successfully initialized nats jetstream", slog.String("url", cfg.GetNatsURL()))
+		if err := pkg.EnsureSubmissionsStream(context.Background(), natsJS); err != nil {
+			logger.Warn("failed to ensure SUBMISSIONS stream", slog.Any("error", err))
+			natsJS = nil
+		} else {
+			logger.Info("SUBMISSIONS stream ready")
+		}
 	}
 
 	submissionsRepo := pg.NewSubmissionsRepo(pool)
@@ -144,6 +152,10 @@ func runServer(envFile string) {
 
 	// Initialize Workshop components
 	vcsService := vcs.NewGoGitService(cfg.WorkshopReposDir)
+
+	// Initialize problem publish use case (depends on vcsService)
+	packagesRepo := pg.NewPackagesRepo(pool)
+	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, vcsService, s3Client, cfg.S3PackageBucket)
 	sandboxClient, err := sandbox.NewClient(sandbox.ClientConfig{
 		Protocol: sandbox.ProtocolGRPC,
 		BaseURL:  cfg.GoJudgeGRPCAddr,
@@ -163,9 +175,13 @@ func runServer(envFile string) {
 	}
 
 	// Initialize outbox worker (event dispatcher system)
-	// TODO: Re-implement outbox handlers for submission events
 	dispatcher := outbox.NewEventDispatcher()
-	// dispatcher.Register(models.EventTypeSubmissionTest, testHandler)
+	if natsJS != nil {
+		dispatcher.Register(models.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
+		logger.Info("registered submission.created outbox handler")
+	} else {
+		logger.Warn("nats jetstream unavailable, submission events will not be forwarded to judge worker")
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -11,23 +11,11 @@ import (
 	"github.com/google/uuid"
 )
 
-const countProblemPackages = `-- name: CountProblemPackages :one
-SELECT COUNT(*) FROM problem_packages
-WHERE problem_id = $1
-`
-
-func (q *Queries) CountProblemPackages(ctx context.Context, problemID uuid.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countProblemPackages, problemID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createProblemPackage = `-- name: CreateProblemPackage :one
 
-INSERT INTO problem_packages (id, problem_id, organization_id, git_commit_hash, package_hash, status)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at
+INSERT INTO problem_packages (id, problem_id, organization_id, git_commit_hash, package_hash, status, version)
+VALUES ($1, $2, $3, $4, $5, $6, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2))
+RETURNING id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version
 `
 
 type CreateProblemPackageParams struct {
@@ -61,6 +49,7 @@ func (q *Queries) CreateProblemPackage(ctx context.Context, arg CreateProblemPac
 		&i.BuildLog,
 		&i.CreatedAt,
 		&i.CompiledAt,
+		&i.Version,
 	)
 	return i, err
 }
@@ -75,7 +64,7 @@ func (q *Queries) DeleteProblemPackage(ctx context.Context, id uuid.UUID) error 
 }
 
 const getProblemPackageByHash = `-- name: GetProblemPackageByHash :one
-SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages WHERE package_hash = $1
+SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages WHERE package_hash = $1
 `
 
 func (q *Queries) GetProblemPackageByHash(ctx context.Context, packageHash string) (ProblemPackage, error) {
@@ -92,12 +81,13 @@ func (q *Queries) GetProblemPackageByHash(ctx context.Context, packageHash strin
 		&i.BuildLog,
 		&i.CreatedAt,
 		&i.CompiledAt,
+		&i.Version,
 	)
 	return i, err
 }
 
 const getProblemPackageByID = `-- name: GetProblemPackageByID :one
-SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages WHERE id = $1
+SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages WHERE id = $1
 `
 
 func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error) {
@@ -114,12 +104,13 @@ func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (Prob
 		&i.BuildLog,
 		&i.CreatedAt,
 		&i.CompiledAt,
+		&i.Version,
 	)
 	return i, err
 }
 
 const getReadyPackage = `-- name: GetReadyPackage :one
-SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages
+SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages
 WHERE problem_id = $1 AND status = 'ready'
 ORDER BY created_at DESC
 LIMIT 1
@@ -139,12 +130,13 @@ func (q *Queries) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (Pro
 		&i.BuildLog,
 		&i.CreatedAt,
 		&i.CompiledAt,
+		&i.Version,
 	)
 	return i, err
 }
 
 const listProblemPackages = `-- name: ListProblemPackages :many
-SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages
+SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages
 WHERE problem_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -176,6 +168,7 @@ func (q *Queries) ListProblemPackages(ctx context.Context, arg ListProblemPackag
 			&i.BuildLog,
 			&i.CreatedAt,
 			&i.CompiledAt,
+			&i.Version,
 		); err != nil {
 			return nil, err
 		}
@@ -192,7 +185,7 @@ UPDATE problem_packages
 SET status = $2,
     url = COALESCE($3, url),
     build_log = COALESCE($4, build_log),
-    compiled_at = CASE WHEN $2 = 'ready' THEN NOW() ELSE compiled_at END
+    compiled_at = CASE WHEN $2 = 'ready'::package_status THEN NOW() ELSE compiled_at END
 WHERE id = $1
 `
 

@@ -959,6 +959,46 @@ paths:
                     format: int32
                   message:
                     type: string
+  /problems/{id}/packages:
+    get:
+      operationId: ListProblemPackages
+      summary: List all packages for a problem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of problem packages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  packages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        version:
+                          type: integer
+                          format: int32
+                        status:
+                          type: string
+                        git_commit_hash:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                        compiled_at:
+                          type: string
+                          format: date-time
   /problems/{id}/package/{version}:
     get:
       operationId: GetPublishedPackage

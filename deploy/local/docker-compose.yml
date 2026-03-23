@@ -79,6 +79,7 @@ services:
     container_name: gate-nats-local
     hostname: nats
     restart: unless-stopped
+    command: ["--js", "--store_dir=/data"]
     ports:
       - "4222:4222"
       - "8222:8222"
@@ -88,10 +89,17 @@ services:
       - gate-local
 
   go-judge:
-    image: criyle/go-judge:v1.11.3
+    build:
+      context: .
+      dockerfile: Dockerfile.go-judge
+    image: gate-go-judge-local:latest
     container_name: gate-go-judge-local
     hostname: go-judge
     restart: unless-stopped
+    command:
+      - "-http-addr=0.0.0.0:5050"
+      - "-enable-grpc"
+      - "-grpc-addr=0.0.0.0:5051"
     ports:
       - "5050:5050"
       - "5051:5051"

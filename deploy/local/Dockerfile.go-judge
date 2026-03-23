@@ -1,0 +1,9 @@
+FROM criyle/go-judge:v1.11.3
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*

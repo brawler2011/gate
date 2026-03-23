@@ -1,6 +1,9 @@
 package pkg
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -23,4 +26,19 @@ func NewNatsJetStream(natsUrl string) (jetstream.JetStream, error) {
 		return nil, err
 	}
 	return js, nil
+}
+
+// EnsureSubmissionsStream creates the SUBMISSIONS JetStream stream if it does not
+// already exist. Both the API server (publisher) and the judge worker (consumer)
+// should call this before using the stream so that whichever process starts first
+// wins the creation race without error.
+func EnsureSubmissionsStream(ctx context.Context, js jetstream.JetStream) error {
+	_, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:     "SUBMISSIONS",
+		Subjects: []string{"submissions.>"},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to ensure SUBMISSIONS stream: %w", err)
+	}
+	return nil
 }

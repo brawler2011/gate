@@ -545,6 +545,7 @@ type ProblemPackage struct {
 	BuildLog       *string            `json:"build_log"`
 	CreatedAt      time.Time          `json:"created_at"`
 	CompiledAt     pgtype.Timestamptz `json:"compiled_at"`
+	Version        int32              `json:"version"`
 }
 
 type ProblemTeam struct {

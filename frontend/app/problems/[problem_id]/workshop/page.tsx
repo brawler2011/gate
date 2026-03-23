@@ -3,6 +3,7 @@ import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { getProblem, listWorkshopFiles } from "@/lib/actions";
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 type Props = {
   params: Promise<{ problem_id: string }>;
@@ -36,7 +37,9 @@ const Page = async (props: Props) => {
       ) : filesError ? (
         <ErrorDisplay error={filesError} />
       ) : (
-        <WorkshopEditor problemId={problem_id} initialFiles={filesResponse?.files ?? []} />
+        <Suspense>
+          <WorkshopEditor problemId={problem_id} initialFiles={filesResponse?.files ?? []} />
+        </Suspense>
       )}
     </DefaultLayout>
   );

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/gate149/gate/backend/config"
@@ -51,6 +52,14 @@ func runJudge(cmd *cobra.Command, args []string) {
 		Level: slog.LevelInfo,
 	}))
 	slog.SetDefault(logger)
+
+	if cfg.JudgeTempDir == "" {
+		cfg.JudgeTempDir = filepath.Join(os.TempDir(), "judge")
+	}
+	if err := os.MkdirAll(cfg.JudgeTempDir, 0o755); err != nil {
+		slog.Error("failed to create judge temp directory", slog.Any("error", err))
+		return
+	}
 
 	logger.Info("starting judge worker",
 		slog.String("env", cfg.Env),
@@ -98,6 +107,12 @@ func runJudge(cmd *cobra.Command, args []string) {
 		return
 	}
 	logger.Info("successfully connected to NATS JetStream", slog.String("url", cfg.GetNatsURL()))
+
+	if err := pkg.EnsureSubmissionsStream(ctx, js); err != nil {
+		logger.Error("failed to ensure SUBMISSIONS stream", slog.Any("error", err))
+		return
+	}
+	logger.Info("SUBMISSIONS stream ready")
 
 	// Create event publisher
 	eventPublisher := judge.NewEventPublisher(js)
