@@ -4,6 +4,7 @@ import { Box } from "@mantine/core";
 import classes from "./WorkshopHotbar.module.css";
 
 export const GENERAL_TAB = "general";
+export const STATEMENT_TAB = "statement";
 export const PACKAGES_TAB = "packages";
 
 type Props = {
@@ -19,7 +20,6 @@ const TAB_LABELS: Record<string, string> = {
   media: "Медиа",
   packages: "Пакеты",
   solutions: "Решения",
-  statement: "Условие",
   tests: "Тесты",
   validators: "Валидаторы",
 };
@@ -29,7 +29,7 @@ function getTabLabel(folder: string): string {
 }
 
 export function WorkshopHotbar({ folders, activeTab, onTabChange }: Props) {
-  const allTabs = [GENERAL_TAB, PACKAGES_TAB, ...folders.sort()];
+  const allTabs = [GENERAL_TAB, STATEMENT_TAB, PACKAGES_TAB, ...folders.sort()];
 
   return (
     <Box className={classes.hotbar}>
@@ -41,7 +41,13 @@ export function WorkshopHotbar({ folders, activeTab, onTabChange }: Props) {
             onClick={() => onTabChange(tab)}
             type="button"
           >
-            {tab === GENERAL_TAB ? "Общее" : tab === PACKAGES_TAB ? "Пакеты" : getTabLabel(tab)}
+            {tab === GENERAL_TAB
+              ? "Общее"
+              : tab === STATEMENT_TAB
+                ? "Условие"
+                : tab === PACKAGES_TAB
+                  ? "Пакеты"
+                  : getTabLabel(tab)}
           </button>
         ))}
       </div>

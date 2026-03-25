@@ -4,10 +4,11 @@ import { Stack } from "@mantine/core";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 import type { FileEntry } from "@contracts/gateway/v1";
-import { WorkshopHotbar, GENERAL_TAB, PACKAGES_TAB } from "./WorkshopHotbar";
+import { WorkshopHotbar, GENERAL_TAB, PACKAGES_TAB, STATEMENT_TAB } from "./WorkshopHotbar";
 import { WorkshopFolderTab } from "./WorkshopFolderTab";
 import { WorkshopGeneralTab } from "./WorkshopGeneralTab";
 import { WorkshopPackagesTab } from "./WorkshopPackagesTab";
+import { WorkshopStatementTab } from "./WorkshopStatementTab";
 
 type Props = {
   problemId: string;
@@ -28,7 +29,7 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
       const path = file.path ?? "";
       if (!path.includes("/")) {
         // Top-level directory → register the tab (files inside will be added below)
-        if (file.is_directory) {
+        if (file.is_directory && path !== STATEMENT_TAB) {
           if (!map.has(path)) map.set(path, []);
         }
         // Root non-directory files (.gitignore, README.md, manifest.json) → general tab
@@ -36,6 +37,7 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
       }
       // File/dir inside a folder
       const folder = path.split("/")[0];
+      if (folder === STATEMENT_TAB) continue;
       if (!map.has(folder)) map.set(folder, []);
       map.get(folder)!.push(file);
     }
@@ -82,6 +84,8 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
       <Stack gap={0} style={{ flex: 1, overflow: "hidden", display: "flex" }}>
         {activeTab === GENERAL_TAB ? (
           <WorkshopGeneralTab problemId={problemId} />
+        ) : activeTab === STATEMENT_TAB ? (
+          <WorkshopStatementTab problemId={problemId} />
         ) : activeTab === PACKAGES_TAB ? (
           <WorkshopPackagesTab problemId={problemId} />
         ) : (

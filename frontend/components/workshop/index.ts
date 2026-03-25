@@ -19,4 +19,5 @@ export * from './WorkshopNotInitialized';
 export * from './WorkshopHotbar';
 export * from './WorkshopFolderTab';
 export * from './WorkshopGeneralTab';
+export * from './WorkshopStatementTab';
 export * from './WorkshopPackagesTab';
