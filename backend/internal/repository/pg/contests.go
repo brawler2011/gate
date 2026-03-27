@@ -26,10 +26,6 @@ func NewContestsRepo(db *pgxpool.Pool) *ContestsRepo {
 }
 
 func (r *ContestsRepo) CreateContest(ctx context.Context, params *models.CreateContestParams) error {
-	titlesJSON, err := marshalJSON(params.Titles)
-	if err != nil {
-		return err
-	}
 	settingsJSON, err := marshalJSON(params.Settings)
 	if err != nil {
 		return err
@@ -44,7 +40,7 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *models.CreateC
 		OrganizationID: params.OrganizationID,
 		OwnerID:        uuidPtrToNullUUID(params.OwnerID),
 		Visibility:     params.Visibility,
-		Titles:         titlesJSON,
+		Title:          params.Title,
 		ShortName:      params.ShortName,
 		Description:    params.Description,
 		Settings:       settingsJSON,
@@ -67,15 +63,8 @@ func (r *ContestsRepo) GetContest(ctx context.Context, id uuid.UUID) (models.Con
 }
 
 func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdateParams) error {
-	var titlesJSON, settingsJSON, accessPolicyJSON []byte
+	var settingsJSON, accessPolicyJSON []byte
 	var err error
-
-	if c.Titles != nil {
-		titlesJSON, err = marshalJSON(*c.Titles)
-		if err != nil {
-			return err
-		}
-	}
 
 	if c.Settings != nil {
 		settingsJSON, err = marshalJSON(*c.Settings)
@@ -93,7 +82,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdate
 
 	err = r.queries.UpdateContest(ctx, sqlc.UpdateContestParams{
 		ID:           c.ID,
-		Titles:       titlesJSON,
+		Title:        c.Title,
 		Description:  c.Description,
 		Visibility:   stringToNullContestVisibility(c.Visibility),
 		Settings:     settingsJSON,
@@ -242,11 +231,18 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c models.Contes
 		packageId = readyPkg.ID
 	}
 
-	err := r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
+	problems, err := r.queries.ListContestProblems(ctx, c.ContestId)
+	if err != nil {
+		return HandlePgErr(err)
+	}
+
+	ordinal := int32(len(problems) + 1)
+
+	err = r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
 		ContestID: c.ContestId,
 		ProblemID: c.ProblemId,
 		PackageID: packageId,
-		Ordinal:   0,
+		Ordinal:   ordinal,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -360,14 +356,10 @@ func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.U
 }
 
 func mapContest(c sqlc.Contest) models.Contest {
-	var titles map[string]string
 	var settings map[string]interface{}
 	var accessPolicy map[string]interface{}
 
 	// Unmarshal JSON fields
-	if len(c.Titles) > 0 {
-		json.Unmarshal(c.Titles, &titles)
-	}
 	if len(c.Settings) > 0 {
 		json.Unmarshal(c.Settings, &settings)
 	}
@@ -380,7 +372,7 @@ func mapContest(c sqlc.Contest) models.Contest {
 		OrganizationID: c.OrganizationID,
 		OwnerID:        pgUUIDToUUIDPtr(c.OwnerID),
 		Visibility:     c.Visibility,
-		Titles:         titles,
+		Title:          c.Title,
 		ShortName:      c.ShortName,
 		Description:    c.Description,
 		Settings:       settings,
@@ -393,17 +385,12 @@ func mapContest(c sqlc.Contest) models.Contest {
 }
 
 func mapGetContestProblemRow(c sqlc.GetContestProblemRow) models.ContestProblem {
-	var titles map[string]string
-	if len(c.Titles) > 0 {
-		json.Unmarshal(c.Titles, &titles)
-	}
-
 	return models.ContestProblem{
 		ContestID:  c.ContestID,
 		ProblemID:  c.ProblemID,
 		PackageID:  c.PackageID,
 		Ordinal:    int(c.Ordinal),
-		Titles:     titles,
+		Title:      c.Title,
 		ShortName:  c.ShortName,
 		Visibility: string(c.Visibility),
 		CreatedAt:  c.CreatedAt,
@@ -411,17 +398,12 @@ func mapGetContestProblemRow(c sqlc.GetContestProblemRow) models.ContestProblem 
 }
 
 func mapListContestProblemsRow(c sqlc.ListContestProblemsRow) models.ContestProblem {
-	var titles map[string]string
-	if len(c.Titles) > 0 {
-		json.Unmarshal(c.Titles, &titles)
-	}
-
 	return models.ContestProblem{
 		ContestID:  c.ContestID,
 		ProblemID:  c.ProblemID,
 		PackageID:  c.PackageID,
 		Ordinal:    int(c.Ordinal),
-		Titles:     titles,
+		Title:      c.Title,
 		ShortName:  c.ShortName,
 		Visibility: string(c.Visibility),
 		PackageURL: c.PackageUrl,

@@ -85,16 +85,14 @@ func (s *GoGitService) InitDefaultManifest(ctx context.Context, problemID uuid.U
 		MemoryLimitMb:   256,
 		StdoutLimitMb:   64,
 		CodeSizeLimitKb: 256,
-		Statements: map[string]problemformat.Statement{
-			"en": {
-				Title:        title,
-				Legend:       "Problem description goes here.",
-				InputFormat:  "Input format description.",
-				OutputFormat: "Output format description.",
-				Notes:        "",
-				Interaction:  "",
-				Scoring:      "",
-			},
+		Statement: problemformat.Statement{
+			Title:        title,
+			Legend:       "Problem description goes here.",
+			InputFormat:  "Input format description.",
+			OutputFormat: "Output format description.",
+			Notes:        "",
+			Interaction:  "",
+			Scoring:      "",
 		},
 	}
 

@@ -44,19 +44,13 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 		orgID = orgs[0].ID
 	}
 
-	// Create titles map from single title
-	titles := make(map[string]string)
-	if request.Params.Title != "" {
-		titles["en"] = request.Params.Title
-	}
-
 	// Generate short_name from UUID to ensure uniqueness
 	shortName := "contest-" + uuid.New().String()[:8]
 
 	contestCreation := &models.CreateContestInput{
 		OrganizationID: orgID,
 		OwnerID:        &user.Id,
-		Titles:         titles,
+		Title:          request.Params.Title,
 		ShortName:      shortName,
 		Description:    "",
 		Visibility:     models.ContestVisibilityPrivate,
@@ -95,6 +89,16 @@ func (h *CoreServer) GetContest(ctx context.Context, request corev1.GetContestRe
 		return nil, err
 	}
 
+	problemDetails := make(map[uuid.UUID]models.Problem, len(ps))
+	for _, contestProblem := range ps {
+		problem, err := h.problemsUC.GetProblemById(ctx, contestProblem.ProblemID)
+		if err != nil {
+			return nil, err
+		}
+
+		problemDetails[contestProblem.ProblemID] = problem
+	}
+
 	var owner models.User
 	if contest.OwnerID != nil {
 		owner, err = h.usersUC.GetUserById(ctx, *contest.OwnerID)
@@ -107,7 +111,7 @@ func (h *CoreServer) GetContest(ctx context.Context, request corev1.GetContestRe
 		return nil, err
 	}
 
-	return corev1.GetContest200JSONResponse(*GetContestResponseDTO(contest, ps, &owner)), nil
+	return corev1.GetContest200JSONResponse(*GetContestResponseDTO(contest, ps, problemDetails, &owner)), nil
 }
 
 func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateContestRequestObject) (corev1.UpdateContestResponseObject, error) {
@@ -134,14 +138,6 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
 	}
 
-	// Build titles map if Title is provided
-	var titles *map[string]string
-	if req.Title != nil {
-		t := make(map[string]string)
-		t["en"] = *req.Title
-		titles = &t
-	}
-
 	var settings *map[string]interface{}
 	if req.MonitorScope != nil || req.SubmissionsListScope != nil || req.SubmissionsReviewScope != nil {
 		s := make(map[string]interface{})
@@ -159,7 +155,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 
 	err = h.contestsUC.UpdateContest(ctx, models.ContestUpdateInput{
 		ID:           request.ContestId,
-		Titles:       titles,
+		Title:        req.Title,
 		Description:  req.Description,
 		Visibility:   req.Visibility,
 		Settings:     settings,
@@ -428,7 +424,14 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, request corev1.GetCo
 		return nil, err
 	}
 
-	return corev1.GetContestProblem200JSONResponse(*GetContestProblemResponseDTO(p)), nil
+	problem, err := h.problemsUC.GetProblemById(ctx, request.ProblemId)
+	if err != nil {
+		return nil, err
+	}
+
+	statement := h.loadProblemStatement(ctx, request.ProblemId)
+
+	return corev1.GetContestProblem200JSONResponse(*GetContestProblemResponseDTO(p, problem, statement)), nil
 }
 
 func (h *CoreServer) DeleteContestProblem(ctx context.Context, request corev1.DeleteContestProblemRequestObject) (corev1.DeleteContestProblemResponseObject, error) {

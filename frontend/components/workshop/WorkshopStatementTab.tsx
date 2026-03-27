@@ -76,8 +76,8 @@ export function WorkshopStatementTab({ problemId }: Props) {
 
       try {
         const parsed = JSON.parse(typeof data === "string" ? data : "{}");
-        const statements = isRecord(parsed) && isRecord(parsed.statements) ? parsed.statements : {};
-        setStatement(toStatementData(statements.en));
+        const statementValue = isRecord(parsed) ? parsed.statement : undefined;
+        setStatement(toStatementData(statementValue));
         setIsDirty(false);
       } catch {
         notifications.show({
@@ -121,15 +121,11 @@ export function WorkshopStatementTab({ problemId }: Props) {
         return;
       }
 
-      const currentStatements = isRecord(manifest.statements) ? manifest.statements : {};
-      const currentEn = isRecord(currentStatements.en) ? currentStatements.en : {};
+      const currentStatement = isRecord(manifest.statement) ? manifest.statement : {};
 
-      manifest.statements = {
-        ...currentStatements,
-        en: {
-          ...currentEn,
-          ...statement,
-        },
+      manifest.statement = {
+        ...currentStatement,
+        ...statement,
       };
 
       const [saveError] = await saveWorkshopFile(
@@ -159,7 +155,7 @@ export function WorkshopStatementTab({ problemId }: Props) {
   return (
     <ScrollArea style={{ flex: 1 }} p="lg">
       <Stack gap="lg" maw={900} mx="auto">
-        <SectionPaper title="Условие задачи (statements.en)">
+        <SectionPaper title="Условие задачи (statement)">
           {isLoading ? (
             <Text c="dimmed" size="sm">
               Загрузка...

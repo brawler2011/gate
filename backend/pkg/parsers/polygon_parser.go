@@ -152,9 +152,13 @@ func convertPolygonToManifest(prob *PolygonProblem, packageDir string) *problemf
 		}
 	}
 
-	// Convert statements
-	statements := make(map[string]problemformat.Statement)
+	// Convert statement
+	statement := problemformat.Statement{}
 	for _, stmt := range prob.Statements {
+		if statement.Legend != "" {
+			break
+		}
+
 		// Read statement content from file
 		stmtPath := filepath.Join(packageDir, stmt.Path)
 		content, err := os.ReadFile(stmtPath)
@@ -163,7 +167,7 @@ func convertPolygonToManifest(prob *PolygonProblem, packageDir string) *problemf
 		}
 
 		// Parse HTML/LaTeX statement (simplified - in production you'd parse properly)
-		statements[stmt.Language] = problemformat.Statement{
+		statement = problemformat.Statement{
 			Title:        prob.ShortName,
 			Legend:       string(content), // Simplified
 			InputFormat:  "",
@@ -212,7 +216,7 @@ func convertPolygonToManifest(prob *PolygonProblem, packageDir string) *problemf
 		MemoryLimitMb:   memoryLimitMb,
 		StdoutLimitMb:   64,  // Default
 		CodeSizeLimitKb: 256, // Default
-		Statements:      statements,
+		Statement:       statement,
 	}
 }
 

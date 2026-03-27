@@ -114,8 +114,8 @@ func convertICPCToManifest(prob *ICPCProblem, packageDir string) (*problemformat
 		problemType = "interactive"
 	}
 
-	// Parse statements from statement/ directory
-	statements, err := convertICPCStatements(packageDir)
+	// Parse statement from statement/ directory
+	statement, err := convertICPCStatement(packageDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse statements: %w", err)
 	}
@@ -132,33 +132,35 @@ func convertICPCToManifest(prob *ICPCProblem, packageDir string) (*problemformat
 		MemoryLimitMb:   memoryLimitMb,
 		StdoutLimitMb:   stdoutLimitMb,
 		CodeSizeLimitKb: codeSizeLimitKb,
-		Statements:      statements,
+		Statement:       statement,
 	}, nil
 }
 
-func convertICPCStatements(packageDir string) (map[string]problemformat.Statement, error) {
-	statements := make(map[string]problemformat.Statement)
+func convertICPCStatement(packageDir string) (problemformat.Statement, error) {
+	statement := problemformat.Statement{}
 	stmtDir := filepath.Join(packageDir, "statement")
 
 	// Check if statement directory exists
 	if _, err := os.Stat(stmtDir); os.IsNotExist(err) {
-		// No statements, return empty map
-		return statements, nil
+		return statement, nil
 	}
 
 	// Read all language directories
 	entries, err := os.ReadDir(stmtDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read statement directory: %w", err)
+		return statement, fmt.Errorf("failed to read statement directory: %w", err)
 	}
 
 	for _, entry := range entries {
+		if statement.Legend != "" {
+			break
+		}
+
 		if !entry.IsDir() {
 			continue
 		}
 
-		lang := entry.Name()
-		langDir := filepath.Join(stmtDir, lang)
+		langDir := filepath.Join(stmtDir, entry.Name())
 
 		// Read problem.tex or problem.md
 		var content string
@@ -174,7 +176,7 @@ func convertICPCStatements(packageDir string) (map[string]problemformat.Statemen
 		}
 
 		// Parse LaTeX/Markdown sections (simplified)
-		statements[lang] = problemformat.Statement{
+		statement = problemformat.Statement{
 			Title:        "", // Would need to parse from content
 			Legend:       content,
 			InputFormat:  "",
@@ -185,7 +187,7 @@ func convertICPCStatements(packageDir string) (map[string]problemformat.Statemen
 		}
 	}
 
-	return statements, nil
+	return statement, nil
 }
 
 func convertICPCTests(packageDir string) (*problemformat.TestsMetadata, error) {

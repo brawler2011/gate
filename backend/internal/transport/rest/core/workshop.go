@@ -24,20 +24,10 @@ func (h *CoreServer) InitProblemWorkshop(ctx context.Context, request corev1.Ini
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "problem not found")
 	}
 
-	// Get title from problem (prefer English, fallback to any available, then default)
+	// Get title from problem or use default
 	title := "New Problem"
-	if problem.Titles != nil {
-		if enTitle, ok := problem.Titles["en"]; ok && enTitle != "" {
-			title = enTitle
-		} else {
-			// Take the first available title
-			for _, t := range problem.Titles {
-				if t != "" {
-					title = t
-					break
-				}
-			}
-		}
+	if problem.Title != "" {
+		title = problem.Title
 	}
 
 	// Initialize workshop

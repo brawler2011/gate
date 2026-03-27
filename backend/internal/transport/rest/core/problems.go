@@ -91,15 +91,12 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 		orgID = orgs[0].ID
 	}
 
-	titles := make(map[string]string)
-	titles["en"] = request.Params.Title
-
 	shortName := "problem-" + uuid.New().String()[:8]
 
 	input := &models.CreateProblemInput{
 		OrganizationID: orgID,
 		OwnerID:        &user.Id,
-		Titles:         titles,
+		Title:          request.Params.Title,
 		ShortName:      shortName,
 		Visibility:     models.ProblemVisibilityPrivate,
 	}
@@ -147,7 +144,9 @@ func (h *CoreServer) GetProblem(ctx context.Context, request corev1.GetProblemRe
 		return nil, err
 	}
 
-	return corev1.GetProblem200JSONResponse{Problem: *ProblemDTO(problem)}, nil
+	statement := h.loadProblemStatement(ctx, request.Id)
+
+	return corev1.GetProblem200JSONResponse{Problem: *ProblemDTO(problem, statement)}, nil
 }
 
 func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdateProblemRequestObject) (corev1.UpdateProblemResponseObject, error) {
@@ -169,11 +168,9 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdatePro
 	// Build update params
 	update := &models.ProblemUpdate{}
 
-	// Handle title update - convert to titles map
+	// Handle title update
 	if req.Title != nil {
-		titles := make(map[string]string)
-		titles["en"] = *req.Title
-		update.Titles = &titles
+		update.Title = req.Title
 	}
 
 	// Handle visibility update

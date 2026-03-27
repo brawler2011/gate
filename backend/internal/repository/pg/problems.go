@@ -2,8 +2,6 @@ package pg
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/repository/pg/sqlc"
@@ -24,18 +22,12 @@ func NewProblemsRepo(db *pgxpool.Pool) *ProblemsRepo {
 }
 
 func (r *ProblemsRepo) CreateProblem(ctx context.Context, params *models.CreateProblemParams) error {
-	// Marshal titles to JSON
-	titlesJSON, err := json.Marshal(params.Titles)
-	if err != nil {
-		return fmt.Errorf("failed to marshal titles: %w", err)
-	}
-
-	_, err = r.queries.CreateProblem(ctx, sqlc.CreateProblemParams{
+	_, err := r.queries.CreateProblem(ctx, sqlc.CreateProblemParams{
 		ID:             params.ID,
 		OrganizationID: params.OrganizationID,
 		OwnerID:        uuidPtrToNullUUID(params.OwnerID),
 		Visibility:     sqlc.ProblemVisibility(params.Visibility),
-		Titles:         titlesJSON,
+		Title:          params.Title,
 		ShortName:      params.ShortName,
 	})
 	if err != nil {
@@ -49,7 +41,7 @@ func (r *ProblemsRepo) GetProblemById(ctx context.Context, id uuid.UUID) (models
 	if err != nil {
 		return models.Problem{}, HandlePgErr(err)
 	}
-	return mapProblem(problem), nil
+	return mapGetProblemByIDRow(problem), nil
 }
 
 func (r *ProblemsRepo) DeleteProblem(ctx context.Context, id uuid.UUID) error {
@@ -86,7 +78,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 
 		problems := make([]models.Problem, len(rows))
 		for i, row := range rows {
-			problems[i] = mapProblem(row)
+			problems[i] = mapListAllProblemsRow(row)
 		}
 
 		return problems, int32(total), nil
@@ -115,26 +107,16 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 
 	problems := make([]models.Problem, len(rows))
 	for i, row := range rows {
-		problems[i] = mapProblem(row)
+		problems[i] = mapListProblemsRow(row)
 	}
 
 	return problems, int32(total), nil
 }
 
 func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
-	// Marshal titles to JSON if provided
-	var titlesJSON []byte
-	var err error
-	if problem.Titles != nil {
-		titlesJSON, err = json.Marshal(*problem.Titles)
-		if err != nil {
-			return fmt.Errorf("failed to marshal titles: %w", err)
-		}
-	}
-
-	err = r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
+	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
 		ID:            id,
-		Titles:        titlesJSON,
+		Title:         problem.Title,
 		Visibility:    stringToNullProblemVisibility(problem.Visibility),
 		OwnerID:       uuidPtrToNullUUID(problem.OwnerID),
 		GitCommitHash: problem.GitCommitHash,
@@ -202,18 +184,45 @@ func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
 	}
 }
 
-func mapProblem(p sqlc.Problem) models.Problem {
-	var titles map[string]string
-	if len(p.Titles) > 0 {
-		json.Unmarshal(p.Titles, &titles)
-	}
-
+func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) models.Problem {
 	return models.Problem{
 		ID:             p.ID,
 		OrganizationID: p.OrganizationID,
 		OwnerID:        pgUUIDToUUIDPtr(p.OwnerID),
 		Visibility:     string(p.Visibility),
-		Titles:         titles,
+		Title:          p.Title,
+		ShortName:      p.ShortName,
+		GitCommitHash:  p.GitCommitHash,
+		TimeLimitMs:    int(p.TimeLimitMs),
+		MemoryLimitMb:  int(p.MemoryLimitMb),
+		CreatedAt:      p.CreatedAt,
+		UpdatedAt:      p.UpdatedAt,
+	}
+}
+
+func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) models.Problem {
+	return models.Problem{
+		ID:             p.ID,
+		OrganizationID: p.OrganizationID,
+		OwnerID:        pgUUIDToUUIDPtr(p.OwnerID),
+		Visibility:     string(p.Visibility),
+		Title:          p.Title,
+		ShortName:      p.ShortName,
+		GitCommitHash:  p.GitCommitHash,
+		TimeLimitMs:    int(p.TimeLimitMs),
+		MemoryLimitMb:  int(p.MemoryLimitMb),
+		CreatedAt:      p.CreatedAt,
+		UpdatedAt:      p.UpdatedAt,
+	}
+}
+
+func mapListProblemsRow(p sqlc.ListProblemsRow) models.Problem {
+	return models.Problem{
+		ID:             p.ID,
+		OrganizationID: p.OrganizationID,
+		OwnerID:        pgUUIDToUUIDPtr(p.OwnerID),
+		Visibility:     string(p.Visibility),
+		Title:          p.Title,
 		ShortName:      p.ShortName,
 		GitCommitHash:  p.GitCommitHash,
 		TimeLimitMs:    int(p.TimeLimitMs),

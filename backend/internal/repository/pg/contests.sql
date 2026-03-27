@@ -1,7 +1,7 @@
 -- Contests queries (new schema with Organizations)
 
 -- name: CreateContest :one
-INSERT INTO contests (id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time)
+INSERT INTO contests (id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
@@ -15,7 +15,7 @@ WHERE organization_id = $1 AND short_name = $2;
 -- name: ListContests :many
 SELECT * FROM contests
 WHERE organization_id = $1
-  AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
+  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::contest_visibility)
 ORDER BY created_at DESC
 LIMIT $4 OFFSET $5;
@@ -23,24 +23,24 @@ LIMIT $4 OFFSET $5;
 -- name: CountContests :one
 SELECT COUNT(*) FROM contests
 WHERE organization_id = $1
-  AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
+  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::contest_visibility);
 
 -- name: ListAllContests :many
 SELECT c.* FROM contests c
-WHERE ($1::text = '' OR (c.titles->>'en') ILIKE '%' || $1 || '%' OR (c.titles->>'ru') ILIKE '%' || $1 || '%')
+WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR c.visibility = $2::contest_visibility)
 ORDER BY c.created_at DESC
 LIMIT $3 OFFSET $4;
 
 -- name: CountAllContests :one
 SELECT COUNT(*) FROM contests c
-WHERE ($1::text = '' OR (c.titles->>'en') ILIKE '%' || $1 || '%' OR (c.titles->>'ru') ILIKE '%' || $1 || '%')
+WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR c.visibility = $2::contest_visibility);
 
 -- name: UpdateContest :exec
 UPDATE contests
-SET titles = COALESCE(sqlc.narg('titles'), titles),
+SET title = COALESCE(sqlc.narg('title'), title),
     description = COALESCE(sqlc.narg('description'), description),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
     settings = COALESCE(sqlc.narg('settings'), settings),
@@ -86,13 +86,13 @@ INSERT INTO contest_problems (contest_id, problem_id, package_id, ordinal)
 VALUES ($1, $2, $3, $4);
 
 -- name: GetContestProblem :one
-SELECT cp.*, p.titles, p.short_name, p.visibility
+SELECT cp.*, p.title, p.short_name, p.visibility
 FROM contest_problems cp
 JOIN problems p ON cp.problem_id = p.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2;
 
 -- name: ListContestProblems :many
-SELECT cp.*, p.titles, p.short_name, p.visibility, pp.url as package_url
+SELECT cp.*, p.title, p.short_name, p.visibility, pp.url as package_url
 FROM contest_problems cp
 JOIN problems p ON cp.problem_id = p.id
 JOIN problem_packages pp ON cp.package_id = pp.id

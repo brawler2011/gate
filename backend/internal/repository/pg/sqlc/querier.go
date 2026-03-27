@@ -34,6 +34,7 @@ type Querier interface {
 	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
 	CountContests(ctx context.Context, arg CountContestsParams) (int64, error)
 	CountOrganizations(ctx context.Context, dollar_1 string) (int64, error)
+	CountPosts(ctx context.Context) (int64, error)
 	CountProblems(ctx context.Context, arg CountProblemsParams) (int64, error)
 	CountSubmissions(ctx context.Context, arg CountSubmissionsParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int32, error)
@@ -41,6 +42,7 @@ type Querier interface {
 	CreateContest(ctx context.Context, arg CreateContestParams) (Contest, error)
 	// Organizations queries
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
+	CreatePost(ctx context.Context, arg CreatePostParams) (uuid.UUID, error)
 	// Problems queries (new schema with Organizations)
 	CreateProblem(ctx context.Context, arg CreateProblemParams) (Problem, error)
 	// Problem Packages queries
@@ -52,6 +54,7 @@ type Querier interface {
 	DeleteContest(ctx context.Context, id uuid.UUID) error
 	DeleteOldEvents(ctx context.Context, arg DeleteOldEventsParams) error
 	DeleteOrganization(ctx context.Context, id uuid.UUID) error
+	DeletePost(ctx context.Context, id uuid.UUID) error
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
 	DeleteProblemPackage(ctx context.Context, id uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
@@ -63,8 +66,9 @@ type Querier interface {
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organization, error)
 	GetOrganizationByLogin(ctx context.Context, login string) (Organization, error)
 	GetOrganizationMember(ctx context.Context, arg GetOrganizationMemberParams) (OrganizationMember, error)
-	GetProblemByID(ctx context.Context, id uuid.UUID) (Problem, error)
-	GetProblemByShortName(ctx context.Context, arg GetProblemByShortNameParams) (Problem, error)
+	GetPostByID(ctx context.Context, id uuid.UUID) (Post, error)
+	GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemByIDRow, error)
+	GetProblemByShortName(ctx context.Context, arg GetProblemByShortNameParams) (GetProblemByShortNameRow, error)
 	GetProblemMember(ctx context.Context, arg GetProblemMemberParams) (ProblemMember, error)
 	GetProblemPackageByHash(ctx context.Context, packageHash string) (ProblemPackage, error)
 	GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error)
@@ -85,7 +89,7 @@ type Querier interface {
 	GetUserTeamsByOrganization(ctx context.Context, arg GetUserTeamsByOrganizationParams) ([]Team, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) error
 	ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]Contest, error)
-	ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]Problem, error)
+	ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error)
 	ListContestMembers(ctx context.Context, contestID uuid.UUID) ([]ListContestMembersRow, error)
 	ListContestProblems(ctx context.Context, contestID uuid.UUID) ([]ListContestProblemsRow, error)
 	ListContestTeams(ctx context.Context, contestID uuid.UUID) ([]ListContestTeamsRow, error)
@@ -93,16 +97,18 @@ type Querier interface {
 	ListOrganizationMembers(ctx context.Context, organizationID uuid.UUID) ([]ListOrganizationMembersRow, error)
 	ListOrganizationTeams(ctx context.Context, organizationID uuid.UUID) ([]Team, error)
 	ListOrganizations(ctx context.Context, arg ListOrganizationsParams) ([]Organization, error)
+	ListPostsAsc(ctx context.Context, arg ListPostsAscParams) ([]Post, error)
+	ListPostsDesc(ctx context.Context, arg ListPostsDescParams) ([]Post, error)
 	ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]ListProblemMembersRow, error)
 	ListProblemPackages(ctx context.Context, arg ListProblemPackagesParams) ([]ProblemPackage, error)
 	ListProblemTeams(ctx context.Context, problemID uuid.UUID) ([]ListProblemTeamsRow, error)
-	ListProblems(ctx context.Context, arg ListProblemsParams) ([]Problem, error)
+	ListProblems(ctx context.Context, arg ListProblemsParams) ([]ListProblemsRow, error)
 	// Submission listing
 	ListSubmissions(ctx context.Context, arg ListSubmissionsParams) ([]ListSubmissionsRow, error)
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]ListTeamMembersRow, error)
 	ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]Contest, error)
 	ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]Contest, error)
-	ListUserAccessibleProblems(ctx context.Context, arg ListUserAccessibleProblemsParams) ([]Problem, error)
+	ListUserAccessibleProblems(ctx context.Context, arg ListUserAccessibleProblemsParams) ([]ListUserAccessibleProblemsRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	MarkAsCompleted(ctx context.Context, id uuid.UUID) error
 	MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) error
@@ -122,9 +128,11 @@ type Querier interface {
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error
 	UpdateOrganizationMemberRole(ctx context.Context, arg UpdateOrganizationMemberRoleParams) error
 	UpdatePackageStatus(ctx context.Context, arg UpdatePackageStatusParams) error
+	UpdatePost(ctx context.Context, arg UpdatePostParams) error
 	UpdateProblem(ctx context.Context, arg UpdateProblemParams) error
 	// Workshop integration queries
 	UpdateProblemGitCommit(ctx context.Context, arg UpdateProblemGitCommitParams) error
+	UpdateProblemLimits(ctx context.Context, arg UpdateProblemLimitsParams) error
 	UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error
 	UpdateProblemTeamPermission(ctx context.Context, arg UpdateProblemTeamPermissionParams) error
 	UpdateSubmission(ctx context.Context, arg UpdateSubmissionParams) error

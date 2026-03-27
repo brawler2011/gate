@@ -26,7 +26,7 @@ type ManifestData = {
   memory_limit_mb: number;
   stdout_limit_mb: number;
   code_size_limit_kb: number;
-  statements?: Record<string, unknown>;
+  statement?: Record<string, unknown>;
   meta_files?: unknown[];
 };
 
@@ -130,7 +130,7 @@ export function WorkshopGeneralTab({ problemId }: Props) {
   const handleSaveManifest = () => {
     if (!manifest) return;
     startSavingManifest(async () => {
-      // Preserve fields we don't edit (statements, meta_files, last_updated)
+      // Preserve fields we don't edit (statement, meta_files, last_updated)
       const [currentError, currentData] = await getWorkshopFile(problemId, "manifest.json");
       let existing: Record<string, unknown> = {};
       if (!currentError && typeof currentData === "string") {

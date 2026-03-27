@@ -449,7 +449,6 @@ type Contest struct {
 	OrganizationID uuid.UUID                `json:"organization_id"`
 	OwnerID        pgtype.UUID              `json:"owner_id"`
 	Visibility     models.ContestVisibility `json:"visibility"`
-	Titles         []byte                   `json:"titles"`
 	ShortName      string                   `json:"short_name"`
 	Description    string                   `json:"description"`
 	Settings       []byte                   `json:"settings"`
@@ -458,6 +457,7 @@ type Contest struct {
 	EndTime        pgtype.Timestamptz       `json:"end_time"`
 	CreatedAt      time.Time                `json:"created_at"`
 	UpdatedAt      time.Time                `json:"updated_at"`
+	Title          string                   `json:"title"`
 }
 
 type ContestMember struct {
@@ -513,18 +513,30 @@ type OutboxEvent struct {
 	DeadlineAt   *time.Time               `json:"deadline_at"`
 }
 
+type Post struct {
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Title       string    `json:"title"`
+	Text        string    `json:"text"`
+	Description string    `json:"description"`
+	AuthorUuid  uuid.UUID `json:"author_uuid"`
+	AuthorName  string    `json:"author_name"`
+	ImageKey    string    `json:"image_key"`
+}
+
 type Problem struct {
 	ID             uuid.UUID         `json:"id"`
 	OrganizationID uuid.UUID         `json:"organization_id"`
 	OwnerID        pgtype.UUID       `json:"owner_id"`
 	Visibility     ProblemVisibility `json:"visibility"`
-	Titles         []byte            `json:"titles"`
 	ShortName      string            `json:"short_name"`
 	GitCommitHash  *string           `json:"git_commit_hash"`
 	CreatedAt      time.Time         `json:"created_at"`
 	UpdatedAt      time.Time         `json:"updated_at"`
 	TimeLimitMs    int32             `json:"time_limit_ms"`
 	MemoryLimitMb  int32             `json:"memory_limit_mb"`
+	Title          string            `json:"title"`
 }
 
 type ProblemMember struct {

@@ -115,11 +115,11 @@ SELECT s.id,
   s.memory_stat,
   s.language,
   s.problem_id,
-  p.titles AS problem_titles,
+  p.title AS problem_title,
   p.short_name AS problem_short_name,
   cp.ordinal AS problem_ordinal,
   s.contest_id,
-  c.titles AS contest_titles,
+  c.title AS contest_title,
   c.short_name AS contest_short_name,
   c.visibility AS contest_visibility,
   s.updated_at,
@@ -145,11 +145,11 @@ type GetSubmissionRow struct {
 	MemoryStat        int32                 `json:"memory_stat"`
 	Language          models.LanguageName   `json:"language"`
 	ProblemID         pgtype.UUID           `json:"problem_id"`
-	ProblemTitles     []byte                `json:"problem_titles"`
+	ProblemTitle      *string               `json:"problem_title"`
 	ProblemShortName  *string               `json:"problem_short_name"`
 	ProblemOrdinal    *int32                `json:"problem_ordinal"`
 	ContestID         pgtype.UUID           `json:"contest_id"`
-	ContestTitles     []byte                `json:"contest_titles"`
+	ContestTitle      *string               `json:"contest_title"`
 	ContestShortName  *string               `json:"contest_short_name"`
 	ContestVisibility NullContestVisibility `json:"contest_visibility"`
 	UpdatedAt         time.Time             `json:"updated_at"`
@@ -171,11 +171,11 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.MemoryStat,
 		&i.Language,
 		&i.ProblemID,
-		&i.ProblemTitles,
+		&i.ProblemTitle,
 		&i.ProblemShortName,
 		&i.ProblemOrdinal,
 		&i.ContestID,
-		&i.ContestTitles,
+		&i.ContestTitle,
 		&i.ContestShortName,
 		&i.ContestVisibility,
 		&i.UpdatedAt,
@@ -195,11 +195,11 @@ SELECT s.id,
   s.memory_stat,
   s.language,
   s.problem_id,
-  p.titles AS problem_titles,
+  p.title AS problem_title,
   p.short_name AS problem_short_name,
   cp.ordinal AS problem_ordinal,
   s.contest_id,
-  c.titles AS contest_titles,
+  c.title AS contest_title,
   c.short_name AS contest_short_name,
   s.updated_at,
   s.created_at
@@ -260,11 +260,11 @@ type ListSubmissionsRow struct {
 	MemoryStat       int32               `json:"memory_stat"`
 	Language         models.LanguageName `json:"language"`
 	ProblemID        pgtype.UUID         `json:"problem_id"`
-	ProblemTitles    []byte              `json:"problem_titles"`
+	ProblemTitle     *string             `json:"problem_title"`
 	ProblemShortName *string             `json:"problem_short_name"`
 	ProblemOrdinal   *int32              `json:"problem_ordinal"`
 	ContestID        pgtype.UUID         `json:"contest_id"`
-	ContestTitles    []byte              `json:"contest_titles"`
+	ContestTitle     *string             `json:"contest_title"`
 	ContestShortName *string             `json:"contest_short_name"`
 	UpdatedAt        time.Time           `json:"updated_at"`
 	CreatedAt        time.Time           `json:"created_at"`
@@ -300,11 +300,11 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.MemoryStat,
 			&i.Language,
 			&i.ProblemID,
-			&i.ProblemTitles,
+			&i.ProblemTitle,
 			&i.ProblemShortName,
 			&i.ProblemOrdinal,
 			&i.ContestID,
-			&i.ContestTitles,
+			&i.ContestTitle,
 			&i.ContestShortName,
 			&i.UpdatedAt,
 			&i.CreatedAt,

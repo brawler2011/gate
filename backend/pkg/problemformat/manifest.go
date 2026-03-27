@@ -6,15 +6,15 @@ import (
 
 // ProblemManifest - основной манифест задачи (manifest.json)
 type ProblemManifest struct {
-	LastUpdated     time.Time            `json:"last_updated"`
-	ProblemType     string               `json:"problem_type"` // "pass-fail", "scoring", "interactive"
-	MaxScore        *int                 `json:"max_score"`
-	FilesMetadata   []FileMetadata       `json:"meta_files"`
-	TimeLimitMs     int                  `json:"time_limit_ms"`
-	MemoryLimitMb   int                  `json:"memory_limit_mb"`
-	StdoutLimitMb   int                  `json:"stdout_limit_mb"`
-	CodeSizeLimitKb int                  `json:"code_size_limit_kb"`
-	Statements      map[string]Statement `json:"statements"` // {"en": {...}, "ru": {...}}
+	LastUpdated     time.Time      `json:"last_updated"`
+	ProblemType     string         `json:"problem_type"` // "pass-fail", "scoring", "interactive"
+	MaxScore        *int           `json:"max_score"`
+	FilesMetadata   []FileMetadata `json:"meta_files"`
+	TimeLimitMs     int            `json:"time_limit_ms"`
+	MemoryLimitMb   int            `json:"memory_limit_mb"`
+	StdoutLimitMb   int            `json:"stdout_limit_mb"`
+	CodeSizeLimitKb int            `json:"code_size_limit_kb"`
+	Statement       Statement      `json:"statement"`
 }
 
 // Statement - условие задачи на одном языке

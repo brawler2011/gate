@@ -4,6 +4,7 @@ import (
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
+	"strings"
 )
 
 func PaginationDTO(p models.Pagination) corev1.PaginationModel {
@@ -27,14 +28,19 @@ func int32PtrToInt32(ptr *int32) int32 {
 	return *ptr
 }
 
-func GetContestResponseDTO(contest models.Contest, problems []models.ContestProblem, owner *models.User) *corev1.GetContestResponseModel {
+func GetContestResponseDTO(contest models.Contest, problems []models.ContestProblem, problemDetails map[uuid.UUID]models.Problem, owner *models.User) *corev1.GetContestResponseModel {
 	resp := corev1.GetContestResponseModel{
 		Contest:  ContestDTO(contest, owner),
 		Problems: make([]corev1.ContestProblemListItemModel, len(problems)),
 	}
 
 	for i, task := range problems {
-		resp.Problems[i] = ContestProblemsListItemDTO(task)
+		if details, ok := problemDetails[task.ProblemID]; ok {
+			resp.Problems[i] = ContestProblemsListItemDTO(task, &details)
+			continue
+		}
+
+		resp.Problems[i] = ContestProblemsListItemDTO(task, nil)
 	}
 
 	return &resp
@@ -66,29 +72,32 @@ func ListUserContestsResponseDTO(contestsList *models.ContestsList) *corev1.List
 	return &resp
 }
 
-func GetContestProblemResponseDTO(p models.ContestProblem) *corev1.GetContestProblemResponseModel {
-	// Extract english title from titles map
-	title := ""
-	if t, ok := p.Titles["en"]; ok {
-		title = t
+func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem models.Problem, statement *models.Statement) *corev1.GetContestProblemResponseModel {
+	title := strings.TrimSpace(problem.Title)
+	if title == "" {
+		title = strings.TrimSpace(contestProblem.Title)
 	}
-
-	position := int32(p.Ordinal)
+	if statement != nil {
+		statementTitle := strings.TrimSpace(statement.Title)
+		if statementTitle != "" {
+			title = statementTitle
+		}
+	}
 
 	return &corev1.GetContestProblemResponseModel{
 		Problem: corev1.ContestProblemModel{
-			ProblemId:        p.ProblemID,
+			ProblemId:        contestProblem.ProblemID,
 			Title:            title,
-			TimeLimit:        0, // Not available in new model
-			MemoryLimit:      0, // Not available in new model
-			Position:         position,
-			LegendHtml:       "", // Not available in new model
-			InputFormatHtml:  "", // Not available in new model
-			OutputFormatHtml: "", // Not available in new model
-			NotesHtml:        "", // Not available in new model
-			ScoringHtml:      "", // Not available in new model
-			CreatedAt:        p.CreatedAt,
-			UpdatedAt:        p.CreatedAt, // UpdatedAt not available in new model
+			TimeLimit:        int32(problem.TimeLimitMs),
+			MemoryLimit:      int32(problem.MemoryLimitMb),
+			Position:         int32(contestProblem.Ordinal),
+			LegendHtml:       statementField(statement, func(s models.Statement) string { return s.Legend }),
+			InputFormatHtml:  statementField(statement, func(s models.Statement) string { return s.InputFormat }),
+			OutputFormatHtml: statementField(statement, func(s models.Statement) string { return s.OutputFormat }),
+			NotesHtml:        statementField(statement, func(s models.Statement) string { return s.Notes }),
+			ScoringHtml:      statementField(statement, func(s models.Statement) string { return s.Scoring }),
+			CreatedAt:        problem.CreatedAt,
+			UpdatedAt:        problem.UpdatedAt,
 		},
 	}
 }
@@ -107,11 +116,7 @@ func SubmissionsListToDTO(submissionsList *models.SubmissionsList) *corev1.ListS
 }
 
 func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
-	// Extract title from titles map
-	title := ""
-	if t, ok := c.Titles["en"]; ok {
-		title = t
-	}
+	title := c.Title
 
 	// Extract owner ID
 	var createdBy uuid.UUID
@@ -144,21 +149,32 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 	return model
 }
 
-func ContestProblemsListItemDTO(t models.ContestProblem) corev1.ContestProblemListItemModel {
-	// Extract title from titles map
-	title := ""
-	if tt, ok := t.Titles["en"]; ok {
-		title = tt
+func ContestProblemsListItemDTO(t models.ContestProblem, problem *models.Problem) corev1.ContestProblemListItemModel {
+	title := strings.TrimSpace(t.Title)
+	if problem != nil {
+		problemTitle := strings.TrimSpace(problem.Title)
+		if problemTitle != "" {
+			title = problemTitle
+		}
+	}
+
+	timeLimit := int32(0)
+	memoryLimit := int32(0)
+	updatedAt := t.CreatedAt
+	if problem != nil {
+		timeLimit = int32(problem.TimeLimitMs)
+		memoryLimit = int32(problem.MemoryLimitMb)
+		updatedAt = problem.UpdatedAt
 	}
 
 	return corev1.ContestProblemListItemModel{
 		ProblemId:   t.ProblemID,
 		Position:    int32(t.Ordinal),
 		Title:       title,
-		MemoryLimit: 0, // Not available
-		TimeLimit:   0, // Not available
+		MemoryLimit: memoryLimit,
+		TimeLimit:   timeLimit,
 		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.CreatedAt, // Not available
+		UpdatedAt:   updatedAt,
 	}
 }
 
@@ -183,11 +199,7 @@ func ParticipantDTO(p models.ContestMember) corev1.UserModel {
 }
 
 func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
-	// Extract title from titles map
-	title := ""
-	if t, ok := p.Titles["en"]; ok {
-		title = t
-	}
+	title := p.Title
 
 	return corev1.ProblemsListItemModel{
 		Id:          p.ID,
@@ -200,11 +212,13 @@ func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
 	}
 }
 
-func ProblemDTO(p models.Problem) *corev1.ProblemModel {
-	// Extract title from titles map
-	title := ""
-	if t, ok := p.Titles["en"]; ok {
-		title = t
+func ProblemDTO(p models.Problem, statement *models.Statement) *corev1.ProblemModel {
+	title := strings.TrimSpace(p.Title)
+	if statement != nil {
+		statementTitle := strings.TrimSpace(statement.Title)
+		if statementTitle != "" {
+			title = statementTitle
+		}
 	}
 
 	createdBy := uuid.Nil
@@ -212,30 +226,43 @@ func ProblemDTO(p models.Problem) *corev1.ProblemModel {
 		createdBy = *p.OwnerID
 	}
 
+	legend := statementField(statement, func(s models.Statement) string { return s.Legend })
+	inputFormat := statementField(statement, func(s models.Statement) string { return s.InputFormat })
+	outputFormat := statementField(statement, func(s models.Statement) string { return s.OutputFormat })
+	notes := statementField(statement, func(s models.Statement) string { return s.Notes })
+	scoring := statementField(statement, func(s models.Statement) string { return s.Scoring })
+
 	return &corev1.ProblemModel{
 		Id:             p.ID,
 		OrganizationId: &p.OrganizationID,
 		Title:          title,
 		Visibility:     p.Visibility,
 		CreatedBy:      createdBy,
-		TimeLimit:      0, // Not available in new model
-		MemoryLimit:    0, // Not available in new model
+		TimeLimit:      int32(p.TimeLimitMs),
+		MemoryLimit:    int32(p.MemoryLimitMb),
 
-		Legend:       "", // Not available in new model
-		InputFormat:  "", // Not available in new model
-		OutputFormat: "", // Not available in new model
-		Notes:        "", // Not available in new model
-		Scoring:      "", // Not available in new model
+		Legend:       legend,
+		InputFormat:  inputFormat,
+		OutputFormat: outputFormat,
+		Notes:        notes,
+		Scoring:      scoring,
 
-		LegendHtml:       "", // Not available in new model
-		InputFormatHtml:  "", // Not available in new model
-		OutputFormatHtml: "", // Not available in new model
-		NotesHtml:        "", // Not available in new model
-		ScoringHtml:      "", // Not available in new model
+		LegendHtml:       legend,
+		InputFormatHtml:  inputFormat,
+		OutputFormatHtml: outputFormat,
+		NotesHtml:        notes,
+		ScoringHtml:      scoring,
 
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
 	}
+}
+func statementField(statement *models.Statement, getter func(models.Statement) string) string {
+	if statement == nil {
+		return ""
+	}
+
+	return getter(*statement)
 }
 
 func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel {

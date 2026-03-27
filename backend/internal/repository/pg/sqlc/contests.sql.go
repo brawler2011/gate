@@ -92,7 +92,7 @@ func (q *Queries) CheckUserIsContestModerator(ctx context.Context, arg CheckUser
 
 const countAllContests = `-- name: CountAllContests :one
 SELECT COUNT(*) FROM contests c
-WHERE ($1::text = '' OR (c.titles->>'en') ILIKE '%' || $1 || '%' OR (c.titles->>'ru') ILIKE '%' || $1 || '%')
+WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR c.visibility = $2::contest_visibility)
 `
 
@@ -111,7 +111,7 @@ func (q *Queries) CountAllContests(ctx context.Context, arg CountAllContestsPara
 const countContests = `-- name: CountContests :one
 SELECT COUNT(*) FROM contests
 WHERE organization_id = $1
-  AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
+  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::contest_visibility)
 `
 
@@ -130,9 +130,9 @@ func (q *Queries) CountContests(ctx context.Context, arg CountContestsParams) (i
 
 const createContest = `-- name: CreateContest :one
 
-INSERT INTO contests (id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time)
+INSERT INTO contests (id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at
+RETURNING id, organization_id, owner_id, visibility, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at, title
 `
 
 type CreateContestParams struct {
@@ -140,7 +140,7 @@ type CreateContestParams struct {
 	OrganizationID uuid.UUID                `json:"organization_id"`
 	OwnerID        pgtype.UUID              `json:"owner_id"`
 	Visibility     models.ContestVisibility `json:"visibility"`
-	Titles         []byte                   `json:"titles"`
+	Title          string                   `json:"title"`
 	ShortName      string                   `json:"short_name"`
 	Description    string                   `json:"description"`
 	Settings       []byte                   `json:"settings"`
@@ -156,7 +156,7 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		arg.OrganizationID,
 		arg.OwnerID,
 		arg.Visibility,
-		arg.Titles,
+		arg.Title,
 		arg.ShortName,
 		arg.Description,
 		arg.Settings,
@@ -170,7 +170,6 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
-		&i.Titles,
 		&i.ShortName,
 		&i.Description,
 		&i.Settings,
@@ -179,6 +178,7 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
 	)
 	return i, err
 }
@@ -193,7 +193,7 @@ func (q *Queries) DeleteContest(ctx context.Context, id uuid.UUID) error {
 }
 
 const getContestByID = `-- name: GetContestByID :one
-SELECT id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests WHERE id = $1
+SELECT id, organization_id, owner_id, visibility, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at, title FROM contests WHERE id = $1
 `
 
 func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (Contest, error) {
@@ -204,7 +204,6 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (Contest, er
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
-		&i.Titles,
 		&i.ShortName,
 		&i.Description,
 		&i.Settings,
@@ -213,12 +212,13 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (Contest, er
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
 	)
 	return i, err
 }
 
 const getContestByShortName = `-- name: GetContestByShortName :one
-SELECT id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests
+SELECT id, organization_id, owner_id, visibility, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at, title FROM contests
 WHERE organization_id = $1 AND short_name = $2
 `
 
@@ -235,7 +235,6 @@ func (q *Queries) GetContestByShortName(ctx context.Context, arg GetContestBySho
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
-		&i.Titles,
 		&i.ShortName,
 		&i.Description,
 		&i.Settings,
@@ -244,6 +243,7 @@ func (q *Queries) GetContestByShortName(ctx context.Context, arg GetContestBySho
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Title,
 	)
 	return i, err
 }
@@ -271,7 +271,7 @@ func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberPara
 }
 
 const getContestProblem = `-- name: GetContestProblem :one
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.titles, p.short_name, p.visibility
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.title, p.short_name, p.visibility
 FROM contest_problems cp
 JOIN problems p ON cp.problem_id = p.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2
@@ -288,7 +288,7 @@ type GetContestProblemRow struct {
 	PackageID  uuid.UUID         `json:"package_id"`
 	Ordinal    int32             `json:"ordinal"`
 	CreatedAt  time.Time         `json:"created_at"`
-	Titles     []byte            `json:"titles"`
+	Title      string            `json:"title"`
 	ShortName  string            `json:"short_name"`
 	Visibility ProblemVisibility `json:"visibility"`
 }
@@ -302,7 +302,7 @@ func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemPa
 		&i.PackageID,
 		&i.Ordinal,
 		&i.CreatedAt,
-		&i.Titles,
+		&i.Title,
 		&i.ShortName,
 		&i.Visibility,
 	)
@@ -310,8 +310,8 @@ func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemPa
 }
 
 const listAllContests = `-- name: ListAllContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.titles, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
-WHERE ($1::text = '' OR (c.titles->>'en') ILIKE '%' || $1 || '%' OR (c.titles->>'ru') ILIKE '%' || $1 || '%')
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, c.title FROM contests c
+WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR c.visibility = $2::contest_visibility)
 ORDER BY c.created_at DESC
 LIMIT $3 OFFSET $4
@@ -343,7 +343,6 @@ func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
-			&i.Titles,
 			&i.ShortName,
 			&i.Description,
 			&i.Settings,
@@ -352,6 +351,7 @@ func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -412,7 +412,7 @@ func (q *Queries) ListContestMembers(ctx context.Context, contestID uuid.UUID) (
 }
 
 const listContestProblems = `-- name: ListContestProblems :many
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.titles, p.short_name, p.visibility, pp.url as package_url
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.title, p.short_name, p.visibility, pp.url as package_url
 FROM contest_problems cp
 JOIN problems p ON cp.problem_id = p.id
 JOIN problem_packages pp ON cp.package_id = pp.id
@@ -426,7 +426,7 @@ type ListContestProblemsRow struct {
 	PackageID  uuid.UUID         `json:"package_id"`
 	Ordinal    int32             `json:"ordinal"`
 	CreatedAt  time.Time         `json:"created_at"`
-	Titles     []byte            `json:"titles"`
+	Title      string            `json:"title"`
 	ShortName  string            `json:"short_name"`
 	Visibility ProblemVisibility `json:"visibility"`
 	PackageUrl *string           `json:"package_url"`
@@ -447,7 +447,7 @@ func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) 
 			&i.PackageID,
 			&i.Ordinal,
 			&i.CreatedAt,
-			&i.Titles,
+			&i.Title,
 			&i.ShortName,
 			&i.Visibility,
 			&i.PackageUrl,
@@ -463,9 +463,9 @@ func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) 
 }
 
 const listContests = `-- name: ListContests :many
-SELECT id, organization_id, owner_id, visibility, titles, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests
+SELECT id, organization_id, owner_id, visibility, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at, title FROM contests
 WHERE organization_id = $1
-  AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
+  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::contest_visibility)
 ORDER BY created_at DESC
 LIMIT $4 OFFSET $5
@@ -499,7 +499,6 @@ func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]C
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
-			&i.Titles,
 			&i.ShortName,
 			&i.Description,
 			&i.Settings,
@@ -508,6 +507,7 @@ func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]C
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -520,7 +520,7 @@ func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]C
 }
 
 const listUserAccessibleContests = `-- name: ListUserAccessibleContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.titles, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, c.title FROM contests c
 WHERE user_has_contest_access($1, c.id)
 ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3
@@ -546,7 +546,6 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
-			&i.Titles,
 			&i.ShortName,
 			&i.Description,
 			&i.Settings,
@@ -555,6 +554,7 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -567,7 +567,7 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 }
 
 const listUserAccessibleContestsByOrg = `-- name: ListUserAccessibleContestsByOrg :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.titles, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, c.title FROM contests c
 WHERE user_has_contest_access($1, c.id)
   AND c.organization_id = $2
 ORDER BY c.created_at DESC
@@ -582,7 +582,12 @@ type ListUserAccessibleContestsByOrgParams struct {
 }
 
 func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]Contest, error) {
-	rows, err := q.db.Query(ctx, listUserAccessibleContestsByOrg, arg.PUserID, arg.OrganizationID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listUserAccessibleContestsByOrg,
+		arg.PUserID,
+		arg.OrganizationID,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -595,7 +600,6 @@ func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListU
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
-			&i.Titles,
 			&i.ShortName,
 			&i.Description,
 			&i.Settings,
@@ -604,6 +608,7 @@ func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListU
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -647,7 +652,7 @@ func (q *Queries) RemoveContestProblem(ctx context.Context, arg RemoveContestPro
 
 const updateContest = `-- name: UpdateContest :exec
 UPDATE contests
-SET titles = COALESCE($2, titles),
+SET title = COALESCE($2, title),
     description = COALESCE($3, description),
     visibility = COALESCE($4, visibility),
     settings = COALESCE($5, settings),
@@ -660,7 +665,7 @@ WHERE id = $1
 
 type UpdateContestParams struct {
 	ID           uuid.UUID             `json:"id"`
-	Titles       []byte                `json:"titles"`
+	Title        *string               `json:"title"`
 	Description  *string               `json:"description"`
 	Visibility   NullContestVisibility `json:"visibility"`
 	Settings     []byte                `json:"settings"`
@@ -673,7 +678,7 @@ type UpdateContestParams struct {
 func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) error {
 	_, err := q.db.Exec(ctx, updateContest,
 		arg.ID,
-		arg.Titles,
+		arg.Title,
 		arg.Description,
 		arg.Visibility,
 		arg.Settings,

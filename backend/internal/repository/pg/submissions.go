@@ -157,14 +157,18 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 		username = *row.Username
 	}
 
-	// Extract title from JSONB titles (just use short name for now)
+	// Prefer title from linked entities, fallback to short_name.
 	var problemTitle string
-	if row.ProblemShortName != nil {
+	if row.ProblemTitle != nil {
+		problemTitle = *row.ProblemTitle
+	} else if row.ProblemShortName != nil {
 		problemTitle = *row.ProblemShortName
 	}
 
 	var contestTitle string
-	if row.ContestShortName != nil {
+	if row.ContestTitle != nil {
+		contestTitle = *row.ContestTitle
+	} else if row.ContestShortName != nil {
 		contestTitle = *row.ContestShortName
 	}
 
@@ -218,14 +222,18 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 		username = *row.Username
 	}
 
-	// Extract title from JSONB titles (just use short name for now)
+	// Prefer title from linked entities, fallback to short_name.
 	var problemTitle string
-	if row.ProblemShortName != nil {
+	if row.ProblemTitle != nil {
+		problemTitle = *row.ProblemTitle
+	} else if row.ProblemShortName != nil {
 		problemTitle = *row.ProblemShortName
 	}
 
 	var contestTitle string
-	if row.ContestShortName != nil {
+	if row.ContestTitle != nil {
+		contestTitle = *row.ContestTitle
+	} else if row.ContestShortName != nil {
 		contestTitle = *row.ContestShortName
 	}
 

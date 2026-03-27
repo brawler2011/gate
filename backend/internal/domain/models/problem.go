@@ -19,8 +19,7 @@ type ProblemManifest struct {
 	StdoutLimitMb   int `json:"stdout_limit_mb"`
 	CodeSizeLimitKb int `json:"code_size_limit_kb"`
 
-	// {"en": {}, "ru": {}}
-	Statements map[string]Statement `json:"statements"`
+	Statement Statement `json:"statement"`
 }
 
 type Statement struct {
@@ -102,7 +101,7 @@ type Problem struct {
 	OrganizationID uuid.UUID
 	OwnerID        *uuid.UUID
 	Visibility     string
-	Titles         map[string]string // {"en": "Sum", "ru": "Сумма"}
+	Title          string
 	ShortName      string
 	GitCommitHash  *string
 	TimeLimitMs    int
@@ -154,7 +153,7 @@ type UpdatePackageStatusParams struct {
 
 type CreateProblemInput struct {
 	OrganizationID uuid.UUID
-	Titles         map[string]string // {"en": "Sum", "ru": "Сумма"}
+	Title          string
 	ShortName      string
 	Visibility     string
 	OwnerID        *uuid.UUID
@@ -163,14 +162,14 @@ type CreateProblemInput struct {
 type CreateProblemParams struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
-	Titles         map[string]string
+	Title          string
 	ShortName      string
 	Visibility     string
 	OwnerID        *uuid.UUID
 }
 
 type UpdateProblemInput struct {
-	Titles     *map[string]string
+	Title      *string
 	Visibility *string
 	OwnerID    *uuid.UUID
 }
@@ -190,7 +189,7 @@ type ProblemsList struct {
 }
 
 type ProblemUpdate struct {
-	Titles        *map[string]string
+	Title         *string
 	Visibility    *string
 	OwnerID       *uuid.UUID
 	GitCommitHash *string

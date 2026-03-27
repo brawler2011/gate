@@ -51,7 +51,7 @@ func (q *Queries) CheckUserHasProblemAccess(ctx context.Context, arg CheckUserHa
 
 const countAllProblems = `-- name: CountAllProblems :one
 SELECT COUNT(*) FROM problems p
-WHERE ($1::text = '' OR (p.titles->>'en') ILIKE '%' || $1 || '%' OR (p.titles->>'ru') ILIKE '%' || $1 || '%')
+WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR p.visibility = $2::problem_visibility)
 `
 
@@ -70,7 +70,7 @@ func (q *Queries) CountAllProblems(ctx context.Context, arg CountAllProblemsPara
 const countProblems = `-- name: CountProblems :one
 SELECT COUNT(*) FROM problems
 WHERE organization_id = $1
-  AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
+  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::problem_visibility)
 `
 
@@ -89,9 +89,9 @@ func (q *Queries) CountProblems(ctx context.Context, arg CountProblemsParams) (i
 
 const createProblem = `-- name: CreateProblem :one
 
-INSERT INTO problems (id, organization_id, owner_id, visibility, titles, short_name)
+INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb
+RETURNING id, organization_id, owner_id, visibility, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb, title
 `
 
 type CreateProblemParams struct {
@@ -99,7 +99,7 @@ type CreateProblemParams struct {
 	OrganizationID uuid.UUID         `json:"organization_id"`
 	OwnerID        pgtype.UUID       `json:"owner_id"`
 	Visibility     ProblemVisibility `json:"visibility"`
-	Titles         []byte            `json:"titles"`
+	Title          string            `json:"title"`
 	ShortName      string            `json:"short_name"`
 }
 
@@ -110,7 +110,7 @@ func (q *Queries) CreateProblem(ctx context.Context, arg CreateProblemParams) (P
 		arg.OrganizationID,
 		arg.OwnerID,
 		arg.Visibility,
-		arg.Titles,
+		arg.Title,
 		arg.ShortName,
 	)
 	var i Problem
@@ -119,13 +119,13 @@ func (q *Queries) CreateProblem(ctx context.Context, arg CreateProblemParams) (P
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
-		&i.Titles,
 		&i.ShortName,
 		&i.GitCommitHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TimeLimitMs,
 		&i.MemoryLimitMb,
+		&i.Title,
 	)
 	return i, err
 }
@@ -140,18 +140,32 @@ func (q *Queries) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 }
 
 const getProblemByID = `-- name: GetProblemByID :one
-SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1
+SELECT id, organization_id, owner_id, visibility, title, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1
 `
 
-func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (Problem, error) {
+type GetProblemByIDRow struct {
+	ID             uuid.UUID         `json:"id"`
+	OrganizationID uuid.UUID         `json:"organization_id"`
+	OwnerID        pgtype.UUID       `json:"owner_id"`
+	Visibility     ProblemVisibility `json:"visibility"`
+	Title          string            `json:"title"`
+	ShortName      string            `json:"short_name"`
+	GitCommitHash  *string           `json:"git_commit_hash"`
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
+	TimeLimitMs    int32             `json:"time_limit_ms"`
+	MemoryLimitMb  int32             `json:"memory_limit_mb"`
+}
+
+func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemByIDRow, error) {
 	row := q.db.QueryRow(ctx, getProblemByID, id)
-	var i Problem
+	var i GetProblemByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
-		&i.Titles,
+		&i.Title,
 		&i.ShortName,
 		&i.GitCommitHash,
 		&i.CreatedAt,
@@ -163,7 +177,7 @@ func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (Problem, er
 }
 
 const getProblemByShortName = `-- name: GetProblemByShortName :one
-SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems 
+SELECT id, organization_id, owner_id, visibility, title, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems 
 WHERE organization_id = $1 AND short_name = $2
 `
 
@@ -172,15 +186,29 @@ type GetProblemByShortNameParams struct {
 	ShortName      string    `json:"short_name"`
 }
 
-func (q *Queries) GetProblemByShortName(ctx context.Context, arg GetProblemByShortNameParams) (Problem, error) {
+type GetProblemByShortNameRow struct {
+	ID             uuid.UUID         `json:"id"`
+	OrganizationID uuid.UUID         `json:"organization_id"`
+	OwnerID        pgtype.UUID       `json:"owner_id"`
+	Visibility     ProblemVisibility `json:"visibility"`
+	Title          string            `json:"title"`
+	ShortName      string            `json:"short_name"`
+	GitCommitHash  *string           `json:"git_commit_hash"`
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
+	TimeLimitMs    int32             `json:"time_limit_ms"`
+	MemoryLimitMb  int32             `json:"memory_limit_mb"`
+}
+
+func (q *Queries) GetProblemByShortName(ctx context.Context, arg GetProblemByShortNameParams) (GetProblemByShortNameRow, error) {
 	row := q.db.QueryRow(ctx, getProblemByShortName, arg.OrganizationID, arg.ShortName)
-	var i Problem
+	var i GetProblemByShortNameRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
-		&i.Titles,
+		&i.Title,
 		&i.ShortName,
 		&i.GitCommitHash,
 		&i.CreatedAt,
@@ -214,14 +242,14 @@ func (q *Queries) GetProblemMember(ctx context.Context, arg GetProblemMemberPara
 }
 
 const getProblemWorkshopStatus = `-- name: GetProblemWorkshopStatus :one
-SELECT id, titles, git_commit_hash, updated_at
+SELECT id, title, git_commit_hash, updated_at
 FROM problems
 WHERE id = $1
 `
 
 type GetProblemWorkshopStatusRow struct {
 	ID            uuid.UUID `json:"id"`
-	Titles        []byte    `json:"titles"`
+	Title         string    `json:"title"`
 	GitCommitHash *string   `json:"git_commit_hash"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
@@ -231,7 +259,7 @@ func (q *Queries) GetProblemWorkshopStatus(ctx context.Context, id uuid.UUID) (G
 	var i GetProblemWorkshopStatusRow
 	err := row.Scan(
 		&i.ID,
-		&i.Titles,
+		&i.Title,
 		&i.GitCommitHash,
 		&i.UpdatedAt,
 	)
@@ -239,8 +267,8 @@ func (q *Queries) GetProblemWorkshopStatus(ctx context.Context, id uuid.UUID) (G
 }
 
 const listAllProblems = `-- name: ListAllProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.titles, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
-WHERE ($1::text = '' OR (p.titles->>'en') ILIKE '%' || $1 || '%' OR (p.titles->>'ru') ILIKE '%' || $1 || '%')
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
+WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR p.visibility = $2::problem_visibility)
 ORDER BY p.created_at DESC
 LIMIT $3 OFFSET $4
@@ -253,7 +281,21 @@ type ListAllProblemsParams struct {
 	Offset  int32  `json:"offset"`
 }
 
-func (q *Queries) ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]Problem, error) {
+type ListAllProblemsRow struct {
+	ID             uuid.UUID         `json:"id"`
+	OrganizationID uuid.UUID         `json:"organization_id"`
+	OwnerID        pgtype.UUID       `json:"owner_id"`
+	Visibility     ProblemVisibility `json:"visibility"`
+	Title          string            `json:"title"`
+	ShortName      string            `json:"short_name"`
+	GitCommitHash  *string           `json:"git_commit_hash"`
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
+	TimeLimitMs    int32             `json:"time_limit_ms"`
+	MemoryLimitMb  int32             `json:"memory_limit_mb"`
+}
+
+func (q *Queries) ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error) {
 	rows, err := q.db.Query(ctx, listAllProblems,
 		arg.Column1,
 		arg.Column2,
@@ -264,15 +306,15 @@ func (q *Queries) ListAllProblems(ctx context.Context, arg ListAllProblemsParams
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Problem{}
+	items := []ListAllProblemsRow{}
 	for rows.Next() {
-		var i Problem
+		var i ListAllProblemsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
-			&i.Titles,
+			&i.Title,
 			&i.ShortName,
 			&i.GitCommitHash,
 			&i.CreatedAt,
@@ -335,9 +377,9 @@ func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) (
 }
 
 const listProblems = `-- name: ListProblems :many
-SELECT id, organization_id, owner_id, visibility, titles, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems
+SELECT id, organization_id, owner_id, visibility, title, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems
 WHERE organization_id = $1
-  AND ($2::text = '' OR (titles->>'en') ILIKE '%' || $2 || '%' OR (titles->>'ru') ILIKE '%' || $2 || '%')
+  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::problem_visibility)
 ORDER BY created_at DESC
 LIMIT $4 OFFSET $5
@@ -351,7 +393,21 @@ type ListProblemsParams struct {
 	Offset         int32     `json:"offset"`
 }
 
-func (q *Queries) ListProblems(ctx context.Context, arg ListProblemsParams) ([]Problem, error) {
+type ListProblemsRow struct {
+	ID             uuid.UUID         `json:"id"`
+	OrganizationID uuid.UUID         `json:"organization_id"`
+	OwnerID        pgtype.UUID       `json:"owner_id"`
+	Visibility     ProblemVisibility `json:"visibility"`
+	Title          string            `json:"title"`
+	ShortName      string            `json:"short_name"`
+	GitCommitHash  *string           `json:"git_commit_hash"`
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
+	TimeLimitMs    int32             `json:"time_limit_ms"`
+	MemoryLimitMb  int32             `json:"memory_limit_mb"`
+}
+
+func (q *Queries) ListProblems(ctx context.Context, arg ListProblemsParams) ([]ListProblemsRow, error) {
 	rows, err := q.db.Query(ctx, listProblems,
 		arg.OrganizationID,
 		arg.Column2,
@@ -363,15 +419,15 @@ func (q *Queries) ListProblems(ctx context.Context, arg ListProblemsParams) ([]P
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Problem{}
+	items := []ListProblemsRow{}
 	for rows.Next() {
-		var i Problem
+		var i ListProblemsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
-			&i.Titles,
+			&i.Title,
 			&i.ShortName,
 			&i.GitCommitHash,
 			&i.CreatedAt,
@@ -390,7 +446,7 @@ func (q *Queries) ListProblems(ctx context.Context, arg ListProblemsParams) ([]P
 }
 
 const listUserAccessibleProblems = `-- name: ListUserAccessibleProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.titles, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
 WHERE user_has_problem_access($1, p.id)
 ORDER BY p.created_at DESC
 LIMIT $2 OFFSET $3
@@ -402,21 +458,35 @@ type ListUserAccessibleProblemsParams struct {
 	Offset  int32     `json:"offset"`
 }
 
-func (q *Queries) ListUserAccessibleProblems(ctx context.Context, arg ListUserAccessibleProblemsParams) ([]Problem, error) {
+type ListUserAccessibleProblemsRow struct {
+	ID             uuid.UUID         `json:"id"`
+	OrganizationID uuid.UUID         `json:"organization_id"`
+	OwnerID        pgtype.UUID       `json:"owner_id"`
+	Visibility     ProblemVisibility `json:"visibility"`
+	Title          string            `json:"title"`
+	ShortName      string            `json:"short_name"`
+	GitCommitHash  *string           `json:"git_commit_hash"`
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
+	TimeLimitMs    int32             `json:"time_limit_ms"`
+	MemoryLimitMb  int32             `json:"memory_limit_mb"`
+}
+
+func (q *Queries) ListUserAccessibleProblems(ctx context.Context, arg ListUserAccessibleProblemsParams) ([]ListUserAccessibleProblemsRow, error) {
 	rows, err := q.db.Query(ctx, listUserAccessibleProblems, arg.PUserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Problem{}
+	items := []ListUserAccessibleProblemsRow{}
 	for rows.Next() {
-		var i Problem
+		var i ListUserAccessibleProblemsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
-			&i.Titles,
+			&i.Title,
 			&i.ShortName,
 			&i.GitCommitHash,
 			&i.CreatedAt,
@@ -451,7 +521,7 @@ func (q *Queries) RemoveProblemMember(ctx context.Context, arg RemoveProblemMemb
 
 const updateProblem = `-- name: UpdateProblem :exec
 UPDATE problems
-SET titles = COALESCE($2, titles),
+SET title = COALESCE($2, title),
     visibility = COALESCE($3, visibility),
     owner_id = COALESCE($4, owner_id),
     git_commit_hash = COALESCE($5, git_commit_hash)
@@ -460,7 +530,7 @@ WHERE id = $1
 
 type UpdateProblemParams struct {
 	ID            uuid.UUID             `json:"id"`
-	Titles        []byte                `json:"titles"`
+	Title         *string               `json:"title"`
 	Visibility    NullProblemVisibility `json:"visibility"`
 	OwnerID       pgtype.UUID           `json:"owner_id"`
 	GitCommitHash *string               `json:"git_commit_hash"`
@@ -469,7 +539,7 @@ type UpdateProblemParams struct {
 func (q *Queries) UpdateProblem(ctx context.Context, arg UpdateProblemParams) error {
 	_, err := q.db.Exec(ctx, updateProblem,
 		arg.ID,
-		arg.Titles,
+		arg.Title,
 		arg.Visibility,
 		arg.OwnerID,
 		arg.GitCommitHash,
@@ -495,23 +565,6 @@ func (q *Queries) UpdateProblemGitCommit(ctx context.Context, arg UpdateProblemG
 	return err
 }
 
-const updateProblemMemberRole = `-- name: UpdateProblemMemberRole :exec
-UPDATE problem_members
-SET role = $3
-WHERE problem_id = $1 AND user_id = $2
-`
-
-type UpdateProblemMemberRoleParams struct {
-	ProblemID uuid.UUID   `json:"problem_id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	Role      ProblemRole `json:"role"`
-}
-
-func (q *Queries) UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error {
-	_, err := q.db.Exec(ctx, updateProblemMemberRole, arg.ProblemID, arg.UserID, arg.Role)
-	return err
-}
-
 const updateProblemLimits = `-- name: UpdateProblemLimits :exec
 UPDATE problems
 SET time_limit_ms = $2, memory_limit_mb = $3
@@ -526,5 +579,22 @@ type UpdateProblemLimitsParams struct {
 
 func (q *Queries) UpdateProblemLimits(ctx context.Context, arg UpdateProblemLimitsParams) error {
 	_, err := q.db.Exec(ctx, updateProblemLimits, arg.ID, arg.TimeLimitMs, arg.MemoryLimitMb)
+	return err
+}
+
+const updateProblemMemberRole = `-- name: UpdateProblemMemberRole :exec
+UPDATE problem_members
+SET role = $3
+WHERE problem_id = $1 AND user_id = $2
+`
+
+type UpdateProblemMemberRoleParams struct {
+	ProblemID uuid.UUID   `json:"problem_id"`
+	UserID    uuid.UUID   `json:"user_id"`
+	Role      ProblemRole `json:"role"`
+}
+
+func (q *Queries) UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error {
+	_, err := q.db.Exec(ctx, updateProblemMemberRole, arg.ProblemID, arg.UserID, arg.Role)
 	return err
 }

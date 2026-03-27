@@ -30,7 +30,7 @@ func (uc *ContestsUseCase) CreateContest(
 		OrganizationID: c.OrganizationID,
 		OwnerID:        c.OwnerID,
 		Visibility:     c.Visibility,
-		Titles:         c.Titles,
+		Title:          c.Title,
 		ShortName:      c.ShortName,
 		Description:    c.Description,
 		Settings:       c.Settings,
@@ -118,7 +118,7 @@ func (uc *ContestsUseCase) ListPublicContests(ctx context.Context, filter models
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c models.ContestUpdateInput) error {
 	params := models.ContestUpdateParams{
 		ID:           c.ID,
-		Titles:       c.Titles,
+		Title:        c.Title,
 		Description:  c.Description,
 		Visibility:   c.Visibility,
 		Settings:     c.Settings,

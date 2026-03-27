@@ -45,6 +45,7 @@ export function ContestProblemsTable({
               const problemUrl = `/contests/${contestId}/problems/${
                 problem.problem_id || ""
               }`;
+
               return (
                 <Table.Tr
                   key={problem.problem_id}

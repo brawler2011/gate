@@ -27,7 +27,7 @@ type CreateContestParams struct {
 	OrganizationID uuid.UUID
 	OwnerID        *uuid.UUID
 	Visibility     ContestVisibility
-	Titles         map[string]string
+	Title          string
 	ShortName      string
 	Description    string
 	Settings       map[string]interface{}
@@ -39,7 +39,7 @@ type CreateContestParams struct {
 type CreateContestInput struct {
 	OrganizationID uuid.UUID
 	OwnerID        *uuid.UUID
-	Titles         map[string]string
+	Title          string
 	ShortName      string
 	Description    string
 	Visibility     ContestVisibility
@@ -95,7 +95,7 @@ type PublicContestsFilter struct {
 
 type ContestUpdateInput struct {
 	ID           uuid.UUID
-	Titles       *map[string]string
+	Title        *string
 	Description  *string
 	Visibility   *ContestVisibility
 	Settings     *map[string]interface{}
@@ -107,7 +107,7 @@ type ContestUpdateInput struct {
 
 type ContestUpdateParams struct {
 	ID           uuid.UUID
-	Titles       *map[string]string
+	Title        *string
 	Description  *string
 	Visibility   *ContestVisibility
 	Settings     *map[string]interface{}
@@ -188,7 +188,7 @@ type Contest struct {
 	OrganizationID uuid.UUID
 	OwnerID        *uuid.UUID
 	Visibility     ContestVisibility
-	Titles         map[string]string // {"en": "Contest", "ru": "Контест"}
+	Title          string
 	ShortName      string
 	Description    string
 	Settings       map[string]interface{} // JSONB for contest settings
@@ -231,7 +231,7 @@ type ContestProblem struct {
 	ProblemID  uuid.UUID
 	PackageID  uuid.UUID
 	Ordinal    int
-	Titles     map[string]string
+	Title      string
 	ShortName  string
 	Visibility string
 	PackageURL *string

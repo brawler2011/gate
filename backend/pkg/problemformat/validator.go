@@ -46,17 +46,12 @@ func ValidateManifest(manifest *ProblemManifest) error {
 		errs = append(errs, errors.New("code_size_limit_kb must be positive"))
 	}
 
-	// Validate statements
-	if len(manifest.Statements) == 0 {
-		errs = append(errs, errors.New("at least one statement is required"))
+	// Validate statement
+	if strings.TrimSpace(manifest.Statement.Title) == "" {
+		errs = append(errs, errors.New("statement.title is required"))
 	}
-	for lang, stmt := range manifest.Statements {
-		if strings.TrimSpace(stmt.Title) == "" {
-			errs = append(errs, fmt.Errorf("statement[%s].title is required", lang))
-		}
-		if strings.TrimSpace(stmt.Legend) == "" {
-			errs = append(errs, fmt.Errorf("statement[%s].legend is required", lang))
-		}
+	if strings.TrimSpace(manifest.Statement.Legend) == "" {
+		errs = append(errs, errors.New("statement.legend is required"))
 	}
 
 	// Validate file metadata

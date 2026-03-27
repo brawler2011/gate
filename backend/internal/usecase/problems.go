@@ -32,7 +32,7 @@ func (uc *ProblemsUseCase) CreateProblem(ctx context.Context, input *models.Crea
 	params := &models.CreateProblemParams{
 		ID:             id,
 		OrganizationID: input.OrganizationID,
-		Titles:         input.Titles,
+		Title:          input.Title,
 		ShortName:      input.ShortName,
 		Visibility:     input.Visibility,
 		OwnerID:        input.OwnerID,
