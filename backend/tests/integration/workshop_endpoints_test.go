@@ -52,9 +52,7 @@ func (s *IntegrationTestSuite) TestWorkshopManifestSyncsProblemTitle() {
 	err = json.Unmarshal(manifestResp.Body, &manifest)
 	s.Require().NoError(err)
 
-	statementEn := manifest.Statements["en"]
-	statementEn.Title = "Synced From Manifest"
-	manifest.Statements["en"] = statementEn
+	manifest.Statement.Title = "Synced From Manifest"
 
 	manifestJSON, err := json.Marshal(manifest)
 	s.Require().NoError(err)

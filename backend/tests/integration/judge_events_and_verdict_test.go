@@ -5,97 +5,25 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/internal/repository/pg"
-	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/internal/worker/judge"
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/problemformat"
-	"github.com/gate149/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// TestStage5JudgingFlow tests end-to-end submission judging
-// This test requires:
-// - PostgreSQL database
-// - NATS JetStream
-// - SeaweedFS (S3)
-// - go-judge sandbox
-// - Published problem package
-func TestStage5JudgingFlow(t *testing.T) {
-	t.Skip("Requires full test environment (PostgreSQL, NATS, S3, go-judge)")
+const natsPort = "4222/tcp"
 
-	ctx := context.Background()
-
-	// Setup database connection
-	dbDSN := "postgres://user:pass@localhost:5432/gate_test?sslmode=disable"
-	pool, err := pkg.NewPostgresDB(dbDSN)
-	require.NoError(t, err)
-	defer pool.Close()
-
-	// Setup repositories
-	submissionsRepo := pg.NewSubmissionsRepo(pool)
-	problemsRepo := pg.NewProblemsRepo(pool)
-
-	// Setup S3 client
-	s3Client := pkg.NewS3Client(pkg.S3Config{
-		Endpoint:  "http://localhost:8333",
-		AccessKey: "admin",
-		SecretKey: "admin_secret",
-		Region:    "us-east-1",
-	})
-
-	// Setup sandbox client
-	sandboxClient, err := sandbox.NewClient(sandbox.ClientConfig{
-		Protocol: sandbox.ProtocolGRPC,
-		BaseURL:  "localhost:5051",
-	})
-	require.NoError(t, err)
-
-	// Setup NATS
-	natsConn, err := pkg.NewNatsConn("nats://localhost:4222")
-	require.NoError(t, err)
-	defer natsConn.Close()
-
-	js, err := jetstream.New(natsConn)
-	require.NoError(t, err)
-
-	eventPublisher := judge.NewEventPublisher(js)
-
-	// Create judge use case
-	judgeUC := usecase.NewJudgeUseCase(
-		submissionsRepo,
-		problemsRepo,
-		s3Client,
-		"problem-packages",
-		"/tmp/judge",
-		sandboxClient,
-		eventPublisher,
-	)
-
-	// Test: Judge a simple C++ submission
-	t.Run("StandardProblemJudging", func(t *testing.T) {
-		// Create a test submission
-		submissionID := uuid.New()
-
-		// Judge the submission
-		err := judgeUC.JudgeSubmission(ctx, submissionID)
-		require.NoError(t, err)
-
-		// Verify submission was updated
-		submission, err := submissionsRepo.GetSubmission(ctx, submissionID)
-		require.NoError(t, err)
-		assert.NotEqual(t, models.Saved, submission.State)
-	})
-}
-
-// TestVerdictCalculation tests verdict calculation logic
 func TestVerdictCalculation(t *testing.T) {
 	t.Run("StandardVerdict_AllPassed", func(t *testing.T) {
 		calculator := judge.NewVerdictCalculator("pass-fail", testMetadata())
@@ -160,14 +88,8 @@ func TestVerdictCalculation(t *testing.T) {
 	})
 }
 
-// TestComponentCache tests component compilation caching
 func TestComponentCache(t *testing.T) {
-	sandboxClient, _ := sandbox.NewClient(sandbox.ClientConfig{
-		Protocol: sandbox.ProtocolGRPC,
-		BaseURL:  "localhost:5051",
-	})
-
-	cache := judge.NewComponentCache(sandboxClient)
+	cache := judge.NewComponentCache(nil)
 
 	t.Run("CacheSetAndGet", func(t *testing.T) {
 		key := "problem-123:checker:abc123"
@@ -211,40 +133,19 @@ func TestComponentCache(t *testing.T) {
 	})
 }
 
-// TestLanguageConversion tests language conversion
-func TestLanguageConversion(t *testing.T) {
-	// This is a simple test to verify language mapping
-	tests := []struct {
-		input    models.LanguageName
-		expected string
-	}{
-		{models.Cpp, "cpp17"},
-		{models.Golang, "go"},
-		{models.Python, "python3"},
-	}
-
-	for _, tt := range tests {
-		// Note: convertLanguage is not exported, so this test would need to be adjusted
-		// or the function should be exported for testing
-		t.Run(tt.expected, func(t *testing.T) {
-			// Test would go here if function was exported
-			t.Skip("convertLanguage is not exported")
-		})
-	}
-}
-
-// TestEventPublishing tests event publishing
 func TestEventPublishing(t *testing.T) {
-	t.Skip("Requires NATS JetStream")
-
 	ctx := context.Background()
-
-	// Setup NATS
-	natsConn, err := pkg.NewNatsConn("nats://localhost:4222")
-	require.NoError(t, err)
+	js, natsConn := newNATSJetStream(t)
 	defer natsConn.Close()
 
-	js, err := jetstream.New(natsConn)
+	err := pkg.EnsureSubmissionsStream(ctx, js)
+	require.NoError(t, err)
+
+	sub, err := natsConn.SubscribeSync("submissions.>")
+	require.NoError(t, err)
+	defer sub.Unsubscribe()
+
+	err = natsConn.Flush()
 	require.NoError(t, err)
 
 	publisher := judge.NewEventPublisher(js)
@@ -260,33 +161,63 @@ func TestEventPublishing(t *testing.T) {
 		Language:     models.Cpp,
 	}
 
-	t.Run("PublishQueued", func(t *testing.T) {
-		err := publisher.PublishQueued(ctx, submissionID, meta)
-		assert.NoError(t, err)
-	})
+	require.NoError(t, publisher.PublishQueued(ctx, submissionID, meta))
+	require.NoError(t, publisher.PublishCompilingStarted(ctx, submissionID, meta))
+	require.NoError(t, publisher.PublishTestingStarted(ctx, submissionID, meta))
+	require.NoError(t, publisher.PublishTestStarted(ctx, submissionID, 1, meta))
+	require.NoError(t, publisher.PublishCompleted(ctx, submissionID, models.Accepted, 100, 1000, 256, 20, meta))
 
-	t.Run("PublishCompilingStarted", func(t *testing.T) {
-		err := publisher.PublishCompilingStarted(ctx, submissionID, meta)
-		assert.NoError(t, err)
-	})
+	expectedSubjects := []string{
+		models.SubmissionEventQueued,
+		models.SubmissionEventCompilingStarted,
+		models.SubmissionEventTestingStarted,
+		models.SubmissionEventTestStarted,
+		models.SubmissionEventCompleted,
+	}
 
-	t.Run("PublishTestingStarted", func(t *testing.T) {
-		err := publisher.PublishTestingStarted(ctx, submissionID, meta)
-		assert.NoError(t, err)
-	})
-
-	t.Run("PublishTestStarted", func(t *testing.T) {
-		err := publisher.PublishTestStarted(ctx, submissionID, 1, meta)
-		assert.NoError(t, err)
-	})
-
-	t.Run("PublishCompleted", func(t *testing.T) {
-		err := publisher.PublishCompleted(ctx, submissionID, models.Accepted, 100, 1000, 256, 20, meta)
-		assert.NoError(t, err)
-	})
+	for _, subject := range expectedSubjects {
+		msg, err := sub.NextMsg(3 * time.Second)
+		require.NoError(t, err)
+		assert.Equal(t, subject, msg.Subject)
+		assert.NotEmpty(t, msg.Data)
+	}
 }
 
-// Helper functions
+func newNATSJetStream(t *testing.T) (jetstream.JetStream, *nats.Conn) {
+	t.Helper()
+
+	ctx := context.Background()
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "nats:2.10-alpine",
+			ExposedPorts: []string{natsPort},
+			Cmd:          []string{"-js"},
+			WaitingFor: wait.ForLog("Server is ready").
+				WithStartupTimeout(30 * time.Second),
+		},
+		Started: true,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		_ = container.Terminate(context.Background())
+	})
+
+	host, err := container.Host(ctx)
+	require.NoError(t, err)
+
+	port, err := container.MappedPort(ctx, natsPort)
+	require.NoError(t, err)
+
+	natsURL := fmt.Sprintf("nats://%s:%s", host, port.Port())
+	natsConn, err := pkg.NewNatsConn(natsURL)
+	require.NoError(t, err)
+
+	js, err := jetstream.New(natsConn)
+	require.NoError(t, err)
+
+	return js, natsConn
+}
 
 func testMetadata() problemformat.TestsMetadata {
 	return problemformat.TestsMetadata{

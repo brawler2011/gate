@@ -257,6 +257,7 @@ func ProblemDTO(p models.Problem, statement *models.Statement) *corev1.ProblemMo
 		UpdatedAt: p.UpdatedAt,
 	}
 }
+
 func statementField(statement *models.Statement, getter func(models.Statement) string) string {
 	if statement == nil {
 		return ""

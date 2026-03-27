@@ -47,7 +47,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		ID:             contestID,
 		OrganizationID: contestOrg.ID,
 		OwnerID:        &admin.Id,
-		Titles:         map[string]string{"en": "Submission Contest"},
+		Title:          "Submission Contest",
 		ShortName:      "submission-contest",
 		Description:    "A test contest for submissions",
 		Visibility:     models.ContestVisibilityPublic,
