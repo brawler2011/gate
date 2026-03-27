@@ -115,11 +115,10 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 
 func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
 	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
-		ID:            id,
-		Title:         problem.Title,
-		Visibility:    stringToNullProblemVisibility(problem.Visibility),
-		OwnerID:       uuidPtrToNullUUID(problem.OwnerID),
-		GitCommitHash: problem.GitCommitHash,
+		ID:         id,
+		Title:      problem.Title,
+		Visibility: stringToNullProblemVisibility(problem.Visibility),
+		OwnerID:    uuidPtrToNullUUID(problem.OwnerID),
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -192,7 +191,6 @@ func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) models.Problem {
 		Visibility:     string(p.Visibility),
 		Title:          p.Title,
 		ShortName:      p.ShortName,
-		GitCommitHash:  p.GitCommitHash,
 		TimeLimitMs:    int(p.TimeLimitMs),
 		MemoryLimitMb:  int(p.MemoryLimitMb),
 		CreatedAt:      p.CreatedAt,
@@ -208,7 +206,6 @@ func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) models.Problem {
 		Visibility:     string(p.Visibility),
 		Title:          p.Title,
 		ShortName:      p.ShortName,
-		GitCommitHash:  p.GitCommitHash,
 		TimeLimitMs:    int(p.TimeLimitMs),
 		MemoryLimitMb:  int(p.MemoryLimitMb),
 		CreatedAt:      p.CreatedAt,
@@ -224,7 +221,6 @@ func mapListProblemsRow(p sqlc.ListProblemsRow) models.Problem {
 		Visibility:     string(p.Visibility),
 		Title:          p.Title,
 		ShortName:      p.ShortName,
-		GitCommitHash:  p.GitCommitHash,
 		TimeLimitMs:    int(p.TimeLimitMs),
 		MemoryLimitMb:  int(p.MemoryLimitMb),
 		CreatedAt:      p.CreatedAt,
@@ -237,6 +233,28 @@ func (r *ProblemsRepo) UpdateProblemLimits(ctx context.Context, id uuid.UUID, ti
 		ID:            id,
 		TimeLimitMs:   int32(timeLimitMs),
 		MemoryLimitMb: int32(memoryLimitMb),
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *ProblemsRepo) GetProblemManifest(ctx context.Context, id uuid.UUID) ([]byte, error) {
+	manifest, err := r.queries.GetProblemManifest(ctx, id)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	if manifest == nil {
+		return nil, nil
+	}
+	return manifest, nil
+}
+
+func (r *ProblemsRepo) UpdateProblemManifest(ctx context.Context, id uuid.UUID, manifest []byte) error {
+	err := r.queries.UpdateProblemManifest(ctx, sqlc.UpdateProblemManifestParams{
+		ID:       id,
+		Manifest: manifest,
 	})
 	if err != nil {
 		return HandlePgErr(err)

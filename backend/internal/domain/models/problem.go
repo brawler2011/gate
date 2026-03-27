@@ -103,7 +103,6 @@ type Problem struct {
 	Visibility     string
 	Title          string
 	ShortName      string
-	GitCommitHash  *string
 	TimeLimitMs    int
 	MemoryLimitMb  int
 	CreatedAt      time.Time
@@ -126,7 +125,6 @@ type ProblemPackage struct {
 	ProblemID      uuid.UUID
 	OrganizationID uuid.UUID
 	Version        int32
-	GitCommitHash  string
 	PackageHash    string
 	URL            *string
 	Status         string // "pending", "building", "ready", "failed"
@@ -139,7 +137,6 @@ type CreatePackageParams struct {
 	ID             uuid.UUID
 	ProblemID      uuid.UUID
 	OrganizationID uuid.UUID
-	GitCommitHash  string
 	PackageHash    string
 	Status         string
 }
@@ -189,10 +186,9 @@ type ProblemsList struct {
 }
 
 type ProblemUpdate struct {
-	Title         *string
-	Visibility    *string
-	OwnerID       *uuid.UUID
-	GitCommitHash *string
+	Title      *string
+	Visibility *string
+	OwnerID    *uuid.UUID
 }
 
 type CreateProblemMemberParams struct {

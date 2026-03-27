@@ -11,10 +11,9 @@ import (
 	"github.com/gate149/gate/backend/internal/transport/middleware"
 	"github.com/gate149/gate/backend/pkg"
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/google/uuid"
 )
 
-// ImportProblem handles POST /problems/import
+// ImportProblem handles POST /problems/{id}/import
 func (h *CoreServer) ImportProblem(ctx context.Context, request corev1.ImportProblemRequestObject) (corev1.ImportProblemResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
@@ -23,10 +22,12 @@ func (h *CoreServer) ImportProblem(ctx context.Context, request corev1.ImportPro
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "authentication required")
 	}
 
-	// Only admins can import problems (for now)
-	// TODO: Check organization-specific permissions
-	if !user.IsAdmin() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "only admins can import problems")
+	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionEditProblem)
+	if err != nil {
+		return nil, err
+	}
+	if !canEdit {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to import problem package")
 	}
 
 	// Parse multipart form
@@ -52,18 +53,15 @@ func (h *CoreServer) ImportProblem(ctx context.Context, request corev1.ImportPro
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to read file")
 	}
 
-	// Generate problem ID
-	problemID := uuid.New()
-
 	// Import problem
-	_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), problemID)
+	_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), request.Id)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import problem")
 	}
 
-	// Return problem ID
+	message := "Problem package imported successfully"
 	return corev1.ImportProblem200JSONResponse{
-		Id: problemID,
+		Message: &message,
 	}, nil
 }
 
@@ -117,21 +115,21 @@ func (h *CoreServer) ListProblemPackages(ctx context.Context, request corev1.Lis
 
 	resp := corev1.ListProblemPackages200JSONResponse{}
 	items := make([]struct {
-		CompiledAt    *time.Time          `json:"compiled_at,omitempty"`
-		CreatedAt     *time.Time          `json:"created_at,omitempty"`
-		GitCommitHash *string             `json:"git_commit_hash,omitempty"`
-		Id            *openapi_types.UUID `json:"id,omitempty"`
-		Status        *string             `json:"status,omitempty"`
-		Version       *int32              `json:"version,omitempty"`
+		CompiledAt  *time.Time          `json:"compiled_at,omitempty"`
+		CreatedAt   *time.Time          `json:"created_at,omitempty"`
+		Id          *openapi_types.UUID `json:"id,omitempty"`
+		PackageHash *string             `json:"package_hash,omitempty"`
+		Status      *string             `json:"status,omitempty"`
+		Version     *int32              `json:"version,omitempty"`
 	}, len(packages))
 	for i, p := range packages {
 		id := openapi_types.UUID(p.ID)
-		hash := p.GitCommitHash
+		hash := p.PackageHash
 		status := p.Status
 		version := p.Version
 		createdAt := p.CreatedAt
 		items[i].Id = &id
-		items[i].GitCommitHash = &hash
+		items[i].PackageHash = &hash
 		items[i].Status = &status
 		items[i].Version = &version
 		items[i].CreatedAt = &createdAt

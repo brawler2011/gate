@@ -913,10 +913,17 @@ paths:
       responses:
         "200":
           description: Avatar deleted successfully
-  /problems/import:
+  /problems/{id}/import:
     post:
       operationId: ImportProblem
-      summary: Import problem from package
+      summary: Import package into existing problem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -934,7 +941,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                type: object
+                properties:
+                  message:
+                    type: string
   /problems/{id}/publish:
     post:
       operationId: PublishProblem
@@ -991,7 +1001,7 @@ paths:
                           format: int32
                         status:
                           type: string
-                        git_commit_hash:
+                        package_hash:
                           type: string
                         created_at:
                           type: string
@@ -1026,7 +1036,7 @@ paths:
   /problems/{problemId}/workshop/init:
     post:
       operationId: InitProblemWorkshop
-      summary: Initialize problem workshop with Git repository
+      summary: Initialize problem workspace
       parameters:
         - name: problemId
           in: path
@@ -1044,12 +1054,10 @@ paths:
                 properties:
                   message:
                     type: string
-                  commit_sha:
-                    type: string
   /problems/{problemId}/workshop/files:
     get:
       operationId: ListWorkshopFiles
-      summary: List files in problem repository
+      summary: List files in problem workspace
       parameters:
         - name: problemId
           in: path
@@ -1078,7 +1086,7 @@ paths:
   /problems/{problemId}/workshop/files/{path}:
     get:
       operationId: GetWorkshopFile
-      summary: Read file content from repository
+      summary: Read file content from workspace
       parameters:
         - name: problemId
           in: path
@@ -1101,7 +1109,7 @@ paths:
                 format: binary
     put:
       operationId: UpdateWorkshopFile
-      summary: Update file content in repository
+      summary: Update file content in workspace
       parameters:
         - name: problemId
           in: path
@@ -1133,7 +1141,7 @@ paths:
                     type: string
     delete:
       operationId: DeleteWorkshopFile
-      summary: Delete file from repository
+      summary: Delete file from workspace
       parameters:
         - name: problemId
           in: path
@@ -1149,93 +1157,6 @@ paths:
       responses:
         "200":
           description: File deleted successfully
-  /problems/{problemId}/workshop/commit:
-    post:
-      operationId: CommitWorkshopChanges
-      summary: Commit changes to repository
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - message
-              properties:
-                message:
-                  type: string
-                  description: Commit message
-                author_name:
-                  type: string
-                  description: Author name
-                author_email:
-                  type: string
-                  description: Author email
-      responses:
-        "200":
-          description: Changes committed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  commit_sha:
-                    type: string
-                  message:
-                    type: string
-  /problems/{problemId}/workshop/status:
-    get:
-      operationId: GetWorkshopStatus
-      summary: Get current workshop status
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Workshop status
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkshopStatus"
-  /problems/{problemId}/workshop/history:
-    get:
-      operationId: GetWorkshopHistory
-      summary: Get commit history
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-      responses:
-        "200":
-          description: Commit history
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  commits:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Commit"
   /problems/{problemId}/workshop/components/{componentType}/compile:
     post:
       operationId: CompileProblemComponent
@@ -2856,40 +2777,6 @@ components:
         size:
           type: integer
           format: int64
-    FileStatus:
-      type: object
-      properties:
-        path:
-          type: string
-        staging:
-          type: string
-        worktree:
-          type: string
-    WorkshopStatus:
-      type: object
-      properties:
-        current_sha:
-          type: string
-        modified_files:
-          type: array
-          items:
-            $ref: "#/components/schemas/FileStatus"
-        has_uncommitted_changes:
-          type: boolean
-    Commit:
-      type: object
-      properties:
-        sha:
-          type: string
-        message:
-          type: string
-        author:
-          type: string
-        email:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
     CompileResult:
       type: object
       properties:

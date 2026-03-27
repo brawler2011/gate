@@ -2,7 +2,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { Commit } from '../models/Commit';
 import type { CompileResult } from '../models/CompileResult';
 import type { CreatedPost } from '../models/CreatedPost';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
@@ -35,7 +34,6 @@ import type { UpdateOrganizationRequestModel } from '../models/UpdateOrganizatio
 import type { UpdateProblemRequestModel } from '../models/UpdateProblemRequestModel';
 import type { UpdateTeamRequestModel } from '../models/UpdateTeamRequestModel';
 import type { ValidationReport } from '../models/ValidationReport';
-import type { WorkshopStatus } from '../models/WorkshopStatus';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class DefaultService {
@@ -789,23 +787,30 @@ export class DefaultService {
         });
     }
     /**
-     * Import problem from package
-     * @returns CreationResponseModel Problem imported successfully
+     * Import package into existing problem
+     * @returns any Problem imported successfully
      * @throws ApiError
      */
     public importProblem({
+        id,
         formData,
     }: {
+        id: string,
         formData: {
             /**
              * Problem package archive (zip)
              */
             package?: Blob;
         },
-    }): CancelablePromise<CreationResponseModel> {
+    }): CancelablePromise<{
+        message?: string;
+    }> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/problems/import',
+            url: '/problems/{id}/import',
+            path: {
+                'id': id,
+            },
             formData: formData,
             mediaType: 'multipart/form-data',
         });
@@ -845,7 +850,7 @@ export class DefaultService {
             id?: string;
             version?: number;
             status?: string;
-            git_commit_hash?: string;
+            package_hash?: string;
             created_at?: string;
             compiled_at?: string;
         }>;
@@ -883,7 +888,7 @@ export class DefaultService {
         });
     }
     /**
-     * Initialize problem workshop with Git repository
+     * Initialize problem workspace
      * @returns any Workshop initialized successfully
      * @throws ApiError
      */
@@ -893,7 +898,6 @@ export class DefaultService {
         problemId: string,
     }): CancelablePromise<{
         message?: string;
-        commit_sha?: string;
     }> {
         return this.httpRequest.request({
             method: 'POST',
@@ -904,7 +908,7 @@ export class DefaultService {
         });
     }
     /**
-     * List files in problem repository
+     * List files in problem workspace
      * @returns any List of files
      * @throws ApiError
      */
@@ -932,7 +936,7 @@ export class DefaultService {
         });
     }
     /**
-     * Read file content from repository
+     * Read file content from workspace
      * @returns binary File content
      * @throws ApiError
      */
@@ -953,7 +957,7 @@ export class DefaultService {
         });
     }
     /**
-     * Update file content in repository
+     * Update file content in workspace
      * @returns any File updated successfully
      * @throws ApiError
      */
@@ -980,7 +984,7 @@ export class DefaultService {
         });
     }
     /**
-     * Delete file from repository
+     * Delete file from workspace
      * @returns any File deleted successfully
      * @throws ApiError
      */
@@ -997,87 +1001,6 @@ export class DefaultService {
             path: {
                 'problemId': problemId,
                 'path': path,
-            },
-        });
-    }
-    /**
-     * Commit changes to repository
-     * @returns any Changes committed successfully
-     * @throws ApiError
-     */
-    public commitWorkshopChanges({
-        problemId,
-        requestBody,
-    }: {
-        problemId: string,
-        requestBody: {
-            /**
-             * Commit message
-             */
-            message: string;
-            /**
-             * Author name
-             */
-            author_name?: string;
-            /**
-             * Author email
-             */
-            author_email?: string;
-        },
-    }): CancelablePromise<{
-        commit_sha?: string;
-        message?: string;
-    }> {
-        return this.httpRequest.request({
-            method: 'POST',
-            url: '/problems/{problemId}/workshop/commit',
-            path: {
-                'problemId': problemId,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
-        });
-    }
-    /**
-     * Get current workshop status
-     * @returns WorkshopStatus Workshop status
-     * @throws ApiError
-     */
-    public getWorkshopStatus({
-        problemId,
-    }: {
-        problemId: string,
-    }): CancelablePromise<WorkshopStatus> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/problems/{problemId}/workshop/status',
-            path: {
-                'problemId': problemId,
-            },
-        });
-    }
-    /**
-     * Get commit history
-     * @returns any Commit history
-     * @throws ApiError
-     */
-    public getWorkshopHistory({
-        problemId,
-        limit = 20,
-    }: {
-        problemId: string,
-        limit?: number,
-    }): CancelablePromise<{
-        commits?: Array<Commit>;
-    }> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/problems/{problemId}/workshop/history',
-            path: {
-                'problemId': problemId,
-            },
-            query: {
-                'limit': limit,
             },
         });
     }

@@ -126,15 +126,6 @@ type BlogPaginationModel struct {
 	Total *int `json:"total,omitempty"`
 }
 
-// Commit defines model for Commit.
-type Commit struct {
-	Author    *string    `json:"author,omitempty"`
-	Email     *string    `json:"email,omitempty"`
-	Message   *string    `json:"message,omitempty"`
-	Sha       *string    `json:"sha,omitempty"`
-	Timestamp *time.Time `json:"timestamp,omitempty"`
-}
-
 // CompileResult defines model for CompileResult.
 type CompileResult struct {
 	CompileError *string `json:"compile_error,omitempty"`
@@ -224,13 +215,6 @@ type FileEntry struct {
 	IsDirectory *bool   `json:"is_directory,omitempty"`
 	Path        *string `json:"path,omitempty"`
 	Size        *int64  `json:"size,omitempty"`
-}
-
-// FileStatus defines model for FileStatus.
-type FileStatus struct {
-	Path     *string `json:"path,omitempty"`
-	Staging  *string `json:"staging,omitempty"`
-	Worktree *string `json:"worktree,omitempty"`
 }
 
 // GetContestProblemResponseModel defines model for GetContestProblemResponseModel.
@@ -560,13 +544,6 @@ type ValidationReport struct {
 	ValidTests   *int                    `json:"valid_tests,omitempty"`
 }
 
-// WorkshopStatus defines model for WorkshopStatus.
-type WorkshopStatus struct {
-	CurrentSha            *string       `json:"current_sha,omitempty"`
-	HasUncommittedChanges *bool         `json:"has_uncommitted_changes,omitempty"`
-	ModifiedFiles         *[]FileStatus `json:"modified_files,omitempty"`
-}
-
 // ListAdminContestsParams defines parameters for ListAdminContests.
 type ListAdminContestsParams struct {
 	Page       int32                              `form:"page" json:"page"`
@@ -715,18 +692,6 @@ type ImportProblemMultipartBody struct {
 	Package *openapi_types.File `json:"package,omitempty"`
 }
 
-// CommitWorkshopChangesJSONBody defines parameters for CommitWorkshopChanges.
-type CommitWorkshopChangesJSONBody struct {
-	// AuthorEmail Author email
-	AuthorEmail *string `json:"author_email,omitempty"`
-
-	// AuthorName Author name
-	AuthorName *string `json:"author_name,omitempty"`
-
-	// Message Commit message
-	Message string `json:"message"`
-}
-
 // CompileProblemComponentParamsComponentType defines parameters for CompileProblemComponent.
 type CompileProblemComponentParamsComponentType string
 
@@ -734,11 +699,6 @@ type CompileProblemComponentParamsComponentType string
 type ListWorkshopFilesParams struct {
 	// Path Directory path to list (empty for root)
 	Path *string `form:"path,omitempty" json:"path,omitempty"`
-}
-
-// GetWorkshopHistoryParams defines parameters for GetWorkshopHistory.
-type GetWorkshopHistoryParams struct {
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // TestSolutionJSONBody defines parameters for TestSolution.
@@ -893,14 +853,11 @@ type CreatePostMultipartRequestBody CreatePostMultipartBody
 // PatchPostByIdMultipartRequestBody defines body for PatchPostById for multipart/form-data ContentType.
 type PatchPostByIdMultipartRequestBody PatchPostByIdMultipartBody
 
-// ImportProblemMultipartRequestBody defines body for ImportProblem for multipart/form-data ContentType.
-type ImportProblemMultipartRequestBody ImportProblemMultipartBody
-
 // UpdateProblemJSONRequestBody defines body for UpdateProblem for application/json ContentType.
 type UpdateProblemJSONRequestBody = UpdateProblemRequestModel
 
-// CommitWorkshopChangesJSONRequestBody defines body for CommitWorkshopChanges for application/json ContentType.
-type CommitWorkshopChangesJSONRequestBody CommitWorkshopChangesJSONBody
+// ImportProblemMultipartRequestBody defines body for ImportProblem for multipart/form-data ContentType.
+type ImportProblemMultipartRequestBody ImportProblemMultipartBody
 
 // TestSolutionJSONRequestBody defines body for TestSolution for application/json ContentType.
 type TestSolutionJSONRequestBody TestSolutionJSONBody
@@ -1090,9 +1047,6 @@ type ClientInterface interface {
 	// CreateProblem request
 	CreateProblem(ctx context.Context, params *CreateProblemParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ImportProblemWithBody request with any body
-	ImportProblemWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// DeleteProblem request
 	DeleteProblem(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1104,6 +1058,9 @@ type ClientInterface interface {
 
 	UpdateProblem(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ImportProblemWithBody request with any body
+	ImportProblemWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetPublishedPackage request
 	GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1112,11 +1069,6 @@ type ClientInterface interface {
 
 	// PublishProblem request
 	PublishProblem(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// CommitWorkshopChangesWithBody request with any body
-	CommitWorkshopChangesWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	CommitWorkshopChanges(ctx context.Context, problemId openapi_types.UUID, body CommitWorkshopChangesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CompileProblemComponent request
 	CompileProblemComponent(ctx context.Context, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1133,9 +1085,6 @@ type ClientInterface interface {
 	// UpdateWorkshopFileWithBody request with any body
 	UpdateWorkshopFileWithBody(ctx context.Context, problemId openapi_types.UUID, path string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetWorkshopHistory request
-	GetWorkshopHistory(ctx context.Context, problemId openapi_types.UUID, params *GetWorkshopHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// InitProblemWorkshop request
 	InitProblemWorkshop(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1143,9 +1092,6 @@ type ClientInterface interface {
 	TestSolutionWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	TestSolution(ctx context.Context, problemId openapi_types.UUID, body TestSolutionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetWorkshopStatus request
-	GetWorkshopStatus(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GenerateTestsWithBody request with any body
 	GenerateTestsWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1618,18 +1564,6 @@ func (c *Client) CreateProblem(ctx context.Context, params *CreateProblemParams,
 	return c.Client.Do(req)
 }
 
-func (c *Client) ImportProblemWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewImportProblemRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) DeleteProblem(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteProblemRequest(c.Server, id)
 	if err != nil {
@@ -1678,6 +1612,18 @@ func (c *Client) UpdateProblem(ctx context.Context, id openapi_types.UUID, body 
 	return c.Client.Do(req)
 }
 
+func (c *Client) ImportProblemWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewImportProblemRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPublishedPackageRequest(c.Server, id, version)
 	if err != nil {
@@ -1704,30 +1650,6 @@ func (c *Client) ListProblemPackages(ctx context.Context, id openapi_types.UUID,
 
 func (c *Client) PublishProblem(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPublishProblemRequest(c.Server, id)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CommitWorkshopChangesWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCommitWorkshopChangesRequestWithBody(c.Server, problemId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CommitWorkshopChanges(ctx context.Context, problemId openapi_types.UUID, body CommitWorkshopChangesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCommitWorkshopChangesRequest(c.Server, problemId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1798,18 +1720,6 @@ func (c *Client) UpdateWorkshopFileWithBody(ctx context.Context, problemId opena
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetWorkshopHistory(ctx context.Context, problemId openapi_types.UUID, params *GetWorkshopHistoryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetWorkshopHistoryRequest(c.Server, problemId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) InitProblemWorkshop(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewInitProblemWorkshopRequest(c.Server, problemId)
 	if err != nil {
@@ -1836,18 +1746,6 @@ func (c *Client) TestSolutionWithBody(ctx context.Context, problemId openapi_typ
 
 func (c *Client) TestSolution(ctx context.Context, problemId openapi_types.UUID, body TestSolutionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewTestSolutionRequest(c.Server, problemId, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetWorkshopStatus(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetWorkshopStatusRequest(c.Server, problemId)
 	if err != nil {
 		return nil, err
 	}
@@ -3896,35 +3794,6 @@ func NewCreateProblemRequest(server string, params *CreateProblemParams) (*http.
 	return req, nil
 }
 
-// NewImportProblemRequestWithBody generates requests for ImportProblem with any type of body
-func NewImportProblemRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/import")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
 // NewDeleteProblemRequest generates requests for DeleteProblem
 func NewDeleteProblemRequest(server string, id openapi_types.UUID) (*http.Request, error) {
 	var err error
@@ -4040,6 +3909,42 @@ func NewUpdateProblemRequestWithBody(server string, id openapi_types.UUID, conte
 	return req, nil
 }
 
+// NewImportProblemRequestWithBody generates requests for ImportProblem with any type of body
+func NewImportProblemRequestWithBody(server string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/import", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetPublishedPackageRequest generates requests for GetPublishedPackage
 func NewGetPublishedPackageRequest(server string, id openapi_types.UUID, version string) (*http.Request, error) {
 	var err error
@@ -4145,53 +4050,6 @@ func NewPublishProblemRequest(server string, id openapi_types.UUID) (*http.Reque
 	if err != nil {
 		return nil, err
 	}
-
-	return req, nil
-}
-
-// NewCommitWorkshopChangesRequest calls the generic CommitWorkshopChanges builder with application/json body
-func NewCommitWorkshopChangesRequest(server string, problemId openapi_types.UUID, body CommitWorkshopChangesJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCommitWorkshopChangesRequestWithBody(server, problemId, "application/json", bodyReader)
-}
-
-// NewCommitWorkshopChangesRequestWithBody generates requests for CommitWorkshopChanges with any type of body
-func NewCommitWorkshopChangesRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/workshop/commit", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -4418,62 +4276,6 @@ func NewUpdateWorkshopFileRequestWithBody(server string, problemId openapi_types
 	return req, nil
 }
 
-// NewGetWorkshopHistoryRequest generates requests for GetWorkshopHistory
-func NewGetWorkshopHistoryRequest(server string, problemId openapi_types.UUID, params *GetWorkshopHistoryParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/workshop/history", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.Limit != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, *params.Limit); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewInitProblemWorkshopRequest generates requests for InitProblemWorkshop
 func NewInitProblemWorkshopRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
 	var err error
@@ -4551,40 +4353,6 @@ func NewTestSolutionRequestWithBody(server string, problemId openapi_types.UUID,
 	}
 
 	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewGetWorkshopStatusRequest generates requests for GetWorkshopStatus
-func NewGetWorkshopStatusRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/workshop/status", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
 
 	return req, nil
 }
@@ -6177,9 +5945,6 @@ type ClientWithResponsesInterface interface {
 	// CreateProblemWithResponse request
 	CreateProblemWithResponse(ctx context.Context, params *CreateProblemParams, reqEditors ...RequestEditorFn) (*CreateProblemResponse, error)
 
-	// ImportProblemWithBodyWithResponse request with any body
-	ImportProblemWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ImportProblemResponse, error)
-
 	// DeleteProblemWithResponse request
 	DeleteProblemWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteProblemResponse, error)
 
@@ -6191,6 +5956,9 @@ type ClientWithResponsesInterface interface {
 
 	UpdateProblemWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateProblemJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemResponse, error)
 
+	// ImportProblemWithBodyWithResponse request with any body
+	ImportProblemWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ImportProblemResponse, error)
+
 	// GetPublishedPackageWithResponse request
 	GetPublishedPackageWithResponse(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*GetPublishedPackageResponse, error)
 
@@ -6199,11 +5967,6 @@ type ClientWithResponsesInterface interface {
 
 	// PublishProblemWithResponse request
 	PublishProblemWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*PublishProblemResponse, error)
-
-	// CommitWorkshopChangesWithBodyWithResponse request with any body
-	CommitWorkshopChangesWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CommitWorkshopChangesResponse, error)
-
-	CommitWorkshopChangesWithResponse(ctx context.Context, problemId openapi_types.UUID, body CommitWorkshopChangesJSONRequestBody, reqEditors ...RequestEditorFn) (*CommitWorkshopChangesResponse, error)
 
 	// CompileProblemComponentWithResponse request
 	CompileProblemComponentWithResponse(ctx context.Context, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType, reqEditors ...RequestEditorFn) (*CompileProblemComponentResponse, error)
@@ -6220,9 +5983,6 @@ type ClientWithResponsesInterface interface {
 	// UpdateWorkshopFileWithBodyWithResponse request with any body
 	UpdateWorkshopFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, path string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWorkshopFileResponse, error)
 
-	// GetWorkshopHistoryWithResponse request
-	GetWorkshopHistoryWithResponse(ctx context.Context, problemId openapi_types.UUID, params *GetWorkshopHistoryParams, reqEditors ...RequestEditorFn) (*GetWorkshopHistoryResponse, error)
-
 	// InitProblemWorkshopWithResponse request
 	InitProblemWorkshopWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*InitProblemWorkshopResponse, error)
 
@@ -6230,9 +5990,6 @@ type ClientWithResponsesInterface interface {
 	TestSolutionWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TestSolutionResponse, error)
 
 	TestSolutionWithResponse(ctx context.Context, problemId openapi_types.UUID, body TestSolutionJSONRequestBody, reqEditors ...RequestEditorFn) (*TestSolutionResponse, error)
-
-	// GetWorkshopStatusWithResponse request
-	GetWorkshopStatusWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetWorkshopStatusResponse, error)
 
 	// GenerateTestsWithBodyWithResponse request with any body
 	GenerateTestsWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GenerateTestsResponse, error)
@@ -6994,28 +6751,6 @@ func (r CreateProblemResponse) StatusCode() int {
 	return 0
 }
 
-type ImportProblemResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *CreationResponseModel
-}
-
-// Status returns HTTPResponse.Status
-func (r ImportProblemResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ImportProblemResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type DeleteProblemResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -7080,6 +6815,30 @@ func (r UpdateProblemResponse) StatusCode() int {
 	return 0
 }
 
+type ImportProblemResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Message *string `json:"message,omitempty"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ImportProblemResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ImportProblemResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetPublishedPackageResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -7106,12 +6865,12 @@ type ListProblemPackagesResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Packages *[]struct {
-			CompiledAt    *time.Time          `json:"compiled_at,omitempty"`
-			CreatedAt     *time.Time          `json:"created_at,omitempty"`
-			GitCommitHash *string             `json:"git_commit_hash,omitempty"`
-			Id            *openapi_types.UUID `json:"id,omitempty"`
-			Status        *string             `json:"status,omitempty"`
-			Version       *int32              `json:"version,omitempty"`
+			CompiledAt  *time.Time          `json:"compiled_at,omitempty"`
+			CreatedAt   *time.Time          `json:"created_at,omitempty"`
+			Id          *openapi_types.UUID `json:"id,omitempty"`
+			PackageHash *string             `json:"package_hash,omitempty"`
+			Status      *string             `json:"status,omitempty"`
+			Version     *int32              `json:"version,omitempty"`
 		} `json:"packages,omitempty"`
 	}
 }
@@ -7151,31 +6910,6 @@ func (r PublishProblemResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PublishProblemResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type CommitWorkshopChangesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		CommitSha *string `json:"commit_sha,omitempty"`
-		Message   *string `json:"message,omitempty"`
-	}
-}
-
-// Status returns HTTPResponse.Status
-func (r CommitWorkshopChangesResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CommitWorkshopChangesResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -7294,36 +7028,11 @@ func (r UpdateWorkshopFileResponse) StatusCode() int {
 	return 0
 }
 
-type GetWorkshopHistoryResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Commits *[]Commit `json:"commits,omitempty"`
-	}
-}
-
-// Status returns HTTPResponse.Status
-func (r GetWorkshopHistoryResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetWorkshopHistoryResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type InitProblemWorkshopResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		CommitSha *string `json:"commit_sha,omitempty"`
-		Message   *string `json:"message,omitempty"`
+		Message *string `json:"message,omitempty"`
 	}
 }
 
@@ -7359,28 +7068,6 @@ func (r TestSolutionResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r TestSolutionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GetWorkshopStatusResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *WorkshopStatus
-}
-
-// Status returns HTTPResponse.Status
-func (r GetWorkshopStatusResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetWorkshopStatusResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -8165,15 +7852,6 @@ func (c *ClientWithResponses) CreateProblemWithResponse(ctx context.Context, par
 	return ParseCreateProblemResponse(rsp)
 }
 
-// ImportProblemWithBodyWithResponse request with arbitrary body returning *ImportProblemResponse
-func (c *ClientWithResponses) ImportProblemWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ImportProblemResponse, error) {
-	rsp, err := c.ImportProblemWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseImportProblemResponse(rsp)
-}
-
 // DeleteProblemWithResponse request returning *DeleteProblemResponse
 func (c *ClientWithResponses) DeleteProblemWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteProblemResponse, error) {
 	rsp, err := c.DeleteProblem(ctx, id, reqEditors...)
@@ -8209,6 +7887,15 @@ func (c *ClientWithResponses) UpdateProblemWithResponse(ctx context.Context, id 
 	return ParseUpdateProblemResponse(rsp)
 }
 
+// ImportProblemWithBodyWithResponse request with arbitrary body returning *ImportProblemResponse
+func (c *ClientWithResponses) ImportProblemWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ImportProblemResponse, error) {
+	rsp, err := c.ImportProblemWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseImportProblemResponse(rsp)
+}
+
 // GetPublishedPackageWithResponse request returning *GetPublishedPackageResponse
 func (c *ClientWithResponses) GetPublishedPackageWithResponse(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*GetPublishedPackageResponse, error) {
 	rsp, err := c.GetPublishedPackage(ctx, id, version, reqEditors...)
@@ -8234,23 +7921,6 @@ func (c *ClientWithResponses) PublishProblemWithResponse(ctx context.Context, id
 		return nil, err
 	}
 	return ParsePublishProblemResponse(rsp)
-}
-
-// CommitWorkshopChangesWithBodyWithResponse request with arbitrary body returning *CommitWorkshopChangesResponse
-func (c *ClientWithResponses) CommitWorkshopChangesWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CommitWorkshopChangesResponse, error) {
-	rsp, err := c.CommitWorkshopChangesWithBody(ctx, problemId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCommitWorkshopChangesResponse(rsp)
-}
-
-func (c *ClientWithResponses) CommitWorkshopChangesWithResponse(ctx context.Context, problemId openapi_types.UUID, body CommitWorkshopChangesJSONRequestBody, reqEditors ...RequestEditorFn) (*CommitWorkshopChangesResponse, error) {
-	rsp, err := c.CommitWorkshopChanges(ctx, problemId, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCommitWorkshopChangesResponse(rsp)
 }
 
 // CompileProblemComponentWithResponse request returning *CompileProblemComponentResponse
@@ -8298,15 +7968,6 @@ func (c *ClientWithResponses) UpdateWorkshopFileWithBodyWithResponse(ctx context
 	return ParseUpdateWorkshopFileResponse(rsp)
 }
 
-// GetWorkshopHistoryWithResponse request returning *GetWorkshopHistoryResponse
-func (c *ClientWithResponses) GetWorkshopHistoryWithResponse(ctx context.Context, problemId openapi_types.UUID, params *GetWorkshopHistoryParams, reqEditors ...RequestEditorFn) (*GetWorkshopHistoryResponse, error) {
-	rsp, err := c.GetWorkshopHistory(ctx, problemId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetWorkshopHistoryResponse(rsp)
-}
-
 // InitProblemWorkshopWithResponse request returning *InitProblemWorkshopResponse
 func (c *ClientWithResponses) InitProblemWorkshopWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*InitProblemWorkshopResponse, error) {
 	rsp, err := c.InitProblemWorkshop(ctx, problemId, reqEditors...)
@@ -8331,15 +7992,6 @@ func (c *ClientWithResponses) TestSolutionWithResponse(ctx context.Context, prob
 		return nil, err
 	}
 	return ParseTestSolutionResponse(rsp)
-}
-
-// GetWorkshopStatusWithResponse request returning *GetWorkshopStatusResponse
-func (c *ClientWithResponses) GetWorkshopStatusWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetWorkshopStatusResponse, error) {
-	rsp, err := c.GetWorkshopStatus(ctx, problemId, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetWorkshopStatusResponse(rsp)
 }
 
 // GenerateTestsWithBodyWithResponse request with arbitrary body returning *GenerateTestsResponse
@@ -9372,32 +9024,6 @@ func ParseCreateProblemResponse(rsp *http.Response) (*CreateProblemResponse, err
 	return response, nil
 }
 
-// ParseImportProblemResponse parses an HTTP response from a ImportProblemWithResponse call
-func ParseImportProblemResponse(rsp *http.Response) (*ImportProblemResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ImportProblemResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest CreationResponseModel
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseDeleteProblemResponse parses an HTTP response from a DeleteProblemWithResponse call
 func ParseDeleteProblemResponse(rsp *http.Response) (*DeleteProblemResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -9456,6 +9082,34 @@ func ParseUpdateProblemResponse(rsp *http.Response) (*UpdateProblemResponse, err
 	return response, nil
 }
 
+// ParseImportProblemResponse parses an HTTP response from a ImportProblemWithResponse call
+func ParseImportProblemResponse(rsp *http.Response) (*ImportProblemResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImportProblemResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Message *string `json:"message,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetPublishedPackageResponse parses an HTTP response from a GetPublishedPackageWithResponse call
 func ParseGetPublishedPackageResponse(rsp *http.Response) (*GetPublishedPackageResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -9489,12 +9143,12 @@ func ParseListProblemPackagesResponse(rsp *http.Response) (*ListProblemPackagesR
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Packages *[]struct {
-				CompiledAt    *time.Time          `json:"compiled_at,omitempty"`
-				CreatedAt     *time.Time          `json:"created_at,omitempty"`
-				GitCommitHash *string             `json:"git_commit_hash,omitempty"`
-				Id            *openapi_types.UUID `json:"id,omitempty"`
-				Status        *string             `json:"status,omitempty"`
-				Version       *int32              `json:"version,omitempty"`
+				CompiledAt  *time.Time          `json:"compiled_at,omitempty"`
+				CreatedAt   *time.Time          `json:"created_at,omitempty"`
+				Id          *openapi_types.UUID `json:"id,omitempty"`
+				PackageHash *string             `json:"package_hash,omitempty"`
+				Status      *string             `json:"status,omitempty"`
+				Version     *int32              `json:"version,omitempty"`
 			} `json:"packages,omitempty"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9525,35 +9179,6 @@ func ParsePublishProblemResponse(rsp *http.Response) (*PublishProblemResponse, e
 		var dest struct {
 			Message *string `json:"message,omitempty"`
 			Version *int32  `json:"version,omitempty"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseCommitWorkshopChangesResponse parses an HTTP response from a CommitWorkshopChangesWithResponse call
-func ParseCommitWorkshopChangesResponse(rsp *http.Response) (*CommitWorkshopChangesResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CommitWorkshopChangesResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			CommitSha *string `json:"commit_sha,omitempty"`
-			Message   *string `json:"message,omitempty"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -9679,34 +9304,6 @@ func ParseUpdateWorkshopFileResponse(rsp *http.Response) (*UpdateWorkshopFileRes
 	return response, nil
 }
 
-// ParseGetWorkshopHistoryResponse parses an HTTP response from a GetWorkshopHistoryWithResponse call
-func ParseGetWorkshopHistoryResponse(rsp *http.Response) (*GetWorkshopHistoryResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetWorkshopHistoryResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Commits *[]Commit `json:"commits,omitempty"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseInitProblemWorkshopResponse parses an HTTP response from a InitProblemWorkshopWithResponse call
 func ParseInitProblemWorkshopResponse(rsp *http.Response) (*InitProblemWorkshopResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -9723,8 +9320,7 @@ func ParseInitProblemWorkshopResponse(rsp *http.Response) (*InitProblemWorkshopR
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			CommitSha *string `json:"commit_sha,omitempty"`
-			Message   *string `json:"message,omitempty"`
+			Message *string `json:"message,omitempty"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -9752,32 +9348,6 @@ func ParseTestSolutionResponse(rsp *http.Response) (*TestSolutionResponse, error
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest TestReport
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetWorkshopStatusResponse parses an HTTP response from a GetWorkshopStatusWithResponse call
-func ParseGetWorkshopStatusResponse(rsp *http.Response) (*GetWorkshopStatusResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetWorkshopStatusResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest WorkshopStatus
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -10409,9 +9979,6 @@ type ServerInterface interface {
 
 	// (POST /problems)
 	CreateProblem(w http.ResponseWriter, r *http.Request, params CreateProblemParams)
-	// Import problem from package
-	// (POST /problems/import)
-	ImportProblem(w http.ResponseWriter, r *http.Request)
 
 	// (DELETE /problems/{id})
 	DeleteProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -10421,6 +9988,9 @@ type ServerInterface interface {
 
 	// (PATCH /problems/{id})
 	UpdateProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Import package into existing problem
+	// (POST /problems/{id}/import)
+	ImportProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get redirect to published problem package
 	// (GET /problems/{id}/package/{version})
 	GetPublishedPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, version string)
@@ -10430,36 +10000,27 @@ type ServerInterface interface {
 	// Publish problem package
 	// (POST /problems/{id}/publish)
 	PublishProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Commit changes to repository
-	// (POST /problems/{problemId}/workshop/commit)
-	CommitWorkshopChanges(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Compile checker/validator/generator/interactor
 	// (POST /problems/{problemId}/workshop/components/{componentType}/compile)
 	CompileProblemComponent(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType)
-	// List files in problem repository
+	// List files in problem workspace
 	// (GET /problems/{problemId}/workshop/files)
 	ListWorkshopFiles(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params ListWorkshopFilesParams)
-	// Delete file from repository
+	// Delete file from workspace
 	// (DELETE /problems/{problemId}/workshop/files/{path})
 	DeleteWorkshopFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, path string)
-	// Read file content from repository
+	// Read file content from workspace
 	// (GET /problems/{problemId}/workshop/files/{path})
 	GetWorkshopFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, path string)
-	// Update file content in repository
+	// Update file content in workspace
 	// (PUT /problems/{problemId}/workshop/files/{path})
 	UpdateWorkshopFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, path string)
-	// Get commit history
-	// (GET /problems/{problemId}/workshop/history)
-	GetWorkshopHistory(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params GetWorkshopHistoryParams)
-	// Initialize problem workshop with Git repository
+	// Initialize problem workspace
 	// (POST /problems/{problemId}/workshop/init)
 	InitProblemWorkshop(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Test solution against tests
 	// (POST /problems/{problemId}/workshop/solutions/test)
 	TestSolution(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
-	// Get current workshop status
-	// (GET /problems/{problemId}/workshop/status)
-	GetWorkshopStatus(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Generate tests using generator
 	// (POST /problems/{problemId}/workshop/tests/generate)
 	GenerateTests(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
@@ -11832,20 +11393,6 @@ func (siw *ServerInterfaceWrapper) CreateProblem(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
-// ImportProblem operation middleware
-func (siw *ServerInterfaceWrapper) ImportProblem(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ImportProblem(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // DeleteProblem operation middleware
 func (siw *ServerInterfaceWrapper) DeleteProblem(w http.ResponseWriter, r *http.Request) {
 
@@ -11912,6 +11459,31 @@ func (siw *ServerInterfaceWrapper) UpdateProblem(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateProblem(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ImportProblem operation middleware
+func (siw *ServerInterfaceWrapper) ImportProblem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportProblem(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11996,31 +11568,6 @@ func (siw *ServerInterfaceWrapper) PublishProblem(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PublishProblem(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CommitWorkshopChanges operation middleware
-func (siw *ServerInterfaceWrapper) CommitWorkshopChanges(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CommitWorkshopChanges(w, r, problemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -12202,42 +11749,6 @@ func (siw *ServerInterfaceWrapper) UpdateWorkshopFile(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
-// GetWorkshopHistory operation middleware
-func (siw *ServerInterfaceWrapper) GetWorkshopHistory(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetWorkshopHistoryParams
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetWorkshopHistory(w, r, problemId, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // InitProblemWorkshop operation middleware
 func (siw *ServerInterfaceWrapper) InitProblemWorkshop(w http.ResponseWriter, r *http.Request) {
 
@@ -12279,31 +11790,6 @@ func (siw *ServerInterfaceWrapper) TestSolution(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.TestSolution(w, r, problemId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetWorkshopStatus operation middleware
-func (siw *ServerInterfaceWrapper) GetWorkshopStatus(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetWorkshopStatus(w, r, problemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -13478,23 +12964,20 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/posts/{id}/image", wrapper.GetPostImage)
 	m.HandleFunc("GET "+options.BaseURL+"/problems", wrapper.ListProblems)
 	m.HandleFunc("POST "+options.BaseURL+"/problems", wrapper.CreateProblem)
-	m.HandleFunc("POST "+options.BaseURL+"/problems/import", wrapper.ImportProblem)
 	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{id}", wrapper.DeleteProblem)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}", wrapper.GetProblem)
 	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{id}", wrapper.UpdateProblem)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{id}/import", wrapper.ImportProblem)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/package/{version}", wrapper.GetPublishedPackage)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/packages", wrapper.ListProblemPackages)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{id}/publish", wrapper.PublishProblem)
-	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/commit", wrapper.CommitWorkshopChanges)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/components/{componentType}/compile", wrapper.CompileProblemComponent)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/files", wrapper.ListWorkshopFiles)
 	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/workshop/files/{path...}", wrapper.DeleteWorkshopFile)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/files/{path...}", wrapper.GetWorkshopFile)
 	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/workshop/files/{path...}", wrapper.UpdateWorkshopFile)
-	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/history", wrapper.GetWorkshopHistory)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/init", wrapper.InitProblemWorkshop)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/solutions/test", wrapper.TestSolution)
-	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/status", wrapper.GetWorkshopStatus)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/tests/generate", wrapper.GenerateTests)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/tests/validate", wrapper.ValidateAllTests)
 	m.HandleFunc("GET "+options.BaseURL+"/public/contests", wrapper.ListPublicContests)
@@ -14216,23 +13699,6 @@ func (response CreateProblem200JSONResponse) VisitCreateProblemResponse(w http.R
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ImportProblemRequestObject struct {
-	Body *multipart.Reader
-}
-
-type ImportProblemResponseObject interface {
-	VisitImportProblemResponse(w http.ResponseWriter) error
-}
-
-type ImportProblem200JSONResponse CreationResponseModel
-
-func (response ImportProblem200JSONResponse) VisitImportProblemResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type DeleteProblemRequestObject struct {
 	Id openapi_types.UUID `json:"id"`
 }
@@ -14283,6 +13749,26 @@ func (response UpdateProblem200Response) VisitUpdateProblemResponse(w http.Respo
 	return nil
 }
 
+type ImportProblemRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *multipart.Reader
+}
+
+type ImportProblemResponseObject interface {
+	VisitImportProblemResponse(w http.ResponseWriter) error
+}
+
+type ImportProblem200JSONResponse struct {
+	Message *string `json:"message,omitempty"`
+}
+
+func (response ImportProblem200JSONResponse) VisitImportProblemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetPublishedPackageRequestObject struct {
 	Id      openapi_types.UUID `json:"id"`
 	Version string             `json:"version"`
@@ -14316,12 +13802,12 @@ type ListProblemPackagesResponseObject interface {
 
 type ListProblemPackages200JSONResponse struct {
 	Packages *[]struct {
-		CompiledAt    *time.Time          `json:"compiled_at,omitempty"`
-		CreatedAt     *time.Time          `json:"created_at,omitempty"`
-		GitCommitHash *string             `json:"git_commit_hash,omitempty"`
-		Id            *openapi_types.UUID `json:"id,omitempty"`
-		Status        *string             `json:"status,omitempty"`
-		Version       *int32              `json:"version,omitempty"`
+		CompiledAt  *time.Time          `json:"compiled_at,omitempty"`
+		CreatedAt   *time.Time          `json:"created_at,omitempty"`
+		Id          *openapi_types.UUID `json:"id,omitempty"`
+		PackageHash *string             `json:"package_hash,omitempty"`
+		Status      *string             `json:"status,omitempty"`
+		Version     *int32              `json:"version,omitempty"`
 	} `json:"packages,omitempty"`
 }
 
@@ -14346,27 +13832,6 @@ type PublishProblem200JSONResponse struct {
 }
 
 func (response PublishProblem200JSONResponse) VisitPublishProblemResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type CommitWorkshopChangesRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Body      *CommitWorkshopChangesJSONRequestBody
-}
-
-type CommitWorkshopChangesResponseObject interface {
-	VisitCommitWorkshopChangesResponse(w http.ResponseWriter) error
-}
-
-type CommitWorkshopChanges200JSONResponse struct {
-	CommitSha *string `json:"commit_sha,omitempty"`
-	Message   *string `json:"message,omitempty"`
-}
-
-func (response CommitWorkshopChanges200JSONResponse) VisitCommitWorkshopChangesResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -14477,26 +13942,6 @@ func (response UpdateWorkshopFile200JSONResponse) VisitUpdateWorkshopFileRespons
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetWorkshopHistoryRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Params    GetWorkshopHistoryParams
-}
-
-type GetWorkshopHistoryResponseObject interface {
-	VisitGetWorkshopHistoryResponse(w http.ResponseWriter) error
-}
-
-type GetWorkshopHistory200JSONResponse struct {
-	Commits *[]Commit `json:"commits,omitempty"`
-}
-
-func (response GetWorkshopHistory200JSONResponse) VisitGetWorkshopHistoryResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type InitProblemWorkshopRequestObject struct {
 	ProblemId openapi_types.UUID `json:"problemId"`
 }
@@ -14506,8 +13951,7 @@ type InitProblemWorkshopResponseObject interface {
 }
 
 type InitProblemWorkshop200JSONResponse struct {
-	CommitSha *string `json:"commit_sha,omitempty"`
-	Message   *string `json:"message,omitempty"`
+	Message *string `json:"message,omitempty"`
 }
 
 func (response InitProblemWorkshop200JSONResponse) VisitInitProblemWorkshopResponse(w http.ResponseWriter) error {
@@ -14529,23 +13973,6 @@ type TestSolutionResponseObject interface {
 type TestSolution200JSONResponse TestReport
 
 func (response TestSolution200JSONResponse) VisitTestSolutionResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetWorkshopStatusRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-}
-
-type GetWorkshopStatusResponseObject interface {
-	VisitGetWorkshopStatusResponse(w http.ResponseWriter) error
-}
-
-type GetWorkshopStatus200JSONResponse WorkshopStatus
-
-func (response GetWorkshopStatus200JSONResponse) VisitGetWorkshopStatusResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -15028,9 +14455,6 @@ type StrictServerInterface interface {
 
 	// (POST /problems)
 	CreateProblem(ctx context.Context, request CreateProblemRequestObject) (CreateProblemResponseObject, error)
-	// Import problem from package
-	// (POST /problems/import)
-	ImportProblem(ctx context.Context, request ImportProblemRequestObject) (ImportProblemResponseObject, error)
 
 	// (DELETE /problems/{id})
 	DeleteProblem(ctx context.Context, request DeleteProblemRequestObject) (DeleteProblemResponseObject, error)
@@ -15040,6 +14464,9 @@ type StrictServerInterface interface {
 
 	// (PATCH /problems/{id})
 	UpdateProblem(ctx context.Context, request UpdateProblemRequestObject) (UpdateProblemResponseObject, error)
+	// Import package into existing problem
+	// (POST /problems/{id}/import)
+	ImportProblem(ctx context.Context, request ImportProblemRequestObject) (ImportProblemResponseObject, error)
 	// Get redirect to published problem package
 	// (GET /problems/{id}/package/{version})
 	GetPublishedPackage(ctx context.Context, request GetPublishedPackageRequestObject) (GetPublishedPackageResponseObject, error)
@@ -15049,36 +14476,27 @@ type StrictServerInterface interface {
 	// Publish problem package
 	// (POST /problems/{id}/publish)
 	PublishProblem(ctx context.Context, request PublishProblemRequestObject) (PublishProblemResponseObject, error)
-	// Commit changes to repository
-	// (POST /problems/{problemId}/workshop/commit)
-	CommitWorkshopChanges(ctx context.Context, request CommitWorkshopChangesRequestObject) (CommitWorkshopChangesResponseObject, error)
 	// Compile checker/validator/generator/interactor
 	// (POST /problems/{problemId}/workshop/components/{componentType}/compile)
 	CompileProblemComponent(ctx context.Context, request CompileProblemComponentRequestObject) (CompileProblemComponentResponseObject, error)
-	// List files in problem repository
+	// List files in problem workspace
 	// (GET /problems/{problemId}/workshop/files)
 	ListWorkshopFiles(ctx context.Context, request ListWorkshopFilesRequestObject) (ListWorkshopFilesResponseObject, error)
-	// Delete file from repository
+	// Delete file from workspace
 	// (DELETE /problems/{problemId}/workshop/files/{path})
 	DeleteWorkshopFile(ctx context.Context, request DeleteWorkshopFileRequestObject) (DeleteWorkshopFileResponseObject, error)
-	// Read file content from repository
+	// Read file content from workspace
 	// (GET /problems/{problemId}/workshop/files/{path})
 	GetWorkshopFile(ctx context.Context, request GetWorkshopFileRequestObject) (GetWorkshopFileResponseObject, error)
-	// Update file content in repository
+	// Update file content in workspace
 	// (PUT /problems/{problemId}/workshop/files/{path})
 	UpdateWorkshopFile(ctx context.Context, request UpdateWorkshopFileRequestObject) (UpdateWorkshopFileResponseObject, error)
-	// Get commit history
-	// (GET /problems/{problemId}/workshop/history)
-	GetWorkshopHistory(ctx context.Context, request GetWorkshopHistoryRequestObject) (GetWorkshopHistoryResponseObject, error)
-	// Initialize problem workshop with Git repository
+	// Initialize problem workspace
 	// (POST /problems/{problemId}/workshop/init)
 	InitProblemWorkshop(ctx context.Context, request InitProblemWorkshopRequestObject) (InitProblemWorkshopResponseObject, error)
 	// Test solution against tests
 	// (POST /problems/{problemId}/workshop/solutions/test)
 	TestSolution(ctx context.Context, request TestSolutionRequestObject) (TestSolutionResponseObject, error)
-	// Get current workshop status
-	// (GET /problems/{problemId}/workshop/status)
-	GetWorkshopStatus(ctx context.Context, request GetWorkshopStatusRequestObject) (GetWorkshopStatusResponseObject, error)
 	// Generate tests using generator
 	// (POST /problems/{problemId}/workshop/tests/generate)
 	GenerateTests(ctx context.Context, request GenerateTestsRequestObject) (GenerateTestsResponseObject, error)
@@ -16018,37 +15436,6 @@ func (sh *strictHandler) CreateProblem(w http.ResponseWriter, r *http.Request, p
 	}
 }
 
-// ImportProblem operation middleware
-func (sh *strictHandler) ImportProblem(w http.ResponseWriter, r *http.Request) {
-	var request ImportProblemRequestObject
-
-	if reader, err := r.MultipartReader(); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
-		return
-	} else {
-		request.Body = reader
-	}
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ImportProblem(ctx, request.(ImportProblemRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ImportProblem")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ImportProblemResponseObject); ok {
-		if err := validResponse.VisitImportProblemResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // DeleteProblem operation middleware
 func (sh *strictHandler) DeleteProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	var request DeleteProblemRequestObject
@@ -16134,6 +15521,39 @@ func (sh *strictHandler) UpdateProblem(w http.ResponseWriter, r *http.Request, i
 	}
 }
 
+// ImportProblem operation middleware
+func (sh *strictHandler) ImportProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request ImportProblemRequestObject
+
+	request.Id = id
+
+	if reader, err := r.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ImportProblem(ctx, request.(ImportProblemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ImportProblem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ImportProblemResponseObject); ok {
+		if err := validResponse.VisitImportProblemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetPublishedPackage operation middleware
 func (sh *strictHandler) GetPublishedPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, version string) {
 	var request GetPublishedPackageRequestObject
@@ -16206,39 +15626,6 @@ func (sh *strictHandler) PublishProblem(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PublishProblemResponseObject); ok {
 		if err := validResponse.VisitPublishProblemResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// CommitWorkshopChanges operation middleware
-func (sh *strictHandler) CommitWorkshopChanges(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
-	var request CommitWorkshopChangesRequestObject
-
-	request.ProblemId = problemId
-
-	var body CommitWorkshopChangesJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.CommitWorkshopChanges(ctx, request.(CommitWorkshopChangesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "CommitWorkshopChanges")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(CommitWorkshopChangesResponseObject); ok {
-		if err := validResponse.VisitCommitWorkshopChangesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -16383,33 +15770,6 @@ func (sh *strictHandler) UpdateWorkshopFile(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// GetWorkshopHistory operation middleware
-func (sh *strictHandler) GetWorkshopHistory(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params GetWorkshopHistoryParams) {
-	var request GetWorkshopHistoryRequestObject
-
-	request.ProblemId = problemId
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetWorkshopHistory(ctx, request.(GetWorkshopHistoryRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetWorkshopHistory")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetWorkshopHistoryResponseObject); ok {
-		if err := validResponse.VisitGetWorkshopHistoryResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // InitProblemWorkshop operation middleware
 func (sh *strictHandler) InitProblemWorkshop(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
 	var request InitProblemWorkshopRequestObject
@@ -16462,32 +15822,6 @@ func (sh *strictHandler) TestSolution(w http.ResponseWriter, r *http.Request, pr
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(TestSolutionResponseObject); ok {
 		if err := validResponse.VisitTestSolutionResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetWorkshopStatus operation middleware
-func (sh *strictHandler) GetWorkshopStatus(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
-	var request GetWorkshopStatusRequestObject
-
-	request.ProblemId = problemId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetWorkshopStatus(ctx, request.(GetWorkshopStatusRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetWorkshopStatus")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetWorkshopStatusResponseObject); ok {
-		if err := validResponse.VisitGetWorkshopStatusResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

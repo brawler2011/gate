@@ -17,7 +17,7 @@ import (
 // JudgeUseCase orchestrates the judging process
 type JudgeUseCase struct {
 	submissionsRepo interfaces.SubmissionsRepo
-	problemsRepo    interfaces.ProblemsRepo
+	packagesRepo    interfaces.PackagesRepo
 	packageLoader   *problemformat.PackageLoader
 	sandboxClient   *sandbox.Client
 	eventPublisher  *judge.EventPublisher
@@ -28,7 +28,7 @@ type JudgeUseCase struct {
 // NewJudgeUseCase creates a new judge use case
 func NewJudgeUseCase(
 	submissionsRepo interfaces.SubmissionsRepo,
-	problemsRepo interfaces.ProblemsRepo,
+	packagesRepo interfaces.PackagesRepo,
 	s3Client *pkg.S3Client,
 	packageBucket string,
 	tempDir string,
@@ -37,7 +37,7 @@ func NewJudgeUseCase(
 ) *JudgeUseCase {
 	return &JudgeUseCase{
 		submissionsRepo: submissionsRepo,
-		problemsRepo:    problemsRepo,
+		packagesRepo:    packagesRepo,
 		packageLoader:   problemformat.NewPackageLoader(s3Client, packageBucket, tempDir),
 		sandboxClient:   sandboxClient,
 		eventPublisher:  eventPublisher,
@@ -76,18 +76,13 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	if submission.ProblemID == nil {
 		return fmt.Errorf("submission has no problem ID")
 	}
-	problem, err := uc.problemsRepo.GetProblemById(ctx, *submission.ProblemID)
+	readyPackage, err := uc.packagesRepo.GetReadyPackage(ctx, *submission.ProblemID)
 	if err != nil {
-		return fmt.Errorf("failed to get problem: %w", err)
-	}
-
-	// Check if problem has a commit hash
-	if problem.GitCommitHash == nil || *problem.GitCommitHash == "" {
 		return fmt.Errorf("problem has no published version")
 	}
 
 	// Load problem package
-	pkg, err := uc.packageLoader.LoadPackage(ctx, problem.ID.String(), *problem.GitCommitHash)
+	pkg, err := uc.packageLoader.LoadPackage(ctx, submission.ProblemID.String(), readyPackage.PackageHash)
 	if err != nil {
 		return fmt.Errorf("failed to load problem package: %w", err)
 	}
@@ -99,7 +94,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	}
 
 	// Compile components (checker, validator, interactor if needed)
-	compiledComponents, err := uc.compileComponents(ctx, pkg, problem.ID)
+	compiledComponents, err := uc.compileComponents(ctx, pkg, *submission.ProblemID)
 	if err != nil {
 		return fmt.Errorf("failed to compile components: %w", err)
 	}

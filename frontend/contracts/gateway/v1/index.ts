@@ -11,7 +11,6 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { BlogPaginationModel } from './models/BlogPaginationModel';
-export type { Commit } from './models/Commit';
 export type { CompileResult } from './models/CompileResult';
 export type { ContestMemberModel } from './models/ContestMemberModel';
 export type { ContestModel } from './models/ContestModel';
@@ -22,7 +21,6 @@ export type { CreateSubmissionRequestModel } from './models/CreateSubmissionRequ
 export type { CreationResponseModel } from './models/CreationResponseModel';
 export type { Error } from './models/Error';
 export type { FileEntry } from './models/FileEntry';
-export type { FileStatus } from './models/FileStatus';
 export type { GetContestProblemResponseModel } from './models/GetContestProblemResponseModel';
 export type { GetContestResponseModel } from './models/GetContestResponseModel';
 export type { GetHealthResponseModel } from './models/GetHealthResponseModel';
@@ -69,6 +67,5 @@ export type { UpdateTeamRequestModel } from './models/UpdateTeamRequestModel';
 export type { UserModel } from './models/UserModel';
 export type { ValidationReport } from './models/ValidationReport';
 export { WebSocketMessageType } from './models/WebSocketMessageType';
-export type { WorkshopStatus } from './models/WorkshopStatus';
 
 export { DefaultService } from './services/DefaultService';

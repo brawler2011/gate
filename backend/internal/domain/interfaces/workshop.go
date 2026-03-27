@@ -15,9 +15,6 @@ type WorkshopUC interface {
 	DeleteProblemFile(ctx context.Context, problemID uuid.UUID, path string) error
 	ReadProblemFile(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error)
 	ListProblemFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]vcs.FileEntry, error)
-	CommitChanges(ctx context.Context, problemID uuid.UUID, message, authorName, authorEmail string) (string, error)
-	GetWorkshopStatus(ctx context.Context, problemID uuid.UUID) (*models.WorkshopStatus, error)
-	GetCommitHistory(ctx context.Context, problemID uuid.UUID, limit int) ([]vcs.Commit, error)
 	CompileProblemComponent(ctx context.Context, req models.CompileComponentRequest) (*models.CompileResult, error)
 	GenerateTests(ctx context.Context, req models.GenerateTestsRequest) error
 	ValidateAllTests(ctx context.Context, problemID uuid.UUID, userID uuid.UUID) (*models.ValidationReport, error)

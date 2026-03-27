@@ -1,7 +1,6 @@
 package models
 
 import (
-	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/google/uuid"
 )
 
@@ -77,11 +76,4 @@ type TestResult struct {
 	Time       int64
 	Memory     int64
 	Message    string
-}
-
-// WorkshopStatus represents the current status of a workshop
-type WorkshopStatus struct {
-	CurrentSHA            string
-	ModifiedFiles         []vcs.FileStatus
-	HasUncommittedChanges bool
 }

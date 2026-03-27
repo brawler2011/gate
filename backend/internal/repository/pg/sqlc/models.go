@@ -531,12 +531,12 @@ type Problem struct {
 	OwnerID        pgtype.UUID       `json:"owner_id"`
 	Visibility     ProblemVisibility `json:"visibility"`
 	ShortName      string            `json:"short_name"`
-	GitCommitHash  *string           `json:"git_commit_hash"`
 	CreatedAt      time.Time         `json:"created_at"`
 	UpdatedAt      time.Time         `json:"updated_at"`
 	TimeLimitMs    int32             `json:"time_limit_ms"`
 	MemoryLimitMb  int32             `json:"memory_limit_mb"`
 	Title          string            `json:"title"`
+	Manifest       []byte            `json:"manifest"`
 }
 
 type ProblemMember struct {
@@ -550,7 +550,6 @@ type ProblemPackage struct {
 	ID             uuid.UUID          `json:"id"`
 	ProblemID      uuid.UUID          `json:"problem_id"`
 	OrganizationID uuid.UUID          `json:"organization_id"`
-	GitCommitHash  string             `json:"git_commit_hash"`
 	PackageHash    string             `json:"package_hash"`
 	Url            *string            `json:"url"`
 	Status         PackageStatus      `json:"status"`

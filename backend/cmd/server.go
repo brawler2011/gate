@@ -100,28 +100,32 @@ func runServer(envFile string) {
 		Endpoint:  cfg.S3Endpoint,
 		AccessKey: cfg.S3AccessKey,
 		SecretKey: cfg.S3SecretKey,
-		Region:    cfg.S3Region,
+		Region:    defaultS3Region,
 	})
 	logger.Info("successfully initialized S3 client")
 
 	// Ensure S3 buckets exist
-	if err := s3Client.EnsureBucket(context.Background(), cfg.S3AvatarBucket); err != nil {
+	if err := s3Client.EnsureBucket(context.Background(), defaultS3AvatarBucket); err != nil {
 		logger.Warn("failed to ensure avatar bucket exists", slog.Any("error", err))
 	}
-	if err := s3Client.EnsureBucket(context.Background(), cfg.S3PackageBucket); err != nil {
+	if err := s3Client.EnsureBucket(context.Background(), defaultS3PackageBucket); err != nil {
 		logger.Warn("failed to ensure package bucket exists", slog.Any("error", err))
 	}
-	if err := s3Client.EnsureBucket(context.Background(), cfg.S3BlogBucket); err != nil {
+	if err := s3Client.EnsureBucket(context.Background(), defaultS3WorkshopBucket); err != nil {
+		logger.Warn("failed to ensure workshop bucket exists", slog.Any("error", err))
+	}
+	if err := s3Client.EnsureBucket(context.Background(), defaultS3BlogBucket); err != nil {
 		logger.Warn("failed to ensure blog bucket exists", slog.Any("error", err))
 	}
+	vcsService := vcs.NewS3Service(s3Client, defaultS3WorkshopBucket)
 
 	// Initialize use cases
 	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, txManager)
-	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, s3Client, cfg.S3AvatarBucket)
-	problemImportUC := usecase.NewProblemImportUseCase(cfg.WorkshopReposDir)
+	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, s3Client, defaultS3AvatarBucket)
+	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, vcsService)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(contestsRepo)
-	blogsUC := usecase.NewBlogsUseCase(blogsRepo, s3Client, cfg.S3BlogBucket)
+	blogsUC := usecase.NewBlogsUseCase(blogsRepo, s3Client, defaultS3BlogBucket)
 
 	// Initialize new permissions system with Organizations/Teams support
 	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC)
@@ -150,12 +154,9 @@ func runServer(envFile string) {
 	submissionsRepo := pg.NewSubmissionsRepo(pool)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
 
-	// Initialize Workshop components
-	vcsService := vcs.NewGoGitService(cfg.WorkshopReposDir)
-
 	// Initialize problem publish use case (depends on vcsService)
 	packagesRepo := pg.NewPackagesRepo(pool)
-	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, vcsService, s3Client, cfg.S3PackageBucket)
+	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, vcsService, s3Client, defaultS3PackageBucket)
 	sandboxClient, err := sandbox.NewClient(sandbox.ClientConfig{
 		Protocol: sandbox.ProtocolGRPC,
 		BaseURL:  cfg.GoJudgeGRPCAddr,

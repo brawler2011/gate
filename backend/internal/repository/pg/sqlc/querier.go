@@ -69,11 +69,12 @@ type Querier interface {
 	GetPostByID(ctx context.Context, id uuid.UUID) (Post, error)
 	GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemByIDRow, error)
 	GetProblemByShortName(ctx context.Context, arg GetProblemByShortNameParams) (GetProblemByShortNameRow, error)
+	GetProblemManifest(ctx context.Context, id uuid.UUID) ([]byte, error)
 	GetProblemMember(ctx context.Context, arg GetProblemMemberParams) (ProblemMember, error)
 	GetProblemPackageByHash(ctx context.Context, packageHash string) (ProblemPackage, error)
 	GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error)
+	GetProblemPackageByVersion(ctx context.Context, arg GetProblemPackageByVersionParams) (ProblemPackage, error)
 	GetProblemTeam(ctx context.Context, arg GetProblemTeamParams) (ProblemTeam, error)
-	GetProblemWorkshopStatus(ctx context.Context, id uuid.UUID) (GetProblemWorkshopStatusRow, error)
 	GetReadyPackage(ctx context.Context, problemID uuid.UUID) (ProblemPackage, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
@@ -131,8 +132,8 @@ type Querier interface {
 	UpdatePost(ctx context.Context, arg UpdatePostParams) error
 	UpdateProblem(ctx context.Context, arg UpdateProblemParams) error
 	// Workshop integration queries
-	UpdateProblemGitCommit(ctx context.Context, arg UpdateProblemGitCommitParams) error
 	UpdateProblemLimits(ctx context.Context, arg UpdateProblemLimitsParams) error
+	UpdateProblemManifest(ctx context.Context, arg UpdateProblemManifestParams) error
 	UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error
 	UpdateProblemTeamPermission(ctx context.Context, arg UpdateProblemTeamPermissionParams) error
 	UpdateSubmission(ctx context.Context, arg UpdateSubmissionParams) error

@@ -37,6 +37,7 @@ func NewS3Client(cfg S3Config) *S3Client {
 			cfg.SecretKey,
 			"",
 		),
+		RetryMaxAttempts: 5,
 		EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(
 			func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 				return aws.Endpoint{
@@ -46,6 +47,8 @@ func NewS3Client(cfg S3Config) *S3Client {
 				}, nil
 			},
 		),
+	}, func(o *s3.Options) {
+		o.UsePathStyle = true
 	})
 
 	return &S3Client{

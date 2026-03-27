@@ -19,7 +19,7 @@ type PackageItem = {
   id?: string;
   version?: number;
   status?: string;
-  git_commit_hash?: string;
+  package_hash?: string;
   created_at?: string;
   compiled_at?: string;
 };
@@ -121,7 +121,7 @@ export function WorkshopPackagesTab({ problemId }: Props) {
                 <Table.Tr>
                   <Table.Th>Версия</Table.Th>
                   <Table.Th>Статус</Table.Th>
-                  <Table.Th>Коммит</Table.Th>
+                  <Table.Th>Хеш пакета</Table.Th>
                   <Table.Th>Дата сборки</Table.Th>
                 </Table.Tr>
               </Table.Thead>
@@ -136,7 +136,7 @@ export function WorkshopPackagesTab({ problemId }: Props) {
                     </Table.Td>
                     <Table.Td>
                       <Text size="xs" ff="monospace" c="dimmed">
-                        {pkg.git_commit_hash?.slice(0, 8) ?? "—"}
+                        {pkg.package_hash?.slice(0, 12) ?? "—"}
                       </Text>
                     </Table.Td>
                     <Table.Td>

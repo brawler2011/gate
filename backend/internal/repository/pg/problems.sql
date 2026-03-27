@@ -6,14 +6,14 @@ VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetProblemByID :one
-SELECT id, organization_id, owner_id, visibility, title, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1;
+SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1;
 
 -- name: GetProblemByShortName :one
-SELECT id, organization_id, owner_id, visibility, title, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems 
+SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems
 WHERE organization_id = $1 AND short_name = $2;
 
 -- name: ListProblems :many
-SELECT id, organization_id, owner_id, visibility, title, short_name, git_commit_hash, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems
+SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems
 WHERE organization_id = $1
   AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::problem_visibility)
@@ -27,7 +27,7 @@ WHERE organization_id = $1
   AND ($3::text = '' OR visibility = $3::problem_visibility);
 
 -- name: ListAllProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
 WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR p.visibility = $2::problem_visibility)
 ORDER BY p.created_at DESC
@@ -42,8 +42,7 @@ WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
 UPDATE problems
 SET title = COALESCE(sqlc.narg('title'), title),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
-    owner_id = COALESCE(sqlc.narg('owner_id'), owner_id),
-    git_commit_hash = COALESCE(sqlc.narg('git_commit_hash'), git_commit_hash)
+    owner_id = COALESCE(sqlc.narg('owner_id'), owner_id)
 WHERE id = $1;
 
 -- name: DeleteProblem :exec
@@ -81,24 +80,20 @@ WHERE problem_id = $1 AND user_id = $2;
 SELECT user_has_problem_access($1, $2) as has_access;
 
 -- name: ListUserAccessibleProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.git_commit_hash, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
 WHERE user_has_problem_access($1, p.id)
 ORDER BY p.created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- Workshop integration queries
 
--- name: UpdateProblemGitCommit :exec
-UPDATE problems
-SET git_commit_hash = $2
-WHERE id = $1;
-
 -- name: UpdateProblemLimits :exec
 UPDATE problems
 SET time_limit_ms = $2, memory_limit_mb = $3
 WHERE id = $1;
 
--- name: GetProblemWorkshopStatus :one
-SELECT id, title, git_commit_hash, updated_at
-FROM problems
-WHERE id = $1;
+-- name: GetProblemManifest :one
+SELECT manifest FROM problems WHERE id = $1;
+
+-- name: UpdateProblemManifest :exec
+UPDATE problems SET manifest = $2 WHERE id = $1;

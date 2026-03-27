@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"time"
 
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
@@ -117,84 +116,6 @@ func (h *CoreServer) DeleteWorkshopFile(ctx context.Context, request corev1.Dele
 	}
 
 	return corev1.DeleteWorkshopFile200Response{}, nil
-}
-
-// CommitWorkshopChanges handles POST /problems/{problemId}/workshop/commit
-func (h *CoreServer) CommitWorkshopChanges(ctx context.Context, request corev1.CommitWorkshopChangesRequestObject) (corev1.CommitWorkshopChangesResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
-	authorName := user.Username
-	if request.Body.AuthorName != nil {
-		authorName = *request.Body.AuthorName
-	}
-
-	authorEmail := ""
-	if request.Body.AuthorEmail != nil {
-		authorEmail = *request.Body.AuthorEmail
-	}
-
-	commitSHA, err := h.workshopUC.CommitChanges(ctx, request.ProblemId, request.Body.Message, authorName, authorEmail)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to commit changes")
-	}
-
-	return corev1.CommitWorkshopChanges200JSONResponse{
-		CommitSha: strPtr(commitSHA),
-		Message:   strPtr("Changes committed successfully"),
-	}, nil
-}
-
-// GetWorkshopStatus handles GET /problems/{problemId}/workshop/status
-func (h *CoreServer) GetWorkshopStatus(ctx context.Context, request corev1.GetWorkshopStatusRequestObject) (corev1.GetWorkshopStatusResponseObject, error) {
-	status, err := h.workshopUC.GetWorkshopStatus(ctx, request.ProblemId)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get workshop status")
-	}
-
-	// Convert vcs.FileStatus to contract FileStatus
-	modifiedFiles := make([]corev1.FileStatus, len(status.ModifiedFiles))
-	for i, f := range status.ModifiedFiles {
-		modifiedFiles[i] = corev1.FileStatus{
-			Path:     strPtr(f.Path),
-			Staging:  strPtr(f.Staging),
-			Worktree: strPtr(f.Worktree),
-		}
-	}
-
-	return corev1.GetWorkshopStatus200JSONResponse{
-		CurrentSha:            strPtr(status.CurrentSHA),
-		HasUncommittedChanges: boolPtr(status.HasUncommittedChanges),
-		ModifiedFiles:         &modifiedFiles,
-	}, nil
-}
-
-// GetWorkshopHistory handles GET /problems/{problemId}/workshop/history
-func (h *CoreServer) GetWorkshopHistory(ctx context.Context, request corev1.GetWorkshopHistoryRequestObject) (corev1.GetWorkshopHistoryResponseObject, error) {
-	limit := 20
-	if request.Params.Limit != nil {
-		limit = *request.Params.Limit
-	}
-
-	commits, err := h.workshopUC.GetCommitHistory(ctx, request.ProblemId, limit)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get commit history")
-	}
-
-	// Convert vcs.Commit to contract Commit
-	contractCommits := make([]corev1.Commit, len(commits))
-	for i, c := range commits {
-		contractCommits[i] = corev1.Commit{
-			Author:    strPtr(c.Author),
-			Email:     strPtr(c.Email),
-			Message:   strPtr(c.Message),
-			Sha:       strPtr(c.SHA),
-			Timestamp: timePtr(c.Timestamp),
-		}
-	}
-
-	return corev1.GetWorkshopHistory200JSONResponse{
-		Commits: &contractCommits,
-	}, nil
 }
 
 // CompileProblemComponent handles POST /problems/{problemId}/workshop/components/{componentType}/compile
@@ -345,8 +266,4 @@ func int64Ptr(i int64) *int64 {
 
 func boolPtr(b bool) *bool {
 	return &b
-}
-
-func timePtr(t time.Time) *time.Time {
-	return &t
 }

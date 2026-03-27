@@ -32,7 +32,7 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
         if (file.is_directory && path !== STATEMENT_TAB) {
           if (!map.has(path)) map.set(path, []);
         }
-        // Root non-directory files (.gitignore, README.md, manifest.json) → general tab
+        // Root non-directory files (README.md, manifest.json) → general tab
         continue;
       }
       // File/dir inside a folder

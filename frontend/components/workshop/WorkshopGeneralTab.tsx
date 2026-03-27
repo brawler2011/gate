@@ -61,19 +61,10 @@ export function WorkshopGeneralTab({ problemId }: Props) {
   });
   const [isSavingReadme, startSavingReadme] = useTransition();
 
-  // .gitignore state
-  const [gitignore, setGitignore] = useState<RawFileState>({
-    content: "",
-    isDirty: false,
-    isLoading: false,
-  });
-  const [isSavingGitignore, startSavingGitignore] = useTransition();
-
   // Load all files on mount
   useEffect(() => {
     loadManifest();
     loadRawFile("README.md", setReadme);
-    loadRawFile(".gitignore", setGitignore);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problemId]);
 
@@ -337,56 +328,6 @@ export function WorkshopGeneralTab({ problemId }: Props) {
           </Stack>
         </SectionPaper>
 
-        {/* .gitignore */}
-        <SectionPaper title=".gitignore">
-          <Stack gap="sm">
-            {gitignore.isLoading ? (
-              <Text c="dimmed" size="sm">
-                Загрузка…
-              </Text>
-            ) : (
-              <Box>
-                <Textarea
-                  value={gitignore.content}
-                  onChange={(e) =>
-                    setGitignore((prev) => ({
-                      ...prev,
-                      content: e.currentTarget.value,
-                      isDirty: true,
-                    }))
-                  }
-                  minRows={5}
-                  maxRows={15}
-                  autosize
-                  styles={{
-                    input: {
-                      fontFamily: "var(--mantine-font-family-monospace)",
-                      fontSize: 13,
-                    },
-                  }}
-                />
-              </Box>
-            )}
-            <Group justify="flex-end">
-              <Button
-                size="sm"
-                variant="default"
-                disabled={!gitignore.isDirty}
-                loading={isSavingGitignore}
-                onClick={() =>
-                  handleSaveRaw(
-                    ".gitignore",
-                    gitignore.content,
-                    setGitignore,
-                    startSavingGitignore
-                  )
-                }
-              >
-                Сохранить .gitignore
-              </Button>
-            </Group>
-          </Stack>
-        </SectionPaper>
       </Stack>
     </ScrollArea>
   );

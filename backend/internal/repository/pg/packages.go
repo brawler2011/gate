@@ -26,7 +26,6 @@ func (r *PackagesRepo) CreatePackage(ctx context.Context, params *models.CreateP
 		ID:             params.ID,
 		ProblemID:      params.ProblemID,
 		OrganizationID: params.OrganizationID,
-		GitCommitHash:  params.GitCommitHash,
 		PackageHash:    params.PackageHash,
 		Status:         sqlc.PackageStatus(params.Status),
 	})
@@ -60,6 +59,17 @@ func (r *PackagesRepo) GetReadyPackage(ctx context.Context, problemID uuid.UUID)
 	return mapPackage(row), nil
 }
 
+func (r *PackagesRepo) GetPackageByVersion(ctx context.Context, problemID uuid.UUID, version int32) (models.ProblemPackage, error) {
+	row, err := r.queries.GetProblemPackageByVersion(ctx, sqlc.GetProblemPackageByVersionParams{
+		ProblemID: problemID,
+		Version:   version,
+	})
+	if err != nil {
+		return models.ProblemPackage{}, HandlePgErr(err)
+	}
+	return mapPackage(row), nil
+}
+
 func (r *PackagesRepo) UpdatePackageStatus(ctx context.Context, params *models.UpdatePackageStatusParams) error {
 	err := r.queries.UpdatePackageStatus(ctx, sqlc.UpdatePackageStatusParams{
 		ID:       params.ID,
@@ -79,7 +89,6 @@ func mapPackage(p sqlc.ProblemPackage) models.ProblemPackage {
 		ProblemID:      p.ProblemID,
 		OrganizationID: p.OrganizationID,
 		Version:        p.Version,
-		GitCommitHash:  p.GitCommitHash,
 		PackageHash:    p.PackageHash,
 		URL:            p.Url,
 		Status:         string(p.Status),
@@ -99,7 +108,7 @@ func init() {
 		CreatePackage(context.Context, *models.CreatePackageParams) (models.ProblemPackage, error)
 		ListPackages(context.Context, uuid.UUID, int32, int32) ([]models.ProblemPackage, error)
 		GetReadyPackage(context.Context, uuid.UUID) (models.ProblemPackage, error)
+		GetPackageByVersion(context.Context, uuid.UUID, int32) (models.ProblemPackage, error)
 		UpdatePackageStatus(context.Context, *models.UpdatePackageStatusParams) error
 	} = (*PackagesRepo)(nil)
 }
-

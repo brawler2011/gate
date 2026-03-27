@@ -79,13 +79,7 @@ KRATOS_ADMIN_URL=http://localhost:4434
 S3_ENDPOINT=                     # required
 S3_ACCESS_KEY=                   # required
 S3_SECRET_KEY=                   # required
-S3_REGION=us-east-1
-S3_AVATAR_BUCKET=avatars
-S3_PACKAGE_BUCKET=problem-packages
-S3_BLOG_BUCKET=blog-images
-
-# Problem workshop
-WORKSHOP_REPOS_DIR=./workshop-repos
+# Region and bucket names are fixed in backend defaults for SeaweedFS
 
 # go-judge
 GOJUDGE_GRPC_ADDR=localhost:5051

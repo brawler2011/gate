@@ -22,6 +22,8 @@ type ProblemsRepo interface {
 	ListProblems(ctx context.Context, filter *models.ProblemsFilter) ([]models.Problem, int32, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error
 	UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error
+	GetProblemManifest(ctx context.Context, id uuid.UUID) ([]byte, error)
+	UpdateProblemManifest(ctx context.Context, id uuid.UUID, manifest []byte) error
 }
 
 type ProblemsUC interface {

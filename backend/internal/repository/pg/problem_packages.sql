@@ -1,8 +1,8 @@
 -- Problem Packages queries
 
 -- name: CreateProblemPackage :one
-INSERT INTO problem_packages (id, problem_id, organization_id, git_commit_hash, package_hash, status, version)
-VALUES ($1, $2, $3, $4, $5, $6, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2))
+INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version)
+VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2))
 RETURNING *;
 
 -- name: GetProblemPackageByID :one
@@ -10,6 +10,9 @@ SELECT * FROM problem_packages WHERE id = $1;
 
 -- name: GetProblemPackageByHash :one
 SELECT * FROM problem_packages WHERE package_hash = $1;
+
+-- name: GetProblemPackageByVersion :one
+SELECT * FROM problem_packages WHERE problem_id = $1 AND version = $2;
 
 -- name: ListProblemPackages :many
 SELECT * FROM problem_packages

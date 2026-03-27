@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
@@ -36,76 +37,63 @@ func NewWorkshopUseCase(
 	}
 }
 
-// IsInitialized reports whether the workshop repository exists for a problem.
 func (uc *WorkshopUseCase) IsInitialized(ctx context.Context, problemID uuid.UUID) bool {
-	return uc.vcsService.RepoExists(ctx, problemID)
+	manifest, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
+	return err == nil && len(manifest) > 0
 }
 
-// InitProblemWorkshop creates Git repo and initial structure
 func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uuid.UUID, title string) error {
-	// Check if repo already exists
-	if uc.vcsService.RepoExists(ctx, problemID) {
+	if uc.IsInitialized(ctx, problemID) {
 		return fmt.Errorf("workshop already initialized for problem %s", problemID)
 	}
 
-	// Create Git repository
-	if err := uc.vcsService.InitProblemRepo(ctx, problemID); err != nil {
-		return fmt.Errorf("failed to init repo: %w", err)
+	defaultDirs := []string{"tests", "solutions", "checkers", "validators", "generators", "interactors", "media"}
+	for _, dir := range defaultDirs {
+		if err := uc.vcsService.CreateDirectory(ctx, problemID, dir); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
 	}
 
-	// Create default manifest.json
-	if err := uc.vcsService.InitDefaultManifest(ctx, problemID, title); err != nil {
-		return fmt.Errorf("failed to create manifest: %w", err)
+	if err := uc.vcsService.WriteFile(ctx, problemID, "README.md", []byte("# Problem\n\nThis is a problem workspace.\n")); err != nil {
+		return fmt.Errorf("failed to create README: %w", err)
 	}
 
-	// Create default tests/tests.json
-	if err := uc.vcsService.InitDefaultTestsMetadata(ctx, problemID); err != nil {
+	testsMeta := defaultTestsMetadata()
+	testsMetaBytes, err := json.MarshalIndent(testsMeta, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal default tests metadata: %w", err)
+	}
+	if err := uc.vcsService.WriteFile(ctx, problemID, "tests/tests.json", testsMetaBytes); err != nil {
 		return fmt.Errorf("failed to create tests metadata: %w", err)
 	}
 
-	// Create sample test files
-	if err := uc.vcsService.WriteFile(ctx, problemID, "tests/1.in", []byte("1 2\n")); err != nil {
+	if err := uc.vcsService.WriteFile(ctx, problemID, "tests/01.in", []byte("1 2\n")); err != nil {
 		return fmt.Errorf("failed to create sample input: %w", err)
 	}
-	if err := uc.vcsService.WriteFile(ctx, problemID, "tests/1.out", []byte("3\n")); err != nil {
+	if err := uc.vcsService.WriteFile(ctx, problemID, "tests/01.out", []byte("3\n")); err != nil {
 		return fmt.Errorf("failed to create sample output: %w", err)
 	}
 
-	// Commit initial structure
-	commitSHA, err := uc.vcsService.Commit(ctx, problemID, "Initialize problem structure", "System", "system@workshop")
-	if err != nil {
-		return fmt.Errorf("failed to commit initial structure: %w", err)
-	}
-
-	// Update problem in database with git commit hash and default limits from manifest
-	if err := uc.problemsRepo.UpdateProblem(ctx, problemID, &models.ProblemUpdate{
-		GitCommitHash: &commitSHA,
-	}); err != nil {
-		return fmt.Errorf("failed to update problem metadata: %w", err)
-	}
-
-	if err := uc.problemsRepo.UpdateProblemLimits(ctx, problemID, 1000, 256); err != nil {
-		return fmt.Errorf("failed to update problem limits: %w", err)
+	manifest := defaultManifest(title)
+	if err := uc.saveManifest(ctx, problemID, manifest); err != nil {
+		return fmt.Errorf("failed to save default manifest: %w", err)
 	}
 
 	return nil
 }
 
-// UpdateProblemFile updates file and validates manifest/components if needed
 func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.UpdateFileRequest) error {
-	// Write file
-	if err := uc.vcsService.WriteFile(ctx, req.ProblemID, req.Path, req.Content); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	// Validate and sync limits if it's manifest.json
 	if req.Path == "manifest.json" {
-		manifest, err := uc.vcsService.LoadManifest(ctx, req.ProblemID)
-		if err != nil {
+		var manifest problemformat.ProblemManifest
+		if err := json.Unmarshal(req.Content, &manifest); err != nil {
 			return fmt.Errorf("invalid manifest.json: %w", err)
 		}
-		if err := uc.problemsRepo.UpdateProblemLimits(ctx, req.ProblemID, manifest.TimeLimitMs, manifest.MemoryLimitMb); err != nil {
-			return fmt.Errorf("failed to sync problem limits: %w", err)
+		if err := problemformat.ValidateManifest(&manifest); err != nil {
+			return fmt.Errorf("invalid manifest.json: %w", err)
+		}
+
+		if err := uc.saveManifest(ctx, req.ProblemID, &manifest); err != nil {
+			return fmt.Errorf("failed to update manifest: %w", err)
 		}
 
 		title := strings.TrimSpace(manifest.Statement.Title)
@@ -114,89 +102,65 @@ func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.Upd
 			if err != nil {
 				return fmt.Errorf("failed to get problem for title sync: %w", err)
 			}
-
-			currentTitle := strings.TrimSpace(problem.Title)
-			if currentTitle != title {
+			if strings.TrimSpace(problem.Title) != title {
 				if err := uc.problemsRepo.UpdateProblem(ctx, req.ProblemID, &models.ProblemUpdate{Title: &title}); err != nil {
 					return fmt.Errorf("failed to sync problem title: %w", err)
 				}
 			}
 		}
+
+		return nil
+	}
+
+	if err := uc.vcsService.WriteFile(ctx, req.ProblemID, req.Path, req.Content); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
 	}
 
 	return nil
 }
 
-// DeleteProblemFile deletes a file from the repository
 func (uc *WorkshopUseCase) DeleteProblemFile(ctx context.Context, problemID uuid.UUID, path string) error {
+	if path == "manifest.json" {
+		return fmt.Errorf("manifest.json cannot be deleted")
+	}
 	return uc.vcsService.DeleteFile(ctx, problemID, path)
 }
 
-// ReadProblemFile reads a file from the repository
 func (uc *WorkshopUseCase) ReadProblemFile(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error) {
+	if path == "manifest.json" {
+		manifestBytes, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
+		if err != nil {
+			return nil, err
+		}
+		if len(manifestBytes) == 0 {
+			return nil, fmt.Errorf("manifest.json not found")
+		}
+		return manifestBytes, nil
+	}
 	return uc.vcsService.ReadFile(ctx, problemID, path)
 }
 
-// ListProblemFiles lists files in a directory
 func (uc *WorkshopUseCase) ListProblemFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]vcs.FileEntry, error) {
-	return uc.vcsService.ListFiles(ctx, problemID, dirPath)
-}
-
-// CommitChanges commits changes to the repository
-func (uc *WorkshopUseCase) CommitChanges(ctx context.Context, problemID uuid.UUID, message, authorName, authorEmail string) (string, error) {
-	commitSHA, err := uc.vcsService.Commit(ctx, problemID, message, authorName, authorEmail)
-	if err != nil {
-		return "", fmt.Errorf("failed to commit: %w", err)
-	}
-
-	// Update problem in database
-	if err := uc.problemsRepo.UpdateProblem(ctx, problemID, &models.ProblemUpdate{
-		GitCommitHash: &commitSHA,
-	}); err != nil {
-		return "", fmt.Errorf("failed to update problem metadata: %w", err)
-	}
-
-	return commitSHA, nil
-}
-
-// GetWorkshopStatus returns the current status of the workshop
-func (uc *WorkshopUseCase) GetWorkshopStatus(ctx context.Context, problemID uuid.UUID) (*models.WorkshopStatus, error) {
-	fileStatuses, err := uc.vcsService.GetStatus(ctx, problemID)
+	files, err := uc.vcsService.ListFiles(ctx, problemID, dirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	currentSHA, err := uc.vcsService.GetCurrentSHA(ctx, problemID)
-	if err != nil {
-		return nil, err
+	if dirPath == "" || dirPath == "." {
+		if uc.IsInitialized(ctx, problemID) {
+			files = append(files, vcs.FileEntry{Path: "manifest.json", IsDirectory: false, Size: 0})
+		}
 	}
 
-	hasChanges, err := uc.vcsService.HasUncommittedChanges(ctx, problemID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &models.WorkshopStatus{
-		CurrentSHA:            currentSHA,
-		ModifiedFiles:         fileStatuses,
-		HasUncommittedChanges: hasChanges,
-	}, nil
+	return files, nil
 }
 
-// GetCommitHistory returns the commit history
-func (uc *WorkshopUseCase) GetCommitHistory(ctx context.Context, problemID uuid.UUID, limit int) ([]vcs.Commit, error) {
-	return uc.vcsService.GetHistory(ctx, problemID, limit)
-}
-
-// CompileProblemComponent compiles checker/validator/generator and caches binary
 func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req models.CompileComponentRequest) (*models.CompileResult, error) {
-	// Load manifest to find component
-	manifest, err := uc.vcsService.LoadManifest(ctx, req.ProblemID)
+	manifest, err := uc.loadManifest(ctx, req.ProblemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load manifest: %w", err)
 	}
 
-	// Find component metadata
 	var componentMeta *problemformat.FileMetadata
 	for i := range manifest.FilesMetadata {
 		if manifest.FilesMetadata[i].Type == req.ComponentType {
@@ -209,13 +173,11 @@ func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req mode
 		return nil, fmt.Errorf("component %s not found in manifest", req.ComponentType)
 	}
 
-	// Read source code
 	sourceCode, err := uc.vcsService.ReadFile(ctx, req.ProblemID, componentMeta.Filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read source file: %w", err)
 	}
 
-	// Load dependencies
 	dependencies := make(map[string]string)
 	for _, dep := range componentMeta.Dependencies {
 		depPath := filepath.Join(filepath.Dir(componentMeta.Filename), dep.Filename)
@@ -226,19 +188,14 @@ func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req mode
 		dependencies[dep.Filename] = string(depContent)
 	}
 
-	// Compile via sandbox
 	binary, err := uc.sandboxOrch.CompileComponentFromSource(ctx,
 		req.ComponentType,
 		string(sourceCode),
 		componentMeta.Compiler,
 		dependencies,
 	)
-
 	if err != nil {
-		return &models.CompileResult{
-			Success:      false,
-			CompileError: err.Error(),
-		}, nil
+		return &models.CompileResult{Success: false, CompileError: err.Error()}, nil
 	}
 
 	if !binary.Success {
@@ -249,11 +206,10 @@ func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req mode
 		}, nil
 	}
 
-	// Update manifest with binary SHA256
 	sha256Hash := sandbox.ComputeSHA256([]byte(binary.FileID))
 	componentMeta.BinarySha256 = &sha256Hash
 
-	if err := uc.vcsService.SaveManifest(ctx, req.ProblemID, manifest); err != nil {
+	if err := uc.saveManifest(ctx, req.ProblemID, manifest); err != nil {
 		return nil, fmt.Errorf("failed to update manifest: %w", err)
 	}
 
@@ -265,15 +221,12 @@ func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req mode
 	}, nil
 }
 
-// GenerateTests runs generator and creates test files
 func (uc *WorkshopUseCase) GenerateTests(ctx context.Context, req models.GenerateTestsRequest) error {
-	// Load manifest
-	manifest, err := uc.vcsService.LoadManifest(ctx, req.ProblemID)
+	manifest, err := uc.loadManifest(ctx, req.ProblemID)
 	if err != nil {
 		return fmt.Errorf("failed to load manifest: %w", err)
 	}
 
-	// Find generator component
 	var generatorMeta *problemformat.FileMetadata
 	for i := range manifest.FilesMetadata {
 		meta := &manifest.FilesMetadata[i]
@@ -287,25 +240,19 @@ func (uc *WorkshopUseCase) GenerateTests(ctx context.Context, req models.Generat
 		return fmt.Errorf("generator %s not found", req.GeneratorName)
 	}
 
-	// Check if generator is compiled
 	if generatorMeta.BinarySha256 == nil || *generatorMeta.BinarySha256 == "" {
 		return fmt.Errorf("generator not compiled, please compile first")
 	}
 
-	// For now, we'll need the compiled fileID - this would come from a cache
-	// In a real implementation, we'd store the fileID somewhere
 	return fmt.Errorf("test generation not yet fully implemented - need fileID caching")
 }
 
-// ValidateAllTests runs validator on all test inputs
 func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.UUID, userID uuid.UUID) (*models.ValidationReport, error) {
-	// Load manifest
-	manifest, err := uc.vcsService.LoadManifest(ctx, problemID)
+	manifest, err := uc.loadManifest(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load manifest: %w", err)
 	}
 
-	// Find validator component
 	var validatorMeta *problemformat.FileMetadata
 	for i := range manifest.FilesMetadata {
 		if manifest.FilesMetadata[i].Type == "validator" {
@@ -315,14 +262,9 @@ func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.
 	}
 
 	if validatorMeta == nil {
-		return &models.ValidationReport{
-			TotalTests: 0,
-			ValidTests: 0,
-			Results:    []models.TestValidationResult{},
-		}, nil // No validator = all tests considered valid
+		return &models.ValidationReport{TotalTests: 0, ValidTests: 0, Results: []models.TestValidationResult{}}, nil
 	}
 
-	// Load tests metadata
 	testsMetaData, err := uc.vcsService.ReadFile(ctx, problemID, "tests/tests.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read tests metadata: %w", err)
@@ -333,17 +275,11 @@ func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.
 		return nil, fmt.Errorf("failed to parse tests metadata: %w", err)
 	}
 
-	// Validate each test (simplified - actual implementation would use sandbox)
-	report := &models.ValidationReport{
-		TotalTests: len(testsMeta.Tests),
-		Results:    make([]models.TestValidationResult, 0),
-	}
+	report := &models.ValidationReport{TotalTests: len(testsMeta.Tests), Results: make([]models.TestValidationResult, 0)}
 
 	for _, test := range testsMeta.Tests {
-		// Check if test files exist
 		inputPath := fmt.Sprintf("tests/%02d.in", test.Ordinal)
 		_, err := uc.vcsService.ReadFile(ctx, problemID, inputPath)
-		// FIXME: Where is validation of %02d.out??? This should validate both .in and .out
 
 		if err != nil {
 			report.Results = append(report.Results, models.TestValidationResult{
@@ -365,25 +301,20 @@ func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.
 	return report, nil
 }
 
-// TestSolution compiles and runs solution against tests
 func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolutionRequest) (*models.TestReport, error) {
-	// Load manifest for limits
-	manifest, err := uc.vcsService.LoadManifest(ctx, req.ProblemID)
+	manifest, err := uc.loadManifest(ctx, req.ProblemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load manifest: %w", err)
 	}
 
-	// Read solution
 	solutionCode, err := uc.vcsService.ReadFile(ctx, req.ProblemID, req.SolutionPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read solution: %w", err)
 	}
 
-	// Detect language from extension
 	ext := filepath.Ext(req.SolutionPath)
 	language := detectLanguage(ext)
 
-	// Load tests
 	testsMetaData, err := uc.vcsService.ReadFile(ctx, req.ProblemID, "tests/tests.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read tests metadata: %w", err)
@@ -394,13 +325,9 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 		return nil, fmt.Errorf("failed to parse tests metadata: %w", err)
 	}
 
-	// Run tests
-	report := &models.TestReport{
-		Results: make([]models.TestResult, 0),
-	}
+	report := &models.TestReport{Results: make([]models.TestResult, 0)}
 
 	for _, test := range testsMeta.Tests {
-		// Skip if test numbers specified and this test not in list
 		if len(req.TestNumbers) > 0 {
 			found := false
 			for _, num := range req.TestNumbers {
@@ -416,7 +343,6 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 
 		report.TotalTests++
 
-		// Read test input and answer
 		inputPath := fmt.Sprintf("tests/%02d.in", test.Ordinal)
 		answerPath := fmt.Sprintf("tests/%02d.out", test.Ordinal)
 
@@ -442,7 +368,6 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 			continue
 		}
 
-		// Judge solution
 		judgeReq := sandbox.JudgeSolutionRequest{
 			SolutionCode:     string(solutionCode),
 			SolutionLanguage: language,
@@ -483,7 +408,83 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 	return report, nil
 }
 
-// detectLanguage detects programming language from file extension
+func (uc *WorkshopUseCase) loadManifest(ctx context.Context, problemID uuid.UUID) (*problemformat.ProblemManifest, error) {
+	manifestBytes, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load manifest from database: %w", err)
+	}
+	if len(manifestBytes) == 0 {
+		return nil, fmt.Errorf("manifest.json not found")
+	}
+
+	var manifest problemformat.ProblemManifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return nil, fmt.Errorf("failed to parse manifest.json: %w", err)
+	}
+
+	return &manifest, nil
+}
+
+func (uc *WorkshopUseCase) saveManifest(ctx context.Context, problemID uuid.UUID, manifest *problemformat.ProblemManifest) error {
+	manifest.LastUpdated = time.Now()
+
+	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	if err := uc.problemsRepo.UpdateProblemManifest(ctx, problemID, manifestBytes); err != nil {
+		return fmt.Errorf("failed to save manifest to database: %w", err)
+	}
+
+	return nil
+}
+
+func defaultManifest(title string) *problemformat.ProblemManifest {
+	return &problemformat.ProblemManifest{
+		LastUpdated:     time.Now(),
+		ProblemType:     "pass-fail",
+		MaxScore:        nil,
+		FilesMetadata:   []problemformat.FileMetadata{},
+		TimeLimitMs:     1000,
+		MemoryLimitMb:   256,
+		StdoutLimitMb:   64,
+		CodeSizeLimitKb: 256,
+		Statement: problemformat.Statement{
+			Title:        title,
+			Legend:       "Problem description goes here.",
+			InputFormat:  "Input format description.",
+			OutputFormat: "Output format description.",
+			Notes:        "",
+			Interaction:  "",
+			Scoring:      "",
+		},
+	}
+}
+
+func defaultTestsMetadata() *problemformat.TestsMetadata {
+	return &problemformat.TestsMetadata{
+		Groups: []problemformat.TestGroup{
+			{
+				Ordinal:      0,
+				Name:         "Samples",
+				Points:       0,
+				PointsPolicy: "complete-group",
+				DependsOn:    []int{},
+				Tests:        [2]int{1, 1},
+			},
+		},
+		Tests: []problemformat.TestCase{
+			{
+				Ordinal:   1,
+				Method:    "manual",
+				Generator: nil,
+				IsSample:  true,
+			},
+		},
+	}
+}
+
 func detectLanguage(ext string) string {
 	switch ext {
 	case ".cpp", ".cc", ".cxx":

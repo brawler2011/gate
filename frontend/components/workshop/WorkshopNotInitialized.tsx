@@ -2,7 +2,7 @@
 
 import { Button, Center, Stack, Text, Title } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconGitCommit } from "@tabler/icons-react";
+import { IconFolderPlus } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { initProblemWorkshop } from "@/lib/actions";
@@ -28,7 +28,7 @@ export function WorkshopNotInitialized({ problemId }: Props) {
       }
       notifications.show({
         title: "Воркшоп создан",
-        message: "Репозиторий задачи успешно инициализирован",
+        message: "Рабочее пространство задачи успешно инициализировано",
         color: "green",
       });
       router.refresh();
@@ -38,13 +38,13 @@ export function WorkshopNotInitialized({ problemId }: Props) {
   return (
     <Center style={{ flex: 1, height: "calc(100vh - 120px)" }}>
       <Stack align="center" gap="md">
-        <IconGitCommit size={48} color="var(--mantine-color-dimmed)" />
+        <IconFolderPlus size={48} color="var(--mantine-color-dimmed)" />
         <Title order={3} c="dimmed">
           Воркшоп не инициализирован
         </Title>
         <Text size="sm" c="dimmed" ta="center" maw={360}>
-          Для этой задачи ещё не создан git-репозиторий. Нажмите кнопку ниже,
-          чтобы создать начальную структуру файлов.
+          Для этой задачи ещё не создано рабочее пространство. Нажмите кнопку
+          ниже, чтобы создать начальную структуру файлов.
         </Text>
         <Button loading={isPending} onClick={handleInit}>
           Инициализировать воркшоп

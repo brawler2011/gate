@@ -4,13 +4,19 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/packagegen"
+	"github.com/gate149/gate/backend/pkg/problemformat"
 	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/google/uuid"
 )
@@ -54,14 +60,53 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 		return nil, fmt.Errorf("failed to get problem: %w", err)
 	}
 
-	gitHash, err := uc.vcsService.GetCurrentSHA(ctx, problemID)
+	manifestBytes, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get git commit hash: %w", err)
+		return nil, fmt.Errorf("failed to get problem manifest: %w", err)
+	}
+	if len(manifestBytes) == 0 {
+		return nil, fmt.Errorf("problem manifest is not initialized")
 	}
 
-	problemDir := uc.vcsService.GetRepoPath(problemID)
+	var manifest problemformat.ProblemManifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return nil, fmt.Errorf("failed to parse manifest: %w", err)
+	}
 
-	builtPkg, err := packagegen.BuildPackage(problemDir)
+	tempDir, err := os.MkdirTemp("", "problem-publish-*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	if err := os.WriteFile(filepath.Join(tempDir, "manifest.json"), manifestBytes, 0o644); err != nil {
+		return nil, fmt.Errorf("failed to write manifest.json: %w", err)
+	}
+
+	workspaceFiles, err := uc.vcsService.ListAllFiles(ctx, problemID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workspace files: %w", err)
+	}
+
+	for _, filePath := range workspaceFiles {
+		if filePath == "manifest.json" {
+			continue
+		}
+		content, err := uc.vcsService.ReadFile(ctx, problemID, filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read workspace file %s: %w", filePath, err)
+		}
+
+		fullPath := filepath.Join(tempDir, filePath)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			return nil, fmt.Errorf("failed to create parent directory for %s: %w", filePath, err)
+		}
+		if err := os.WriteFile(fullPath, content, 0o644); err != nil {
+			return nil, fmt.Errorf("failed to write workspace file %s: %w", filePath, err)
+		}
+	}
+
+	builtPkg, err := packagegen.BuildPackage(tempDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build package: %w", err)
 	}
@@ -78,22 +123,7 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 	zipBytes := zipBuffer.Bytes()
 	hashBytes := sha256.Sum256(zipBytes)
 	packageHash := fmt.Sprintf("%x", hashBytes)
-
-	packageID := uuid.New()
-	created, err := uc.packagesRepo.CreatePackage(ctx, &models.CreatePackageParams{
-		ID:             packageID,
-		ProblemID:      problemID,
-		OrganizationID: problem.OrganizationID,
-		GitCommitHash:  gitHash,
-		PackageHash:    packageHash,
-		Status:         "building",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create package record: %w", err)
-	}
-
-	versionStr := fmt.Sprintf("v%d", created.Version)
-	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID.String(), versionStr)
+	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID.String(), packageHash)
 	uploadErr := uc.s3Client.UploadFile(
 		ctx,
 		uc.packageBucket,
@@ -101,23 +131,25 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 		bytes.NewReader(zipBytes),
 		"application/zip",
 	)
+	if uploadErr != nil {
+		return nil, fmt.Errorf("failed to upload package to S3: %w", uploadErr)
+	}
+
+	packageID := uuid.New()
+	created, err := uc.packagesRepo.CreatePackage(ctx, &models.CreatePackageParams{
+		ID:             packageID,
+		ProblemID:      problemID,
+		OrganizationID: problem.OrganizationID,
+		PackageHash:    packageHash,
+		Status:         "building",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create package record: %w", err)
+	}
 
 	// Use a background context for status updates so they are never cancelled
 	// by the incoming request context (e.g. client disconnect or deadline).
 	bgCtx := context.Background()
-
-	if uploadErr != nil {
-		buildLog := uploadErr.Error()
-		updateErr := uc.packagesRepo.UpdatePackageStatus(bgCtx, &models.UpdatePackageStatusParams{
-			ID:       packageID,
-			Status:   "failed",
-			BuildLog: &buildLog,
-		})
-		if updateErr != nil {
-			return nil, fmt.Errorf("failed to upload package to S3 (%w) and failed to update package status: %v", uploadErr, updateErr)
-		}
-		return nil, fmt.Errorf("failed to upload package to S3: %w", uploadErr)
-	}
 
 	if err := uc.packagesRepo.UpdatePackageStatus(bgCtx, &models.UpdatePackageStatusParams{
 		ID:     packageID,
@@ -125,14 +157,6 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 		URL:    nil,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to update package status to ready: %w", err)
-	}
-
-	// Update the problems table so the judge knows which version to load.
-	// problems.git_commit_hash stores the version key used as the S3 filename.
-	if err := uc.problemsRepo.UpdateProblem(bgCtx, problemID, &models.ProblemUpdate{
-		GitCommitHash: &versionStr,
-	}); err != nil {
-		return nil, fmt.Errorf("failed to update problem git commit hash: %w", err)
 	}
 
 	return &PublishResult{
@@ -155,7 +179,18 @@ func (uc *ProblemPublishUseCase) GetPublishedPackageURL(
 	problemID uuid.UUID,
 	version string,
 ) (string, error) {
-	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID.String(), version)
+	version = strings.TrimPrefix(version, "v")
+	versionNum, err := strconv.ParseInt(version, 10, 32)
+	if err != nil {
+		return "", fmt.Errorf("invalid version: %w", err)
+	}
+
+	pkgVersion, err := uc.packagesRepo.GetPackageByVersion(ctx, problemID, int32(versionNum))
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve package version: %w", err)
+	}
+
+	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID.String(), pkgVersion.PackageHash)
 	packageURL, err := uc.s3Client.GetPresignedURL(ctx, uc.packageBucket, s3Key, 1*time.Hour)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate package URL: %w", err)

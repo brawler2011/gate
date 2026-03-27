@@ -78,14 +78,14 @@ func runJudge(cmd *cobra.Command, args []string) {
 
 	// Initialize repositories
 	submissionsRepo := pg.NewSubmissionsRepo(pool)
-	problemsRepo := pg.NewProblemsRepo(pool)
+	packagesRepo := pg.NewPackagesRepo(pool)
 
 	// Initialize S3 client
 	s3Client := pkg.NewS3Client(pkg.S3Config{
 		Endpoint:  cfg.S3Endpoint,
 		AccessKey: cfg.S3AccessKey,
 		SecretKey: cfg.S3SecretKey,
-		Region:    cfg.S3Region,
+		Region:    defaultS3Region,
 	})
 	logger.Info("successfully initialized S3 client", slog.String("endpoint", cfg.S3Endpoint))
 
@@ -120,9 +120,9 @@ func runJudge(cmd *cobra.Command, args []string) {
 	// Create judge use case
 	judgeUC := usecase.NewJudgeUseCase(
 		submissionsRepo,
-		problemsRepo,
+		packagesRepo,
 		s3Client,
-		cfg.S3PackageBucket,
+		defaultS3PackageBucket,
 		cfg.JudgeTempDir,
 		sandboxClient,
 		eventPublisher,

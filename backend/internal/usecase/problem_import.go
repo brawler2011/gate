@@ -3,205 +3,251 @@ package usecase
 import (
 	"archive/zip"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
 
-	"github.com/gate149/gate/backend/pkg/parsers"
+	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/pkg/problemformat"
+	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/google/uuid"
 )
 
+var testFileRegexp = regexp.MustCompile(`^(\d+)\.(in|out|ans)$`)
+
 type ProblemImportUseCase struct {
-	workshopReposDir string
+	problemsRepo interfaces.ProblemsRepo
+	vcsService   vcs.Service
 }
 
-func NewProblemImportUseCase(workshopReposDir string) *ProblemImportUseCase {
-	return &ProblemImportUseCase{
-		workshopReposDir: workshopReposDir,
-	}
+func NewProblemImportUseCase(problemsRepo interfaces.ProblemsRepo, vcsService vcs.Service) *ProblemImportUseCase {
+	return &ProblemImportUseCase{problemsRepo: problemsRepo, vcsService: vcsService}
 }
 
-// ImportProblemPackage imports a problem package (ZIP) and converts it to unified format
-func (uc *ProblemImportUseCase) ImportProblemPackage(
-	ctx context.Context,
-	zipReader io.ReaderAt,
-	zipSize int64,
-	problemID uuid.UUID,
-) (string, error) {
-	// Create temporary directory for extraction
+func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*problemformat.ProblemPackage, error) {
 	tempDir, err := os.MkdirTemp("", "problem-import-*")
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp directory: %w", err)
+		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Extract ZIP
-	err = extractZip(zipReader, zipSize, tempDir)
+	zipPath := filepath.Join(tempDir, "package.zip")
+	zipFile, err := os.Create(zipPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract ZIP: %w", err)
+		return nil, fmt.Errorf("failed to create temp zip file: %w", err)
 	}
 
-	// Detect format and parse
-	manifest, testsMetadata, format, err := parsers.ParsePackage(tempDir)
+	if _, err := io.Copy(zipFile, zipReader); err != nil {
+		zipFile.Close()
+		return nil, fmt.Errorf("failed to copy zip content: %w", err)
+	}
+	zipFile.Close()
+
+	r, err := zip.OpenReader(zipPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse package: %w", err)
+		return nil, fmt.Errorf("failed to open zip file: %w", err)
+	}
+	defer r.Close()
+
+	if err := extractZip(&r.Reader, tempDir); err != nil {
+		return nil, fmt.Errorf("failed to extract zip: %w", err)
 	}
 
-	// Create problem directory in workshop
-	problemDir := filepath.Join(uc.workshopReposDir, problemID.String())
-	if err := os.MkdirAll(problemDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create problem directory: %w", err)
-	}
-
-	// Save manifest
-	if err := problemformat.SaveManifest(problemDir, manifest); err != nil {
-		return "", fmt.Errorf("failed to save manifest: %w", err)
-	}
-
-	// Save tests metadata
-	if err := problemformat.SaveTestsMetadata(problemDir, testsMetadata); err != nil {
-		return "", fmt.Errorf("failed to save tests metadata: %w", err)
-	}
-
-	// Copy test files
-	err = copyTestFiles(tempDir, problemDir, format)
+	manifest, err := problemformat.LoadManifest(tempDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to copy test files: %w", err)
+		return nil, fmt.Errorf("failed to load manifest: %w", err)
 	}
 
-	// Copy executable files (checkers, validators, etc.)
-	err = copyExecutableFiles(tempDir, problemDir, manifest.FilesMetadata)
+	if err := problemformat.ValidateManifest(manifest); err != nil {
+		return nil, fmt.Errorf("invalid manifest: %w", err)
+	}
+
+	testsMetadata, err := problemformat.LoadTestsMetadata(tempDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to copy executable files: %w", err)
+		return nil, fmt.Errorf("failed to load tests metadata: %w", err)
 	}
 
-	return format, nil
+	format := detectPackageFormat(tempDir)
+
+	workspaceDir := filepath.Join(tempDir, "workspace")
+	if err := os.MkdirAll(workspaceDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create workspace dir: %w", err)
+	}
+
+	if err := problemformat.SaveTestsMetadata(workspaceDir, testsMetadata); err != nil {
+		return nil, fmt.Errorf("failed to save tests metadata: %w", err)
+	}
+
+	if err := copyTestFiles(tempDir, workspaceDir, format); err != nil {
+		return nil, fmt.Errorf("failed to copy test files: %w", err)
+	}
+
+	if err := copyExecutableFiles(tempDir, workspaceDir, manifest); err != nil {
+		return nil, fmt.Errorf("failed to copy executable files: %w", err)
+	}
+
+	if err := uc.vcsService.DeleteProblemWorkspace(ctx, problemID); err != nil {
+		return nil, fmt.Errorf("failed to clear existing workspace: %w", err)
+	}
+
+	for _, dir := range []string{"tests", "solutions", "checkers", "validators", "generators", "interactors", "media"} {
+		if err := uc.vcsService.CreateDirectory(ctx, problemID, dir); err != nil {
+			return nil, fmt.Errorf("failed to create workspace directory %s: %w", dir, err)
+		}
+	}
+
+	err = filepath.WalkDir(workspaceDir, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		rel, err := filepath.Rel(workspaceDir, path)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		return uc.vcsService.WriteFile(ctx, problemID, rel, content)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload workspace files: %w", err)
+	}
+
+	manifest.LastUpdated = time.Now()
+	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	if err := uc.problemsRepo.UpdateProblemManifest(ctx, problemID, manifestBytes); err != nil {
+		return nil, fmt.Errorf("failed to save manifest to database: %w", err)
+	}
+
+	return &problemformat.ProblemPackage{Manifest: *manifest, TestsMetadata: *testsMetadata}, nil
 }
 
-func extractZip(reader io.ReaderAt, size int64, destDir string) error {
-	zipReader, err := zip.NewReader(reader, size)
-	if err != nil {
-		return fmt.Errorf("failed to open ZIP: %w", err)
-	}
-
-	for _, file := range zipReader.File {
-		err := extractZipFile(file, destDir)
-		if err != nil {
-			return fmt.Errorf("failed to extract file %s: %w", file.Name, err)
+func extractZip(r *zip.Reader, destDir string) error {
+	for _, f := range r.File {
+		if strings.HasPrefix(f.Name, "../") || strings.Contains(f.Name, "..\\") {
+			return fmt.Errorf("invalid file path in zip: %s", f.Name)
 		}
+
+		path := filepath.Join(destDir, f.Name)
+
+		if f.FileInfo().IsDir() {
+			if err := os.MkdirAll(path, f.Mode()); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return err
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+
+		out, err := os.Create(path)
+		if err != nil {
+			rc.Close()
+			return err
+		}
+
+		if _, err := io.Copy(out, rc); err != nil {
+			out.Close()
+			rc.Close()
+			return err
+		}
+
+		out.Close()
+		rc.Close()
 	}
 
 	return nil
 }
 
-func extractZipFile(file *zip.File, destDir string) error {
-	filePath := filepath.Join(destDir, file.Name)
-
-	// Check for ZipSlip vulnerability
-	if !filepath.HasPrefix(filePath, filepath.Clean(destDir)+string(os.PathSeparator)) {
-		return fmt.Errorf("illegal file path: %s", file.Name)
+func detectPackageFormat(extractedDir string) string {
+	if _, err := os.Stat(filepath.Join(extractedDir, "data", "secret")); err == nil {
+		return "polygon"
 	}
 
-	if file.FileInfo().IsDir() {
-		return os.MkdirAll(filePath, file.Mode())
+	if _, err := os.Stat(filepath.Join(extractedDir, "tests", "tests.json")); err == nil {
+		return "native"
 	}
 
-	// Create parent directories
-	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-		return err
-	}
-
-	// Extract file
-	destFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	srcFile, err := file.Open()
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	_, err = io.Copy(destFile, srcFile)
-	return err
+	return "unknown"
 }
 
-func copyTestFiles(srcDir, destDir string, format string) error {
-	testsDir := filepath.Join(destDir, "tests")
-	if err := os.MkdirAll(testsDir, 0755); err != nil {
-		return err
-	}
+func copyTestFiles(sourceDir, targetDir, format string) error {
+	var testFiles []string
 
-	var srcTestsDir string
-	if format == "polygon" {
-		srcTestsDir = filepath.Join(srcDir, "tests")
-	} else if format == "icpc" {
-		// ICPC has data/sample and data/secret
-		// Copy from both directories
-		sampleDir := filepath.Join(srcDir, "data", "sample")
-		secretDir := filepath.Join(srcDir, "data", "secret")
+	switch format {
+	case "polygon":
+		testsDir := filepath.Join(sourceDir, "data", "secret")
+		entries, err := os.ReadDir(testsDir)
+		if err != nil {
+			return err
+		}
 
-		testNum := 1
-		// Copy sample tests
-		if entries, err := os.ReadDir(sampleDir); err == nil {
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-				name := entry.Name()
-				if filepath.Ext(name) == ".in" {
-					baseName := name[:len(name)-3]
-					// Copy .in file
-					copyFile(filepath.Join(sampleDir, name), filepath.Join(testsDir, fmt.Sprintf("%02d.in", testNum)))
-					// Copy .ans file as .out
-					copyFile(filepath.Join(sampleDir, baseName+".ans"), filepath.Join(testsDir, fmt.Sprintf("%02d.out", testNum)))
-					testNum++
-				}
+		for _, entry := range entries {
+			if !entry.IsDir() && testFileRegexp.MatchString(entry.Name()) {
+				testFiles = append(testFiles, entry.Name())
 			}
 		}
 
-		// Copy secret tests
-		if entries, err := os.ReadDir(secretDir); err == nil {
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-				name := entry.Name()
-				if filepath.Ext(name) == ".in" {
-					baseName := name[:len(name)-3]
-					// Copy .in file
-					copyFile(filepath.Join(secretDir, name), filepath.Join(testsDir, fmt.Sprintf("%02d.in", testNum)))
-					// Copy .ans file as .out
-					copyFile(filepath.Join(secretDir, baseName+".ans"), filepath.Join(testsDir, fmt.Sprintf("%02d.out", testNum)))
-					testNum++
-				}
+	case "native":
+		testsDir := filepath.Join(sourceDir, "tests")
+		entries, err := os.ReadDir(testsDir)
+		if err != nil {
+			return err
+		}
+
+		for _, entry := range entries {
+			if !entry.IsDir() && testFileRegexp.MatchString(entry.Name()) {
+				testFiles = append(testFiles, entry.Name())
 			}
 		}
 
-		return nil
+	default:
+		return fmt.Errorf("unsupported package format: %s", format)
 	}
 
-	// Copy test files from source directory
-	if _, err := os.Stat(srcTestsDir); os.IsNotExist(err) {
-		return nil // No tests directory
-	}
+	sort.Strings(testFiles)
 
-	entries, err := os.ReadDir(srcTestsDir)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
+	for _, fileName := range testFiles {
+		var sourcePath string
+		if format == "polygon" {
+			sourcePath = filepath.Join(sourceDir, "data", "secret", fileName)
+		} else {
+			sourcePath = filepath.Join(sourceDir, "tests", fileName)
 		}
-		srcPath := filepath.Join(srcTestsDir, entry.Name())
-		destPath := filepath.Join(testsDir, entry.Name())
-		if err := copyFile(srcPath, destPath); err != nil {
+
+		targetPath := filepath.Join(targetDir, "tests", fileName)
+
+		content, err := os.ReadFile(sourcePath)
+		if err != nil {
+			return err
+		}
+
+		if err := os.WriteFile(targetPath, content, 0o644); err != nil {
 			return err
 		}
 	}
@@ -209,32 +255,68 @@ func copyTestFiles(srcDir, destDir string, format string) error {
 	return nil
 }
 
-func copyExecutableFiles(srcDir, destDir string, filesMetadata []problemformat.FileMetadata) error {
-	for _, fileMeta := range filesMetadata {
-		srcPath := filepath.Join(srcDir, fileMeta.Filename)
-		destPath := filepath.Join(destDir, filepath.Base(fileMeta.Filename))
+func copyExecutableFiles(sourceDir, targetDir string, manifest *problemformat.ProblemManifest) error {
+	for _, fileMeta := range manifest.FilesMetadata {
+		var sourcePath string
+		targetPath := filepath.Join(targetDir, fileMeta.Filename)
 
-		if err := copyFile(srcPath, destPath); err != nil {
-			// Log warning but don't fail
-			continue
+		if _, err := os.Stat(filepath.Join(sourceDir, fileMeta.Filename)); err == nil {
+			sourcePath = filepath.Join(sourceDir, fileMeta.Filename)
+		} else {
+			sourcePath = findFileByName(sourceDir, filepath.Base(fileMeta.Filename))
+			if sourcePath == "" {
+				return fmt.Errorf("could not find executable file: %s", fileMeta.Filename)
+			}
+		}
+
+		if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+			return err
+		}
+
+		content, err := os.ReadFile(sourcePath)
+		if err != nil {
+			return err
+		}
+
+		if err := os.WriteFile(targetPath, content, 0o644); err != nil {
+			return err
+		}
+
+		for _, dep := range fileMeta.Dependencies {
+			depSourcePath := findFileByName(sourceDir, dep.Filename)
+			if depSourcePath == "" {
+				return fmt.Errorf("could not find dependency file: %s", dep.Filename)
+			}
+
+			depTargetPath := filepath.Join(filepath.Dir(targetPath), dep.Filename)
+
+			depContent, err := os.ReadFile(depSourcePath)
+			if err != nil {
+				return err
+			}
+
+			if err := os.WriteFile(depTargetPath, depContent, 0o644); err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
 }
 
-func copyFile(src, dst string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
+func findFileByName(rootDir, fileName string) string {
+	var foundPath string
 
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
+	_ = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !d.IsDir() && d.Name() == fileName {
+			foundPath = path
+			return fs.SkipAll
+		}
+		return nil
+	})
 
-	_, err = io.Copy(dstFile, srcFile)
-	return err
+	return foundPath
 }

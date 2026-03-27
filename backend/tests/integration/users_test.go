@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package integration
 
 import (
@@ -108,13 +111,11 @@ func (s *IntegrationTestSuite) createOrganizationWithID(id uuid.UUID, login stri
 // createDummyProblemPackage creates a dummy problem package for testing
 func (s *IntegrationTestSuite) createDummyProblemPackage(problemID uuid.UUID, orgID uuid.UUID) uuid.UUID {
 	packageID := uuid.New()
-	// Git commit hash must be 40 characters (SHA-1)
-	gitCommitHash := "0000000000000000000000000000000000000000"
 	// Package hash must be 64 characters (SHA-256)
 	packageHash := "0000000000000000000000000000000000000000000000000000000000000000"
 	_, err := s.dbPool.Exec(s.ctx,
-		"INSERT INTO problem_packages (id, problem_id, organization_id, git_commit_hash, package_hash, status) VALUES ($1, $2, $3, $4, $5, $6)",
-		packageID, problemID, orgID, gitCommitHash, packageHash, "ready")
+		"INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version) VALUES ($1, $2, $3, $4, $5, $6)",
+		packageID, problemID, orgID, packageHash, "ready", 1)
 	s.Require().NoError(err)
 	return packageID
 }

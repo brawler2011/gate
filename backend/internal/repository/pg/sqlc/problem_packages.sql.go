@@ -13,16 +13,15 @@ import (
 
 const createProblemPackage = `-- name: CreateProblemPackage :one
 
-INSERT INTO problem_packages (id, problem_id, organization_id, git_commit_hash, package_hash, status, version)
-VALUES ($1, $2, $3, $4, $5, $6, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2))
-RETURNING id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version
+INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version)
+VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2))
+RETURNING id, problem_id, organization_id, package_hash, url, status, build_log, created_at, compiled_at, version
 `
 
 type CreateProblemPackageParams struct {
 	ID             uuid.UUID     `json:"id"`
 	ProblemID      uuid.UUID     `json:"problem_id"`
 	OrganizationID uuid.UUID     `json:"organization_id"`
-	GitCommitHash  string        `json:"git_commit_hash"`
 	PackageHash    string        `json:"package_hash"`
 	Status         PackageStatus `json:"status"`
 }
@@ -33,7 +32,6 @@ func (q *Queries) CreateProblemPackage(ctx context.Context, arg CreateProblemPac
 		arg.ID,
 		arg.ProblemID,
 		arg.OrganizationID,
-		arg.GitCommitHash,
 		arg.PackageHash,
 		arg.Status,
 	)
@@ -42,7 +40,6 @@ func (q *Queries) CreateProblemPackage(ctx context.Context, arg CreateProblemPac
 		&i.ID,
 		&i.ProblemID,
 		&i.OrganizationID,
-		&i.GitCommitHash,
 		&i.PackageHash,
 		&i.Url,
 		&i.Status,
@@ -64,7 +61,7 @@ func (q *Queries) DeleteProblemPackage(ctx context.Context, id uuid.UUID) error 
 }
 
 const getProblemPackageByHash = `-- name: GetProblemPackageByHash :one
-SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages WHERE package_hash = $1
+SELECT id, problem_id, organization_id, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages WHERE package_hash = $1
 `
 
 func (q *Queries) GetProblemPackageByHash(ctx context.Context, packageHash string) (ProblemPackage, error) {
@@ -74,7 +71,6 @@ func (q *Queries) GetProblemPackageByHash(ctx context.Context, packageHash strin
 		&i.ID,
 		&i.ProblemID,
 		&i.OrganizationID,
-		&i.GitCommitHash,
 		&i.PackageHash,
 		&i.Url,
 		&i.Status,
@@ -87,7 +83,7 @@ func (q *Queries) GetProblemPackageByHash(ctx context.Context, packageHash strin
 }
 
 const getProblemPackageByID = `-- name: GetProblemPackageByID :one
-SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages WHERE id = $1
+SELECT id, problem_id, organization_id, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages WHERE id = $1
 `
 
 func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error) {
@@ -97,7 +93,33 @@ func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (Prob
 		&i.ID,
 		&i.ProblemID,
 		&i.OrganizationID,
-		&i.GitCommitHash,
+		&i.PackageHash,
+		&i.Url,
+		&i.Status,
+		&i.BuildLog,
+		&i.CreatedAt,
+		&i.CompiledAt,
+		&i.Version,
+	)
+	return i, err
+}
+
+const getProblemPackageByVersion = `-- name: GetProblemPackageByVersion :one
+SELECT id, problem_id, organization_id, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages WHERE problem_id = $1 AND version = $2
+`
+
+type GetProblemPackageByVersionParams struct {
+	ProblemID uuid.UUID `json:"problem_id"`
+	Version   int32     `json:"version"`
+}
+
+func (q *Queries) GetProblemPackageByVersion(ctx context.Context, arg GetProblemPackageByVersionParams) (ProblemPackage, error) {
+	row := q.db.QueryRow(ctx, getProblemPackageByVersion, arg.ProblemID, arg.Version)
+	var i ProblemPackage
+	err := row.Scan(
+		&i.ID,
+		&i.ProblemID,
+		&i.OrganizationID,
 		&i.PackageHash,
 		&i.Url,
 		&i.Status,
@@ -110,7 +132,7 @@ func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (Prob
 }
 
 const getReadyPackage = `-- name: GetReadyPackage :one
-SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages
+SELECT id, problem_id, organization_id, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages
 WHERE problem_id = $1 AND status = 'ready'
 ORDER BY created_at DESC
 LIMIT 1
@@ -123,7 +145,6 @@ func (q *Queries) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (Pro
 		&i.ID,
 		&i.ProblemID,
 		&i.OrganizationID,
-		&i.GitCommitHash,
 		&i.PackageHash,
 		&i.Url,
 		&i.Status,
@@ -136,7 +157,7 @@ func (q *Queries) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (Pro
 }
 
 const listProblemPackages = `-- name: ListProblemPackages :many
-SELECT id, problem_id, organization_id, git_commit_hash, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages
+SELECT id, problem_id, organization_id, package_hash, url, status, build_log, created_at, compiled_at, version FROM problem_packages
 WHERE problem_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -161,7 +182,6 @@ func (q *Queries) ListProblemPackages(ctx context.Context, arg ListProblemPackag
 			&i.ID,
 			&i.ProblemID,
 			&i.OrganizationID,
-			&i.GitCommitHash,
 			&i.PackageHash,
 			&i.Url,
 			&i.Status,

@@ -34,21 +34,16 @@ type Config struct {
 	KratosAdminURL string `env:"KRATOS_ADMIN_URL" env-default:"http://localhost:4434"`
 
 	// Workshop configuration
-	WorkshopReposDir string `env:"WORKSHOP_REPOS_DIR" env-default:"./workshop-repos"`
-	GoJudgeGRPCAddr  string `env:"GOJUDGE_GRPC_ADDR" env-default:"localhost:5051"`
+	GoJudgeGRPCAddr string `env:"GOJUDGE_GRPC_ADDR" env-default:"localhost:5051"`
 
 	// S3 configuration (SeaweedFS)
-	S3Endpoint      string `env:"S3_ENDPOINT" required:"true"`
-	S3AccessKey     string `env:"S3_ACCESS_KEY" required:"true"`
-	S3SecretKey     string `env:"S3_SECRET_KEY" required:"true"`
-	S3Region        string `env:"S3_REGION" env-default:"us-east-1"`
-	S3AvatarBucket  string `env:"S3_AVATAR_BUCKET" env-default:"avatars"`
-	S3PackageBucket string `env:"S3_PACKAGE_BUCKET" env-default:"problem-packages"`
-	S3BlogBucket    string `env:"S3_BLOG_BUCKET" env-default:"blog-images"`
+	S3Endpoint  string `env:"S3_ENDPOINT" required:"true"`
+	S3AccessKey string `env:"S3_ACCESS_KEY" required:"true"`
+	S3SecretKey string `env:"S3_SECRET_KEY" required:"true"`
 
 	// Judging configuration
 	JudgeWorkerCount int    `env:"JUDGE_WORKER_COUNT" env-default:"4"`
-	JudgeTempDir     string `env:"JUDGE_TEMP_DIR"` // defaults to os.TempDir()/judge at runtime
+	JudgeTempDir     string `env:"JUDGE_TEMP_DIR"`                     // defaults to os.TempDir()/judge at runtime
 	JudgeTimeout     int    `env:"JUDGE_TIMEOUT" env-default:"300000"` // milliseconds
 	JudgeMaxRetries  int    `env:"JUDGE_MAX_RETRIES" env-default:"3"`
 }
