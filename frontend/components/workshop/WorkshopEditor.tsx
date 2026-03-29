@@ -4,9 +4,16 @@ import { Stack } from "@mantine/core";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 import type { FileEntry } from "@contracts/gateway/v1";
-import { WorkshopHotbar, GENERAL_TAB, PACKAGES_TAB, STATEMENT_TAB } from "./WorkshopHotbar";
+import {
+  WorkshopHotbar,
+  GENERAL_TAB,
+  IMPORT_TAB,
+  PACKAGES_TAB,
+  STATEMENT_TAB,
+} from "./WorkshopHotbar";
 import { WorkshopFolderTab } from "./WorkshopFolderTab";
 import { WorkshopGeneralTab } from "./WorkshopGeneralTab";
+import { WorkshopImportTab } from "./WorkshopImportTab";
 import { WorkshopPackagesTab } from "./WorkshopPackagesTab";
 import { WorkshopStatementTab } from "./WorkshopStatementTab";
 
@@ -22,6 +29,11 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
   const activeTab = searchParams.get("tab") ?? GENERAL_TAB;
   const selectedFile = searchParams.get("file");
 
+  const staticTabs = useMemo(
+    () => new Set([GENERAL_TAB, STATEMENT_TAB, PACKAGES_TAB, IMPORT_TAB]),
+    []
+  );
+
   // Group files by top-level folder, excluding root files that go to general
   const folderMap = useMemo(() => {
     const map = new Map<string, FileEntry[]>();
@@ -29,7 +41,7 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
       const path = file.path ?? "";
       if (!path.includes("/")) {
         // Top-level directory → register the tab (files inside will be added below)
-        if (file.is_directory && path !== STATEMENT_TAB) {
+        if (file.is_directory && !staticTabs.has(path)) {
           if (!map.has(path)) map.set(path, []);
         }
         // Root non-directory files (README.md, manifest.json) → general tab
@@ -37,12 +49,12 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
       }
       // File/dir inside a folder
       const folder = path.split("/")[0];
-      if (folder === STATEMENT_TAB) continue;
+      if (staticTabs.has(folder)) continue;
       if (!map.has(folder)) map.set(folder, []);
       map.get(folder)!.push(file);
     }
     return map;
-  }, [initialFiles]);
+  }, [initialFiles, staticTabs]);
 
   const folders = useMemo(() => [...folderMap.keys()].sort(), [folderMap]);
 
@@ -88,6 +100,8 @@ export function WorkshopEditor({ problemId, initialFiles }: Props) {
           <WorkshopStatementTab problemId={problemId} />
         ) : activeTab === PACKAGES_TAB ? (
           <WorkshopPackagesTab problemId={problemId} />
+        ) : activeTab === IMPORT_TAB ? (
+          <WorkshopImportTab problemId={problemId} />
         ) : (
           <WorkshopFolderTab
             key={activeTab}

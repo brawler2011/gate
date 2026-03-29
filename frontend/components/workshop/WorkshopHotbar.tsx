@@ -6,6 +6,7 @@ import classes from "./WorkshopHotbar.module.css";
 export const GENERAL_TAB = "general";
 export const STATEMENT_TAB = "statement";
 export const PACKAGES_TAB = "packages";
+export const IMPORT_TAB = "import";
 
 type Props = {
   folders: string[];
@@ -29,7 +30,7 @@ function getTabLabel(folder: string): string {
 }
 
 export function WorkshopHotbar({ folders, activeTab, onTabChange }: Props) {
-  const allTabs = [GENERAL_TAB, STATEMENT_TAB, PACKAGES_TAB, ...folders.sort()];
+  const allTabs = [GENERAL_TAB, STATEMENT_TAB, PACKAGES_TAB, IMPORT_TAB, ...folders.sort()];
 
   return (
     <Box className={classes.hotbar}>
@@ -47,7 +48,9 @@ export function WorkshopHotbar({ folders, activeTab, onTabChange }: Props) {
                 ? "Условие"
                 : tab === PACKAGES_TAB
                   ? "Пакеты"
-                  : getTabLabel(tab)}
+                  : tab === IMPORT_TAB
+                    ? "Импорт"
+                    : getTabLabel(tab)}
           </button>
         ))}
       </div>

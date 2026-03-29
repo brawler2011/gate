@@ -21,3 +21,4 @@ export * from './WorkshopFolderTab';
 export * from './WorkshopGeneralTab';
 export * from './WorkshopStatementTab';
 export * from './WorkshopPackagesTab';
+export * from './WorkshopImportTab';

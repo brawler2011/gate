@@ -396,6 +396,17 @@ export async function publishProblem(problemId: string) {
   return Call((client) => client.default.publishProblem({ id: problemId }));
 }
 
+export async function importProblemPackage(problemId: string, packageFile: Blob) {
+  return Call((client) =>
+    client.default.importProblem({
+      id: problemId,
+      formData: {
+        package: packageFile,
+      },
+    })
+  );
+}
+
 export async function listProblemPackages(problemId: string) {
   return Call((client) => client.default.listProblemPackages({ id: problemId }));
 }

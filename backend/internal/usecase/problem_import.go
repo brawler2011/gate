@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
+	"github.com/gate149/gate/backend/pkg/parsers"
 	"github.com/gate149/gate/backend/pkg/problemformat"
 	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/google/uuid"
@@ -60,21 +61,26 @@ func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipRea
 		return nil, fmt.Errorf("failed to extract zip: %w", err)
 	}
 
-	manifest, err := problemformat.LoadManifest(tempDir)
+	packageRoot, err := detectPackageRoot(tempDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load manifest: %w", err)
+		return nil, fmt.Errorf("failed to detect package root: %w", err)
+	}
+
+	manifest, testsMetadata, format, err := loadPackageMetadata(packageRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load package metadata: %w", err)
+	}
+
+	enrichManifestDefaults(ctx, uc.problemsRepo, problemID, manifest, format)
+	if format != "native" {
+		normalizeTestsOrdinals(testsMetadata)
 	}
 
 	if err := problemformat.ValidateManifest(manifest); err != nil {
 		return nil, fmt.Errorf("invalid manifest: %w", err)
 	}
 
-	testsMetadata, err := problemformat.LoadTestsMetadata(tempDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load tests metadata: %w", err)
-	}
-
-	format := detectPackageFormat(tempDir)
+	manifest.LastUpdated = time.Now()
 
 	workspaceDir := filepath.Join(tempDir, "workspace")
 	if err := os.MkdirAll(workspaceDir, 0o755); err != nil {
@@ -85,11 +91,11 @@ func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipRea
 		return nil, fmt.Errorf("failed to save tests metadata: %w", err)
 	}
 
-	if err := copyTestFiles(tempDir, workspaceDir, format); err != nil {
+	if err := copyTestFiles(packageRoot, workspaceDir, format, testsMetadata); err != nil {
 		return nil, fmt.Errorf("failed to copy test files: %w", err)
 	}
 
-	if err := copyExecutableFiles(tempDir, workspaceDir, manifest); err != nil {
+	if err := copyExecutableFiles(packageRoot, workspaceDir, manifest); err != nil {
 		return nil, fmt.Errorf("failed to copy executable files: %w", err)
 	}
 
@@ -128,7 +134,6 @@ func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipRea
 		return nil, fmt.Errorf("failed to upload workspace files: %w", err)
 	}
 
-	manifest.LastUpdated = time.Now()
 	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
@@ -184,72 +189,413 @@ func extractZip(r *zip.Reader, destDir string) error {
 	return nil
 }
 
-func detectPackageFormat(extractedDir string) string {
-	if _, err := os.Stat(filepath.Join(extractedDir, "data", "secret")); err == nil {
-		return "polygon"
+func detectPackageRoot(extractedDir string) (string, error) {
+	if hasPackageMarker(extractedDir) {
+		return extractedDir, nil
 	}
 
-	if _, err := os.Stat(filepath.Join(extractedDir, "tests", "tests.json")); err == nil {
-		return "native"
+	entries, err := os.ReadDir(extractedDir)
+	if err != nil {
+		return "", err
 	}
 
-	return "unknown"
+	filteredDirs := make([]string, 0)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if name == "__MACOSX" {
+			continue
+		}
+		filteredDirs = append(filteredDirs, filepath.Join(extractedDir, name))
+	}
+
+	if len(filteredDirs) == 1 && hasPackageMarker(filteredDirs[0]) {
+		return filteredDirs[0], nil
+	}
+
+	best := ""
+	bestDepth := int(^uint(0) >> 1)
+
+	walkErr := filepath.WalkDir(extractedDir, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil || !d.IsDir() {
+			return nil
+		}
+
+		if filepath.Base(path) == "__MACOSX" {
+			return filepath.SkipDir
+		}
+
+		if !hasPackageMarker(path) {
+			return nil
+		}
+
+		rel, relErr := filepath.Rel(extractedDir, path)
+		if relErr != nil {
+			return nil
+		}
+		if rel == "." {
+			best = path
+			bestDepth = 0
+			return filepath.SkipAll
+		}
+
+		depth := strings.Count(filepath.ToSlash(rel), "/") + 1
+		if depth < bestDepth || (depth == bestDepth && path < best) {
+			best = path
+			bestDepth = depth
+		}
+		return nil
+	})
+	if walkErr != nil {
+		return "", walkErr
+	}
+
+	if best != "" {
+		return best, nil
+	}
+
+	return extractedDir, nil
 }
 
-func copyTestFiles(sourceDir, targetDir, format string) error {
-	var testFiles []string
+func hasPackageMarker(dir string) bool {
+	markers := []string{
+		"manifest.json",
+		"problem.xml",
+		"problem.yaml",
+	}
+
+	for _, marker := range markers {
+		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+func loadPackageMetadata(packageDir string) (*problemformat.ProblemManifest, *problemformat.TestsMetadata, string, error) {
+	nativeManifest, nativeManifestErr := problemformat.LoadManifest(packageDir)
+	nativeTests, nativeTestsErr := problemformat.LoadTestsMetadata(packageDir)
+	if nativeManifestErr == nil && nativeTestsErr == nil {
+		return nativeManifest, nativeTests, "native", nil
+	}
+
+	manifest, testsMetadata, format, parseErr := parsers.ParsePackage(packageDir)
+	if parseErr != nil {
+		return nil, nil, "", fmt.Errorf(
+			"native load failed (manifest: %v, tests: %v), parser fallback failed: %w",
+			nativeManifestErr,
+			nativeTestsErr,
+			parseErr,
+		)
+	}
+
+	return manifest, testsMetadata, format, nil
+}
+
+func enrichManifestDefaults(ctx context.Context, problemsRepo interfaces.ProblemsRepo, problemID uuid.UUID, manifest *problemformat.ProblemManifest, format string) {
+	problemTitle := ""
+	if problem, err := problemsRepo.GetProblemById(ctx, problemID); err == nil {
+		problemTitle = strings.TrimSpace(problem.Title)
+	}
+
+	if strings.TrimSpace(manifest.Statement.Title) == "" {
+		if problemTitle != "" {
+			manifest.Statement.Title = problemTitle
+		} else {
+			manifest.Statement.Title = "Imported problem"
+		}
+	}
+
+	if strings.TrimSpace(manifest.Statement.Legend) == "" {
+		manifest.Statement.Legend = fmt.Sprintf("Imported from %s package.", format)
+	}
+}
+
+func normalizeTestsOrdinals(testsMetadata *problemformat.TestsMetadata) {
+	for i := range testsMetadata.Tests {
+		testsMetadata.Tests[i].Ordinal = i + 1
+	}
+}
+
+func copyTestFiles(sourceDir, targetDir, format string, testsMetadata *problemformat.TestsMetadata) error {
+	if testsMetadata == nil {
+		return fmt.Errorf("tests metadata is nil")
+	}
+
+	if err := os.MkdirAll(filepath.Join(targetDir, "tests"), 0o755); err != nil {
+		return err
+	}
 
 	switch format {
 	case "polygon":
-		testsDir := filepath.Join(sourceDir, "data", "secret")
-		entries, err := os.ReadDir(testsDir)
-		if err != nil {
-			return err
-		}
-
-		for _, entry := range entries {
-			if !entry.IsDir() && testFileRegexp.MatchString(entry.Name()) {
-				testFiles = append(testFiles, entry.Name())
-			}
-		}
-
+		return copyPolygonTestFiles(sourceDir, targetDir, len(testsMetadata.Tests))
+	case "icpc":
+		return copyICPCTestFiles(sourceDir, targetDir, len(testsMetadata.Tests))
 	case "native":
-		testsDir := filepath.Join(sourceDir, "tests")
-		entries, err := os.ReadDir(testsDir)
-		if err != nil {
-			return err
-		}
-
-		for _, entry := range entries {
-			if !entry.IsDir() && testFileRegexp.MatchString(entry.Name()) {
-				testFiles = append(testFiles, entry.Name())
-			}
-		}
-
+		return copyNativeTestFiles(sourceDir, targetDir, testsMetadata)
 	default:
 		return fmt.Errorf("unsupported package format: %s", format)
 	}
+}
 
-	sort.Strings(testFiles)
+func copyNativeTestFiles(sourceDir, targetDir string, testsMetadata *problemformat.TestsMetadata) error {
+	testsDir := filepath.Join(sourceDir, "tests")
 
-	for _, fileName := range testFiles {
-		var sourcePath string
-		if format == "polygon" {
-			sourcePath = filepath.Join(sourceDir, "data", "secret", fileName)
-		} else {
-			sourcePath = filepath.Join(sourceDir, "tests", fileName)
-		}
-
-		targetPath := filepath.Join(targetDir, "tests", fileName)
-
-		content, err := os.ReadFile(sourcePath)
+	for _, test := range testsMetadata.Tests {
+		inputPath, err := findNativeInputPath(testsDir, test.Ordinal)
 		if err != nil {
 			return err
 		}
 
-		if err := os.WriteFile(targetPath, content, 0o644); err != nil {
+		outputPath, err := findNativeOutputPath(testsDir, test.Ordinal)
+		if err != nil {
 			return err
 		}
+
+		targetInputPath := filepath.Join(targetDir, "tests", fmt.Sprintf("%02d.in", test.Ordinal))
+		targetOutputPath := filepath.Join(targetDir, "tests", fmt.Sprintf("%02d.out", test.Ordinal))
+
+		if err := copyFileContents(inputPath, targetInputPath); err != nil {
+			return err
+		}
+		if err := copyFileContents(outputPath, targetOutputPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func copyPolygonTestFiles(sourceDir, targetDir string, expectedCount int) error {
+	pairs, err := collectIndexedTestPairs(filepath.Join(sourceDir, "data", "secret"))
+	if err != nil {
+		return err
+	}
+
+	if len(pairs) < expectedCount {
+		return fmt.Errorf("polygon package has %d test pairs, expected at least %d", len(pairs), expectedCount)
+	}
+
+	for i := 0; i < expectedCount; i++ {
+		targetOrdinal := i + 1
+		targetInputPath := filepath.Join(targetDir, "tests", fmt.Sprintf("%02d.in", targetOrdinal))
+		targetOutputPath := filepath.Join(targetDir, "tests", fmt.Sprintf("%02d.out", targetOrdinal))
+
+		if err := copyFileContents(pairs[i].inputPath, targetInputPath); err != nil {
+			return err
+		}
+		if err := copyFileContents(pairs[i].outputPath, targetOutputPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func copyICPCTestFiles(sourceDir, targetDir string, expectedCount int) error {
+	samplePairs, err := collectNamedTestPairs(filepath.Join(sourceDir, "data", "sample"))
+	if err != nil {
+		return err
+	}
+
+	secretPairs, err := collectNamedTestPairs(filepath.Join(sourceDir, "data", "secret"))
+	if err != nil {
+		return err
+	}
+
+	pairs := append(samplePairs, secretPairs...)
+	if len(pairs) < expectedCount {
+		return fmt.Errorf("icpc package has %d test pairs, expected at least %d", len(pairs), expectedCount)
+	}
+
+	for i := 0; i < expectedCount; i++ {
+		targetOrdinal := i + 1
+		targetInputPath := filepath.Join(targetDir, "tests", fmt.Sprintf("%02d.in", targetOrdinal))
+		targetOutputPath := filepath.Join(targetDir, "tests", fmt.Sprintf("%02d.out", targetOrdinal))
+
+		if err := copyFileContents(pairs[i].inputPath, targetInputPath); err != nil {
+			return err
+		}
+		if err := copyFileContents(pairs[i].outputPath, targetOutputPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func findNativeInputPath(testsDir string, ordinal int) (string, error) {
+	candidates := []string{
+		fmt.Sprintf("%02d.in", ordinal),
+		fmt.Sprintf("%d.in", ordinal),
+	}
+
+	for _, candidate := range candidates {
+		path := filepath.Join(testsDir, candidate)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+
+	return "", fmt.Errorf("input file for test %d not found", ordinal)
+}
+
+func findNativeOutputPath(testsDir string, ordinal int) (string, error) {
+	candidates := []string{
+		fmt.Sprintf("%02d.out", ordinal),
+		fmt.Sprintf("%02d.ans", ordinal),
+		fmt.Sprintf("%d.out", ordinal),
+		fmt.Sprintf("%d.ans", ordinal),
+	}
+
+	for _, candidate := range candidates {
+		path := filepath.Join(testsDir, candidate)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+
+	return "", fmt.Errorf("output file for test %d not found", ordinal)
+}
+
+type testPair struct {
+	inputPath  string
+	outputPath string
+}
+
+func collectIndexedTestPairs(dir string) ([]testPair, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	type pairInfo struct {
+		inputPath  string
+		outputPath string
+	}
+
+	pairMap := make(map[string]*pairInfo)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		match := testFileRegexp.FindStringSubmatch(name)
+		if len(match) != 3 {
+			continue
+		}
+
+		number := match[1]
+		ext := match[2]
+
+		pair := pairMap[number]
+		if pair == nil {
+			pair = &pairInfo{}
+			pairMap[number] = pair
+		}
+
+		fullPath := filepath.Join(dir, name)
+		if ext == "in" {
+			pair.inputPath = fullPath
+		} else if ext == "out" {
+			pair.outputPath = fullPath
+		} else if ext == "ans" && pair.outputPath == "" {
+			pair.outputPath = fullPath
+		}
+	}
+
+	keys := make([]string, 0, len(pairMap))
+	for number := range pairMap {
+		if pairMap[number].inputPath != "" && pairMap[number].outputPath != "" {
+			keys = append(keys, number)
+		}
+	}
+	sort.Strings(keys)
+
+	pairs := make([]testPair, 0, len(keys))
+	for _, number := range keys {
+		pair := pairMap[number]
+		pairs = append(pairs, testPair{inputPath: pair.inputPath, outputPath: pair.outputPath})
+	}
+
+	return pairs, nil
+}
+
+func collectNamedTestPairs(dir string) ([]testPair, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []testPair{}, nil
+		}
+		return nil, err
+	}
+
+	type pairInfo struct {
+		inputPath  string
+		outputPath string
+	}
+
+	pairMap := make(map[string]*pairInfo)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		ext := strings.ToLower(filepath.Ext(name))
+		stem := strings.TrimSuffix(name, filepath.Ext(name))
+		if stem == "" {
+			continue
+		}
+
+		pair := pairMap[stem]
+		if pair == nil {
+			pair = &pairInfo{}
+			pairMap[stem] = pair
+		}
+
+		fullPath := filepath.Join(dir, name)
+		switch ext {
+		case ".in":
+			pair.inputPath = fullPath
+		case ".out":
+			pair.outputPath = fullPath
+		case ".ans":
+			if pair.outputPath == "" {
+				pair.outputPath = fullPath
+			}
+		}
+	}
+
+	stems := make([]string, 0, len(pairMap))
+	for stem := range pairMap {
+		if pairMap[stem].inputPath != "" && pairMap[stem].outputPath != "" {
+			stems = append(stems, stem)
+		}
+	}
+	sort.Strings(stems)
+
+	pairs := make([]testPair, 0, len(stems))
+	for _, stem := range stems {
+		pair := pairMap[stem]
+		pairs = append(pairs, testPair{inputPath: pair.inputPath, outputPath: pair.outputPath})
+	}
+
+	return pairs, nil
+}
+
+func copyFileContents(sourcePath, targetPath string) error {
+	content, err := os.ReadFile(sourcePath)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(targetPath, content, 0o644); err != nil {
+		return err
 	}
 
 	return nil
