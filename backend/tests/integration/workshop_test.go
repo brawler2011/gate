@@ -28,7 +28,6 @@ import (
 )
 
 const (
-	workshopGoJudgeHTTPPort                  = "5050/tcp"
 	workshopGoJudgeGRPCPort                  = "5051/tcp"
 	workshopGoJudgeStartupTimeout            = 120 * time.Second
 	workshopGoJudgeProbeRetryDelay           = 1500 * time.Millisecond
@@ -157,14 +156,14 @@ func newWorkshopSandboxOrchestrator(t *testing.T) *sandbox.Orchestrator {
 	ctx := context.Background()
 
 	req := testcontainers.ContainerRequest{
-		ExposedPorts: []string{workshopGoJudgeHTTPPort, workshopGoJudgeGRPCPort},
+		ExposedPorts: []string{workshopGoJudgeGRPCPort},
 		Env: map[string]string{
 			"ES_ENABLE_GRPC": "true",
 			"ES_PARALLELISM": "2",
 			"ES_PRE_FORK":    "1",
 		},
 		Privileged: true,
-		WaitingFor: wait.ForLog("Starting http server").
+		WaitingFor: wait.ForListeningPort(workshopGoJudgeGRPCPort).
 			WithStartupTimeout(workshopGoJudgeStartupTimeout),
 	}
 
@@ -202,9 +201,8 @@ func newWorkshopSandboxOrchestrator(t *testing.T) *sandbox.Orchestrator {
 	require.NoError(t, err)
 
 	client, err := sandbox.NewClient(sandbox.ClientConfig{
-		Protocol: sandbox.ProtocolGRPC,
-		BaseURL:  net.JoinHostPort(host, mappedPort.Port()),
-		Timeout:  30 * time.Second,
+		Addr:    net.JoinHostPort(host, mappedPort.Port()),
+		Timeout: 30 * time.Second,
 	})
 	require.NoError(t, err)
 

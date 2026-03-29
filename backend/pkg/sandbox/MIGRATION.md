@@ -11,7 +11,7 @@ This document describes the migration of the workshop backend from the old `judg
 
 **New:**
 - `core/pkg/sandbox/` - Complete SDK with:
-  - `client.go` - Enhanced client with HTTP/gRPC support
+  - `client.go` - gRPC client for go-judge
   - `compiler.go` - Multi-language compilation
   - `executor.go` - Component execution
   - `orchestrator.go` - High-level workflows
@@ -70,9 +70,8 @@ handlers := httpTransport.NewHandlers(vcsService, judgeClient, polygonRepo)
 **After:**
 ```go
 sandboxClient, err := sandbox.NewClient(sandbox.ClientConfig{
-    Protocol: sandbox.ProtocolHTTP,
-    BaseURL:  goJudgeURL,
-    Timeout:  60 * time.Second,
+    Addr:    goJudgeURL,
+    Timeout: 60 * time.Second,
 })
 defer sandboxClient.Close()
 
@@ -122,7 +121,7 @@ func mapVerdict(sandboxVerdict string) polygonv1.Verdict {
 1. **Multi-language support**: Not limited to C++ anymore
 2. **Better error handling**: Proper error messages and status codes
 3. **Modular design**: Separate compiler, executor, and orchestrator
-4. **Flexible protocols**: Support for both HTTP and gRPC
+4. **Stable transport**: gRPC-only client for go-judge
 5. **Resource management**: Proper cleanup and timeout handling
 6. **Extensible**: Easy to add checkers, validators, generators
 7. **Testable**: Unit and integration tests included

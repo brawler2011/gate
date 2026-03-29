@@ -219,8 +219,10 @@ services:
     container_name: gate-go-judge-dev
     hostname: go-judge
     restart: unless-stopped
+    command:
+      - "-enable-grpc"
+      - "-grpc-addr=0.0.0.0:5051"
     ports:
-      - "5050:5050"
       - "5051:5051"
     privileged: true
     volumes:

@@ -22,7 +22,6 @@ import (
 
 const (
 	defaultGoJudgeStartupTimeoutSec  = 120
-	goJudgeHTTPPort                  = "5050/tcp"
 	goJudgeGRPCPort                  = "5051/tcp"
 	goJudgeReadinessRetryDelay       = 1500 * time.Millisecond
 	goJudgeReadinessProbeCallTimeout = 8 * time.Second
@@ -69,14 +68,14 @@ func setupIntegrationHarness(ctx context.Context) error {
 	startupTimeout := startupTimeoutFromEnv()
 
 	req := testcontainers.ContainerRequest{
-		ExposedPorts: []string{goJudgeHTTPPort, goJudgeGRPCPort},
+		ExposedPorts: []string{goJudgeGRPCPort},
 		Env: map[string]string{
 			"ES_ENABLE_GRPC": "true",
 			"ES_PARALLELISM": "2",
 			"ES_PRE_FORK":    "1",
 		},
-		Privileged:   true,
-		WaitingFor: wait.ForLog("Starting http server").
+		Privileged: true,
+		WaitingFor: wait.ForListeningPort(goJudgeGRPCPort).
 			WithStartupTimeout(startupTimeout),
 	}
 	if image := os.Getenv("GOJUDGE_TEST_IMAGE"); image != "" {
@@ -116,9 +115,8 @@ func setupIntegrationHarness(ctx context.Context) error {
 
 	grpcAddr := net.JoinHostPort(host, mappedPort.Port())
 	client, err := NewClient(ClientConfig{
-		Protocol: ProtocolGRPC,
-		BaseURL:  grpcAddr,
-		Timeout:  30 * time.Second,
+		Addr:    grpcAddr,
+		Timeout: 30 * time.Second,
 	})
 	if err != nil {
 		return err
@@ -152,10 +150,10 @@ func waitForJudgeReady(ctx context.Context, client *Client, startupTimeout time.
 	for time.Now().Before(deadline) {
 		probeCtx, cancel := context.WithTimeout(ctx, goJudgeReadinessProbeCallTimeout)
 		result, err := client.Compile(probeCtx, CompileRequest{
-			SourceCode:  "int main(){return 0;}",
-			Language:    "cpp17",
-			SourceFile:  "main.cpp",
-			OutputFile:  "main",
+			SourceCode:   "int main(){return 0;}",
+			Language:     "cpp17",
+			SourceFile:   "main.cpp",
+			OutputFile:   "main",
 			Dependencies: map[string]string{},
 			Limits: ResourceLimits{
 				CPUTimeMs: 5000,
@@ -434,7 +432,7 @@ int main(void) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-	result, err := judgeWithRetry(ctx, orchestrator, JudgeSolutionRequest{
+			result, err := judgeWithRetry(ctx, orchestrator, JudgeSolutionRequest{
 				SolutionCode:     tt.source,
 				SolutionLanguage: tt.language,
 				CheckerFileID:    "",

@@ -158,8 +158,7 @@ func runServer(envFile string) {
 	packagesRepo := pg.NewPackagesRepo(pool)
 	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, vcsService, s3Client, defaultS3PackageBucket)
 	sandboxClient, err := sandbox.NewClient(sandbox.ClientConfig{
-		Protocol: sandbox.ProtocolGRPC,
-		BaseURL:  cfg.GoJudgeGRPCAddr,
+		Addr: cfg.GoJudgeGRPCAddr,
 	})
 	if err != nil {
 		logger.Warn("failed to create sandbox client, workshop features will be limited", slog.Any("error", err))

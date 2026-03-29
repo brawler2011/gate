@@ -201,7 +201,7 @@ func TestBuildCommand(t *testing.T) {
 // Mock tests for CompileComponent (without actual go-judge server)
 func TestCompileComponentInterpretedLanguage(t *testing.T) {
 	// For interpreted languages, compilation should succeed immediately
-	client := &Client{protocol: ProtocolHTTP}
+	client := &Client{}
 	compiler := NewCompiler(client)
 
 	req := ComponentCompileRequest{

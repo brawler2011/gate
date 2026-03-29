@@ -1,16 +1,11 @@
 package sandbox
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
-	"time"
 
 	pb "github.com/criyle/go-judge/pb"
 	"google.golang.org/grpc"
@@ -19,45 +14,24 @@ import (
 
 // Client is the main client for interacting with go-judge
 type Client struct {
-	httpClient *http.Client
 	grpcClient pb.ExecutorClient
 	grpcConn   *grpc.ClientConn
-	baseURL    string
-	protocol   Protocol
 }
 
 // NewClient creates a new sandbox client
 func NewClient(config ClientConfig) (*Client, error) {
-	client := &Client{
-		baseURL:  config.BaseURL,
-		protocol: config.Protocol,
+	conn, err := grpc.NewClient(config.Addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024)), // 100MB
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gRPC connection: %w", err)
 	}
 
-	timeout := config.Timeout
-	if timeout == 0 {
-		timeout = 60 * time.Second
-	}
-
-	switch config.Protocol {
-	case ProtocolHTTP:
-		client.httpClient = &http.Client{
-			Timeout: timeout,
-		}
-	case ProtocolGRPC:
-		conn, err := grpc.NewClient(config.BaseURL,
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
-			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024)), // 100MB
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create gRPC connection: %w", err)
-		}
-		client.grpcClient = pb.NewExecutorClient(conn)
-		client.grpcConn = conn
-	default:
-		return nil, fmt.Errorf("unsupported protocol: %s", config.Protocol)
-	}
-
-	return client, nil
+	return &Client{
+		grpcClient: pb.NewExecutorClient(conn),
+		grpcConn:   conn,
+	}, nil
 }
 
 // Close closes the client connections
@@ -70,124 +44,12 @@ func (c *Client) Close() error {
 
 // Compile compiles source code and returns the compiled binary
 func (c *Client) Compile(ctx context.Context, req CompileRequest) (*CompileResult, error) {
-	if c.protocol == ProtocolHTTP {
-		return c.compileHTTP(ctx, req)
-	}
 	return c.compileGRPC(ctx, req)
 }
 
 // Execute executes a compiled binary
 func (c *Client) Execute(ctx context.Context, req ExecuteRequest) (*ExecuteResult, error) {
-	if c.protocol == ProtocolHTTP {
-		return c.executeHTTP(ctx, req)
-	}
 	return c.executeGRPC(ctx, req)
-}
-
-// compileHTTP compiles using HTTP API
-func (c *Client) compileHTTP(ctx context.Context, req CompileRequest) (*CompileResult, error) {
-	langConfig, ok := GetLanguageConfig(NormalizeLanguageName(req.Language))
-	if !ok {
-		return nil, fmt.Errorf("unsupported language: %s", req.Language)
-	}
-
-	if !langConfig.NeedsCompilation {
-		// For interpreted languages, just return the source as-is
-		return &CompileResult{
-			Success: true,
-			FileID:  "", // No file ID for interpreted languages
-		}, nil
-	}
-
-	// Build compilation command
-	compileCmd := buildCommand(langConfig.CompileCommand, map[string]string{
-		"{source}": req.SourceFile,
-		"{output}": req.OutputFile,
-	})
-
-	// Prepare CopyIn files
-	copyIn := make(map[string]interface{})
-	copyIn[req.SourceFile] = map[string]string{"content": req.SourceCode}
-
-	// Add dependencies
-	for filename, content := range req.Dependencies {
-		copyIn[filename] = map[string]string{"content": content}
-	}
-
-	// Build HTTP request
-	httpReq := map[string]interface{}{
-		"cmd": []map[string]interface{}{
-			{
-				"args":          compileCmd,
-				"env":           langConfig.CompilerEnv,
-				"files":         []interface{}{map[string]string{}, map[string]string{}, map[string]string{}}, // stdin, stdout, stderr
-				"cpuLimit":      req.Limits.ToNanoseconds(),
-				"memoryLimit":   req.Limits.ToBytes(),
-				"procLimit":     req.Limits.ProcLimit,
-				"copyIn":        copyIn,
-				"copyOut":       []string{req.OutputFile},
-				"copyOutCached": []string{req.OutputFile},
-			},
-		},
-	}
-
-	body, err := json.Marshal(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	httpRequest, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/run", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
-	}
-	httpRequest.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(httpRequest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("go-judge returned status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	var results []map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	if len(results) == 0 {
-		return nil, fmt.Errorf("no results returned from go-judge")
-	}
-
-	result := results[0]
-	compileResult := &CompileResult{
-		Success:    result["status"].(string) == "Accepted",
-		ExitStatus: int(result["exitStatus"].(float64)),
-		Time:       int64(result["time"].(float64)),
-		Memory:     int64(result["memory"].(float64)),
-	}
-
-	// Extract stdout/stderr
-	if files, ok := result["files"].(map[string]interface{}); ok {
-		if stdout, ok := files["stdout"].(string); ok {
-			compileResult.Stdout = stdout
-		}
-		if stderr, ok := files["stderr"].(string); ok {
-			compileResult.Stderr = stderr
-		}
-	}
-
-	// Extract FileID from fileIds
-	if fileIds, ok := result["fileIds"].(map[string]interface{}); ok {
-		if fileId, ok := fileIds[req.OutputFile].(string); ok {
-			compileResult.FileID = fileId
-		}
-	}
-
-	return compileResult, nil
 }
 
 // compileGRPC compiles using gRPC API
@@ -244,6 +106,10 @@ func (c *Client) compileGRPC(ctx context.Context, req CompileRequest) (*CompileR
 		Cmd: []*pb.Request_CmdType{cmd},
 	}.Build()
 
+	if c.grpcClient == nil {
+		return nil, fmt.Errorf("gRPC client is not initialized")
+	}
+
 	grpcResp, err := c.grpcClient.Exec(ctx, grpcReq)
 	if err != nil {
 		return nil, fmt.Errorf("gRPC exec failed: %w", err)
@@ -282,92 +148,12 @@ func (c *Client) compileGRPC(ctx context.Context, req CompileRequest) (*CompileR
 	return compileResult, nil
 }
 
-// executeHTTP executes using HTTP API
-func (c *Client) executeHTTP(ctx context.Context, req ExecuteRequest) (*ExecuteResult, error) {
-	// Prepare CopyIn
-	copyIn := make(map[string]interface{})
-	if req.BinaryFileID != "" {
-		// Use cached file from compilation
-		copyIn[strings.TrimPrefix(req.ExecutableName, "./")] = map[string]string{"src": req.BinaryFileID}
-	}
-
-	// Add additional input files
-	for filename, content := range req.Files {
-		copyIn[filename] = map[string]string{"content": string(content)}
-	}
-
-	// Prepare stdin
-	stdinFile := map[string]string{"content": string(req.Stdin)}
-
-	// Build HTTP request
-	httpReq := map[string]interface{}{
-		"cmd": []map[string]interface{}{
-			{
-				"args":        append([]string{req.ExecutableName}, req.Args...),
-				"env":         []string{"PATH=/usr/bin:/bin"},
-				"files":       []interface{}{stdinFile, map[string]string{}, map[string]string{}}, // stdin, stdout, stderr
-				"cpuLimit":    req.Limits.ToNanoseconds(),
-				"memoryLimit": req.Limits.ToBytes(),
-				"procLimit":   req.Limits.ProcLimit,
-				"copyIn":      copyIn,
-			},
-		},
-	}
-
-	body, err := json.Marshal(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	httpRequest, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/run", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
-	}
-	httpRequest.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(httpRequest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("go-judge returned status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	var results []map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	if len(results) == 0 {
-		return nil, fmt.Errorf("no results returned from go-judge")
-	}
-
-	result := results[0]
-	execResult := &ExecuteResult{
-		Status:     result["status"].(string),
-		ExitStatus: int(result["exitStatus"].(float64)),
-		Time:       int64(result["time"].(float64)),
-		Memory:     int64(result["memory"].(float64)),
-	}
-
-	// Extract stdout/stderr
-	if files, ok := result["files"].(map[string]interface{}); ok {
-		if stdout, ok := files["stdout"].(string); ok {
-			execResult.Stdout = []byte(stdout)
-		}
-		if stderr, ok := files["stderr"].(string); ok {
-			execResult.Stderr = []byte(stderr)
-		}
-	}
-
-	return execResult, nil
-}
-
 // executeGRPC executes using gRPC API
 func (c *Client) executeGRPC(ctx context.Context, req ExecuteRequest) (*ExecuteResult, error) {
+	if c.grpcClient == nil {
+		return nil, fmt.Errorf("gRPC client is not initialized")
+	}
+
 	// Prepare CopyIn
 	copyIn := make(map[string]*pb.Request_File)
 	if req.BinaryFileID != "" {

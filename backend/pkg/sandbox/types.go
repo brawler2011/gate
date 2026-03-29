@@ -2,14 +2,6 @@ package sandbox
 
 import "time"
 
-// Protocol specifies the communication protocol with go-judge
-type Protocol string
-
-const (
-	ProtocolHTTP Protocol = "http"
-	ProtocolGRPC Protocol = "grpc"
-)
-
 // StatusAccepted is the go-judge status string for successful execution.
 const StatusAccepted = "Accepted"
 
@@ -33,9 +25,8 @@ func (r ResourceLimits) ToBytes() int64 {
 
 // ClientConfig configures the sandbox client
 type ClientConfig struct {
-	Protocol Protocol
-	BaseURL  string // HTTP base URL or gRPC address
-	Timeout  time.Duration
+	Addr    string // gRPC address
+	Timeout time.Duration
 }
 
 // CompileRequest represents a compilation request

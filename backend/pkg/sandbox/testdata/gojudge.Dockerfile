@@ -9,6 +9,6 @@ RUN apt-get update && \
 WORKDIR /opt
 COPY --from=gojudge /opt/go-judge /opt/mount.yaml /opt/
 
-EXPOSE 5050 5051 5052
+EXPOSE 5051 5052
 
 ENTRYPOINT ["/opt/go-judge"]

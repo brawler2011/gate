@@ -91,8 +91,7 @@ func runJudge(cmd *cobra.Command, args []string) {
 
 	// Initialize sandbox client
 	sandboxClient, err := sandbox.NewClient(sandbox.ClientConfig{
-		Protocol: sandbox.ProtocolGRPC,
-		BaseURL:  cfg.GoJudgeGRPCAddr,
+		Addr: cfg.GoJudgeGRPCAddr,
 	})
 	if err != nil {
 		logger.Error("failed to create sandbox client", slog.Any("error", err))

@@ -8,7 +8,7 @@ Go-Judge SDK for compiling and executing problem components in isolation.
 - **Component compilation**: Checkers, validators, generators, interactors
 - **Solution execution**: Compile and run user solutions
 - **Resource limits**: CPU time, memory, process limits
-- **Multiple protocols**: HTTP and gRPC
+- **Transport**: gRPC client for go-judge
 - **Orchestration**: High-level workflows for testing
 
 ## Quick Start
@@ -18,17 +18,8 @@ Go-Judge SDK for compiling and executing problem components in isolation.
 ```go
 import "gate/core/pkg/sandbox"
 
-// HTTP client
 client, err := sandbox.NewClient(sandbox.ClientConfig{
-    Protocol: sandbox.ProtocolHTTP,
-    BaseURL:  "http://localhost:5050",
-    Timeout:  30 * time.Second,
-})
-
-// Or gRPC client
-client, err := sandbox.NewClient(sandbox.ClientConfig{
-    Protocol: sandbox.ProtocolGRPC,
-    BaseURL:  "localhost:5051",
+    Addr:    "localhost:5051",
     Timeout:  30 * time.Second,
 })
 ```
@@ -174,11 +165,11 @@ go test -v -tags=integration ./core/pkg/sandbox
 ## Architecture
 
 ```
-Client (HTTP/gRPC) → Compiler → go-judge (compile)
-                   ↓
-                   Executor → go-judge (execute)
-                   ↓
-                   Orchestrator (high-level workflows)
+Client (gRPC) → Compiler → go-judge (compile)
+              ↓
+              Executor → go-judge (execute)
+              ↓
+              Orchestrator (high-level workflows)
 ```
 
 ## Error Handling
