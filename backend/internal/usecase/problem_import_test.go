@@ -22,8 +22,7 @@ func TestImportProblemPackagePolygonFallback(t *testing.T) {
 	problemsRepo := newProblemImportMockProblemsRepo()
 	problemsRepo.problems[problemID] = models.Problem{ID: problemID, Title: "Repo Title"}
 
-	workspaceDir := t.TempDir()
-	vcsService := vcs.NewGoGitService(workspaceDir)
+	vcsService := vcs.NewInMemoryS3Service("test-workshop")
 	uc := NewProblemImportUseCase(problemsRepo, vcsService)
 
 	zipBytes := createZipBytes(t, map[string]string{
@@ -79,8 +78,7 @@ func TestImportProblemPackageICPCFallbackWithNestedRoot(t *testing.T) {
 	problemsRepo := newProblemImportMockProblemsRepo()
 	problemsRepo.problems[problemID] = models.Problem{ID: problemID, Title: "Repository Problem Title"}
 
-	workspaceDir := t.TempDir()
-	vcsService := vcs.NewGoGitService(workspaceDir)
+	vcsService := vcs.NewInMemoryS3Service("test-workshop")
 	uc := NewProblemImportUseCase(problemsRepo, vcsService)
 
 	zipBytes := createZipBytes(t, map[string]string{

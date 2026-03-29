@@ -39,13 +39,8 @@ const (
 func TestWorkshopE2E(t *testing.T) {
 	sandboxOrch := newWorkshopSandboxOrchestrator(t)
 
-	// Create temp directory for repos
-	tempDir, err := os.MkdirTemp("", "workshop-e2e-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
 	// Initialize VCS service
-	vcsService := vcs.NewGoGitService(tempDir)
+	vcsService := vcs.NewInMemoryS3Service("integration-workshop")
 	ctx := context.Background()
 	problemID := uuid.New()
 

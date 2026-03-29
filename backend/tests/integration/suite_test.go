@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -51,7 +50,6 @@ type IntegrationTestSuite struct {
 	usersRepo         *pg.UsersRepo
 	contestsRepo      *pg.ContestsRepo
 	organizationsRepo interfaces.OrganizationsRepo
-	workshopReposDir  string
 }
 
 func TestIntegrationSuite(t *testing.T) {
@@ -95,8 +93,6 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	err = goose.Up(db, migrationsPath)
 	s.Require().NoError(err)
 
-	s.workshopReposDir, err = os.MkdirTemp("", "workshop-repos-*")
-	s.Require().NoError(err)
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
@@ -106,11 +102,6 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	if s.pgContainer != nil {
 		if err := s.pgContainer.Terminate(s.ctx); err != nil {
 			log.Printf("failed to terminate container: %s", err)
-		}
-	}
-	if s.workshopReposDir != "" {
-		if err := os.RemoveAll(s.workshopReposDir); err != nil {
-			log.Printf("failed to remove workshop repos dir: %s", err)
 		}
 	}
 }
@@ -140,7 +131,7 @@ func (s *IntegrationTestSuite) initApp() {
 	teamsRepo := pg.NewTeamsRepo(s.dbPool)
 	blogsRepo := pg.NewBlogsRepo(s.dbPool)
 	txManager := pg.NewTransactor(s.dbPool)
-	vcsService := vcs.NewGoGitService(s.workshopReposDir)
+	vcsService := vcs.NewInMemoryS3Service("integration-workshop")
 
 	// UseCases
 	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, txManager)

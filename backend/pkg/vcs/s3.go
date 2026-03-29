@@ -1,6 +1,7 @@
 package vcs
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -9,18 +10,34 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
+type StorageClient interface {
+	UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error
+	DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (*s3.GetObjectOutput, error)
+	DeleteFile(ctx context.Context, bucket, key string) error
+	ListFiles(ctx context.Context, bucket, prefix string) ([]string, error)
+}
+
 type S3Service struct {
-	s3Client *pkg.S3Client
-	bucket   string
-	locks    sync.Map
+	storage StorageClient
+	bucket  string
+	locks   sync.Map
 }
 
 func NewS3Service(s3Client *pkg.S3Client, bucket string) *S3Service {
-	return &S3Service{s3Client: s3Client, bucket: bucket}
+	return NewS3ServiceWithStorage(s3Client, bucket)
+}
+
+func NewS3ServiceWithStorage(storage StorageClient, bucket string) *S3Service {
+	return &S3Service{storage: storage, bucket: bucket}
+}
+
+func NewInMemoryS3Service(bucket string) *S3Service {
+	return NewS3ServiceWithStorage(newInMemoryStorageClient(), bucket)
 }
 
 func (s *S3Service) workspaceLock(problemID uuid.UUID) *sync.RWMutex {
@@ -73,7 +90,7 @@ func (s *S3Service) CreateDirectory(ctx context.Context, problemID uuid.UUID, p 
 	defer mu.Unlock()
 
 	key := s.workspacePrefix(problemID) + normalized
-	return s.s3Client.UploadFile(ctx, s.bucket, key, strings.NewReader(""), "application/x-directory")
+	return s.storage.UploadFile(ctx, s.bucket, key, strings.NewReader(""), "application/x-directory")
 }
 
 func (s *S3Service) DeleteProblemWorkspace(ctx context.Context, problemID uuid.UUID) error {
@@ -81,12 +98,12 @@ func (s *S3Service) DeleteProblemWorkspace(ctx context.Context, problemID uuid.U
 	mu.Lock()
 	defer mu.Unlock()
 
-	keys, err := s.s3Client.ListFiles(ctx, s.bucket, s.workspacePrefix(problemID))
+	keys, err := s.storage.ListFiles(ctx, s.bucket, s.workspacePrefix(problemID))
 	if err != nil {
 		return fmt.Errorf("failed to list workspace files: %w", err)
 	}
 	for _, key := range keys {
-		if err := s.s3Client.DeleteFile(ctx, s.bucket, key); err != nil {
+		if err := s.storage.DeleteFile(ctx, s.bucket, key); err != nil {
 			return fmt.Errorf("failed to delete workspace file %s: %w", key, err)
 		}
 	}
@@ -107,7 +124,7 @@ func (s *S3Service) ReadFile(ctx context.Context, problemID uuid.UUID, p string)
 	mu.RLock()
 	defer mu.RUnlock()
 
-	obj, err := s.s3Client.DownloadFile(ctx, s.bucket, key, nil)
+	obj, err := s.storage.DownloadFile(ctx, s.bucket, key, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", p, err)
 	}
@@ -135,7 +152,7 @@ func (s *S3Service) WriteFile(ctx context.Context, problemID uuid.UUID, p string
 	mu.Lock()
 	defer mu.Unlock()
 
-	if err := s.s3Client.UploadFile(ctx, s.bucket, key, strings.NewReader(string(content)), "application/octet-stream"); err != nil {
+	if err := s.storage.UploadFile(ctx, s.bucket, key, bytes.NewReader(content), "application/octet-stream"); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", p, err)
 	}
 
@@ -152,7 +169,7 @@ func (s *S3Service) DeleteFile(ctx context.Context, problemID uuid.UUID, p strin
 	mu.Lock()
 	defer mu.Unlock()
 
-	if err := s.s3Client.DeleteFile(ctx, s.bucket, key); err != nil {
+	if err := s.storage.DeleteFile(ctx, s.bucket, key); err != nil {
 		return fmt.Errorf("failed to delete file %s: %w", p, err)
 	}
 
@@ -169,7 +186,7 @@ func (s *S3Service) ListFiles(ctx context.Context, problemID uuid.UUID, dirPath 
 	mu.RLock()
 	defer mu.RUnlock()
 
-	keys, err := s.s3Client.ListFiles(ctx, s.bucket, s.workspacePrefix(problemID))
+	keys, err := s.storage.ListFiles(ctx, s.bucket, s.workspacePrefix(problemID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files: %w", err)
 	}
@@ -257,7 +274,7 @@ func (s *S3Service) ListAllFiles(ctx context.Context, problemID uuid.UUID) ([]st
 	mu.RLock()
 	defer mu.RUnlock()
 
-	keys, err := s.s3Client.ListFiles(ctx, s.bucket, s.workspacePrefix(problemID))
+	keys, err := s.storage.ListFiles(ctx, s.bucket, s.workspacePrefix(problemID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files: %w", err)
 	}
@@ -273,4 +290,87 @@ func (s *S3Service) ListAllFiles(ctx context.Context, problemID uuid.UUID) ([]st
 	}
 	sort.Strings(result)
 	return result, nil
+}
+
+type inMemoryStorageClient struct {
+	mu      sync.RWMutex
+	buckets map[string]map[string][]byte
+}
+
+func newInMemoryStorageClient() *inMemoryStorageClient {
+	return &inMemoryStorageClient{buckets: make(map[string]map[string][]byte)}
+}
+
+func (c *inMemoryStorageClient) bucketObjects(bucket string) map[string][]byte {
+	objects, ok := c.buckets[bucket]
+	if !ok {
+		objects = make(map[string][]byte)
+		c.buckets[bucket] = objects
+	}
+	return objects
+}
+
+func (c *inMemoryStorageClient) existingBucketObjects(bucket string) map[string][]byte {
+	objects, ok := c.buckets[bucket]
+	if !ok {
+		return nil
+	}
+	return objects
+}
+
+func (c *inMemoryStorageClient) UploadFile(_ context.Context, bucket, key string, reader io.Reader, _ string) error {
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	objects := c.bucketObjects(bucket)
+	objects[key] = append([]byte(nil), content...)
+	return nil
+}
+
+func (c *inMemoryStorageClient) DownloadFile(_ context.Context, bucket, key string, _ *string) (*s3.GetObjectOutput, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	objects := c.existingBucketObjects(bucket)
+	if objects == nil {
+		return nil, fmt.Errorf("failed to download file from S3: object not found")
+	}
+	content, ok := objects[key]
+	if !ok {
+		return nil, fmt.Errorf("failed to download file from S3: object not found")
+	}
+
+	return &s3.GetObjectOutput{Body: io.NopCloser(bytes.NewReader(append([]byte(nil), content...)))}, nil
+}
+
+func (c *inMemoryStorageClient) DeleteFile(_ context.Context, bucket, key string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	objects := c.bucketObjects(bucket)
+	delete(objects, key)
+	return nil
+}
+
+func (c *inMemoryStorageClient) ListFiles(_ context.Context, bucket, prefix string) ([]string, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	objects := c.existingBucketObjects(bucket)
+	if objects == nil {
+		return []string{}, nil
+	}
+	keys := make([]string, 0, len(objects))
+	for key := range objects {
+		if strings.HasPrefix(key, prefix) {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	return keys, nil
 }

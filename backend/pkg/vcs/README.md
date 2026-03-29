@@ -5,7 +5,7 @@ Storage abstraction used by the workshop use case.
 ## Implementations
 
 - `S3Service`: primary implementation for production. Stores workspace files in S3 under `workspaces/{problemId}/{path}`.
-- `LocalFSService`: compatibility implementation used by integration tests.
+- `NewInMemoryS3Service`: in-memory storage-backed `S3Service` constructor used by tests.
 
 ## Notes
 
