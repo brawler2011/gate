@@ -58,7 +58,7 @@ export function CreateProblemModal({ opened, onClose, orgs, defaultOrgId }: Prop
       if (updateError) throw new Error(updateError.message);
 
       onClose();
-      router.push(`/problems/${problemId}/workshop`);
+      router.push(`/problems/${problemId}`);
     } catch (err) {
       notifications.show({
         title: "Ошибка",

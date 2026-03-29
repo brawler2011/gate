@@ -23,7 +23,7 @@ export function OrgProblemsTab({ problems }: Props) {
         {problems.map((p) => (
           <Table.Tr key={p.id}>
             <Table.Td>
-              <Anchor component={Link} href={`/problems/${p.id}/workshop`} size="sm">
+              <Anchor component={Link} href={`/problems/${p.id}`} size="sm">
                 {p.title}
               </Anchor>
             </Table.Td>

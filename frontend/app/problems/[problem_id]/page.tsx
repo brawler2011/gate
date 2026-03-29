@@ -1,11 +1,9 @@
-"use server";
-
-import { DefaultLayout } from '@/components/shared';
-import { Problem } from '@/components/problems/Problem';
-import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { getProblem } from "@/lib/actions";
+import { WorkshopEditor, WorkshopNotInitialized } from "@/components/workshop";
+import { DefaultLayout } from "@/components/shared";
+import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
+import { getProblem, listWorkshopFiles } from "@/lib/actions";
 import { Metadata } from "next";
-import { Stack } from "@mantine/core";
+import { Suspense } from "react";
 
 type Props = {
   params: Promise<{ problem_id: string }>;
@@ -13,33 +11,38 @@ type Props = {
 
 export const generateMetadata = async (props: Props): Promise<Metadata> => {
   const { problem_id } = await props.params;
-  
+
   const [error, response] = await getProblem(problem_id);
   if (error || !response) {
-    return {
-      title: "Ошибка загрузки задачи",
-    };
+    return { title: "Редактор файлов" };
   }
 
-  return {
-    title: `${response.problem.title}`,
-    description: "",
-  };
+  return { title: `Файлы — ${response.problem.title}` };
 };
 
 const Page = async (props: Props) => {
   const { problem_id } = await props.params;
-  const [error, response] = await getProblem(problem_id);
 
-  if (error) return <ErrorDisplay error={error} />;
+  const [problemError] = await getProblem(problem_id);
+  if (problemError) return <ErrorDisplay error={problemError} />;
+
+  const [filesError, filesResponse] = await listWorkshopFiles(problem_id);
 
   return (
-    <DefaultLayout>
-      <Stack px="16" pb="16" maw="1920px" m="0 auto">
-        <Stack align="center" w="fit-content" gap="16" m="0 auto">
-          <Problem problem={response!.problem} letter="A" />
-        </Stack>
-      </Stack>
+    <DefaultLayout
+      stylesConfig={{
+        main: { paddingTop: 70, paddingBottom: 0 },
+      }}
+    >
+      {filesError?.status === 404 ? (
+        <WorkshopNotInitialized problemId={problem_id} />
+      ) : filesError ? (
+        <ErrorDisplay error={filesError} />
+      ) : (
+        <Suspense>
+          <WorkshopEditor problemId={problem_id} initialFiles={filesResponse?.files ?? []} />
+        </Suspense>
+      )}
     </DefaultLayout>
   );
 };

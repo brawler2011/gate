@@ -55,7 +55,7 @@ export function ProblemCard({ problem, showEditButton }: Props) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  router.push(`/problems/${problem.id}/workshop`);
+                  router.push(`/problems/${problem.id}`);
                 }}
                 style={{ flexShrink: 0 }}
               >
@@ -83,4 +83,3 @@ export function ProblemCard({ problem, showEditButton }: Props) {
     </Link>
   );
 }
-
