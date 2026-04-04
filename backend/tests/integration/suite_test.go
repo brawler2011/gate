@@ -137,7 +137,7 @@ func (s *IntegrationTestSuite) initApp() {
 	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, txManager)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo)
-	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC)
+	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC, s.organizationsRepo)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
 	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)

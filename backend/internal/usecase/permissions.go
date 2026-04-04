@@ -14,17 +14,20 @@ type PermissionsUseCase struct {
 	contestsUC interfaces.ContestsUC
 	usersUC    interfaces.UsersUC
 	problemsUC interfaces.ProblemsUC
+	orgsRepo   interfaces.OrganizationsRepo
 }
 
 func NewPermissionsUseCase(
 	contestsUC interfaces.ContestsUC,
 	usersUC interfaces.UsersUC,
 	problemsUC interfaces.ProblemsUC,
+	orgsRepo interfaces.OrganizationsRepo,
 ) *PermissionsUseCase {
 	return &PermissionsUseCase{
 		contestsUC: contestsUC,
 		usersUC:    usersUC,
 		problemsUC: problemsUC,
+		orgsRepo:   orgsRepo,
 	}
 }
 
@@ -323,12 +326,23 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 		return true, nil
 	}
 
-	// TODO: Check organization membership and roles
-	// For now, allow all authenticated users to view organizations
-	if action == models.ActionViewOrganization {
-		return true, nil
+	member, err := uc.orgsRepo.GetMember(ctx, orgID, userID)
+	if err != nil {
+		// User is not a member of the organization
+		if action == models.ActionViewOrganization {
+			return true, nil
+		}
+		return false, nil
 	}
 
-	// For other actions, deny by default (should check membership)
-	return false, nil
+	switch action {
+	case models.ActionViewOrganization:
+		return true, nil
+	case models.ActionManageOrganization:
+		return member.Role == models.OrgRoleOwner || member.Role == models.OrgRoleAdmin, nil
+	case models.ActionDeleteOrganization:
+		return member.Role == models.OrgRoleOwner, nil
+	default:
+		return false, fmt.Errorf("unknown organization action: %s", action)
+	}
 }

@@ -128,7 +128,7 @@ func runServer(envFile string) {
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, s3Client, defaultS3BlogBucket)
 
 	// Initialize new permissions system with Organizations/Teams support
-	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC)
+	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC, orgsRepo)
 	logger.Info("successfully initialized permissions system with Organizations/Teams support")
 
 	// Initialize Organizations and Teams use cases
