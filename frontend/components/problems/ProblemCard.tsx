@@ -38,8 +38,8 @@ export function ProblemCard({ problem, showEditButton }: Props) {
             <Stack gap="0" style={{ flex: 1, minWidth: 0 }}>
               <Title
                 order={4}
+                fz="md"
                 lineClamp={1}
-                style={{ wordBreak: "break-word" }}
               >
                 {problem.title}
               </Title>
