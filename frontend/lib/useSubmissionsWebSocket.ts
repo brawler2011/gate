@@ -146,6 +146,7 @@ export function useSubmissionsWebSocket({
           if (!data.submission) return;
           const newSubmission: SubmissionWithProgress = {
             ...data.submission,
+            created_at: data.submission.created_at || new Date().toISOString(),
             isNew: true,
           };
           
