@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"log/slog"
 
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
@@ -706,5 +707,16 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, request corev1.
 		return nil, err
 	}
 
-	return corev1.ListContestSubmissions200JSONResponse(*ListSolutionsResponseDTO(submissionsList)), nil
+	var since int64
+	lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.natsJS)
+	if seqErr != nil {
+		slog.Warn("failed to get submissions last sequence", "error", seqErr)
+	} else {
+		since = int64(lastSeq)
+	}
+
+	resp := *ListSolutionsResponseDTO(submissionsList)
+	resp.Since = &since
+
+	return corev1.ListContestSubmissions200JSONResponse(resp), nil
 }

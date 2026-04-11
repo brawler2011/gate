@@ -2,15 +2,22 @@ package observer
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
+	observerv1 "github.com/gate149/contracts/observer/v1"
+	"github.com/gate149/gate/backend/config"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/transport/middleware"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
+
+const timeToClose = time.Second * 1
 
 type Observer struct {
 	upgrader *websocket.Upgrader
@@ -18,16 +25,22 @@ type Observer struct {
 	hub      *Hub
 }
 
-func NewObserver(addr string, ringSize int) *Observer {
+func NewObserver(cfg *config.WsConfig, hub *Hub, middleware func(http.Handler) http.Handler) *Observer {
 	mux := http.NewServeMux()
-	hub := NewHub(ringSize)
+
+	allowedOrigins := make(map[string]bool, 2)
+	for _, origin := range strings.Split(strings.TrimSpace(cfg.AllowedOrigins), ",") {
+		allowedOrigins[origin] = true
+	}
 
 	observer := &Observer{
-		upgrader: &websocket.Upgrader{},
-		hub:      hub,
+		upgrader: &websocket.Upgrader{
+			CheckOrigin: newCheckOrigin(allowedOrigins, cfg.Env),
+		},
+		hub: hub,
 		server: &http.Server{
-			Addr:    addr,
-			Handler: mux,
+			Addr:    cfg.WsAddress,
+			Handler: middleware(mux),
 		},
 	}
 
@@ -36,11 +49,28 @@ func NewObserver(addr string, ringSize int) *Observer {
 	return observer
 }
 
-func (s *Observer) Start() {
+func newCheckOrigin(allowedOrigins map[string]bool, env string) func(r *http.Request) bool {
+	if env == "local" {
+		slog.Info("local environment, all origins allowed")
+		return func(r *http.Request) bool {
+			return true
+		}
+	}
+	return func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if allowedOrigins[origin] {
+			return true
+		}
+		return false
+	}
+}
+
+func (s *Observer) Start() error {
 	err := s.server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
-		slog.Error("failed to start http server", "error", err)
+		return err
 	}
+	return nil
 }
 
 func (s *Observer) Close(ctx context.Context) error {
@@ -72,7 +102,7 @@ func metaMatches(meta *models.SubmissionEventMeta, filter *SubmissionsFilter) bo
 }
 
 func (f *SubmissionsFilter) Matches(event *WrappedEvent) bool {
-	switch e := event.Event.(type) {
+	switch e := event.RawEvent.(type) {
 	case *models.SubmissionCreatedEvent:
 		return metaMatches(&e.SubmissionEventMeta, f)
 	case *models.SubmissionQueuedEvent:
@@ -179,21 +209,30 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		conn.Close()
 	}()
 
+	readDone := startReadPump(conn)
+
 	// 3. Catch-up from ring buffer
-	if filter.Since < s.hub.ring.MinSeq() && filter.Since != 0 {
-		slog.Warn("client since too old", "since", filter.Since, "min", s.hub.ring.MinSeq())
-		// In a real app, you might send an error message here before closing
+	history, err := s.hub.ring.GetRange(filter.Since, sub.barrierSeq)
+	if err != nil && !errors.Is(err, ErrBufferEmpty) {
+		code, message := getClosingFrameData(err)
+		if err := conn.WriteControl(code, message, time.Now().Add(timeToClose)); err != nil {
+			handleWriteError(err)
+			return
+		}
+		slog.Error("cannot get history", "error", err, "since", filter.Since, "barrier", sub.barrierSeq)
 		return
 	}
 
-	history, err := s.hub.ring.GetRange(filter.Since, sub.barrierSeq)
-	if err != nil {
-		slog.Error("failed to get history", "error", err)
-		return
-	}
 	for _, event := range history {
+		select {
+		case <-readDone:
+			return
+		default:
+		}
+
 		if filter.Matches(event) {
-			if err := conn.WriteJSON(event); err != nil {
+			if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+				handleWriteError(err)
 				return
 			}
 		}
@@ -202,19 +241,94 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 	// 4. Flush pending and transition to LIVE
 	sub.mu.Lock()
 	for _, event := range sub.pending {
-		if err := conn.WriteJSON(event); err != nil {
+		select {
+		case <-readDone:
+			sub.mu.Unlock()
+			return
+		default:
+		}
+
+		if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+			handleWriteError(err)
 			sub.mu.Unlock()
 			return
 		}
 	}
+
 	sub.pending = nil
 	sub.state = StateLive
 	sub.mu.Unlock()
 
 	// 5. Main write loop (live events)
-	for event := range sub.outbox {
-		if err := conn.WriteJSON(event); err != nil {
-			break
+	for {
+		select {
+		case <-readDone:
+			return
+		case event := <-sub.outbox:
+			if event == nil {
+				slog.Error("event is nil")
+				if err := conn.WriteControl(websocket.CloseInternalServerErr, nil, time.Now().Add(timeToClose)); err != nil {
+					handleWriteError(err)
+				}
+				return
+			}
+			if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+				handleWriteError(err)
+				return
+			}
 		}
 	}
+}
+
+func getClosingFrameData(err error) (int, []byte) {
+	switch {
+	case errors.Is(err, ErrBufferEmpty):
+		return int(observerv1.SubmissionsWsCloseCodeBufferEmpty),
+			[]byte(observerv1.SubmissionsWsCloseReasonBufferEmpty)
+	case errors.Is(err, ErrInvalidRange):
+		return int(observerv1.SubmissionsWsCloseCodeInvalidRange),
+			[]byte(observerv1.SubmissionsWsCloseReasonInvalidRange)
+	case errors.Is(err, ErrHistoryLost):
+		return int(observerv1.SubmissionsWsCloseCodeHistoryLost),
+			[]byte(observerv1.SubmissionsWsCloseReasonHistoryLost)
+	default:
+		return websocket.CloseInternalServerErr,
+			[]byte(err.Error())
+	}
+}
+
+func handleReadError(err error) {
+	if websocket.IsCloseError(err,
+		websocket.CloseGoingAway,
+		websocket.CloseNoStatusReceived,
+		websocket.CloseNormalClosure) {
+		return
+	}
+
+	slog.Error("cannot read client message", "error", err)
+}
+
+func handleWriteError(err error) {
+	if websocket.IsCloseError(err,
+		websocket.CloseGoingAway,
+		websocket.CloseNoStatusReceived,
+		websocket.CloseNormalClosure) {
+		return
+	}
+
+	slog.Error("cannot write message to client", "error", err)
+}
+
+func startReadPump(conn *websocket.Conn) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				handleReadError(err)
+				return
+			}
+		}
+	}()
+	return done
 }

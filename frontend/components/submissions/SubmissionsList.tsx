@@ -42,28 +42,21 @@ const VerdictCell = ({ submission }: VerdictCellProps) => {
 
     // Currently testing (has progress)
     if (progress) {
-        const percentage = progress.totalTests > 0
-            ? (progress.testNumber / progress.totalTests) * 100
-            : 0;
-
+        const phaseLabels = {
+            queued: 'В очереди',
+            compiling: 'Компиляция',
+            testing: `Тест ${progress.testNumber}`
+        }
         return (
-            <div className={styles.progressContainer}>
-                <div className={styles.progressText}>
-                    <Loader size="xs" />
-                    <span>Тестируется ({progress.testNumber}/{progress.totalTests})</span>
-                </div>
-                <div className={styles.progressBar}>
-                    <div
-                        className={progress.hasFailed ? styles.progressFillError : styles.progressFill}
-                        style={{ width: `${percentage}%` }}
-                    />
-                </div>
+            <div className={styles.progressText}>
+                <Loader size="xs" />
+                <span>{phaseLabels[progress.phase]}</span>
             </div>
         );
     }
 
     // Final verdict
-    const stateString = StateString(state, submission.failed_test);
+    const stateString = StateString(state);
     return (
         <Text c={StateColor(state)} fw={500}>
             {stateString === "UK" ? state : stateString}

@@ -5,7 +5,7 @@
 import type { PaginationModel } from './PaginationModel';
 import type { SubmissionsListItemModel } from './SubmissionsListItemModel';
 export type ListSubmissionsResponseModel = {
-    'access-token'?: string;
+    since?: number;
     submissions: Array<SubmissionsListItemModel>;
     pagination: PaginationModel;
 };

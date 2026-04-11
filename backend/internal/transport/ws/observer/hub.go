@@ -12,10 +12,10 @@ import (
 )
 
 type WrappedEvent struct {
-	Seq       uint64
-	EventType string
-	Event     any
-	Payload   []byte
+	Seq        uint64
+	EventType  string
+	RawEvent   any
+	DTOPayload []byte
 }
 
 type SubscriberState int
@@ -90,16 +90,25 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 		return nil
 	}
 
+	clientPayload, err := SubmissionsEnvelopeDTO(eventType, event)
+	if err != nil {
+		slog.Error("failed to marshal client payload", "type", eventType, "error", err)
+		return nil
+	}
+	if len(clientPayload) == 0 {
+		slog.Warn("empty client payload", "type", eventType)
+		return nil
+	}
+
 	h.broadcast(&WrappedEvent{
-		Seq:       seq,
-		EventType: eventType,
-		Event:     event,
-		Payload:   payload,
+		Seq:        seq,
+		EventType:  eventType,
+		RawEvent:   event,
+		DTOPayload: clientPayload,
 	})
 
 	return nil
 }
-
 func (h *Hub) broadcast(event *WrappedEvent) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

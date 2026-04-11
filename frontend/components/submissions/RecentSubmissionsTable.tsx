@@ -5,8 +5,6 @@ import Link from "next/link";
 import type { SubmissionsListItemModel } from "@contracts/core/v1";
 import { StateColor, StateString, TimeBeautify } from "@/lib/lib";
 import { useSubmissionsWebSocket, type SubmissionWithProgress } from "@/lib/useSubmissionsWebSocket";
-import { notifications } from "@mantine/notifications";
-import { useEffect, useRef } from "react";
 import styles from "./RecentSubmissionsTable.module.css";
 
 const RECENT_SUBMISSIONS_LIMIT = 5;
@@ -17,6 +15,7 @@ type RecentSubmissionsTableProps = {
   userId?: string;
   problemId?: string;
   wsUrl?: string;
+  since?: number;
 };
 
 interface StatusCellProps {
@@ -38,29 +37,24 @@ const StatusCell = ({ submission }: StatusCellProps) => {
 
   // Currently testing (has progress)
   if (progress) {
+    const phaseLabels = {
+      queued: 'В очереди',
+      compiling: 'Компиляция',
+      testing: `Тест ${progress.testNumber}`
+    }
+
     return (
-      <div className={styles.statusCellVertical}>
-        <div className={styles.statusCell}>
-          <Loader size="xs" />
-          <span>{progress.testNumber}/{progress.totalTests}</span>
-        </div>
-        <div className={styles.miniProgressBar}>
-          <div
-            className={progress.hasFailed ? styles.miniProgressFillError : styles.miniProgressFill}
-            style={{ width: `${progress.totalTests > 0 ? (progress.testNumber / progress.totalTests) * 100 : 0}%` }}
-          />
-        </div>
+      <div className={styles.statusCell}>
+        <Loader size="xs" />
+        <span>{phaseLabels[progress.phase]}</span>
       </div>
     );
   }
 
   // Final verdict
-  // DEBUG: Log failed_test value
-  console.log('Submission verdict:', { id: submission.id, state, failed_test: submission.failed_test });
-  
   return (
     <Text c={StateColor(state)} fw={500}>
-      {StateString(state, submission.failed_test)}
+      {StateString(state)}
     </Text>
   );
 };
@@ -71,15 +65,19 @@ export function RecentSubmissionsTable({
   userId,
   problemId,
   wsUrl,
+  since,
 }: RecentSubmissionsTableProps) {
-  const prevErrorRef = useRef(false);
-  
   // Enable WS only if wsUrl is provided and we have userId and problemId for filtering
   const enabled = Boolean(wsUrl && userId && problemId);
 
-  const { submissions, connectionError, highlightedIds } = useSubmissionsWebSocket({
+  const {
+    submissions,
+    highlightedIds,
+  } = useSubmissionsWebSocket({
     wsUrl: wsUrl || '',
+    since,
     initialSubmissions,
+    snapshotScope: 'mine',
     filter: {
       contestId,
       userId,
@@ -88,19 +86,6 @@ export function RecentSubmissionsTable({
     pageSize: RECENT_SUBMISSIONS_LIMIT,
     enabled,
   });
-
-  // Show toast notification when connection error occurs
-  useEffect(() => {
-    if (connectionError && !prevErrorRef.current) {
-      notifications.show({
-        title: 'Соединение потеряно',
-        message: 'Не удалось подключиться к серверу обновлений.',
-        color: 'orange',
-        autoClose: 5000,
-      });
-    }
-    prevErrorRef.current = connectionError;
-  }, [connectionError]);
 
   // Use WS submissions if enabled, otherwise use initial submissions
   const displaySubmissions = enabled ? submissions.slice(0, RECENT_SUBMISSIONS_LIMIT) : initialSubmissions.slice(0, RECENT_SUBMISSIONS_LIMIT);

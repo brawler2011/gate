@@ -2,4 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type MessageSubmissionTestStarted = Record<string, any>;
+import type { SubmissionEventMeta } from './SubmissionEventMeta';
+export type MessageSubmissionTestStarted = (SubmissionEventMeta & {
+    id: string;
+    number: number;
+});
+

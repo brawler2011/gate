@@ -7,6 +7,7 @@ import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class DefaultService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
+     * @returns void
      * @throws ApiError
      */
     public observeSubmissions({

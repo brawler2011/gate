@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/usecase"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
 type CoreServer struct {
@@ -18,6 +19,7 @@ type CoreServer struct {
 	avatarsUC       *usecase.AvatarsUseCase
 	importUC        *usecase.ProblemImportUseCase
 	publishUC       *usecase.ProblemPublishUseCase
+	natsJS          jetstream.JetStream
 }
 
 func NewCoreServer(
@@ -33,6 +35,7 @@ func NewCoreServer(
 	avatarsUC *usecase.AvatarsUseCase,
 	importUC *usecase.ProblemImportUseCase,
 	publishUC *usecase.ProblemPublishUseCase,
+	natsJS jetstream.JetStream,
 ) *CoreServer {
 	return &CoreServer{
 		contestsUC:      contestsUC,
@@ -47,5 +50,6 @@ func NewCoreServer(
 		avatarsUC:       avatarsUC,
 		importUC:        importUC,
 		publishUC:       publishUC,
+		natsJS:          natsJS,
 	}
 }

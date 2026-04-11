@@ -7,13 +7,164 @@ package observerv1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/oapi-codegen/runtime"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for SubmissionsEventType.
+const (
+	SubmissionsCompilingStarted SubmissionsEventType = "submissions.compiling_started"
+	SubmissionsCompleted        SubmissionsEventType = "submissions.completed"
+	SubmissionsCreated          SubmissionsEventType = "submissions.created"
+	SubmissionsQueued           SubmissionsEventType = "submissions.queued"
+	SubmissionsTestStarted      SubmissionsEventType = "submissions.test_started"
+	SubmissionsTestingStarted   SubmissionsEventType = "submissions.testing_started"
+)
+
+// Defines values for SubmissionsWsCloseCode.
+const (
+	SubmissionsWsCloseCodeBufferEmpty  SubmissionsWsCloseCode = 4408
+	SubmissionsWsCloseCodeHistoryLost  SubmissionsWsCloseCode = 4409
+	SubmissionsWsCloseCodeInvalidRange SubmissionsWsCloseCode = 4410
+)
+
+// Defines values for SubmissionsWsCloseReason.
+const (
+	SubmissionsWsCloseReasonBufferEmpty  SubmissionsWsCloseReason = "buffer_empty"
+	SubmissionsWsCloseReasonHistoryLost  SubmissionsWsCloseReason = "history_lost"
+	SubmissionsWsCloseReasonInvalidRange SubmissionsWsCloseReason = "invalid_range"
+)
+
+// MessageSubmissionCompilingStarted defines model for MessageSubmissionCompilingStarted.
+type MessageSubmissionCompilingStarted struct {
+	ContestId    *openapi_types.UUID `json:"contest_id,omitempty"`
+	ContestTitle *string             `json:"contest_title,omitempty"`
+	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	Id           openapi_types.UUID  `json:"id"`
+	Language     *int32              `json:"language,omitempty"`
+	Position     *int32              `json:"position,omitempty"`
+	ProblemId    *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemTitle *string             `json:"problem_title,omitempty"`
+	UserId       *openapi_types.UUID `json:"user_id,omitempty"`
+	Username     *string             `json:"username,omitempty"`
+}
+
+// MessageSubmissionCompleted defines model for MessageSubmissionCompleted.
+type MessageSubmissionCompleted struct {
+	ContestId    *openapi_types.UUID `json:"contest_id,omitempty"`
+	ContestTitle *string             `json:"contest_title,omitempty"`
+	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	Id           openapi_types.UUID  `json:"id"`
+	Language     *int32              `json:"language,omitempty"`
+	MemoryStat   int32               `json:"memory_stat"`
+	Penalty      int32               `json:"penalty"`
+	Position     *int32              `json:"position,omitempty"`
+	ProblemId    *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemTitle *string             `json:"problem_title,omitempty"`
+	Score        int32               `json:"score"`
+	State        int32               `json:"state"`
+	TimeStat     int32               `json:"time_stat"`
+	UserId       *openapi_types.UUID `json:"user_id,omitempty"`
+	Username     *string             `json:"username,omitempty"`
+}
+
+// MessageSubmissionCreated defines model for MessageSubmissionCreated.
+type MessageSubmissionCreated struct {
+	ContestId    *openapi_types.UUID `json:"contest_id,omitempty"`
+	ContestTitle *string             `json:"contest_title,omitempty"`
+	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	Id           openapi_types.UUID  `json:"id"`
+	Language     *int32              `json:"language,omitempty"`
+	Position     *int32              `json:"position,omitempty"`
+	ProblemId    *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemTitle *string             `json:"problem_title,omitempty"`
+	Source       string              `json:"source"`
+	State        int32               `json:"state"`
+	UserId       *openapi_types.UUID `json:"user_id,omitempty"`
+	Username     *string             `json:"username,omitempty"`
+}
+
+// MessageSubmissionQueued defines model for MessageSubmissionQueued.
+type MessageSubmissionQueued struct {
+	ContestId    *openapi_types.UUID `json:"contest_id,omitempty"`
+	ContestTitle *string             `json:"contest_title,omitempty"`
+	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	Id           openapi_types.UUID  `json:"id"`
+	Language     *int32              `json:"language,omitempty"`
+	Position     *int32              `json:"position,omitempty"`
+	ProblemId    *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemTitle *string             `json:"problem_title,omitempty"`
+	UserId       *openapi_types.UUID `json:"user_id,omitempty"`
+	Username     *string             `json:"username,omitempty"`
+}
+
+// MessageSubmissionTestStarted defines model for MessageSubmissionTestStarted.
+type MessageSubmissionTestStarted struct {
+	ContestId    *openapi_types.UUID `json:"contest_id,omitempty"`
+	ContestTitle *string             `json:"contest_title,omitempty"`
+	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	Id           openapi_types.UUID  `json:"id"`
+	Language     *int32              `json:"language,omitempty"`
+	Number       int32               `json:"number"`
+	Position     *int32              `json:"position,omitempty"`
+	ProblemId    *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemTitle *string             `json:"problem_title,omitempty"`
+	UserId       *openapi_types.UUID `json:"user_id,omitempty"`
+	Username     *string             `json:"username,omitempty"`
+}
+
+// MessageSubmissionTestingStarted defines model for MessageSubmissionTestingStarted.
+type MessageSubmissionTestingStarted struct {
+	ContestId    *openapi_types.UUID `json:"contest_id,omitempty"`
+	ContestTitle *string             `json:"contest_title,omitempty"`
+	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	Id           openapi_types.UUID  `json:"id"`
+	Language     *int32              `json:"language,omitempty"`
+	Position     *int32              `json:"position,omitempty"`
+	ProblemId    *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemTitle *string             `json:"problem_title,omitempty"`
+	UserId       *openapi_types.UUID `json:"user_id,omitempty"`
+	Username     *string             `json:"username,omitempty"`
+}
+
+// SubmissionEventMeta defines model for SubmissionEventMeta.
+type SubmissionEventMeta struct {
+	ContestId    *openapi_types.UUID `json:"contest_id,omitempty"`
+	ContestTitle *string             `json:"contest_title,omitempty"`
+	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	Language     *int32              `json:"language,omitempty"`
+	Position     *int32              `json:"position,omitempty"`
+	ProblemId    *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemTitle *string             `json:"problem_title,omitempty"`
+	UserId       *openapi_types.UUID `json:"user_id,omitempty"`
+	Username     *string             `json:"username,omitempty"`
+}
+
+// SubmissionsEventType defines model for SubmissionsEventType.
+type SubmissionsEventType string
+
+// SubmissionsMessage defines model for SubmissionsMessage.
+type SubmissionsMessage struct {
+	EventType SubmissionsEventType       `json:"event_type"`
+	Payload   SubmissionsMessage_Payload `json:"payload"`
+}
+
+// SubmissionsMessage_Payload defines model for SubmissionsMessage.Payload.
+type SubmissionsMessage_Payload struct {
+	union json.RawMessage
+}
+
+// SubmissionsWsCloseCode defines model for SubmissionsWsCloseCode.
+type SubmissionsWsCloseCode int32
+
+// SubmissionsWsCloseReason defines model for SubmissionsWsCloseReason.
+type SubmissionsWsCloseReason string
 
 // ObserveSubmissionsParams defines parameters for ObserveSubmissions.
 type ObserveSubmissionsParams struct {
@@ -22,6 +173,172 @@ type ObserveSubmissionsParams struct {
 	UserId    *openapi_types.UUID `form:"userId,omitempty" json:"userId,omitempty"`
 	ProblemId *openapi_types.UUID `form:"problemId,omitempty" json:"problemId,omitempty"`
 	Language  *int32              `form:"language,omitempty" json:"language,omitempty"`
+}
+
+// AsMessageSubmissionCreated returns the union data inside the SubmissionsMessage_Payload as a MessageSubmissionCreated
+func (t SubmissionsMessage_Payload) AsMessageSubmissionCreated() (MessageSubmissionCreated, error) {
+	var body MessageSubmissionCreated
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageSubmissionCreated overwrites any union data inside the SubmissionsMessage_Payload as the provided MessageSubmissionCreated
+func (t *SubmissionsMessage_Payload) FromMessageSubmissionCreated(v MessageSubmissionCreated) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageSubmissionCreated performs a merge with any union data inside the SubmissionsMessage_Payload, using the provided MessageSubmissionCreated
+func (t *SubmissionsMessage_Payload) MergeMessageSubmissionCreated(v MessageSubmissionCreated) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMessageSubmissionQueued returns the union data inside the SubmissionsMessage_Payload as a MessageSubmissionQueued
+func (t SubmissionsMessage_Payload) AsMessageSubmissionQueued() (MessageSubmissionQueued, error) {
+	var body MessageSubmissionQueued
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageSubmissionQueued overwrites any union data inside the SubmissionsMessage_Payload as the provided MessageSubmissionQueued
+func (t *SubmissionsMessage_Payload) FromMessageSubmissionQueued(v MessageSubmissionQueued) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageSubmissionQueued performs a merge with any union data inside the SubmissionsMessage_Payload, using the provided MessageSubmissionQueued
+func (t *SubmissionsMessage_Payload) MergeMessageSubmissionQueued(v MessageSubmissionQueued) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMessageSubmissionCompilingStarted returns the union data inside the SubmissionsMessage_Payload as a MessageSubmissionCompilingStarted
+func (t SubmissionsMessage_Payload) AsMessageSubmissionCompilingStarted() (MessageSubmissionCompilingStarted, error) {
+	var body MessageSubmissionCompilingStarted
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageSubmissionCompilingStarted overwrites any union data inside the SubmissionsMessage_Payload as the provided MessageSubmissionCompilingStarted
+func (t *SubmissionsMessage_Payload) FromMessageSubmissionCompilingStarted(v MessageSubmissionCompilingStarted) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageSubmissionCompilingStarted performs a merge with any union data inside the SubmissionsMessage_Payload, using the provided MessageSubmissionCompilingStarted
+func (t *SubmissionsMessage_Payload) MergeMessageSubmissionCompilingStarted(v MessageSubmissionCompilingStarted) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMessageSubmissionTestingStarted returns the union data inside the SubmissionsMessage_Payload as a MessageSubmissionTestingStarted
+func (t SubmissionsMessage_Payload) AsMessageSubmissionTestingStarted() (MessageSubmissionTestingStarted, error) {
+	var body MessageSubmissionTestingStarted
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageSubmissionTestingStarted overwrites any union data inside the SubmissionsMessage_Payload as the provided MessageSubmissionTestingStarted
+func (t *SubmissionsMessage_Payload) FromMessageSubmissionTestingStarted(v MessageSubmissionTestingStarted) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageSubmissionTestingStarted performs a merge with any union data inside the SubmissionsMessage_Payload, using the provided MessageSubmissionTestingStarted
+func (t *SubmissionsMessage_Payload) MergeMessageSubmissionTestingStarted(v MessageSubmissionTestingStarted) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMessageSubmissionTestStarted returns the union data inside the SubmissionsMessage_Payload as a MessageSubmissionTestStarted
+func (t SubmissionsMessage_Payload) AsMessageSubmissionTestStarted() (MessageSubmissionTestStarted, error) {
+	var body MessageSubmissionTestStarted
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageSubmissionTestStarted overwrites any union data inside the SubmissionsMessage_Payload as the provided MessageSubmissionTestStarted
+func (t *SubmissionsMessage_Payload) FromMessageSubmissionTestStarted(v MessageSubmissionTestStarted) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageSubmissionTestStarted performs a merge with any union data inside the SubmissionsMessage_Payload, using the provided MessageSubmissionTestStarted
+func (t *SubmissionsMessage_Payload) MergeMessageSubmissionTestStarted(v MessageSubmissionTestStarted) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMessageSubmissionCompleted returns the union data inside the SubmissionsMessage_Payload as a MessageSubmissionCompleted
+func (t SubmissionsMessage_Payload) AsMessageSubmissionCompleted() (MessageSubmissionCompleted, error) {
+	var body MessageSubmissionCompleted
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageSubmissionCompleted overwrites any union data inside the SubmissionsMessage_Payload as the provided MessageSubmissionCompleted
+func (t *SubmissionsMessage_Payload) FromMessageSubmissionCompleted(v MessageSubmissionCompleted) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageSubmissionCompleted performs a merge with any union data inside the SubmissionsMessage_Payload, using the provided MessageSubmissionCompleted
+func (t *SubmissionsMessage_Payload) MergeMessageSubmissionCompleted(v MessageSubmissionCompleted) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SubmissionsMessage_Payload) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SubmissionsMessage_Payload) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
 }
 
 // ServerInterface represents all server handlers.
@@ -237,6 +554,14 @@ type ObserveSubmissionsRequestObject struct {
 
 type ObserveSubmissionsResponseObject interface {
 	VisitObserveSubmissionsResponse(w http.ResponseWriter) error
+}
+
+type ObserveSubmissions101Response struct {
+}
+
+func (response ObserveSubmissions101Response) VisitObserveSubmissionsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(101)
+	return nil
 }
 
 // StrictServerInterface represents all server handlers.

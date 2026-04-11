@@ -10,15 +10,16 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
-export type { MessageSubmissionCompilingCompleted } from './models/MessageSubmissionCompilingCompleted';
 export type { MessageSubmissionCompilingStarted } from './models/MessageSubmissionCompilingStarted';
+export type { MessageSubmissionCompleted } from './models/MessageSubmissionCompleted';
 export type { MessageSubmissionCreated } from './models/MessageSubmissionCreated';
 export type { MessageSubmissionQueued } from './models/MessageSubmissionQueued';
-export type { MessageSubmissionTestCompleted } from './models/MessageSubmissionTestCompleted';
-export type { MessageSubmissionTestingCompleted } from './models/MessageSubmissionTestingCompleted';
 export type { MessageSubmissionTestingStarted } from './models/MessageSubmissionTestingStarted';
 export type { MessageSubmissionTestStarted } from './models/MessageSubmissionTestStarted';
+export type { SubmissionEventMeta } from './models/SubmissionEventMeta';
+export { SubmissionsEventType } from './models/SubmissionsEventType';
 export type { SubmissionsMessage } from './models/SubmissionsMessage';
-export { SubmissionsMessageType } from './models/SubmissionsMessageType';
+export { SubmissionsWsCloseCode } from './models/SubmissionsWsCloseCode';
+export { SubmissionsWsCloseReason } from './models/SubmissionsWsCloseReason';
 
 export { DefaultService } from './services/DefaultService';

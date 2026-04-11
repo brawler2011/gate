@@ -156,7 +156,6 @@ type SubmissionCompilingStartedEvent struct {
 
 	Id uuid.UUID `json:"id"`
 }
-
 type SubmissionTestingStartedEvent struct {
 	SubmissionEventMeta
 

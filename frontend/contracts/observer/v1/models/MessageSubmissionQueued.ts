@@ -2,4 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type MessageSubmissionQueued = Record<string, any>;
+import type { SubmissionEventMeta } from './SubmissionEventMeta';
+export type MessageSubmissionQueued = (SubmissionEventMeta & {
+    id: string;
+});
+

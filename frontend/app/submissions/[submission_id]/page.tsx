@@ -44,6 +44,7 @@ const Page = async (props: Props) => {
 
   const { submission } = resp;
 
+  // TODO: submission.failed_test
   const rows = [submission].map((submission) => (
     <TableTr key={submission.id}>
       <TableTd ta="center">
@@ -68,7 +69,7 @@ const Page = async (props: Props) => {
       </TableTd>
       <TableTd ta="center">
         <Text c={StateColor(submission.state)} fw={500}>
-          {StateString(submission.state, submission.failed_test)}
+          {StateString(submission.state)}
         </Text>
       </TableTd>
       <TableTd ta="center">

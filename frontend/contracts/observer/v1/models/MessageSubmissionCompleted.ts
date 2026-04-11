@@ -3,9 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { SubmissionEventMeta } from './SubmissionEventMeta';
-export type MessageSubmissionCreated = (SubmissionEventMeta & {
+export type MessageSubmissionCompleted = (SubmissionEventMeta & {
     id: string;
     state: number;
-    source: string;
+    score: number;
+    penalty: number;
+    time_stat: number;
+    memory_stat: number;
 });
 

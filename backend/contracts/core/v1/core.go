@@ -302,8 +302,8 @@ type ListProblemsResponseModel struct {
 
 // ListSubmissionsResponseModel defines model for ListSubmissionsResponseModel.
 type ListSubmissionsResponseModel struct {
-	AccessToken *string                    `json:"access-token,omitempty"`
 	Pagination  PaginationModel            `json:"pagination"`
+	Since       *int64                     `json:"since,omitempty"`
 	Submissions []SubmissionsListItemModel `json:"submissions"`
 }
 

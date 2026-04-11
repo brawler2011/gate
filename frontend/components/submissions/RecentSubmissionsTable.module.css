@@ -22,13 +22,6 @@
     box-sizing: border-box;
 }
 
-.statusCellVertical {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-}
-
 /* Queue status */
 .queueStatus {
     display: flex;
@@ -43,30 +36,6 @@
 
 [data-mantine-color-scheme="dark"] .queueStatus {
     color: var(--mantine-color-gray-5);
-}
-
-/* Mini progress bar for recent submissions table */
-.miniProgressBar {
-    width: 80px;
-    height: 6px;
-    background-color: var(--mantine-color-gray-3);
-    border-radius: 3px;
-    overflow: hidden;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.miniProgressFill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--mantine-color-green-5), var(--mantine-color-green-6));
-    border-radius: 3px;
-    transition: width 0.3s ease-out;
-}
-
-.miniProgressFillError {
-    height: 100%;
-    background: linear-gradient(90deg, var(--mantine-color-red-5), var(--mantine-color-red-6));
-    border-radius: 3px;
-    transition: width 0.3s ease-out;
 }
 
 /* Row highlight animation */
@@ -90,14 +59,4 @@
         background-color: var(--mantine-color-blue-light);
     }
 
-    .miniProgressFill,
-    .miniProgressFillError {
-        transition: none;
-    }
 }
-
-/* Dark mode adjustments */
-[data-mantine-color-scheme="dark"] .miniProgressBar {
-    background-color: var(--mantine-color-dark-4);
-}
-

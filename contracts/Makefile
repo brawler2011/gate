@@ -50,7 +50,7 @@ go-gen: deps
 			:; \
 		else \
 			go run $(OAPI_CODEGEN) \
-				-generate std-http-server,models,strict-server \
+				-generate std-http-server,models,strict-server,skip-prune \
 				-package "$$pkg_name" \
 				-o "$$out_dir/$$service.go" \
 				"$$spec_path" || exit 1; \

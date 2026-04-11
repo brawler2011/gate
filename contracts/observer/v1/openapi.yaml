@@ -37,50 +37,168 @@ paths:
           schema:
             type: integer
             format: int32
-    responses:
-      "101":
-        description: Switching protocols
+      responses:
+        "101":
+          description: Switching protocols
 components:
   schemas:
-    SubmissionsMessageType:
+    SubmissionsWsCloseCode:
+      type: integer
+      format: int32
+      enum:
+        - 4408
+        - 4409
+        - 4410
+      x-enum-varnames:
+        - buffer_empty
+        - history_lost
+        - invalid_range
+    SubmissionsWsCloseReason:
       type: string
       enum:
-        - created
-        - queued
-        - compiling_started
-        - testing_started
-        - test_started
-        - completed
+        - buffer_empty
+        - history_lost
+        - invalid_range
+    SubmissionEventMeta:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        contest_id:
+          type: string
+          format: uuid
+        contest_title:
+          type: string
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        position:
+          type: integer
+          format: int32
+        language:
+          type: integer
+          format: int32
+        created_at:
+          type: string
+          format: date-time
+    SubmissionsEventType:
+      type: string
+      enum:
+        - submissions.created
+        - submissions.queued
+        - submissions.compiling_started
+        - submissions.testing_started
+        - submissions.test_started
+        - submissions.completed
     SubmissionsMessage:
       type: object
       required:
-        - message_type
+        - event_type
+        - payload
       properties:
-        message_type:
-          $ref: "#/components/schemas/SubmissionsMessageType"
-        message:
+        event_type:
+          $ref: "#/components/schemas/SubmissionsEventType"
+        payload:
           oneOf:
             - $ref: "#/components/schemas/MessageSubmissionCreated"
             - $ref: "#/components/schemas/MessageSubmissionQueued"
-            - $ref: "#/components/schemas/MessageSubmissionTestingStarted"
             - $ref: "#/components/schemas/MessageSubmissionCompilingStarted"
-            - $ref: "#/components/schemas/MessageSubmissionCompilingCompleted"
+            - $ref: "#/components/schemas/MessageSubmissionTestingStarted"
             - $ref: "#/components/schemas/MessageSubmissionTestStarted"
-            - $ref: "#/components/schemas/MessageSubmissionTestCompleted"
-            - $ref: "#/components/schemas/MessageSubmissionTestingCompleted"
+            - $ref: "#/components/schemas/MessageSubmissionCompleted"
     MessageSubmissionCreated:
-      type: object
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+            - state
+            - source
+          properties:
+            id:
+              type: string
+              format: uuid
+            state:
+              type: integer
+              format: int32
+            source:
+              type: string
     MessageSubmissionQueued:
-      type: object
-    MessageSubmissionTestingStarted:
-      type: object
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              format: uuid
     MessageSubmissionCompilingStarted:
-      type: object
-    MessageSubmissionCompilingCompleted:
-      type: object
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              format: uuid
+    MessageSubmissionTestingStarted:
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              format: uuid
     MessageSubmissionTestStarted:
-      type: object
-    MessageSubmissionTestCompleted:
-      type: object
-    MessageSubmissionTestingCompleted:
-      type: object
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+            - number
+          properties:
+            id:
+              type: string
+              format: uuid
+            number:
+              type: integer
+              format: int32
+    MessageSubmissionCompleted:
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+            - state
+            - score
+            - penalty
+            - time_stat
+            - memory_stat
+          properties:
+            id:
+              type: string
+              format: uuid
+            state:
+              type: integer
+              format: int32
+            score:
+              type: integer
+              format: int32
+            penalty:
+              type: integer
+              format: int32
+            time_stat:
+              type: integer
+              format: int32
+            memory_stat:
+              type: integer
+              format: int32

@@ -128,6 +128,8 @@ const Page = async ({params, searchParams}: PageProps) => {
                                             <SubmissionsListClient
                                                 initialSubmissions={submissionsData.submissions}
                                                 wsUrl={wsBaseUrl + "/submissions"}
+                                                since={submissionsData.since}
+                                                snapshotScope="all"
                                                 filter={{
                                                     contestId: contest_id,
                                                     userId: parsedParams.userId,
@@ -172,4 +174,3 @@ const Page = async ({params, searchParams}: PageProps) => {
 };
 
 export default Page;
-

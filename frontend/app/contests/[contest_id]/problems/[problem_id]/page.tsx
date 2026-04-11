@@ -66,7 +66,7 @@ const Page = async (props: Props) => {
           pageSize: 5,
           sortOrder: "desc",
         })
-      : Promise.resolve([null, { submissions: [], pagination: { page: 1, total: 0 } }] as const),
+      : Promise.resolve([null, { submissions: [], pagination: { page: 1, total: 0 }, since: 0 }] as const),
   ]);
 
   if (problemError) return <ErrorDisplay error={problemError} />;
@@ -100,6 +100,7 @@ const Page = async (props: Props) => {
       contestRole={contestRole}
       header={<HeaderWithSession />}
       wsUrl={wsUrl}
+      since={submissionsResponse?.since}
     />
   );
 };

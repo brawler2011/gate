@@ -4,15 +4,26 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/gate149/gate/backend/config"
+	"github.com/gate149/gate/backend/internal/domain/interfaces"
+	"github.com/gate149/gate/backend/internal/domain/models"
+	"github.com/gate149/gate/backend/internal/repository/pg"
+	"github.com/gate149/gate/backend/internal/transport/middleware"
 	ws "github.com/gate149/gate/backend/internal/transport/ws/observer"
+	"github.com/gate149/gate/backend/internal/usecase"
+	"github.com/gate149/gate/backend/internal/worker/outbox"
+	"github.com/gate149/gate/backend/internal/worker/pubsub"
+	"github.com/gate149/gate/backend/pkg"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
+	"github.com/ory/client-go"
+	ory "github.com/ory/client-go"
 	"github.com/spf13/cobra"
 )
 
@@ -84,36 +95,98 @@ func runWsServer(envFile string) {
 			Level: slog.LevelDebug,
 		}))
 	}
+	slog.SetDefault(log)
 
-	log.Info("starting websocket server",
+	slog.Info("starting websocket server",
 		slog.String("address", cfg.WsAddress),
 		slog.String("nats_url", cfg.GetNatsURL()),
 		slog.String("env", cfg.Env))
 
 	// Initialize WebSocket observer with ring buffer size
 	const ringBufferSize = 10000
-	observer := ws.NewObserver(cfg.WsAddress, ringBufferSize)
-	log.Info("websocket observer initialized")
+
+	pool, err := pkg.NewPostgresDB(cfg.GetPostgresDSN())
+	usersRepo := pg.NewUsersRepo(pool)
+	outboxRepo := pg.NewOutboxRepo(pool)
+	txManager := pg.NewTransactor(pool)
+
+	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, txManager)
+
+	oryPublicConfiguration := ory.NewConfiguration()
+	oryPublicConfiguration.Servers = []ory.ServerConfiguration{{
+		URL: cfg.KratosURl,
+	}}
+	oryPublicClient := ory.NewAPIClient(oryPublicConfiguration)
+
+	observerMiddleware := newMiddleware(usersUC, oryPublicClient)
+	observerHub := ws.NewHub(ringBufferSize)
+	observer := ws.NewObserver(&cfg, observerHub, observerMiddleware)
+	slog.Info("websocket observer initialized")
+
+	js, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
+	if err != nil {
+		panic(fmt.Sprintf("failed to connect to nats jetstream: %s", err.Error()))
+	}
+
+	if err := pkg.EnsureSubmissionsStream(context.Background(), js); err != nil {
+		panic(fmt.Sprintf("failed to ensure SUBMISSIONS stream: %s", err.Error()))
+	}
+	slog.Info("nats jetstream initialized", slog.String("url", cfg.GetNatsURL()))
+
+	dispatcher := outbox.NewEventDispatcher()
+	dispatcher.Register(models.SubmissionEventCreated, observerHub)
+	dispatcher.Register(models.SubmissionEventQueued, observerHub)
+	dispatcher.Register(models.SubmissionEventCompilingStarted, observerHub)
+	dispatcher.Register(models.SubmissionEventTestingStarted, observerHub)
+	dispatcher.Register(models.SubmissionEventTestStarted, observerHub)
+	dispatcher.Register(models.SubmissionEventCompleted, observerHub)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sub, err := pubsub.NewSubmissionsSub(rootCtx, js, dispatcher)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create submissions subscriber: %s", err.Error()))
+	}
+
+	go func() {
+		slog.Info("nats submissions subscriber started")
+		if err := sub.Start(rootCtx); err != nil && err != context.Canceled {
+			slog.Error("nats submissions subscriber stopped with error", slog.Any("error", err))
+		}
+	}()
 
 	// Start observer server in background
 	go func() {
-		log.Info("websocket server listening", slog.String("address", cfg.WsAddress))
-		observer.Start()
+		slog.Info("websocket server listening", slog.String("address", cfg.WsAddress))
+		err := observer.Start()
+		if err != nil {
+			panic(fmt.Errorf("failed to start http server %w", err))
+		}
 	}()
 
 	// Wait for shutdown signal
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 	<-stop
+	cancel()
 
-	log.Info("shutting down websocket server...")
+	slog.Info("shutting down websocket server...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := observer.Close(shutdownCtx); err != nil {
-		log.Error("error shutting down server", slog.Any("error", err))
+		slog.Error("error shutting down server", slog.Any("error", err))
 	}
 
-	log.Info("websocket server stopped")
+	slog.Info("websocket server stopped")
+}
+
+func newMiddleware(usersUC interfaces.UsersUC, oryPublicClient *client.APIClient) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return middleware.AuthMiddleware(oryPublicClient.FrontendAPI)(
+			middleware.UsersMiddleware(usersUC)(next),
+		)
+	}
 }

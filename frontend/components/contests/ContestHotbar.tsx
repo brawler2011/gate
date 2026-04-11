@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Button, Collapse, Stack } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconChevronDown,
   IconChevronUp,
@@ -34,6 +34,7 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children,
   // Create permission checker
   const checker = new PermissionChecker(user, contestRole?.role || null);
   const [mobileNavOpened, { toggle: toggleMobileNav }] = useDisclosure(false);
+  const isDesktop = useMediaQuery("(min-width: 48em)");
 
   const marginStyle = align === "center" ? "0 auto" : "0";
 
@@ -73,9 +74,17 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children,
 
   return (
     <Box>
-      {/* Desktop tabs - just tabs, no panel */}
+      {/* Desktop tabs */}
       <div className={classes.desktopTabs}>
-        <Box style={{ maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: marginStyle, marginBottom: -1, position: "relative", zIndex: 1 }}>
+        <Box
+          style={{
+            maxWidth: CONTEST_CONTENT_MAX_WIDTH,
+            margin: marginStyle,
+            marginBottom: -1,
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
           <div className={classes.tabRow}>
             {tabs.map((tab) => (
               <Link
@@ -89,12 +98,14 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children,
             ))}
           </div>
         </Box>
-        <Box style={{ maxWidth: maxWidth || CONTEST_CONTENT_MAX_WIDTH, margin: marginStyle }}>
-          {children}
-        </Box>
+        {isDesktop && (
+          <Box style={{ maxWidth: maxWidth || CONTEST_CONTENT_MAX_WIDTH, margin: marginStyle }}>
+            {children}
+          </Box>
+        )}
       </div>
 
-      {/* Mobile navigation - just nav, no panel wrapper */}
+      {/* Mobile navigation */}
       <Stack
         gap="md"
         className={classes.mobileSection}
@@ -175,8 +186,7 @@ export function ContestHotbar({ contest, user, contestRole, activeTab, children,
             )}
           </Stack>
         </Collapse>
-        
-        {children}
+        {!isDesktop && children}
       </Stack>
     </Box>
   );

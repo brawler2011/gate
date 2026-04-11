@@ -139,17 +139,20 @@ func runServer(envFile string) {
 	// Initialize NATS JetStream connection
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
 	if err != nil {
-		logger.Warn("failed to create nats jetstream connection", slog.Any("error", err))
-		natsJS = nil
-	} else {
-		logger.Info("successfully initialized nats jetstream", slog.String("url", cfg.GetNatsURL()))
-		if err := pkg.EnsureSubmissionsStream(context.Background(), natsJS); err != nil {
-			logger.Warn("failed to ensure SUBMISSIONS stream", slog.Any("error", err))
-			natsJS = nil
-		} else {
-			logger.Info("SUBMISSIONS stream ready")
-		}
+		panic(fmt.Errorf("failed to create nats jetstream connection %w", err))
 	}
+	logger.Info("successfully initialized nats jetstream", slog.String("url", cfg.GetNatsURL()))
+
+	if err := pkg.EnsureSubmissionsStream(context.Background(), natsJS); err != nil {
+		panic(fmt.Errorf("failed to ensure SUBMISSIONS stream %w", err))
+	}
+
+	logger.Info("SUBMISSIONS stream ready")
+
+	// Initialize outbox worker (event dispatcher system)
+	dispatcher := outbox.NewEventDispatcher()
+	dispatcher.Register(models.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
+	logger.Info("registered submission.created outbox handler")
 
 	submissionsRepo := pg.NewSubmissionsRepo(pool)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
@@ -174,15 +177,6 @@ func runServer(envFile string) {
 		logger.Info("successfully initialized workshop use case")
 	}
 
-	// Initialize outbox worker (event dispatcher system)
-	dispatcher := outbox.NewEventDispatcher()
-	if natsJS != nil {
-		dispatcher.Register(models.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
-		logger.Info("registered submission.created outbox handler")
-	} else {
-		logger.Warn("nats jetstream unavailable, submission events will not be forwarded to judge worker")
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -204,6 +198,7 @@ func runServer(envFile string) {
 		avatarsUC,
 		problemImportUC,
 		problemPublishUC,
+		natsJS,
 	)
 
 	if workshopUC != nil {

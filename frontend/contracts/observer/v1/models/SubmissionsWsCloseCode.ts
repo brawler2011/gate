@@ -2,4 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type MessageSubmissionCompilingCompleted = Record<string, any>;
+export enum SubmissionsWsCloseCode {
+    buffer_empty = 4408,
+    history_lost = 4409,
+    invalid_range = 4410,
+}

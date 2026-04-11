@@ -158,6 +158,7 @@ func (s *IntegrationTestSuite) initApp() {
 		nil, // avatarsUC - not needed for integration tests
 		nil, // importUC - not needed for integration tests
 		nil, // publishUC - not needed for integration tests
+		nil, // natsJS - not needed for integration tests
 	)
 
 	// Strict Handler

@@ -47,6 +47,7 @@ func TestRingBuffer_GetRange(t *testing.T) {
 		{"PartialRange", 1, 3, []string{"two", "three"}, false},
 		{"OpenEnd", 1, 0, []string{"two", "three"}, false},
 		{"SingleItem", 1, 2, []string{"two"}, false},
+		{"EqualBoundsEmpty", 3, 3, nil, false},
 		{"InvalidRange", 3, 1, nil, true}, // since >= to
 		{"BeyondMax", 5, 0, nil, false},   // since >= maxSeq
 	}
@@ -95,8 +96,14 @@ func TestRingBuffer_HistoryLost(t *testing.T) {
 
 func TestRingBuffer_Empty(t *testing.T) {
 	rb := observer.NewRingBuffer[int](5)
-	_, err := rb.GetRange(0, 1)
+	got, err := rb.GetRange(0, 1)
 	if err == nil {
-		t.Error("expected error for empty buffer")
+		t.Error("expected ErrBufferEmpty for empty buffer, got nil")
+	}
+	if err != nil && err != observer.ErrBufferEmpty {
+		t.Errorf("unexpected error for empty buffer: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("expected empty result for empty buffer, got %v", got)
 	}
 }

@@ -80,6 +80,19 @@ type WsConfig struct {
 	NatsUrl   string `env:"NATS_URL"`
 	NatsHost  string `env:"NATS_HOST" env-default:"localhost"`
 	NatsPort  string `env:"NATS_PORT" env-default:"4222"`
+
+	PostgresDSN      string `env:"POSTGRES_DSN"`
+	PostgresUser     string `env:"POSTGRES_USER" env-default:"postgres"`
+	PostgresPassword string `env:"POSTGRES_PASSWORD" env-default:"postgres"`
+	PostgresHost     string `env:"POSTGRES_HOST" env-default:"localhost"`
+	PostgresPort     string `env:"POSTGRES_PORT" env-default:"5432"`
+	PostgresDatabase string `env:"POSTGRES_DB" env-default:"gate"`
+	PostgresSSLMode  string `env:"POSTGRES_SSLMODE" env-default:"disable"`
+
+	KratosURl      string `env:"KRATOS_URL" env-default:"http://localhost:4433"`
+	KratosAdminURL string `env:"KRATOS_ADMIN_URL" env-default:"http://localhost:4434"`
+
+	AllowedOrigins string `env:"ALLOWED_ORIGINS" env-default:"http://localhost,http://127.0.0.1"`
 }
 
 func (c *WsConfig) GetNatsURL() string {
@@ -87,4 +100,11 @@ func (c *WsConfig) GetNatsURL() string {
 		return c.NatsUrl
 	}
 	return fmt.Sprintf("nats://%s:%s", c.NatsHost, c.NatsPort)
+}
+func (c *WsConfig) GetPostgresDSN() string {
+	if c.PostgresDSN != "" {
+		return c.PostgresDSN
+	}
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		c.PostgresUser, c.PostgresPassword, c.PostgresHost, c.PostgresPort, c.PostgresDatabase, c.PostgresSSLMode)
 }

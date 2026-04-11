@@ -30,7 +30,7 @@ export function ContestProblemsTable({
   const router = useRouter();
 
   return (
-    <Box style={{ maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}>
+    <Box style={{ width: "100%", maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}>
       <Box className={classes.tableContainer}>
         <Table className={classes.table} verticalSpacing="md">
           <Table.Thead className={classes.thead}>

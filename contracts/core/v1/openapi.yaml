@@ -2266,8 +2266,9 @@ components:
         - submissions
         - pagination
       properties:
-        access-token:
-          type: string
+        since:
+          type: integer
+          format: int64
         submissions:
           type: array
           items:

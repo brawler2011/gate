@@ -5,6 +5,12 @@ import (
 	"sync"
 )
 
+var (
+	ErrBufferEmpty  = errors.New("ring buffer is empty")
+	ErrInvalidRange = errors.New("requested range is invalid")
+	ErrHistoryLost  = errors.New("requested history is lost")
+)
+
 type RingBufferItem[T any] struct {
 	Value T
 	Seq   uint64
@@ -75,11 +81,7 @@ func (b *RingBuffer[T]) GetRange(since, to uint64) ([]T, error) {
 	defer b.mu.RUnlock()
 
 	if b.maxSeq == 0 {
-		return nil, errors.New("ring buffer is empty")
-	}
-
-	if to != 0 && since >= to {
-		return nil, errors.New("requested range is invalid")
+		return nil, ErrBufferEmpty
 	}
 
 	// No new items
@@ -87,11 +89,15 @@ func (b *RingBuffer[T]) GetRange(since, to uint64) ([]T, error) {
 		return nil, nil
 	}
 
+	if to != 0 && since >= to {
+		return nil, ErrInvalidRange
+	}
+
 	start := since + 1
 
 	// requested range start is too old
 	if start < b.minSeq {
-		return nil, errors.New("requested history is lost")
+		return nil, ErrHistoryLost
 	}
 
 	end := b.maxSeq

@@ -2,17 +2,15 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { MessageSubmissionCompilingCompleted } from './MessageSubmissionCompilingCompleted';
 import type { MessageSubmissionCompilingStarted } from './MessageSubmissionCompilingStarted';
+import type { MessageSubmissionCompleted } from './MessageSubmissionCompleted';
 import type { MessageSubmissionCreated } from './MessageSubmissionCreated';
 import type { MessageSubmissionQueued } from './MessageSubmissionQueued';
-import type { MessageSubmissionTestCompleted } from './MessageSubmissionTestCompleted';
-import type { MessageSubmissionTestingCompleted } from './MessageSubmissionTestingCompleted';
 import type { MessageSubmissionTestingStarted } from './MessageSubmissionTestingStarted';
 import type { MessageSubmissionTestStarted } from './MessageSubmissionTestStarted';
-import type { SubmissionsMessageType } from './SubmissionsMessageType';
+import type { SubmissionsEventType } from './SubmissionsEventType';
 export type SubmissionsMessage = {
-    message_type: SubmissionsMessageType;
-    message?: (MessageSubmissionCreated | MessageSubmissionQueued | MessageSubmissionTestingStarted | MessageSubmissionCompilingStarted | MessageSubmissionCompilingCompleted | MessageSubmissionTestStarted | MessageSubmissionTestCompleted | MessageSubmissionTestingCompleted);
+    event_type: SubmissionsEventType;
+    payload: (MessageSubmissionCreated | MessageSubmissionQueued | MessageSubmissionCompilingStarted | MessageSubmissionTestingStarted | MessageSubmissionTestStarted | MessageSubmissionCompleted);
 };
 

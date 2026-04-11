@@ -38,10 +38,11 @@ type PageProps = {
     user: SessionUser,
     contestRole: { role: ContestRole } | null,
     header: React.ReactNode,
-    wsUrl?: string
+    wsUrl?: string,
+    since?: number,
 }
 
-const Task = ({tasks, contest, task, submissions, problemId, contestId, user, contestRole, header, wsUrl}: PageProps) => {
+const Task = ({tasks, contest, task, submissions, problemId, contestId, user, contestRole, header, wsUrl, since}: PageProps) => {
     const onSubmit = async (
         submission: FormData,
         language: string
@@ -163,6 +164,7 @@ const Task = ({tasks, contest, task, submissions, problemId, contestId, user, co
                                         userId={user?.id}
                                         problemId={problemId}
                                         wsUrl={wsUrl}
+                                        since={since}
                                     />
                                 </Stack>
                             </Paper>

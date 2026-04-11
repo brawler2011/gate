@@ -93,6 +93,7 @@ func newOutboxEventParams(submission models.Submission) (*models.CreateOutboxEve
 			ProblemTitle: submission.ProblemTitle,
 			Position:     submission.Position,
 			Language:     submission.Language,
+			CreatedAt:    submission.CreatedAt,
 		},
 		Id:     submission.ID,
 		State:  submission.State,

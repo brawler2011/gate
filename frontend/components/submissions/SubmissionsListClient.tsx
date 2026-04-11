@@ -3,13 +3,13 @@
 import React from 'react';
 import { SubmissionsList } from './SubmissionsList';
 import { useSubmissionsWebSocket } from '@/lib/useSubmissionsWebSocket';
-import { notifications } from '@mantine/notifications';
-import { useEffect, useRef } from 'react';
 import type { SubmissionsListItemModel } from '@contracts/core/v1';
 
 interface SubmissionsListClientProps {
     initialSubmissions: SubmissionsListItemModel[];
     wsUrl: string;
+    since?: number;
+    snapshotScope?: 'all' | 'mine';
     filter: {
         contestId?: string;
         userId?: string;
@@ -23,6 +23,8 @@ interface SubmissionsListClientProps {
 export function SubmissionsListClient({
     initialSubmissions,
     wsUrl,
+    since,
+    snapshotScope = 'all',
     filter,
     pageSize,
     page,
@@ -30,39 +32,26 @@ export function SubmissionsListClient({
 }: SubmissionsListClientProps) {
     // WS only active on first page with desc sort order (desc is default when not specified)
     const enabled = page === 1 && (sortOrder === 'desc' || sortOrder === undefined);
-    const prevErrorRef = useRef(false);
 
-    // Debug logging
-    if (process.env.NODE_ENV === 'development') {
-        console.log('[SubmissionsListClient]', { wsUrl, page, sortOrder, enabled });
-    }
-
-    const { submissions, connectionError, highlightedIds } = useSubmissionsWebSocket({
+    const {
+        submissions,
+        highlightedIds,
+    } = useSubmissionsWebSocket({
         wsUrl,
+        since,
         initialSubmissions,
+        snapshotScope,
         filter,
         pageSize,
         enabled,
     });
 
-    // Show toast notification when connection error occurs
-    useEffect(() => {
-        if (connectionError && !prevErrorRef.current) {
-            notifications.show({
-                title: 'Соединение потеряно',
-                message: 'Не удалось подключиться к серверу обновлений. Данные могут быть неактуальными.',
-                color: 'orange',
-                autoClose: 5000,
-            });
-        }
-        prevErrorRef.current = connectionError;
-    }, [connectionError]);
-
     return (
-        <SubmissionsList
-            submissions={submissions}
-            highlightedIds={highlightedIds}
-        />
+        <>
+            <SubmissionsList
+                submissions={submissions}
+                highlightedIds={highlightedIds}
+            />
+        </>
     );
 }
-
