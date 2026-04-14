@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
@@ -15,6 +16,9 @@ type SubmissionsSub struct {
 	dispatcher interfaces.EventDispatcher
 	consumer   jetstream.Consumer
 	logger     *slog.Logger
+	mu         sync.Mutex
+	consumeCtx jetstream.ConsumeContext
+	cancel     context.CancelFunc
 }
 
 func NewSubmissionsSub(
@@ -48,20 +52,62 @@ func NewSubmissionsSub(
 func (s *SubmissionsSub) Start(ctx context.Context) error {
 	s.logger.Info("starting subscriber")
 
-	consumeCtx, err := s.consumer.Consume(s.handleMessage(ctx), jetstream.PullMaxMessages(1))
+	runCtx, cancel := context.WithCancel(ctx)
+	consumeCtx, err := s.consumer.Consume(s.handleMessage(runCtx), jetstream.PullMaxMessages(1))
 	if err != nil {
+		cancel()
 		return fmt.Errorf("failed to start consume: %w", err)
 	}
 
-	select {
-	case <-ctx.Done():
-		s.logger.Info("stopping subscriber")
+	s.mu.Lock()
+	s.consumeCtx = consumeCtx
+	s.cancel = cancel
+	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		s.consumeCtx = nil
+		s.cancel = nil
+		s.mu.Unlock()
+		cancel()
+	}()
+
+	if err := runCtx.Err(); err != nil {
 		consumeCtx.Stop()
 		<-consumeCtx.Closed()
-		return ctx.Err()
+		return err
+	}
+
+	select {
+	case <-runCtx.Done():
+		consumeCtx.Stop()
+		<-consumeCtx.Closed()
+		return runCtx.Err()
 	case <-consumeCtx.Closed():
+		if err := runCtx.Err(); err != nil {
+			return err
+		}
 		s.logger.Error("consumer closed unexpectedly")
 		return fmt.Errorf("consumer closed")
+	}
+}
+
+func (s *SubmissionsSub) Stop() {
+	s.mu.Lock()
+	consumeCtx := s.consumeCtx
+	cancel := s.cancel
+	s.mu.Unlock()
+
+	if consumeCtx == nil && cancel == nil {
+		return
+	}
+
+	s.logger.Info("stopping subscriber")
+	if cancel != nil {
+		cancel()
+	}
+	if consumeCtx != nil {
+		consumeCtx.Stop()
+		<-consumeCtx.Closed()
 	}
 }
 
@@ -78,6 +124,7 @@ func (s *SubmissionsSub) handleMessage(parentCtx context.Context) jetstream.Mess
 			if err := msg.Nak(); err != nil {
 				s.logger.Error("failed to nak message", "error", err)
 			}
+			return
 		}
 
 		// Very important to pass sequence info

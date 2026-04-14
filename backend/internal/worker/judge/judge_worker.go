@@ -20,6 +20,8 @@ type JudgeWorker struct {
 	consumer    jetstream.Consumer
 	workerCount int
 	logger      *slog.Logger
+	mu          sync.Mutex
+	cancel      context.CancelFunc
 	wg          sync.WaitGroup
 }
 
@@ -59,23 +61,34 @@ func NewJudgeWorker(
 
 // Start starts the judge worker pool
 func (w *JudgeWorker) Start(ctx context.Context) error {
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	w.mu.Lock()
+	w.cancel = cancel
+	w.mu.Unlock()
+	defer func() {
+		w.mu.Lock()
+		w.cancel = nil
+		w.mu.Unlock()
+	}()
+
 	w.logger.Info("starting judge worker", "worker_count", w.workerCount)
 
 	// Start worker pool
 	for i := 0; i < w.workerCount; i++ {
 		w.wg.Add(1)
-		go w.workerRoutine(ctx, i)
+		go w.workerRoutine(runCtx, i)
 	}
 
-	// Wait for context cancellation
-	<-ctx.Done()
+	<-runCtx.Done()
 	w.logger.Info("stopping judge worker, waiting for workers to finish...")
 
 	// Wait for all workers to complete
 	w.wg.Wait()
 	w.logger.Info("judge worker stopped")
 
-	return ctx.Err()
+	return runCtx.Err()
 }
 
 // workerRoutine is the main loop for a single worker
@@ -173,6 +186,13 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 
 // Stop gracefully stops the worker
 func (w *JudgeWorker) Stop() {
+	w.mu.Lock()
+	cancel := w.cancel
+	w.mu.Unlock()
+	if cancel == nil {
+		return
+	}
+
 	w.logger.Info("stop signal received")
-	// Context cancellation will trigger shutdown
+	cancel()
 }

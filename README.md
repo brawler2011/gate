@@ -28,7 +28,7 @@ A self-hosted competitive programming platform. Gate149 lets you author problems
 
 ```
 gate/
-├── backend/      # Go REST API, WebSocket server, judge worker, migrations
+├── backend/      # Go API, WebSocket, Kratos webhook, judge worker, migrations
 ├── frontend/     # Next.js 15 web application
 ├── contracts/    # OpenAPI specs and generated TypeScript/Go client code
 └── deploy/       # Docker Compose configs for local, dev, and production
@@ -48,9 +48,7 @@ The fastest way to run the full stack locally is Docker Compose.
 **Prerequisites:** Docker, Docker Compose
 
 ```bash
-cd deploy/local
-cp .env.example .env   # Fill in passwords and S3 credentials
-cd ..
+cp deploy/local/.env.example deploy/local/.env   # Fill in passwords and S3 credentials
 make local-up
 ```
 
@@ -68,10 +66,8 @@ To stop: `make local-down`
 
 ```bash
 cd backend
-go run . migrate --env .env   # Apply DB migrations
-go run . server  --env .env   # REST API on :8080
-go run . ws      --env .env   # WebSocket server
-go run . judge   --env .env   # Async judge worker (NATS consumer)
+go run . --migrate --env .env # Apply DB migrations
+go run . --env .env           # Start the merged backend runtime
 ```
 
 Run tests:

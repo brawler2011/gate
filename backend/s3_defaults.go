@@ -1,4 +1,4 @@
-package cmd
+package main
 
 const (
 	defaultS3Region         = "us-east-1"

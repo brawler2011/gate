@@ -1,7 +1,6 @@
 package observer
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -21,11 +20,11 @@ const timeToClose = time.Second * 1
 
 type Observer struct {
 	upgrader *websocket.Upgrader
-	server   *http.Server
+	handler  http.Handler
 	hub      *Hub
 }
 
-func NewObserver(cfg *config.WsConfig, hub *Hub, middleware func(http.Handler) http.Handler) *Observer {
+func NewObserver(cfg *config.Config, hub *Hub, middleware func(http.Handler) http.Handler) *Observer {
 	mux := http.NewServeMux()
 
 	allowedOrigins := make(map[string]bool, 2)
@@ -38,15 +37,16 @@ func NewObserver(cfg *config.WsConfig, hub *Hub, middleware func(http.Handler) h
 			CheckOrigin: newCheckOrigin(allowedOrigins, cfg.Env),
 		},
 		hub: hub,
-		server: &http.Server{
-			Addr:    cfg.WsAddress,
-			Handler: middleware(mux),
-		},
 	}
 
 	mux.HandleFunc("/ws/submissions", observer.HandleSubmissions)
+	observer.handler = middleware(mux)
 
 	return observer
+}
+
+func (s *Observer) Handler() http.Handler {
+	return s.handler
 }
 
 func newCheckOrigin(allowedOrigins map[string]bool, env string) func(r *http.Request) bool {
@@ -63,18 +63,6 @@ func newCheckOrigin(allowedOrigins map[string]bool, env string) func(r *http.Req
 		}
 		return false
 	}
-}
-
-func (s *Observer) Start() error {
-	err := s.server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		return err
-	}
-	return nil
-}
-
-func (s *Observer) Close(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
 }
 
 type SubmissionsFilter struct {

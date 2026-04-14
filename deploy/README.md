@@ -24,6 +24,8 @@ make dev-down       # Stop dev environment
 make prod-logs      # View production logs
 make local-restart  # Restart local containers
 make dev-ps         # List running containers
+make local-backend  # Run the merged backend natively for local dev
+make local-migrate  # Run embedded backend migrations locally
 ```
 
 ### SSL (Dev/Prod)
@@ -44,7 +46,7 @@ make prod-backup    # Backup production databases to ./backups/
 
 ## Directory Structure
 
-*   `base/`: Shared configuration (Kratos, Judge0)
+*   `base/`: Shared configuration (Kratos)
 *   `local/`, `dev/`, `prod/`: Environment-specific configs (`docker-compose.yml`, `.env`)
 
 ## Requirements

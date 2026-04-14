@@ -11,15 +11,14 @@ Go backend for a competitive programming platform. Handles problems, contests, s
 
 ## Architecture overview
 
-The backend runs as several independent processes that communicate via **NATS JetStream**:
+The backend now runs as a single long-lived process. One instance starts:
 
-| Process | Command | Purpose |
-|---|---|---|
-| API server | `go run . server` | Main REST API |
-| WebSocket server | `go run . ws` | Real-time submission events |
-| Kratos webhook | `go run . kratos` | Private webhook for Ory Kratos user lifecycle |
-| Judge worker | `go run . judge` | Async code judging via go-judge sandbox |
-| Migrations | `go run . migrate` | Apply DB migrations (goose, embedded SQL) |
+- the public REST API on `ADDRESS`
+- the private Kratos webhook server on `PRIVATE_ADDRESS`
+- the `/ws/submissions` WebSocket endpoint on the public server
+- the async judge worker and outbox/submission consumers over **NATS JetStream**
+
+Database migrations remain a separate one-shot mode.
 
 ### External dependencies
 
@@ -48,7 +47,7 @@ All configuration is read from environment variables (or a `.env` file passed vi
 ENV=dev                          # dev | local | prod
 ADDRESS=0.0.0.0:13000            # Main API listen address
 PRIVATE_ADDRESS=:13011           # Kratos webhook server address
-WS_ADDRESS=:8081                 # WebSocket server address
+ALLOWED_ORIGINS=http://localhost,http://127.0.0.1
 
 # PostgreSQL
 POSTGRES_DSN=                    # Full DSN (overrides individual vars below)
@@ -106,23 +105,13 @@ docker compose up -d
 ### 2. Apply migrations
 
 ```bash
-go run . migrate --env .env
+go run . --migrate --env .env
 ```
 
-### 3. Start processes
+### 3. Start the backend
 
 ```bash
-# Main REST API
-go run . server --env .env
-
-# WebSocket server (separate terminal)
-go run . ws --env .env
-
-# Kratos webhook server (separate terminal)
-go run . kratos --env .env
-
-# Judge worker (separate terminal)
-go run . judge --env .env
+go run . --env .env
 ```
 
 ## Development
@@ -160,7 +149,7 @@ docker build -f backend/Dockerfile -t backend .
 
 ## WebSocket API
 
-Connect to `GET /ws/submissions` on the WebSocket server. Supported query parameters:
+Connect to `GET /ws/submissions` on the main backend server. Supported query parameters:
 
 | Parameter | Description |
 |---|---|
