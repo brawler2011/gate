@@ -4,44 +4,11 @@
 -- ============================================================================
 -- EXTENSIONS
 -- ============================================================================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ============================================================================
 -- FUNCTIONS
 -- ============================================================================
-
--- Generate UUID v7 (time-ordered UUID with millisecond precision)
--- Format: 48-bit timestamp | 12-bit random | 2-bit version | 62-bit random
-CREATE FUNCTION uuid_generate_v7() RETURNS UUID
-    LANGUAGE plpgsql
-AS $$
-DECLARE
-    unix_ts_ms BIGINT;
-    uuid_bytes BYTEA;
-BEGIN
-    -- Get Unix timestamp in milliseconds
-    unix_ts_ms := (EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::BIGINT;
-    
-    -- Generate UUID v7
-    uuid_bytes := 
-        -- 48-bit timestamp
-        substring(int8send(unix_ts_ms) from 3 for 6) ||
-        -- 12-bit random + 4-bit version (0x7)
-        substring(gen_random_bytes(2) from 1 for 2) ||
-        -- 2-bit variant (0b10) + 62-bit random
-        substring(gen_random_bytes(8) from 1 for 8);
-    
-    -- Set version (7) in bits 48-51
-    uuid_bytes := set_byte(uuid_bytes, 6, (get_byte(uuid_bytes, 6) & 15) | 112);
-    
-    -- Set variant (RFC 4122) in bits 64-65
-    uuid_bytes := set_byte(uuid_bytes, 8, (get_byte(uuid_bytes, 8) & 63) | 128);
-    
-    RETURN encode(uuid_bytes, 'hex')::UUID;
-END;
-$$;
 
 -- Auto-update updated_at timestamp on row update
 CREATE FUNCTION updated_at_update() RETURNS TRIGGER
@@ -361,7 +328,7 @@ CREATE TYPE organization_role AS ENUM ('owner', 'admin', 'member');
 -- Organizations: schools, universities, companies
 CREATE TABLE organizations
 (
-    id          UUID PRIMARY KEY             DEFAULT uuid_generate_v7(),
+    id          UUID PRIMARY KEY             DEFAULT uuidv7(),
     login       TEXT        NOT NULL UNIQUE,
     name        TEXT        NOT NULL,
     description TEXT        NOT NULL DEFAULT '',
@@ -415,7 +382,7 @@ EXECUTE FUNCTION updated_at_update();
 
 CREATE TABLE teams
 (
-    id              UUID PRIMARY KEY             DEFAULT uuid_generate_v7(),
+    id              UUID PRIMARY KEY             DEFAULT uuidv7(),
     organization_id UUID        NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
     name            TEXT        NOT NULL,
     slug            TEXT        NOT NULL,
@@ -476,18 +443,19 @@ CREATE INDEX team_members_user_id_idx ON team_members (user_id);
 -- Working copy stored in local filesystem: /var/gate/problems/{org_id}/{problem_id}/
 CREATE TABLE problems
 (
-    id              UUID PRIMARY KEY             DEFAULT uuid_generate_v7(),
+    id              UUID PRIMARY KEY             DEFAULT uuidv7(),
     organization_id UUID                NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
     owner_id        UUID REFERENCES users (id) ON DELETE SET NULL,
     visibility      problem_visibility  NOT NULL DEFAULT 'private',
-    titles          JSONB               NOT NULL,
+    title           TEXT                NOT NULL,
     short_name      VARCHAR(100)        NOT NULL,
-    git_commit_hash VARCHAR(40),
+    time_limit_ms   INT                 NOT NULL DEFAULT 1000,
+    memory_limit_mb INT                 NOT NULL DEFAULT 256,
+    manifest        JSONB,
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     UNIQUE (organization_id, short_name),
-    CHECK (length(short_name) > 0),
-    CHECK (jsonb_typeof(titles) = 'object')
+    CHECK (length(short_name) > 0)
 );
 
 CREATE INDEX problems_organization_id_idx ON problems (organization_id);
@@ -495,7 +463,7 @@ CREATE INDEX problems_owner_id_idx ON problems (owner_id);
 CREATE INDEX problems_short_name_idx ON problems (short_name);
 CREATE INDEX problems_visibility_idx ON problems (visibility);
 CREATE INDEX problems_created_at_idx ON problems (created_at DESC);
-CREATE INDEX problems_titles_trgm_idx ON problems USING GIN ((titles->>'en') gin_trgm_ops);
+CREATE INDEX problems_title_trgm_idx ON problems USING GIN (title gin_trgm_ops);
 
 CREATE TRIGGER on_problems_update
     BEFORE UPDATE
@@ -512,18 +480,18 @@ EXECUTE FUNCTION updated_at_update();
 -- Contains: compiled binaries, generated tests, validated output
 CREATE TABLE problem_packages
 (
-    id              UUID PRIMARY KEY             DEFAULT uuid_generate_v7(),
+    id              UUID PRIMARY KEY             DEFAULT uuidv7(),
     problem_id      UUID             NOT NULL REFERENCES problems (id) ON DELETE CASCADE,
     organization_id UUID             NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
-    git_commit_hash VARCHAR(40)      NOT NULL,
+    version         INT              NOT NULL,
     package_hash    VARCHAR(64)      NOT NULL UNIQUE,
     url             VARCHAR(512),
     status          package_status   NOT NULL DEFAULT 'pending',
     build_log       TEXT,
     created_at      TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
     compiled_at     TIMESTAMPTZ,
-    CHECK (length(git_commit_hash) = 40),
-    CHECK (length(package_hash) = 64)
+    CHECK (length(package_hash) = 64),
+    CONSTRAINT uq_problem_packages_problem_version UNIQUE (problem_id, version)
 );
 
 CREATE INDEX problem_packages_problem_id_idx ON problem_packages (problem_id);
@@ -569,11 +537,11 @@ CREATE INDEX problem_teams_problem_id_idx ON problem_teams (problem_id);
 -- Contests: Organization-owned, time-bound competitions
 CREATE TABLE contests
 (
-    id              UUID PRIMARY KEY             DEFAULT uuid_generate_v7(),
+    id              UUID PRIMARY KEY             DEFAULT uuidv7(),
     organization_id UUID                NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
     owner_id        UUID REFERENCES users (id) ON DELETE SET NULL,
     visibility      contest_visibility  NOT NULL DEFAULT 'private',
-    titles          JSONB               NOT NULL,
+    title           TEXT                NOT NULL,
     short_name      VARCHAR(100)        NOT NULL,
     description     TEXT                NOT NULL DEFAULT '',
 
@@ -598,7 +566,6 @@ CREATE TABLE contests
     updated_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     UNIQUE (organization_id, short_name),
     CHECK (length(short_name) > 0),
-    CHECK (jsonb_typeof(titles) = 'object'),
     CHECK (end_time IS NULL OR start_time IS NULL OR end_time > start_time)
 );
 
@@ -608,7 +575,7 @@ CREATE INDEX contests_short_name_idx ON contests (short_name);
 CREATE INDEX contests_visibility_idx ON contests (visibility);
 CREATE INDEX contests_created_at_idx ON contests (created_at DESC);
 CREATE INDEX contests_start_time_idx ON contests (start_time);
-CREATE INDEX contests_titles_trgm_idx ON contests USING GIN ((titles->>'en') gin_trgm_ops);
+CREATE INDEX contests_title_trgm_idx ON contests USING GIN (title gin_trgm_ops);
 
 CREATE TRIGGER on_contests_update
     BEFORE UPDATE
@@ -682,7 +649,7 @@ EXECUTE FUNCTION check_max_problems_on_contest();
 -- User submissions to problems (in contests or standalone practice)
 CREATE TABLE submissions
 (
-    id          UUID PRIMARY KEY          DEFAULT uuid_generate_v7(),
+    id          UUID PRIMARY KEY          DEFAULT uuidv7(),
     contest_id  UUID REFERENCES contests (id) ON DELETE SET NULL,
     problem_id  UUID REFERENCES problems (id) ON DELETE SET NULL,
     owner_id  UUID REFERENCES users (id) ON DELETE SET NULL,
@@ -723,7 +690,7 @@ EXECUTE FUNCTION updated_at_update();
 -- Transactional outbox pattern for reliable event processing
 CREATE TABLE outbox_events
 (
-    id            UUID PRIMARY KEY             DEFAULT uuid_generate_v7(),
+    id            UUID PRIMARY KEY             DEFAULT uuidv7(),
     aggregate_id  UUID                NOT NULL,
     event_type    VARCHAR(64)         NOT NULL,
     payload       JSONB               NOT NULL DEFAULT '{}',
@@ -743,12 +710,42 @@ CREATE INDEX outbox_events_worker_idx
 CREATE INDEX outbox_events_aggregate_id_idx ON outbox_events (aggregate_id);
 CREATE INDEX outbox_events_status_idx ON outbox_events (status);
 
+-- ============================================================================
+-- POSTS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS posts
+(
+    id              UUID PRIMARY KEY     DEFAULT uuidv7(),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    title           TEXT        NOT NULL,
+    text            TEXT        NOT NULL,
+    description     TEXT        NOT NULL,
+    author_uuid     UUID        NOT NULL,
+    author_name     TEXT        NOT NULL,
+    image_key       TEXT        NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_author_uuid ON posts(author_uuid);
+
+CREATE TRIGGER posts_updated_at_trigger
+    BEFORE UPDATE ON posts
+    FOR EACH ROW
+    EXECUTE FUNCTION updated_at_update();
+
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
 
 -- Drop tables in reverse dependency order
+DROP TRIGGER IF EXISTS posts_updated_at_trigger ON posts;
+DROP INDEX IF EXISTS idx_posts_author_uuid;
+DROP INDEX IF EXISTS idx_posts_created_at;
+DROP TABLE IF EXISTS posts;
+
 DROP INDEX IF EXISTS outbox_events_status_idx;
 DROP INDEX IF EXISTS outbox_events_aggregate_id_idx;
 DROP INDEX IF EXISTS outbox_events_worker_idx;
@@ -781,7 +778,7 @@ DROP INDEX IF EXISTS contest_members_user_id_idx;
 DROP TABLE IF EXISTS contest_members;
 
 DROP TRIGGER IF EXISTS on_contests_update ON contests;
-DROP INDEX IF EXISTS contests_titles_trgm_idx;
+DROP INDEX IF EXISTS contests_title_trgm_idx;
 DROP INDEX IF EXISTS contests_start_time_idx;
 DROP INDEX IF EXISTS contests_created_at_idx;
 DROP INDEX IF EXISTS contests_visibility_idx;
@@ -806,7 +803,7 @@ DROP INDEX IF EXISTS problem_packages_problem_id_idx;
 DROP TABLE IF EXISTS problem_packages;
 
 DROP TRIGGER IF EXISTS on_problems_update ON problems;
-DROP INDEX IF EXISTS problems_titles_trgm_idx;
+DROP INDEX IF EXISTS problems_title_trgm_idx;
 DROP INDEX IF EXISTS problems_created_at_idx;
 DROP INDEX IF EXISTS problems_visibility_idx;
 DROP INDEX IF EXISTS problems_short_name_idx;
@@ -857,10 +854,8 @@ DROP FUNCTION IF EXISTS user_has_contest_access(UUID, UUID);
 DROP FUNCTION IF EXISTS user_has_problem_access(UUID, UUID);
 DROP FUNCTION IF EXISTS check_max_problems_on_contest();
 DROP FUNCTION IF EXISTS updated_at_update();
-DROP FUNCTION IF EXISTS uuid_generate_v7();
 
 -- Drop extensions
 DROP EXTENSION IF EXISTS pg_trgm;
-DROP EXTENSION IF EXISTS "uuid-ossp";
 
 -- +goose StatementEnd
