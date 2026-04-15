@@ -141,14 +141,7 @@ const Header = ({ user }: { user?: SessionUser }) => {
             >
               Мастерская
             </Anchor>
-            <Anchor
-              component={Link}
-              href="/about"
-              className={classes.link}
-              underline="never"
-            >
-              О платформе
-            </Anchor>
+            
           </Group>
           <Box hiddenFrom="sm" style={{ flex: 1 }} />
           <Group justify="flex-end" h="100%" gap="xs" className={classes.rightSection}>
@@ -232,15 +225,7 @@ const Header = ({ user }: { user?: SessionUser }) => {
             >
               Мастерская
             </Anchor>
-            <Anchor
-              component={Link}
-              href="/about"
-              className={classes.link}
-              underline="never"
-              onClick={closeDrawer}
-            >
-              О платформе
-            </Anchor>
+            
             {user?.role === "admin" && (
               <Anchor
                 component={Link}

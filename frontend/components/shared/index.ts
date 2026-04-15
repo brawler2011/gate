@@ -8,7 +8,6 @@ export * from './Layout';
 export * from './LinkAnchor';
 export * from './LogoutLink';
 export * from './Pagination';
-export * from './PresentationSlide';
 export * from './RefreshButton';
 export * from './StatusMessage';
 export * from './Task';
