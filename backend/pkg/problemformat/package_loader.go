@@ -193,16 +193,6 @@ func (pp *ProblemPackage) Cleanup() error {
 	return nil
 }
 
-// GetComponent retrieves a component by type
-func (pp *ProblemPackage) GetComponent(componentType string) (*ComponentFile, bool) {
-	for _, comp := range pp.Components {
-		if comp.Type == componentType {
-			return &comp, true
-		}
-	}
-	return nil, false
-}
-
 // extractZip extracts a ZIP file to a destination directory
 func extractZip(zipPath, destDir string) error {
 	reader, err := zip.OpenReader(zipPath)

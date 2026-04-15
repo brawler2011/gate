@@ -3,8 +3,6 @@ package problemformat
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -163,81 +161,6 @@ func ValidateTestsMetadata(tests *TestsMetadata, manifest *ProblemManifest) erro
 		}
 		if manifest.MaxScore != nil && totalPoints != *manifest.MaxScore {
 			errs = append(errs, fmt.Errorf("sum of group points (%d) does not match max_score (%d)", totalPoints, *manifest.MaxScore))
-		}
-	}
-
-	if len(errs) > 0 {
-		return errors.Join(errs...)
-	}
-	return nil
-}
-
-// ValidateProblemStructure проверяет структуру папки задачи
-func ValidateProblemStructure(problemDir string) error {
-	var errs []error
-
-	// Check if directory exists
-	if _, err := os.Stat(problemDir); os.IsNotExist(err) {
-		return fmt.Errorf("problem directory does not exist: %s", problemDir)
-	}
-
-	// Required files
-	requiredFiles := []string{
-		"manifest.json",
-		"tests/tests.json",
-	}
-
-	for _, file := range requiredFiles {
-		path := filepath.Join(problemDir, file)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			errs = append(errs, fmt.Errorf("required file not found: %s", file))
-		}
-	}
-
-	// Load and validate manifest
-	manifest, err := LoadManifest(problemDir)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to load manifest: %w", err))
-		// Can't continue validation without manifest
-		if len(errs) > 0 {
-			return errors.Join(errs...)
-		}
-	}
-
-	if err := ValidateManifest(manifest); err != nil {
-		errs = append(errs, fmt.Errorf("manifest validation failed: %w", err))
-	}
-
-	// Validate tests metadata
-	testsMetadata, err := LoadTestsMetadata(problemDir)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to load tests metadata: %w", err))
-	} else {
-		if err := ValidateTestsMetadata(testsMetadata, manifest); err != nil {
-			errs = append(errs, fmt.Errorf("tests metadata validation failed: %w", err))
-		}
-
-		// Check if test files exist
-		for _, test := range testsMetadata.Tests {
-			inputPath := filepath.Join(problemDir, "tests", fmt.Sprintf("%02d.in", test.Ordinal))
-			outputPath := filepath.Join(problemDir, "tests", fmt.Sprintf("%02d.out", test.Ordinal))
-
-			if _, err := os.Stat(inputPath); os.IsNotExist(err) {
-				errs = append(errs, fmt.Errorf("test input file not found: %02d.in", test.Ordinal))
-			}
-			if _, err := os.Stat(outputPath); os.IsNotExist(err) {
-				errs = append(errs, fmt.Errorf("test output file not found: %02d.out", test.Ordinal))
-			}
-		}
-	}
-
-	// Check if meta files exist
-	if manifest != nil {
-		for _, file := range manifest.FilesMetadata {
-			filePath := filepath.Join(problemDir, file.Filename)
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				errs = append(errs, fmt.Errorf("meta file not found: %s", file.Filename))
-			}
 		}
 	}
 

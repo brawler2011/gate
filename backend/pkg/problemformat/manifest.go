@@ -66,13 +66,3 @@ type TestCase struct {
 	Generator *string `json:"generator"` // "gen_border 1 2 3" или null
 	IsSample  bool    `json:"is_sample"`
 }
-
-// Media - медиа-файлы задачи
-type Media struct {
-	Images []Image `json:"images"`
-}
-
-// Image - изображение
-type Image struct {
-	Filename string `json:"filename"`
-}
