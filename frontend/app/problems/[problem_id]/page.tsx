@@ -1,7 +1,7 @@
-import { WorkshopEditor, WorkshopNotInitialized } from "@/components/workshop";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { getProblem, listWorkshopFiles } from "@/lib/actions";
+import { WorkshopEditor, WorkshopNotInitialized } from "@/components/workshop";
+import { getProblem, getWorkshopProblemLimits } from "@/lib/actions";
 import { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -26,7 +26,7 @@ const Page = async (props: Props) => {
   const [problemError] = await getProblem(problem_id);
   if (problemError) return <ErrorDisplay error={problemError} />;
 
-  const [filesError, filesResponse] = await listWorkshopFiles(problem_id);
+  const [limitsError] = await getWorkshopProblemLimits(problem_id);
 
   return (
     <DefaultLayout
@@ -34,13 +34,13 @@ const Page = async (props: Props) => {
         main: { paddingTop: 70, paddingBottom: 0 },
       }}
     >
-      {filesError?.status === 404 ? (
+      {limitsError?.status === 404 ? (
         <WorkshopNotInitialized problemId={problem_id} />
-      ) : filesError ? (
-        <ErrorDisplay error={filesError} />
+      ) : limitsError ? (
+        <ErrorDisplay error={limitsError} />
       ) : (
         <Suspense>
-          <WorkshopEditor problemId={problem_id} initialFiles={filesResponse?.files ?? []} />
+          <WorkshopEditor problemId={problem_id} />
         </Suspense>
       )}
     </DefaultLayout>

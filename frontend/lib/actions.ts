@@ -1,15 +1,12 @@
 "use server";
 
-import { Call, type ApiError } from './api';
 import type {
-  ListSubmissionsResponseModel,
-  ListOrganizationsResponseModel,
-  GetOrganizationResponseModel,
-  ListOrganizationMembersResponseModel,
-  ListTeamsResponseModel,
-  GetTeamResponseModel,
-  ListTeamMembersResponseModel,
+    FileEntry,
+    ListSubmissionsResponseModel,
+    UpdateProblemLimitsRequest,
+    UpdateProblemStatementRequest
 } from '@contracts/gateway/v1';
+import { Call, type ApiError } from './api';
 
 export async function getContests(page: number = 1, pageSize: number = 10, search?: string, organizationId?: string) {
     return Call((client) => client.default.listWorkshopContests({page, pageSize, search, organizationId}));
@@ -379,17 +376,211 @@ export async function initProblemWorkshop(problemId: string) {
   return Call((client) => client.default.initProblemWorkshop({ problemId }));
 }
 
-export async function listWorkshopFiles(problemId: string, path?: string) {
-  return Call((client) => client.default.listWorkshopFiles({ problemId, path }));
+const badWorkshopRequest = (message: string): [ApiError, null] => [{ status: 400, message }, null];
+type WorkshopFilesResponse = Promise<[ApiError | null, { files?: FileEntry[] } | null]>;
+type WorkshopFileResponse = Promise<[ApiError | null, string | null]>;
+
+const toText = async (data: Blob | string | ArrayBuffer | ArrayBufferView | null) => {
+  if (data == null) return "";
+
+  if (typeof data === 'string') {
+    return data;
+  }
+
+  if (typeof (data as Blob).text === 'function') {
+    return (data as Blob).text();
+  }
+
+  if (data instanceof ArrayBuffer) {
+    return new TextDecoder().decode(data);
+  }
+
+  if (ArrayBuffer.isView(data)) {
+    return new TextDecoder().decode(data);
+  }
+
+  return String(data);
+};
+
+export async function getWorkshopProblemLimits(problemId: string) {
+  return Call((client) => client.default.getProblemLimits({ problemId }));
 }
 
-export async function getWorkshopFile(problemId: string, path: string) {
-  return Call((client) => client.default.getWorkshopFile({ problemId, path }));
+export async function updateWorkshopProblemLimits(problemId: string, requestBody: UpdateProblemLimitsRequest) {
+  return Call((client) => client.default.updateProblemLimits({ problemId, requestBody }));
 }
 
-export async function saveWorkshopFile(problemId: string, path: string, content: string) {
+export async function getWorkshopProblemStatement(problemId: string) {
+  return Call((client) => client.default.getProblemStatement({ problemId }));
+}
+
+export async function updateWorkshopProblemStatement(problemId: string, requestBody: UpdateProblemStatementRequest) {
+  return Call((client) => client.default.updateProblemStatement({ problemId, requestBody }));
+}
+
+export async function getWorkshopProblemReadme(problemId: string): Promise<[ApiError | null, string | null]> {
+  const [error, data] = await Call((client) => client.default.getProblemReadme({ problemId }));
+  if (error || !data) return [error, null];
+  return [null, await toText(data)];
+}
+
+export async function updateWorkshopProblemReadme(problemId: string, content: string) {
   const blob = new Blob([content], { type: 'application/octet-stream' });
-  return Call((client) => client.default.updateWorkshopFile({ problemId, path, requestBody: blob }));
+  return Call((client) => client.default.updateProblemReadme({ problemId, requestBody: blob }));
+}
+
+export async function listWorkshopCheckerFiles(problemId: string): WorkshopFilesResponse {
+  return Call((client) => client.default.listProblemCheckers({ problemId }));
+}
+
+export async function getWorkshopCheckerFile(problemId: string, name: string): WorkshopFileResponse {
+  const [error, data] = await Call((client) => client.default.getProblemChecker({ problemId, name }));
+  if (error || !data) return [error, null];
+  return [null, await toText(data)];
+}
+
+export async function createWorkshopCheckerFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.createProblemChecker({ problemId, name, requestBody: blob }));
+}
+
+export async function updateWorkshopCheckerFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.updateProblemChecker({ problemId, name, requestBody: blob }));
+}
+
+export async function listWorkshopGeneratorFiles(problemId: string): WorkshopFilesResponse {
+  return Call((client) => client.default.listProblemGenerators({ problemId }));
+}
+
+export async function getWorkshopGeneratorFile(problemId: string, name: string): WorkshopFileResponse {
+  const [error, data] = await Call((client) => client.default.getProblemGenerator({ problemId, name }));
+  if (error || !data) return [error, null];
+  return [null, await toText(data)];
+}
+
+export async function createWorkshopGeneratorFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.createProblemGenerator({ problemId, name, requestBody: blob }));
+}
+
+export async function updateWorkshopGeneratorFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.updateProblemGenerator({ problemId, name, requestBody: blob }));
+}
+
+export async function listWorkshopInteractorFiles(problemId: string): WorkshopFilesResponse {
+  return Call((client) => client.default.listProblemInteractors({ problemId }));
+}
+
+export async function getWorkshopInteractorFile(problemId: string, name: string): WorkshopFileResponse {
+  const [error, data] = await Call((client) => client.default.getProblemInteractor({ problemId, name }));
+  if (error || !data) return [error, null];
+  return [null, await toText(data)];
+}
+
+export async function createWorkshopInteractorFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.createProblemInteractor({ problemId, name, requestBody: blob }));
+}
+
+export async function updateWorkshopInteractorFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.updateProblemInteractor({ problemId, name, requestBody: blob }));
+}
+
+export async function listWorkshopMediaFiles(problemId: string): WorkshopFilesResponse {
+  return Call((client) => client.default.listProblemMediaFiles({ problemId }));
+}
+
+export async function getWorkshopMediaFile(problemId: string, name: string): WorkshopFileResponse {
+  const [error, data] = await Call((client) => client.default.getProblemMediaFile({ problemId, name }));
+  if (error || !data) return [error, null];
+  return [null, await toText(data)];
+}
+
+export async function createWorkshopMediaFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.createProblemMediaFile({ problemId, name, requestBody: blob }));
+}
+
+export async function updateWorkshopMediaFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.updateProblemMediaFile({ problemId, name, requestBody: blob }));
+}
+
+export async function listWorkshopSolutionFiles(problemId: string): WorkshopFilesResponse {
+  return Call((client) => client.default.listProblemWorkshopSubmissions({ problemId }));
+}
+
+export async function getWorkshopSolutionFile(problemId: string, name: string): WorkshopFileResponse {
+  const [error, data] = await Call((client) => client.default.getProblemWorkshopSubmission({ problemId, name }));
+  if (error || !data) return [error, null];
+  return [null, await toText(data)];
+}
+
+export async function createWorkshopSolutionFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.createProblemWorkshopSubmission({ problemId, name, requestBody: blob }));
+}
+
+export async function updateWorkshopSolutionFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.updateProblemWorkshopSubmission({ problemId, name, requestBody: blob }));
+}
+
+export async function listWorkshopTestFiles(problemId: string): WorkshopFilesResponse {
+  return Call((client) => client.default.listProblemTests({ problemId }));
+}
+
+export async function getWorkshopTestFile(problemId: string, name: string): WorkshopFileResponse {
+  const [error, data] = await Call((client) => client.default.getProblemTestFile({ problemId, name }));
+  if (error || !data) return [error, null];
+  return [null, await toText(data)];
+}
+
+export async function createWorkshopTestFile(problemId: string, name: string, content: string) {
+  if (name === 'tests.json') {
+    return badWorkshopRequest('tests/tests.json is reserved for tests configuration updates');
+  }
+
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.createProblemTestFile({ problemId, name, requestBody: blob }));
+}
+
+export async function updateWorkshopTestFile(problemId: string, name: string, content: string) {
+  if (name === 'tests.json') {
+    let testsConfig: Record<string, unknown>;
+    try {
+      testsConfig = JSON.parse(content) as Record<string, unknown>;
+    } catch {
+      return badWorkshopRequest('tests/tests.json must contain valid JSON');
+    }
+    return Call((client) => client.default.updateProblemTestsConfig({ problemId, requestBody: testsConfig }));
+  }
+
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.updateProblemTestFile({ problemId, name, requestBody: blob }));
+}
+
+export async function listWorkshopValidatorFiles(problemId: string): WorkshopFilesResponse {
+  return Call((client) => client.default.listProblemValidators({ problemId }));
+}
+
+export async function getWorkshopValidatorFile(problemId: string, name: string): WorkshopFileResponse {
+  const [error, data] = await Call((client) => client.default.getProblemValidator({ problemId, name }));
+  if (error || !data) return [error, null];
+  return [null, await toText(data)];
+}
+
+export async function createWorkshopValidatorFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.createProblemValidator({ problemId, name, requestBody: blob }));
+}
+
+export async function updateWorkshopValidatorFile(problemId: string, name: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return Call((client) => client.default.updateProblemValidator({ problemId, name, requestBody: blob }));
 }
 
 export async function publishProblem(problemId: string) {

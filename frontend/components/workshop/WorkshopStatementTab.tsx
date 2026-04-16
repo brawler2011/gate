@@ -1,7 +1,11 @@
 "use client";
 
 import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { getWorkshopFile, saveWorkshopFile } from "@/lib/actions";
+import {
+  getWorkshopProblemLimits,
+  getWorkshopProblemStatement,
+  updateWorkshopProblemStatement,
+} from "@/lib/actions";
 import {
   Box,
   Button,
@@ -23,70 +27,33 @@ import remarkMath from "remark-math";
 import "../problems/Problem.css";
 import classes from "./WorkshopStatementTab.module.css";
 
-type JsonPrimitive = string | number | boolean | null;
-type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
-type JsonObject = {
-  [key: string]: JsonValue | undefined;
+type StatementData = {
+  title: string;
+  legend: string;
+  input_format: string;
+  output_format: string;
+  notes: string;
+  interaction: string;
+  scoring: string;
 };
 
-const STATEMENT_FIELDS = [
-  "title",
-  "legend",
-  "input_format",
-  "output_format",
-  "notes",
-  "interaction",
-  "scoring",
-] as const;
-
-type StatementField = (typeof STATEMENT_FIELDS)[number];
-
-type StatementData = Record<StatementField, string>;
-
-type WorkshopManifest = JsonObject & {
+type PreviewMeta = {
   problem_type?: string;
   max_score?: number | null;
   time_limit_ms?: number;
   memory_limit_mb?: number;
-  statement?: Partial<Record<StatementField, string | null>>;
 };
 
-type PreviewMeta = Pick<
-  WorkshopManifest,
-  "problem_type" | "max_score" | "time_limit_ms" | "memory_limit_mb"
->;
-type LoadedPreviewMeta = Required<PreviewMeta>;
+type LoadedPreviewMeta = {
+  problem_type: string;
+  max_score: number | null;
+  time_limit_ms: number;
+  memory_limit_mb: number;
+};
 
 type Props = {
   problemId: string;
 };
-
-function parseManifest(data: string | null | undefined): WorkshopManifest {
-  const parsed = JSON.parse(data ?? "{}") as
-    | WorkshopManifest
-    | JsonValue[]
-    | null;
-
-  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
-    return {};
-  }
-
-  return parsed;
-}
-
-function normalizeStatement(
-  statement?: WorkshopManifest["statement"],
-): StatementData {
-  return {
-    title: statement?.title ?? "",
-    legend: statement?.legend ?? "",
-    input_format: statement?.input_format ?? "",
-    output_format: statement?.output_format ?? "",
-    notes: statement?.notes ?? "",
-    interaction: statement?.interaction ?? "",
-    scoring: statement?.scoring ?? "",
-  };
-}
 
 function prettifyTimeLimit(timeLimit: number) {
   if (timeLimit % 1000 === 0) {
@@ -211,35 +178,62 @@ export function WorkshopStatementTab({ problemId }: Props) {
 
   useEffect(() => {
     startLoading(async () => {
-      const [error, data] = await getWorkshopFile(problemId, "manifest.json");
-      if (error) {
+      const [[limitsError, limits], [statementError, statementData]] =
+        await Promise.all([
+          getWorkshopProblemLimits(problemId),
+          getWorkshopProblemStatement(problemId),
+        ]);
+
+      if (limitsError || !limits) {
         notifications.show({
-          title: "Ошибка загрузки manifest.json",
-          message: error.message ?? "Не удалось загрузить манифест",
+          title: "Ошибка загрузки лимитов",
+          message:
+            limitsError?.message ?? "Не удалось загрузить лимиты для preview",
           color: "red",
         });
         return;
       }
 
-      try {
-        const manifest = parseManifest(
-          typeof data === "string" ? data : undefined,
-        );
-        setStatement(normalizeStatement(manifest.statement));
-        setPreviewMeta(manifest);
-        setIsDirty(false);
-      } catch {
+      if (statementError || !statementData) {
         notifications.show({
-          title: "Ошибка парсинга manifest.json",
-          message: "Файл содержит невалидный JSON",
+          title: "Ошибка загрузки условия",
+          message: statementError?.message ?? "Не удалось загрузить statement",
           color: "red",
         });
+        return;
       }
+
+      setPreviewMeta({
+        problem_type: limits.problem_type,
+        max_score: limits.max_score ?? null,
+        time_limit_ms: limits.time_limit_ms,
+        memory_limit_mb: limits.memory_limit_mb,
+      });
+      setStatement({
+        title: statementData.title ?? "",
+        legend: statementData.legend ?? "",
+        input_format: statementData.input_format ?? "",
+        output_format: statementData.output_format ?? "",
+        notes: statementData.notes ?? "",
+        interaction: statementData.interaction ?? "",
+        scoring: statementData.scoring ?? "",
+      });
+      setIsDirty(false);
     });
   }, [problemId]);
 
   const patchStatement = (patch: Partial<StatementData>) => {
-    setStatement((prev) => ({ ...normalizeStatement(), ...prev, ...patch }));
+    setStatement((prev) => ({
+      title: "",
+      legend: "",
+      input_format: "",
+      output_format: "",
+      notes: "",
+      interaction: "",
+      scoring: "",
+      ...prev,
+      ...patch,
+    }));
     setIsDirty(true);
   };
 
@@ -247,45 +241,15 @@ export function WorkshopStatementTab({ problemId }: Props) {
     startSaving(async () => {
       if (!statement) return;
 
-      const [currentError, currentData] = await getWorkshopFile(
-        problemId,
-        "manifest.json",
-      );
-      if (currentError) {
-        notifications.show({
-          title: "Ошибка сохранения",
-          message:
-            currentError.message ??
-            "Не удалось загрузить актуальный manifest.json",
-          color: "red",
-        });
-        return;
-      }
-
-      let manifest: WorkshopManifest = {};
-      try {
-        manifest = parseManifest(
-          typeof currentData === "string" ? currentData : undefined,
-        );
-      } catch {
-        notifications.show({
-          title: "Ошибка сохранения",
-          message: "manifest.json содержит невалидный JSON",
-          color: "red",
-        });
-        return;
-      }
-
-      manifest.statement = {
-        ...manifest.statement,
-        ...statement,
-      };
-
-      const [saveError] = await saveWorkshopFile(
-        problemId,
-        "manifest.json",
-        JSON.stringify(manifest, null, 2),
-      );
+      const [saveError] = await updateWorkshopProblemStatement(problemId, {
+        title: statement.title,
+        legend: statement.legend,
+        input_format: statement.input_format,
+        output_format: statement.output_format,
+        notes: statement.notes,
+        interaction: statement.interaction,
+        scoring: statement.scoring,
+      });
 
       if (saveError) {
         notifications.show({
@@ -299,7 +263,7 @@ export function WorkshopStatementTab({ problemId }: Props) {
       setIsDirty(false);
       notifications.show({
         title: "Сохранено",
-        message: "Условие записано в manifest.json",
+        message: "Условие задачи обновлено",
         color: "green",
       });
     });

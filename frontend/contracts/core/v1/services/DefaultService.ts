@@ -6,7 +6,6 @@ import type { CompileResult } from '../models/CompileResult';
 import type { CreatedPost } from '../models/CreatedPost';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
 import type { CreationResponseModel } from '../models/CreationResponseModel';
-import type { FileEntry } from '../models/FileEntry';
 import type { GetContestProblemResponseModel } from '../models/GetContestProblemResponseModel';
 import type { GetContestResponseModel } from '../models/GetContestResponseModel';
 import type { GetHealthResponseModel } from '../models/GetHealthResponseModel';
@@ -27,13 +26,21 @@ import type { ListTeamMembersResponseModel } from '../models/ListTeamMembersResp
 import type { ListTeamsResponseModel } from '../models/ListTeamsResponseModel';
 import type { ListUserContestsResponseModel } from '../models/ListUserContestsResponseModel';
 import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
+import type { MainComponentSelectionRequest } from '../models/MainComponentSelectionRequest';
+import type { MessageResponse } from '../models/MessageResponse';
 import type { PostModel } from '../models/PostModel';
+import type { ProblemLimits } from '../models/ProblemLimits';
+import type { ProblemStatement } from '../models/ProblemStatement';
 import type { TestReport } from '../models/TestReport';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
 import type { UpdateOrganizationRequestModel } from '../models/UpdateOrganizationRequestModel';
+import type { UpdateProblemLimitsRequest } from '../models/UpdateProblemLimitsRequest';
 import type { UpdateProblemRequestModel } from '../models/UpdateProblemRequestModel';
+import type { UpdateProblemStatementRequest } from '../models/UpdateProblemStatementRequest';
+import type { UpdateProblemTestsConfigRequest } from '../models/UpdateProblemTestsConfigRequest';
 import type { UpdateTeamRequestModel } from '../models/UpdateTeamRequestModel';
 import type { ValidationReport } from '../models/ValidationReport';
+import type { WorkshopFileListResponse } from '../models/WorkshopFileListResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class DefaultService {
@@ -889,16 +896,14 @@ export class DefaultService {
     }
     /**
      * Initialize problem workspace
-     * @returns any Workshop initialized successfully
+     * @returns MessageResponse Workshop initialized successfully
      * @throws ApiError
      */
     public initProblemWorkshop({
         problemId,
     }: {
         problemId: string,
-    }): CancelablePromise<{
-        message?: string;
-    }> {
+    }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/problems/{problemId}/workshop/init',
@@ -908,100 +913,1017 @@ export class DefaultService {
         });
     }
     /**
-     * List files in problem workspace
-     * @returns any List of files
+     * Get problem README
+     * @returns binary README content
      * @throws ApiError
      */
-    public listWorkshopFiles({
+    public getProblemReadme({
         problemId,
-        path = '',
     }: {
         problemId: string,
-        /**
-         * Directory path to list (empty for root)
-         */
-        path?: string,
-    }): CancelablePromise<{
-        files?: Array<FileEntry>;
-    }> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/problems/{problemId}/workshop/files',
-            path: {
-                'problemId': problemId,
-            },
-            query: {
-                'path': path,
-            },
-        });
-    }
-    /**
-     * Read file content from workspace
-     * @returns binary File content
-     * @throws ApiError
-     */
-    public getWorkshopFile({
-        problemId,
-        path,
-    }: {
-        problemId: string,
-        path: string,
     }): CancelablePromise<Blob> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/problems/{problemId}/workshop/files/{path}',
+            url: '/problems/{problemId}/readme',
             path: {
                 'problemId': problemId,
-                'path': path,
             },
         });
     }
     /**
-     * Update file content in workspace
-     * @returns any File updated successfully
+     * Update problem README
+     * @returns MessageResponse README updated successfully
      * @throws ApiError
      */
-    public updateWorkshopFile({
+    public updateProblemReadme({
         problemId,
-        path,
         requestBody,
     }: {
         problemId: string,
-        path: string,
         requestBody: Blob,
-    }): CancelablePromise<{
-        message?: string;
-    }> {
+    }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'PUT',
-            url: '/problems/{problemId}/workshop/files/{path}',
+            url: '/problems/{problemId}/readme',
             path: {
                 'problemId': problemId,
-                'path': path,
             },
             body: requestBody,
             mediaType: 'application/octet-stream',
         });
     }
     /**
-     * Delete file from workspace
-     * @returns any File deleted successfully
+     * Get problem limits and type settings
+     * @returns ProblemLimits Problem limits
      * @throws ApiError
      */
-    public deleteWorkshopFile({
+    public getProblemLimits({
         problemId,
-        path,
     }: {
         problemId: string,
-        path: string,
-    }): CancelablePromise<any> {
+    }): CancelablePromise<ProblemLimits> {
         return this.httpRequest.request({
-            method: 'DELETE',
-            url: '/problems/{problemId}/workshop/files/{path}',
+            method: 'GET',
+            url: '/problems/{problemId}/limits',
             path: {
                 'problemId': problemId,
-                'path': path,
             },
+        });
+    }
+    /**
+     * Update problem limits and type settings
+     * @returns ProblemLimits Limits updated successfully
+     * @throws ApiError
+     */
+    public updateProblemLimits({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: UpdateProblemLimitsRequest,
+    }): CancelablePromise<ProblemLimits> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{problemId}/limits',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Get problem statement
+     * @returns ProblemStatement Problem statement
+     * @throws ApiError
+     */
+    public getProblemStatement({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<ProblemStatement> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/statement',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Update problem statement
+     * @returns ProblemStatement Statement updated successfully
+     * @throws ApiError
+     */
+    public updateProblemStatement({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: UpdateProblemStatementRequest,
+    }): CancelablePromise<ProblemStatement> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{problemId}/statement',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * List checker files
+     * @returns WorkshopFileListResponse List of checkers
+     * @throws ApiError
+     */
+    public listProblemCheckers({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<WorkshopFileListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/checkers',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Create checker file
+     * @returns MessageResponse Checker created successfully
+     * @throws ApiError
+     */
+    public createProblemChecker({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/checkers',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Get checker file content
+     * @returns binary Checker content
+     * @throws ApiError
+     */
+    public getProblemChecker({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/checkers/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Update checker file
+     * @returns MessageResponse Checker updated successfully
+     * @throws ApiError
+     */
+    public updateProblemChecker({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/problems/{problemId}/checkers/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Delete checker file
+     * @returns MessageResponse Checker deleted successfully
+     * @throws ApiError
+     */
+    public deleteProblemChecker({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{problemId}/checkers/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Set main checker file
+     * @returns MessageResponse Main checker selected successfully
+     * @throws ApiError
+     */
+    public setProblemCheckerMain({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: MainComponentSelectionRequest,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{problemId}/checkers/main',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * List generator files
+     * @returns WorkshopFileListResponse List of generators
+     * @throws ApiError
+     */
+    public listProblemGenerators({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<WorkshopFileListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/generators',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Create generator file
+     * @returns MessageResponse Generator created successfully
+     * @throws ApiError
+     */
+    public createProblemGenerator({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/generators',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Get generator file content
+     * @returns binary Generator content
+     * @throws ApiError
+     */
+    public getProblemGenerator({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/generators/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Update generator file
+     * @returns MessageResponse Generator updated successfully
+     * @throws ApiError
+     */
+    public updateProblemGenerator({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/problems/{problemId}/generators/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Delete generator file
+     * @returns MessageResponse Generator deleted successfully
+     * @throws ApiError
+     */
+    public deleteProblemGenerator({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{problemId}/generators/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Set main generator file
+     * @returns MessageResponse Main generator selected successfully
+     * @throws ApiError
+     */
+    public setProblemGeneratorMain({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: MainComponentSelectionRequest,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{problemId}/generators/main',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * List interactor files
+     * @returns WorkshopFileListResponse List of interactors
+     * @throws ApiError
+     */
+    public listProblemInteractors({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<WorkshopFileListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/interactors',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Create interactor file
+     * @returns MessageResponse Interactor created successfully
+     * @throws ApiError
+     */
+    public createProblemInteractor({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/interactors',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Get interactor file content
+     * @returns binary Interactor content
+     * @throws ApiError
+     */
+    public getProblemInteractor({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/interactors/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Update interactor file
+     * @returns MessageResponse Interactor updated successfully
+     * @throws ApiError
+     */
+    public updateProblemInteractor({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/problems/{problemId}/interactors/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Delete interactor file
+     * @returns MessageResponse Interactor deleted successfully
+     * @throws ApiError
+     */
+    public deleteProblemInteractor({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{problemId}/interactors/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Set main interactor file
+     * @returns MessageResponse Main interactor selected successfully
+     * @throws ApiError
+     */
+    public setProblemInteractorMain({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: MainComponentSelectionRequest,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{problemId}/interactors/main',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * List media files
+     * @returns WorkshopFileListResponse List of media files
+     * @throws ApiError
+     */
+    public listProblemMediaFiles({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<WorkshopFileListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/media',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Create media file
+     * @returns MessageResponse Media file created successfully
+     * @throws ApiError
+     */
+    public createProblemMediaFile({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/media',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Get media file content
+     * @returns binary Media file content
+     * @throws ApiError
+     */
+    public getProblemMediaFile({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/media/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Update media file
+     * @returns MessageResponse Media file updated successfully
+     * @throws ApiError
+     */
+    public updateProblemMediaFile({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/problems/{problemId}/media/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Delete media file
+     * @returns MessageResponse Media file deleted successfully
+     * @throws ApiError
+     */
+    public deleteProblemMediaFile({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{problemId}/media/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * List author solution files
+     * @returns WorkshopFileListResponse List of author solutions
+     * @throws ApiError
+     */
+    public listProblemWorkshopSubmissions({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<WorkshopFileListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/submissions',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Create author solution file
+     * @returns MessageResponse Author solution file created successfully
+     * @throws ApiError
+     */
+    public createProblemWorkshopSubmission({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/submissions',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Get author solution file content
+     * @returns binary Author solution file content
+     * @throws ApiError
+     */
+    public getProblemWorkshopSubmission({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/submissions/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Update author solution file
+     * @returns MessageResponse Author solution file updated successfully
+     * @throws ApiError
+     */
+    public updateProblemWorkshopSubmission({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/problems/{problemId}/submissions/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Delete author solution file
+     * @returns MessageResponse Author solution file deleted successfully
+     * @throws ApiError
+     */
+    public deleteProblemWorkshopSubmission({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{problemId}/submissions/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * List test files
+     * @returns WorkshopFileListResponse List of tests
+     * @throws ApiError
+     */
+    public listProblemTests({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<WorkshopFileListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/tests',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Create test file
+     * @returns MessageResponse Test file created successfully
+     * @throws ApiError
+     */
+    public createProblemTestFile({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/tests',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Update tests.json configuration
+     * @returns MessageResponse Tests config updated successfully
+     * @throws ApiError
+     */
+    public updateProblemTestsConfig({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: UpdateProblemTestsConfigRequest,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{problemId}/tests/config',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Get test file content
+     * @returns binary Test file content
+     * @throws ApiError
+     */
+    public getProblemTestFile({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/tests/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Update test file
+     * @returns MessageResponse Test file updated successfully
+     * @throws ApiError
+     */
+    public updateProblemTestFile({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/problems/{problemId}/tests/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Delete test file
+     * @returns MessageResponse Test file deleted successfully
+     * @throws ApiError
+     */
+    public deleteProblemTestFile({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{problemId}/tests/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * List validator files
+     * @returns WorkshopFileListResponse List of validators
+     * @throws ApiError
+     */
+    public listProblemValidators({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<WorkshopFileListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/validators',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Create validator file
+     * @returns MessageResponse Validator created successfully
+     * @throws ApiError
+     */
+    public createProblemValidator({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/validators',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Get validator file content
+     * @returns binary Validator content
+     * @throws ApiError
+     */
+    public getProblemValidator({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/validators/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Update validator file
+     * @returns MessageResponse Validator updated successfully
+     * @throws ApiError
+     */
+    public updateProblemValidator({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/problems/{problemId}/validators/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Delete validator file
+     * @returns MessageResponse Validator deleted successfully
+     * @throws ApiError
+     */
+    public deleteProblemValidator({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{problemId}/validators/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Set main validator file
+     * @returns MessageResponse Main validator selected successfully
+     * @throws ApiError
+     */
+    public setProblemValidatorMain({
+        problemId,
+        requestBody,
+    }: {
+        problemId: string,
+        requestBody: MainComponentSelectionRequest,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{problemId}/validators/main',
+            path: {
+                'problemId': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**

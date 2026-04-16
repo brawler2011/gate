@@ -1050,14 +1050,11 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-  /problems/{problemId}/workshop/files:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/readme:
     get:
-      operationId: ListWorkshopFiles
-      summary: List files in problem workspace
+      operationId: GetProblemReadme
+      summary: Get problem README
       parameters:
         - name: problemId
           in: path
@@ -1065,51 +1062,17 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: path
-          in: query
-          schema:
-            type: string
-            default: ""
-          description: Directory path to list (empty for root)
       responses:
         "200":
-          description: List of files
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  files:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/FileEntry"
-  /problems/{problemId}/workshop/files/{path}:
-    get:
-      operationId: GetWorkshopFile
-      summary: Read file content from workspace
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: path
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: File content
+          description: README content
           content:
             application/octet-stream:
               schema:
                 type: string
                 format: binary
     put:
-      operationId: UpdateWorkshopFile
-      summary: Update file content in workspace
+      operationId: UpdateProblemReadme
+      summary: Update problem README
       parameters:
         - name: problemId
           in: path
@@ -1117,7 +1080,184 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: path
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: README updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/limits:
+    get:
+      operationId: GetProblemLimits
+      summary: Get problem limits and type settings
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Problem limits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemLimits"
+    patch:
+      operationId: UpdateProblemLimits
+      summary: Update problem limits and type settings
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProblemLimitsRequest"
+      responses:
+        "200":
+          description: Limits updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemLimits"
+  /problems/{problemId}/statement:
+    get:
+      operationId: GetProblemStatement
+      summary: Get problem statement
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Problem statement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemStatement"
+    patch:
+      operationId: UpdateProblemStatement
+      summary: Update problem statement
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProblemStatementRequest"
+      responses:
+        "200":
+          description: Statement updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemStatement"
+  /problems/{problemId}/checkers:
+    get:
+      operationId: ListProblemCheckers
+      summary: List checker files
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of checkers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkshopFileListResponse"
+    post:
+      operationId: CreateProblemChecker
+      summary: Create checker file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Checker created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/checkers/{name}:
+    get:
+      operationId: GetProblemChecker
+      summary: Get checker file content
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Checker content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      operationId: UpdateProblemChecker
+      summary: Update checker file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
           in: path
           required: true
           schema:
@@ -1131,17 +1271,14 @@ paths:
               format: binary
       responses:
         "200":
-          description: File updated successfully
+          description: Checker updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                $ref: "#/components/schemas/MessageResponse"
     delete:
-      operationId: DeleteWorkshopFile
-      summary: Delete file from workspace
+      operationId: DeleteProblemChecker
+      summary: Delete checker file
       parameters:
         - name: problemId
           in: path
@@ -1149,14 +1286,870 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: path
+        - name: name
           in: path
           required: true
           schema:
             type: string
       responses:
         "200":
-          description: File deleted successfully
+          description: Checker deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/checkers/main:
+    patch:
+      operationId: SetProblemCheckerMain
+      summary: Set main checker file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MainComponentSelectionRequest"
+      responses:
+        "200":
+          description: Main checker selected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/generators:
+    get:
+      operationId: ListProblemGenerators
+      summary: List generator files
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of generators
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkshopFileListResponse"
+    post:
+      operationId: CreateProblemGenerator
+      summary: Create generator file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Generator created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/generators/{name}:
+    get:
+      operationId: GetProblemGenerator
+      summary: Get generator file content
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Generator content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      operationId: UpdateProblemGenerator
+      summary: Update generator file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Generator updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+    delete:
+      operationId: DeleteProblemGenerator
+      summary: Delete generator file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Generator deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/generators/main:
+    patch:
+      operationId: SetProblemGeneratorMain
+      summary: Set main generator file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MainComponentSelectionRequest"
+      responses:
+        "200":
+          description: Main generator selected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/interactors:
+    get:
+      operationId: ListProblemInteractors
+      summary: List interactor files
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of interactors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkshopFileListResponse"
+    post:
+      operationId: CreateProblemInteractor
+      summary: Create interactor file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Interactor created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/interactors/{name}:
+    get:
+      operationId: GetProblemInteractor
+      summary: Get interactor file content
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Interactor content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      operationId: UpdateProblemInteractor
+      summary: Update interactor file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Interactor updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+    delete:
+      operationId: DeleteProblemInteractor
+      summary: Delete interactor file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Interactor deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/interactors/main:
+    patch:
+      operationId: SetProblemInteractorMain
+      summary: Set main interactor file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MainComponentSelectionRequest"
+      responses:
+        "200":
+          description: Main interactor selected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/media:
+    get:
+      operationId: ListProblemMediaFiles
+      summary: List media files
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of media files
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkshopFileListResponse"
+    post:
+      operationId: CreateProblemMediaFile
+      summary: Create media file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Media file created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/media/{name}:
+    get:
+      operationId: GetProblemMediaFile
+      summary: Get media file content
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Media file content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      operationId: UpdateProblemMediaFile
+      summary: Update media file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Media file updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+    delete:
+      operationId: DeleteProblemMediaFile
+      summary: Delete media file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Media file deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/submissions:
+    get:
+      operationId: ListProblemWorkshopSubmissions
+      summary: List author solution files
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of author solutions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkshopFileListResponse"
+    post:
+      operationId: CreateProblemWorkshopSubmission
+      summary: Create author solution file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Author solution file created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/submissions/{name}:
+    get:
+      operationId: GetProblemWorkshopSubmission
+      summary: Get author solution file content
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Author solution file content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      operationId: UpdateProblemWorkshopSubmission
+      summary: Update author solution file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Author solution file updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+    delete:
+      operationId: DeleteProblemWorkshopSubmission
+      summary: Delete author solution file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Author solution file deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/tests:
+    get:
+      operationId: ListProblemTests
+      summary: List test files
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of tests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkshopFileListResponse"
+    post:
+      operationId: CreateProblemTestFile
+      summary: Create test file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Test file created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/tests/config:
+    patch:
+      operationId: UpdateProblemTestsConfig
+      summary: Update tests.json configuration
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProblemTestsConfigRequest"
+      responses:
+        "200":
+          description: Tests config updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/tests/{name}:
+    get:
+      operationId: GetProblemTestFile
+      summary: Get test file content
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Test file content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      operationId: UpdateProblemTestFile
+      summary: Update test file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Test file updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+    delete:
+      operationId: DeleteProblemTestFile
+      summary: Delete test file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Test file deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/validators:
+    get:
+      operationId: ListProblemValidators
+      summary: List validator files
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of validators
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkshopFileListResponse"
+    post:
+      operationId: CreateProblemValidator
+      summary: Create validator file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Validator created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/validators/{name}:
+    get:
+      operationId: GetProblemValidator
+      summary: Get validator file content
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Validator content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      operationId: UpdateProblemValidator
+      summary: Update validator file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Validator updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+    delete:
+      operationId: DeleteProblemValidator
+      summary: Delete validator file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Validator deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/validators/main:
+    patch:
+      operationId: SetProblemValidatorMain
+      summary: Set main validator file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MainComponentSelectionRequest"
+      responses:
+        "200":
+          description: Main validator selected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
   /problems/{problemId}/workshop/components/{componentType}/compile:
     post:
       operationId: CompileProblemComponent
@@ -1650,7 +2643,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [ asc, desc ]
+            enum: [asc, desc]
             default: desc
       responses:
         "200":
@@ -1661,7 +2654,7 @@ paths:
                 $ref: "#/components/schemas/ListPostsResponseModel"
     post:
       security:
-        - cookieAuth: [ ]
+        - cookieAuth: []
       operationId: CreatePost
       summary: Create a new post
       requestBody:
@@ -1737,7 +2730,7 @@ paths:
                 $ref: "#/components/schemas/Error"
     patch:
       security:
-        - cookieAuth: [ ]
+        - cookieAuth: []
       operationId: PatchPostById
       summary: Partially update a post by ID
       parameters:
@@ -1791,7 +2784,7 @@ paths:
                 $ref: "#/components/schemas/Error"
     delete:
       security:
-        - cookieAuth: [ ]
+        - cookieAuth: []
       operationId: DeletePostById
       summary: Delete a post by ID
       parameters:
@@ -1843,7 +2836,7 @@ paths:
         "200":
           description: Post image
           content:
-            image/png: { }
+            image/png: {}
         "400":
           description: bad request
           content:
@@ -2761,6 +3754,105 @@ components:
         size:
           type: integer
           format: int64
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    WorkshopFileListResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileEntry"
+    ProblemLimits:
+      type: object
+      required:
+        - problem_type
+        - time_limit_ms
+        - memory_limit_mb
+        - stdout_limit_mb
+        - code_size_limit_kb
+      properties:
+        problem_type:
+          type: string
+        time_limit_ms:
+          type: integer
+        memory_limit_mb:
+          type: integer
+        stdout_limit_mb:
+          type: integer
+        code_size_limit_kb:
+          type: integer
+        max_score:
+          type: integer
+          nullable: true
+    UpdateProblemLimitsRequest:
+      type: object
+      properties:
+        problem_type:
+          type: string
+        time_limit_ms:
+          type: integer
+        memory_limit_mb:
+          type: integer
+        stdout_limit_mb:
+          type: integer
+        code_size_limit_kb:
+          type: integer
+        max_score:
+          type: integer
+          nullable: true
+    ProblemStatement:
+      type: object
+      required:
+        - title
+        - legend
+        - input_format
+        - output_format
+      properties:
+        title:
+          type: string
+        legend:
+          type: string
+        input_format:
+          type: string
+        output_format:
+          type: string
+        notes:
+          type: string
+        interaction:
+          type: string
+        scoring:
+          type: string
+    UpdateProblemStatementRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        legend:
+          type: string
+        input_format:
+          type: string
+        output_format:
+          type: string
+        notes:
+          type: string
+        interaction:
+          type: string
+        scoring:
+          type: string
+    MainComponentSelectionRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+    UpdateProblemTestsConfigRequest:
+      type: object
+      additionalProperties: true
     CompileResult:
       type: object
       properties:

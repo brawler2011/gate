@@ -1,5 +1,7 @@
 "use client";
 
+import type { ApiError } from "@/lib/api";
+import type { FileEntry } from "@contracts/gateway/v1";
 import {
   ActionIcon,
   Box,
@@ -17,9 +19,13 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconFile, IconPlus, IconRefresh, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import type { FileEntry } from "@contracts/gateway/v1";
-import { getWorkshopFile, listWorkshopFiles, saveWorkshopFile } from "@/lib/actions";
 import classes from "./WorkshopFolderTab.module.css";
+
+type ListFilesResult = Promise<
+  [ApiError | null, { files?: FileEntry[] } | null]
+>;
+type GetFileResult = Promise<[ApiError | null, string | null]>;
+type SaveFileResult = Promise<[ApiError | null, unknown | null]>;
 
 type Props = {
   problemId: string;
@@ -27,14 +33,30 @@ type Props = {
   selectedFile: string | null;
   onFileSelect: (filePath: string) => void;
   onFileCreated: (filePath: string) => void;
+  listFiles: (problemId: string) => ListFilesResult;
+  getFile: (problemId: string, name: string) => GetFileResult;
+  createFile: (
+    problemId: string,
+    name: string,
+    content: string,
+  ) => SaveFileResult;
+  updateFile: (
+    problemId: string,
+    name: string,
+    content: string,
+  ) => SaveFileResult;
 };
 
-export function WorkshopFolderTab({
+export function WorkshopCollectionTab({
   problemId,
   folderName,
   selectedFile,
   onFileSelect,
   onFileCreated,
+  listFiles,
+  getFile,
+  createFile,
+  updateFile,
 }: Props) {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
@@ -43,16 +65,18 @@ export function WorkshopFolderTab({
   const [isLoadingFile, startLoadingFile] = useTransition();
   const [isSaving, startSaving] = useTransition();
 
-  // New file creation state
   const [isCreating, setIsCreating] = useState(false);
   const [newFileName, setNewFileName] = useState("");
   const [isCreatingFile, startCreatingFile] = useTransition();
   const newFileInputRef = useRef<HTMLInputElement>(null);
 
+  const getFileName = (path: string) => path.split("/").pop() ?? path;
+
   const fetchFiles = useCallback(async () => {
     setIsLoadingFiles(true);
-    const [error, data] = await listWorkshopFiles(problemId, folderName);
+    const [error, data] = await listFiles(problemId);
     setIsLoadingFiles(false);
+
     if (error) {
       notifications.show({
         title: "Ошибка загрузки файлов",
@@ -61,19 +85,21 @@ export function WorkshopFolderTab({
       });
       return;
     }
+
     setFiles(data?.files ?? []);
-  }, [problemId, folderName]);
+  }, [listFiles, problemId]);
 
   useEffect(() => {
     fetchFiles();
   }, [fetchFiles]);
 
-  const leafFiles = files.filter((f) => !f.is_directory);
+  const leafFiles = files.filter((file) => !file.is_directory);
 
   const loadFile = useCallback(
     (path: string) => {
       startLoadingFile(async () => {
-        const [error, data] = await getWorkshopFile(problemId, path);
+        const fileName = getFileName(path);
+        const [error, data] = await getFile(problemId, fileName);
         if (error) {
           notifications.show({
             title: "Ошибка загрузки файла",
@@ -82,46 +108,58 @@ export function WorkshopFolderTab({
           });
           return;
         }
-        const text = typeof data === "string" ? data : "";
-        setContent(text);
+
+        setContent(typeof data === "string" ? data : "");
         setIsDirty(false);
       });
     },
-    [problemId],
+    [getFile, problemId],
   );
 
-  // Auto-open if single file or when selectedFile changes
   useEffect(() => {
     if (!selectedFile && leafFiles.length === 1) {
       onFileSelect(leafFiles[0].path!);
       return;
     }
+
     if (selectedFile) {
       loadFile(selectedFile);
-    } else {
-      setContent("");
-      setIsDirty(false);
+      return;
     }
-  }, [selectedFile, folderName, leafFiles.length, loadFile, onFileSelect]);
+
+    setContent("");
+    setIsDirty(false);
+  }, [leafFiles.length, loadFile, onFileSelect, selectedFile]);
 
   const handleSave = () => {
     if (!selectedFile) return;
+
     startSaving(async () => {
-      const [error] = await saveWorkshopFile(problemId, selectedFile, content);
+      const fileName = getFileName(selectedFile);
+      const isExistingFile = leafFiles.some(
+        (file) => file.path === selectedFile,
+      );
+      const saveFile = isExistingFile ? updateFile : createFile;
+      const [error] = await saveFile(problemId, fileName, content);
+
       if (error) {
         notifications.show({
-          title: "Ошибка сохранения",
+          title: isExistingFile ? "Ошибка обновления" : "Ошибка создания",
           message: error.message ?? "Не удалось сохранить файл",
           color: "red",
         });
         return;
       }
+
       setIsDirty(false);
-      notifications.show({ title: "Сохранено", message: selectedFile, color: "green" });
+      notifications.show({
+        title: isExistingFile ? "Обновлено" : "Создано",
+        message: selectedFile,
+        color: "green",
+      });
+      await fetchFiles();
     });
   };
-
-  const getFileName = (path: string) => path.split("/").pop() ?? path;
 
   const openCreateInput = () => {
     setIsCreating(true);
@@ -137,9 +175,11 @@ export function WorkshopFolderTab({
   const handleCreate = () => {
     const trimmed = newFileName.trim();
     if (!trimmed) return;
+
     const fullPath = `${folderName}/${trimmed}`;
+
     startCreatingFile(async () => {
-      const [error] = await saveWorkshopFile(problemId, fullPath, "");
+      const [error] = await createFile(problemId, trimmed, "");
       if (error) {
         notifications.show({
           title: "Ошибка создания файла",
@@ -148,6 +188,7 @@ export function WorkshopFolderTab({
         });
         return;
       }
+
       setIsCreating(false);
       setNewFileName("");
       await fetchFiles();
@@ -172,20 +213,24 @@ export function WorkshopFolderTab({
         </button>
       ))}
 
-      {/* Inline new-file input */}
       {isCreating ? (
         <Group gap={4} style={{ flexShrink: 0 }}>
           <TextInput
             ref={newFileInputRef}
             value={newFileName}
-            onChange={(e) => setNewFileName(e.currentTarget.value)}
+            onChange={(event) => setNewFileName(event.currentTarget.value)}
             placeholder="имя файла"
             size="xs"
             style={{ width: 160 }}
-            styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)", fontSize: 12 } }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleCreate();
-              if (e.key === "Escape") cancelCreate();
+            styles={{
+              input: {
+                fontFamily: "var(--mantine-font-family-monospace)",
+                fontSize: 12,
+              },
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") handleCreate();
+              if (event.key === "Escape") cancelCreate();
             }}
             disabled={isCreatingFile}
           />
@@ -223,6 +268,17 @@ export function WorkshopFolderTab({
     </div>
   );
 
+  if (isLoadingFiles) {
+    return (
+      <Stack gap={0} style={{ flex: 1, overflow: "hidden" }}>
+        {fileBar}
+        <Center style={{ flex: 1 }}>
+          <Loader size="sm" />
+        </Center>
+      </Stack>
+    );
+  }
+
   if (leafFiles.length === 0) {
     return (
       <Stack gap={0} style={{ flex: 1, overflow: "hidden" }}>
@@ -243,7 +299,6 @@ export function WorkshopFolderTab({
     <Stack gap={0} style={{ flex: 1, height: "100%", overflow: "hidden" }}>
       {fileBar}
 
-      {/* Toolbar */}
       <Group
         px="md"
         py="xs"
@@ -269,7 +324,7 @@ export function WorkshopFolderTab({
               variant="subtle"
               title="Перезагрузить"
               disabled={isSaving || isLoadingFile}
-              onClick={() => selectedFile && loadFile(selectedFile)}
+              onClick={() => loadFile(selectedFile)}
             >
               <IconRefresh size={16} />
             </ActionIcon>
@@ -285,13 +340,18 @@ export function WorkshopFolderTab({
         </Group>
       </Group>
 
-      {/* Editor */}
-      <Box style={{ flex: 1, overflow: "hidden", padding: "var(--mantine-spacing-xs)" }}>
+      <Box
+        style={{
+          flex: 1,
+          overflow: "hidden",
+          padding: "var(--mantine-spacing-xs)",
+        }}
+      >
         {selectedFile ? (
           <Textarea
             value={content}
-            onChange={(e) => {
-              setContent(e.currentTarget.value);
+            onChange={(event) => {
+              setContent(event.currentTarget.value);
               setIsDirty(true);
             }}
             disabled={isLoadingFile || isSaving}

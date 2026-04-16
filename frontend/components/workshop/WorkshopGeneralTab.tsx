@@ -1,5 +1,12 @@
 "use client";
 
+import { SectionPaper } from "@/components/workshop/SectionPaper";
+import {
+  getWorkshopProblemLimits,
+  getWorkshopProblemReadme,
+  updateWorkshopProblemLimits,
+  updateWorkshopProblemReadme,
+} from "@/lib/actions";
 import {
   Box,
   Button,
@@ -11,29 +18,17 @@ import {
   Stack,
   Text,
   Textarea,
-  Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useEffect, useState, useTransition } from "react";
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { getWorkshopFile, saveWorkshopFile } from "@/lib/actions";
 
-type ManifestData = {
-  last_updated?: string;
+type LimitsData = {
   problem_type: string;
   max_score: number | null;
   time_limit_ms: number;
   memory_limit_mb: number;
   stdout_limit_mb: number;
   code_size_limit_kb: number;
-  statement?: Record<string, unknown>;
-  meta_files?: unknown[];
-};
-
-type RawFileState = {
-  content: string;
-  isDirty: boolean;
-  isLoading: boolean;
 };
 
 type Props = {
@@ -47,153 +42,128 @@ const PROBLEM_TYPE_OPTIONS = [
 ];
 
 export function WorkshopGeneralTab({ problemId }: Props) {
-  // Manifest state
-  const [manifest, setManifest] = useState<ManifestData | null>(null);
-  const [isLoadingManifest, startLoadingManifest] = useTransition();
-  const [isSavingManifest, startSavingManifest] = useTransition();
-  const [isManifestDirty, setIsManifestDirty] = useState(false);
+  const [limits, setLimits] = useState<LimitsData | null>(null);
+  const [isLoading, startLoading] = useTransition();
+  const [isSaving, startSaving] = useTransition();
+  const [isDirty, setIsDirty] = useState(false);
+  const [readme, setReadme] = useState("");
+  const [isReadmeLoading, setIsReadmeLoading] = useState(false);
+  const [isReadmeDirty, setIsReadmeDirty] = useState(false);
+  const [isReadmeSaving, startReadmeSaving] = useTransition();
 
-  // README state
-  const [readme, setReadme] = useState<RawFileState>({
-    content: "",
-    isDirty: false,
-    isLoading: false,
-  });
-  const [isSavingReadme, startSavingReadme] = useTransition();
-
-  // Load all files on mount
-  useEffect(() => {
-    loadManifest();
-    loadRawFile("README.md", setReadme);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [problemId]);
-
-  const loadManifest = () => {
-    startLoadingManifest(async () => {
-      const [error, data] = await getWorkshopFile(problemId, "manifest.json");
-      if (error) {
+  const loadLimits = () => {
+    startLoading(async () => {
+      const [error, data] = await getWorkshopProblemLimits(problemId);
+      if (error || !data) {
         notifications.show({
-          title: "Ошибка загрузки manifest.json",
-          message: error.message ?? "Не удалось загрузить манифест",
+          title: "Ошибка загрузки лимитов",
+          message: error?.message ?? "Не удалось загрузить лимиты задачи",
           color: "red",
         });
         return;
       }
-      try {
-        const parsed: ManifestData = JSON.parse(typeof data === "string" ? data : "{}");
-        setManifest(parsed);
-        setIsManifestDirty(false);
-      } catch {
-        notifications.show({
-          title: "Ошибка парсинга manifest.json",
-          message: "Файл содержит невалидный JSON",
-          color: "red",
-        });
-      }
+
+      setLimits({
+        problem_type: data.problem_type,
+        max_score: data.max_score ?? null,
+        time_limit_ms: data.time_limit_ms,
+        memory_limit_mb: data.memory_limit_mb,
+        stdout_limit_mb: data.stdout_limit_mb,
+        code_size_limit_kb: data.code_size_limit_kb,
+      });
+      setIsDirty(false);
     });
   };
 
-  const loadRawFile = (
-    path: string,
-    setter: React.Dispatch<React.SetStateAction<RawFileState>>
-  ) => {
-    setter((prev) => ({ ...prev, isLoading: true }));
-    // We don't have a direct way to mark loading with useTransition per-file here,
-    // so we use a simple approach with the setter
-    getWorkshopFile(problemId, path).then(([error, data]) => {
-      if (error && error.status !== 404) {
+  useEffect(() => {
+    loadLimits();
+    loadReadme();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [problemId]);
+
+  const loadReadme = async () => {
+    setIsReadmeLoading(true);
+    const [error, data] = await getWorkshopProblemReadme(problemId);
+    setIsReadmeLoading(false);
+
+    if (error) {
+      notifications.show({
+        title: "Ошибка загрузки README.md",
+        message: error.message ?? "Не удалось загрузить README.md",
+        color: "red",
+      });
+      return;
+    }
+
+    setReadme(data ?? "");
+    setIsReadmeDirty(false);
+  };
+
+  const patchLimits = (patch: Partial<LimitsData>) => {
+    setLimits((prev) => (prev ? { ...prev, ...patch } : prev));
+    setIsDirty(true);
+  };
+
+  const handleSave = () => {
+    if (!limits) return;
+
+    startSaving(async () => {
+      const [error] = await updateWorkshopProblemLimits(problemId, {
+        problem_type: limits.problem_type,
+        max_score: limits.problem_type === "scoring" ? limits.max_score : null,
+        time_limit_ms: limits.time_limit_ms,
+        memory_limit_mb: limits.memory_limit_mb,
+        stdout_limit_mb: limits.stdout_limit_mb,
+        code_size_limit_kb: limits.code_size_limit_kb,
+      });
+
+      if (error) {
         notifications.show({
-          title: `Ошибка загрузки ${path}`,
-          message: error.message ?? "Не удалось загрузить файл",
+          title: "Ошибка сохранения",
+          message: error.message ?? "Не удалось сохранить лимиты",
           color: "red",
         });
-        setter((prev) => ({ ...prev, isLoading: false }));
         return;
       }
-      setter({
-        content: typeof data === "string" ? data : "",
-        isDirty: false,
-        isLoading: false,
+
+      setIsDirty(false);
+      notifications.show({
+        title: "Сохранено",
+        message: "Лимиты задачи обновлены",
+        color: "green",
       });
     });
   };
 
-  const handleSaveManifest = () => {
-    if (!manifest) return;
-    startSavingManifest(async () => {
-      // Preserve fields we don't edit (statement, meta_files, last_updated)
-      const [currentError, currentData] = await getWorkshopFile(problemId, "manifest.json");
-      let existing: Record<string, unknown> = {};
-      if (!currentError && typeof currentData === "string") {
-        try {
-          existing = JSON.parse(currentData);
-        } catch {
-          // ignore
-        }
-      }
+  const handleReadmeSave = () => {
+    startReadmeSaving(async () => {
+      const [error] = await updateWorkshopProblemReadme(problemId, readme);
 
-      const updated = {
-        ...existing,
-        problem_type: manifest.problem_type,
-        max_score: manifest.max_score,
-        time_limit_ms: manifest.time_limit_ms,
-        memory_limit_mb: manifest.memory_limit_mb,
-        stdout_limit_mb: manifest.stdout_limit_mb,
-        code_size_limit_kb: manifest.code_size_limit_kb,
-      };
-
-      const [error] = await saveWorkshopFile(
-        problemId,
-        "manifest.json",
-        JSON.stringify(updated, null, 2)
-      );
       if (error) {
         notifications.show({
           title: "Ошибка сохранения",
-          message: error.message ?? "Не удалось сохранить manifest.json",
+          message: error.message ?? "Не удалось сохранить README.md",
           color: "red",
         });
         return;
       }
-      setIsManifestDirty(false);
-      notifications.show({ title: "Сохранено", message: "manifest.json", color: "green" });
-    });
-  };
 
-  const handleSaveRaw = (
-    path: string,
-    content: string,
-    setter: React.Dispatch<React.SetStateAction<RawFileState>>,
-    startSaving: (fn: () => Promise<void>) => void
-  ) => {
-    startSaving(async () => {
-      const [error] = await saveWorkshopFile(problemId, path, content);
-      if (error) {
-        notifications.show({
-          title: "Ошибка сохранения",
-          message: error.message ?? `Не удалось сохранить ${path}`,
-          color: "red",
-        });
-        return;
-      }
-      setter((prev) => ({ ...prev, isDirty: false }));
-      notifications.show({ title: "Сохранено", message: path, color: "green" });
+      setIsReadmeDirty(false);
+      notifications.show({
+        title: "Сохранено",
+        message: "README.md обновлен",
+        color: "green",
+      });
     });
-  };
-
-  const patchManifest = (patch: Partial<ManifestData>) => {
-    setManifest((prev) => (prev ? { ...prev, ...patch } : prev));
-    setIsManifestDirty(true);
   };
 
   return (
     <ScrollArea style={{ flex: 1 }} p="lg">
       <Stack gap="lg" maw={900} mx="auto">
-        {/* Manifest form */}
         <SectionPaper title="Настройки задачи">
-          {isLoadingManifest || !manifest ? (
+          {isLoading || !limits ? (
             <Text c="dimmed" size="sm">
-              Загрузка…
+              Загрузка...
             </Text>
           ) : (
             <Stack gap="md">
@@ -203,8 +173,15 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                     label="Тип задачи"
                     description="Схема оценивания"
                     data={PROBLEM_TYPE_OPTIONS}
-                    value={manifest.problem_type}
-                    onChange={(val) => val && patchManifest({ problem_type: val })}
+                    value={limits.problem_type}
+                    onChange={(value) => {
+                      if (!value) return;
+                      patchLimits({
+                        problem_type: value,
+                        max_score:
+                          value === "scoring" ? limits.max_score : null,
+                      });
+                    }}
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 4 }}>
@@ -213,9 +190,11 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                     description="В миллисекундах"
                     suffix=" мс"
                     min={0}
-                    value={manifest.time_limit_ms}
-                    onChange={(val) =>
-                      patchManifest({ time_limit_ms: typeof val === "number" ? val : 0 })
+                    value={limits.time_limit_ms}
+                    onChange={(value) =>
+                      patchLimits({
+                        time_limit_ms: typeof value === "number" ? value : 0,
+                      })
                     }
                   />
                 </Grid.Col>
@@ -225,9 +204,11 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                     description="В мегабайтах"
                     suffix=" МБ"
                     min={0}
-                    value={manifest.memory_limit_mb}
-                    onChange={(val) =>
-                      patchManifest({ memory_limit_mb: typeof val === "number" ? val : 0 })
+                    value={limits.memory_limit_mb}
+                    onChange={(value) =>
+                      patchLimits({
+                        memory_limit_mb: typeof value === "number" ? value : 0,
+                      })
                     }
                   />
                 </Grid.Col>
@@ -237,9 +218,11 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                     description="В мегабайтах"
                     suffix=" МБ"
                     min={0}
-                    value={manifest.stdout_limit_mb}
-                    onChange={(val) =>
-                      patchManifest({ stdout_limit_mb: typeof val === "number" ? val : 0 })
+                    value={limits.stdout_limit_mb}
+                    onChange={(value) =>
+                      patchLimits({
+                        stdout_limit_mb: typeof value === "number" ? value : 0,
+                      })
                     }
                   />
                 </Grid.Col>
@@ -249,9 +232,12 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                     description="В килобайтах"
                     suffix=" КБ"
                     min={0}
-                    value={manifest.code_size_limit_kb}
-                    onChange={(val) =>
-                      patchManifest({ code_size_limit_kb: typeof val === "number" ? val : 0 })
+                    value={limits.code_size_limit_kb}
+                    onChange={(value) =>
+                      patchLimits({
+                        code_size_limit_kb:
+                          typeof value === "number" ? value : 0,
+                      })
                     }
                   />
                 </Grid.Col>
@@ -260,20 +246,24 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                     label="Максимальный балл"
                     description="Только для scoring-задач"
                     min={0}
-                    value={manifest.max_score ?? ""}
-                    onChange={(val) =>
-                      patchManifest({ max_score: typeof val === "number" ? val : null })
+                    disabled={limits.problem_type !== "scoring"}
+                    value={limits.max_score ?? ""}
+                    onChange={(value) =>
+                      patchLimits({
+                        max_score: typeof value === "number" ? value : null,
+                      })
                     }
                     placeholder="Не задан"
                   />
                 </Grid.Col>
               </Grid>
+
               <Group justify="flex-end">
                 <Button
                   size="sm"
-                  disabled={!isManifestDirty}
-                  loading={isSavingManifest}
-                  onClick={handleSaveManifest}
+                  disabled={!isDirty}
+                  loading={isSaving}
+                  onClick={handleSave}
                 >
                   Сохранить настройки
                 </Button>
@@ -282,24 +272,20 @@ export function WorkshopGeneralTab({ problemId }: Props) {
           )}
         </SectionPaper>
 
-        {/* README.md */}
         <SectionPaper title="README.md">
-          <Stack gap="sm">
-            {readme.isLoading ? (
-              <Text c="dimmed" size="sm">
-                Загрузка…
-              </Text>
-            ) : (
+          {isReadmeLoading ? (
+            <Text c="dimmed" size="sm">
+              Загрузка...
+            </Text>
+          ) : (
+            <Stack gap="sm">
               <Box>
                 <Textarea
-                  value={readme.content}
-                  onChange={(e) =>
-                    setReadme((prev) => ({
-                      ...prev,
-                      content: e.currentTarget.value,
-                      isDirty: true,
-                    }))
-                  }
+                  value={readme}
+                  onChange={(event) => {
+                    setReadme(event.currentTarget.value);
+                    setIsReadmeDirty(true);
+                  }}
                   minRows={8}
                   maxRows={20}
                   autosize
@@ -311,23 +297,21 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                   }}
                 />
               </Box>
-            )}
-            <Group justify="flex-end">
-              <Button
-                size="sm"
-                variant="default"
-                disabled={!readme.isDirty}
-                loading={isSavingReadme}
-                onClick={() =>
-                  handleSaveRaw("README.md", readme.content, setReadme, startSavingReadme)
-                }
-              >
-                Сохранить README.md
-              </Button>
-            </Group>
-          </Stack>
-        </SectionPaper>
 
+              <Group justify="flex-end">
+                <Button
+                  size="sm"
+                  variant="default"
+                  disabled={!isReadmeDirty}
+                  loading={isReadmeSaving}
+                  onClick={handleReadmeSave}
+                >
+                  Сохранить README.md
+                </Button>
+              </Group>
+            </Stack>
+          )}
+        </SectionPaper>
       </Stack>
     </ScrollArea>
   );

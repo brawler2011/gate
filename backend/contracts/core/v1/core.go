@@ -331,6 +331,16 @@ type ListUsersResponseModel struct {
 	Users      []UserModel     `json:"users"`
 }
 
+// MainComponentSelectionRequest defines model for MainComponentSelectionRequest.
+type MainComponentSelectionRequest struct {
+	Name string `json:"name"`
+}
+
+// MessageResponse defines model for MessageResponse.
+type MessageResponse struct {
+	Message *string `json:"message,omitempty"`
+}
+
 // OrganizationMemberModel defines model for OrganizationMemberModel.
 type OrganizationMemberModel struct {
 	CreatedAt      time.Time          `json:"created_at"`
@@ -368,6 +378,16 @@ type PostModel struct {
 	UpdatedAt      *time.Time          `json:"updated_at,omitempty"`
 }
 
+// ProblemLimits defines model for ProblemLimits.
+type ProblemLimits struct {
+	CodeSizeLimitKb int    `json:"code_size_limit_kb"`
+	MaxScore        *int   `json:"max_score"`
+	MemoryLimitMb   int    `json:"memory_limit_mb"`
+	ProblemType     string `json:"problem_type"`
+	StdoutLimitMb   int    `json:"stdout_limit_mb"`
+	TimeLimitMs     int    `json:"time_limit_ms"`
+}
+
 // ProblemModel defines model for ProblemModel.
 type ProblemModel struct {
 	CreatedAt        time.Time           `json:"created_at"`
@@ -390,6 +410,17 @@ type ProblemModel struct {
 	Title            string              `json:"title"`
 	UpdatedAt        time.Time           `json:"updated_at"`
 	Visibility       string              `json:"visibility"`
+}
+
+// ProblemStatement defines model for ProblemStatement.
+type ProblemStatement struct {
+	InputFormat  string  `json:"input_format"`
+	Interaction  *string `json:"interaction,omitempty"`
+	Legend       string  `json:"legend"`
+	Notes        *string `json:"notes,omitempty"`
+	OutputFormat string  `json:"output_format"`
+	Scoring      *string `json:"scoring,omitempty"`
+	Title        string  `json:"title"`
 }
 
 // ProblemsListItemModel defines model for ProblemsListItemModel.
@@ -503,6 +534,16 @@ type UpdateOrganizationRequestModel struct {
 	Name        *string `json:"name,omitempty"`
 }
 
+// UpdateProblemLimitsRequest defines model for UpdateProblemLimitsRequest.
+type UpdateProblemLimitsRequest struct {
+	CodeSizeLimitKb *int    `json:"code_size_limit_kb,omitempty"`
+	MaxScore        *int    `json:"max_score"`
+	MemoryLimitMb   *int    `json:"memory_limit_mb,omitempty"`
+	ProblemType     *string `json:"problem_type,omitempty"`
+	StdoutLimitMb   *int    `json:"stdout_limit_mb,omitempty"`
+	TimeLimitMs     *int    `json:"time_limit_ms,omitempty"`
+}
+
 // UpdateProblemRequestModel defines model for UpdateProblemRequestModel.
 type UpdateProblemRequestModel struct {
 	InputFormat  *string `json:"input_format,omitempty"`
@@ -515,6 +556,20 @@ type UpdateProblemRequestModel struct {
 	Title        *string `json:"title,omitempty"`
 	Visibility   *string `json:"visibility,omitempty"`
 }
+
+// UpdateProblemStatementRequest defines model for UpdateProblemStatementRequest.
+type UpdateProblemStatementRequest struct {
+	InputFormat  *string `json:"input_format,omitempty"`
+	Interaction  *string `json:"interaction,omitempty"`
+	Legend       *string `json:"legend,omitempty"`
+	Notes        *string `json:"notes,omitempty"`
+	OutputFormat *string `json:"output_format,omitempty"`
+	Scoring      *string `json:"scoring,omitempty"`
+	Title        *string `json:"title,omitempty"`
+}
+
+// UpdateProblemTestsConfigRequest defines model for UpdateProblemTestsConfigRequest.
+type UpdateProblemTestsConfigRequest map[string]interface{}
 
 // UpdateTeamRequestModel defines model for UpdateTeamRequestModel.
 type UpdateTeamRequestModel struct {
@@ -542,6 +597,11 @@ type ValidationReport struct {
 	Results      *[]TestValidationResult `json:"results,omitempty"`
 	TotalTests   *int                    `json:"total_tests,omitempty"`
 	ValidTests   *int                    `json:"valid_tests,omitempty"`
+}
+
+// WorkshopFileListResponse defines model for WorkshopFileListResponse.
+type WorkshopFileListResponse struct {
+	Files *[]FileEntry `json:"files,omitempty"`
 }
 
 // ListAdminContestsParams defines parameters for ListAdminContests.
@@ -692,14 +752,43 @@ type ImportProblemMultipartBody struct {
 	Package *openapi_types.File `json:"package,omitempty"`
 }
 
+// CreateProblemCheckerParams defines parameters for CreateProblemChecker.
+type CreateProblemCheckerParams struct {
+	Name string `form:"name" json:"name"`
+}
+
+// CreateProblemGeneratorParams defines parameters for CreateProblemGenerator.
+type CreateProblemGeneratorParams struct {
+	Name string `form:"name" json:"name"`
+}
+
+// CreateProblemInteractorParams defines parameters for CreateProblemInteractor.
+type CreateProblemInteractorParams struct {
+	Name string `form:"name" json:"name"`
+}
+
+// CreateProblemMediaFileParams defines parameters for CreateProblemMediaFile.
+type CreateProblemMediaFileParams struct {
+	Name string `form:"name" json:"name"`
+}
+
+// CreateProblemWorkshopSubmissionParams defines parameters for CreateProblemWorkshopSubmission.
+type CreateProblemWorkshopSubmissionParams struct {
+	Name string `form:"name" json:"name"`
+}
+
+// CreateProblemTestFileParams defines parameters for CreateProblemTestFile.
+type CreateProblemTestFileParams struct {
+	Name string `form:"name" json:"name"`
+}
+
+// CreateProblemValidatorParams defines parameters for CreateProblemValidator.
+type CreateProblemValidatorParams struct {
+	Name string `form:"name" json:"name"`
+}
+
 // CompileProblemComponentParamsComponentType defines parameters for CompileProblemComponent.
 type CompileProblemComponentParamsComponentType string
-
-// ListWorkshopFilesParams defines parameters for ListWorkshopFiles.
-type ListWorkshopFilesParams struct {
-	// Path Directory path to list (empty for root)
-	Path *string `form:"path,omitempty" json:"path,omitempty"`
-}
 
 // TestSolutionJSONBody defines parameters for TestSolution.
 type TestSolutionJSONBody struct {
@@ -858,6 +947,27 @@ type UpdateProblemJSONRequestBody = UpdateProblemRequestModel
 
 // ImportProblemMultipartRequestBody defines body for ImportProblem for multipart/form-data ContentType.
 type ImportProblemMultipartRequestBody ImportProblemMultipartBody
+
+// SetProblemCheckerMainJSONRequestBody defines body for SetProblemCheckerMain for application/json ContentType.
+type SetProblemCheckerMainJSONRequestBody = MainComponentSelectionRequest
+
+// SetProblemGeneratorMainJSONRequestBody defines body for SetProblemGeneratorMain for application/json ContentType.
+type SetProblemGeneratorMainJSONRequestBody = MainComponentSelectionRequest
+
+// SetProblemInteractorMainJSONRequestBody defines body for SetProblemInteractorMain for application/json ContentType.
+type SetProblemInteractorMainJSONRequestBody = MainComponentSelectionRequest
+
+// UpdateProblemLimitsJSONRequestBody defines body for UpdateProblemLimits for application/json ContentType.
+type UpdateProblemLimitsJSONRequestBody = UpdateProblemLimitsRequest
+
+// UpdateProblemStatementJSONRequestBody defines body for UpdateProblemStatement for application/json ContentType.
+type UpdateProblemStatementJSONRequestBody = UpdateProblemStatementRequest
+
+// UpdateProblemTestsConfigJSONRequestBody defines body for UpdateProblemTestsConfig for application/json ContentType.
+type UpdateProblemTestsConfigJSONRequestBody = UpdateProblemTestsConfigRequest
+
+// SetProblemValidatorMainJSONRequestBody defines body for SetProblemValidatorMain for application/json ContentType.
+type SetProblemValidatorMainJSONRequestBody = MainComponentSelectionRequest
 
 // TestSolutionJSONRequestBody defines body for TestSolution for application/json ContentType.
 type TestSolutionJSONRequestBody TestSolutionJSONBody
@@ -1070,20 +1180,160 @@ type ClientInterface interface {
 	// PublishProblem request
 	PublishProblem(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListProblemCheckers request
+	ListProblemCheckers(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemCheckerWithBody request with any body
+	CreateProblemCheckerWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemCheckerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetProblemCheckerMainWithBody request with any body
+	SetProblemCheckerMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetProblemCheckerMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemChecker request
+	DeleteProblemChecker(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemChecker request
+	GetProblemChecker(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemCheckerWithBody request with any body
+	UpdateProblemCheckerWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemGenerators request
+	ListProblemGenerators(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemGeneratorWithBody request with any body
+	CreateProblemGeneratorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemGeneratorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetProblemGeneratorMainWithBody request with any body
+	SetProblemGeneratorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetProblemGeneratorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemGenerator request
+	DeleteProblemGenerator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemGenerator request
+	GetProblemGenerator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemGeneratorWithBody request with any body
+	UpdateProblemGeneratorWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemInteractors request
+	ListProblemInteractors(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemInteractorWithBody request with any body
+	CreateProblemInteractorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemInteractorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetProblemInteractorMainWithBody request with any body
+	SetProblemInteractorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetProblemInteractorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemInteractor request
+	DeleteProblemInteractor(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemInteractor request
+	GetProblemInteractor(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemInteractorWithBody request with any body
+	UpdateProblemInteractorWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemLimits request
+	GetProblemLimits(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemLimitsWithBody request with any body
+	UpdateProblemLimitsWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateProblemLimits(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemLimitsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemMediaFiles request
+	ListProblemMediaFiles(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemMediaFileWithBody request with any body
+	CreateProblemMediaFileWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemMediaFileParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemMediaFile request
+	DeleteProblemMediaFile(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemMediaFile request
+	GetProblemMediaFile(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemMediaFileWithBody request with any body
+	UpdateProblemMediaFileWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemReadme request
+	GetProblemReadme(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemReadmeWithBody request with any body
+	UpdateProblemReadmeWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemStatement request
+	GetProblemStatement(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemStatementWithBody request with any body
+	UpdateProblemStatementWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateProblemStatement(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemWorkshopSubmissions request
+	ListProblemWorkshopSubmissions(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemWorkshopSubmissionWithBody request with any body
+	CreateProblemWorkshopSubmissionWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemWorkshopSubmissionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemWorkshopSubmission request
+	DeleteProblemWorkshopSubmission(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemWorkshopSubmission request
+	GetProblemWorkshopSubmission(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemWorkshopSubmissionWithBody request with any body
+	UpdateProblemWorkshopSubmissionWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemTests request
+	ListProblemTests(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemTestFileWithBody request with any body
+	CreateProblemTestFileWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemTestFileParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemTestsConfigWithBody request with any body
+	UpdateProblemTestsConfigWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateProblemTestsConfig(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemTestsConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemTestFile request
+	DeleteProblemTestFile(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemTestFile request
+	GetProblemTestFile(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemTestFileWithBody request with any body
+	UpdateProblemTestFileWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemValidators request
+	ListProblemValidators(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemValidatorWithBody request with any body
+	CreateProblemValidatorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemValidatorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetProblemValidatorMainWithBody request with any body
+	SetProblemValidatorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetProblemValidatorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemValidator request
+	DeleteProblemValidator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemValidator request
+	GetProblemValidator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemValidatorWithBody request with any body
+	UpdateProblemValidatorWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CompileProblemComponent request
 	CompileProblemComponent(ctx context.Context, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListWorkshopFiles request
-	ListWorkshopFiles(ctx context.Context, problemId openapi_types.UUID, params *ListWorkshopFilesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// DeleteWorkshopFile request
-	DeleteWorkshopFile(ctx context.Context, problemId openapi_types.UUID, path string, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetWorkshopFile request
-	GetWorkshopFile(ctx context.Context, problemId openapi_types.UUID, path string, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateWorkshopFileWithBody request with any body
-	UpdateWorkshopFileWithBody(ctx context.Context, problemId openapi_types.UUID, path string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// InitProblemWorkshop request
 	InitProblemWorkshop(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1660,56 +1910,644 @@ func (c *Client) PublishProblem(ctx context.Context, id openapi_types.UUID, reqE
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListProblemCheckers(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemCheckersRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemCheckerWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemCheckerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemCheckerRequestWithBody(c.Server, problemId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetProblemCheckerMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetProblemCheckerMainRequestWithBody(c.Server, problemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetProblemCheckerMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetProblemCheckerMainRequest(c.Server, problemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemChecker(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemCheckerRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemChecker(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemCheckerRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemCheckerWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemCheckerRequestWithBody(c.Server, problemId, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemGenerators(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemGeneratorsRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemGeneratorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemGeneratorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemGeneratorRequestWithBody(c.Server, problemId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetProblemGeneratorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetProblemGeneratorMainRequestWithBody(c.Server, problemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetProblemGeneratorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetProblemGeneratorMainRequest(c.Server, problemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemGenerator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemGeneratorRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemGenerator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemGeneratorRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemGeneratorWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemGeneratorRequestWithBody(c.Server, problemId, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemInteractors(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemInteractorsRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemInteractorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemInteractorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemInteractorRequestWithBody(c.Server, problemId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetProblemInteractorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetProblemInteractorMainRequestWithBody(c.Server, problemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetProblemInteractorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetProblemInteractorMainRequest(c.Server, problemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemInteractor(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemInteractorRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemInteractor(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemInteractorRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemInteractorWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemInteractorRequestWithBody(c.Server, problemId, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemLimits(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemLimitsRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemLimitsWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemLimitsRequestWithBody(c.Server, problemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemLimits(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemLimitsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemLimitsRequest(c.Server, problemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemMediaFiles(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemMediaFilesRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemMediaFileWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemMediaFileParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemMediaFileRequestWithBody(c.Server, problemId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemMediaFile(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemMediaFileRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemMediaFile(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemMediaFileRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemMediaFileWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemMediaFileRequestWithBody(c.Server, problemId, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemReadme(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemReadmeRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemReadmeWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemReadmeRequestWithBody(c.Server, problemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemStatement(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemStatementRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemStatementWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemStatementRequestWithBody(c.Server, problemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemStatement(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemStatementRequest(c.Server, problemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemWorkshopSubmissions(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemWorkshopSubmissionsRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemWorkshopSubmissionWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemWorkshopSubmissionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemWorkshopSubmissionRequestWithBody(c.Server, problemId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemWorkshopSubmission(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemWorkshopSubmissionRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemWorkshopSubmission(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemWorkshopSubmissionRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemWorkshopSubmissionWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemWorkshopSubmissionRequestWithBody(c.Server, problemId, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemTests(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemTestsRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemTestFileWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemTestFileParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemTestFileRequestWithBody(c.Server, problemId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemTestsConfigWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemTestsConfigRequestWithBody(c.Server, problemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemTestsConfig(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemTestsConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemTestsConfigRequest(c.Server, problemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemTestFile(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemTestFileRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemTestFile(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemTestFileRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemTestFileWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemTestFileRequestWithBody(c.Server, problemId, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemValidators(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemValidatorsRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemValidatorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemValidatorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemValidatorRequestWithBody(c.Server, problemId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetProblemValidatorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetProblemValidatorMainRequestWithBody(c.Server, problemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetProblemValidatorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetProblemValidatorMainRequest(c.Server, problemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemValidator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemValidatorRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemValidator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemValidatorRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemValidatorWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemValidatorRequestWithBody(c.Server, problemId, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) CompileProblemComponent(ctx context.Context, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCompileProblemComponentRequest(c.Server, problemId, componentType)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ListWorkshopFiles(ctx context.Context, problemId openapi_types.UUID, params *ListWorkshopFilesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListWorkshopFilesRequest(c.Server, problemId, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) DeleteWorkshopFile(ctx context.Context, problemId openapi_types.UUID, path string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteWorkshopFileRequest(c.Server, problemId, path)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetWorkshopFile(ctx context.Context, problemId openapi_types.UUID, path string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetWorkshopFileRequest(c.Server, problemId, path)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) UpdateWorkshopFileWithBody(ctx context.Context, problemId openapi_types.UUID, path string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateWorkshopFileRequestWithBody(c.Server, problemId, path, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4054,6 +4892,1964 @@ func NewPublishProblemRequest(server string, id openapi_types.UUID) (*http.Reque
 	return req, nil
 }
 
+// NewListProblemCheckersRequest generates requests for ListProblemCheckers
+func NewListProblemCheckersRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/checkers", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemCheckerRequestWithBody generates requests for CreateProblemChecker with any type of body
+func NewCreateProblemCheckerRequestWithBody(server string, problemId openapi_types.UUID, params *CreateProblemCheckerParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/checkers", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, params.Name); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSetProblemCheckerMainRequest calls the generic SetProblemCheckerMain builder with application/json body
+func NewSetProblemCheckerMainRequest(server string, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetProblemCheckerMainRequestWithBody(server, problemId, "application/json", bodyReader)
+}
+
+// NewSetProblemCheckerMainRequestWithBody generates requests for SetProblemCheckerMain with any type of body
+func NewSetProblemCheckerMainRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/checkers/main", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteProblemCheckerRequest generates requests for DeleteProblemChecker
+func NewDeleteProblemCheckerRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/checkers/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProblemCheckerRequest generates requests for GetProblemChecker
+func NewGetProblemCheckerRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/checkers/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemCheckerRequestWithBody generates requests for UpdateProblemChecker with any type of body
+func NewUpdateProblemCheckerRequestWithBody(server string, problemId openapi_types.UUID, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/checkers/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListProblemGeneratorsRequest generates requests for ListProblemGenerators
+func NewListProblemGeneratorsRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/generators", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemGeneratorRequestWithBody generates requests for CreateProblemGenerator with any type of body
+func NewCreateProblemGeneratorRequestWithBody(server string, problemId openapi_types.UUID, params *CreateProblemGeneratorParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/generators", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, params.Name); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSetProblemGeneratorMainRequest calls the generic SetProblemGeneratorMain builder with application/json body
+func NewSetProblemGeneratorMainRequest(server string, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetProblemGeneratorMainRequestWithBody(server, problemId, "application/json", bodyReader)
+}
+
+// NewSetProblemGeneratorMainRequestWithBody generates requests for SetProblemGeneratorMain with any type of body
+func NewSetProblemGeneratorMainRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/generators/main", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteProblemGeneratorRequest generates requests for DeleteProblemGenerator
+func NewDeleteProblemGeneratorRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/generators/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProblemGeneratorRequest generates requests for GetProblemGenerator
+func NewGetProblemGeneratorRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/generators/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemGeneratorRequestWithBody generates requests for UpdateProblemGenerator with any type of body
+func NewUpdateProblemGeneratorRequestWithBody(server string, problemId openapi_types.UUID, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/generators/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListProblemInteractorsRequest generates requests for ListProblemInteractors
+func NewListProblemInteractorsRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/interactors", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemInteractorRequestWithBody generates requests for CreateProblemInteractor with any type of body
+func NewCreateProblemInteractorRequestWithBody(server string, problemId openapi_types.UUID, params *CreateProblemInteractorParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/interactors", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, params.Name); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSetProblemInteractorMainRequest calls the generic SetProblemInteractorMain builder with application/json body
+func NewSetProblemInteractorMainRequest(server string, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetProblemInteractorMainRequestWithBody(server, problemId, "application/json", bodyReader)
+}
+
+// NewSetProblemInteractorMainRequestWithBody generates requests for SetProblemInteractorMain with any type of body
+func NewSetProblemInteractorMainRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/interactors/main", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteProblemInteractorRequest generates requests for DeleteProblemInteractor
+func NewDeleteProblemInteractorRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/interactors/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProblemInteractorRequest generates requests for GetProblemInteractor
+func NewGetProblemInteractorRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/interactors/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemInteractorRequestWithBody generates requests for UpdateProblemInteractor with any type of body
+func NewUpdateProblemInteractorRequestWithBody(server string, problemId openapi_types.UUID, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/interactors/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetProblemLimitsRequest generates requests for GetProblemLimits
+func NewGetProblemLimitsRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/limits", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemLimitsRequest calls the generic UpdateProblemLimits builder with application/json body
+func NewUpdateProblemLimitsRequest(server string, problemId openapi_types.UUID, body UpdateProblemLimitsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateProblemLimitsRequestWithBody(server, problemId, "application/json", bodyReader)
+}
+
+// NewUpdateProblemLimitsRequestWithBody generates requests for UpdateProblemLimits with any type of body
+func NewUpdateProblemLimitsRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/limits", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListProblemMediaFilesRequest generates requests for ListProblemMediaFiles
+func NewListProblemMediaFilesRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/media", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemMediaFileRequestWithBody generates requests for CreateProblemMediaFile with any type of body
+func NewCreateProblemMediaFileRequestWithBody(server string, problemId openapi_types.UUID, params *CreateProblemMediaFileParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/media", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, params.Name); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteProblemMediaFileRequest generates requests for DeleteProblemMediaFile
+func NewDeleteProblemMediaFileRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/media/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProblemMediaFileRequest generates requests for GetProblemMediaFile
+func NewGetProblemMediaFileRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/media/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemMediaFileRequestWithBody generates requests for UpdateProblemMediaFile with any type of body
+func NewUpdateProblemMediaFileRequestWithBody(server string, problemId openapi_types.UUID, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/media/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetProblemReadmeRequest generates requests for GetProblemReadme
+func NewGetProblemReadmeRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/readme", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemReadmeRequestWithBody generates requests for UpdateProblemReadme with any type of body
+func NewUpdateProblemReadmeRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/readme", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetProblemStatementRequest generates requests for GetProblemStatement
+func NewGetProblemStatementRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/statement", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemStatementRequest calls the generic UpdateProblemStatement builder with application/json body
+func NewUpdateProblemStatementRequest(server string, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateProblemStatementRequestWithBody(server, problemId, "application/json", bodyReader)
+}
+
+// NewUpdateProblemStatementRequestWithBody generates requests for UpdateProblemStatement with any type of body
+func NewUpdateProblemStatementRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/statement", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListProblemWorkshopSubmissionsRequest generates requests for ListProblemWorkshopSubmissions
+func NewListProblemWorkshopSubmissionsRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/submissions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemWorkshopSubmissionRequestWithBody generates requests for CreateProblemWorkshopSubmission with any type of body
+func NewCreateProblemWorkshopSubmissionRequestWithBody(server string, problemId openapi_types.UUID, params *CreateProblemWorkshopSubmissionParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/submissions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, params.Name); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteProblemWorkshopSubmissionRequest generates requests for DeleteProblemWorkshopSubmission
+func NewDeleteProblemWorkshopSubmissionRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/submissions/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProblemWorkshopSubmissionRequest generates requests for GetProblemWorkshopSubmission
+func NewGetProblemWorkshopSubmissionRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/submissions/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemWorkshopSubmissionRequestWithBody generates requests for UpdateProblemWorkshopSubmission with any type of body
+func NewUpdateProblemWorkshopSubmissionRequestWithBody(server string, problemId openapi_types.UUID, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/submissions/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListProblemTestsRequest generates requests for ListProblemTests
+func NewListProblemTestsRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/tests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemTestFileRequestWithBody generates requests for CreateProblemTestFile with any type of body
+func NewCreateProblemTestFileRequestWithBody(server string, problemId openapi_types.UUID, params *CreateProblemTestFileParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/tests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, params.Name); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewUpdateProblemTestsConfigRequest calls the generic UpdateProblemTestsConfig builder with application/json body
+func NewUpdateProblemTestsConfigRequest(server string, problemId openapi_types.UUID, body UpdateProblemTestsConfigJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateProblemTestsConfigRequestWithBody(server, problemId, "application/json", bodyReader)
+}
+
+// NewUpdateProblemTestsConfigRequestWithBody generates requests for UpdateProblemTestsConfig with any type of body
+func NewUpdateProblemTestsConfigRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/tests/config", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteProblemTestFileRequest generates requests for DeleteProblemTestFile
+func NewDeleteProblemTestFileRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/tests/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProblemTestFileRequest generates requests for GetProblemTestFile
+func NewGetProblemTestFileRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/tests/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemTestFileRequestWithBody generates requests for UpdateProblemTestFile with any type of body
+func NewUpdateProblemTestFileRequestWithBody(server string, problemId openapi_types.UUID, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/tests/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListProblemValidatorsRequest generates requests for ListProblemValidators
+func NewListProblemValidatorsRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/validators", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemValidatorRequestWithBody generates requests for CreateProblemValidator with any type of body
+func NewCreateProblemValidatorRequestWithBody(server string, problemId openapi_types.UUID, params *CreateProblemValidatorParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/validators", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, params.Name); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSetProblemValidatorMainRequest calls the generic SetProblemValidatorMain builder with application/json body
+func NewSetProblemValidatorMainRequest(server string, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetProblemValidatorMainRequestWithBody(server, problemId, "application/json", bodyReader)
+}
+
+// NewSetProblemValidatorMainRequestWithBody generates requests for SetProblemValidatorMain with any type of body
+func NewSetProblemValidatorMainRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/validators/main", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteProblemValidatorRequest generates requests for DeleteProblemValidator
+func NewDeleteProblemValidatorRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/validators/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProblemValidatorRequest generates requests for GetProblemValidator
+func NewGetProblemValidatorRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/validators/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemValidatorRequestWithBody generates requests for UpdateProblemValidator with any type of body
+func NewUpdateProblemValidatorRequestWithBody(server string, problemId openapi_types.UUID, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/validators/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewCompileProblemComponentRequest generates requests for CompileProblemComponent
 func NewCompileProblemComponentRequest(server string, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType) (*http.Request, error) {
 	var err error
@@ -4091,187 +6887,6 @@ func NewCompileProblemComponentRequest(server string, problemId openapi_types.UU
 	if err != nil {
 		return nil, err
 	}
-
-	return req, nil
-}
-
-// NewListWorkshopFilesRequest generates requests for ListWorkshopFiles
-func NewListWorkshopFilesRequest(server string, problemId openapi_types.UUID, params *ListWorkshopFilesParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/workshop/files", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.Path != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "path", runtime.ParamLocationQuery, *params.Path); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewDeleteWorkshopFileRequest generates requests for DeleteWorkshopFile
-func NewDeleteWorkshopFileRequest(server string, problemId openapi_types.UUID, path string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "path", runtime.ParamLocationPath, path)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/workshop/files/%s", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetWorkshopFileRequest generates requests for GetWorkshopFile
-func NewGetWorkshopFileRequest(server string, problemId openapi_types.UUID, path string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "path", runtime.ParamLocationPath, path)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/workshop/files/%s", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewUpdateWorkshopFileRequestWithBody generates requests for UpdateWorkshopFile with any type of body
-func NewUpdateWorkshopFileRequestWithBody(server string, problemId openapi_types.UUID, path string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "path", runtime.ParamLocationPath, path)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/workshop/files/%s", pathParam0, pathParam1)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -5968,20 +8583,160 @@ type ClientWithResponsesInterface interface {
 	// PublishProblemWithResponse request
 	PublishProblemWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*PublishProblemResponse, error)
 
+	// ListProblemCheckersWithResponse request
+	ListProblemCheckersWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemCheckersResponse, error)
+
+	// CreateProblemCheckerWithBodyWithResponse request with any body
+	CreateProblemCheckerWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemCheckerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemCheckerResponse, error)
+
+	// SetProblemCheckerMainWithBodyWithResponse request with any body
+	SetProblemCheckerMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemCheckerMainResponse, error)
+
+	SetProblemCheckerMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemCheckerMainResponse, error)
+
+	// DeleteProblemCheckerWithResponse request
+	DeleteProblemCheckerWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemCheckerResponse, error)
+
+	// GetProblemCheckerWithResponse request
+	GetProblemCheckerWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemCheckerResponse, error)
+
+	// UpdateProblemCheckerWithBodyWithResponse request with any body
+	UpdateProblemCheckerWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemCheckerResponse, error)
+
+	// ListProblemGeneratorsWithResponse request
+	ListProblemGeneratorsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemGeneratorsResponse, error)
+
+	// CreateProblemGeneratorWithBodyWithResponse request with any body
+	CreateProblemGeneratorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemGeneratorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemGeneratorResponse, error)
+
+	// SetProblemGeneratorMainWithBodyWithResponse request with any body
+	SetProblemGeneratorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemGeneratorMainResponse, error)
+
+	SetProblemGeneratorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemGeneratorMainResponse, error)
+
+	// DeleteProblemGeneratorWithResponse request
+	DeleteProblemGeneratorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemGeneratorResponse, error)
+
+	// GetProblemGeneratorWithResponse request
+	GetProblemGeneratorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemGeneratorResponse, error)
+
+	// UpdateProblemGeneratorWithBodyWithResponse request with any body
+	UpdateProblemGeneratorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemGeneratorResponse, error)
+
+	// ListProblemInteractorsWithResponse request
+	ListProblemInteractorsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemInteractorsResponse, error)
+
+	// CreateProblemInteractorWithBodyWithResponse request with any body
+	CreateProblemInteractorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemInteractorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemInteractorResponse, error)
+
+	// SetProblemInteractorMainWithBodyWithResponse request with any body
+	SetProblemInteractorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemInteractorMainResponse, error)
+
+	SetProblemInteractorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemInteractorMainResponse, error)
+
+	// DeleteProblemInteractorWithResponse request
+	DeleteProblemInteractorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemInteractorResponse, error)
+
+	// GetProblemInteractorWithResponse request
+	GetProblemInteractorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemInteractorResponse, error)
+
+	// UpdateProblemInteractorWithBodyWithResponse request with any body
+	UpdateProblemInteractorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemInteractorResponse, error)
+
+	// GetProblemLimitsWithResponse request
+	GetProblemLimitsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemLimitsResponse, error)
+
+	// UpdateProblemLimitsWithBodyWithResponse request with any body
+	UpdateProblemLimitsWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemLimitsResponse, error)
+
+	UpdateProblemLimitsWithResponse(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemLimitsJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemLimitsResponse, error)
+
+	// ListProblemMediaFilesWithResponse request
+	ListProblemMediaFilesWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemMediaFilesResponse, error)
+
+	// CreateProblemMediaFileWithBodyWithResponse request with any body
+	CreateProblemMediaFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemMediaFileParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemMediaFileResponse, error)
+
+	// DeleteProblemMediaFileWithResponse request
+	DeleteProblemMediaFileWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemMediaFileResponse, error)
+
+	// GetProblemMediaFileWithResponse request
+	GetProblemMediaFileWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemMediaFileResponse, error)
+
+	// UpdateProblemMediaFileWithBodyWithResponse request with any body
+	UpdateProblemMediaFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemMediaFileResponse, error)
+
+	// GetProblemReadmeWithResponse request
+	GetProblemReadmeWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemReadmeResponse, error)
+
+	// UpdateProblemReadmeWithBodyWithResponse request with any body
+	UpdateProblemReadmeWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemReadmeResponse, error)
+
+	// GetProblemStatementWithResponse request
+	GetProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemStatementResponse, error)
+
+	// UpdateProblemStatementWithBodyWithResponse request with any body
+	UpdateProblemStatementWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error)
+
+	UpdateProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error)
+
+	// ListProblemWorkshopSubmissionsWithResponse request
+	ListProblemWorkshopSubmissionsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemWorkshopSubmissionsResponse, error)
+
+	// CreateProblemWorkshopSubmissionWithBodyWithResponse request with any body
+	CreateProblemWorkshopSubmissionWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemWorkshopSubmissionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemWorkshopSubmissionResponse, error)
+
+	// DeleteProblemWorkshopSubmissionWithResponse request
+	DeleteProblemWorkshopSubmissionWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemWorkshopSubmissionResponse, error)
+
+	// GetProblemWorkshopSubmissionWithResponse request
+	GetProblemWorkshopSubmissionWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemWorkshopSubmissionResponse, error)
+
+	// UpdateProblemWorkshopSubmissionWithBodyWithResponse request with any body
+	UpdateProblemWorkshopSubmissionWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemWorkshopSubmissionResponse, error)
+
+	// ListProblemTestsWithResponse request
+	ListProblemTestsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemTestsResponse, error)
+
+	// CreateProblemTestFileWithBodyWithResponse request with any body
+	CreateProblemTestFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemTestFileParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemTestFileResponse, error)
+
+	// UpdateProblemTestsConfigWithBodyWithResponse request with any body
+	UpdateProblemTestsConfigWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemTestsConfigResponse, error)
+
+	UpdateProblemTestsConfigWithResponse(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemTestsConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemTestsConfigResponse, error)
+
+	// DeleteProblemTestFileWithResponse request
+	DeleteProblemTestFileWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemTestFileResponse, error)
+
+	// GetProblemTestFileWithResponse request
+	GetProblemTestFileWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemTestFileResponse, error)
+
+	// UpdateProblemTestFileWithBodyWithResponse request with any body
+	UpdateProblemTestFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemTestFileResponse, error)
+
+	// ListProblemValidatorsWithResponse request
+	ListProblemValidatorsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemValidatorsResponse, error)
+
+	// CreateProblemValidatorWithBodyWithResponse request with any body
+	CreateProblemValidatorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemValidatorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemValidatorResponse, error)
+
+	// SetProblemValidatorMainWithBodyWithResponse request with any body
+	SetProblemValidatorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemValidatorMainResponse, error)
+
+	SetProblemValidatorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemValidatorMainResponse, error)
+
+	// DeleteProblemValidatorWithResponse request
+	DeleteProblemValidatorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemValidatorResponse, error)
+
+	// GetProblemValidatorWithResponse request
+	GetProblemValidatorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemValidatorResponse, error)
+
+	// UpdateProblemValidatorWithBodyWithResponse request with any body
+	UpdateProblemValidatorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemValidatorResponse, error)
+
 	// CompileProblemComponentWithResponse request
 	CompileProblemComponentWithResponse(ctx context.Context, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType, reqEditors ...RequestEditorFn) (*CompileProblemComponentResponse, error)
-
-	// ListWorkshopFilesWithResponse request
-	ListWorkshopFilesWithResponse(ctx context.Context, problemId openapi_types.UUID, params *ListWorkshopFilesParams, reqEditors ...RequestEditorFn) (*ListWorkshopFilesResponse, error)
-
-	// DeleteWorkshopFileWithResponse request
-	DeleteWorkshopFileWithResponse(ctx context.Context, problemId openapi_types.UUID, path string, reqEditors ...RequestEditorFn) (*DeleteWorkshopFileResponse, error)
-
-	// GetWorkshopFileWithResponse request
-	GetWorkshopFileWithResponse(ctx context.Context, problemId openapi_types.UUID, path string, reqEditors ...RequestEditorFn) (*GetWorkshopFileResponse, error)
-
-	// UpdateWorkshopFileWithBodyWithResponse request with any body
-	UpdateWorkshopFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, path string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWorkshopFileResponse, error)
 
 	// InitProblemWorkshopWithResponse request
 	InitProblemWorkshopWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*InitProblemWorkshopResponse, error)
@@ -6916,6 +9671,1010 @@ func (r PublishProblemResponse) StatusCode() int {
 	return 0
 }
 
+type ListProblemCheckersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *WorkshopFileListResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemCheckersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemCheckersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemCheckerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemCheckerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemCheckerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type SetProblemCheckerMainResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SetProblemCheckerMainResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetProblemCheckerMainResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemCheckerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemCheckerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemCheckerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemCheckerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemCheckerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemCheckerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemCheckerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemCheckerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemCheckerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemGeneratorsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *WorkshopFileListResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemGeneratorsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemGeneratorsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemGeneratorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemGeneratorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemGeneratorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type SetProblemGeneratorMainResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SetProblemGeneratorMainResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetProblemGeneratorMainResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemGeneratorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemGeneratorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemGeneratorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemGeneratorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemGeneratorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemGeneratorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemGeneratorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemGeneratorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemGeneratorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemInteractorsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *WorkshopFileListResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemInteractorsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemInteractorsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemInteractorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemInteractorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemInteractorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type SetProblemInteractorMainResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SetProblemInteractorMainResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetProblemInteractorMainResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemInteractorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemInteractorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemInteractorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemInteractorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemInteractorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemInteractorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemInteractorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemInteractorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemInteractorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemLimitsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ProblemLimits
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemLimitsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemLimitsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemLimitsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ProblemLimits
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemLimitsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemLimitsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemMediaFilesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *WorkshopFileListResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemMediaFilesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemMediaFilesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemMediaFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemMediaFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemMediaFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemMediaFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemMediaFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemMediaFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemMediaFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemMediaFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemMediaFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemMediaFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemMediaFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemMediaFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemReadmeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemReadmeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemReadmeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemReadmeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemReadmeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemReadmeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemStatementResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ProblemStatement
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemStatementResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemStatementResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemStatementResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ProblemStatement
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemStatementResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemStatementResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemWorkshopSubmissionsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *WorkshopFileListResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemWorkshopSubmissionsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemWorkshopSubmissionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemWorkshopSubmissionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemWorkshopSubmissionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemWorkshopSubmissionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemWorkshopSubmissionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemWorkshopSubmissionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemWorkshopSubmissionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemWorkshopSubmissionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemWorkshopSubmissionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemWorkshopSubmissionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemWorkshopSubmissionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemWorkshopSubmissionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemWorkshopSubmissionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemTestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *WorkshopFileListResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemTestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemTestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemTestFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemTestFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemTestFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemTestsConfigResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemTestsConfigResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemTestsConfigResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemTestFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemTestFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemTestFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemTestFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemTestFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemTestFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemTestFileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemTestFileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemTestFileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemValidatorsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *WorkshopFileListResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemValidatorsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemValidatorsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemValidatorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemValidatorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemValidatorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type SetProblemValidatorMainResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SetProblemValidatorMainResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetProblemValidatorMainResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemValidatorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemValidatorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemValidatorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemValidatorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemValidatorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemValidatorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemValidatorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemValidatorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemValidatorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type CompileProblemComponentResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -6938,102 +10697,10 @@ func (r CompileProblemComponentResponse) StatusCode() int {
 	return 0
 }
 
-type ListWorkshopFilesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Files *[]FileEntry `json:"files,omitempty"`
-	}
-}
-
-// Status returns HTTPResponse.Status
-func (r ListWorkshopFilesResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListWorkshopFilesResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type DeleteWorkshopFileResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r DeleteWorkshopFileResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r DeleteWorkshopFileResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GetWorkshopFileResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r GetWorkshopFileResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetWorkshopFileResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type UpdateWorkshopFileResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Message *string `json:"message,omitempty"`
-	}
-}
-
-// Status returns HTTPResponse.Status
-func (r UpdateWorkshopFileResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UpdateWorkshopFileResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type InitProblemWorkshopResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *struct {
-		Message *string `json:"message,omitempty"`
-	}
+	JSON200      *MessageResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -7923,6 +11590,476 @@ func (c *ClientWithResponses) PublishProblemWithResponse(ctx context.Context, id
 	return ParsePublishProblemResponse(rsp)
 }
 
+// ListProblemCheckersWithResponse request returning *ListProblemCheckersResponse
+func (c *ClientWithResponses) ListProblemCheckersWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemCheckersResponse, error) {
+	rsp, err := c.ListProblemCheckers(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemCheckersResponse(rsp)
+}
+
+// CreateProblemCheckerWithBodyWithResponse request with arbitrary body returning *CreateProblemCheckerResponse
+func (c *ClientWithResponses) CreateProblemCheckerWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemCheckerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemCheckerResponse, error) {
+	rsp, err := c.CreateProblemCheckerWithBody(ctx, problemId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemCheckerResponse(rsp)
+}
+
+// SetProblemCheckerMainWithBodyWithResponse request with arbitrary body returning *SetProblemCheckerMainResponse
+func (c *ClientWithResponses) SetProblemCheckerMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemCheckerMainResponse, error) {
+	rsp, err := c.SetProblemCheckerMainWithBody(ctx, problemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetProblemCheckerMainResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetProblemCheckerMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemCheckerMainResponse, error) {
+	rsp, err := c.SetProblemCheckerMain(ctx, problemId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetProblemCheckerMainResponse(rsp)
+}
+
+// DeleteProblemCheckerWithResponse request returning *DeleteProblemCheckerResponse
+func (c *ClientWithResponses) DeleteProblemCheckerWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemCheckerResponse, error) {
+	rsp, err := c.DeleteProblemChecker(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemCheckerResponse(rsp)
+}
+
+// GetProblemCheckerWithResponse request returning *GetProblemCheckerResponse
+func (c *ClientWithResponses) GetProblemCheckerWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemCheckerResponse, error) {
+	rsp, err := c.GetProblemChecker(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemCheckerResponse(rsp)
+}
+
+// UpdateProblemCheckerWithBodyWithResponse request with arbitrary body returning *UpdateProblemCheckerResponse
+func (c *ClientWithResponses) UpdateProblemCheckerWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemCheckerResponse, error) {
+	rsp, err := c.UpdateProblemCheckerWithBody(ctx, problemId, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemCheckerResponse(rsp)
+}
+
+// ListProblemGeneratorsWithResponse request returning *ListProblemGeneratorsResponse
+func (c *ClientWithResponses) ListProblemGeneratorsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemGeneratorsResponse, error) {
+	rsp, err := c.ListProblemGenerators(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemGeneratorsResponse(rsp)
+}
+
+// CreateProblemGeneratorWithBodyWithResponse request with arbitrary body returning *CreateProblemGeneratorResponse
+func (c *ClientWithResponses) CreateProblemGeneratorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemGeneratorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemGeneratorResponse, error) {
+	rsp, err := c.CreateProblemGeneratorWithBody(ctx, problemId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemGeneratorResponse(rsp)
+}
+
+// SetProblemGeneratorMainWithBodyWithResponse request with arbitrary body returning *SetProblemGeneratorMainResponse
+func (c *ClientWithResponses) SetProblemGeneratorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemGeneratorMainResponse, error) {
+	rsp, err := c.SetProblemGeneratorMainWithBody(ctx, problemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetProblemGeneratorMainResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetProblemGeneratorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemGeneratorMainResponse, error) {
+	rsp, err := c.SetProblemGeneratorMain(ctx, problemId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetProblemGeneratorMainResponse(rsp)
+}
+
+// DeleteProblemGeneratorWithResponse request returning *DeleteProblemGeneratorResponse
+func (c *ClientWithResponses) DeleteProblemGeneratorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemGeneratorResponse, error) {
+	rsp, err := c.DeleteProblemGenerator(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemGeneratorResponse(rsp)
+}
+
+// GetProblemGeneratorWithResponse request returning *GetProblemGeneratorResponse
+func (c *ClientWithResponses) GetProblemGeneratorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemGeneratorResponse, error) {
+	rsp, err := c.GetProblemGenerator(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemGeneratorResponse(rsp)
+}
+
+// UpdateProblemGeneratorWithBodyWithResponse request with arbitrary body returning *UpdateProblemGeneratorResponse
+func (c *ClientWithResponses) UpdateProblemGeneratorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemGeneratorResponse, error) {
+	rsp, err := c.UpdateProblemGeneratorWithBody(ctx, problemId, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemGeneratorResponse(rsp)
+}
+
+// ListProblemInteractorsWithResponse request returning *ListProblemInteractorsResponse
+func (c *ClientWithResponses) ListProblemInteractorsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemInteractorsResponse, error) {
+	rsp, err := c.ListProblemInteractors(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemInteractorsResponse(rsp)
+}
+
+// CreateProblemInteractorWithBodyWithResponse request with arbitrary body returning *CreateProblemInteractorResponse
+func (c *ClientWithResponses) CreateProblemInteractorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemInteractorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemInteractorResponse, error) {
+	rsp, err := c.CreateProblemInteractorWithBody(ctx, problemId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemInteractorResponse(rsp)
+}
+
+// SetProblemInteractorMainWithBodyWithResponse request with arbitrary body returning *SetProblemInteractorMainResponse
+func (c *ClientWithResponses) SetProblemInteractorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemInteractorMainResponse, error) {
+	rsp, err := c.SetProblemInteractorMainWithBody(ctx, problemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetProblemInteractorMainResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetProblemInteractorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemInteractorMainResponse, error) {
+	rsp, err := c.SetProblemInteractorMain(ctx, problemId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetProblemInteractorMainResponse(rsp)
+}
+
+// DeleteProblemInteractorWithResponse request returning *DeleteProblemInteractorResponse
+func (c *ClientWithResponses) DeleteProblemInteractorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemInteractorResponse, error) {
+	rsp, err := c.DeleteProblemInteractor(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemInteractorResponse(rsp)
+}
+
+// GetProblemInteractorWithResponse request returning *GetProblemInteractorResponse
+func (c *ClientWithResponses) GetProblemInteractorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemInteractorResponse, error) {
+	rsp, err := c.GetProblemInteractor(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemInteractorResponse(rsp)
+}
+
+// UpdateProblemInteractorWithBodyWithResponse request with arbitrary body returning *UpdateProblemInteractorResponse
+func (c *ClientWithResponses) UpdateProblemInteractorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemInteractorResponse, error) {
+	rsp, err := c.UpdateProblemInteractorWithBody(ctx, problemId, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemInteractorResponse(rsp)
+}
+
+// GetProblemLimitsWithResponse request returning *GetProblemLimitsResponse
+func (c *ClientWithResponses) GetProblemLimitsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemLimitsResponse, error) {
+	rsp, err := c.GetProblemLimits(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemLimitsResponse(rsp)
+}
+
+// UpdateProblemLimitsWithBodyWithResponse request with arbitrary body returning *UpdateProblemLimitsResponse
+func (c *ClientWithResponses) UpdateProblemLimitsWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemLimitsResponse, error) {
+	rsp, err := c.UpdateProblemLimitsWithBody(ctx, problemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemLimitsResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateProblemLimitsWithResponse(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemLimitsJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemLimitsResponse, error) {
+	rsp, err := c.UpdateProblemLimits(ctx, problemId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemLimitsResponse(rsp)
+}
+
+// ListProblemMediaFilesWithResponse request returning *ListProblemMediaFilesResponse
+func (c *ClientWithResponses) ListProblemMediaFilesWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemMediaFilesResponse, error) {
+	rsp, err := c.ListProblemMediaFiles(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemMediaFilesResponse(rsp)
+}
+
+// CreateProblemMediaFileWithBodyWithResponse request with arbitrary body returning *CreateProblemMediaFileResponse
+func (c *ClientWithResponses) CreateProblemMediaFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemMediaFileParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemMediaFileResponse, error) {
+	rsp, err := c.CreateProblemMediaFileWithBody(ctx, problemId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemMediaFileResponse(rsp)
+}
+
+// DeleteProblemMediaFileWithResponse request returning *DeleteProblemMediaFileResponse
+func (c *ClientWithResponses) DeleteProblemMediaFileWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemMediaFileResponse, error) {
+	rsp, err := c.DeleteProblemMediaFile(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemMediaFileResponse(rsp)
+}
+
+// GetProblemMediaFileWithResponse request returning *GetProblemMediaFileResponse
+func (c *ClientWithResponses) GetProblemMediaFileWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemMediaFileResponse, error) {
+	rsp, err := c.GetProblemMediaFile(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemMediaFileResponse(rsp)
+}
+
+// UpdateProblemMediaFileWithBodyWithResponse request with arbitrary body returning *UpdateProblemMediaFileResponse
+func (c *ClientWithResponses) UpdateProblemMediaFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemMediaFileResponse, error) {
+	rsp, err := c.UpdateProblemMediaFileWithBody(ctx, problemId, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemMediaFileResponse(rsp)
+}
+
+// GetProblemReadmeWithResponse request returning *GetProblemReadmeResponse
+func (c *ClientWithResponses) GetProblemReadmeWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemReadmeResponse, error) {
+	rsp, err := c.GetProblemReadme(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemReadmeResponse(rsp)
+}
+
+// UpdateProblemReadmeWithBodyWithResponse request with arbitrary body returning *UpdateProblemReadmeResponse
+func (c *ClientWithResponses) UpdateProblemReadmeWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemReadmeResponse, error) {
+	rsp, err := c.UpdateProblemReadmeWithBody(ctx, problemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemReadmeResponse(rsp)
+}
+
+// GetProblemStatementWithResponse request returning *GetProblemStatementResponse
+func (c *ClientWithResponses) GetProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemStatementResponse, error) {
+	rsp, err := c.GetProblemStatement(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemStatementResponse(rsp)
+}
+
+// UpdateProblemStatementWithBodyWithResponse request with arbitrary body returning *UpdateProblemStatementResponse
+func (c *ClientWithResponses) UpdateProblemStatementWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error) {
+	rsp, err := c.UpdateProblemStatementWithBody(ctx, problemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemStatementResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error) {
+	rsp, err := c.UpdateProblemStatement(ctx, problemId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemStatementResponse(rsp)
+}
+
+// ListProblemWorkshopSubmissionsWithResponse request returning *ListProblemWorkshopSubmissionsResponse
+func (c *ClientWithResponses) ListProblemWorkshopSubmissionsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemWorkshopSubmissionsResponse, error) {
+	rsp, err := c.ListProblemWorkshopSubmissions(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemWorkshopSubmissionsResponse(rsp)
+}
+
+// CreateProblemWorkshopSubmissionWithBodyWithResponse request with arbitrary body returning *CreateProblemWorkshopSubmissionResponse
+func (c *ClientWithResponses) CreateProblemWorkshopSubmissionWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemWorkshopSubmissionParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemWorkshopSubmissionResponse, error) {
+	rsp, err := c.CreateProblemWorkshopSubmissionWithBody(ctx, problemId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemWorkshopSubmissionResponse(rsp)
+}
+
+// DeleteProblemWorkshopSubmissionWithResponse request returning *DeleteProblemWorkshopSubmissionResponse
+func (c *ClientWithResponses) DeleteProblemWorkshopSubmissionWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemWorkshopSubmissionResponse, error) {
+	rsp, err := c.DeleteProblemWorkshopSubmission(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemWorkshopSubmissionResponse(rsp)
+}
+
+// GetProblemWorkshopSubmissionWithResponse request returning *GetProblemWorkshopSubmissionResponse
+func (c *ClientWithResponses) GetProblemWorkshopSubmissionWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemWorkshopSubmissionResponse, error) {
+	rsp, err := c.GetProblemWorkshopSubmission(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemWorkshopSubmissionResponse(rsp)
+}
+
+// UpdateProblemWorkshopSubmissionWithBodyWithResponse request with arbitrary body returning *UpdateProblemWorkshopSubmissionResponse
+func (c *ClientWithResponses) UpdateProblemWorkshopSubmissionWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemWorkshopSubmissionResponse, error) {
+	rsp, err := c.UpdateProblemWorkshopSubmissionWithBody(ctx, problemId, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemWorkshopSubmissionResponse(rsp)
+}
+
+// ListProblemTestsWithResponse request returning *ListProblemTestsResponse
+func (c *ClientWithResponses) ListProblemTestsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemTestsResponse, error) {
+	rsp, err := c.ListProblemTests(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemTestsResponse(rsp)
+}
+
+// CreateProblemTestFileWithBodyWithResponse request with arbitrary body returning *CreateProblemTestFileResponse
+func (c *ClientWithResponses) CreateProblemTestFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemTestFileParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemTestFileResponse, error) {
+	rsp, err := c.CreateProblemTestFileWithBody(ctx, problemId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemTestFileResponse(rsp)
+}
+
+// UpdateProblemTestsConfigWithBodyWithResponse request with arbitrary body returning *UpdateProblemTestsConfigResponse
+func (c *ClientWithResponses) UpdateProblemTestsConfigWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemTestsConfigResponse, error) {
+	rsp, err := c.UpdateProblemTestsConfigWithBody(ctx, problemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemTestsConfigResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateProblemTestsConfigWithResponse(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemTestsConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemTestsConfigResponse, error) {
+	rsp, err := c.UpdateProblemTestsConfig(ctx, problemId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemTestsConfigResponse(rsp)
+}
+
+// DeleteProblemTestFileWithResponse request returning *DeleteProblemTestFileResponse
+func (c *ClientWithResponses) DeleteProblemTestFileWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemTestFileResponse, error) {
+	rsp, err := c.DeleteProblemTestFile(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemTestFileResponse(rsp)
+}
+
+// GetProblemTestFileWithResponse request returning *GetProblemTestFileResponse
+func (c *ClientWithResponses) GetProblemTestFileWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemTestFileResponse, error) {
+	rsp, err := c.GetProblemTestFile(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemTestFileResponse(rsp)
+}
+
+// UpdateProblemTestFileWithBodyWithResponse request with arbitrary body returning *UpdateProblemTestFileResponse
+func (c *ClientWithResponses) UpdateProblemTestFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemTestFileResponse, error) {
+	rsp, err := c.UpdateProblemTestFileWithBody(ctx, problemId, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemTestFileResponse(rsp)
+}
+
+// ListProblemValidatorsWithResponse request returning *ListProblemValidatorsResponse
+func (c *ClientWithResponses) ListProblemValidatorsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemValidatorsResponse, error) {
+	rsp, err := c.ListProblemValidators(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemValidatorsResponse(rsp)
+}
+
+// CreateProblemValidatorWithBodyWithResponse request with arbitrary body returning *CreateProblemValidatorResponse
+func (c *ClientWithResponses) CreateProblemValidatorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemValidatorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemValidatorResponse, error) {
+	rsp, err := c.CreateProblemValidatorWithBody(ctx, problemId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemValidatorResponse(rsp)
+}
+
+// SetProblemValidatorMainWithBodyWithResponse request with arbitrary body returning *SetProblemValidatorMainResponse
+func (c *ClientWithResponses) SetProblemValidatorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemValidatorMainResponse, error) {
+	rsp, err := c.SetProblemValidatorMainWithBody(ctx, problemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetProblemValidatorMainResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetProblemValidatorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemValidatorMainResponse, error) {
+	rsp, err := c.SetProblemValidatorMain(ctx, problemId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetProblemValidatorMainResponse(rsp)
+}
+
+// DeleteProblemValidatorWithResponse request returning *DeleteProblemValidatorResponse
+func (c *ClientWithResponses) DeleteProblemValidatorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemValidatorResponse, error) {
+	rsp, err := c.DeleteProblemValidator(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemValidatorResponse(rsp)
+}
+
+// GetProblemValidatorWithResponse request returning *GetProblemValidatorResponse
+func (c *ClientWithResponses) GetProblemValidatorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemValidatorResponse, error) {
+	rsp, err := c.GetProblemValidator(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemValidatorResponse(rsp)
+}
+
+// UpdateProblemValidatorWithBodyWithResponse request with arbitrary body returning *UpdateProblemValidatorResponse
+func (c *ClientWithResponses) UpdateProblemValidatorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemValidatorResponse, error) {
+	rsp, err := c.UpdateProblemValidatorWithBody(ctx, problemId, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemValidatorResponse(rsp)
+}
+
 // CompileProblemComponentWithResponse request returning *CompileProblemComponentResponse
 func (c *ClientWithResponses) CompileProblemComponentWithResponse(ctx context.Context, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType, reqEditors ...RequestEditorFn) (*CompileProblemComponentResponse, error) {
 	rsp, err := c.CompileProblemComponent(ctx, problemId, componentType, reqEditors...)
@@ -7930,42 +12067,6 @@ func (c *ClientWithResponses) CompileProblemComponentWithResponse(ctx context.Co
 		return nil, err
 	}
 	return ParseCompileProblemComponentResponse(rsp)
-}
-
-// ListWorkshopFilesWithResponse request returning *ListWorkshopFilesResponse
-func (c *ClientWithResponses) ListWorkshopFilesWithResponse(ctx context.Context, problemId openapi_types.UUID, params *ListWorkshopFilesParams, reqEditors ...RequestEditorFn) (*ListWorkshopFilesResponse, error) {
-	rsp, err := c.ListWorkshopFiles(ctx, problemId, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListWorkshopFilesResponse(rsp)
-}
-
-// DeleteWorkshopFileWithResponse request returning *DeleteWorkshopFileResponse
-func (c *ClientWithResponses) DeleteWorkshopFileWithResponse(ctx context.Context, problemId openapi_types.UUID, path string, reqEditors ...RequestEditorFn) (*DeleteWorkshopFileResponse, error) {
-	rsp, err := c.DeleteWorkshopFile(ctx, problemId, path, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteWorkshopFileResponse(rsp)
-}
-
-// GetWorkshopFileWithResponse request returning *GetWorkshopFileResponse
-func (c *ClientWithResponses) GetWorkshopFileWithResponse(ctx context.Context, problemId openapi_types.UUID, path string, reqEditors ...RequestEditorFn) (*GetWorkshopFileResponse, error) {
-	rsp, err := c.GetWorkshopFile(ctx, problemId, path, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetWorkshopFileResponse(rsp)
-}
-
-// UpdateWorkshopFileWithBodyWithResponse request with arbitrary body returning *UpdateWorkshopFileResponse
-func (c *ClientWithResponses) UpdateWorkshopFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, path string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateWorkshopFileResponse, error) {
-	rsp, err := c.UpdateWorkshopFileWithBody(ctx, problemId, path, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateWorkshopFileResponse(rsp)
 }
 
 // InitProblemWorkshopWithResponse request returning *InitProblemWorkshopResponse
@@ -9190,6 +13291,1122 @@ func ParsePublishProblemResponse(rsp *http.Response) (*PublishProblemResponse, e
 	return response, nil
 }
 
+// ParseListProblemCheckersResponse parses an HTTP response from a ListProblemCheckersWithResponse call
+func ParseListProblemCheckersResponse(rsp *http.Response) (*ListProblemCheckersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemCheckersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkshopFileListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemCheckerResponse parses an HTTP response from a CreateProblemCheckerWithResponse call
+func ParseCreateProblemCheckerResponse(rsp *http.Response) (*CreateProblemCheckerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemCheckerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetProblemCheckerMainResponse parses an HTTP response from a SetProblemCheckerMainWithResponse call
+func ParseSetProblemCheckerMainResponse(rsp *http.Response) (*SetProblemCheckerMainResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetProblemCheckerMainResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemCheckerResponse parses an HTTP response from a DeleteProblemCheckerWithResponse call
+func ParseDeleteProblemCheckerResponse(rsp *http.Response) (*DeleteProblemCheckerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemCheckerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemCheckerResponse parses an HTTP response from a GetProblemCheckerWithResponse call
+func ParseGetProblemCheckerResponse(rsp *http.Response) (*GetProblemCheckerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemCheckerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemCheckerResponse parses an HTTP response from a UpdateProblemCheckerWithResponse call
+func ParseUpdateProblemCheckerResponse(rsp *http.Response) (*UpdateProblemCheckerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemCheckerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProblemGeneratorsResponse parses an HTTP response from a ListProblemGeneratorsWithResponse call
+func ParseListProblemGeneratorsResponse(rsp *http.Response) (*ListProblemGeneratorsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemGeneratorsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkshopFileListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemGeneratorResponse parses an HTTP response from a CreateProblemGeneratorWithResponse call
+func ParseCreateProblemGeneratorResponse(rsp *http.Response) (*CreateProblemGeneratorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemGeneratorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetProblemGeneratorMainResponse parses an HTTP response from a SetProblemGeneratorMainWithResponse call
+func ParseSetProblemGeneratorMainResponse(rsp *http.Response) (*SetProblemGeneratorMainResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetProblemGeneratorMainResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemGeneratorResponse parses an HTTP response from a DeleteProblemGeneratorWithResponse call
+func ParseDeleteProblemGeneratorResponse(rsp *http.Response) (*DeleteProblemGeneratorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemGeneratorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemGeneratorResponse parses an HTTP response from a GetProblemGeneratorWithResponse call
+func ParseGetProblemGeneratorResponse(rsp *http.Response) (*GetProblemGeneratorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemGeneratorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemGeneratorResponse parses an HTTP response from a UpdateProblemGeneratorWithResponse call
+func ParseUpdateProblemGeneratorResponse(rsp *http.Response) (*UpdateProblemGeneratorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemGeneratorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProblemInteractorsResponse parses an HTTP response from a ListProblemInteractorsWithResponse call
+func ParseListProblemInteractorsResponse(rsp *http.Response) (*ListProblemInteractorsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemInteractorsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkshopFileListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemInteractorResponse parses an HTTP response from a CreateProblemInteractorWithResponse call
+func ParseCreateProblemInteractorResponse(rsp *http.Response) (*CreateProblemInteractorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemInteractorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetProblemInteractorMainResponse parses an HTTP response from a SetProblemInteractorMainWithResponse call
+func ParseSetProblemInteractorMainResponse(rsp *http.Response) (*SetProblemInteractorMainResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetProblemInteractorMainResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemInteractorResponse parses an HTTP response from a DeleteProblemInteractorWithResponse call
+func ParseDeleteProblemInteractorResponse(rsp *http.Response) (*DeleteProblemInteractorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemInteractorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemInteractorResponse parses an HTTP response from a GetProblemInteractorWithResponse call
+func ParseGetProblemInteractorResponse(rsp *http.Response) (*GetProblemInteractorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemInteractorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemInteractorResponse parses an HTTP response from a UpdateProblemInteractorWithResponse call
+func ParseUpdateProblemInteractorResponse(rsp *http.Response) (*UpdateProblemInteractorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemInteractorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemLimitsResponse parses an HTTP response from a GetProblemLimitsWithResponse call
+func ParseGetProblemLimitsResponse(rsp *http.Response) (*GetProblemLimitsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemLimitsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProblemLimits
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemLimitsResponse parses an HTTP response from a UpdateProblemLimitsWithResponse call
+func ParseUpdateProblemLimitsResponse(rsp *http.Response) (*UpdateProblemLimitsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemLimitsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProblemLimits
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProblemMediaFilesResponse parses an HTTP response from a ListProblemMediaFilesWithResponse call
+func ParseListProblemMediaFilesResponse(rsp *http.Response) (*ListProblemMediaFilesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemMediaFilesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkshopFileListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemMediaFileResponse parses an HTTP response from a CreateProblemMediaFileWithResponse call
+func ParseCreateProblemMediaFileResponse(rsp *http.Response) (*CreateProblemMediaFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemMediaFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemMediaFileResponse parses an HTTP response from a DeleteProblemMediaFileWithResponse call
+func ParseDeleteProblemMediaFileResponse(rsp *http.Response) (*DeleteProblemMediaFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemMediaFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemMediaFileResponse parses an HTTP response from a GetProblemMediaFileWithResponse call
+func ParseGetProblemMediaFileResponse(rsp *http.Response) (*GetProblemMediaFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemMediaFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemMediaFileResponse parses an HTTP response from a UpdateProblemMediaFileWithResponse call
+func ParseUpdateProblemMediaFileResponse(rsp *http.Response) (*UpdateProblemMediaFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemMediaFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemReadmeResponse parses an HTTP response from a GetProblemReadmeWithResponse call
+func ParseGetProblemReadmeResponse(rsp *http.Response) (*GetProblemReadmeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemReadmeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemReadmeResponse parses an HTTP response from a UpdateProblemReadmeWithResponse call
+func ParseUpdateProblemReadmeResponse(rsp *http.Response) (*UpdateProblemReadmeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemReadmeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemStatementResponse parses an HTTP response from a GetProblemStatementWithResponse call
+func ParseGetProblemStatementResponse(rsp *http.Response) (*GetProblemStatementResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemStatementResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProblemStatement
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemStatementResponse parses an HTTP response from a UpdateProblemStatementWithResponse call
+func ParseUpdateProblemStatementResponse(rsp *http.Response) (*UpdateProblemStatementResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemStatementResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProblemStatement
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProblemWorkshopSubmissionsResponse parses an HTTP response from a ListProblemWorkshopSubmissionsWithResponse call
+func ParseListProblemWorkshopSubmissionsResponse(rsp *http.Response) (*ListProblemWorkshopSubmissionsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemWorkshopSubmissionsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkshopFileListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemWorkshopSubmissionResponse parses an HTTP response from a CreateProblemWorkshopSubmissionWithResponse call
+func ParseCreateProblemWorkshopSubmissionResponse(rsp *http.Response) (*CreateProblemWorkshopSubmissionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemWorkshopSubmissionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemWorkshopSubmissionResponse parses an HTTP response from a DeleteProblemWorkshopSubmissionWithResponse call
+func ParseDeleteProblemWorkshopSubmissionResponse(rsp *http.Response) (*DeleteProblemWorkshopSubmissionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemWorkshopSubmissionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemWorkshopSubmissionResponse parses an HTTP response from a GetProblemWorkshopSubmissionWithResponse call
+func ParseGetProblemWorkshopSubmissionResponse(rsp *http.Response) (*GetProblemWorkshopSubmissionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemWorkshopSubmissionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemWorkshopSubmissionResponse parses an HTTP response from a UpdateProblemWorkshopSubmissionWithResponse call
+func ParseUpdateProblemWorkshopSubmissionResponse(rsp *http.Response) (*UpdateProblemWorkshopSubmissionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemWorkshopSubmissionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProblemTestsResponse parses an HTTP response from a ListProblemTestsWithResponse call
+func ParseListProblemTestsResponse(rsp *http.Response) (*ListProblemTestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemTestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkshopFileListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemTestFileResponse parses an HTTP response from a CreateProblemTestFileWithResponse call
+func ParseCreateProblemTestFileResponse(rsp *http.Response) (*CreateProblemTestFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemTestFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemTestsConfigResponse parses an HTTP response from a UpdateProblemTestsConfigWithResponse call
+func ParseUpdateProblemTestsConfigResponse(rsp *http.Response) (*UpdateProblemTestsConfigResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemTestsConfigResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemTestFileResponse parses an HTTP response from a DeleteProblemTestFileWithResponse call
+func ParseDeleteProblemTestFileResponse(rsp *http.Response) (*DeleteProblemTestFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemTestFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemTestFileResponse parses an HTTP response from a GetProblemTestFileWithResponse call
+func ParseGetProblemTestFileResponse(rsp *http.Response) (*GetProblemTestFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemTestFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemTestFileResponse parses an HTTP response from a UpdateProblemTestFileWithResponse call
+func ParseUpdateProblemTestFileResponse(rsp *http.Response) (*UpdateProblemTestFileResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemTestFileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProblemValidatorsResponse parses an HTTP response from a ListProblemValidatorsWithResponse call
+func ParseListProblemValidatorsResponse(rsp *http.Response) (*ListProblemValidatorsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemValidatorsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkshopFileListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemValidatorResponse parses an HTTP response from a CreateProblemValidatorWithResponse call
+func ParseCreateProblemValidatorResponse(rsp *http.Response) (*CreateProblemValidatorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemValidatorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetProblemValidatorMainResponse parses an HTTP response from a SetProblemValidatorMainWithResponse call
+func ParseSetProblemValidatorMainResponse(rsp *http.Response) (*SetProblemValidatorMainResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetProblemValidatorMainResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemValidatorResponse parses an HTTP response from a DeleteProblemValidatorWithResponse call
+func ParseDeleteProblemValidatorResponse(rsp *http.Response) (*DeleteProblemValidatorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemValidatorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemValidatorResponse parses an HTTP response from a GetProblemValidatorWithResponse call
+func ParseGetProblemValidatorResponse(rsp *http.Response) (*GetProblemValidatorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemValidatorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemValidatorResponse parses an HTTP response from a UpdateProblemValidatorWithResponse call
+func ParseUpdateProblemValidatorResponse(rsp *http.Response) (*UpdateProblemValidatorResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemValidatorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseCompileProblemComponentResponse parses an HTTP response from a CompileProblemComponentWithResponse call
 func ParseCompileProblemComponentResponse(rsp *http.Response) (*CompileProblemComponentResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -9216,94 +14433,6 @@ func ParseCompileProblemComponentResponse(rsp *http.Response) (*CompileProblemCo
 	return response, nil
 }
 
-// ParseListWorkshopFilesResponse parses an HTTP response from a ListWorkshopFilesWithResponse call
-func ParseListWorkshopFilesResponse(rsp *http.Response) (*ListWorkshopFilesResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListWorkshopFilesResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Files *[]FileEntry `json:"files,omitempty"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeleteWorkshopFileResponse parses an HTTP response from a DeleteWorkshopFileWithResponse call
-func ParseDeleteWorkshopFileResponse(rsp *http.Response) (*DeleteWorkshopFileResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeleteWorkshopFileResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	return response, nil
-}
-
-// ParseGetWorkshopFileResponse parses an HTTP response from a GetWorkshopFileWithResponse call
-func ParseGetWorkshopFileResponse(rsp *http.Response) (*GetWorkshopFileResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetWorkshopFileResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	return response, nil
-}
-
-// ParseUpdateWorkshopFileResponse parses an HTTP response from a UpdateWorkshopFileWithResponse call
-func ParseUpdateWorkshopFileResponse(rsp *http.Response) (*UpdateWorkshopFileResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UpdateWorkshopFileResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Message *string `json:"message,omitempty"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseInitProblemWorkshopResponse parses an HTTP response from a InitProblemWorkshopWithResponse call
 func ParseInitProblemWorkshopResponse(rsp *http.Response) (*InitProblemWorkshopResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -9319,9 +14448,7 @@ func ParseInitProblemWorkshopResponse(rsp *http.Response) (*InitProblemWorkshopR
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Message *string `json:"message,omitempty"`
-		}
+		var dest MessageResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -10000,21 +15127,147 @@ type ServerInterface interface {
 	// Publish problem package
 	// (POST /problems/{id}/publish)
 	PublishProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// List checker files
+	// (GET /problems/{problemId}/checkers)
+	ListProblemCheckers(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Create checker file
+	// (POST /problems/{problemId}/checkers)
+	CreateProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemCheckerParams)
+	// Set main checker file
+	// (PATCH /problems/{problemId}/checkers/main)
+	SetProblemCheckerMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Delete checker file
+	// (DELETE /problems/{problemId}/checkers/{name})
+	DeleteProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get checker file content
+	// (GET /problems/{problemId}/checkers/{name})
+	GetProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Update checker file
+	// (PUT /problems/{problemId}/checkers/{name})
+	UpdateProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// List generator files
+	// (GET /problems/{problemId}/generators)
+	ListProblemGenerators(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Create generator file
+	// (POST /problems/{problemId}/generators)
+	CreateProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemGeneratorParams)
+	// Set main generator file
+	// (PATCH /problems/{problemId}/generators/main)
+	SetProblemGeneratorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Delete generator file
+	// (DELETE /problems/{problemId}/generators/{name})
+	DeleteProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get generator file content
+	// (GET /problems/{problemId}/generators/{name})
+	GetProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Update generator file
+	// (PUT /problems/{problemId}/generators/{name})
+	UpdateProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// List interactor files
+	// (GET /problems/{problemId}/interactors)
+	ListProblemInteractors(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Create interactor file
+	// (POST /problems/{problemId}/interactors)
+	CreateProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemInteractorParams)
+	// Set main interactor file
+	// (PATCH /problems/{problemId}/interactors/main)
+	SetProblemInteractorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Delete interactor file
+	// (DELETE /problems/{problemId}/interactors/{name})
+	DeleteProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get interactor file content
+	// (GET /problems/{problemId}/interactors/{name})
+	GetProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Update interactor file
+	// (PUT /problems/{problemId}/interactors/{name})
+	UpdateProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get problem limits and type settings
+	// (GET /problems/{problemId}/limits)
+	GetProblemLimits(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Update problem limits and type settings
+	// (PATCH /problems/{problemId}/limits)
+	UpdateProblemLimits(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// List media files
+	// (GET /problems/{problemId}/media)
+	ListProblemMediaFiles(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Create media file
+	// (POST /problems/{problemId}/media)
+	CreateProblemMediaFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemMediaFileParams)
+	// Delete media file
+	// (DELETE /problems/{problemId}/media/{name})
+	DeleteProblemMediaFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get media file content
+	// (GET /problems/{problemId}/media/{name})
+	GetProblemMediaFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Update media file
+	// (PUT /problems/{problemId}/media/{name})
+	UpdateProblemMediaFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get problem README
+	// (GET /problems/{problemId}/readme)
+	GetProblemReadme(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Update problem README
+	// (PUT /problems/{problemId}/readme)
+	UpdateProblemReadme(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Get problem statement
+	// (GET /problems/{problemId}/statement)
+	GetProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Update problem statement
+	// (PATCH /problems/{problemId}/statement)
+	UpdateProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// List author solution files
+	// (GET /problems/{problemId}/submissions)
+	ListProblemWorkshopSubmissions(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Create author solution file
+	// (POST /problems/{problemId}/submissions)
+	CreateProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemWorkshopSubmissionParams)
+	// Delete author solution file
+	// (DELETE /problems/{problemId}/submissions/{name})
+	DeleteProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get author solution file content
+	// (GET /problems/{problemId}/submissions/{name})
+	GetProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Update author solution file
+	// (PUT /problems/{problemId}/submissions/{name})
+	UpdateProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// List test files
+	// (GET /problems/{problemId}/tests)
+	ListProblemTests(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Create test file
+	// (POST /problems/{problemId}/tests)
+	CreateProblemTestFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemTestFileParams)
+	// Update tests.json configuration
+	// (PATCH /problems/{problemId}/tests/config)
+	UpdateProblemTestsConfig(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Delete test file
+	// (DELETE /problems/{problemId}/tests/{name})
+	DeleteProblemTestFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get test file content
+	// (GET /problems/{problemId}/tests/{name})
+	GetProblemTestFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Update test file
+	// (PUT /problems/{problemId}/tests/{name})
+	UpdateProblemTestFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// List validator files
+	// (GET /problems/{problemId}/validators)
+	ListProblemValidators(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Create validator file
+	// (POST /problems/{problemId}/validators)
+	CreateProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemValidatorParams)
+	// Set main validator file
+	// (PATCH /problems/{problemId}/validators/main)
+	SetProblemValidatorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Delete validator file
+	// (DELETE /problems/{problemId}/validators/{name})
+	DeleteProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get validator file content
+	// (GET /problems/{problemId}/validators/{name})
+	GetProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Update validator file
+	// (PUT /problems/{problemId}/validators/{name})
+	UpdateProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
 	// Compile checker/validator/generator/interactor
 	// (POST /problems/{problemId}/workshop/components/{componentType}/compile)
 	CompileProblemComponent(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType)
-	// List files in problem workspace
-	// (GET /problems/{problemId}/workshop/files)
-	ListWorkshopFiles(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params ListWorkshopFilesParams)
-	// Delete file from workspace
-	// (DELETE /problems/{problemId}/workshop/files/{path})
-	DeleteWorkshopFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, path string)
-	// Read file content from workspace
-	// (GET /problems/{problemId}/workshop/files/{path})
-	GetWorkshopFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, path string)
-	// Update file content in workspace
-	// (PUT /problems/{problemId}/workshop/files/{path})
-	UpdateWorkshopFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, path string)
 	// Initialize problem workspace
 	// (POST /problems/{problemId}/workshop/init)
 	InitProblemWorkshop(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
@@ -11577,6 +16830,1471 @@ func (siw *ServerInterfaceWrapper) PublishProblem(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListProblemCheckers operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemCheckers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemCheckers(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemChecker operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemChecker(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemCheckerParams
+
+	// ------------- Required query parameter "name" -------------
+
+	if paramValue := r.URL.Query().Get("name"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemChecker(w, r, problemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetProblemCheckerMain operation middleware
+func (siw *ServerInterfaceWrapper) SetProblemCheckerMain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetProblemCheckerMain(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProblemChecker operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemChecker(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemChecker(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemChecker operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemChecker(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemChecker(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemChecker operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemChecker(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemChecker(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProblemGenerators operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemGenerators(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemGenerators(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemGenerator operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemGenerator(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemGeneratorParams
+
+	// ------------- Required query parameter "name" -------------
+
+	if paramValue := r.URL.Query().Get("name"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemGenerator(w, r, problemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetProblemGeneratorMain operation middleware
+func (siw *ServerInterfaceWrapper) SetProblemGeneratorMain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetProblemGeneratorMain(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProblemGenerator operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemGenerator(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemGenerator(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemGenerator operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemGenerator(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemGenerator(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemGenerator operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemGenerator(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemGenerator(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProblemInteractors operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemInteractors(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemInteractors(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemInteractor operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemInteractor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemInteractorParams
+
+	// ------------- Required query parameter "name" -------------
+
+	if paramValue := r.URL.Query().Get("name"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemInteractor(w, r, problemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetProblemInteractorMain operation middleware
+func (siw *ServerInterfaceWrapper) SetProblemInteractorMain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetProblemInteractorMain(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProblemInteractor operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemInteractor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemInteractor(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemInteractor operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemInteractor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemInteractor(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemInteractor operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemInteractor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemInteractor(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemLimits operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemLimits(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemLimits(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemLimits operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemLimits(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemLimits(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProblemMediaFiles operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemMediaFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemMediaFiles(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemMediaFile operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemMediaFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemMediaFileParams
+
+	// ------------- Required query parameter "name" -------------
+
+	if paramValue := r.URL.Query().Get("name"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemMediaFile(w, r, problemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProblemMediaFile operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemMediaFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemMediaFile(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemMediaFile operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemMediaFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemMediaFile(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemMediaFile operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemMediaFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemMediaFile(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemReadme operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemReadme(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemReadme(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemReadme operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemReadme(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemReadme(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemStatement operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemStatement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemStatement(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemStatement operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemStatement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemStatement(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProblemWorkshopSubmissions operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemWorkshopSubmissions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemWorkshopSubmissions(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemWorkshopSubmission operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemWorkshopSubmissionParams
+
+	// ------------- Required query parameter "name" -------------
+
+	if paramValue := r.URL.Query().Get("name"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemWorkshopSubmission(w, r, problemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProblemWorkshopSubmission operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemWorkshopSubmission(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemWorkshopSubmission operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemWorkshopSubmission(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemWorkshopSubmission operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemWorkshopSubmission(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProblemTests operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemTests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemTests(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemTestFile operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemTestFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemTestFileParams
+
+	// ------------- Required query parameter "name" -------------
+
+	if paramValue := r.URL.Query().Get("name"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemTestFile(w, r, problemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemTestsConfig operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemTestsConfig(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemTestsConfig(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProblemTestFile operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemTestFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemTestFile(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemTestFile operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemTestFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemTestFile(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemTestFile operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemTestFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemTestFile(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProblemValidators operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemValidators(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemValidators(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemValidator operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemValidator(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemValidatorParams
+
+	// ------------- Required query parameter "name" -------------
+
+	if paramValue := r.URL.Query().Get("name"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemValidator(w, r, problemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetProblemValidatorMain operation middleware
+func (siw *ServerInterfaceWrapper) SetProblemValidatorMain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetProblemValidatorMain(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProblemValidator operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemValidator(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemValidator(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemValidator operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemValidator(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemValidator(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemValidator operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemValidator(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemValidator(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CompileProblemComponent operation middleware
 func (siw *ServerInterfaceWrapper) CompileProblemComponent(w http.ResponseWriter, r *http.Request) {
 
@@ -11602,144 +18320,6 @@ func (siw *ServerInterfaceWrapper) CompileProblemComponent(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CompileProblemComponent(w, r, problemId, componentType)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListWorkshopFiles operation middleware
-func (siw *ServerInterfaceWrapper) ListWorkshopFiles(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListWorkshopFilesParams
-
-	// ------------- Optional query parameter "path" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "path", r.URL.Query(), &params.Path)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "path", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListWorkshopFiles(w, r, problemId, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DeleteWorkshopFile operation middleware
-func (siw *ServerInterfaceWrapper) DeleteWorkshopFile(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "path" -------------
-	var path string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "path", r.PathValue("path"), &path, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "path", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteWorkshopFile(w, r, problemId, path)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetWorkshopFile operation middleware
-func (siw *ServerInterfaceWrapper) GetWorkshopFile(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "path" -------------
-	var path string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "path", r.PathValue("path"), &path, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "path", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetWorkshopFile(w, r, problemId, path)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UpdateWorkshopFile operation middleware
-func (siw *ServerInterfaceWrapper) UpdateWorkshopFile(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "path" -------------
-	var path string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "path", r.PathValue("path"), &path, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "path", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateWorkshopFile(w, r, problemId, path)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -12971,11 +19551,53 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/package/{version}", wrapper.GetPublishedPackage)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/packages", wrapper.ListProblemPackages)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{id}/publish", wrapper.PublishProblem)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/checkers", wrapper.ListProblemCheckers)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/checkers", wrapper.CreateProblemChecker)
+	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/checkers/main", wrapper.SetProblemCheckerMain)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/checkers/{name}", wrapper.DeleteProblemChecker)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/checkers/{name}", wrapper.GetProblemChecker)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/checkers/{name}", wrapper.UpdateProblemChecker)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/generators", wrapper.ListProblemGenerators)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/generators", wrapper.CreateProblemGenerator)
+	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/generators/main", wrapper.SetProblemGeneratorMain)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/generators/{name}", wrapper.DeleteProblemGenerator)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/generators/{name}", wrapper.GetProblemGenerator)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/generators/{name}", wrapper.UpdateProblemGenerator)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/interactors", wrapper.ListProblemInteractors)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/interactors", wrapper.CreateProblemInteractor)
+	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/interactors/main", wrapper.SetProblemInteractorMain)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/interactors/{name}", wrapper.DeleteProblemInteractor)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/interactors/{name}", wrapper.GetProblemInteractor)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/interactors/{name}", wrapper.UpdateProblemInteractor)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/limits", wrapper.GetProblemLimits)
+	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/limits", wrapper.UpdateProblemLimits)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/media", wrapper.ListProblemMediaFiles)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/media", wrapper.CreateProblemMediaFile)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/media/{name}", wrapper.DeleteProblemMediaFile)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/media/{name}", wrapper.GetProblemMediaFile)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/media/{name}", wrapper.UpdateProblemMediaFile)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/readme", wrapper.GetProblemReadme)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/readme", wrapper.UpdateProblemReadme)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/statement", wrapper.GetProblemStatement)
+	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/statement", wrapper.UpdateProblemStatement)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/submissions", wrapper.ListProblemWorkshopSubmissions)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/submissions", wrapper.CreateProblemWorkshopSubmission)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/submissions/{name}", wrapper.DeleteProblemWorkshopSubmission)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/submissions/{name}", wrapper.GetProblemWorkshopSubmission)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/submissions/{name}", wrapper.UpdateProblemWorkshopSubmission)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/tests", wrapper.ListProblemTests)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/tests", wrapper.CreateProblemTestFile)
+	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/tests/config", wrapper.UpdateProblemTestsConfig)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/tests/{name}", wrapper.DeleteProblemTestFile)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/tests/{name}", wrapper.GetProblemTestFile)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/tests/{name}", wrapper.UpdateProblemTestFile)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/validators", wrapper.ListProblemValidators)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/validators", wrapper.CreateProblemValidator)
+	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/validators/main", wrapper.SetProblemValidatorMain)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/validators/{name}", wrapper.DeleteProblemValidator)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/validators/{name}", wrapper.GetProblemValidator)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/validators/{name}", wrapper.UpdateProblemValidator)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/components/{componentType}/compile", wrapper.CompileProblemComponent)
-	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/files", wrapper.ListWorkshopFiles)
-	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/workshop/files/{path...}", wrapper.DeleteWorkshopFile)
-	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/workshop/files/{path...}", wrapper.GetWorkshopFile)
-	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/workshop/files/{path...}", wrapper.UpdateWorkshopFile)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/init", wrapper.InitProblemWorkshop)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/solutions/test", wrapper.TestSolution)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/tests/generate", wrapper.GenerateTests)
@@ -13838,6 +20460,918 @@ func (response PublishProblem200JSONResponse) VisitPublishProblemResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListProblemCheckersRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type ListProblemCheckersResponseObject interface {
+	VisitListProblemCheckersResponse(w http.ResponseWriter) error
+}
+
+type ListProblemCheckers200JSONResponse WorkshopFileListResponse
+
+func (response ListProblemCheckers200JSONResponse) VisitListProblemCheckersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateProblemCheckerRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    CreateProblemCheckerParams
+	Body      io.Reader
+}
+
+type CreateProblemCheckerResponseObject interface {
+	VisitCreateProblemCheckerResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemChecker200JSONResponse MessageResponse
+
+func (response CreateProblemChecker200JSONResponse) VisitCreateProblemCheckerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SetProblemCheckerMainRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Body      *SetProblemCheckerMainJSONRequestBody
+}
+
+type SetProblemCheckerMainResponseObject interface {
+	VisitSetProblemCheckerMainResponse(w http.ResponseWriter) error
+}
+
+type SetProblemCheckerMain200JSONResponse MessageResponse
+
+func (response SetProblemCheckerMain200JSONResponse) VisitSetProblemCheckerMainResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProblemCheckerRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type DeleteProblemCheckerResponseObject interface {
+	VisitDeleteProblemCheckerResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemChecker200JSONResponse MessageResponse
+
+func (response DeleteProblemChecker200JSONResponse) VisitDeleteProblemCheckerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemCheckerRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type GetProblemCheckerResponseObject interface {
+	VisitGetProblemCheckerResponse(w http.ResponseWriter) error
+}
+
+type GetProblemChecker200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetProblemChecker200ApplicationoctetStreamResponse) VisitGetProblemCheckerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateProblemCheckerRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+	Body      io.Reader
+}
+
+type UpdateProblemCheckerResponseObject interface {
+	VisitUpdateProblemCheckerResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemChecker200JSONResponse MessageResponse
+
+func (response UpdateProblemChecker200JSONResponse) VisitUpdateProblemCheckerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProblemGeneratorsRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type ListProblemGeneratorsResponseObject interface {
+	VisitListProblemGeneratorsResponse(w http.ResponseWriter) error
+}
+
+type ListProblemGenerators200JSONResponse WorkshopFileListResponse
+
+func (response ListProblemGenerators200JSONResponse) VisitListProblemGeneratorsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateProblemGeneratorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    CreateProblemGeneratorParams
+	Body      io.Reader
+}
+
+type CreateProblemGeneratorResponseObject interface {
+	VisitCreateProblemGeneratorResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemGenerator200JSONResponse MessageResponse
+
+func (response CreateProblemGenerator200JSONResponse) VisitCreateProblemGeneratorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SetProblemGeneratorMainRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Body      *SetProblemGeneratorMainJSONRequestBody
+}
+
+type SetProblemGeneratorMainResponseObject interface {
+	VisitSetProblemGeneratorMainResponse(w http.ResponseWriter) error
+}
+
+type SetProblemGeneratorMain200JSONResponse MessageResponse
+
+func (response SetProblemGeneratorMain200JSONResponse) VisitSetProblemGeneratorMainResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProblemGeneratorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type DeleteProblemGeneratorResponseObject interface {
+	VisitDeleteProblemGeneratorResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemGenerator200JSONResponse MessageResponse
+
+func (response DeleteProblemGenerator200JSONResponse) VisitDeleteProblemGeneratorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemGeneratorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type GetProblemGeneratorResponseObject interface {
+	VisitGetProblemGeneratorResponse(w http.ResponseWriter) error
+}
+
+type GetProblemGenerator200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetProblemGenerator200ApplicationoctetStreamResponse) VisitGetProblemGeneratorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateProblemGeneratorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+	Body      io.Reader
+}
+
+type UpdateProblemGeneratorResponseObject interface {
+	VisitUpdateProblemGeneratorResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemGenerator200JSONResponse MessageResponse
+
+func (response UpdateProblemGenerator200JSONResponse) VisitUpdateProblemGeneratorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProblemInteractorsRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type ListProblemInteractorsResponseObject interface {
+	VisitListProblemInteractorsResponse(w http.ResponseWriter) error
+}
+
+type ListProblemInteractors200JSONResponse WorkshopFileListResponse
+
+func (response ListProblemInteractors200JSONResponse) VisitListProblemInteractorsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateProblemInteractorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    CreateProblemInteractorParams
+	Body      io.Reader
+}
+
+type CreateProblemInteractorResponseObject interface {
+	VisitCreateProblemInteractorResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemInteractor200JSONResponse MessageResponse
+
+func (response CreateProblemInteractor200JSONResponse) VisitCreateProblemInteractorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SetProblemInteractorMainRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Body      *SetProblemInteractorMainJSONRequestBody
+}
+
+type SetProblemInteractorMainResponseObject interface {
+	VisitSetProblemInteractorMainResponse(w http.ResponseWriter) error
+}
+
+type SetProblemInteractorMain200JSONResponse MessageResponse
+
+func (response SetProblemInteractorMain200JSONResponse) VisitSetProblemInteractorMainResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProblemInteractorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type DeleteProblemInteractorResponseObject interface {
+	VisitDeleteProblemInteractorResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemInteractor200JSONResponse MessageResponse
+
+func (response DeleteProblemInteractor200JSONResponse) VisitDeleteProblemInteractorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemInteractorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type GetProblemInteractorResponseObject interface {
+	VisitGetProblemInteractorResponse(w http.ResponseWriter) error
+}
+
+type GetProblemInteractor200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetProblemInteractor200ApplicationoctetStreamResponse) VisitGetProblemInteractorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateProblemInteractorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+	Body      io.Reader
+}
+
+type UpdateProblemInteractorResponseObject interface {
+	VisitUpdateProblemInteractorResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemInteractor200JSONResponse MessageResponse
+
+func (response UpdateProblemInteractor200JSONResponse) VisitUpdateProblemInteractorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemLimitsRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type GetProblemLimitsResponseObject interface {
+	VisitGetProblemLimitsResponse(w http.ResponseWriter) error
+}
+
+type GetProblemLimits200JSONResponse ProblemLimits
+
+func (response GetProblemLimits200JSONResponse) VisitGetProblemLimitsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateProblemLimitsRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Body      *UpdateProblemLimitsJSONRequestBody
+}
+
+type UpdateProblemLimitsResponseObject interface {
+	VisitUpdateProblemLimitsResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemLimits200JSONResponse ProblemLimits
+
+func (response UpdateProblemLimits200JSONResponse) VisitUpdateProblemLimitsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProblemMediaFilesRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type ListProblemMediaFilesResponseObject interface {
+	VisitListProblemMediaFilesResponse(w http.ResponseWriter) error
+}
+
+type ListProblemMediaFiles200JSONResponse WorkshopFileListResponse
+
+func (response ListProblemMediaFiles200JSONResponse) VisitListProblemMediaFilesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateProblemMediaFileRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    CreateProblemMediaFileParams
+	Body      io.Reader
+}
+
+type CreateProblemMediaFileResponseObject interface {
+	VisitCreateProblemMediaFileResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemMediaFile200JSONResponse MessageResponse
+
+func (response CreateProblemMediaFile200JSONResponse) VisitCreateProblemMediaFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProblemMediaFileRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type DeleteProblemMediaFileResponseObject interface {
+	VisitDeleteProblemMediaFileResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemMediaFile200JSONResponse MessageResponse
+
+func (response DeleteProblemMediaFile200JSONResponse) VisitDeleteProblemMediaFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemMediaFileRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type GetProblemMediaFileResponseObject interface {
+	VisitGetProblemMediaFileResponse(w http.ResponseWriter) error
+}
+
+type GetProblemMediaFile200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetProblemMediaFile200ApplicationoctetStreamResponse) VisitGetProblemMediaFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateProblemMediaFileRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+	Body      io.Reader
+}
+
+type UpdateProblemMediaFileResponseObject interface {
+	VisitUpdateProblemMediaFileResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemMediaFile200JSONResponse MessageResponse
+
+func (response UpdateProblemMediaFile200JSONResponse) VisitUpdateProblemMediaFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemReadmeRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type GetProblemReadmeResponseObject interface {
+	VisitGetProblemReadmeResponse(w http.ResponseWriter) error
+}
+
+type GetProblemReadme200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetProblemReadme200ApplicationoctetStreamResponse) VisitGetProblemReadmeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateProblemReadmeRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Body      io.Reader
+}
+
+type UpdateProblemReadmeResponseObject interface {
+	VisitUpdateProblemReadmeResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemReadme200JSONResponse MessageResponse
+
+func (response UpdateProblemReadme200JSONResponse) VisitUpdateProblemReadmeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemStatementRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type GetProblemStatementResponseObject interface {
+	VisitGetProblemStatementResponse(w http.ResponseWriter) error
+}
+
+type GetProblemStatement200JSONResponse ProblemStatement
+
+func (response GetProblemStatement200JSONResponse) VisitGetProblemStatementResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateProblemStatementRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Body      *UpdateProblemStatementJSONRequestBody
+}
+
+type UpdateProblemStatementResponseObject interface {
+	VisitUpdateProblemStatementResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemStatement200JSONResponse ProblemStatement
+
+func (response UpdateProblemStatement200JSONResponse) VisitUpdateProblemStatementResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProblemWorkshopSubmissionsRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type ListProblemWorkshopSubmissionsResponseObject interface {
+	VisitListProblemWorkshopSubmissionsResponse(w http.ResponseWriter) error
+}
+
+type ListProblemWorkshopSubmissions200JSONResponse WorkshopFileListResponse
+
+func (response ListProblemWorkshopSubmissions200JSONResponse) VisitListProblemWorkshopSubmissionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateProblemWorkshopSubmissionRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    CreateProblemWorkshopSubmissionParams
+	Body      io.Reader
+}
+
+type CreateProblemWorkshopSubmissionResponseObject interface {
+	VisitCreateProblemWorkshopSubmissionResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemWorkshopSubmission200JSONResponse MessageResponse
+
+func (response CreateProblemWorkshopSubmission200JSONResponse) VisitCreateProblemWorkshopSubmissionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProblemWorkshopSubmissionRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type DeleteProblemWorkshopSubmissionResponseObject interface {
+	VisitDeleteProblemWorkshopSubmissionResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemWorkshopSubmission200JSONResponse MessageResponse
+
+func (response DeleteProblemWorkshopSubmission200JSONResponse) VisitDeleteProblemWorkshopSubmissionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemWorkshopSubmissionRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type GetProblemWorkshopSubmissionResponseObject interface {
+	VisitGetProblemWorkshopSubmissionResponse(w http.ResponseWriter) error
+}
+
+type GetProblemWorkshopSubmission200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetProblemWorkshopSubmission200ApplicationoctetStreamResponse) VisitGetProblemWorkshopSubmissionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateProblemWorkshopSubmissionRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+	Body      io.Reader
+}
+
+type UpdateProblemWorkshopSubmissionResponseObject interface {
+	VisitUpdateProblemWorkshopSubmissionResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemWorkshopSubmission200JSONResponse MessageResponse
+
+func (response UpdateProblemWorkshopSubmission200JSONResponse) VisitUpdateProblemWorkshopSubmissionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProblemTestsRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type ListProblemTestsResponseObject interface {
+	VisitListProblemTestsResponse(w http.ResponseWriter) error
+}
+
+type ListProblemTests200JSONResponse WorkshopFileListResponse
+
+func (response ListProblemTests200JSONResponse) VisitListProblemTestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateProblemTestFileRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    CreateProblemTestFileParams
+	Body      io.Reader
+}
+
+type CreateProblemTestFileResponseObject interface {
+	VisitCreateProblemTestFileResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemTestFile200JSONResponse MessageResponse
+
+func (response CreateProblemTestFile200JSONResponse) VisitCreateProblemTestFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateProblemTestsConfigRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Body      *UpdateProblemTestsConfigJSONRequestBody
+}
+
+type UpdateProblemTestsConfigResponseObject interface {
+	VisitUpdateProblemTestsConfigResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemTestsConfig200JSONResponse MessageResponse
+
+func (response UpdateProblemTestsConfig200JSONResponse) VisitUpdateProblemTestsConfigResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProblemTestFileRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type DeleteProblemTestFileResponseObject interface {
+	VisitDeleteProblemTestFileResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemTestFile200JSONResponse MessageResponse
+
+func (response DeleteProblemTestFile200JSONResponse) VisitDeleteProblemTestFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemTestFileRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type GetProblemTestFileResponseObject interface {
+	VisitGetProblemTestFileResponse(w http.ResponseWriter) error
+}
+
+type GetProblemTestFile200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetProblemTestFile200ApplicationoctetStreamResponse) VisitGetProblemTestFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateProblemTestFileRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+	Body      io.Reader
+}
+
+type UpdateProblemTestFileResponseObject interface {
+	VisitUpdateProblemTestFileResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemTestFile200JSONResponse MessageResponse
+
+func (response UpdateProblemTestFile200JSONResponse) VisitUpdateProblemTestFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProblemValidatorsRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type ListProblemValidatorsResponseObject interface {
+	VisitListProblemValidatorsResponse(w http.ResponseWriter) error
+}
+
+type ListProblemValidators200JSONResponse WorkshopFileListResponse
+
+func (response ListProblemValidators200JSONResponse) VisitListProblemValidatorsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateProblemValidatorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    CreateProblemValidatorParams
+	Body      io.Reader
+}
+
+type CreateProblemValidatorResponseObject interface {
+	VisitCreateProblemValidatorResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemValidator200JSONResponse MessageResponse
+
+func (response CreateProblemValidator200JSONResponse) VisitCreateProblemValidatorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SetProblemValidatorMainRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Body      *SetProblemValidatorMainJSONRequestBody
+}
+
+type SetProblemValidatorMainResponseObject interface {
+	VisitSetProblemValidatorMainResponse(w http.ResponseWriter) error
+}
+
+type SetProblemValidatorMain200JSONResponse MessageResponse
+
+func (response SetProblemValidatorMain200JSONResponse) VisitSetProblemValidatorMainResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProblemValidatorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type DeleteProblemValidatorResponseObject interface {
+	VisitDeleteProblemValidatorResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemValidator200JSONResponse MessageResponse
+
+func (response DeleteProblemValidator200JSONResponse) VisitDeleteProblemValidatorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemValidatorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type GetProblemValidatorResponseObject interface {
+	VisitGetProblemValidatorResponse(w http.ResponseWriter) error
+}
+
+type GetProblemValidator200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetProblemValidator200ApplicationoctetStreamResponse) VisitGetProblemValidatorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateProblemValidatorRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+	Body      io.Reader
+}
+
+type UpdateProblemValidatorResponseObject interface {
+	VisitUpdateProblemValidatorResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemValidator200JSONResponse MessageResponse
+
+func (response UpdateProblemValidator200JSONResponse) VisitUpdateProblemValidatorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type CompileProblemComponentRequestObject struct {
 	ProblemId     openapi_types.UUID                         `json:"problemId"`
 	ComponentType CompileProblemComponentParamsComponentType `json:"componentType"`
@@ -13856,92 +21390,6 @@ func (response CompileProblemComponent200JSONResponse) VisitCompileProblemCompon
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListWorkshopFilesRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Params    ListWorkshopFilesParams
-}
-
-type ListWorkshopFilesResponseObject interface {
-	VisitListWorkshopFilesResponse(w http.ResponseWriter) error
-}
-
-type ListWorkshopFiles200JSONResponse struct {
-	Files *[]FileEntry `json:"files,omitempty"`
-}
-
-func (response ListWorkshopFiles200JSONResponse) VisitListWorkshopFilesResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type DeleteWorkshopFileRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Path      string             `json:"path"`
-}
-
-type DeleteWorkshopFileResponseObject interface {
-	VisitDeleteWorkshopFileResponse(w http.ResponseWriter) error
-}
-
-type DeleteWorkshopFile200Response struct {
-}
-
-func (response DeleteWorkshopFile200Response) VisitDeleteWorkshopFileResponse(w http.ResponseWriter) error {
-	w.WriteHeader(200)
-	return nil
-}
-
-type GetWorkshopFileRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Path      string             `json:"path"`
-}
-
-type GetWorkshopFileResponseObject interface {
-	VisitGetWorkshopFileResponse(w http.ResponseWriter) error
-}
-
-type GetWorkshopFile200ApplicationoctetStreamResponse struct {
-	Body          io.Reader
-	ContentLength int64
-}
-
-func (response GetWorkshopFile200ApplicationoctetStreamResponse) VisitGetWorkshopFileResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/octet-stream")
-	if response.ContentLength != 0 {
-		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
-	}
-	w.WriteHeader(200)
-
-	if closer, ok := response.Body.(io.ReadCloser); ok {
-		defer closer.Close()
-	}
-	_, err := io.Copy(w, response.Body)
-	return err
-}
-
-type UpdateWorkshopFileRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Path      string             `json:"path"`
-	Body      io.Reader
-}
-
-type UpdateWorkshopFileResponseObject interface {
-	VisitUpdateWorkshopFileResponse(w http.ResponseWriter) error
-}
-
-type UpdateWorkshopFile200JSONResponse struct {
-	Message *string `json:"message,omitempty"`
-}
-
-func (response UpdateWorkshopFile200JSONResponse) VisitUpdateWorkshopFileResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type InitProblemWorkshopRequestObject struct {
 	ProblemId openapi_types.UUID `json:"problemId"`
 }
@@ -13950,9 +21398,7 @@ type InitProblemWorkshopResponseObject interface {
 	VisitInitProblemWorkshopResponse(w http.ResponseWriter) error
 }
 
-type InitProblemWorkshop200JSONResponse struct {
-	Message *string `json:"message,omitempty"`
-}
+type InitProblemWorkshop200JSONResponse MessageResponse
 
 func (response InitProblemWorkshop200JSONResponse) VisitInitProblemWorkshopResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -14476,21 +21922,147 @@ type StrictServerInterface interface {
 	// Publish problem package
 	// (POST /problems/{id}/publish)
 	PublishProblem(ctx context.Context, request PublishProblemRequestObject) (PublishProblemResponseObject, error)
+	// List checker files
+	// (GET /problems/{problemId}/checkers)
+	ListProblemCheckers(ctx context.Context, request ListProblemCheckersRequestObject) (ListProblemCheckersResponseObject, error)
+	// Create checker file
+	// (POST /problems/{problemId}/checkers)
+	CreateProblemChecker(ctx context.Context, request CreateProblemCheckerRequestObject) (CreateProblemCheckerResponseObject, error)
+	// Set main checker file
+	// (PATCH /problems/{problemId}/checkers/main)
+	SetProblemCheckerMain(ctx context.Context, request SetProblemCheckerMainRequestObject) (SetProblemCheckerMainResponseObject, error)
+	// Delete checker file
+	// (DELETE /problems/{problemId}/checkers/{name})
+	DeleteProblemChecker(ctx context.Context, request DeleteProblemCheckerRequestObject) (DeleteProblemCheckerResponseObject, error)
+	// Get checker file content
+	// (GET /problems/{problemId}/checkers/{name})
+	GetProblemChecker(ctx context.Context, request GetProblemCheckerRequestObject) (GetProblemCheckerResponseObject, error)
+	// Update checker file
+	// (PUT /problems/{problemId}/checkers/{name})
+	UpdateProblemChecker(ctx context.Context, request UpdateProblemCheckerRequestObject) (UpdateProblemCheckerResponseObject, error)
+	// List generator files
+	// (GET /problems/{problemId}/generators)
+	ListProblemGenerators(ctx context.Context, request ListProblemGeneratorsRequestObject) (ListProblemGeneratorsResponseObject, error)
+	// Create generator file
+	// (POST /problems/{problemId}/generators)
+	CreateProblemGenerator(ctx context.Context, request CreateProblemGeneratorRequestObject) (CreateProblemGeneratorResponseObject, error)
+	// Set main generator file
+	// (PATCH /problems/{problemId}/generators/main)
+	SetProblemGeneratorMain(ctx context.Context, request SetProblemGeneratorMainRequestObject) (SetProblemGeneratorMainResponseObject, error)
+	// Delete generator file
+	// (DELETE /problems/{problemId}/generators/{name})
+	DeleteProblemGenerator(ctx context.Context, request DeleteProblemGeneratorRequestObject) (DeleteProblemGeneratorResponseObject, error)
+	// Get generator file content
+	// (GET /problems/{problemId}/generators/{name})
+	GetProblemGenerator(ctx context.Context, request GetProblemGeneratorRequestObject) (GetProblemGeneratorResponseObject, error)
+	// Update generator file
+	// (PUT /problems/{problemId}/generators/{name})
+	UpdateProblemGenerator(ctx context.Context, request UpdateProblemGeneratorRequestObject) (UpdateProblemGeneratorResponseObject, error)
+	// List interactor files
+	// (GET /problems/{problemId}/interactors)
+	ListProblemInteractors(ctx context.Context, request ListProblemInteractorsRequestObject) (ListProblemInteractorsResponseObject, error)
+	// Create interactor file
+	// (POST /problems/{problemId}/interactors)
+	CreateProblemInteractor(ctx context.Context, request CreateProblemInteractorRequestObject) (CreateProblemInteractorResponseObject, error)
+	// Set main interactor file
+	// (PATCH /problems/{problemId}/interactors/main)
+	SetProblemInteractorMain(ctx context.Context, request SetProblemInteractorMainRequestObject) (SetProblemInteractorMainResponseObject, error)
+	// Delete interactor file
+	// (DELETE /problems/{problemId}/interactors/{name})
+	DeleteProblemInteractor(ctx context.Context, request DeleteProblemInteractorRequestObject) (DeleteProblemInteractorResponseObject, error)
+	// Get interactor file content
+	// (GET /problems/{problemId}/interactors/{name})
+	GetProblemInteractor(ctx context.Context, request GetProblemInteractorRequestObject) (GetProblemInteractorResponseObject, error)
+	// Update interactor file
+	// (PUT /problems/{problemId}/interactors/{name})
+	UpdateProblemInteractor(ctx context.Context, request UpdateProblemInteractorRequestObject) (UpdateProblemInteractorResponseObject, error)
+	// Get problem limits and type settings
+	// (GET /problems/{problemId}/limits)
+	GetProblemLimits(ctx context.Context, request GetProblemLimitsRequestObject) (GetProblemLimitsResponseObject, error)
+	// Update problem limits and type settings
+	// (PATCH /problems/{problemId}/limits)
+	UpdateProblemLimits(ctx context.Context, request UpdateProblemLimitsRequestObject) (UpdateProblemLimitsResponseObject, error)
+	// List media files
+	// (GET /problems/{problemId}/media)
+	ListProblemMediaFiles(ctx context.Context, request ListProblemMediaFilesRequestObject) (ListProblemMediaFilesResponseObject, error)
+	// Create media file
+	// (POST /problems/{problemId}/media)
+	CreateProblemMediaFile(ctx context.Context, request CreateProblemMediaFileRequestObject) (CreateProblemMediaFileResponseObject, error)
+	// Delete media file
+	// (DELETE /problems/{problemId}/media/{name})
+	DeleteProblemMediaFile(ctx context.Context, request DeleteProblemMediaFileRequestObject) (DeleteProblemMediaFileResponseObject, error)
+	// Get media file content
+	// (GET /problems/{problemId}/media/{name})
+	GetProblemMediaFile(ctx context.Context, request GetProblemMediaFileRequestObject) (GetProblemMediaFileResponseObject, error)
+	// Update media file
+	// (PUT /problems/{problemId}/media/{name})
+	UpdateProblemMediaFile(ctx context.Context, request UpdateProblemMediaFileRequestObject) (UpdateProblemMediaFileResponseObject, error)
+	// Get problem README
+	// (GET /problems/{problemId}/readme)
+	GetProblemReadme(ctx context.Context, request GetProblemReadmeRequestObject) (GetProblemReadmeResponseObject, error)
+	// Update problem README
+	// (PUT /problems/{problemId}/readme)
+	UpdateProblemReadme(ctx context.Context, request UpdateProblemReadmeRequestObject) (UpdateProblemReadmeResponseObject, error)
+	// Get problem statement
+	// (GET /problems/{problemId}/statement)
+	GetProblemStatement(ctx context.Context, request GetProblemStatementRequestObject) (GetProblemStatementResponseObject, error)
+	// Update problem statement
+	// (PATCH /problems/{problemId}/statement)
+	UpdateProblemStatement(ctx context.Context, request UpdateProblemStatementRequestObject) (UpdateProblemStatementResponseObject, error)
+	// List author solution files
+	// (GET /problems/{problemId}/submissions)
+	ListProblemWorkshopSubmissions(ctx context.Context, request ListProblemWorkshopSubmissionsRequestObject) (ListProblemWorkshopSubmissionsResponseObject, error)
+	// Create author solution file
+	// (POST /problems/{problemId}/submissions)
+	CreateProblemWorkshopSubmission(ctx context.Context, request CreateProblemWorkshopSubmissionRequestObject) (CreateProblemWorkshopSubmissionResponseObject, error)
+	// Delete author solution file
+	// (DELETE /problems/{problemId}/submissions/{name})
+	DeleteProblemWorkshopSubmission(ctx context.Context, request DeleteProblemWorkshopSubmissionRequestObject) (DeleteProblemWorkshopSubmissionResponseObject, error)
+	// Get author solution file content
+	// (GET /problems/{problemId}/submissions/{name})
+	GetProblemWorkshopSubmission(ctx context.Context, request GetProblemWorkshopSubmissionRequestObject) (GetProblemWorkshopSubmissionResponseObject, error)
+	// Update author solution file
+	// (PUT /problems/{problemId}/submissions/{name})
+	UpdateProblemWorkshopSubmission(ctx context.Context, request UpdateProblemWorkshopSubmissionRequestObject) (UpdateProblemWorkshopSubmissionResponseObject, error)
+	// List test files
+	// (GET /problems/{problemId}/tests)
+	ListProblemTests(ctx context.Context, request ListProblemTestsRequestObject) (ListProblemTestsResponseObject, error)
+	// Create test file
+	// (POST /problems/{problemId}/tests)
+	CreateProblemTestFile(ctx context.Context, request CreateProblemTestFileRequestObject) (CreateProblemTestFileResponseObject, error)
+	// Update tests.json configuration
+	// (PATCH /problems/{problemId}/tests/config)
+	UpdateProblemTestsConfig(ctx context.Context, request UpdateProblemTestsConfigRequestObject) (UpdateProblemTestsConfigResponseObject, error)
+	// Delete test file
+	// (DELETE /problems/{problemId}/tests/{name})
+	DeleteProblemTestFile(ctx context.Context, request DeleteProblemTestFileRequestObject) (DeleteProblemTestFileResponseObject, error)
+	// Get test file content
+	// (GET /problems/{problemId}/tests/{name})
+	GetProblemTestFile(ctx context.Context, request GetProblemTestFileRequestObject) (GetProblemTestFileResponseObject, error)
+	// Update test file
+	// (PUT /problems/{problemId}/tests/{name})
+	UpdateProblemTestFile(ctx context.Context, request UpdateProblemTestFileRequestObject) (UpdateProblemTestFileResponseObject, error)
+	// List validator files
+	// (GET /problems/{problemId}/validators)
+	ListProblemValidators(ctx context.Context, request ListProblemValidatorsRequestObject) (ListProblemValidatorsResponseObject, error)
+	// Create validator file
+	// (POST /problems/{problemId}/validators)
+	CreateProblemValidator(ctx context.Context, request CreateProblemValidatorRequestObject) (CreateProblemValidatorResponseObject, error)
+	// Set main validator file
+	// (PATCH /problems/{problemId}/validators/main)
+	SetProblemValidatorMain(ctx context.Context, request SetProblemValidatorMainRequestObject) (SetProblemValidatorMainResponseObject, error)
+	// Delete validator file
+	// (DELETE /problems/{problemId}/validators/{name})
+	DeleteProblemValidator(ctx context.Context, request DeleteProblemValidatorRequestObject) (DeleteProblemValidatorResponseObject, error)
+	// Get validator file content
+	// (GET /problems/{problemId}/validators/{name})
+	GetProblemValidator(ctx context.Context, request GetProblemValidatorRequestObject) (GetProblemValidatorResponseObject, error)
+	// Update validator file
+	// (PUT /problems/{problemId}/validators/{name})
+	UpdateProblemValidator(ctx context.Context, request UpdateProblemValidatorRequestObject) (UpdateProblemValidatorResponseObject, error)
 	// Compile checker/validator/generator/interactor
 	// (POST /problems/{problemId}/workshop/components/{componentType}/compile)
 	CompileProblemComponent(ctx context.Context, request CompileProblemComponentRequestObject) (CompileProblemComponentResponseObject, error)
-	// List files in problem workspace
-	// (GET /problems/{problemId}/workshop/files)
-	ListWorkshopFiles(ctx context.Context, request ListWorkshopFilesRequestObject) (ListWorkshopFilesResponseObject, error)
-	// Delete file from workspace
-	// (DELETE /problems/{problemId}/workshop/files/{path})
-	DeleteWorkshopFile(ctx context.Context, request DeleteWorkshopFileRequestObject) (DeleteWorkshopFileResponseObject, error)
-	// Read file content from workspace
-	// (GET /problems/{problemId}/workshop/files/{path})
-	GetWorkshopFile(ctx context.Context, request GetWorkshopFileRequestObject) (GetWorkshopFileResponseObject, error)
-	// Update file content in workspace
-	// (PUT /problems/{problemId}/workshop/files/{path})
-	UpdateWorkshopFile(ctx context.Context, request UpdateWorkshopFileRequestObject) (UpdateWorkshopFileResponseObject, error)
 	// Initialize problem workspace
 	// (POST /problems/{problemId}/workshop/init)
 	InitProblemWorkshop(ctx context.Context, request InitProblemWorkshopRequestObject) (InitProblemWorkshopResponseObject, error)
@@ -15633,6 +23205,1309 @@ func (sh *strictHandler) PublishProblem(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// ListProblemCheckers operation middleware
+func (sh *strictHandler) ListProblemCheckers(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request ListProblemCheckersRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemCheckers(ctx, request.(ListProblemCheckersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemCheckers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemCheckersResponseObject); ok {
+		if err := validResponse.VisitListProblemCheckersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemChecker operation middleware
+func (sh *strictHandler) CreateProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemCheckerParams) {
+	var request CreateProblemCheckerRequestObject
+
+	request.ProblemId = problemId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemChecker(ctx, request.(CreateProblemCheckerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemChecker")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemCheckerResponseObject); ok {
+		if err := validResponse.VisitCreateProblemCheckerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetProblemCheckerMain operation middleware
+func (sh *strictHandler) SetProblemCheckerMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request SetProblemCheckerMainRequestObject
+
+	request.ProblemId = problemId
+
+	var body SetProblemCheckerMainJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetProblemCheckerMain(ctx, request.(SetProblemCheckerMainRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetProblemCheckerMain")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetProblemCheckerMainResponseObject); ok {
+		if err := validResponse.VisitSetProblemCheckerMainResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteProblemChecker operation middleware
+func (sh *strictHandler) DeleteProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request DeleteProblemCheckerRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemChecker(ctx, request.(DeleteProblemCheckerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemChecker")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemCheckerResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemCheckerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemChecker operation middleware
+func (sh *strictHandler) GetProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request GetProblemCheckerRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemChecker(ctx, request.(GetProblemCheckerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemChecker")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemCheckerResponseObject); ok {
+		if err := validResponse.VisitGetProblemCheckerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemChecker operation middleware
+func (sh *strictHandler) UpdateProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request UpdateProblemCheckerRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemChecker(ctx, request.(UpdateProblemCheckerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemChecker")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemCheckerResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemCheckerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemGenerators operation middleware
+func (sh *strictHandler) ListProblemGenerators(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request ListProblemGeneratorsRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemGenerators(ctx, request.(ListProblemGeneratorsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemGenerators")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemGeneratorsResponseObject); ok {
+		if err := validResponse.VisitListProblemGeneratorsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemGenerator operation middleware
+func (sh *strictHandler) CreateProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemGeneratorParams) {
+	var request CreateProblemGeneratorRequestObject
+
+	request.ProblemId = problemId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemGenerator(ctx, request.(CreateProblemGeneratorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemGenerator")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemGeneratorResponseObject); ok {
+		if err := validResponse.VisitCreateProblemGeneratorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetProblemGeneratorMain operation middleware
+func (sh *strictHandler) SetProblemGeneratorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request SetProblemGeneratorMainRequestObject
+
+	request.ProblemId = problemId
+
+	var body SetProblemGeneratorMainJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetProblemGeneratorMain(ctx, request.(SetProblemGeneratorMainRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetProblemGeneratorMain")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetProblemGeneratorMainResponseObject); ok {
+		if err := validResponse.VisitSetProblemGeneratorMainResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteProblemGenerator operation middleware
+func (sh *strictHandler) DeleteProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request DeleteProblemGeneratorRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemGenerator(ctx, request.(DeleteProblemGeneratorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemGenerator")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemGeneratorResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemGeneratorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemGenerator operation middleware
+func (sh *strictHandler) GetProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request GetProblemGeneratorRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemGenerator(ctx, request.(GetProblemGeneratorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemGenerator")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemGeneratorResponseObject); ok {
+		if err := validResponse.VisitGetProblemGeneratorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemGenerator operation middleware
+func (sh *strictHandler) UpdateProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request UpdateProblemGeneratorRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemGenerator(ctx, request.(UpdateProblemGeneratorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemGenerator")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemGeneratorResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemGeneratorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemInteractors operation middleware
+func (sh *strictHandler) ListProblemInteractors(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request ListProblemInteractorsRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemInteractors(ctx, request.(ListProblemInteractorsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemInteractors")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemInteractorsResponseObject); ok {
+		if err := validResponse.VisitListProblemInteractorsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemInteractor operation middleware
+func (sh *strictHandler) CreateProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemInteractorParams) {
+	var request CreateProblemInteractorRequestObject
+
+	request.ProblemId = problemId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemInteractor(ctx, request.(CreateProblemInteractorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemInteractor")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemInteractorResponseObject); ok {
+		if err := validResponse.VisitCreateProblemInteractorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetProblemInteractorMain operation middleware
+func (sh *strictHandler) SetProblemInteractorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request SetProblemInteractorMainRequestObject
+
+	request.ProblemId = problemId
+
+	var body SetProblemInteractorMainJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetProblemInteractorMain(ctx, request.(SetProblemInteractorMainRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetProblemInteractorMain")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetProblemInteractorMainResponseObject); ok {
+		if err := validResponse.VisitSetProblemInteractorMainResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteProblemInteractor operation middleware
+func (sh *strictHandler) DeleteProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request DeleteProblemInteractorRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemInteractor(ctx, request.(DeleteProblemInteractorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemInteractor")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemInteractorResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemInteractorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemInteractor operation middleware
+func (sh *strictHandler) GetProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request GetProblemInteractorRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemInteractor(ctx, request.(GetProblemInteractorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemInteractor")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemInteractorResponseObject); ok {
+		if err := validResponse.VisitGetProblemInteractorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemInteractor operation middleware
+func (sh *strictHandler) UpdateProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request UpdateProblemInteractorRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemInteractor(ctx, request.(UpdateProblemInteractorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemInteractor")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemInteractorResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemInteractorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemLimits operation middleware
+func (sh *strictHandler) GetProblemLimits(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request GetProblemLimitsRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemLimits(ctx, request.(GetProblemLimitsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemLimits")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemLimitsResponseObject); ok {
+		if err := validResponse.VisitGetProblemLimitsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemLimits operation middleware
+func (sh *strictHandler) UpdateProblemLimits(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request UpdateProblemLimitsRequestObject
+
+	request.ProblemId = problemId
+
+	var body UpdateProblemLimitsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemLimits(ctx, request.(UpdateProblemLimitsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemLimits")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemLimitsResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemLimitsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemMediaFiles operation middleware
+func (sh *strictHandler) ListProblemMediaFiles(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request ListProblemMediaFilesRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemMediaFiles(ctx, request.(ListProblemMediaFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemMediaFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemMediaFilesResponseObject); ok {
+		if err := validResponse.VisitListProblemMediaFilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemMediaFile operation middleware
+func (sh *strictHandler) CreateProblemMediaFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemMediaFileParams) {
+	var request CreateProblemMediaFileRequestObject
+
+	request.ProblemId = problemId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemMediaFile(ctx, request.(CreateProblemMediaFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemMediaFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemMediaFileResponseObject); ok {
+		if err := validResponse.VisitCreateProblemMediaFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteProblemMediaFile operation middleware
+func (sh *strictHandler) DeleteProblemMediaFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request DeleteProblemMediaFileRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemMediaFile(ctx, request.(DeleteProblemMediaFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemMediaFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemMediaFileResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemMediaFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemMediaFile operation middleware
+func (sh *strictHandler) GetProblemMediaFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request GetProblemMediaFileRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemMediaFile(ctx, request.(GetProblemMediaFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemMediaFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemMediaFileResponseObject); ok {
+		if err := validResponse.VisitGetProblemMediaFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemMediaFile operation middleware
+func (sh *strictHandler) UpdateProblemMediaFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request UpdateProblemMediaFileRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemMediaFile(ctx, request.(UpdateProblemMediaFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemMediaFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemMediaFileResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemMediaFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemReadme operation middleware
+func (sh *strictHandler) GetProblemReadme(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request GetProblemReadmeRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemReadme(ctx, request.(GetProblemReadmeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemReadme")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemReadmeResponseObject); ok {
+		if err := validResponse.VisitGetProblemReadmeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemReadme operation middleware
+func (sh *strictHandler) UpdateProblemReadme(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request UpdateProblemReadmeRequestObject
+
+	request.ProblemId = problemId
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemReadme(ctx, request.(UpdateProblemReadmeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemReadme")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemReadmeResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemReadmeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemStatement operation middleware
+func (sh *strictHandler) GetProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request GetProblemStatementRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemStatement(ctx, request.(GetProblemStatementRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemStatement")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemStatementResponseObject); ok {
+		if err := validResponse.VisitGetProblemStatementResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemStatement operation middleware
+func (sh *strictHandler) UpdateProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request UpdateProblemStatementRequestObject
+
+	request.ProblemId = problemId
+
+	var body UpdateProblemStatementJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemStatement(ctx, request.(UpdateProblemStatementRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemStatement")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemStatementResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemStatementResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemWorkshopSubmissions operation middleware
+func (sh *strictHandler) ListProblemWorkshopSubmissions(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request ListProblemWorkshopSubmissionsRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemWorkshopSubmissions(ctx, request.(ListProblemWorkshopSubmissionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemWorkshopSubmissions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemWorkshopSubmissionsResponseObject); ok {
+		if err := validResponse.VisitListProblemWorkshopSubmissionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemWorkshopSubmission operation middleware
+func (sh *strictHandler) CreateProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemWorkshopSubmissionParams) {
+	var request CreateProblemWorkshopSubmissionRequestObject
+
+	request.ProblemId = problemId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemWorkshopSubmission(ctx, request.(CreateProblemWorkshopSubmissionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemWorkshopSubmission")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemWorkshopSubmissionResponseObject); ok {
+		if err := validResponse.VisitCreateProblemWorkshopSubmissionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteProblemWorkshopSubmission operation middleware
+func (sh *strictHandler) DeleteProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request DeleteProblemWorkshopSubmissionRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemWorkshopSubmission(ctx, request.(DeleteProblemWorkshopSubmissionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemWorkshopSubmission")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemWorkshopSubmissionResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemWorkshopSubmissionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemWorkshopSubmission operation middleware
+func (sh *strictHandler) GetProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request GetProblemWorkshopSubmissionRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemWorkshopSubmission(ctx, request.(GetProblemWorkshopSubmissionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemWorkshopSubmission")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemWorkshopSubmissionResponseObject); ok {
+		if err := validResponse.VisitGetProblemWorkshopSubmissionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemWorkshopSubmission operation middleware
+func (sh *strictHandler) UpdateProblemWorkshopSubmission(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request UpdateProblemWorkshopSubmissionRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemWorkshopSubmission(ctx, request.(UpdateProblemWorkshopSubmissionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemWorkshopSubmission")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemWorkshopSubmissionResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemWorkshopSubmissionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemTests operation middleware
+func (sh *strictHandler) ListProblemTests(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request ListProblemTestsRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemTests(ctx, request.(ListProblemTestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemTests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemTestsResponseObject); ok {
+		if err := validResponse.VisitListProblemTestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemTestFile operation middleware
+func (sh *strictHandler) CreateProblemTestFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemTestFileParams) {
+	var request CreateProblemTestFileRequestObject
+
+	request.ProblemId = problemId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemTestFile(ctx, request.(CreateProblemTestFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemTestFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemTestFileResponseObject); ok {
+		if err := validResponse.VisitCreateProblemTestFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemTestsConfig operation middleware
+func (sh *strictHandler) UpdateProblemTestsConfig(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request UpdateProblemTestsConfigRequestObject
+
+	request.ProblemId = problemId
+
+	var body UpdateProblemTestsConfigJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemTestsConfig(ctx, request.(UpdateProblemTestsConfigRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemTestsConfig")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemTestsConfigResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemTestsConfigResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteProblemTestFile operation middleware
+func (sh *strictHandler) DeleteProblemTestFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request DeleteProblemTestFileRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemTestFile(ctx, request.(DeleteProblemTestFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemTestFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemTestFileResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemTestFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemTestFile operation middleware
+func (sh *strictHandler) GetProblemTestFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request GetProblemTestFileRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemTestFile(ctx, request.(GetProblemTestFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemTestFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemTestFileResponseObject); ok {
+		if err := validResponse.VisitGetProblemTestFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemTestFile operation middleware
+func (sh *strictHandler) UpdateProblemTestFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request UpdateProblemTestFileRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemTestFile(ctx, request.(UpdateProblemTestFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemTestFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemTestFileResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemTestFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemValidators operation middleware
+func (sh *strictHandler) ListProblemValidators(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request ListProblemValidatorsRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemValidators(ctx, request.(ListProblemValidatorsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemValidators")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemValidatorsResponseObject); ok {
+		if err := validResponse.VisitListProblemValidatorsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemValidator operation middleware
+func (sh *strictHandler) CreateProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemValidatorParams) {
+	var request CreateProblemValidatorRequestObject
+
+	request.ProblemId = problemId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemValidator(ctx, request.(CreateProblemValidatorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemValidator")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemValidatorResponseObject); ok {
+		if err := validResponse.VisitCreateProblemValidatorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetProblemValidatorMain operation middleware
+func (sh *strictHandler) SetProblemValidatorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request SetProblemValidatorMainRequestObject
+
+	request.ProblemId = problemId
+
+	var body SetProblemValidatorMainJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetProblemValidatorMain(ctx, request.(SetProblemValidatorMainRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetProblemValidatorMain")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetProblemValidatorMainResponseObject); ok {
+		if err := validResponse.VisitSetProblemValidatorMainResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteProblemValidator operation middleware
+func (sh *strictHandler) DeleteProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request DeleteProblemValidatorRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemValidator(ctx, request.(DeleteProblemValidatorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemValidator")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemValidatorResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemValidatorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemValidator operation middleware
+func (sh *strictHandler) GetProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request GetProblemValidatorRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemValidator(ctx, request.(GetProblemValidatorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemValidator")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemValidatorResponseObject); ok {
+		if err := validResponse.VisitGetProblemValidatorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemValidator operation middleware
+func (sh *strictHandler) UpdateProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request UpdateProblemValidatorRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemValidator(ctx, request.(UpdateProblemValidatorRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemValidator")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemValidatorResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemValidatorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CompileProblemComponent operation middleware
 func (sh *strictHandler) CompileProblemComponent(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType) {
 	var request CompileProblemComponentRequestObject
@@ -15653,116 +24528,6 @@ func (sh *strictHandler) CompileProblemComponent(w http.ResponseWriter, r *http.
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CompileProblemComponentResponseObject); ok {
 		if err := validResponse.VisitCompileProblemComponentResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ListWorkshopFiles operation middleware
-func (sh *strictHandler) ListWorkshopFiles(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params ListWorkshopFilesParams) {
-	var request ListWorkshopFilesRequestObject
-
-	request.ProblemId = problemId
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListWorkshopFiles(ctx, request.(ListWorkshopFilesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListWorkshopFiles")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListWorkshopFilesResponseObject); ok {
-		if err := validResponse.VisitListWorkshopFilesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// DeleteWorkshopFile operation middleware
-func (sh *strictHandler) DeleteWorkshopFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, path string) {
-	var request DeleteWorkshopFileRequestObject
-
-	request.ProblemId = problemId
-	request.Path = path
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.DeleteWorkshopFile(ctx, request.(DeleteWorkshopFileRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DeleteWorkshopFile")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DeleteWorkshopFileResponseObject); ok {
-		if err := validResponse.VisitDeleteWorkshopFileResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetWorkshopFile operation middleware
-func (sh *strictHandler) GetWorkshopFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, path string) {
-	var request GetWorkshopFileRequestObject
-
-	request.ProblemId = problemId
-	request.Path = path
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetWorkshopFile(ctx, request.(GetWorkshopFileRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetWorkshopFile")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetWorkshopFileResponseObject); ok {
-		if err := validResponse.VisitGetWorkshopFileResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// UpdateWorkshopFile operation middleware
-func (sh *strictHandler) UpdateWorkshopFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, path string) {
-	var request UpdateWorkshopFileRequestObject
-
-	request.ProblemId = problemId
-	request.Path = path
-
-	request.Body = r.Body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UpdateWorkshopFile(ctx, request.(UpdateWorkshopFileRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UpdateWorkshopFile")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UpdateWorkshopFileResponseObject); ok {
-		if err := validResponse.VisitUpdateWorkshopFileResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

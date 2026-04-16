@@ -62,7 +62,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	// 1. Start Postgres Container
 	var err error
 	s.pgContainer, err = postgres.Run(s.ctx,
-		"postgres:16-alpine",
+		"postgres:18-alpine",
 		postgres.WithDatabase("tester"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("postgres"),
@@ -82,7 +82,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	// 3. Run Migrations
 	_, b, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(b)
-	migrationsPath := filepath.Join(basepath, "../../cmd/migrations")
+	migrationsPath := filepath.Join(basepath, "../../migrations")
 
 	db, err := sql.Open("pgx", connStr)
 	s.Require().NoError(err)
