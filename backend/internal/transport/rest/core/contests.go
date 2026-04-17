@@ -191,7 +191,6 @@ func (h *CoreServer) ListUserContests(ctx context.Context, request corev1.ListUs
 	if err != nil {
 		return nil, err
 	}
-
 	var sortBy string
 	if request.Params.SortBy != nil {
 		sortBy = string(*request.Params.SortBy)

@@ -623,6 +623,124 @@ func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListU
 	return items, nil
 }
 
+const listUserPublicContests = `-- name: ListUserPublicContests :many
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, c.title FROM contests c
+WHERE c.owner_id = $1 AND c.visibility = 'public'
+ORDER BY c.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListUserPublicContestsParams struct {
+	OwnerID uuid.UUID `json:"owner_id"`
+	Limit   int32     `json:"limit"`
+	Offset  int32     `json:"offset"`
+}
+
+func (q *Queries) ListUserPublicContests(ctx context.Context, arg ListUserPublicContestsParams) ([]Contest, error) {
+	rows, err := q.db.Query(ctx, listUserPublicContests, arg.OwnerID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Contest{}
+	for rows.Next() {
+		var i Contest
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.OwnerID,
+			&i.Visibility,
+			&i.ShortName,
+			&i.Description,
+			&i.Settings,
+			&i.AccessPolicy,
+			&i.StartTime,
+			&i.EndTime,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Title,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countUserPublicContests = `-- name: CountUserPublicContests :one
+SELECT COUNT(*) FROM contests
+WHERE owner_id = $1 AND visibility = 'public'
+`
+
+func (q *Queries) CountUserPublicContests(ctx context.Context, ownerID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserPublicContests, ownerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const listUserOwnedContests = `-- name: ListUserOwnedContests :many
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, c.title FROM contests c
+WHERE c.owner_id = $1
+ORDER BY c.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListUserOwnedContestsParams struct {
+	OwnerID uuid.UUID `json:"owner_id"`
+	Limit   int32     `json:"limit"`
+	Offset  int32     `json:"offset"`
+}
+
+func (q *Queries) ListUserOwnedContests(ctx context.Context, arg ListUserOwnedContestsParams) ([]Contest, error) {
+	rows, err := q.db.Query(ctx, listUserOwnedContests, arg.OwnerID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Contest{}
+	for rows.Next() {
+		var i Contest
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.OwnerID,
+			&i.Visibility,
+			&i.ShortName,
+			&i.Description,
+			&i.Settings,
+			&i.AccessPolicy,
+			&i.StartTime,
+			&i.EndTime,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Title,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countUserOwnedContests = `-- name: CountUserOwnedContests :one
+SELECT COUNT(*) FROM contests
+WHERE owner_id = $1
+`
+
+func (q *Queries) CountUserOwnedContests(ctx context.Context, ownerID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserOwnedContests, ownerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const removeContestMember = `-- name: RemoveContestMember :exec
 DELETE FROM contest_members
 WHERE contest_id = $1 AND user_id = $2

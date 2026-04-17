@@ -149,8 +149,6 @@ func (r *ContestsRepo) ListUserContests(ctx context.Context, filter models.UserC
 		return nil, 0, HandlePgErr(err)
 	}
 
-	// For count, we'll just return the length of results since we don't have a dedicated count query
-	// This is a limitation - ideally we'd have a CountUserAccessibleContests query
 	count := int64(len(rows))
 
 	contests := make([]models.Contest, len(rows))

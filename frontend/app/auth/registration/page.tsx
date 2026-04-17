@@ -39,6 +39,12 @@ type FlowData = {
   };
 };
 
+type RegistrationFormState = {
+  username: string;
+  email: string;
+  password: string;
+};
+
 export default function RegistrationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,9 +52,11 @@ export default function RegistrationPage() {
   const returnTo = searchParams.get("return_to");
 
   const [flow, setFlow] = useState<FlowData | null>(null);
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState<RegistrationFormState>({
+    username: "",
+    email: "",
+    password: "",
+  });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -107,10 +115,10 @@ export default function RegistrationPage() {
         body: JSON.stringify({
           method: "password",
           traits: {
-            username,
-            email,
+            username: formData.username,
+            email: formData.email,
           },
-          password,
+          password: formData.password,
           csrf_token: csrfToken,
         }),
         credentials: "include",
@@ -214,8 +222,10 @@ export default function RegistrationPage() {
                 required
                 size="md"
                 radius="md"
-                value={username}
-                onChange={(e) => setUsername(e.currentTarget.value)}
+                value={formData.username}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, username: e.currentTarget.value }))
+                }
               />
 
               <TextInput
@@ -225,8 +235,10 @@ export default function RegistrationPage() {
                 required
                 size="md"
                 radius="md"
-                value={email}
-                onChange={(e) => setEmail(e.currentTarget.value)}
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, email: e.currentTarget.value }))
+                }
               />
 
               <PasswordInput
@@ -235,8 +247,10 @@ export default function RegistrationPage() {
                 required
                 size="md"
                 radius="md"
-                value={password}
-                onChange={(e) => setPassword(e.currentTarget.value)}
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, password: e.currentTarget.value }))
+                }
               />
 
               <Button

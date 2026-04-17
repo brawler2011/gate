@@ -49,6 +49,7 @@ func buildStrictAuthzPolicies() map[string]strictAuthzPolicy {
 		"GetUser":             {public: true},
 
 		"GetMe":            {requireAuth: true},
+		"PatchMe":          {requireAuth: true},
 		"CreateContest":    {requireAuth: true},
 		"GetMyContestRole": {requireAuth: true},
 

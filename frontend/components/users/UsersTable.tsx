@@ -47,7 +47,6 @@ export function UsersTable({ users, pagination, page, search, role }: Props) {
             <Table.Th style={{ width: "20%" }}>Имя пользователя</Table.Th>
             <Table.Th style={{ width: "15%" }}>Имя</Table.Th>
             <Table.Th style={{ width: "10%" }}>ID</Table.Th>
-            <Table.Th style={{ width: "20%" }}>Электронная почта</Table.Th>
             <Table.Th style={{ width: "10%" }}>Роль</Table.Th>
             <Table.Th style={{ width: "10%" }}>Дата создания</Table.Th>
           </Table.Tr>
@@ -67,13 +66,12 @@ export function UsersTable({ users, pagination, page, search, role }: Props) {
             >
               <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>{user.username}</Table.Td>
               <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>
-                <Text c="dimmed" size="sm">Алексей Котоков</Text>
+                <Text c="dimmed" size="sm">
+                  {[user.name, user.surname].filter(Boolean).join(" ") || "—"}
+                </Text>
               </Table.Td>
               <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>
                 <TruncatedWithCopy value={user.id} />
-              </Table.Td>
-              <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>
-                <TruncatedWithCopy value="kotok.9647@gmail.com" />
               </Table.Td>
               <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>
                 <Badge color={getRoleColor(user.role)}>{user.role}</Badge>
@@ -101,4 +99,3 @@ export function UsersTable({ users, pagination, page, search, role }: Props) {
     </>
   );
 }
-

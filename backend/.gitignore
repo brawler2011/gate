@@ -3,3 +3,4 @@
 cache
 **/*.env
 *.exe
+workshop-repos*

@@ -46,6 +46,7 @@ export type { MessageResponse } from './models/MessageResponse';
 export type { OrganizationMemberModel } from './models/OrganizationMemberModel';
 export type { OrganizationModel } from './models/OrganizationModel';
 export type { PaginationModel } from './models/PaginationModel';
+export type { PatchMeRequestModel } from './models/PatchMeRequestModel';
 export type { PostModel } from './models/PostModel';
 export type { PostPatchRequestModel } from './models/PostPatchRequestModel';
 export type { ProblemLimits } from './models/ProblemLimits';
@@ -77,3 +78,4 @@ export { WebSocketMessageType } from './models/WebSocketMessageType';
 export type { WorkshopFileListResponse } from './models/WorkshopFileListResponse';
 
 export { DefaultService } from './services/DefaultService';
+export { UsersService } from './services/UsersService';
