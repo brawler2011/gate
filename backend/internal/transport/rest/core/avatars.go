@@ -6,19 +6,11 @@ import (
 	"io"
 
 	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/internal/transport/middleware"
 	"github.com/gate149/gate/backend/pkg"
 )
 
 // UploadAvatar handles POST /users/{id}/avatar
 func (h *CoreServer) UploadAvatar(ctx context.Context, request corev1.UploadAvatarRequestObject) (corev1.UploadAvatarResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
-	// Check permissions: only the user themselves or admin can upload avatar
-	if user.Id != request.Id && !user.IsAdmin() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "can only upload your own avatar")
-	}
-
 	// Parse multipart form to extract file
 	// The Body field contains a multipart.Reader
 	if request.Body == nil {
@@ -73,13 +65,6 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, request corev1.UploadAvat
 
 // DeleteAvatar handles DELETE /users/{id}/avatar
 func (h *CoreServer) DeleteAvatar(ctx context.Context, request corev1.DeleteAvatarRequestObject) (corev1.DeleteAvatarResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
-	// Check permissions: only the user themselves or admin can delete avatar
-	if user.Id != request.Id && !user.IsAdmin() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "can only delete your own avatar")
-	}
-
 	// Delete avatar using use case
 	err := h.avatarsUC.DeleteAvatar(ctx, request.Id)
 	if err != nil {

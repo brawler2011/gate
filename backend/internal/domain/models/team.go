@@ -90,10 +90,11 @@ type ProblemTeam struct {
 
 // ContestTeam represents team-based access to a contest
 type ContestTeam struct {
-	ContestID uuid.UUID
-	TeamID    uuid.UUID
-	Role      ContestRole
-	TeamName  string
-	TeamSlug  string
-	CreatedAt time.Time
+	ContestID       uuid.UUID
+	TeamID          uuid.UUID
+	Role            ContestRole
+	PermissionsMask *ContestPermissionMask
+	TeamName        string
+	TeamSlug        string
+	CreatedAt       time.Time
 }

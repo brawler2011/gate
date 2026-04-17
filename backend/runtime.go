@@ -158,7 +158,7 @@ func runApp(envFile string) error {
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(contestsRepo)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, s3Client, defaultS3BlogBucket)
-	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC, orgsRepo)
+	permissionsUC := usecase.NewPermissionsUseCase(contestsRepo, usersUC, problemsRepo, teamsRepo, orgsRepo)
 	orgsUC := usecase.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, txManager)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, txManager)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
@@ -254,7 +254,9 @@ func runApp(envFile string) error {
 		natsJS,
 	)
 
-	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, nil, corev1.StrictHTTPServerOptions{
+	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, []corev1.StrictMiddlewareFunc{
+		middleware.AuthzStrictMiddleware(permissionsUC, submissionsUC),
+	}, corev1.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		},

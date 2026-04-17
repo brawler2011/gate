@@ -3578,6 +3578,11 @@ components:
         role:
           type: string
           example: "owner"
+        permissions_mask:
+          type: integer
+          format: int64
+          description: "Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access"
+          example: 255
     TestProgressEventType:
       type: string
       enum:

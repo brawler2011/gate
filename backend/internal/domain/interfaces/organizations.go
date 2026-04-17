@@ -23,6 +23,7 @@ type OrganizationsRepo interface {
 	UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role models.OrganizationRole) error
 	RemoveMember(ctx context.Context, orgID, userID uuid.UUID) error
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.Organization, error)
+	ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, bool, error)
 
 	WithTx(tx pgx.Tx) OrganizationsRepo
 }
@@ -41,4 +42,5 @@ type OrganizationsUC interface {
 	UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role models.OrganizationRole, requestUserID uuid.UUID) error
 	RemoveMember(ctx context.Context, orgID, userID, requestUserID uuid.UUID) error
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.Organization, error)
+	ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, error)
 }

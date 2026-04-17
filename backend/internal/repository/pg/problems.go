@@ -168,9 +168,17 @@ func (r *ProblemsRepo) GetProblemTests(ctx context.Context, problemId uuid.UUID)
 }
 
 func (r *ProblemsRepo) GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTeam, error) {
-	// TODO: Implement when problem_teams table is fully integrated
-	// For now, return empty slice as teams feature is not fully implemented
-	return []models.ProblemTeam{}, nil
+	rows, err := r.queries.ListProblemTeams(ctx, problemId)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	teams := make([]models.ProblemTeam, len(rows))
+	for i, row := range rows {
+		teams[i] = mapProblemTeam(row)
+	}
+
+	return teams, nil
 }
 
 func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
@@ -284,6 +292,17 @@ func mapProblemMember(pm sqlc.ProblemMember) models.ProblemMember {
 		Username:  "",
 		Email:     "",
 		CreatedAt: pm.CreatedAt,
+	}
+}
+
+func mapProblemTeam(pt sqlc.ListProblemTeamsRow) models.ProblemTeam {
+	return models.ProblemTeam{
+		ProblemID:  pt.ProblemID,
+		TeamID:     pt.TeamID,
+		Permission: models.ProblemPermission(pt.Permission),
+		TeamName:   pt.TeamName,
+		TeamSlug:   pt.TeamSlug,
+		CreatedAt:  pt.CreatedAt,
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
+	"github.com/gate149/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -217,4 +218,21 @@ func (uc *OrganizationsUseCase) RemoveMember(ctx context.Context, orgID, userID,
 
 func (uc *OrganizationsUseCase) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.Organization, error) {
 	return uc.repo.GetUserOrganizations(ctx, userID)
+}
+
+func (uc *OrganizationsUseCase) ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, error) {
+	orgID, found, err := uc.repo.ResolveUserOrganizationID(ctx, userID, requestedOrgID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	if !found {
+		if requestedOrgID != nil {
+			return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "organization not found or user is not a member")
+		}
+
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "user has no organizations")
+	}
+
+	return orgID, nil
 }

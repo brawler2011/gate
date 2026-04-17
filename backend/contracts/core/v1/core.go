@@ -236,7 +236,9 @@ type GetHealthResponseModel struct {
 
 // GetMyContestRoleResponseModel defines model for GetMyContestRoleResponseModel.
 type GetMyContestRoleResponseModel struct {
-	Role string `json:"role"`
+	// PermissionsMask Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access
+	PermissionsMask *int64 `json:"permissions_mask,omitempty"`
+	Role            string `json:"role"`
 }
 
 // GetOrganizationResponseModel defines model for GetOrganizationResponseModel.

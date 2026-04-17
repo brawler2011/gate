@@ -7,29 +7,12 @@ import (
 	"time"
 
 	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/internal/transport/middleware"
 	"github.com/gate149/gate/backend/pkg"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // ImportProblem handles POST /problems/{id}/import
 func (h *CoreServer) ImportProblem(ctx context.Context, request corev1.ImportProblemRequestObject) (corev1.ImportProblemResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
-	// Check if user is authenticated
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "authentication required")
-	}
-
-	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionEditProblem)
-	if err != nil {
-		return nil, err
-	}
-	if !canEdit {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to import problem package")
-	}
-
 	// Parse multipart form
 	if request.Body == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
@@ -67,20 +50,6 @@ func (h *CoreServer) ImportProblem(ctx context.Context, request corev1.ImportPro
 
 // PublishProblem handles POST /problems/{id}/publish
 func (h *CoreServer) PublishProblem(ctx context.Context, request corev1.PublishProblemRequestObject) (corev1.PublishProblemResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "authentication required")
-	}
-
-	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionEditProblem)
-	if err != nil {
-		return nil, err
-	}
-	if !canEdit {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to publish problem")
-	}
-
 	result, err := h.publishUC.PublishProblem(ctx, request.Id)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to publish problem")
@@ -95,19 +64,6 @@ func (h *CoreServer) PublishProblem(ctx context.Context, request corev1.PublishP
 
 // ListProblemPackages handles GET /problems/{id}/packages
 func (h *CoreServer) ListProblemPackages(ctx context.Context, request corev1.ListProblemPackagesRequestObject) (corev1.ListProblemPackagesResponseObject, error) {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "authentication required")
-	}
-
-	canView, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionViewProblem)
-	if err != nil {
-		return nil, err
-	}
-	if !canView {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions")
-	}
-
 	packages, err := h.publishUC.ListPackages(ctx, request.Id)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list packages")

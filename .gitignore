@@ -2,3 +2,6 @@
 .claude/
 .vscode/
 .idea/
+.github/
+.VSCodeCounter/
+*.log

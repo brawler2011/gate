@@ -6,7 +6,9 @@ package integration
 import (
 	"context"
 	"database/sql"
+	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -17,6 +19,7 @@ import (
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/repository/pg"
+	"github.com/gate149/gate/backend/internal/transport/middleware"
 	handlers "github.com/gate149/gate/backend/internal/transport/rest/core"
 	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/pkg"
@@ -137,7 +140,7 @@ func (s *IntegrationTestSuite) initApp() {
 	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, txManager)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo)
-	permissionsUC := usecase.NewPermissionsUseCase(contestsUC, usersUC, problemsUC, s.organizationsRepo)
+	permissionsUC := usecase.NewPermissionsUseCase(s.contestsRepo, usersUC, problemsRepo, teamsRepo, s.organizationsRepo)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
 	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
@@ -162,14 +165,14 @@ func (s *IntegrationTestSuite) initApp() {
 	)
 
 	// Strict Handler
-	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, nil, corev1.StrictHTTPServerOptions{
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, []corev1.StrictMiddlewareFunc{
+		middleware.AuthzStrictMiddleware(permissionsUC, submissionsUC),
+	}, corev1.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		},
-		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-		},
+		ResponseErrorHandlerFunc: middleware.ResponseErrorHandler(logger),
 	})
 
 	mux := http.NewServeMux()

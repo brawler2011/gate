@@ -1,10 +1,11 @@
 package core
 
 import (
+	"strings"
+
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
-	"strings"
 )
 
 func PaginationDTO(p models.Pagination) corev1.PaginationModel {
@@ -126,6 +127,27 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 
 	// Convert visibility
 	visibility := string(c.Visibility)
+	monitorScope := "moderator"
+	submissionsListScope := "moderator"
+	submissionsReviewScope := "moderator"
+
+	if rawMonitorScope, ok := c.Settings["monitor_scope"]; ok {
+		if parsedMonitorScope, ok := rawMonitorScope.(string); ok && parsedMonitorScope != "" {
+			monitorScope = parsedMonitorScope
+		}
+	}
+
+	if rawSubmissionsListScope, ok := c.Settings["submissions_list_scope"]; ok {
+		if parsedSubmissionsListScope, ok := rawSubmissionsListScope.(string); ok && parsedSubmissionsListScope != "" {
+			submissionsListScope = parsedSubmissionsListScope
+		}
+	}
+
+	if rawSubmissionsReviewScope, ok := c.Settings["submissions_review_scope"]; ok {
+		if parsedSubmissionsReviewScope, ok := rawSubmissionsReviewScope.(string); ok && parsedSubmissionsReviewScope != "" {
+			submissionsReviewScope = parsedSubmissionsReviewScope
+		}
+	}
 
 	model := corev1.ContestModel{
 		Id:                     c.ID,
@@ -133,9 +155,9 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		Title:                  title,
 		Description:            c.Description,
 		Visibility:             visibility,
-		MonitorScope:           string(c.MonitorScope()),
-		SubmissionsListScope:   string(c.SubmissionsListScope()),
-		SubmissionsReviewScope: string(c.SubmissionsReviewScope()),
+		MonitorScope:           monitorScope,
+		SubmissionsListScope:   submissionsListScope,
+		SubmissionsReviewScope: submissionsReviewScope,
 		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,

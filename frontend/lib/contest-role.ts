@@ -10,7 +10,31 @@ export type ContestRole = "owner" | "moderator" | "participant";
 
 export type ContestRoleResponse = {
   role: ContestRole;
+  permissionsMask?: number;
 } | null;
+
+type ContestRoleApiResponse = {
+  role?: unknown;
+  permissions_mask?: unknown;
+};
+
+const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
+  if (!response || typeof response !== "object") {
+    return null;
+  }
+
+  const data = response as ContestRoleApiResponse;
+  if (data.role !== "owner" && data.role !== "moderator" && data.role !== "participant") {
+    return null;
+  }
+
+  const parsed: Exclude<ContestRoleResponse, null> = { role: data.role };
+  if (typeof data.permissions_mask === "number") {
+    parsed.permissionsMask = data.permissions_mask;
+  }
+
+  return parsed;
+};
 
 /**
  * Get the current user's role in a specific contest
@@ -27,12 +51,5 @@ export async function getMyContestRole(contestId: string): Promise<ContestRoleRe
     return null;
   }
   
-  // Validate that the role is one of the expected values
-  const role = response.role as ContestRole;
-  if (role === "owner" || role === "moderator" || role === "participant") {
-    return { role };
-  }
-  
-  // If role is not recognized, treat as no role
-  return null;
+  return parseContestRoleResponse(response);
 }

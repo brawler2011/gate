@@ -449,6 +449,7 @@ type Contest struct {
 	OrganizationID uuid.UUID                `json:"organization_id"`
 	OwnerID        pgtype.UUID              `json:"owner_id"`
 	Visibility     models.ContestVisibility `json:"visibility"`
+	Title          string                   `json:"title"`
 	ShortName      string                   `json:"short_name"`
 	Description    string                   `json:"description"`
 	Settings       []byte                   `json:"settings"`
@@ -457,14 +458,14 @@ type Contest struct {
 	EndTime        pgtype.Timestamptz       `json:"end_time"`
 	CreatedAt      time.Time                `json:"created_at"`
 	UpdatedAt      time.Time                `json:"updated_at"`
-	Title          string                   `json:"title"`
 }
 
 type ContestMember struct {
-	ContestID uuid.UUID          `json:"contest_id"`
-	UserID    uuid.UUID          `json:"user_id"`
-	Role      models.ContestRole `json:"role"`
-	CreatedAt time.Time          `json:"created_at"`
+	ContestID       uuid.UUID          `json:"contest_id"`
+	UserID          uuid.UUID          `json:"user_id"`
+	Role            models.ContestRole `json:"role"`
+	CreatedAt       time.Time          `json:"created_at"`
+	PermissionsMask int64              `json:"permissions_mask"`
 }
 
 type ContestProblem struct {
@@ -476,10 +477,11 @@ type ContestProblem struct {
 }
 
 type ContestTeam struct {
-	ContestID uuid.UUID          `json:"contest_id"`
-	TeamID    uuid.UUID          `json:"team_id"`
-	Role      models.ContestRole `json:"role"`
-	CreatedAt time.Time          `json:"created_at"`
+	ContestID       uuid.UUID          `json:"contest_id"`
+	TeamID          uuid.UUID          `json:"team_id"`
+	Role            models.ContestRole `json:"role"`
+	CreatedAt       time.Time          `json:"created_at"`
+	PermissionsMask int64              `json:"permissions_mask"`
 }
 
 type Organization struct {
@@ -530,13 +532,13 @@ type Problem struct {
 	OrganizationID uuid.UUID         `json:"organization_id"`
 	OwnerID        pgtype.UUID       `json:"owner_id"`
 	Visibility     ProblemVisibility `json:"visibility"`
+	Title          string            `json:"title"`
 	ShortName      string            `json:"short_name"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
 	TimeLimitMs    int32             `json:"time_limit_ms"`
 	MemoryLimitMb  int32             `json:"memory_limit_mb"`
-	Title          string            `json:"title"`
 	Manifest       []byte            `json:"manifest"`
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
 }
 
 type ProblemMember struct {
@@ -550,13 +552,13 @@ type ProblemPackage struct {
 	ID             uuid.UUID          `json:"id"`
 	ProblemID      uuid.UUID          `json:"problem_id"`
 	OrganizationID uuid.UUID          `json:"organization_id"`
+	Version        int32              `json:"version"`
 	PackageHash    string             `json:"package_hash"`
 	Url            *string            `json:"url"`
 	Status         PackageStatus      `json:"status"`
 	BuildLog       *string            `json:"build_log"`
 	CreatedAt      time.Time          `json:"created_at"`
 	CompiledAt     pgtype.Timestamptz `json:"compiled_at"`
-	Version        int32              `json:"version"`
 }
 
 type ProblemTeam struct {

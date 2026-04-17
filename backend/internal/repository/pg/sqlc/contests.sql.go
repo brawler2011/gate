@@ -132,7 +132,7 @@ const createContest = `-- name: CreateContest :one
 
 INSERT INTO contests (id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, organization_id, owner_id, visibility, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at, title
+RETURNING id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at
 `
 
 type CreateContestParams struct {
@@ -170,6 +170,7 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
+		&i.Title,
 		&i.ShortName,
 		&i.Description,
 		&i.Settings,
@@ -178,7 +179,6 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Title,
 	)
 	return i, err
 }
@@ -193,7 +193,7 @@ func (q *Queries) DeleteContest(ctx context.Context, id uuid.UUID) error {
 }
 
 const getContestByID = `-- name: GetContestByID :one
-SELECT id, organization_id, owner_id, visibility, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at, title FROM contests WHERE id = $1
+SELECT id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests WHERE id = $1
 `
 
 func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (Contest, error) {
@@ -204,6 +204,7 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (Contest, er
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
+		&i.Title,
 		&i.ShortName,
 		&i.Description,
 		&i.Settings,
@@ -212,13 +213,12 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (Contest, er
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Title,
 	)
 	return i, err
 }
 
 const getContestByShortName = `-- name: GetContestByShortName :one
-SELECT id, organization_id, owner_id, visibility, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at, title FROM contests
+SELECT id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests
 WHERE organization_id = $1 AND short_name = $2
 `
 
@@ -235,6 +235,7 @@ func (q *Queries) GetContestByShortName(ctx context.Context, arg GetContestBySho
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
+		&i.Title,
 		&i.ShortName,
 		&i.Description,
 		&i.Settings,
@@ -243,13 +244,12 @@ func (q *Queries) GetContestByShortName(ctx context.Context, arg GetContestBySho
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Title,
 	)
 	return i, err
 }
 
 const getContestMember = `-- name: GetContestMember :one
-SELECT contest_id, user_id, role, created_at FROM contest_members
+SELECT contest_id, user_id, role, created_at, permissions_mask FROM contest_members
 WHERE contest_id = $1 AND user_id = $2
 `
 
@@ -266,6 +266,7 @@ func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberPara
 		&i.UserID,
 		&i.Role,
 		&i.CreatedAt,
+		&i.PermissionsMask,
 	)
 	return i, err
 }
@@ -310,7 +311,7 @@ func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemPa
 }
 
 const listAllContests = `-- name: ListAllContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, c.title FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
 WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR c.visibility = $2::contest_visibility)
 ORDER BY c.created_at DESC
@@ -343,6 +344,7 @@ func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
+			&i.Title,
 			&i.ShortName,
 			&i.Description,
 			&i.Settings,
@@ -351,7 +353,6 @@ func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -364,7 +365,7 @@ func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams
 }
 
 const listContestMembers = `-- name: ListContestMembers :many
-SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username, u.email, u.name, u.surname
+SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, cm.permissions_mask, u.username, u.email, u.name, u.surname
 FROM contest_members cm
 JOIN users u ON cm.user_id = u.id
 WHERE cm.contest_id = $1
@@ -372,14 +373,15 @@ ORDER BY cm.created_at
 `
 
 type ListContestMembersRow struct {
-	ContestID uuid.UUID          `json:"contest_id"`
-	UserID    uuid.UUID          `json:"user_id"`
-	Role      models.ContestRole `json:"role"`
-	CreatedAt time.Time          `json:"created_at"`
-	Username  string             `json:"username"`
-	Email     string             `json:"email"`
-	Name      string             `json:"name"`
-	Surname   string             `json:"surname"`
+	ContestID       uuid.UUID          `json:"contest_id"`
+	UserID          uuid.UUID          `json:"user_id"`
+	Role            models.ContestRole `json:"role"`
+	CreatedAt       time.Time          `json:"created_at"`
+	PermissionsMask int64              `json:"permissions_mask"`
+	Username        string             `json:"username"`
+	Email           string             `json:"email"`
+	Name            string             `json:"name"`
+	Surname         string             `json:"surname"`
 }
 
 func (q *Queries) ListContestMembers(ctx context.Context, contestID uuid.UUID) ([]ListContestMembersRow, error) {
@@ -396,6 +398,7 @@ func (q *Queries) ListContestMembers(ctx context.Context, contestID uuid.UUID) (
 			&i.UserID,
 			&i.Role,
 			&i.CreatedAt,
+			&i.PermissionsMask,
 			&i.Username,
 			&i.Email,
 			&i.Name,
@@ -463,7 +466,7 @@ func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) 
 }
 
 const listContests = `-- name: ListContests :many
-SELECT id, organization_id, owner_id, visibility, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at, title FROM contests
+SELECT id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests
 WHERE organization_id = $1
   AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::contest_visibility)
@@ -499,6 +502,7 @@ func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]C
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
+			&i.Title,
 			&i.ShortName,
 			&i.Description,
 			&i.Settings,
@@ -507,7 +511,6 @@ func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]C
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -520,7 +523,7 @@ func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]C
 }
 
 const listUserAccessibleContests = `-- name: ListUserAccessibleContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, c.title FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
 WHERE user_has_contest_access($1, c.id)
 ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3
@@ -546,6 +549,7 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
+			&i.Title,
 			&i.ShortName,
 			&i.Description,
 			&i.Settings,
@@ -554,7 +558,6 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -567,7 +570,7 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 }
 
 const listUserAccessibleContestsByOrg = `-- name: ListUserAccessibleContestsByOrg :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, c.title FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
 WHERE user_has_contest_access($1, c.id)
   AND c.organization_id = $2
 ORDER BY c.created_at DESC
@@ -600,6 +603,7 @@ func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListU
 			&i.OrganizationID,
 			&i.OwnerID,
 			&i.Visibility,
+			&i.Title,
 			&i.ShortName,
 			&i.Description,
 			&i.Settings,
@@ -608,7 +612,6 @@ func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListU
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Title,
 		); err != nil {
 			return nil, err
 		}

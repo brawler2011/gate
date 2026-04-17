@@ -4,5 +4,9 @@
 /* eslint-disable */
 export type GetMyContestRoleResponseModel = {
     role: string;
+    /**
+     * Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access
+     */
+    permissions_mask?: number;
 };
 

@@ -13,9 +13,6 @@ import (
 func (h *CoreServer) ListTeams(ctx context.Context, request corev1.ListTeamsRequestObject) (corev1.ListTeamsResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Validate parameters
 	search := ""
@@ -79,9 +76,6 @@ func (h *CoreServer) ListTeams(ctx context.Context, request corev1.ListTeamsRequ
 func (h *CoreServer) CreateTeam(ctx context.Context, request corev1.CreateTeamRequestObject) (corev1.CreateTeamResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Validate request body
 	if err := validateCreateTeamRequest(request.Body.Name, request.Body.OrganizationId); err != nil {
@@ -116,9 +110,6 @@ func (h *CoreServer) CreateTeam(ctx context.Context, request corev1.CreateTeamRe
 func (h *CoreServer) GetTeam(ctx context.Context, request corev1.GetTeamRequestObject) (corev1.GetTeamResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Get team
 	team, err := h.teamsUC.GetTeam(ctx, request.Id, user.Id)
@@ -135,9 +126,6 @@ func (h *CoreServer) GetTeam(ctx context.Context, request corev1.GetTeamRequestO
 func (h *CoreServer) UpdateTeam(ctx context.Context, request corev1.UpdateTeamRequestObject) (corev1.UpdateTeamResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Validate request body
 	if err := validateUpdateTeamRequest(*request.Body); err != nil {
@@ -164,9 +152,6 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, request corev1.UpdateTeamRe
 func (h *CoreServer) DeleteTeam(ctx context.Context, request corev1.DeleteTeamRequestObject) (corev1.DeleteTeamResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Delete team
 	err := h.teamsUC.DeleteTeam(ctx, request.Id, user.Id)
@@ -181,9 +166,6 @@ func (h *CoreServer) DeleteTeam(ctx context.Context, request corev1.DeleteTeamRe
 func (h *CoreServer) ListTeamMembers(ctx context.Context, request corev1.ListTeamMembersRequestObject) (corev1.ListTeamMembersResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Validate parameters
 	err := validateListTeamsParams(request.Params.Page, request.Params.PageSize, nil)
@@ -207,9 +189,6 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, request corev1.ListTea
 func (h *CoreServer) AddTeamMember(ctx context.Context, request corev1.AddTeamMemberRequestObject) (corev1.AddTeamMemberResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Create input with default role "member"
 	input := &models.AddTeamMemberInput{
@@ -231,9 +210,6 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, request corev1.AddTeamMe
 func (h *CoreServer) RemoveTeamMember(ctx context.Context, request corev1.RemoveTeamMemberRequestObject) (corev1.RemoveTeamMemberResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Remove member
 	err := h.teamsUC.RemoveTeamMember(ctx, request.Id, request.Params.UserId, user.Id)
@@ -246,10 +222,10 @@ func (h *CoreServer) RemoveTeamMember(ctx context.Context, request corev1.Remove
 
 // containsIgnoreCase is a helper function to check if a string contains a substring (case-insensitive)
 func containsIgnoreCase(str, substr string) bool {
-	return len(str) >= len(substr) && 
-		(substr == "" || 
-		 len(substr) > 0 && 
-		 indexIgnoreCase(str, substr) >= 0)
+	return len(str) >= len(substr) &&
+		(substr == "" ||
+			len(substr) > 0 &&
+				indexIgnoreCase(str, substr) >= 0)
 }
 
 func indexIgnoreCase(str, substr string) int {

@@ -19,30 +19,15 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 
 	user := middleware.GetUser(ctx)
 
-	orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
-	if err != nil {
-		return nil, err
-	}
-	if len(orgs) == 0 {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "user has no organizations")
-	}
-
-	var orgID uuid.UUID
+	var requestedOrgID *uuid.UUID
 	if request.Params.OrganizationId != nil {
 		requested := uuid.UUID(*request.Params.OrganizationId)
-		found := false
-		for _, org := range orgs {
-			if org.ID == requested {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "organization not found or user is not a member")
-		}
-		orgID = requested
-	} else {
-		orgID = orgs[0].ID
+		requestedOrgID = &requested
+	}
+
+	orgID, err := h.organizationsUC.ResolveUserOrganizationID(ctx, user.Id, requestedOrgID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Generate short_name from UUID to ensure uniqueness
@@ -56,7 +41,7 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 		Description:    "",
 		Visibility:     models.ContestVisibilityPrivate,
 		Settings:       make(map[string]interface{}),
-		AccessPolicy:   make(map[string]interface{}),
+		AccessPolicy:   models.DefaultContestAccessPolicy(),
 		StartTime:      nil,
 		EndTime:        nil,
 	}
@@ -70,19 +55,9 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 }
 
 func (h *CoreServer) GetContest(ctx context.Context, request corev1.GetContestRequestObject) (corev1.GetContestResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
 	contest, err := h.contestsUC.GetContest(ctx, request.ContestId)
 	if err != nil {
 		return nil, err
-	}
-
-	canView, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetContest)
-	if err != nil {
-		return nil, err
-	}
-	if !canView {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
 	}
 
 	ps, err := h.contestsUC.GetContestProblems(ctx, request.ContestId)
@@ -126,19 +101,6 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 		return nil, err
 	}
 
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
-	if err != nil {
-		return nil, err
-	}
-	if !canUpdate {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
-	}
-
 	var settings *map[string]interface{}
 	if req.MonitorScope != nil || req.SubmissionsListScope != nil || req.SubmissionsReviewScope != nil {
 		s := make(map[string]interface{})
@@ -173,20 +135,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 }
 
 func (h *CoreServer) DeleteContest(ctx context.Context, request corev1.DeleteContestRequestObject) (corev1.DeleteContestResponseObject, error) {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	canAdmin, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionAdminContest)
-	if err != nil {
-		return nil, err
-	}
-	if !canAdmin {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to delete contest")
-	}
-
-	err = h.contestsUC.DeleteContest(ctx, request.ContestId)
+	err := h.contestsUC.DeleteContest(ctx, request.ContestId)
 	if err != nil {
 		return nil, err
 	}
@@ -198,15 +147,6 @@ func (h *CoreServer) ListAdminContests(ctx context.Context, request corev1.ListA
 	err := validateListContestsParams(request.Params.Page, request.Params.PageSize, request.Params.Search)
 	if err != nil {
 		return nil, err
-	}
-
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	if !user.IsAdmin() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "admin access required")
 	}
 
 	var visibility *string
@@ -252,16 +192,6 @@ func (h *CoreServer) ListUserContests(ctx context.Context, request corev1.ListUs
 		return nil, err
 	}
 
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	// Only allow user to see their own contests or admins
-	if request.Id != user.Id && !user.IsAdmin() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
-	}
-
 	var sortBy string
 	if request.Params.SortBy != nil {
 		sortBy = string(*request.Params.SortBy)
@@ -300,9 +230,6 @@ func (h *CoreServer) ListWorkshopContests(ctx context.Context, request corev1.Li
 	}
 
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	var sortBy string
 	if request.Params.SortBy != nil {
@@ -379,20 +306,7 @@ func (h *CoreServer) ListPublicContests(ctx context.Context, request corev1.List
 }
 
 func (h *CoreServer) CreateContestProblem(ctx context.Context, request corev1.CreateContestProblemRequestObject) (corev1.CreateContestProblemResponseObject, error) {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
-	if err != nil {
-		return nil, err
-	}
-	if !canUpdate {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
-	}
-
-	err = h.contestsUC.CreateContestProblem(ctx, models.ContestProblemCreation{
+	err := h.contestsUC.CreateContestProblem(ctx, models.ContestProblemCreation{
 		ContestId: request.ContestId,
 		ProblemId: request.Params.ProblemId,
 	})
@@ -404,19 +318,6 @@ func (h *CoreServer) CreateContestProblem(ctx context.Context, request corev1.Cr
 }
 
 func (h *CoreServer) GetContestProblem(ctx context.Context, request corev1.GetContestProblemRequestObject) (corev1.GetContestProblemResponseObject, error) {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	canView, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetContest)
-	if err != nil {
-		return nil, err
-	}
-	if !canView {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest problem")
-	}
-
 	p, err := h.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
 		ContestId: request.ContestId,
 		ProblemId: request.ProblemId,
@@ -436,21 +337,8 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, request corev1.GetCo
 }
 
 func (h *CoreServer) DeleteContestProblem(ctx context.Context, request corev1.DeleteContestProblemRequestObject) (corev1.DeleteContestProblemResponseObject, error) {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
-	if err != nil {
-		return nil, err
-	}
-	if !canUpdate {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
-	}
-
 	// Delete the problem
-	err = h.contestsUC.DeleteContestProblem(ctx, models.ContestProblemDeletion{
+	err := h.contestsUC.DeleteContestProblem(ctx, models.ContestProblemDeletion{
 		ContestId: request.ContestId,
 		ProblemId: request.ProblemId,
 	})
@@ -462,20 +350,7 @@ func (h *CoreServer) DeleteContestProblem(ctx context.Context, request corev1.De
 }
 
 func (h *CoreServer) CreateContestMember(ctx context.Context, request corev1.CreateContestMemberRequestObject) (corev1.CreateContestMemberResponseObject, error) {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
-	if err != nil {
-		return nil, err
-	}
-	if !canUpdate {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
-	}
-
-	err = h.contestsUC.CreateParticipant(ctx, models.ParticipantCreation{
+	err := h.contestsUC.CreateParticipant(ctx, models.ParticipantCreation{
 		ContestId: request.ContestId,
 		UserId:    request.Params.UserId,
 	})
@@ -487,20 +362,7 @@ func (h *CoreServer) CreateContestMember(ctx context.Context, request corev1.Cre
 }
 
 func (h *CoreServer) DeleteContestMember(ctx context.Context, request corev1.DeleteContestMemberRequestObject) (corev1.DeleteContestMemberResponseObject, error) {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	canUpdate, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionUpdateContest)
-	if err != nil {
-		return nil, err
-	}
-	if !canUpdate {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to edit contest")
-	}
-
-	err = h.contestsUC.DeleteParticipant(ctx, models.ParticipantDeletion{
+	err := h.contestsUC.DeleteParticipant(ctx, models.ParticipantDeletion{
 		ContestId: request.ContestId,
 		UserId:    request.Params.UserId,
 	})
@@ -513,9 +375,6 @@ func (h *CoreServer) DeleteContestMember(ctx context.Context, request corev1.Del
 
 func (h *CoreServer) UpdateContestMember(ctx context.Context, request corev1.UpdateContestMemberRequestObject) (corev1.UpdateContestMemberResponseObject, error) {
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	userId, err := uuid.Parse(request.Params.UserId.String())
 	if err != nil {
@@ -525,24 +384,6 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, request corev1.Upd
 	// Prevent user from updating their own role
 	if userId == user.Id {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "cannot update own role")
-	}
-
-	// Check if user is contest owner or global admin
-	// First check if user is global admin
-	isAdmin := user.IsAdmin()
-
-	// If not admin, check if user is contest owner
-	if !isAdmin {
-		contestMember, err := h.contestsUC.GetContestMember(ctx, &models.ContestPermissionGet{
-			ContestId: request.ContestId,
-			UserId:    user.Id,
-		})
-		if err != nil {
-			return nil, pkg.Wrap(pkg.NoPermission, err, "insufficient permission to update contest member")
-		}
-		if contestMember.ContestRole != models.ContestRoleOwner {
-			return nil, pkg.Wrap(pkg.NoPermission, nil, "only contest owner or admin can update contest member role")
-		}
 	}
 
 	// Validate role value
@@ -560,26 +401,6 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, request corev1.Upd
 }
 
 func (h *CoreServer) ListContestMembers(ctx context.Context, request corev1.ListContestMembersRequestObject) (corev1.ListContestMembersResponseObject, error) {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-
-	canView, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetMonitor)
-	if err != nil {
-		return nil, err
-	}
-
-	if !canView {
-		canView, err = h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionListOwnSubmissions)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if !canView {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
-	}
-
 	participantsList, err := h.contestsUC.ListParticipants(ctx, models.ParticipantsFilter{
 		Page:      request.Params.Page,
 		PageSize:  request.Params.PageSize,
@@ -612,63 +433,26 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, request corev1.List
 
 func (h *CoreServer) GetMyContestRole(ctx context.Context, request corev1.GetMyContestRoleRequestObject) (corev1.GetMyContestRoleResponseObject, error) {
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
-	contestMember, err := h.contestsUC.GetContestMember(ctx, &models.ContestPermissionGet{
-		ContestId: request.ContestId,
-		UserId:    user.Id,
-	})
+	contestRole, permissionsMask, err := h.permissionsUC.GetEffectiveContestRole(ctx, request.ContestId, user.Id)
 	if err != nil {
 		return nil, err
 	}
 
+	if contestRole == nil {
+		return corev1.GetMyContestRole200JSONResponse{}, nil
+	}
+
+	permissionsMaskValue := int64(permissionsMask)
+
 	return corev1.GetMyContestRole200JSONResponse{
-		Role: contestMember.ContestRole,
+		Role:            *contestRole,
+		PermissionsMask: &permissionsMaskValue,
 	}, nil
 }
 
 func (h *CoreServer) ListContestSubmissions(ctx context.Context, request corev1.ListContestSubmissionsRequestObject) (corev1.ListContestSubmissionsResponseObject, error) {
-	// Allow unauthenticated access for public contests
-	user := middleware.GetUser(ctx)
-
-	// Determine which userId to filter by and check permissions
-	var filterUserId *uuid.UUID
-
-	if request.Params.UserId == nil {
-		// No userId specified - request to get all members' submissions
-		// Need permission to list all users' submissions
-		canList, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionListUsersSubmissions)
-		if err != nil {
-			return nil, err
-		}
-		if !canList {
-			return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to list all contest submissions")
-		}
-		// Don't filter by userId - get all submissions
-		filterUserId = nil
-	} else if *request.Params.UserId == user.Id {
-		// UserId matches current user - check permission to view own submissions
-		canView, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionListOwnSubmissions)
-		if err != nil {
-			return nil, err
-		}
-		if !canView {
-			return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view own submissions in this contest")
-		}
-		filterUserId = &user.Id
-	} else {
-		// UserId is different - need permission to list other users' submissions
-		canList, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionListUsersSubmissions)
-		if err != nil {
-			return nil, err
-		}
-		if !canList {
-			return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view other users' submissions")
-		}
-		filterUserId = request.Params.UserId
-	}
+	filterUserId := request.Params.UserId
 
 	var order *int32
 	if request.Params.SortOrder != nil {

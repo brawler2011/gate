@@ -52,7 +52,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		Description:    "A test contest for submissions",
 		Visibility:     models.ContestVisibilityPublic,
 		Settings:       make(map[string]interface{}),
-		AccessPolicy:   make(map[string]interface{}),
+		AccessPolicy:   models.DefaultContestAccessPolicy(),
 	})
 	s.Require().NoError(err)
 

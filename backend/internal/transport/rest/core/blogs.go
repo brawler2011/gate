@@ -66,18 +66,6 @@ func (s *CoreServer) ListPosts(ctx context.Context, request corev1.ListPostsRequ
 func (s *CoreServer) CreatePost(ctx context.Context, request corev1.CreatePostRequestObject) (corev1.CreatePostResponseObject, error) {
 	// Get user from context
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return corev1.CreatePost401JSONResponse{
-			Error: stringPtr("unauthorized"),
-		}, nil
-	}
-
-	// Check if user is admin
-	if user.Role != "admin" {
-		return corev1.CreatePost403JSONResponse{
-			Error: stringPtr("forbidden: only admins can create posts"),
-		}, nil
-	}
 
 	// Parse multipart form
 	title, description, text, imageReader, filename, err := parsePostForm(request.Body)
@@ -132,21 +120,6 @@ func (s *CoreServer) GetPostById(ctx context.Context, request corev1.GetPostById
 
 // PatchPostById implements the PatchPostById operation
 func (s *CoreServer) PatchPostById(ctx context.Context, request corev1.PatchPostByIdRequestObject) (corev1.PatchPostByIdResponseObject, error) {
-	// Get user from context
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return corev1.PatchPostById401JSONResponse{
-			Error: stringPtr("unauthorized"),
-		}, nil
-	}
-
-	// Check if user is admin
-	if user.Role != "admin" {
-		return corev1.PatchPostById403JSONResponse{
-			Error: stringPtr("forbidden: only admins can update posts"),
-		}, nil
-	}
-
 	// Parse multipart form
 	title, description, text, imageReader, filename, err := parsePostForm(request.Body)
 	if err != nil {
@@ -183,21 +156,6 @@ func (s *CoreServer) PatchPostById(ctx context.Context, request corev1.PatchPost
 
 // DeletePostById implements the DeletePostById operation
 func (s *CoreServer) DeletePostById(ctx context.Context, request corev1.DeletePostByIdRequestObject) (corev1.DeletePostByIdResponseObject, error) {
-	// Get user from context
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return corev1.DeletePostById401JSONResponse{
-			Error: stringPtr("unauthorized"),
-		}, nil
-	}
-
-	// Check if user is admin
-	if user.Role != "admin" {
-		return corev1.DeletePostById403JSONResponse{
-			Error: stringPtr("forbidden: only admins can delete posts"),
-		}, nil
-	}
-
 	// Delete post
 	err := s.blogsUC.DeletePost(ctx, request.Id)
 	if err != nil {

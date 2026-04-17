@@ -69,10 +69,6 @@ func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProble
 func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreateProblemRequestObject) (corev1.CreateProblemResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "no session found")
-	}
-
 	if request.Params.Title == "" {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
 	}
@@ -110,17 +106,7 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 }
 
 func (h *CoreServer) DeleteProblem(ctx context.Context, request corev1.DeleteProblemRequestObject) (corev1.DeleteProblemResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
-	canAdmin, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionAdminProblem)
-	if err != nil {
-		return nil, err
-	}
-	if !canAdmin {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to delete problem")
-	}
-
-	err = h.problemsUC.DeleteProblem(ctx, request.Id)
+	err := h.problemsUC.DeleteProblem(ctx, request.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -129,16 +115,6 @@ func (h *CoreServer) DeleteProblem(ctx context.Context, request corev1.DeletePro
 }
 
 func (h *CoreServer) GetProblem(ctx context.Context, request corev1.GetProblemRequestObject) (corev1.GetProblemResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
-	canView, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionViewProblem)
-	if err != nil {
-		return nil, err
-	}
-	if !canView {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view problem")
-	}
-
 	problem, err := h.problemsUC.GetProblemById(ctx, request.Id)
 	if err != nil {
 		return nil, err
@@ -150,16 +126,6 @@ func (h *CoreServer) GetProblem(ctx context.Context, request corev1.GetProblemRe
 }
 
 func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdateProblemRequestObject) (corev1.UpdateProblemResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
-	canEdit, err := h.permissionsUC.HasProblemPermission(ctx, request.Id, user.Id, models.ActionEditProblem)
-	if err != nil {
-		return nil, err
-	}
-	if !canEdit {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to update problem")
-	}
-
 	if request.Body == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
@@ -181,7 +147,7 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdatePro
 	// Note: Other fields (Legend, InputFormat, etc.) are now stored in git repos
 	// and managed through the workshop/publish workflow
 
-	err = h.problemsUC.UpdateProblem(ctx, request.Id, update)
+	err := h.problemsUC.UpdateProblem(ctx, request.Id, update)
 	if err != nil {
 		return nil, err
 	}

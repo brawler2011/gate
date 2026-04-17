@@ -63,3 +63,16 @@ SELECT o.* FROM organizations o
 INNER JOIN organization_members om ON o.id = om.organization_id
 WHERE om.user_id = $1
 ORDER BY o.created_at DESC;
+
+-- name: GetLatestUserOrganizationID :one
+SELECT om.organization_id
+FROM organization_members om
+WHERE om.user_id = $1
+ORDER BY om.created_at DESC
+LIMIT 1;
+
+-- name: GetSpecificUserOrganizationID :one
+SELECT om.organization_id
+FROM organization_members om
+WHERE om.user_id = $1 AND om.organization_id = $2
+LIMIT 1;

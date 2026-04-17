@@ -17,11 +17,13 @@ import (
 
 type ContestsRepo struct {
 	queries *sqlc.Queries
+	db      *pgxpool.Pool
 }
 
 func NewContestsRepo(db *pgxpool.Pool) *ContestsRepo {
 	return &ContestsRepo{
 		queries: sqlc.New(db),
+		db:      db,
 	}
 }
 
@@ -287,9 +289,77 @@ func (r *ContestsRepo) GetContestProblems(ctx context.Context, contestId uuid.UU
 }
 
 func (r *ContestsRepo) GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]models.ContestTeam, error) {
-	// TODO: Implement when contest_teams table is fully integrated
-	// For now, return empty slice as teams feature is not fully implemented
-	return []models.ContestTeam{}, nil
+	rows, err := r.queries.ListContestTeams(ctx, contestId)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	teams := make([]models.ContestTeam, len(rows))
+	for i, row := range rows {
+		teams[i] = mapContestTeam(row)
+	}
+
+	return teams, nil
+}
+
+func (r *ContestsRepo) CreateContestTeam(
+	ctx context.Context,
+	contestID uuid.UUID,
+	teamID uuid.UUID,
+	role models.ContestRole,
+) error {
+	err := r.queries.AddContestTeam(ctx, sqlc.AddContestTeamParams{
+		ContestID: contestID,
+		TeamID:    teamID,
+		Role:      role,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+
+	if err := r.syncContestTeamPermissionsMask(ctx, contestID, teamID, role); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ContestsRepo) UpdateContestTeamRole(
+	ctx context.Context,
+	contestID uuid.UUID,
+	teamID uuid.UUID,
+	role models.ContestRole,
+) error {
+	err := r.queries.UpdateContestTeamRole(ctx, sqlc.UpdateContestTeamRoleParams{
+		ContestID: contestID,
+		TeamID:    teamID,
+		Role:      role,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+
+	if err := r.syncContestTeamPermissionsMask(ctx, contestID, teamID, role); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ContestsRepo) DeleteContestTeam(
+	ctx context.Context,
+	contestID uuid.UUID,
+	teamID uuid.UUID,
+) error {
+	err := r.queries.RemoveContestTeam(ctx, sqlc.RemoveContestTeamParams{
+		ContestID: contestID,
+		TeamID:    teamID,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+
+	return nil
 }
 
 func (r *ContestsRepo) ListContestMembers(ctx context.Context, filter models.ParticipantsFilter) ([]models.ContestMember, int32, error) {
@@ -318,6 +388,11 @@ func (r *ContestsRepo) CreateContestMember(ctx context.Context, c *models.Create
 	if err != nil {
 		return HandlePgErr(err)
 	}
+
+	if err := r.syncContestMemberPermissionsMask(ctx, c.ContestId, c.UserId, c.Role); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -329,6 +404,7 @@ func (r *ContestsRepo) GetContestMember(ctx context.Context, c *models.ContestPe
 	if err != nil {
 		return models.ContestMember{}, HandlePgErr(err)
 	}
+
 	return mapContestMember(member), nil
 }
 
@@ -352,6 +428,61 @@ func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.U
 	if err != nil {
 		return HandlePgErr(err)
 	}
+
+	if err := r.syncContestMemberPermissionsMask(ctx, contestId, userId, role); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ContestsRepo) syncContestMemberPermissionsMask(
+	ctx context.Context,
+	contestID uuid.UUID,
+	userID uuid.UUID,
+	role models.ContestRole,
+) error {
+	mask, ok := models.ContestRoleDefaultPermissionMask(role)
+	if !ok {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid contest role for permissions mask")
+	}
+
+	_, err := r.db.Exec(
+		ctx,
+		"UPDATE contest_members SET permissions_mask = $3 WHERE contest_id = $1 AND user_id = $2",
+		contestID,
+		userID,
+		int64(mask),
+	)
+	if err != nil {
+		return HandlePgErr(err)
+	}
+
+	return nil
+}
+
+func (r *ContestsRepo) syncContestTeamPermissionsMask(
+	ctx context.Context,
+	contestID uuid.UUID,
+	teamID uuid.UUID,
+	role models.ContestRole,
+) error {
+	mask, ok := models.ContestRoleDefaultPermissionMask(role)
+	if !ok {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid contest role for team permissions mask")
+	}
+
+	_, err := r.db.Exec(
+		ctx,
+		"UPDATE contest_teams SET permissions_mask = $3 WHERE contest_id = $1 AND team_id = $2",
+		contestID,
+		teamID,
+		int64(mask),
+	)
+	if err != nil {
+		return HandlePgErr(err)
+	}
+
 	return nil
 }
 
@@ -422,10 +553,25 @@ func mapListContestMembersRow(c sqlc.ListContestMembersRow) models.ContestMember
 }
 
 func mapContestMember(c sqlc.ContestMember) models.ContestMember {
+	mask := models.ContestPermissionMask(c.PermissionsMask)
 	return models.ContestMember{
-		UserID:      c.UserID,
-		ContestID:   c.ContestID,
-		ContestRole: models.ContestRole(c.Role),
+		UserID:          c.UserID,
+		ContestID:       c.ContestID,
+		ContestRole:     models.ContestRole(c.Role),
+		PermissionsMask: &mask,
+	}
+}
+
+func mapContestTeam(c sqlc.ListContestTeamsRow) models.ContestTeam {
+	mask := models.ContestPermissionMask(c.PermissionsMask)
+	return models.ContestTeam{
+		ContestID:       c.ContestID,
+		TeamID:          c.TeamID,
+		Role:            c.Role,
+		PermissionsMask: &mask,
+		TeamName:        c.TeamName,
+		TeamSlug:        c.TeamSlug,
+		CreatedAt:       c.CreatedAt,
 	}
 }
 

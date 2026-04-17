@@ -3,7 +3,7 @@ sql:
   - engine: "postgresql"
 
     queries: "internal/repository/pg/*.sql"
-    schema: "cmd/migrations/"
+    schema: "migrations/"
     gen:
       go:
         package: "sqlc"

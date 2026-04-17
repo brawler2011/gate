@@ -3561,6 +3561,10 @@ components:
         role:
           type: string
           example: "owner"
+        permissions_mask:
+          type: integer
+          format: int64
+          description: Effective contest action permissions represented as a bitmask.
     TestProgressEventType:
       type: string
       enum:

@@ -28,9 +28,6 @@ func generateLogin(name string) string {
 func (h *CoreServer) ListOrganizations(ctx context.Context, request corev1.ListOrganizationsRequestObject) (corev1.ListOrganizationsResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Validate parameters
 	search := ""
@@ -63,9 +60,6 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, request corev1.ListO
 func (h *CoreServer) CreateOrganization(ctx context.Context, request corev1.CreateOrganizationRequestObject) (corev1.CreateOrganizationResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Validate parameters
 	if err := validateCreateOrganizationParams(request.Params.Name); err != nil {
@@ -102,9 +96,6 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, request corev1.Crea
 func (h *CoreServer) GetOrganization(ctx context.Context, request corev1.GetOrganizationRequestObject) (corev1.GetOrganizationResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Get organization
 	org, err := h.organizationsUC.GetOrganization(ctx, request.Id, user.Id)
@@ -121,9 +112,6 @@ func (h *CoreServer) GetOrganization(ctx context.Context, request corev1.GetOrga
 func (h *CoreServer) UpdateOrganization(ctx context.Context, request corev1.UpdateOrganizationRequestObject) (corev1.UpdateOrganizationResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Validate request body
 	if err := validateUpdateOrganizationRequest(*request.Body); err != nil {
@@ -150,9 +138,6 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, request corev1.Upda
 func (h *CoreServer) DeleteOrganization(ctx context.Context, request corev1.DeleteOrganizationRequestObject) (corev1.DeleteOrganizationResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Delete organization
 	err := h.organizationsUC.DeleteOrganization(ctx, request.Id, user.Id)
@@ -167,9 +152,6 @@ func (h *CoreServer) DeleteOrganization(ctx context.Context, request corev1.Dele
 func (h *CoreServer) ListOrganizationMembers(ctx context.Context, request corev1.ListOrganizationMembersRequestObject) (corev1.ListOrganizationMembersResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Validate parameters
 	err := validateListOrganizationsParams(request.Params.Page, request.Params.PageSize, nil)
@@ -193,9 +175,6 @@ func (h *CoreServer) ListOrganizationMembers(ctx context.Context, request corev1
 func (h *CoreServer) AddOrganizationMember(ctx context.Context, request corev1.AddOrganizationMemberRequestObject) (corev1.AddOrganizationMemberResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Validate role
 	if !validateOrganizationRole(request.Params.Role) {
@@ -222,9 +201,6 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, request corev1.A
 func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, request corev1.RemoveOrganizationMemberRequestObject) (corev1.RemoveOrganizationMemberResponseObject, error) {
 	// Get current user
 	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 
 	// Remove member
 	err := h.organizationsUC.RemoveMember(ctx, request.Id, request.Params.UserId, user.Id)

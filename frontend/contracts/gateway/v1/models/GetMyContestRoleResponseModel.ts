@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export type GetMyContestRoleResponseModel = {
+    permissions_mask?: number;
     role: string;
 };
 

@@ -88,6 +88,21 @@ func (q *Queries) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getLatestUserOrganizationID = `-- name: GetLatestUserOrganizationID :one
+SELECT om.organization_id
+FROM organization_members om
+WHERE om.user_id = $1
+ORDER BY om.created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestUserOrganizationID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getLatestUserOrganizationID, userID)
+	var organization_id uuid.UUID
+	err := row.Scan(&organization_id)
+	return organization_id, err
+}
+
 const getOrganizationByID = `-- name: GetOrganizationByID :one
 SELECT id, login, name, description, avatar_url, created_at, updated_at FROM organizations WHERE id = $1
 `
@@ -146,6 +161,25 @@ func (q *Queries) GetOrganizationMember(ctx context.Context, arg GetOrganization
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getSpecificUserOrganizationID = `-- name: GetSpecificUserOrganizationID :one
+SELECT om.organization_id
+FROM organization_members om
+WHERE om.user_id = $1 AND om.organization_id = $2
+LIMIT 1
+`
+
+type GetSpecificUserOrganizationIDParams struct {
+	UserID         uuid.UUID `json:"user_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+}
+
+func (q *Queries) GetSpecificUserOrganizationID(ctx context.Context, arg GetSpecificUserOrganizationIDParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getSpecificUserOrganizationID, arg.UserID, arg.OrganizationID)
+	var organization_id uuid.UUID
+	err := row.Scan(&organization_id)
+	return organization_id, err
 }
 
 const getUserOrganizations = `-- name: GetUserOrganizations :many

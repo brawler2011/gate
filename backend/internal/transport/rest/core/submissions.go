@@ -12,15 +12,6 @@ import (
 func (h *CoreServer) CreateSubmission(ctx context.Context, request corev1.CreateSubmissionRequestObject) (corev1.CreateSubmissionResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
-	// Check if user can create solution in this contest
-	canCreate, err := h.permissionsUC.HasContestPermission(ctx, request.Params.ContestId, user.Id, models.ActionCreateSubmission)
-	if err != nil {
-		return nil, err
-	}
-	if !canCreate {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to create solution")
-	}
-
 	if request.Body == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
@@ -55,28 +46,15 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, request corev1.Create
 }
 
 func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmissionRequestObject) (corev1.GetSubmissionResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
 	submission, err := h.submissionsUC.GetSubmission(ctx, request.SubmissionId)
 	if err != nil {
 		return nil, err
-	}
-
-	// User can only view their own submission (simplified for now)
-	if submission.CreatedBy == nil || *submission.CreatedBy != user.Id {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
 	}
 
 	return corev1.GetSubmission200JSONResponse{Submission: SolutionDTO(submission)}, nil
 }
 
 func (h *CoreServer) ListSubmissions(ctx context.Context, request corev1.ListSubmissionsRequestObject) (corev1.ListSubmissionsResponseObject, error) {
-	user := middleware.GetUser(ctx)
-
-	if !user.IsAdmin() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "only admins can list submissions")
-	}
-
 	filter := ListSolutionsParamsDTO(request.Params)
 
 	solutionsList, err := h.submissionsUC.ListSubmissions(ctx, filter)

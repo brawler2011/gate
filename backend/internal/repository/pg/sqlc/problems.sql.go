@@ -91,7 +91,7 @@ const createProblem = `-- name: CreateProblem :one
 
 INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, organization_id, owner_id, visibility, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb, title, manifest
+RETURNING id, organization_id, owner_id, visibility, title, short_name, time_limit_ms, memory_limit_mb, manifest, created_at, updated_at
 `
 
 type CreateProblemParams struct {
@@ -119,13 +119,13 @@ func (q *Queries) CreateProblem(ctx context.Context, arg CreateProblemParams) (P
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
+		&i.Title,
 		&i.ShortName,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.TimeLimitMs,
 		&i.MemoryLimitMb,
-		&i.Title,
 		&i.Manifest,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

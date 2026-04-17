@@ -2,6 +2,7 @@ package pg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
@@ -254,4 +255,27 @@ func (r *OrganizationsRepo) GetUserOrganizations(ctx context.Context, userID uui
 	}
 
 	return result, nil
+}
+
+func (r *OrganizationsRepo) ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, bool, error) {
+	var orgID uuid.UUID
+	var err error
+
+	if requestedOrgID == nil {
+		orgID, err = r.q.GetLatestUserOrganizationID(ctx, userID)
+	} else {
+		orgID, err = r.q.GetSpecificUserOrganizationID(ctx, sqlc.GetSpecificUserOrganizationIDParams{
+			UserID:         userID,
+			OrganizationID: *requestedOrgID,
+		})
+	}
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.Nil, false, nil
+		}
+		return uuid.Nil, false, fmt.Errorf("failed to resolve user organization: %w", err)
+	}
+
+	return orgID, true, nil
 }
