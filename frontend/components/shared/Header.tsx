@@ -406,14 +406,6 @@ const Header = ({
               </Anchor>
               <Anchor
                 component={Link}
-                href="/contests"
-                className={classes.link}
-                underline="never"
-              >
-                Контесты
-              </Anchor>
-              <Anchor
-                component={Link}
                 href="/orgs"
                 className={classes.link}
                 underline="never"
@@ -485,15 +477,6 @@ const Header = ({
               onClick={closeDrawer}
             >
               Главная
-            </Anchor>
-            <Anchor
-              component={Link}
-              href="/contests"
-              className={classes.link}
-              underline="never"
-              onClick={closeDrawer}
-            >
-              Контесты
             </Anchor>
             <Anchor
               component={Link}

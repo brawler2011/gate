@@ -12,10 +12,6 @@ export async function getContests(page: number = 1, pageSize: number = 10, searc
     return Call((client) => client.default.listWorkshopContests({page, pageSize, search, organizationId}));
 }
 
-export async function getPublicContests(page: number = 1, pageSize: number = 10, search?: string) {
-    return Call((client) => client.default.listPublicContests({page, pageSize, search}));
-}
-
 export async function getUserContests(userId: string, page: number = 1, pageSize: number = 10, search?: string) {
     return Call((client) => client.default.listUserContests({id: userId, page, pageSize, search}));
 }
