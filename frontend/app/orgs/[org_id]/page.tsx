@@ -1,19 +1,46 @@
-import { DefaultLayout } from '@/components/shared';
-import { OrgPageActions, OrgTabs } from '@/components/orgs';
-import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { getContests, getOrganization, getProblems, listOrganizationMembers, listTeams } from '@/lib/actions';
-import { Container, Group, Stack, Text, Title } from '@mantine/core';
-import { notFound } from 'next/navigation';
+import { OrgTabs } from "@/components/orgs";
+import { DefaultLayout } from "@/components/shared";
+import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
+import {
+  getContests,
+  getOrganization,
+  getProblems,
+  listOrganizationMembers,
+  listTeams,
+} from "@/lib/actions";
+import {
+  buildOrgHeaderNav,
+  ORG_OVERVIEW_TABS,
+  type OrgOverviewTab,
+} from "@/lib/org-header-nav";
+import { Container, Stack, Text, Title } from "@mantine/core";
+import { notFound } from "next/navigation";
 
-type Props = { params: Promise<{ org_id: string }> };
+function isOrgOverviewTab(value: string | undefined): value is OrgOverviewTab {
+  return ORG_OVERVIEW_TABS.includes(value as OrgOverviewTab);
+}
 
-export default async function OrgPage({ params }: Props) {
+type Props = {
+  params: Promise<{ org_id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+};
+
+export default async function OrgPage({ params, searchParams }: Props) {
   const { org_id } = await params;
+  const { tab } = await searchParams;
+  const activeTab: OrgOverviewTab = isOrgOverviewTab(tab) ? tab : "contests";
+  const orgHeaderNav = buildOrgHeaderNav({ orgId: org_id, activeTab });
 
   const [orgError, orgData] = await getOrganization(org_id);
   if (orgError) {
     if (orgError.status === 404) notFound();
-    return <DefaultLayout><Container size="lg" py="lg"><ErrorDisplay error={orgError} /></Container></DefaultLayout>;
+    return (
+      <DefaultLayout>
+        <Container size="lg" py="lg">
+          <ErrorDisplay error={orgError} />
+        </Container>
+      </DefaultLayout>
+    );
   }
 
   const [
@@ -35,16 +62,17 @@ export default async function OrgPage({ params }: Props) {
   const contests = contestsData?.contests ?? [];
 
   return (
-    <DefaultLayout>
+    <DefaultLayout headerSecondaryNavItems={orgHeaderNav}>
       <Container size="lg" py="lg">
         <Stack gap="md">
-          <Group justify="space-between" align="flex-end">
-            <div>
-              <Title order={2}>{org.name}</Title>
-              {org.description && <Text c="dimmed" size="sm">{org.description}</Text>}
-            </div>
-            <OrgPageActions orgId={org_id} />
-          </Group>
+          <div>
+            <Title order={2}>{org.name}</Title>
+            {org.description && (
+              <Text c="dimmed" size="sm">
+                {org.description}
+              </Text>
+            )}
+          </div>
 
           <OrgTabs
             members={members}
@@ -52,6 +80,7 @@ export default async function OrgPage({ params }: Props) {
             problems={problems}
             contests={contests}
             orgId={org_id}
+            activeTab={activeTab}
             membersError={membersError}
             teamsError={teamsError}
             problemsError={problemsError}

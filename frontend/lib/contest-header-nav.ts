@@ -11,7 +11,14 @@ export type ContestHeaderNavKey =
   | "monitor"
   | "manage";
 
-export type HeaderSecondaryNavIcon = ContestHeaderNavKey;
+export type HeaderSecondaryNavIcon =
+  | ContestHeaderNavKey
+  | "contests"
+  | "problems"
+  | "teams"
+  | "members"
+  | "settings"
+  | "workshop";
 
 export type HeaderSecondaryNavItem = {
   key: string;

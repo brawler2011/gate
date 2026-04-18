@@ -1,11 +1,13 @@
 "use client";
 
+import { StatusMessage } from "@/components/shared/StatusMessage";
 import {
   addOrganizationMember,
   listOrganizationMembers,
   removeOrganizationMember,
   searchUsers,
-} from '@/lib/actions';
+} from "@/lib/actions";
+import type { OrganizationMemberModel } from "@contracts/gateway/v1";
 import {
   ActionIcon,
   Autocomplete,
@@ -19,22 +21,22 @@ import {
   Stack,
   Table,
   Text,
-} from '@mantine/core';
-import { useDebouncedValue } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
-import { IconPlus, IconTrash, IconUsers } from '@tabler/icons-react';
-import { useCallback, useEffect, useState } from 'react';
-import type { OrganizationMemberModel } from '@contracts/gateway/v1';
-import { StatusMessage } from '@/components/shared/StatusMessage';
+} from "@mantine/core";
+import { useDebouncedValue } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
+import { IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
+import { useCallback, useEffect, useState } from "react";
 
 const ROLE_OPTIONS = [
-  { label: 'Владелец', value: 'owner', color: 'red' },
-  { label: 'Администратор', value: 'admin', color: 'orange' },
-  { label: 'Участник', value: 'member', color: 'blue' },
+  { label: "Владелец", value: "owner", color: "red" },
+  { label: "Администратор", value: "admin", color: "orange" },
+  { label: "Участник", value: "member", color: "blue" },
 ];
 
 function getRoleDisplay(role: string) {
-  return ROLE_OPTIONS.find((r) => r.value === role) ?? { label: role, color: 'gray' };
+  return (
+    ROLE_OPTIONS.find((r) => r.value === role) ?? { label: role, color: "gray" }
+  );
 }
 
 type Props = { orgId: string };
@@ -42,15 +44,20 @@ type Props = { orgId: string };
 export function OrgMembersManagement({ orgId }: Props) {
   const [members, setMembers] = useState<OrganizationMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
-  const [searchResults, setSearchResults] = useState<{ value: string; label: string }[]>([]);
+  const [searchResults, setSearchResults] = useState<
+    { value: string; label: string }[]
+  >([]);
   const [searching, setSearching] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>('member');
+  const [selectedRole, setSelectedRole] = useState<string>("member");
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [status, setStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
@@ -59,29 +66,44 @@ export function OrgMembersManagement({ orgId }: Props) {
     if (data) setMembers(data.members);
   }, [orgId]);
 
-  useEffect(() => { loadMembers(); }, [loadMembers]);
+  useEffect(() => {
+    loadMembers();
+  }, [loadMembers]);
 
   useEffect(() => {
-    if (!debouncedQuery || debouncedQuery.length < 2) { setSearchResults([]); return; }
+    if (!debouncedQuery || debouncedQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
     setSearching(true);
     searchUsers(debouncedQuery).then(([, data]) => {
       setSearching(false);
-      setSearchResults((data?.users ?? []).map((u) => ({ value: u.id, label: u.username })));
+      setSearchResults(
+        (data?.users ?? []).map((u) => ({ value: u.id, label: u.username })),
+      );
     });
   }, [debouncedQuery]);
 
   const handleAdd = async () => {
     if (!selectedUserId) return;
     setAdding(true);
-    const [error] = await addOrganizationMember(orgId, selectedUserId, selectedRole as 'owner' | 'admin' | 'member');
+    const [error] = await addOrganizationMember(
+      orgId,
+      selectedUserId,
+      selectedRole as "owner" | "admin" | "member",
+    );
     setAdding(false);
     if (error) {
-      notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });
-      setStatus({ type: 'error', message: error.message });
+      notifications.show({
+        title: "Ошибка",
+        message: error.message,
+        color: "red",
+      });
+      setStatus({ type: "error", message: error.message });
       return;
     }
-    setStatus({ type: 'success', message: 'Участник добавлен' });
-    setSearchQuery('');
+    setStatus({ type: "success", message: "Участник добавлен" });
+    setSearchQuery("");
     setSelectedUserId(null);
     await loadMembers();
   };
@@ -91,38 +113,50 @@ export function OrgMembersManagement({ orgId }: Props) {
     const [error] = await removeOrganizationMember(orgId, userId);
     setDeletingId(null);
     if (error) {
-      notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });
-      setStatus({ type: 'error', message: error.message });
+      notifications.show({
+        title: "Ошибка",
+        message: error.message,
+        color: "red",
+      });
+      setStatus({ type: "error", message: error.message });
       return;
     }
-    setStatus({ type: 'success', message: 'Участник удалён' });
+    setStatus({ type: "success", message: "Участник удалён" });
     await loadMembers();
   };
 
   return (
     <>
       <Stack gap="md">
-        <Card withBorder padding="md">
-          <Group gap="sm" align="flex-end">
+        <Card withBorder padding="lg">
+          <Group gap="md" align="flex-end">
             <Autocomplete
+              size="md"
               placeholder="Поиск пользователя..."
               value={searchQuery}
-              onChange={(v) => { setSearchQuery(v); setSelectedUserId(null); }}
+              onChange={(v) => {
+                setSearchQuery(v);
+                setSelectedUserId(null);
+              }}
               onOptionSubmit={(v) => {
                 setSelectedUserId(v);
-                setSearchQuery(searchResults.find((r) => r.value === v)?.label ?? v);
+                setSearchQuery(
+                  searchResults.find((r) => r.value === v)?.label ?? v,
+                );
               }}
               data={searchResults}
               rightSection={searching ? <Loader size="xs" /> : null}
               style={{ flex: 1 }}
             />
             <Select
+              size="md"
               data={ROLE_OPTIONS}
               value={selectedRole}
-              onChange={(v) => setSelectedRole(v ?? 'member')}
-              w={160}
+              onChange={(v) => setSelectedRole(v ?? "member")}
+              w={180}
             />
             <Button
+              size="md"
               onClick={handleAdd}
               loading={adding}
               disabled={!selectedUserId}
@@ -134,12 +168,16 @@ export function OrgMembersManagement({ orgId }: Props) {
         </Card>
 
         {loading ? (
-          <Center py="xl"><Loader /></Center>
+          <Center py="xl">
+            <Loader />
+          </Center>
         ) : members.length === 0 ? (
           <Center py="xl">
             <Stack align="center" gap="sm">
               <IconUsers size={32} color="var(--mantine-color-dimmed)" />
-              <Text size="sm" c="dimmed">Нет участников</Text>
+              <Text size="sm" c="dimmed">
+                Нет участников
+              </Text>
             </Stack>
           </Center>
         ) : (
@@ -158,20 +196,27 @@ export function OrgMembersManagement({ orgId }: Props) {
                 return (
                   <Table.Tr key={m.user_id}>
                     <Table.Td>
-                      <Text size="sm" fw={500}>{m.username}</Text>
+                      <Text size="sm" fw={500}>
+                        {m.username}
+                      </Text>
                     </Table.Td>
                     <Table.Td>
-                      <Badge color={role.color} variant="filled" size="md" tt="none">
+                      <Badge
+                        color={role.color}
+                        variant="filled"
+                        size="md"
+                        tt="none"
+                      >
                         {role.label}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        {new Date(m.created_at).toLocaleDateString('ru-RU')}
+                        {new Date(m.created_at).toLocaleDateString("ru-RU")}
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      {m.role !== 'owner' && (
+                      {m.role !== "owner" && (
                         <ActionIcon
                           color="red"
                           variant="subtle"
@@ -190,8 +235,8 @@ export function OrgMembersManagement({ orgId }: Props) {
         )}
       </Stack>
       <StatusMessage
-        type={status?.type ?? 'success'}
-        message={status?.message ?? ''}
+        type={status?.type ?? "success"}
+        message={status?.message ?? ""}
         opened={!!status}
         onClose={() => setStatus(null)}
       />

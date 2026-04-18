@@ -33,7 +33,11 @@ import {
   IconSend,
   IconSettings,
   IconSun,
+  IconTools,
+  IconTrophy,
   IconUser,
+  IconUsers,
+  IconUsersGroup,
 } from "@tabler/icons-react";
 import cx from "clsx";
 import NextImage from "next/image";
@@ -60,6 +64,12 @@ const NAV_ICON_MAP: Record<
   allsubmissions: IconMail,
   monitor: IconDeviceDesktop,
   manage: IconSettings,
+  contests: IconTrophy,
+  problems: IconPuzzle,
+  teams: IconUsersGroup,
+  members: IconUsers,
+  settings: IconSettings,
+  workshop: IconTools,
 };
 
 const useIsomorphicLayoutEffect =

@@ -1,18 +1,28 @@
-import type { OrganizationMemberModel } from '@contracts/gateway/v1';
-import { Table, Badge, Text } from '@mantine/core';
+"use client";
+
+import type { OrganizationMemberModel } from "@contracts/gateway/v1";
+import { Badge, Table, Text } from "@mantine/core";
 
 const ROLE_COLORS: Record<string, string> = {
-  owner: 'red', admin: 'orange', member: 'gray',
+  owner: "red",
+  admin: "orange",
+  member: "gray",
 };
 const ROLE_LABELS: Record<string, string> = {
-  owner: 'Владелец', admin: 'Администратор', member: 'Участник',
+  owner: "Владелец",
+  admin: "Администратор",
+  member: "Участник",
 };
 
 type Props = { members: OrganizationMemberModel[] };
 
 export function OrgMembersTab({ members }: Props) {
   if (members.length === 0) {
-    return <Text c="dimmed" py="xl" ta="center">Нет участников</Text>;
+    return (
+      <Text c="dimmed" py="xl" ta="center">
+        Нет участников
+      </Text>
+    );
   }
   return (
     <Table verticalSpacing="sm">
@@ -26,15 +36,21 @@ export function OrgMembersTab({ members }: Props) {
       <Table.Tbody>
         {members.map((m) => (
           <Table.Tr key={m.user_id}>
-            <Table.Td><Text size="sm">{m.username}</Text></Table.Td>
             <Table.Td>
-              <Badge color={ROLE_COLORS[m.role] ?? 'gray'} variant="light" size="sm">
+              <Text size="sm">{m.username}</Text>
+            </Table.Td>
+            <Table.Td>
+              <Badge
+                color={ROLE_COLORS[m.role] ?? "gray"}
+                variant="light"
+                size="sm"
+              >
                 {ROLE_LABELS[m.role] ?? m.role}
               </Badge>
             </Table.Td>
             <Table.Td>
               <Text size="sm" c="dimmed">
-                {new Date(m.created_at).toLocaleDateString('ru-RU')}
+                {new Date(m.created_at).toLocaleDateString("ru-RU")}
               </Text>
             </Table.Td>
           </Table.Tr>

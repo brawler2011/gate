@@ -1,28 +1,24 @@
-import { DefaultLayout } from '@/components/shared';
-import { OrgSettingsForm } from '@/components/orgs/OrgSettingsForm';
-import { OrgMembersManagement } from '@/components/orgs/OrgMembersManagement';
-import { OrgDangerZone } from '@/components/orgs/OrgDangerZone';
-import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { getOrganization } from '@/lib/actions';
-import { Container, Stack } from '@mantine/core';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { IconAlertTriangle, IconArrowLeft, IconSettings, IconUsers } from '@tabler/icons-react';
-import classes from './styles.module.css';
+import { OrgDangerZone } from "@/components/orgs/OrgDangerZone";
+import { OrgMembersManagement } from "@/components/orgs/OrgMembersManagement";
+import { OrgSettingsForm } from "@/components/orgs/OrgSettingsForm";
+import { OrgSettingsMobileNav } from "@/components/orgs/OrgSettingsMobileNav";
+import { ORG_SETTINGS_NAV_SECTIONS } from "@/components/orgs/OrgSettingsNavShared";
+import { OrgSettingsSidebarNav } from "@/components/orgs/OrgSettingsSidebarNav";
+import { DefaultLayout } from "@/components/shared";
+import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
+import { getOrganization } from "@/lib/actions";
+import { buildOrgHeaderNav } from "@/lib/org-header-nav";
+import { Box, Container, Stack } from "@mantine/core";
+import { notFound } from "next/navigation";
+import classes from "./styles.module.css";
 
 const SECTIONS = {
-  SETTINGS: 'settings',
-  MEMBERS: 'members',
-  DANGER: 'danger',
+  SETTINGS: "settings",
+  MEMBERS: "members",
+  DANGER: "danger",
 } as const;
 
-type Section = typeof SECTIONS[keyof typeof SECTIONS];
-
-const NAV_SECTIONS = [
-  { key: SECTIONS.SETTINGS, label: 'Настройки', icon: IconSettings },
-  { key: SECTIONS.MEMBERS, label: 'Участники', icon: IconUsers },
-  { key: SECTIONS.DANGER, label: 'Опасная зона', icon: IconAlertTriangle },
-] as const;
+type Section = (typeof SECTIONS)[keyof typeof SECTIONS];
 
 type Props = {
   params: Promise<{ org_id: string }>;
@@ -31,14 +27,16 @@ type Props = {
 
 export default async function OrgSettingsPage({ params, searchParams }: Props) {
   const { org_id } = await params;
-  const { section = 'settings' } = await searchParams;
+  const { section = "settings" } = await searchParams;
 
   const [error, data] = await getOrganization(org_id);
   if (error) {
     if (error.status === 404) notFound();
     return (
       <DefaultLayout>
-        <Container size="sm" py="lg"><ErrorDisplay error={error} /></Container>
+        <Container size="sm" py="lg">
+          <ErrorDisplay error={error} />
+        </Container>
       </DefaultLayout>
     );
   }
@@ -48,46 +46,42 @@ export default async function OrgSettingsPage({ params, searchParams }: Props) {
   const activeSection = (
     validSections.includes(section as Section) ? section : SECTIONS.SETTINGS
   ) as Section;
+  const orgHeaderNav = buildOrgHeaderNav({
+    orgId: org_id,
+    activeTab: "settings",
+  });
 
   return (
-    <DefaultLayout>
-      <Container size="sm" py="lg">
+    <DefaultLayout headerSecondaryNavItems={orgHeaderNav}>
+      <Container size="lg" py="lg">
         <Stack gap="md">
-          <Link href={`/orgs/${org_id}`} className={classes.tab} style={{ alignSelf: 'flex-start' }}>
-            <IconArrowLeft size={16} />
-            Назад к организации
-          </Link>
+          <Box className={classes.manageLayout}>
+            <OrgSettingsSidebarNav
+              orgId={org_id}
+              activeSection={activeSection}
+              sections={ORG_SETTINGS_NAV_SECTIONS}
+            />
 
-          <div>
-            <div className={classes.tabRow}>
-              {NAV_SECTIONS.map((s) => {
-                const Icon = s.icon;
-                const isActive = activeSection === s.key;
-                return (
-                  <Link
-                    key={s.key}
-                    href={`/orgs/${org_id}/settings?section=${s.key}`}
-                    className={`${classes.tab} ${isActive ? classes.tabActive : ''}`}
-                  >
-                    <Icon size={16} />
-                    {s.label}
-                  </Link>
-                );
-              })}
-            </div>
+            <Box className={classes.manageContent}>
+              <OrgSettingsMobileNav
+                orgId={org_id}
+                activeSection={activeSection}
+                sections={ORG_SETTINGS_NAV_SECTIONS}
+              />
 
-            <div className={classes.contentPanel}>
-              {activeSection === SECTIONS.SETTINGS && (
-                <OrgSettingsForm org={org} />
-              )}
-              {activeSection === SECTIONS.MEMBERS && (
-                <OrgMembersManagement orgId={org_id} />
-              )}
-              {activeSection === SECTIONS.DANGER && (
-                <OrgDangerZone orgId={org_id} orgName={org.name} />
-              )}
-            </div>
-          </div>
+              <Box className={classes.contentPanel}>
+                {activeSection === SECTIONS.SETTINGS && (
+                  <OrgSettingsForm org={org} />
+                )}
+                {activeSection === SECTIONS.MEMBERS && (
+                  <OrgMembersManagement orgId={org_id} />
+                )}
+                {activeSection === SECTIONS.DANGER && (
+                  <OrgDangerZone orgId={org_id} orgName={org.name} />
+                )}
+              </Box>
+            </Box>
+          </Box>
         </Stack>
       </Container>
     </DefaultLayout>
