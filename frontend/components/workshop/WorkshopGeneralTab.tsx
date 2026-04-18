@@ -13,7 +13,6 @@ import {
   Grid,
   Group,
   NumberInput,
-  ScrollArea,
   Select,
   Stack,
   Text,
@@ -158,7 +157,7 @@ export function WorkshopGeneralTab({ problemId }: Props) {
   };
 
   return (
-    <ScrollArea style={{ flex: 1 }} p="lg">
+    <Box p="lg">
       <Stack gap="lg" maw={900} mx="auto">
         <SectionPaper title="Настройки задачи">
           {isLoading || !limits ? (
@@ -287,7 +286,6 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                     setIsReadmeDirty(true);
                   }}
                   minRows={8}
-                  maxRows={20}
                   autosize
                   styles={{
                     input: {
@@ -313,6 +311,6 @@ export function WorkshopGeneralTab({ problemId }: Props) {
           )}
         </SectionPaper>
       </Stack>
-    </ScrollArea>
+    </Box>
   );
 }

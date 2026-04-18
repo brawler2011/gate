@@ -2,16 +2,12 @@
 .fileBar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 8px 16px;
   border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
-  overflow-x: auto;
+  overflow: visible;
   flex-shrink: 0;
-  scrollbar-width: none;
-}
-
-.fileBar::-webkit-scrollbar {
-  display: none;
 }
 
 /* File pill button */

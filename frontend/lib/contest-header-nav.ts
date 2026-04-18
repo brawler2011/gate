@@ -14,10 +14,10 @@ export type ContestHeaderNavKey =
 export type HeaderSecondaryNavIcon = ContestHeaderNavKey;
 
 export type HeaderSecondaryNavItem = {
-  key: ContestHeaderNavKey;
+  key: string;
   label: string;
   href: string;
-  icon: HeaderSecondaryNavIcon;
+  icon?: HeaderSecondaryNavIcon;
   active?: boolean;
 };
 

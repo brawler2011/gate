@@ -217,7 +217,7 @@ const SecondaryNav = ({ items }: { items: HeaderSecondaryNavItem[] }) => {
       <div className={classes.secondaryNavInner} ref={containerRef}>
         <div className={classes.secondaryNavVisible}>
           {visibleItems.map((item) => {
-            const Icon = NAV_ICON_MAP[item.icon];
+            const Icon = item.icon ? NAV_ICON_MAP[item.icon] : undefined;
 
             return (
               <Link
@@ -228,7 +228,7 @@ const SecondaryNav = ({ items }: { items: HeaderSecondaryNavItem[] }) => {
                   item.active && classes.secondaryNavLinkActive,
                 )}
               >
-                <Icon size={15} />
+                {Icon ? <Icon size={15} /> : null}
                 {item.label}
               </Link>
             );
@@ -258,7 +258,7 @@ const SecondaryNav = ({ items }: { items: HeaderSecondaryNavItem[] }) => {
             <Popover.Dropdown p="xs">
               <Stack gap={4}>
                 {overflowItems.map((item) => {
-                  const Icon = NAV_ICON_MAP[item.icon];
+                  const Icon = item.icon ? NAV_ICON_MAP[item.icon] : undefined;
 
                   return (
                     <Link
@@ -270,7 +270,7 @@ const SecondaryNav = ({ items }: { items: HeaderSecondaryNavItem[] }) => {
                       )}
                       onClick={() => setMoreOpened(false)}
                     >
-                      <Icon size={15} />
+                      {Icon ? <Icon size={15} /> : null}
                       {item.label}
                     </Link>
                   );
@@ -283,7 +283,7 @@ const SecondaryNav = ({ items }: { items: HeaderSecondaryNavItem[] }) => {
 
       <div className={classes.secondaryNavMeasure} aria-hidden>
         {items.map((item, index) => {
-          const Icon = NAV_ICON_MAP[item.icon];
+          const Icon = item.icon ? NAV_ICON_MAP[item.icon] : undefined;
 
           return (
             <span
@@ -293,7 +293,7 @@ const SecondaryNav = ({ items }: { items: HeaderSecondaryNavItem[] }) => {
               }}
               className={classes.secondaryNavLink}
             >
-              <Icon size={15} />
+              {Icon ? <Icon size={15} /> : null}
               {item.label}
             </span>
           );

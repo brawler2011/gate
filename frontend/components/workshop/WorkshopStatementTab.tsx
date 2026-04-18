@@ -10,7 +10,6 @@ import {
   Box,
   Button,
   Group,
-  ScrollArea,
   Stack,
   Text,
   TextInput,
@@ -272,7 +271,7 @@ export function WorkshopStatementTab({ problemId }: Props) {
   return (
     <Box className={classes.root}>
       <Box className={classes.editorPane}>
-        <ScrollArea style={{ height: "100%" }} p="lg">
+        <Box p="lg">
           <Stack gap="lg" maw={900} mx="auto">
             <SectionPaper title="Условие задачи (statement)">
               {isLoading ? (
@@ -298,7 +297,6 @@ export function WorkshopStatementTab({ problemId }: Props) {
                           patchStatement({ legend: e.currentTarget.value })
                         }
                         minRows={6}
-                        maxRows={20}
                         autosize
                       />
 
@@ -311,7 +309,6 @@ export function WorkshopStatementTab({ problemId }: Props) {
                           })
                         }
                         minRows={4}
-                        maxRows={16}
                         autosize
                       />
 
@@ -324,7 +321,6 @@ export function WorkshopStatementTab({ problemId }: Props) {
                           })
                         }
                         minRows={4}
-                        maxRows={16}
                         autosize
                       />
 
@@ -335,7 +331,6 @@ export function WorkshopStatementTab({ problemId }: Props) {
                           patchStatement({ notes: e.currentTarget.value })
                         }
                         minRows={3}
-                        maxRows={14}
                         autosize
                       />
 
@@ -346,7 +341,6 @@ export function WorkshopStatementTab({ problemId }: Props) {
                           patchStatement({ interaction: e.currentTarget.value })
                         }
                         minRows={3}
-                        maxRows={14}
                         autosize
                       />
 
@@ -357,7 +351,6 @@ export function WorkshopStatementTab({ problemId }: Props) {
                           patchStatement({ scoring: e.currentTarget.value })
                         }
                         minRows={3}
-                        maxRows={14}
                         autosize
                       />
 
@@ -377,11 +370,11 @@ export function WorkshopStatementTab({ problemId }: Props) {
               )}
             </SectionPaper>
           </Stack>
-        </ScrollArea>
+        </Box>
       </Box>
 
       <Box className={classes.previewPane} visibleFrom="md">
-        <ScrollArea style={{ height: "100%" }} p="lg">
+        <Box p="lg">
           <Stack gap="lg" maw={900} mx="auto">
             {isLoading || !deferredStatement || !hasPreviewMeta(previewMeta) ? (
               <Text c="dimmed" size="sm">
@@ -394,7 +387,7 @@ export function WorkshopStatementTab({ problemId }: Props) {
               />
             )}
           </Stack>
-        </ScrollArea>
+        </Box>
       </Box>
     </Box>
   );

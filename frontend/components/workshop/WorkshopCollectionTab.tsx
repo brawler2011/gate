@@ -270,9 +270,9 @@ export function WorkshopCollectionTab({
 
   if (isLoadingFiles) {
     return (
-      <Stack gap={0} style={{ flex: 1, overflow: "hidden" }}>
+      <Stack gap={0}>
         {fileBar}
-        <Center style={{ flex: 1 }}>
+        <Center py="xl">
           <Loader size="sm" />
         </Center>
       </Stack>
@@ -281,9 +281,9 @@ export function WorkshopCollectionTab({
 
   if (leafFiles.length === 0) {
     return (
-      <Stack gap={0} style={{ flex: 1, overflow: "hidden" }}>
+      <Stack gap={0}>
         {fileBar}
-        <Center style={{ flex: 1 }}>
+        <Center py="xl">
           <Stack align="center" gap="xs">
             <IconFile size={40} color="var(--mantine-color-dimmed)" />
             <Title order={5} c="dimmed">
@@ -296,7 +296,7 @@ export function WorkshopCollectionTab({
   }
 
   return (
-    <Stack gap={0} style={{ flex: 1, height: "100%", overflow: "hidden" }}>
+    <Stack gap={0}>
       {fileBar}
 
       <Group
@@ -342,8 +342,6 @@ export function WorkshopCollectionTab({
 
       <Box
         style={{
-          flex: 1,
-          overflow: "hidden",
           padding: "var(--mantine-spacing-xs)",
         }}
       >
@@ -355,22 +353,19 @@ export function WorkshopCollectionTab({
               setIsDirty(true);
             }}
             disabled={isLoadingFile || isSaving}
-            autosize={false}
+            autosize
+            minRows={20}
             styles={{
-              wrapper: { height: "100%" },
               input: {
-                height: "100%",
                 fontFamily: "var(--mantine-font-family-monospace)",
                 fontSize: 13,
                 resize: "none",
-                whiteSpace: "pre",
-                overflowX: "auto",
+                whiteSpace: "pre-wrap",
               },
             }}
-            style={{ height: "100%" }}
           />
         ) : (
-          <Center h="100%">
+          <Center py="xl">
             <Stack align="center" gap="xs">
               <IconFile size={40} color="var(--mantine-color-dimmed)" />
               <Title order={5} c="dimmed">

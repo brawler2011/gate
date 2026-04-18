@@ -1,12 +1,20 @@
 "use client";
 
-import { Alert, Button, FileInput, Group, ScrollArea, Stack, Text } from "@mantine/core";
+import { SectionPaper } from "@/components/workshop/SectionPaper";
+import { importProblemPackage } from "@/lib/actions";
+import {
+  Alert,
+  Box,
+  Button,
+  FileInput,
+  Group,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconInfoCircle, IconUpload } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { importProblemPackage } from "@/lib/actions";
 
 type Props = {
   problemId: string;
@@ -42,16 +50,20 @@ export function WorkshopImportTab({ problemId }: Props) {
   };
 
   return (
-    <ScrollArea style={{ flex: 1 }} p="lg">
+    <Box p="lg">
       <Stack gap="lg" maw={900} mx="auto">
         <SectionPaper title="Импорт пакета">
           <Stack gap="sm">
             <Text size="sm" c="dimmed">
-              Загрузите zip-архив задачи для импорта в текущий воркшоп. Поддерживаются форматы
-              ICPC и Polygon, а также native-пакеты Gate.
+              Загрузите zip-архив задачи для импорта в текущий воркшоп.
+              Поддерживаются форматы ICPC и Polygon, а также native-пакеты Gate.
             </Text>
 
-            <Alert color="blue" variant="light" icon={<IconInfoCircle size={16} />}>
+            <Alert
+              color="blue"
+              variant="light"
+              icon={<IconInfoCircle size={16} />}
+            >
               Импорт перезапишет файлы воркшопа для этой задачи.
             </Alert>
 
@@ -76,6 +88,6 @@ export function WorkshopImportTab({ problemId }: Props) {
           </Stack>
         </SectionPaper>
       </Stack>
-    </ScrollArea>
+    </Box>
   );
 }

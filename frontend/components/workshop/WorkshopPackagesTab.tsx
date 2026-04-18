@@ -1,19 +1,19 @@
 "use client";
 
+import { SectionPaper } from "@/components/workshop/SectionPaper";
+import { listProblemPackages, publishProblem } from "@/lib/actions";
 import {
   Badge,
+  Box,
   Button,
   Group,
   Loader,
-  ScrollArea,
   Stack,
   Table,
   Text,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { listProblemPackages, publishProblem } from "@/lib/actions";
 
 type PackageItem = {
   id?: string;
@@ -36,7 +36,11 @@ function StatusBadge({ status }: { status?: string }) {
     failed: { color: "red", label: "Ошибка" },
   };
   const info = map[status ?? ""] ?? { color: "gray", label: status ?? "—" };
-  return <Badge color={info.color} variant="light">{info.label}</Badge>;
+  return (
+    <Badge color={info.color} variant="light">
+      {info.label}
+    </Badge>
+  );
 }
 
 function formatDateTime(iso?: string) {
@@ -82,7 +86,10 @@ export function WorkshopPackagesTab({ problemId }: Props) {
       }
       notifications.show({
         title: "Пакет собран",
-        message: data?.version != null ? `Версия пакета: v${data.version}` : "Пакет успешно собран",
+        message:
+          data?.version != null
+            ? `Версия пакета: v${data.version}`
+            : "Пакет успешно собран",
         color: "green",
       });
       await fetchPackages();
@@ -90,13 +97,14 @@ export function WorkshopPackagesTab({ problemId }: Props) {
   };
 
   return (
-    <ScrollArea style={{ flex: 1 }} p="lg">
+    <Box p="lg">
       <Stack gap="lg" maw={900} mx="auto">
         <SectionPaper title="Сборка пакета">
           <Stack gap="sm">
             <Text size="sm" c="dimmed">
-              Соберите пакет задачи из текущего состояния воркшопа. После успешной сборки задача
-              будет готова к тестированию решений на всех контестах, где она добавлена.
+              Соберите пакет задачи из текущего состояния воркшопа. После
+              успешной сборки задача будет готова к тестированию решений на всех
+              контестах, где она добавлена.
             </Text>
             <Group>
               <Button loading={isBuilding} onClick={handleBuild}>
@@ -129,7 +137,9 @@ export function WorkshopPackagesTab({ problemId }: Props) {
                 {packages.map((pkg) => (
                   <Table.Tr key={pkg.id}>
                     <Table.Td>
-                      <Text size="sm" fw={600}>v{pkg.version}</Text>
+                      <Text size="sm" fw={600}>
+                        v{pkg.version}
+                      </Text>
                     </Table.Td>
                     <Table.Td>
                       <StatusBadge status={pkg.status} />
@@ -149,6 +159,6 @@ export function WorkshopPackagesTab({ problemId }: Props) {
           )}
         </SectionPaper>
       </Stack>
-    </ScrollArea>
+    </Box>
   );
 }
