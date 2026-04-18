@@ -1,12 +1,8 @@
-import { Badge, Button, Paper, Stack, Title } from "@mantine/core";
-import { IconSettings } from "@tabler/icons-react";
-import Link from "next/link";
-import type { ContestModel } from "@contracts/core/v1";
-import type { ContestRole } from "@/lib/contest-role";
 import type { SessionUser } from "@/lib/auth";
-import { PermissionChecker } from "@/lib/permissions";
 import { CONTEST_INFO_PANEL_WIDTH } from "@/lib/constants";
-import classes from "./ContestInfoPanel.module.css";
+import type { ContestRole } from "@/lib/contest-role";
+import type { ContestModel } from "@contracts/core/v1";
+import { Badge, Paper, Stack, Title } from "@mantine/core";
 
 type ContestInfoPanelProps = {
   contest: ContestModel;
@@ -18,7 +14,10 @@ type ContestInfoPanelProps = {
 /**
  * Role display configuration for badges
  */
-const ROLE_CONFIG: Record<ContestRole | "guest", { label: string; color: string }> = {
+const ROLE_CONFIG: Record<
+  ContestRole | "guest",
+  { label: string; color: string }
+> = {
   owner: { label: "Владелец", color: "red" },
   moderator: { label: "Модератор", color: "yellow" },
   participant: { label: "Участник", color: "gray" },
@@ -28,7 +27,10 @@ const ROLE_CONFIG: Record<ContestRole | "guest", { label: string; color: string 
 /**
  * Get role display configuration
  */
-function getRoleDisplay(role: ContestRole | null): { label: string; color: string } {
+function getRoleDisplay(role: ContestRole | null): {
+  label: string;
+  color: string;
+} {
   if (!role) {
     return ROLE_CONFIG.guest;
   }
@@ -37,17 +39,20 @@ function getRoleDisplay(role: ContestRole | null): { label: string; color: strin
 
 /**
  * Contest info panel component
- * Shows contest name, user's role badge, and management button for moderators/owners
+ * Shows contest name and the current user's role badge
  * Only visible for authenticated users, hidden on mobile
  */
-export function ContestInfoPanel({ contest, user, contestRole, width }: ContestInfoPanelProps) {
+export function ContestInfoPanel({
+  contest,
+  user,
+  contestRole,
+  width,
+}: ContestInfoPanelProps) {
   // Don't render for unauthenticated users
   if (!user) {
     return null;
   }
 
-  const checker = new PermissionChecker(user, contestRole?.role || null);
-  const canManage = checker.canManageContest(contest);
   const roleDisplay = getRoleDisplay(contestRole?.role || null);
 
   return (
@@ -57,42 +62,26 @@ export function ContestInfoPanel({ contest, user, contestRole, width }: ContestI
       p="md"
       withBorder
       bg="transparent"
-      style={{ 
+      style={{
         width: width || CONTEST_INFO_PANEL_WIDTH,
-        borderColor: 'var(--mantine-color-dark-5)'
+        borderColor: "var(--mantine-color-dark-5)",
       }}
     >
       <Stack gap="sm" align="center">
         {/* Contest Title */}
-        <Title order={3} lineClamp={2} ta="center" style={{ fontSize: '1.25rem' }}>
+        <Title
+          order={3}
+          lineClamp={2}
+          ta="center"
+          style={{ fontSize: "1.25rem" }}
+        >
           {contest.title}
         </Title>
 
         {/* Role Badge */}
-        <Badge
-          variant="filled"
-          color={roleDisplay.color}
-          size="lg"
-          tt="none"
-        >
+        <Badge variant="filled" color={roleDisplay.color} size="lg" tt="none">
           {roleDisplay.label}
         </Badge>
-
-        {/* Manage Button - only for moderators and owners */}
-        {canManage && (
-          <Link href={`/contests/${contest.id}/manage`} style={{ textDecoration: 'none', display: 'block' }}>
-            <Button
-              className={classes.manageButton}
-              leftSection={<IconSettings size={16} />}
-              size="sm"
-              mt="xs"
-              variant="transparent"
-              fullWidth
-            >
-              Управление
-            </Button>
-          </Link>
-        )}
       </Stack>
     </Paper>
   );

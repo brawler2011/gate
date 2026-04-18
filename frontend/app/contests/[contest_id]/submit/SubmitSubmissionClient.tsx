@@ -1,12 +1,15 @@
 "use client";
 
-import { CreateSubmissionForm } from '@/components/submissions/CreateSubmissionForm';
-import { numberToLetters } from "@/lib/lib";
-import { Box, Paper, Select, Stack } from "@mantine/core";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import type { ContestModel, ContestProblemListItemModel } from "@contracts/core/v1";
+import { CreateSubmissionForm } from "@/components/submissions/CreateSubmissionForm";
 import type { SessionUser } from "@/lib/auth";
+import { numberToLetters } from "@/lib/lib";
+import type {
+  ContestModel,
+  ContestProblemListItemModel,
+} from "@contracts/core/v1";
+import { Box, Paper, Select, Stack } from "@mantine/core";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { submitSubmission } from "./actions";
 
 type Props = {
@@ -18,7 +21,7 @@ type Props = {
 export function SubmitSubmissionClient({ contest, problems, user }: Props) {
   const router = useRouter();
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
-    problems.length > 0 ? problems[0].problem_id : null
+    problems.length > 0 ? problems[0].problem_id : null,
   );
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -37,14 +40,16 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
       selectedProblemId,
       contest.id,
       submission,
-      language
+      language,
     );
 
     if (result) {
       // Mark as submitted to disable form
       setIsSubmitted(true);
       // Redirect to "Мои посылки" page after successful submission
-      router.push(`/contests/${contest.id}/mysubmissions?order=desc&userId=${user?.id}`);
+      router.push(
+        `/contests/${contest.id}/mysubmissions?order=desc&userId=${user?.id}`,
+      );
     }
 
     return result;
@@ -61,18 +66,19 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
   }
 
   return (
-    <Box style={{ maxWidth: "100%", margin: "0 auto"}}>
-      <Paper 
-        shadow="sm" 
-        p="md" 
-        withBorder 
+    <Box style={{ maxWidth: "100%", margin: "0 auto" }}>
+      <Paper
+        shadow="sm"
+        p="md"
+        withBorder
         bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))"
-        style={{ 
-          borderRadius: '0 var(--mantine-radius-md) var(--mantine-radius-md) var(--mantine-radius-md)',
-          borderColor: 'light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))'
+        style={{
+          borderRadius: "var(--mantine-radius-md)",
+          borderColor:
+            "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))",
         }}
       >
-        <CreateSubmissionForm 
+        <CreateSubmissionForm
           onSubmit={handleSubmit}
           large={true}
           disabled={isSubmitted}
@@ -85,7 +91,9 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
               onChange={setSelectedProblemId}
               allowDeselect={false}
               disabled={isSubmitted}
-              style={{ width: `${(problemOptions.find(o => o.value === selectedProblemId)?.label.length || 10) + 3}ch` }}
+              style={{
+                width: `${(problemOptions.find((o) => o.value === selectedProblemId)?.label.length || 10) + 3}ch`,
+              }}
               comboboxProps={{ position: "bottom-start" }}
               styles={{ dropdown: { minWidth: "max-content" } }}
             />

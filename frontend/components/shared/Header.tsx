@@ -1,5 +1,10 @@
 "use client";
 
+import type { SessionUser } from "@/lib/auth";
+import type {
+  HeaderSecondaryNavIcon,
+  HeaderSecondaryNavItem,
+} from "@/lib/contest-header-nav";
 import { APP_COLORS } from "@/lib/theme/colors";
 import {
   ActionIcon,
@@ -12,6 +17,7 @@ import {
   Drawer,
   Group,
   Image,
+  Popover,
   ScrollArea,
   Stack,
   Title,
@@ -19,22 +25,61 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconMoon, IconSun, IconUser } from "@tabler/icons-react";
-import type { SessionUser } from "@/lib/auth";
+import {
+  IconDeviceDesktop,
+  IconMail,
+  IconMoon,
+  IconPuzzle,
+  IconSend,
+  IconSettings,
+  IconSun,
+  IconUser,
+} from "@tabler/icons-react";
 import cx from "clsx";
 import NextImage from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogoutLink } from './LogoutLink';
+import {
+  type ComponentType,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import classes from "./Header.module.css";
+import { LogoutLink } from "./LogoutLink";
+
+const NAV_ICON_MAP: Record<
+  HeaderSecondaryNavIcon,
+  ComponentType<{ size?: string | number }>
+> = {
+  tasks: IconPuzzle,
+  submit: IconSend,
+  mysubmissions: IconUser,
+  allsubmissions: IconMail,
+  monitor: IconDeviceDesktop,
+  manage: IconSettings,
+};
+
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const Profile = ({ user }: { user?: SessionUser }) => {
   const pathname = usePathname();
-  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const returnUrl = pathname && pathname !== '/' && !pathname.startsWith('/auth') 
-    ? (isLocalhost ? `${window.location.origin}${pathname}` : pathname) 
-    : null;
-  const returnTo = returnUrl ? `?return_to=${encodeURIComponent(returnUrl)}` : '';
+  const isLocalhost =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+  const returnUrl =
+    pathname && pathname !== "/" && !pathname.startsWith("/auth")
+      ? isLocalhost
+        ? `${window.location.origin}${pathname}`
+        : pathname
+      : null;
+  const returnTo = returnUrl
+    ? `?return_to=${encodeURIComponent(returnUrl)}`
+    : "";
 
   if (user) {
     return (
@@ -67,14 +112,227 @@ const Profile = ({ user }: { user?: SessionUser }) => {
   );
 };
 
-const Header = ({ user }: { user?: SessionUser }) => {
-  const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] = useDisclosure(false);
+const SecondaryNav = ({ items }: { items: HeaderSecondaryNavItem[] }) => {
   const pathname = usePathname();
-  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const returnUrl = pathname && pathname !== '/' && !pathname.startsWith('/auth') 
-    ? (isLocalhost ? `${window.location.origin}${pathname}` : pathname) 
-    : null;
-  const returnTo = returnUrl ? `?return_to=${encodeURIComponent(returnUrl)}` : '';
+  const [visibleCount, setVisibleCount] = useState(items.length);
+  const [moreOpened, setMoreOpened] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const moreMeasureRef = useRef<HTMLButtonElement | null>(null);
+  const itemMeasureRefs = useRef<Array<HTMLSpanElement | null>>([]);
+
+  const recalculateVisibleCount = useCallback(() => {
+    if (items.length === 0) {
+      setVisibleCount(0);
+      return;
+    }
+
+    const containerWidth = containerRef.current?.clientWidth ?? 0;
+    if (containerWidth === 0) {
+      setVisibleCount(items.length);
+      return;
+    }
+
+    const itemWidths = items.map(
+      (_, index) => itemMeasureRefs.current[index]?.offsetWidth ?? 0,
+    );
+    if (itemWidths.some((width) => width === 0)) {
+      setVisibleCount(items.length);
+      return;
+    }
+
+    const gap = 8;
+    const totalWidth =
+      itemWidths.reduce((sum, width) => sum + width, 0) +
+      Math.max(0, itemWidths.length - 1) * gap;
+
+    if (totalWidth <= containerWidth) {
+      setVisibleCount(items.length);
+      return;
+    }
+
+    const moreWidth = moreMeasureRef.current?.offsetWidth ?? 72;
+    const availableWidth = containerWidth - moreWidth - gap;
+    let widthUsed = 0;
+    let nextVisibleCount = 0;
+
+    for (const width of itemWidths) {
+      const nextWidth = widthUsed + width + (nextVisibleCount > 0 ? gap : 0);
+      if (nextWidth > availableWidth) {
+        break;
+      }
+
+      widthUsed = nextWidth;
+      nextVisibleCount += 1;
+    }
+
+    setVisibleCount(Math.max(0, nextVisibleCount));
+  }, [items]);
+
+  useIsomorphicLayoutEffect(() => {
+    recalculateVisibleCount();
+  }, [recalculateVisibleCount]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      recalculateVisibleCount();
+    });
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [recalculateVisibleCount]);
+
+  useEffect(() => {
+    if (!document.fonts?.ready) {
+      return;
+    }
+
+    let mounted = true;
+    document.fonts.ready.then(() => {
+      if (mounted) {
+        recalculateVisibleCount();
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [recalculateVisibleCount]);
+
+  useEffect(() => {
+    setMoreOpened(false);
+  }, [pathname]);
+
+  const visibleItems = items.slice(0, visibleCount);
+  const overflowItems = items.slice(visibleCount);
+
+  return (
+    <div className={classes.secondaryNavSection}>
+      <div className={classes.secondaryNavInner} ref={containerRef}>
+        <div className={classes.secondaryNavVisible}>
+          {visibleItems.map((item) => {
+            const Icon = NAV_ICON_MAP[item.icon];
+
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                className={cx(
+                  classes.secondaryNavLink,
+                  item.active && classes.secondaryNavLinkActive,
+                )}
+              >
+                <Icon size={15} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {overflowItems.length > 0 && (
+          <Popover
+            opened={moreOpened}
+            onChange={setMoreOpened}
+            position="bottom-end"
+            withArrow
+            shadow="md"
+          >
+            <Popover.Target>
+              <button
+                type="button"
+                className={classes.secondaryMoreButton}
+                onClick={() => setMoreOpened((current) => !current)}
+                aria-haspopup="menu"
+                aria-expanded={moreOpened}
+                data-opened={moreOpened || undefined}
+              >
+                More
+              </button>
+            </Popover.Target>
+            <Popover.Dropdown p="xs">
+              <Stack gap={4}>
+                {overflowItems.map((item) => {
+                  const Icon = NAV_ICON_MAP[item.icon];
+
+                  return (
+                    <Link
+                      key={item.key}
+                      href={item.href}
+                      className={cx(
+                        classes.secondaryNavPopoverLink,
+                        item.active && classes.secondaryNavPopoverLinkActive,
+                      )}
+                      onClick={() => setMoreOpened(false)}
+                    >
+                      <Icon size={15} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </Stack>
+            </Popover.Dropdown>
+          </Popover>
+        )}
+      </div>
+
+      <div className={classes.secondaryNavMeasure} aria-hidden>
+        {items.map((item, index) => {
+          const Icon = NAV_ICON_MAP[item.icon];
+
+          return (
+            <span
+              key={`measure-${item.key}`}
+              ref={(node) => {
+                itemMeasureRefs.current[index] = node;
+              }}
+              className={classes.secondaryNavLink}
+            >
+              <Icon size={15} />
+              {item.label}
+            </span>
+          );
+        })}
+        <button
+          ref={moreMeasureRef}
+          type="button"
+          className={classes.secondaryMoreButton}
+        >
+          More
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Header = ({
+  user,
+  secondaryNavItems,
+}: {
+  user?: SessionUser;
+  secondaryNavItems?: HeaderSecondaryNavItem[];
+}) => {
+  const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] =
+    useDisclosure(false);
+  const pathname = usePathname();
+  const isLocalhost =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+  const returnUrl =
+    pathname && pathname !== "/" && !pathname.startsWith("/auth")
+      ? isLocalhost
+        ? `${window.location.origin}${pathname}`
+        : pathname
+      : null;
+  const returnTo = returnUrl
+    ? `?return_to=${encodeURIComponent(returnUrl)}`
+    : "";
 
   const { setColorScheme } = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme("dark", {
@@ -84,100 +342,130 @@ const Header = ({ user }: { user?: SessionUser }) => {
   return (
     <>
       <div className={classes.header}>
-        <Group h="100%" maw="1920px" mx="auto" wrap="nowrap" justify="space-between" style={{ flex: 1, position: "relative" }}>
-          <Group justify="flex-start" h="100%" className={classes.leftSection} gap="xs">
-            <Burger
-              opened={drawerOpened}
-              onClick={toggleDrawer}
-              hiddenFrom="sm"
-            />
-            <Link href="/" className={classes.logoLink}>
-              <Group gap="xs" wrap="nowrap">
-                <Image
-                  component={NextImage}
-                  src="/gate_logo.svg"
-                  alt="Gate logo"
-                  width={40}
-                  height={40}
-                  priority
-                  className={classes.logoImage}
-                />
-                <Title order={1}>
-                  Gate
-                </Title>
-              </Group>
-            </Link>
-          </Group>
-          <Group justify="center" h="100%" gap={0} visibleFrom="sm" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
-            <Anchor
-              component={Link}
-              href="/"
-              className={classes.link}
-              underline="never"
+        <div className={classes.headerTop}>
+          <Group
+            h="100%"
+            maw="1920px"
+            mx="auto"
+            wrap="nowrap"
+            justify="space-between"
+            style={{ flex: 1, position: "relative" }}
+          >
+            <Group
+              justify="flex-start"
+              h="100%"
+              className={classes.leftSection}
+              gap="xs"
             >
-              Главная
-            </Anchor>
-            <Anchor
-              component={Link}
-              href="/contests"
-              className={classes.link}
-              underline="never"
+              <Burger
+                opened={drawerOpened}
+                onClick={toggleDrawer}
+                hiddenFrom="sm"
+              />
+              <Link href="/" className={classes.logoLink}>
+                <Group gap="xs" wrap="nowrap">
+                  <Image
+                    component={NextImage}
+                    src="/gate_logo.svg"
+                    alt="Gate logo"
+                    width={40}
+                    height={40}
+                    priority
+                    className={classes.logoImage}
+                  />
+                  <Title order={1}>Gate</Title>
+                </Group>
+              </Link>
+            </Group>
+            <Group
+              justify="center"
+              h="100%"
+              gap={0}
+              visibleFrom="sm"
+              style={{
+                position: "absolute",
+                left: "50%",
+                transform: "translateX(-50%)",
+              }}
             >
-              Контесты
-            </Anchor>
-            <Anchor
-              component={Link}
-              href="/orgs"
-              className={classes.link}
-              underline="never"
-            >
-              Организации
-            </Anchor>
-            <Anchor
-              component={Link}
-              href="/workshop"
-              className={classes.link}
-              underline="never"
-            >
-              Мастерская
-            </Anchor>
-            
-          </Group>
-          <Box hiddenFrom="sm" style={{ flex: 1 }} />
-          <Group justify="flex-end" h="100%" gap="xs" className={classes.rightSection}>
-            {user?.role === "admin" && (
-              <Button
+              <Anchor
                 component={Link}
-                href="/admin"
-                variant="filled"
-                visibleFrom="sm"
-                color={APP_COLORS.admin}
+                href="/"
+                className={classes.link}
+                underline="never"
               >
-                ADMIN
-              </Button>
-            )}
-            <ActionIcon
-              onClick={() =>
-                setColorScheme(
-                  computedColorScheme === "light" ? "dark" : "light"
-                )
-              }
-              variant="default"
-              size="input-sm"
-              aria-label="Toggle color scheme"
+                Главная
+              </Anchor>
+              <Anchor
+                component={Link}
+                href="/contests"
+                className={classes.link}
+                underline="never"
+              >
+                Контесты
+              </Anchor>
+              <Anchor
+                component={Link}
+                href="/orgs"
+                className={classes.link}
+                underline="never"
+              >
+                Организации
+              </Anchor>
+              <Anchor
+                component={Link}
+                href="/workshop"
+                className={classes.link}
+                underline="never"
+              >
+                Мастерская
+              </Anchor>
+            </Group>
+            <Box hiddenFrom="sm" style={{ flex: 1 }} />
+            <Group
+              justify="flex-end"
+              h="100%"
+              gap="xs"
+              className={classes.rightSection}
             >
-              <IconSun
-                className={cx(classes.icon, classes.light)}
-                stroke={1.5}
-              />
-              <IconMoon
-                className={cx(classes.icon, classes.dark)}
-                stroke={1.5}
-              />
-            </ActionIcon>
-            <Profile user={user} />
+              {user?.role === "admin" && (
+                <Button
+                  component={Link}
+                  href="/admin"
+                  variant="filled"
+                  visibleFrom="sm"
+                  color={APP_COLORS.admin}
+                >
+                  ADMIN
+                </Button>
+              )}
+              <ActionIcon
+                onClick={() =>
+                  setColorScheme(
+                    computedColorScheme === "light" ? "dark" : "light",
+                  )
+                }
+                variant="default"
+                size="input-sm"
+                aria-label="Toggle color scheme"
+              >
+                <IconSun
+                  className={cx(classes.icon, classes.light)}
+                  stroke={1.5}
+                />
+                <IconMoon
+                  className={cx(classes.icon, classes.dark)}
+                  stroke={1.5}
+                />
+              </ActionIcon>
+              <Profile user={user} />
+            </Group>
           </Group>
-        </Group>
+        </div>
+
+        {secondaryNavItems && secondaryNavItems.length > 0 && (
+          <SecondaryNav items={secondaryNavItems} />
+        )}
       </div>
 
       <Drawer
@@ -225,7 +513,7 @@ const Header = ({ user }: { user?: SessionUser }) => {
             >
               Мастерская
             </Anchor>
-            
+
             {user?.role === "admin" && (
               <Anchor
                 component={Link}
@@ -245,7 +533,7 @@ const Header = ({ user }: { user?: SessionUser }) => {
               <ActionIcon
                 onClick={() =>
                   setColorScheme(
-                    computedColorScheme === "light" ? "dark" : "light"
+                    computedColorScheme === "light" ? "dark" : "light",
                   )
                 }
                 variant="default"

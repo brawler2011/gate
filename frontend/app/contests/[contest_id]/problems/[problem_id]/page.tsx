@@ -1,32 +1,33 @@
-import { cache } from "react";
-import { numberToLetters } from "@/lib/lib";
-import {
-  getContest,
-  getContestProblem,
-  getMySubmissions,
-} from "@/lib/actions";
-import { HeaderWithSession } from '@/components/shared/HeaderWithSession';
-import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { Metadata } from "next";
-import { Task } from '@/components/shared/Task';
+import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
+import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
+import { Task } from "@/components/shared/Task";
+import { getContest, getContestProblem, getMySubmissions } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
+import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
+import { numberToLetters } from "@/lib/lib";
+import { Metadata } from "next";
+import { cache } from "react";
 
 type Props = {
-  params: Promise<{ contest_id: string; problem_id: string; userId: string; sortOrder: string; }>;
+  params: Promise<{
+    contest_id: string;
+    problem_id: string;
+    userId: string;
+    sortOrder: string;
+  }>;
 };
 
 // Cache getContestProblem to avoid duplicate calls in generateMetadata and Page
-const getCachedContestProblem = cache(
-  (problemId: string, contestId: string) =>
-    getContestProblem(problemId, contestId)
+const getCachedContestProblem = cache((problemId: string, contestId: string) =>
+  getContestProblem(problemId, contestId),
 );
 
 const generateMetadata = async (props: Props): Promise<Metadata> => {
   const params = await props.params;
   const [error, problem] = await getCachedContestProblem(
     params.problem_id,
-    params.contest_id
+    params.contest_id,
   );
 
   if (error || !problem?.problem) {
@@ -66,18 +67,31 @@ const Page = async (props: Props) => {
           pageSize: 5,
           sortOrder: "desc",
         })
-      : Promise.resolve([null, { submissions: [], pagination: { page: 1, total: 0 }, since: 0 }] as const),
+      : Promise.resolve([
+          null,
+          { submissions: [], pagination: { page: 1, total: 0 }, since: 0 },
+        ] as const),
   ]);
 
   if (problemError) return <ErrorDisplay error={problemError} />;
   if (contestError) return <ErrorDisplay error={contestError} />;
 
   if (!problemResponse?.problem || !contestResponse?.contest) {
-    return <ErrorDisplay error={{ status: 404, message: "Задача или контест не найдены" }} />;
+    return (
+      <ErrorDisplay
+        error={{ status: 404, message: "Задача или контест не найдены" }}
+      />
+    );
   }
 
   // Get contest role for permissions
   const contestRole = user ? await getMyContestRole(params.contest_id) : null;
+  const contestHeaderNav = buildContestHeaderNav({
+    contest: contestResponse.contest,
+    user,
+    contestRole,
+    activeTab: "tasks",
+  });
 
   // Handle submissions - if null or error, use empty array
   // This can happen if user is not synced in backend DB yet
@@ -85,7 +99,7 @@ const Page = async (props: Props) => {
 
   // Build WebSocket URL for real-time updates
   // Remove trailing slash if present to avoid double slashes
-  const wsBaseUrl = (process.env.WEBSOCKET_URL || '').replace(/\/+$/, '');
+  const wsBaseUrl = (process.env.WEBSOCKET_URL || "").replace(/\/+$/, "");
   const wsUrl = wsBaseUrl ? `${wsBaseUrl}/submissions` : undefined;
 
   return (
@@ -98,7 +112,7 @@ const Page = async (props: Props) => {
       contestId={params.contest_id}
       user={user}
       contestRole={contestRole}
-      header={<HeaderWithSession />}
+      header={<HeaderWithSession secondaryNavItems={contestHeaderNav} />}
       wsUrl={wsUrl}
       since={submissionsResponse?.since}
     />

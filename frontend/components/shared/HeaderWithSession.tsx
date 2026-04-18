@@ -1,8 +1,15 @@
 import { getCurrentUser } from "@/lib/auth";
+import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
 import { Header } from "./Header";
 
-export async function HeaderWithSession() {
+type HeaderWithSessionProps = {
+  secondaryNavItems?: HeaderSecondaryNavItem[];
+};
+
+export async function HeaderWithSession({
+  secondaryNavItems,
+}: HeaderWithSessionProps = {}) {
   const user = await getCurrentUser();
-  
-  return <Header user={user} />;
+
+  return <Header user={user} secondaryNavItems={secondaryNavItems} />;
 }

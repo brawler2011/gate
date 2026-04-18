@@ -1,9 +1,11 @@
-import { HeaderWithSession } from '@/components/shared/HeaderWithSession';
-import { DefaultLayoutClient } from "./Layout";
+import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
+import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
 import type { AppShellProps } from "@mantine/core";
+import { DefaultLayoutClient } from "./Layout";
 
 type DefaultLayoutProps = {
   children: React.ReactNode;
+  headerSecondaryNavItems?: HeaderSecondaryNavItem[];
   headerConfig?: AppShellProps["header"];
   footerConfig?: AppShellProps["footer"];
   asideConfig?: AppShellProps["aside"];
@@ -12,11 +14,17 @@ type DefaultLayoutProps = {
   paddingConfig?: AppShellProps["padding"];
 };
 
-export async function DefaultLayout({ children, ...props }: DefaultLayoutProps) {
+export async function DefaultLayout({
+  children,
+  headerSecondaryNavItems,
+  ...props
+}: DefaultLayoutProps) {
   return (
-    <DefaultLayoutClient {...props} header={<HeaderWithSession />}>
+    <DefaultLayoutClient
+      {...props}
+      header={<HeaderWithSession secondaryNavItems={headerSecondaryNavItems} />}
+    >
       {children}
     </DefaultLayoutClient>
   );
 }
-

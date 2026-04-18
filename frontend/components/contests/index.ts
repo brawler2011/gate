@@ -1,7 +1,5 @@
 export * from './ChangeRoleModal';
-export * from './ContestHotbar';
 export * from './ContestInfoPanel';
-export * from './ContestManageHotbar';
 export * from './ContestManagementSidebar';
 export * from './ContestsContentSkeleton';
 export * from './ContestsGridSkeleton';
