@@ -33,7 +33,6 @@ import {
   IconSend,
   IconSettings,
   IconSun,
-  IconTools,
   IconTrophy,
   IconUser,
   IconUsers,
@@ -69,7 +68,6 @@ const NAV_ICON_MAP: Record<
   teams: IconUsersGroup,
   members: IconUsers,
   settings: IconSettings,
-  workshop: IconTools,
 };
 
 const useIsomorphicLayoutEffect =
@@ -422,14 +420,6 @@ const Header = ({
               >
                 Организации
               </Anchor>
-              <Anchor
-                component={Link}
-                href="/workshop"
-                className={classes.link}
-                underline="never"
-              >
-                Мастерская
-              </Anchor>
             </Group>
             <Box hiddenFrom="sm" style={{ flex: 1 }} />
             <Group
@@ -513,15 +503,6 @@ const Header = ({
               onClick={closeDrawer}
             >
               Организации
-            </Anchor>
-            <Anchor
-              component={Link}
-              href="/workshop"
-              className={classes.link}
-              underline="never"
-              onClick={closeDrawer}
-            >
-              Мастерская
             </Anchor>
 
             {user?.role === "admin" && (

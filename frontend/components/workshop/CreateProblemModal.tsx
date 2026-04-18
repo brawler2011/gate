@@ -1,20 +1,34 @@
 "use client";
 
 import { createProblem, updateProblem } from "@/lib/actions";
-import { Button, Modal, NumberInput, Select, Stack, TextInput } from "@mantine/core";
+import type { OrganizationModel } from "@contracts/gateway/v1";
+import {
+  Button,
+  Modal,
+  NumberInput,
+  Select,
+  Stack,
+  TextInput,
+} from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { OrganizationModel } from "@contracts/gateway/v1";
 
 type Props = {
   opened: boolean;
   onClose: () => void;
   orgs: OrganizationModel[];
   defaultOrgId?: string;
+  lockOrganization?: boolean;
 };
 
-export function CreateProblemModal({ opened, onClose, orgs, defaultOrgId }: Props) {
+export function CreateProblemModal({
+  opened,
+  onClose,
+  orgs,
+  defaultOrgId,
+  lockOrganization = false,
+}: Props) {
   const router = useRouter();
   const [title, setTitle] = useState("New Problem");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
@@ -26,7 +40,8 @@ export function CreateProblemModal({ opened, onClose, orgs, defaultOrgId }: Prop
     if (opened) {
       setTitle("New Problem");
       const orgIds = new Set(orgs.map((o) => o.id));
-      const validDefault = defaultOrgId && orgIds.has(defaultOrgId) ? defaultOrgId : null;
+      const validDefault =
+        defaultOrgId && orgIds.has(defaultOrgId) ? defaultOrgId : null;
       setOrgId(validDefault ?? (orgs.length === 1 ? orgs[0].id : null));
       setTimeLimit(1000);
       setMemoryLimit(256);
@@ -38,14 +53,19 @@ export function CreateProblemModal({ opened, onClose, orgs, defaultOrgId }: Prop
   const handleSubmit = async () => {
     if (!orgId) return;
 
-    const tl = typeof timeLimit === "number" ? timeLimit : parseInt(timeLimit, 10);
-    const ml = typeof memoryLimit === "number" ? memoryLimit : parseInt(memoryLimit, 10);
+    const tl =
+      typeof timeLimit === "number" ? timeLimit : parseInt(timeLimit, 10);
+    const ml =
+      typeof memoryLimit === "number" ? memoryLimit : parseInt(memoryLimit, 10);
 
     if (!tl || !ml) return;
 
     setLoading(true);
     try {
-      const [createError, createResponse] = await createProblem(title.trim() || "New Problem", orgId);
+      const [createError, createResponse] = await createProblem(
+        title.trim() || "New Problem",
+        orgId,
+      );
       if (createError) throw new Error(createError.message);
       if (!createResponse?.id) throw new Error("Не получен ID задачи");
 
@@ -62,7 +82,8 @@ export function CreateProblemModal({ opened, onClose, orgs, defaultOrgId }: Prop
     } catch (err) {
       notifications.show({
         title: "Ошибка",
-        message: err instanceof Error ? err.message : "Не удалось создать задачу",
+        message:
+          err instanceof Error ? err.message : "Не удалось создать задачу",
         color: "red",
       });
     } finally {
@@ -91,14 +112,16 @@ export function CreateProblemModal({ opened, onClose, orgs, defaultOrgId }: Prop
           required
           data-autofocus
         />
-        <Select
-          label="Организация"
-          placeholder="Выберите организацию"
-          data={orgData}
-          value={orgId}
-          onChange={setOrgId}
-          required
-        />
+        {!lockOrganization && (
+          <Select
+            label="Организация"
+            placeholder="Выберите организацию"
+            data={orgData}
+            value={orgId}
+            onChange={setOrgId}
+            required
+          />
+        )}
         <NumberInput
           label="Лимит времени (мс)"
           value={timeLimit}

@@ -8,6 +8,8 @@ import type { OrgOverviewTab } from "@/lib/org-header-nav";
 import type {
   ContestModel,
   OrganizationMemberModel,
+  OrganizationModel,
+  PaginationModel,
   ProblemsListItemModel,
   TeamModel,
 } from "@contracts/gateway/v1";
@@ -18,8 +20,13 @@ type Props = {
   members: OrganizationMemberModel[];
   teams: TeamModel[];
   problems: ProblemsListItemModel[];
+  problemsPagination: PaginationModel;
   contests: ContestModel[];
+  contestsPagination: PaginationModel;
+  org: OrganizationModel;
   orgId: string;
+  isAuthenticated: boolean;
+  search?: string;
   activeTab: OrgTabsActiveTab;
   membersError: ApiError | null;
   teamsError: ApiError | null;
@@ -31,8 +38,13 @@ export function OrgTabs({
   members,
   teams,
   problems,
+  problemsPagination,
   contests,
+  contestsPagination,
+  org,
   orgId,
+  isAuthenticated,
+  search,
   activeTab,
   membersError,
   teamsError,
@@ -43,7 +55,12 @@ export function OrgTabs({
     return problemsError ? (
       <ErrorDisplay error={problemsError} />
     ) : (
-      <OrgProblemsTab problems={problems} />
+      <OrgProblemsTab
+        problems={problems}
+        pagination={problemsPagination}
+        org={org}
+        isAuthenticated={isAuthenticated}
+      />
     );
   }
 
@@ -66,6 +83,12 @@ export function OrgTabs({
   return contestsError ? (
     <ErrorDisplay error={contestsError} />
   ) : (
-    <OrgContestsTab contests={contests} />
+    <OrgContestsTab
+      contests={contests}
+      pagination={contestsPagination}
+      org={org}
+      isAuthenticated={isAuthenticated}
+      search={search}
+    />
   );
 }

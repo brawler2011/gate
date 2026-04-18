@@ -1,46 +1,110 @@
 "use client";
-import type { ProblemsListItemModel } from '@contracts/gateway/v1';
-import { Table, Text, Anchor, Badge } from '@mantine/core';
-import Link from 'next/link';
 
-type Props = { problems: ProblemsListItemModel[] };
+import { ProblemCard } from "@/components/problems/ProblemCard";
+import { NextPagination } from "@/components/shared/Pagination";
+import { CreateProblemModal } from "@/components/workshop/CreateProblemModal";
+import type {
+  OrganizationModel,
+  PaginationModel,
+  ProblemsListItemModel,
+} from "@contracts/gateway/v1";
+import {
+  Button,
+  Center,
+  Group,
+  SimpleGrid,
+  Stack,
+  Text,
+  TextInput,
+} from "@mantine/core";
+import { IconPlus, IconSearch } from "@tabler/icons-react";
+import { useMemo, useState } from "react";
 
-export function OrgProblemsTab({ problems }: Props) {
-  if (problems.length === 0) {
-    return <Text c="dimmed" py="xl" ta="center">Задачи не найдены</Text>;
-  }
+type Props = {
+  problems: ProblemsListItemModel[];
+  pagination: PaginationModel;
+  org: OrganizationModel;
+  isAuthenticated: boolean;
+};
+
+export function OrgProblemsTab({
+  problems,
+  pagination,
+  org,
+  isAuthenticated,
+}: Props) {
+  const [searchValue, setSearchValue] = useState("");
+  const [createOpened, setCreateOpened] = useState(false);
+
+  const filteredProblems = useMemo(
+    () =>
+      problems.filter((problem) =>
+        problem.title?.toLowerCase().includes(searchValue.toLowerCase()),
+      ),
+    [problems, searchValue],
+  );
+
   return (
-    <Table verticalSpacing="sm">
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>Название</Table.Th>
-          <Table.Th>Лимит памяти</Table.Th>
-          <Table.Th>Лимит времени</Table.Th>
-          <Table.Th>Создана</Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {problems.map((p) => (
-          <Table.Tr key={p.id}>
-            <Table.Td>
-              <Anchor component={Link} href={`/problems/${p.id}`} size="sm">
-                {p.title}
-              </Anchor>
-            </Table.Td>
-            <Table.Td>
-              <Badge variant="light" color="blue" size="sm">{p.memory_limit} МБ</Badge>
-            </Table.Td>
-            <Table.Td>
-              <Badge variant="light" color="teal" size="sm">{p.time_limit} мс</Badge>
-            </Table.Td>
-            <Table.Td>
-              <Text size="sm" c="dimmed">
-                {new Date(p.created_at).toLocaleDateString('ru-RU')}
-              </Text>
-            </Table.Td>
-          </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
+    <Stack gap="md">
+      <Group justify="space-between" align="center">
+        <TextInput
+          placeholder="Поиск задач..."
+          leftSection={<IconSearch size={16} />}
+          value={searchValue}
+          onChange={(event) => setSearchValue(event.currentTarget.value)}
+          radius="md"
+          size="md"
+          style={{ flex: 1 }}
+        />
+        {isAuthenticated && (
+          <Button
+            title="Создать новую задачу"
+            onClick={() => setCreateOpened(true)}
+            size="md"
+            leftSection={<IconPlus size={18} />}
+            radius="md"
+          >
+            Создать задачу
+          </Button>
+        )}
+      </Group>
+
+      {filteredProblems.length === 0 ? (
+        <Center py="xl">
+          <Text c="dimmed">Задачи не найдены</Text>
+        </Center>
+      ) : (
+        <SimpleGrid
+          cols={{ base: 1, xs: 2, sm: 2, md: 3, lg: 4, xl: 4 }}
+          spacing={{ base: "xs", sm: "sm", md: "md" }}
+        >
+          {filteredProblems.map((problem) => (
+            <ProblemCard
+              key={problem.id}
+              problem={problem}
+              showEditButton={false}
+            />
+          ))}
+        </SimpleGrid>
+      )}
+
+      {pagination.total > 1 && (
+        <Stack align="center">
+          <NextPagination
+            pagination={pagination}
+            baseUrl={`/orgs/${org.id}`}
+            queryParams={{ tab: "problems" }}
+          />
+        </Stack>
+      )}
+
+      <CreateProblemModal
+        opened={createOpened}
+        onClose={() => setCreateOpened(false)}
+        orgs={[org]}
+        defaultOrgId={org.id}
+        lockOrganization
+      />
+    </Stack>
   );
 }

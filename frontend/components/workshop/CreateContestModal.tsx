@@ -1,20 +1,27 @@
 "use client";
 
 import { createContest } from "@/lib/actions";
+import type { OrganizationModel } from "@contracts/gateway/v1";
 import { Button, Modal, Select, Stack, TextInput } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { OrganizationModel } from "@contracts/gateway/v1";
 
 type Props = {
   opened: boolean;
   onClose: () => void;
   orgs: OrganizationModel[];
   defaultOrgId?: string;
+  lockOrganization?: boolean;
 };
 
-export function CreateContestModal({ opened, onClose, orgs, defaultOrgId }: Props) {
+export function CreateContestModal({
+  opened,
+  onClose,
+  orgs,
+  defaultOrgId,
+  lockOrganization = false,
+}: Props) {
   const router = useRouter();
   const [title, setTitle] = useState("New Contest");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
@@ -24,7 +31,8 @@ export function CreateContestModal({ opened, onClose, orgs, defaultOrgId }: Prop
     if (opened) {
       setTitle("New Contest");
       const orgIds = new Set(orgs.map((o) => o.id));
-      const validDefault = defaultOrgId && orgIds.has(defaultOrgId) ? defaultOrgId : null;
+      const validDefault =
+        defaultOrgId && orgIds.has(defaultOrgId) ? defaultOrgId : null;
       setOrgId(validDefault ?? (orgs.length === 1 ? orgs[0].id : null));
     }
   }, [opened, defaultOrgId, orgs]);
@@ -36,7 +44,10 @@ export function CreateContestModal({ opened, onClose, orgs, defaultOrgId }: Prop
 
     setLoading(true);
     try {
-      const [error, response] = await createContest(title.trim() || "New Contest", orgId);
+      const [error, response] = await createContest(
+        title.trim() || "New Contest",
+        orgId,
+      );
       if (error) throw new Error(error.message);
       if (!response?.id) throw new Error("Не получен ID контеста");
       onClose();
@@ -44,7 +55,8 @@ export function CreateContestModal({ opened, onClose, orgs, defaultOrgId }: Prop
     } catch (err) {
       notifications.show({
         title: "Ошибка",
-        message: err instanceof Error ? err.message : "Не удалось создать контест",
+        message:
+          err instanceof Error ? err.message : "Не удалось создать контест",
         color: "red",
       });
     } finally {
@@ -71,14 +83,16 @@ export function CreateContestModal({ opened, onClose, orgs, defaultOrgId }: Prop
           required
           data-autofocus
         />
-        <Select
-          label="Организация"
-          placeholder="Выберите организацию"
-          data={orgData}
-          value={orgId}
-          onChange={setOrgId}
-          required
-        />
+        {!lockOrganization && (
+          <Select
+            label="Организация"
+            placeholder="Выберите организацию"
+            data={orgData}
+            value={orgId}
+            onChange={setOrgId}
+            required
+          />
+        )}
         <Button
           onClick={handleSubmit}
           loading={loading}

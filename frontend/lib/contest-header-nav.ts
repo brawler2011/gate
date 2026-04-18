@@ -17,8 +17,7 @@ export type HeaderSecondaryNavIcon =
   | "problems"
   | "teams"
   | "members"
-  | "settings"
-  | "workshop";
+  | "settings";
 
 export type HeaderSecondaryNavItem = {
   key: string;

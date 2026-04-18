@@ -1,7 +1,8 @@
 "use client";
 
+import type { ApiError } from "@/lib/api";
+import type { ProblemModel } from "@contracts/core/v1";
 import {
-  Anchor,
   Button,
   Container,
   Divider,
@@ -22,8 +23,6 @@ import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
-import type { ProblemModel } from "@contracts/core/v1";
-import type { ApiError } from "@/lib/api";
 
 type ProblemFormData = {
   title?: string;
@@ -38,8 +37,14 @@ type ProblemFormData = {
 
 type Props = {
   problem: ProblemModel;
-  onSubmitFn: (id: string, data: ProblemFormData) => Promise<readonly [ApiError | null, unknown]>;
-  onUploadFn: (id: string, data: FormData) => Promise<readonly [ApiError | null, unknown]>;
+  onSubmitFn: (
+    id: string,
+    data: ProblemFormData,
+  ) => Promise<readonly [ApiError | null, unknown]>;
+  onUploadFn: (
+    id: string,
+    data: FormData,
+  ) => Promise<readonly [ApiError | null, unknown]>;
 };
 
 const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
@@ -75,7 +80,8 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
       console.error("❌ Problem update failed:", error);
       notifications.show({
         title: "Ошибка",
-        message: error instanceof Error ? error.message : "Не удалось обновить задачу",
+        message:
+          error instanceof Error ? error.message : "Не удалось обновить задачу",
         color: "red",
       });
       form.clearErrors();
@@ -102,7 +108,8 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
       console.error("Upload failed:", error);
       notifications.show({
         title: "Ошибка",
-        message: error instanceof Error ? error.message : "Не удалось загрузить файл",
+        message:
+          error instanceof Error ? error.message : "Не удалось загрузить файл",
         color: "red",
       });
     },
@@ -128,7 +135,14 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
       <Paper shadow="sm" p="md" mb="lg" withBorder>
         <Group justify="space-between">
           <Group gap="sm">
-            <Link href="/workshop?view=problems" style={{ textDecoration: 'none' }}>
+            <Link
+              href={
+                problem.organization_id
+                  ? `/orgs/${problem.organization_id}?tab=problems`
+                  : "/orgs"
+              }
+              style={{ textDecoration: "none" }}
+            >
               <Button
                 variant="default"
                 size="sm"
@@ -140,7 +154,7 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
             <div>
               <Title order={3} size="h5">
                 Редактирование задачи
-              </Title>  
+              </Title>
             </div>
           </Group>
           <Group gap="sm">
@@ -166,150 +180,146 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
       </Paper>
 
       <Container size="md" pt={0} pb="xl">
-          <form id="problem-form" onSubmit={onSubmit}>
-            <Stack gap="lg">
-              {/* Title Section */}
-              <Paper p="lg" radius="md" withBorder>
-                <Stack gap="md">
-                  <div>
-                    <Title order={4} mb="xs">
-                      📝 Основная информация
-                    </Title>
-                    <Divider />
-                  </div>
-                  <TextInput
-                    label="Название задачи"
-                    placeholder="Введите название"
-                    size="md"
-                    key={form.key("title")}
-                    {...form.getInputProps("title")}
-                  />
-                </Stack>
-              </Paper>
-
-              {/* Limits Section */}
-              <Paper p="lg" radius="md" withBorder>
-                <Stack gap="md">
-                  <div>
-                    <Title order={4} mb="xs">
-                      ⚙️ Ограничения
-                    </Title>
-                    <Divider />
-                  </div>
-                  <Group grow>
-                    <NumberInput
-                      label="Время (мс)"
-                      placeholder="1000"
-                      size="md"
-                      key={form.key("time_limit")}
-                      {...form.getInputProps("time_limit")}
-                    />
-                    <NumberInput
-                      label="Память (МБ)"
-                      placeholder="64"
-                      size="md"
-                      key={form.key("memory_limit")}
-                      {...form.getInputProps("memory_limit")}
-                    />
-                  </Group>
-                </Stack>
-              </Paper>
-
-              {/* Description Section */}
-              <Paper p="lg" radius="md" withBorder>
-                <Stack gap="md">
-                  <div>
-                    <Title order={4} mb="xs">
-                      📄 Условие задачи
-                    </Title>
-                    <Divider />
-                  </div>
-                  <Textarea
-                    label="Легенда"
-                    placeholder="Опишите условие задачи..."
-                    autosize
-                    minRows={4}
-                    maxRows={8}
-                    size="md"
-                    key={form.key("legend")}
-                    {...form.getInputProps("legend")}
-                  />
-                  <Textarea
-                    label="Формат входных данных"
-                    placeholder="Опишите входные данные..."
-                    autosize
-                    minRows={3}
-                    maxRows={6}
-                    size="md"
-                    key={form.key("input_format")}
-                    {...form.getInputProps("input_format")}
-                  />
-                  <Textarea
-                    label="Формат выходных данных"
-                    placeholder="Опишите выходные данные..."
-                    autosize
-                    minRows={3}
-                    maxRows={6}
-                    size="md"
-                    key={form.key("output_format")}
-                    {...form.getInputProps("output_format")}
-                  />
-                </Stack>
-              </Paper>
-
-              {/* Scoring and Notes Section */}
-              <Paper p="lg" radius="md" withBorder>
-                <Stack gap="md">
-                  <div>
-                    <Title order={4} mb="xs">
-                      📊 Дополнительные параметры
-                    </Title>
-                    <Divider />
-                  </div>
-                  <Textarea
-                    label="Система оценки"
-                    placeholder="Опишите систему оценки..."
-                    autosize
-                    minRows={3}
-                    maxRows={6}
-                    size="md"
-                    key={form.key("scoring")}
-                    {...form.getInputProps("scoring")}
-                  />
-                  <Textarea
-                    label="Примечание"
-                    placeholder="Дополнительные примечания..."
-                    autosize
-                    minRows={2}
-                    maxRows={4}
-                    size="md"
-                    key={form.key("notes")}
-                    {...form.getInputProps("notes")}
-                  />
-                </Stack>
-              </Paper>
-
-              {/* Save Button */}
-              <Group justify="flex-end" gap="md">
-                <Button
-                  variant="default"
+        <form id="problem-form" onSubmit={onSubmit}>
+          <Stack gap="lg">
+            {/* Title Section */}
+            <Paper p="lg" radius="md" withBorder>
+              <Stack gap="md">
+                <div>
+                  <Title order={4} mb="xs">
+                    📝 Основная информация
+                  </Title>
+                  <Divider />
+                </div>
+                <TextInput
+                  label="Название задачи"
+                  placeholder="Введите название"
                   size="md"
-                  onClick={() => router.back()}
-                >
-                  Отмена
-                </Button>
-                <Button
-                  type="submit"
+                  key={form.key("title")}
+                  {...form.getInputProps("title")}
+                />
+              </Stack>
+            </Paper>
+
+            {/* Limits Section */}
+            <Paper p="lg" radius="md" withBorder>
+              <Stack gap="md">
+                <div>
+                  <Title order={4} mb="xs">
+                    ⚙️ Ограничения
+                  </Title>
+                  <Divider />
+                </div>
+                <Group grow>
+                  <NumberInput
+                    label="Время (мс)"
+                    placeholder="1000"
+                    size="md"
+                    key={form.key("time_limit")}
+                    {...form.getInputProps("time_limit")}
+                  />
+                  <NumberInput
+                    label="Память (МБ)"
+                    placeholder="64"
+                    size="md"
+                    key={form.key("memory_limit")}
+                    {...form.getInputProps("memory_limit")}
+                  />
+                </Group>
+              </Stack>
+            </Paper>
+
+            {/* Description Section */}
+            <Paper p="lg" radius="md" withBorder>
+              <Stack gap="md">
+                <div>
+                  <Title order={4} mb="xs">
+                    📄 Условие задачи
+                  </Title>
+                  <Divider />
+                </div>
+                <Textarea
+                  label="Легенда"
+                  placeholder="Опишите условие задачи..."
+                  autosize
+                  minRows={4}
+                  maxRows={8}
                   size="md"
-                  loading={mutation.isPending}
-                  disabled={!form.isDirty()}
-                >
-                  Сохранить изменения
-                </Button>
-              </Group>
-            </Stack>
-          </form>
-        </Container>
+                  key={form.key("legend")}
+                  {...form.getInputProps("legend")}
+                />
+                <Textarea
+                  label="Формат входных данных"
+                  placeholder="Опишите входные данные..."
+                  autosize
+                  minRows={3}
+                  maxRows={6}
+                  size="md"
+                  key={form.key("input_format")}
+                  {...form.getInputProps("input_format")}
+                />
+                <Textarea
+                  label="Формат выходных данных"
+                  placeholder="Опишите выходные данные..."
+                  autosize
+                  minRows={3}
+                  maxRows={6}
+                  size="md"
+                  key={form.key("output_format")}
+                  {...form.getInputProps("output_format")}
+                />
+              </Stack>
+            </Paper>
+
+            {/* Scoring and Notes Section */}
+            <Paper p="lg" radius="md" withBorder>
+              <Stack gap="md">
+                <div>
+                  <Title order={4} mb="xs">
+                    📊 Дополнительные параметры
+                  </Title>
+                  <Divider />
+                </div>
+                <Textarea
+                  label="Система оценки"
+                  placeholder="Опишите систему оценки..."
+                  autosize
+                  minRows={3}
+                  maxRows={6}
+                  size="md"
+                  key={form.key("scoring")}
+                  {...form.getInputProps("scoring")}
+                />
+                <Textarea
+                  label="Примечание"
+                  placeholder="Дополнительные примечания..."
+                  autosize
+                  minRows={2}
+                  maxRows={4}
+                  size="md"
+                  key={form.key("notes")}
+                  {...form.getInputProps("notes")}
+                />
+              </Stack>
+            </Paper>
+
+            {/* Save Button */}
+            <Group justify="flex-end" gap="md">
+              <Button variant="default" size="md" onClick={() => router.back()}>
+                Отмена
+              </Button>
+              <Button
+                type="submit"
+                size="md"
+                loading={mutation.isPending}
+                disabled={!form.isDirty()}
+              >
+                Сохранить изменения
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Container>
 
       {/* Modal for file upload */}
       <Modal

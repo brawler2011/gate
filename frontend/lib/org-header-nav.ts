@@ -8,7 +8,7 @@ export const ORG_OVERVIEW_TABS = [
 ] as const;
 
 export type OrgOverviewTab = (typeof ORG_OVERVIEW_TABS)[number];
-export type OrgHeaderNavKey = OrgOverviewTab | "settings" | "workshop";
+export type OrgHeaderNavKey = OrgOverviewTab | "settings";
 
 type BuildOrgHeaderNavParams = {
   orgId: string;
@@ -60,12 +60,6 @@ export function buildOrgHeaderNav({
       label: "Настройки",
       href: `/orgs/${orgId}/settings`,
       icon: "settings",
-    },
-    {
-      key: "workshop",
-      label: "Мастерская",
-      href: `/workshop?org_id=${orgId}`,
-      icon: "workshop",
     },
   ];
 
