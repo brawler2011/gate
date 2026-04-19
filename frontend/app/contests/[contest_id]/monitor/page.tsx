@@ -2,7 +2,10 @@ import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
 import { DefaultLayout } from "@/components/shared";
 import { getContest } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
-import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
+import {
+  CONTEST_CONTENT_MAX_WIDTH,
+  CONTEST_INFO_PANEL_COMPACT_WIDTH,
+} from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import { Box, Container, Text, Title } from "@mantine/core";
@@ -35,7 +38,21 @@ const Page = async ({ params }: PageProps) => {
 
   return (
     <DefaultLayout headerSecondaryNavItems={contestHeaderNav}>
-      <Box className={classes.contestContainer}>
+      <Box className={classes.contestContainerWithLeftInfo}>
+        {/* Left Sidebar - Contest Info Panel - hidden on mobile */}
+        {contestResponse?.contest && (
+          <Box
+            style={{ width: CONTEST_INFO_PANEL_COMPACT_WIDTH }}
+            visibleFrom="sm"
+          >
+            <ContestInfoPanel
+              contest={contestResponse.contest}
+              user={user}
+              width={CONTEST_INFO_PANEL_COMPACT_WIDTH}
+            />
+          </Box>
+        )}
+
         {/* Main Content */}
         <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
           <Container
@@ -51,17 +68,6 @@ const Page = async ({ params }: PageProps) => {
             </Text>
           </Container>
         </Box>
-
-        {/* Right Sidebar - Contest Info Panel - hidden on mobile */}
-        {contestResponse?.contest && (
-          <Box style={{ marginTop: "16px" }} visibleFrom="sm">
-            <ContestInfoPanel
-              contest={contestResponse.contest}
-              user={user}
-              contestRole={contestRole}
-            />
-          </Box>
-        )}
       </Box>
     </DefaultLayout>
   );

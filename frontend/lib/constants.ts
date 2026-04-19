@@ -18,4 +18,5 @@ export const CONTEST_PROBLEM_MAX_WIDTH = '800px';
 export const CONTEST_SIDEBAR_LEFT_WIDTH = '250px';
 export const CONTEST_SIDEBAR_RIGHT_WIDTH = '520px';
 export const CONTEST_INFO_PANEL_WIDTH = '370px';     // Панель информации о контесте (половина от hotbar)
+export const CONTEST_INFO_PANEL_COMPACT_WIDTH = '280px';
 

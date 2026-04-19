@@ -5,7 +5,10 @@ import { Footer } from "@/components/shared/Footer";
 import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
 import { getContest } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
-import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
+import {
+  CONTEST_CONTENT_MAX_WIDTH,
+  CONTEST_INFO_PANEL_COMPACT_WIDTH,
+} from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import type {
@@ -52,7 +55,6 @@ type ContestProps = {
   contest: ContestModel;
   problems: Array<ContestProblemListItemModel>;
   user: Awaited<ReturnType<typeof getCurrentUser>>;
-  contestRole: Awaited<ReturnType<typeof getMyContestRole>>;
   contestHeaderNav: ReturnType<typeof buildContestHeaderNav>;
 };
 
@@ -60,7 +62,6 @@ const Contest = ({
   contest,
   problems,
   user,
-  contestRole,
   contestHeaderNav,
 }: ContestProps) => {
   return (
@@ -70,7 +71,19 @@ const Contest = ({
       </AppShellHeader>
       <AppShellMain>
         <Box maw="1920px" mx="auto" w="100%">
-          <Box className={classes.contestContainer}>
+          <Box className={classes.contestContainerWithLeftInfo}>
+            {/* Left Sidebar - Contest Info Panel - hidden on mobile */}
+            <Box
+              style={{ width: CONTEST_INFO_PANEL_COMPACT_WIDTH }}
+              visibleFrom="sm"
+            >
+              <ContestInfoPanel
+                contest={contest}
+                user={user}
+                width={CONTEST_INFO_PANEL_COMPACT_WIDTH}
+              />
+            </Box>
+
             {/* Main Content */}
             <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
               <Container
@@ -100,15 +113,6 @@ const Contest = ({
                   />
                 )}
               </Container>
-            </Box>
-
-            {/* Right Sidebar - Contest Info Panel - hidden on mobile */}
-            <Box style={{ marginTop: "16px" }} visibleFrom="sm">
-              <ContestInfoPanel
-                contest={contest}
-                user={user}
-                contestRole={contestRole}
-              />
             </Box>
           </Box>
         </Box>
@@ -142,7 +146,6 @@ const Page = async ({ params }: Props) => {
       contest={response!.contest}
       problems={response!.problems || []}
       user={user}
-      contestRole={contestRole}
       contestHeaderNav={contestHeaderNav}
     />
   );

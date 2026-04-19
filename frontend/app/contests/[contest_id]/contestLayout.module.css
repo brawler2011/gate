@@ -8,6 +8,15 @@
     padding-left: 0;
   }
 
+/* Layout container for contest pages with info panel on the left */
+.contestContainerWithLeftInfo {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  max-width: 100%;
+  padding-left: 0;
+}
+
 /* Desktop: add left padding for sidebar */
 /* 250px (CONTEST_SIDEBAR_LEFT_WIDTH) + 16px (AppShell padding) = 266px total */
 @media (min-width: 48em) {

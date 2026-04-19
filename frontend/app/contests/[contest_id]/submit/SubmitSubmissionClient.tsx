@@ -11,6 +11,7 @@ import { Box, Paper, Select, Stack } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { submitSubmission } from "./actions";
+import classes from "./SubmitSubmissionClient.module.css";
 
 type Props = {
   contest: ContestModel;
@@ -91,6 +92,7 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
               onChange={setSelectedProblemId}
               allowDeselect={false}
               disabled={isSubmitted}
+              classNames={{ input: classes.problemSelectInput }}
               style={{
                 width: `${(problemOptions.find((o) => o.value === selectedProblemId)?.label.length || 10) + 3}ch`,
               }}

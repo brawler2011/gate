@@ -1,7 +1,6 @@
 "use client";
 
 import { submitSubmission } from "@/app/contests/[contest_id]/problems/[problem_id]/actions";
-import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
 import { Problem } from "@/components/problems/Problem";
 import { Layout } from "@/components/shared";
 import { Footer } from "@/components/shared/Footer";
@@ -12,7 +11,6 @@ import {
   CONTEST_SIDEBAR_LEFT_WIDTH,
   CONTEST_SIDEBAR_RIGHT_WIDTH,
 } from "@/lib/constants";
-import type { ContestRole } from "@/lib/contest-role";
 import { numberToLetters } from "@/lib/lib";
 import type {
   ContestModel,
@@ -42,7 +40,6 @@ type PageProps = {
   problemId: string;
   contestId: string;
   user: SessionUser;
-  contestRole: { role: ContestRole } | null;
   header: React.ReactNode;
   wsUrl?: string;
   since?: number;
@@ -56,7 +53,6 @@ const Task = ({
   problemId,
   contestId,
   user,
-  contestRole,
   header,
   wsUrl,
   since,
@@ -81,6 +77,7 @@ const Task = ({
               alignItems: "flex-start",
               paddingTop: "var(--mantine-spacing-md)",
               paddingBottom: "var(--mantine-spacing-md)",
+              paddingLeft: "var(--mantine-spacing-md)",
               paddingRight: "var(--mantine-spacing-md)",
             }}
           >
@@ -95,9 +92,7 @@ const Task = ({
                 bg="transparent"
                 style={{
                   borderColor: "var(--mantine-color-dark-5)",
-                  borderLeft: "none",
-                  borderTopLeftRadius: 0,
-                  borderBottomLeftRadius: 0,
+                  overflow: "hidden",
                 }}
               >
                 <Stack w="100%" gap="xs">
@@ -111,7 +106,7 @@ const Task = ({
                       ta="center"
                       style={{ cursor: "pointer" }}
                     >
-                      Задачи
+                      {contest.title}
                     </Title>
                   </Link>
                   <Stack gap={0}>
@@ -155,38 +150,27 @@ const Task = ({
             </Box>
 
             {/* Right Sidebar - скрыт на мобилках */}
-            <Box style={{ marginRight: "16px" }} visibleFrom="sm">
-              <Stack gap="md">
-                {/* Contest Info Panel */}
-                <ContestInfoPanel
-                  contest={contest}
-                  user={user}
-                  contestRole={contestRole}
-                  width="100%"
-                />
-
-                {/* Submission Form and Recent Submissions */}
-                <Paper
-                  shadow="sm"
-                  radius="md"
-                  p="md"
-                  withBorder
-                  bg="var(--mantine-color-gray-light)"
-                  style={{ width: CONTEST_SIDEBAR_RIGHT_WIDTH }}
-                >
-                  <Stack>
-                    <CreateSubmissionForm onSubmit={onSubmit} />
-                    <RecentSubmissionsTable
-                      submissions={submissions}
-                      contestId={contest.id}
-                      userId={user?.id}
-                      problemId={problemId}
-                      wsUrl={wsUrl}
-                      since={since}
-                    />
-                  </Stack>
-                </Paper>
-              </Stack>
+            <Box visibleFrom="sm">
+              <Paper
+                shadow="sm"
+                radius="md"
+                p="md"
+                withBorder
+                bg="var(--mantine-color-gray-light)"
+                style={{ width: CONTEST_SIDEBAR_RIGHT_WIDTH }}
+              >
+                <Stack>
+                  <CreateSubmissionForm onSubmit={onSubmit} />
+                  <RecentSubmissionsTable
+                    submissions={submissions}
+                    contestId={contest.id}
+                    userId={user?.id}
+                    problemId={problemId}
+                    wsUrl={wsUrl}
+                    since={since}
+                  />
+                </Stack>
+              </Paper>
             </Box>
           </Box>
         </Box>

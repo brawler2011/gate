@@ -117,6 +117,17 @@
     /* Used for Mantine Button classNames */
 }
 
+.languageSelectInput {
+    transition: background-color 0.15s ease;
+}
+
+.languageSelectInput:hover:not(:disabled) {
+    background-color: light-dark(
+            var(--mantine-color-gray-1),
+            var(--mantine-color-dark-5)
+    );
+}
+
 /* Large variant for submit page */
 .codeLarge .input {
     min-height: 500px;
