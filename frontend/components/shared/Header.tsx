@@ -73,6 +73,11 @@ const NAV_ICON_MAP: Record<
 const useIsomorphicLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
+export type HeaderOrganization = {
+  id: string;
+  name: string;
+};
+
 const Profile = ({ user }: { user?: SessionUser }) => {
   const pathname = usePathname();
   const isLocalhost =
@@ -321,9 +326,11 @@ const SecondaryNav = ({ items }: { items: HeaderSecondaryNavItem[] }) => {
 const Header = ({
   user,
   secondaryNavItems,
+  organization,
 }: {
   user?: SessionUser;
   secondaryNavItems?: HeaderSecondaryNavItem[];
+  organization?: HeaderOrganization;
 }) => {
   const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] =
     useDisclosure(false);
@@ -376,20 +383,35 @@ const Header = ({
                 onClick={toggleDrawer}
                 hiddenFrom="sm"
               />
-              <Link href="/" className={classes.logoLink}>
-                <Group gap="xs" wrap="nowrap">
-                  <Image
-                    component={NextImage}
-                    src="/gate_logo.svg"
-                    alt="Gate logo"
-                    width={40}
-                    height={40}
-                    priority
-                    className={classes.logoImage}
-                  />
-                  <Title order={1}>Gate</Title>
-                </Group>
-              </Link>
+              <Group gap={6} wrap="nowrap" className={classes.brandingGroup}>
+                <Link href="/" className={classes.logoLink}>
+                  <Group gap="xs" wrap="nowrap">
+                    <Image
+                      component={NextImage}
+                      src="/gate_logo.svg"
+                      alt="Gate logo"
+                      width={40}
+                      height={40}
+                      priority
+                      className={classes.logoImage}
+                    />
+                    <Title order={1}>Gate</Title>
+                  </Group>
+                </Link>
+
+                {organization && (
+                  <div className={classes.organizationCrumb}>
+                    <span className={classes.organizationSlash}>/</span>
+                    <Link
+                      href={`/orgs/${organization.id}`}
+                      className={classes.organizationLink}
+                      title={organization.name}
+                    >
+                      {organization.name}
+                    </Link>
+                  </div>
+                )}
+              </Group>
             </Group>
             <Group
               justify="center"

@@ -6,6 +6,7 @@ import { DefaultLayoutClient } from "./Layout";
 type DefaultLayoutProps = {
   children: React.ReactNode;
   headerSecondaryNavItems?: HeaderSecondaryNavItem[];
+  headerOrganizationId?: string;
   headerConfig?: AppShellProps["header"];
   footerConfig?: AppShellProps["footer"];
   asideConfig?: AppShellProps["aside"];
@@ -17,12 +18,18 @@ type DefaultLayoutProps = {
 export async function DefaultLayout({
   children,
   headerSecondaryNavItems,
+  headerOrganizationId,
   ...props
 }: DefaultLayoutProps) {
   return (
     <DefaultLayoutClient
       {...props}
-      header={<HeaderWithSession secondaryNavItems={headerSecondaryNavItems} />}
+      header={
+        <HeaderWithSession
+          secondaryNavItems={headerSecondaryNavItems}
+          organizationId={headerOrganizationId}
+        />
+      }
     >
       {children}
     </DefaultLayoutClient>

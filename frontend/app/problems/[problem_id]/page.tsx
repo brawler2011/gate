@@ -108,7 +108,7 @@ const Page = async (props: Props) => {
   const resolvedSearchParams = await props.searchParams;
   const activeTab = resolvedSearchParams.tab ?? GENERAL_TAB;
 
-  const [problemError] = await getProblem(problem_id);
+  const [problemError, problemResponse] = await getProblem(problem_id);
   if (problemError) return <ErrorDisplay error={problemError} />;
 
   const [limitsError] = await getWorkshopProblemLimits(problem_id);
@@ -120,6 +120,7 @@ const Page = async (props: Props) => {
   return (
     <DefaultLayout
       headerSecondaryNavItems={problemHeaderNav}
+      headerOrganizationId={problemResponse?.problem.organization_id}
       stylesConfig={{
         header: {
           position: "static",

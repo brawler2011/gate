@@ -37,7 +37,10 @@ const Page = async ({ params }: PageProps) => {
     : undefined;
 
   return (
-    <DefaultLayout headerSecondaryNavItems={contestHeaderNav}>
+    <DefaultLayout
+      headerSecondaryNavItems={contestHeaderNav}
+      headerOrganizationId={contestResponse?.contest.organization_id}
+    >
       <Box className={classes.contestContainerWithLeftInfo}>
         {/* Left Sidebar - Contest Info Panel - hidden on mobile */}
         {contestResponse?.contest && (

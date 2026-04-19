@@ -111,7 +111,12 @@ const Page = async (props: Props) => {
       problemId={params.problem_id}
       contestId={params.contest_id}
       user={user}
-      header={<HeaderWithSession secondaryNavItems={contestHeaderNav} />}
+      header={
+        <HeaderWithSession
+          secondaryNavItems={contestHeaderNav}
+          organizationId={contestResponse.contest.organization_id}
+        />
+      }
       wsUrl={wsUrl}
       since={submissionsResponse?.since}
     />

@@ -63,7 +63,10 @@ const Page = async ({ params }: Props) => {
   return (
     <Layout>
       <AppShellHeader>
-        <HeaderWithSession secondaryNavItems={contestHeaderNav} />
+        <HeaderWithSession
+          secondaryNavItems={contestHeaderNav}
+          organizationId={response!.contest.organization_id}
+        />
       </AppShellHeader>
       <AppShellMain>
         <Box maw="1920px" mx="auto" w="100%">

@@ -79,7 +79,10 @@ export default async function ContestManagePage({
   });
 
   return (
-    <DefaultLayout headerSecondaryNavItems={contestHeaderNav}>
+    <DefaultLayout
+      headerSecondaryNavItems={contestHeaderNav}
+      headerOrganizationId={contest.organization_id}
+    >
       <Box className={layoutClasses.contestContainer}>
         {/* Main Content */}
         <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>

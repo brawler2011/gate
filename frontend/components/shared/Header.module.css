@@ -22,6 +22,40 @@
     height: 40px;
     text-decoration: none;
     color: var(--mantine-color-text);
+    flex-shrink: 0;
+}
+
+.brandingGroup {
+    min-width: 0;
+    max-width: min(46vw, 540px);
+}
+
+.organizationCrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.organizationSlash {
+    color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-2));
+    font-size: var(--mantine-font-size-lg);
+    line-height: 1;
+}
+
+.organizationLink {
+    color: var(--mantine-color-text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: var(--mantine-font-size-md);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: min(28vw, 320px);
+}
+
+.organizationLink:hover {
+    text-decoration: underline;
 }
 
 .logoImage {
@@ -175,6 +209,15 @@
 }
 
 @media (max-width: var(--mantine-breakpoint-sm)) {
+    .brandingGroup {
+        max-width: calc(100vw - 185px);
+    }
+
+    .organizationLink {
+        max-width: 40vw;
+        font-size: var(--mantine-font-size-sm);
+    }
+
     .secondaryNavSection {
         padding-top: 4px;
         padding-bottom: 6px;
