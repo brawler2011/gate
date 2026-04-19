@@ -150,27 +150,31 @@ const Task = ({
             </Box>
 
             {/* Right Sidebar - скрыт на мобилках */}
-            <Box visibleFrom="sm">
-              <Paper
-                shadow="sm"
-                radius="md"
-                p="md"
-                withBorder
-                bg="var(--mantine-color-gray-light)"
-                style={{ width: CONTEST_SIDEBAR_RIGHT_WIDTH }}
-              >
-                <Stack>
+            <Box
+              visibleFrom="sm"
+              style={{ width: CONTEST_SIDEBAR_RIGHT_WIDTH }}
+            >
+              <Stack gap="md">
+                <Paper
+                  shadow="sm"
+                  radius="md"
+                  p="md"
+                  withBorder
+                  bg="var(--mantine-color-gray-light)"
+                  style={{ width: "100%" }}
+                >
                   <CreateSubmissionForm onSubmit={onSubmit} />
-                  <RecentSubmissionsTable
-                    submissions={submissions}
-                    contestId={contest.id}
-                    userId={user?.id}
-                    problemId={problemId}
-                    wsUrl={wsUrl}
-                    since={since}
-                  />
-                </Stack>
-              </Paper>
+                </Paper>
+
+                <RecentSubmissionsTable
+                  submissions={submissions}
+                  contestId={contest.id}
+                  userId={user?.id}
+                  problemId={problemId}
+                  wsUrl={wsUrl}
+                  since={since}
+                />
+              </Stack>
             </Box>
           </Box>
         </Box>

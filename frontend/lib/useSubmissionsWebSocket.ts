@@ -30,7 +30,7 @@ export interface SubmissionWithProgress extends SubmissionsListItemModel {
 }
 
 export interface UseSubmissionsWebSocketOptions {
-  wsUrl: string;
+  wsUrl?: string;
   since?: number;
   initialSubmissions: SubmissionsListItemModel[];
   snapshotScope: 'all' | 'mine';
@@ -317,6 +317,9 @@ export function useSubmissionsWebSocket({
   // Build WebSocket URL with filter params
   // Use individual filter values as dependencies to prevent reconnection on every render
   const buildWsUrl = useCallback(() => {
+    if (!wsUrl) {
+      return '';
+    }
     const url = new URL(wsUrl);
     url.searchParams.set('since', String(sinceState ?? 0));
     url.searchParams.set('sortOrder', 'desc');
