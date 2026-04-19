@@ -346,10 +346,16 @@ const Header = ({
   const computedColorScheme = useComputedColorScheme("dark", {
     getInitialValueInEffect: true,
   });
+  const hasSecondaryNav = Boolean(secondaryNavItems?.length);
 
   return (
     <>
-      <div className={classes.header}>
+      <div
+        className={cx(
+          classes.header,
+          hasSecondaryNav && classes.headerWithSecondaryNav,
+        )}
+      >
         <div className={classes.headerTop}>
           <Group
             h="100%"
