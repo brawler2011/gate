@@ -1,0 +1,19 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+issues:
+  exclude-dirs:
+    - contracts
+    - tests/mocks
+  exclude-files:
+    - ".*\\.pb\\.go$"

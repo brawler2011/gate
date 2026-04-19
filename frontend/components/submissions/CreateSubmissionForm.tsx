@@ -16,14 +16,19 @@ import { IconPaperclip, IconTrash } from "@tabler/icons-react";
 import { useMutation } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import React, { useRef, useState } from "react";
+import type CodeEditor from "react-simple-code-editor";
 import classes from "./CreateSubmissionForm.module.css";
 import "./vsc-dark-plus.css";
 
 // Dynamic import to avoid hydration mismatch (autoCapitalize="off" vs "none")
+type CodeEditorProps = React.ComponentProps<typeof CodeEditor>;
+
 const Editor = dynamic(
   () => import("react-simple-code-editor").then((mod) => mod.default),
   { ssr: false },
 );
+
+const TypedEditor = Editor as React.ComponentType<CodeEditorProps>;
 
 const languages = ["python", "cpp", "golang"];
 
@@ -143,8 +148,12 @@ const CreateSubmissionForm = ({
     }
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown: React.KeyboardEventHandler<HTMLElement> = (event) => {
     if (event.key === "Tab") {
+      if (!(event.currentTarget instanceof HTMLTextAreaElement)) {
+        return;
+      }
+
       event.preventDefault();
       const target = event.currentTarget;
       const start = target.selectionStart;
@@ -257,7 +266,7 @@ const CreateSubmissionForm = ({
           ) : (
             <div className={classes.editorContainer}>
               {mounted && (
-                <Editor
+                <TypedEditor
                   value={form.values.code}
                   onValueChange={(code: string) =>
                     form.setFieldValue("code", code)
@@ -270,7 +279,7 @@ const CreateSubmissionForm = ({
                   className={classes.codeEditor}
                   disabled={disabled}
                   textareaId="code-editor-textarea"
-                  onKeyDown={handleKeyDown as any}
+                  onKeyDown={handleKeyDown}
                 />
               )}
             </div>

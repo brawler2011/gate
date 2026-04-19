@@ -1,6 +1,7 @@
 import { DefaultLayout } from '@/components/shared';
 import { isAuthenticated } from "@/lib/auth";
 import { listPosts } from "@/lib/actions";
+import type { PaginationModel } from "@contracts/gateway/v1";
 import {
   Container,
   Group,
@@ -28,7 +29,10 @@ export default async function Page({ searchParams }: PageProps) {
   // Fetch blog posts from API with pagination (5 posts per page)
   const [error, postsData] = await listPosts(currentPage, 5);
   const blogPosts = postsData?.posts || [];
-  const pagination = postsData?.pagination || { total: 0, page: currentPage };
+  const pagination: PaginationModel = {
+    total: postsData?.pagination?.total ?? 0,
+    page: postsData?.pagination?.page ?? currentPage,
+  };
 
   const renderBlogSection = () => (
     <Stack gap="md">

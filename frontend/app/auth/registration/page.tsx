@@ -1,25 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import {
-  TextInput,
-  PasswordInput,
-  Button,
-  Paper,
-  Title,
-  Text,
-  Anchor,
-  Stack,
   Alert,
-  Center,
-  Loader,
-  Group,
+  Anchor,
   Box,
+  Button,
+  Center,
+  Group,
+  Loader,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  Title,
 } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 type FlowData = {
   id: string;
@@ -46,6 +46,20 @@ type RegistrationFormState = {
 };
 
 export default function RegistrationPage() {
+  return (
+    <Suspense
+      fallback={
+        <Center h="100vh">
+          <Loader size="lg" />
+        </Center>
+      }
+    >
+      <RegistrationPageContent />
+    </Suspense>
+  );
+}
+
+function RegistrationPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const flowId = searchParams.get("flow");
@@ -93,7 +107,7 @@ export default function RegistrationPage() {
   }
 
   const csrfNode = flow.ui.nodes.find(
-    (node) => node.attributes.name === "csrf_token"
+    (node) => node.attributes.name === "csrf_token",
   );
   const csrfToken = csrfNode?.attributes.value || "";
 
@@ -101,28 +115,31 @@ export default function RegistrationPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    
+
     // Get return_to from flow object, fallback to URL param, then to "/"
     const targetReturnTo = flow.return_to || returnTo || "/";
-    
+
     try {
-      const response = await fetch(`/api/.ory/self-service/registration?flow=${flowId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          method: "password",
-          traits: {
-            username: formData.username,
-            email: formData.email,
+      const response = await fetch(
+        `/api/.ory/self-service/registration?flow=${flowId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
           },
-          password: formData.password,
-          csrf_token: csrfToken,
-        }),
-        credentials: "include",
-      });
+          body: JSON.stringify({
+            method: "password",
+            traits: {
+              username: formData.username,
+              email: formData.email,
+            },
+            password: formData.password,
+            csrf_token: csrfToken,
+          }),
+          credentials: "include",
+        },
+      );
 
       const data = await response.json();
 
@@ -133,7 +150,7 @@ export default function RegistrationPage() {
         router.refresh();
         return;
       }
-      
+
       // If response is ok but no session, still redirect (edge case)
       if (response.ok) {
         router.push(targetReturnTo);
@@ -141,19 +158,27 @@ export default function RegistrationPage() {
         return;
       }
 
-      if (response.status === 410 || response.status === 404 || response.status === 403) {
+      if (
+        response.status === 410 ||
+        response.status === 404 ||
+        response.status === 403
+      ) {
         window.location.href = `/api/.ory/self-service/registration/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
         return;
       }
 
       if (data.ui?.messages) {
-        const messages = data.ui.messages.map((m: { text: string }) => m.text).join(". ");
+        const messages = data.ui.messages
+          .map((m: { text: string }) => m.text)
+          .join(". ");
         setError(messages);
       } else if (data.ui?.nodes) {
         const fieldErrors: string[] = [];
         for (const node of data.ui.nodes) {
           if (node.messages?.length > 0) {
-            fieldErrors.push(...node.messages.map((m: { text: string }) => m.text));
+            fieldErrors.push(
+              ...node.messages.map((m: { text: string }) => m.text),
+            );
           }
         }
         if (fieldErrors.length > 0) {
@@ -181,7 +206,11 @@ export default function RegistrationPage() {
         padding: "1rem",
       }}
     >
-      <Stack align="center" gap={32} style={{ width: "min(550px, calc(100vw - 2rem))" }}>
+      <Stack
+        align="center"
+        gap={32}
+        style={{ width: "min(550px, calc(100vw - 2rem))" }}
+      >
         <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
           <Group justify="center" gap="md">
             <Image
@@ -197,7 +226,13 @@ export default function RegistrationPage() {
           </Group>
         </Link>
 
-        <Paper radius="md" p={32} withBorder shadow="sm" style={{ width: "100%" }}>
+        <Paper
+          radius="md"
+          p={32}
+          withBorder
+          shadow="sm"
+          style={{ width: "100%" }}
+        >
           <Title order={2} ta="center" mb={24} fz={22}>
             Регистрация
           </Title>
@@ -224,7 +259,10 @@ export default function RegistrationPage() {
                 radius="md"
                 value={formData.username}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, username: e.currentTarget.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    username: e.currentTarget.value,
+                  }))
                 }
               />
 
@@ -237,7 +275,10 @@ export default function RegistrationPage() {
                 radius="md"
                 value={formData.email}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, email: e.currentTarget.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    email: e.currentTarget.value,
+                  }))
                 }
               />
 
@@ -249,7 +290,10 @@ export default function RegistrationPage() {
                 radius="md"
                 value={formData.password}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, password: e.currentTarget.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    password: e.currentTarget.value,
+                  }))
                 }
               />
 
@@ -268,7 +312,13 @@ export default function RegistrationPage() {
 
           <Text c="dimmed" ta="center" mt={24} fz={14}>
             Уже есть аккаунт?{" "}
-            <Anchor component={Link} href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`} fz={14} fw={600} underline="hover">
+            <Anchor
+              component={Link}
+              href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`}
+              fz={14}
+              fw={600}
+              underline="hover"
+            >
               Войти
             </Anchor>
           </Text>

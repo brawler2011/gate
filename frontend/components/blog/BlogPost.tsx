@@ -19,6 +19,7 @@ export interface BlogPostProps {
   title: string;
   author: string;
   avatarUrl?: string;
+  previewImageUrl?: string;
   description: string;
   date?: string;
 }
@@ -28,10 +29,11 @@ export function BlogPost({
   title,
   author,
   avatarUrl,
+  previewImageUrl,
   description,
   date,
 }: BlogPostProps) {
-  const imageUrl = `/api/blogs/posts/${id}/image`;
+  const imageUrl = previewImageUrl ? `/api/blogs/posts/${id}/image` : null;
 
   return (
     <Link

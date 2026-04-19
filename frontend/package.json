@@ -3,10 +3,14 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "local": "bun --env-file=../deploy/local/.env next dev",
-    "build": "next build",
+    "dev:local": "bun --env-file=../deploy/local/.env next dev",
+    "build:local": "NODE_ENV=production bun --env-file=../deploy/local/.env next build",
+    "build:dev": "NODE_ENV=production bun --env-file=../deploy/dev/.env next build",
+    "build:prod": "NODE_ENV=production bun --env-file=../deploy/prod/.env next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@mantine/core": "^8.3.10",

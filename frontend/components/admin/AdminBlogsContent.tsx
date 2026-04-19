@@ -57,7 +57,10 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
     }
 
     setPosts(data.posts || []);
-    setPagination(data.pagination || { total: 0, page: 1 });
+    setPagination({
+      total: data.pagination?.total ?? 0,
+      page: data.pagination?.page ?? currentPage,
+    });
     setLoading(false);
   }, []);
 

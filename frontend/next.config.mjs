@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     output: 'standalone',
-    typescript: {
-        ignoreBuildErrors: true,
-    },
     pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
     experimental: {
         serverActions: {

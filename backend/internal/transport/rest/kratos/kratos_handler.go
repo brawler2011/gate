@@ -34,6 +34,15 @@ type KratosHandler struct {
 	identityAPI ory.IdentityAPI
 }
 
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		slog.Error("Failed to encode webhook response", "error", err)
+	}
+}
+
 func NewKratosHandler(usersUC interfaces.UsersUC, identityAPI ory.IdentityAPI) *KratosHandler {
 	return &KratosHandler{
 		usersUC:     usersUC,
@@ -53,8 +62,7 @@ func (h *KratosHandler) HandleKratosWebhook(w http.ResponseWriter, r *http.Reque
 	var req KratosWebhookRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		slog.Error("Failed to parse webhook body", "error", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(&ErrorResponse{
+		writeJSON(w, http.StatusBadRequest, &ErrorResponse{
 			Error: "Invalid request body",
 		})
 		return
@@ -64,8 +72,7 @@ func (h *KratosHandler) HandleKratosWebhook(w http.ResponseWriter, r *http.Reque
 
 	if req.UserId == "" || req.Username == "" || req.Email == "" {
 		slog.Error("Missing required fields in webhook")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(&ErrorResponse{
+		writeJSON(w, http.StatusBadRequest, &ErrorResponse{
 			Error: "Missing required fields: userId, username and email",
 		})
 		return
@@ -76,8 +83,7 @@ func (h *KratosHandler) HandleKratosWebhook(w http.ResponseWriter, r *http.Reque
 	kratosId, err := uuid.Parse(req.UserId)
 	if err != nil {
 		slog.Error("Invalid userId format", "error", err, "user_id", req.UserId)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(&ErrorResponse{
+		writeJSON(w, http.StatusBadRequest, &ErrorResponse{
 			Error: "Invalid userId format",
 		})
 		return
@@ -95,8 +101,7 @@ func (h *KratosHandler) HandleKratosWebhook(w http.ResponseWriter, r *http.Reque
 		existingUser, fetchErr := h.usersUC.GetUserByKratosId(ctx, kratosId)
 		if fetchErr == nil && existingUser.Id != uuid.Nil {
 			slog.Info("User already exists", "kratos_id", req.UserId)
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(KratosWebhookResponse{})
+			writeJSON(w, http.StatusOK, KratosWebhookResponse{})
 			return
 		}
 
@@ -106,8 +111,7 @@ func (h *KratosHandler) HandleKratosWebhook(w http.ResponseWriter, r *http.Reque
 			"username", req.Username,
 		)
 
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(&ErrorResponse{
+		writeJSON(w, http.StatusInternalServerError, &ErrorResponse{
 			Error: "Failed to create user in database",
 		})
 		return
@@ -120,6 +124,5 @@ func (h *KratosHandler) HandleKratosWebhook(w http.ResponseWriter, r *http.Reque
 		"role", defaultRole,
 	)
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(KratosWebhookResponse{})
+	writeJSON(w, http.StatusOK, KratosWebhookResponse{})
 }

@@ -183,6 +183,8 @@ func ResponseErrorHandler(logger *slog.Logger) func(w http.ResponseWriter, r *ht
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			logger.ErrorContext(ctx, "Failed to encode error response", "error", err)
+		}
 	}
 }

@@ -19,7 +19,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 
 type LimitsData = {
   problem_type: string;
@@ -50,7 +50,7 @@ export function WorkshopGeneralTab({ problemId }: Props) {
   const [isReadmeDirty, setIsReadmeDirty] = useState(false);
   const [isReadmeSaving, startReadmeSaving] = useTransition();
 
-  const loadLimits = () => {
+  const loadLimits = useCallback(() => {
     startLoading(async () => {
       const [error, data] = await getWorkshopProblemLimits(problemId);
       if (error || !data) {
@@ -72,15 +72,9 @@ export function WorkshopGeneralTab({ problemId }: Props) {
       });
       setIsDirty(false);
     });
-  };
+  }, [problemId, startLoading]);
 
-  useEffect(() => {
-    loadLimits();
-    loadReadme();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [problemId]);
-
-  const loadReadme = async () => {
+  const loadReadme = useCallback(async () => {
     setIsReadmeLoading(true);
     const [error, data] = await getWorkshopProblemReadme(problemId);
     setIsReadmeLoading(false);
@@ -96,7 +90,12 @@ export function WorkshopGeneralTab({ problemId }: Props) {
 
     setReadme(data ?? "");
     setIsReadmeDirty(false);
-  };
+  }, [problemId]);
+
+  useEffect(() => {
+    loadLimits();
+    void loadReadme();
+  }, [loadLimits, loadReadme]);
 
   const patchLimits = (patch: Partial<LimitsData>) => {
     setLimits((prev) => (prev ? { ...prev, ...patch } : prev));
