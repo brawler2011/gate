@@ -24,6 +24,11 @@ func NewOrchestrator(client *Client) *Orchestrator {
 	}
 }
 
+// Client returns the underlying sandbox client.
+func (o *Orchestrator) Client() *Client {
+	return o.client
+}
+
 // ValidateTest compiles validator (if needed) and validates test input
 func (o *Orchestrator) ValidateTest(ctx context.Context, req ValidateTestRequest) (*ValidationResult, error) {
 	// If validator FileID is not provided, return error
@@ -231,6 +236,93 @@ func (o *Orchestrator) JudgeSolution(ctx context.Context, req JudgeSolutionReque
 		Message: checkerResult.Message,
 		Time:    solutionResult.Time,
 		Memory:  solutionResult.Memory,
+	}, nil
+}
+
+// JudgeSolutionInteractive compiles solution and runs it against an interactor via pipes.
+func (o *Orchestrator) JudgeSolutionInteractive(ctx context.Context, req JudgeSolutionRequest) (*JudgeResult, error) {
+	interactorFileID := req.InteractorFileID
+	if interactorFileID == "" {
+		interactorFileID = req.CheckerFileID
+	}
+	if interactorFileID == "" {
+		return &JudgeResult{
+			Verdict:        "IE",
+			Message:        "Interactor binary not provided",
+			ExecutionError: "missing interactor binary",
+		}, nil
+	}
+
+	compileLimits := o.compiler.GetCompileLimits(req.SolutionLanguage)
+	compileLimits.CPUTimeMs = 30000
+	compileLimits.MemoryMB = 512
+
+	binary, err := o.compiler.CompileSolution(ctx, req.SolutionCode, req.SolutionLanguage, compileLimits)
+	if err != nil {
+		return &JudgeResult{
+			Verdict:      "CE",
+			Message:      "Compilation failed",
+			CompileError: fmt.Sprintf("compilation error: %v", err),
+		}, nil
+	}
+
+	if !binary.Success {
+		return &JudgeResult{
+			Verdict:      "CE",
+			Message:      "Compilation failed",
+			CompileError: binary.CompileLog,
+		}, nil
+	}
+
+	runLimits := ResourceLimits{
+		CPUTimeMs: req.TimeLimitMs,
+		MemoryMB:  req.MemoryLimitMB,
+		ProcLimit: 1,
+		StackMB:   256,
+	}
+
+	interactorLimits := ResourceLimits{
+		CPUTimeMs: req.TimeLimitMs,
+		MemoryMB:  256,
+		ProcLimit: 1,
+		StackMB:   256,
+	}
+	if interactorLimits.CPUTimeMs <= 0 {
+		interactorLimits.CPUTimeMs = 10000
+	}
+
+	interactorResult, err := o.executor.RunInteractor(ctx, InteractorRunRequest{
+		BinaryFileID:       interactorFileID,
+		SolutionFileID:     binary.FileID,
+		SolutionSourceCode: req.SolutionCode,
+		SolutionLanguage:   req.SolutionLanguage,
+		Input:              req.Input,
+		Answer:             req.Answer,
+		SolutionLimits:     runLimits,
+		InteractorLimits:   interactorLimits,
+	})
+	if err != nil {
+		return &JudgeResult{
+			Verdict:        "IE",
+			Message:        "Internal error during interactive execution",
+			ExecutionError: fmt.Sprintf("execution error: %v", err),
+		}, nil
+	}
+
+	if !interactorResult.Success {
+		return &JudgeResult{
+			Verdict:        "IE",
+			Message:        "Interactive execution failed",
+			ExecutionError: interactorResult.Error,
+		}, nil
+	}
+
+	return &JudgeResult{
+		Verdict: interactorResult.Verdict,
+		Score:   interactorResult.Score,
+		Message: interactorResult.Message,
+		Time:    interactorResult.Time,
+		Memory:  interactorResult.Memory,
 	}, nil
 }
 

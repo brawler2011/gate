@@ -187,15 +187,219 @@ func (e *Executor) RunGenerator(ctx context.Context, req GeneratorRunRequest) (*
 
 // RunInteractor handles interactive problems
 func (e *Executor) RunInteractor(ctx context.Context, req InteractorRunRequest) (*InteractorResult, error) {
-	// Interactive problems are complex and require process communication
-	// This is a simplified implementation
-	// In production, we'd need to set up pipes between solution and interactor
+	if req.BinaryFileID == "" {
+		return &InteractorResult{
+			Success: false,
+			Error:   "interactor binary not provided",
+		}, nil
+	}
 
-	// For now, return not implemented
+	solutionLimits := normalizeLimits(req.SolutionLimits, ResourceLimits{
+		CPUTimeMs: 5000,
+		MemoryMB:  256,
+		ProcLimit: 1,
+		StackMB:   256,
+	})
+
+	interactorLimits := normalizeLimits(req.InteractorLimits, ResourceLimits{
+		CPUTimeMs: 10000,
+		MemoryMB:  256,
+		ProcLimit: 1,
+		StackMB:   256,
+	})
+
+	solutionCmd, err := e.buildInteractiveSolutionCommand(req, solutionLimits)
+	if err != nil {
+		return &InteractorResult{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+
+	interactorCmd := InteractiveExecutionCommand{
+		BinaryFileID:   req.BinaryFileID,
+		ExecutableName: "./interactor",
+		Args:           []string{"input.txt", "output.txt", "answer.txt"},
+		Env:            []string{"PATH=/usr/bin:/bin"},
+		Files: map[string][]byte{
+			"input.txt":  req.Input,
+			"output.txt": []byte{},
+			"answer.txt": req.Answer,
+		},
+		Limits: interactorLimits,
+	}
+
+	interactiveResult, err := e.client.ExecuteInteractive(ctx, InteractiveExecutionRequest{
+		Solution:   solutionCmd,
+		Interactor: interactorCmd,
+	})
+	if err != nil {
+		return &InteractorResult{
+			Success: false,
+			Error:   fmt.Sprintf("execution failed: %v", err),
+		}, nil
+	}
+
+	totalTime := interactiveResult.Solution.Time
+	if interactiveResult.Interactor.Time > totalTime {
+		totalTime = interactiveResult.Interactor.Time
+	}
+
+	maxMemory := interactiveResult.Solution.Memory
+	if interactiveResult.Interactor.Memory > maxMemory {
+		maxMemory = interactiveResult.Interactor.Memory
+	}
+
+	if interactiveResult.Solution.Status != StatusAccepted {
+		return &InteractorResult{
+			Verdict: mapExecutionStatusToVerdict(interactiveResult.Solution.Status),
+			Message: strings.TrimSpace(string(interactiveResult.Solution.Stderr)),
+			Time:    totalTime,
+			Memory:  maxMemory,
+			Success: true,
+		}, nil
+	}
+
+	if interactiveResult.Interactor.Status != StatusAccepted && interactiveResult.Interactor.Status != "Nonzero Exit Status" {
+		return &InteractorResult{
+			Verdict: mapExecutionStatusToVerdict(interactiveResult.Interactor.Status),
+			Message: strings.TrimSpace(string(interactiveResult.Interactor.Stderr)),
+			Time:    totalTime,
+			Memory:  maxMemory,
+			Success: true,
+		}, nil
+	}
+
+	verdictResult := parseCheckerLikeVerdict(interactiveResult.Interactor)
+	if verdictResult.Message == "" {
+		verdictResult.Message = strings.TrimSpace(string(interactiveResult.Interactor.Stderr))
+	}
+
 	return &InteractorResult{
-		Success: false,
-		Error:   "interactor execution not yet implemented",
+		Verdict: verdictResult.Verdict,
+		Score:   verdictResult.Score,
+		Message: verdictResult.Message,
+		Time:    totalTime,
+		Memory:  maxMemory,
+		Success: true,
 	}, nil
+}
+
+func (e *Executor) buildInteractiveSolutionCommand(req InteractorRunRequest, limits ResourceLimits) (InteractiveExecutionCommand, error) {
+	if req.SolutionFileID != "" {
+		return InteractiveExecutionCommand{
+			BinaryFileID:   req.SolutionFileID,
+			ExecutableName: "./solution",
+			Args:           []string{},
+			Env:            []string{"PATH=/usr/bin:/bin"},
+			Files:          map[string][]byte{},
+			Limits:         limits,
+		}, nil
+	}
+
+	if req.SolutionSourceCode == "" {
+		return InteractiveExecutionCommand{}, fmt.Errorf("solution source code not provided for interpreted run")
+	}
+
+	normalizedLang := NormalizeLanguageName(req.SolutionLanguage)
+	langConfig, ok := GetLanguageConfig(normalizedLang)
+	if !ok {
+		return InteractiveExecutionCommand{}, fmt.Errorf("unsupported language: %s", req.SolutionLanguage)
+	}
+
+	sourceFile := "solution" + langConfig.Extension
+	executeCmd := e.compiler.GetExecuteCommand(normalizedLang, "solution")
+	if len(executeCmd) == 0 {
+		return InteractiveExecutionCommand{}, fmt.Errorf("no execute command configured for language: %s", req.SolutionLanguage)
+	}
+
+	return InteractiveExecutionCommand{
+		BinaryFileID:   "",
+		ExecutableName: executeCmd[0],
+		Args:           executeCmd[1:],
+		Env:            defaultExecEnv(langConfig.ExecuteEnv),
+		Files: map[string][]byte{
+			sourceFile: []byte(req.SolutionSourceCode),
+		},
+		Limits: limits,
+	}, nil
+}
+
+func normalizeLimits(limits ResourceLimits, defaults ResourceLimits) ResourceLimits {
+	if limits.CPUTimeMs <= 0 {
+		limits.CPUTimeMs = defaults.CPUTimeMs
+	}
+	if limits.MemoryMB <= 0 {
+		limits.MemoryMB = defaults.MemoryMB
+	}
+	if limits.ProcLimit <= 0 {
+		limits.ProcLimit = defaults.ProcLimit
+	}
+	if limits.StackMB <= 0 {
+		limits.StackMB = defaults.StackMB
+	}
+	return limits
+}
+
+type checkerVerdictResult struct {
+	Verdict string
+	Score   *float64
+	Message string
+}
+
+func parseCheckerLikeVerdict(result ExecuteResult) checkerVerdictResult {
+	output := strings.TrimSpace(string(result.Stdout))
+	lines := strings.Split(output, "\n")
+	firstLine := ""
+	if len(lines) > 0 {
+		firstLine = strings.ToUpper(strings.TrimSpace(lines[0]))
+	}
+
+	verdict := "FAIL"
+	if result.Status == StatusAccepted && result.ExitStatus == 0 {
+		verdict = "OK"
+	} else if strings.Contains(firstLine, "WRONG") || result.ExitStatus == 1 {
+		verdict = "WA"
+	} else if strings.Contains(firstLine, "PRESENTATION") || result.ExitStatus == 2 {
+		verdict = "PE"
+	} else if result.ExitStatus == 3 {
+		verdict = "FAIL"
+	} else if result.ExitStatus == 7 {
+		verdict = "POINTS"
+	}
+
+	message := ""
+	if len(lines) > 1 {
+		message = strings.Join(lines[1:], "\n")
+	} else if len(lines) == 1 && len(lines[0]) > 0 {
+		message = lines[0]
+	}
+
+	parsed := checkerVerdictResult{
+		Verdict: verdict,
+		Message: message,
+	}
+
+	if verdict == "POINTS" {
+		parsed.Score = extractScore(output)
+	}
+
+	return parsed
+}
+
+func mapExecutionStatusToVerdict(status string) string {
+	switch status {
+	case "Time Limit Exceeded":
+		return "TLE"
+	case "Memory Limit Exceeded":
+		return "MLE"
+	case "Output Limit Exceeded":
+		return "RE"
+	case "Accepted", "Nonzero Exit Status", "Runtime Error", "Dangerous Syscall", "Internal Error", "File Error":
+		return "RE"
+	default:
+		return "RE"
+	}
 }
 
 // RunSolution executes a user solution

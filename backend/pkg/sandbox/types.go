@@ -70,6 +70,45 @@ type ExecuteResult struct {
 	Memory     int64 // in bytes
 }
 
+// InteractiveExecutionCommand describes one process in interactive execution.
+type InteractiveExecutionCommand struct {
+	BinaryFileID   string // cached binary from compilation
+	ExecutableName string // e.g., "./solution"
+	Args           []string
+	Env            []string
+	Files          map[string][]byte // additional input files
+	Limits         ResourceLimits
+}
+
+// PipeEndpoint references one command file descriptor in a multi-command request.
+type PipeEndpoint struct {
+	CommandIndex int32
+	FD           int32
+}
+
+// PipeMapping describes one pipe between two command descriptors.
+type PipeMapping struct {
+	In              PipeEndpoint
+	Out             PipeEndpoint
+	Proxy           bool
+	Name            string
+	MaxBytes        uint64
+	DisableZeroCopy bool
+}
+
+// InteractiveExecutionRequest describes two-process interactive execution.
+type InteractiveExecutionRequest struct {
+	Solution    InteractiveExecutionCommand
+	Interactor  InteractiveExecutionCommand
+	PipeMapping []PipeMapping
+}
+
+// InteractiveExecutionResult contains per-process results.
+type InteractiveExecutionResult struct {
+	Solution   ExecuteResult
+	Interactor ExecuteResult
+}
+
 // ComponentCompileRequest represents a problem component compilation request
 type ComponentCompileRequest struct {
 	Type         string // "checker", "validator", "generator", "interactor"
@@ -142,10 +181,14 @@ type GeneratorResult struct {
 
 // InteractorRunRequest represents an interactor execution request
 type InteractorRunRequest struct {
-	BinaryFileID   string // from ComponentBinary
-	SolutionFileID string // compiled solution
-	Input          []byte // test input
-	Limits         ResourceLimits
+	BinaryFileID       string // compiled interactor binary
+	SolutionFileID     string // compiled solution binary
+	SolutionSourceCode string // used for interpreted solutions
+	SolutionLanguage   string
+	Input              []byte // test input
+	Answer             []byte // expected output/answer file contents
+	SolutionLimits     ResourceLimits
+	InteractorLimits   ResourceLimits
 }
 
 // InteractorResult represents an interactor execution result
@@ -212,6 +255,7 @@ type JudgeSolutionRequest struct {
 	SolutionCode     string
 	SolutionLanguage string
 	CheckerFileID    string // pre-compiled checker
+	InteractorFileID string // pre-compiled interactor
 	Input            []byte
 	Answer           []byte
 	TimeLimitMs      int64

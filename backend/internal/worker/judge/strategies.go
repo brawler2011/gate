@@ -200,19 +200,6 @@ func NewInteractiveStrategy(
 }
 
 // Judge executes interactive judging.
-//
-// NOTE: True interactive judging requires bidirectional pipe communication
-// between the solution and interactor processes, which go-judge does not yet
-// support natively. Until that support is added, this strategy falls back to
-// running the interactor as a post-execution checker. This produces correct
-// verdicts for many interactive problems but does not faithfully simulate
-// real-time interaction.
-//
-// Full implementation would:
-//   1. Compile both solution and interactor.
-//   2. Run them in parallel with pipes (solution stdout → interactor stdin,
-//      interactor stdout → solution stdin).
-//   3. Let the interactor determine the final verdict.
 func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language models.LanguageName, meta models.SubmissionEventMeta) (*FinalVerdict, error) {
 	orchestrator := sandbox.NewOrchestrator(s.sandboxClient)
 
@@ -221,9 +208,6 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 	if !exists {
 		return nil, fmt.Errorf("interactor is required for interactive problems")
 	}
-
-	// Fallback: use interactor binary as a post-execution checker.
-	checkerFileID := interactorFileID
 
 	// Convert language
 	languageStr := convertLanguage(language)
@@ -245,14 +229,14 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 		judgeReq := sandbox.JudgeSolutionRequest{
 			SolutionCode:     sourceCode,
 			SolutionLanguage: languageStr,
-			CheckerFileID:    checkerFileID,
+			InteractorFileID: interactorFileID,
 			Input:            testCase.Input,
 			Answer:           testCase.Output,
 			TimeLimitMs:      int64(s.pkg.Manifest.TimeLimitMs),
 			MemoryLimitMB:    int64(s.pkg.Manifest.MemoryLimitMb),
 		}
 
-		result, err := orchestrator.JudgeSolution(ctx, judgeReq)
+		result, err := orchestrator.JudgeSolutionInteractive(ctx, judgeReq)
 		if err != nil {
 			return nil, fmt.Errorf("failed to judge test %d: %w", testCase.Ordinal, err)
 		}

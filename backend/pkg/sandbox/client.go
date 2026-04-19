@@ -52,6 +52,11 @@ func (c *Client) Execute(ctx context.Context, req ExecuteRequest) (*ExecuteResul
 	return c.executeGRPC(ctx, req)
 }
 
+// ExecuteInteractive executes solution and interactor in one request using pipe mappings.
+func (c *Client) ExecuteInteractive(ctx context.Context, req InteractiveExecutionRequest) (*InteractiveExecutionResult, error) {
+	return c.executeInteractiveGRPC(ctx, req)
+}
+
 // compileGRPC compiles using gRPC API
 func (c *Client) compileGRPC(ctx context.Context, req CompileRequest) (*CompileResult, error) {
 	langConfig, ok := GetLanguageConfig(NormalizeLanguageName(req.Language))
@@ -195,27 +200,106 @@ func (c *Client) executeGRPC(ctx context.Context, req ExecuteRequest) (*ExecuteR
 	}
 
 	result := grpcResp.GetResults()[0]
+	execResult := toExecuteResult(result)
+	return &execResult, nil
+}
 
-	// Safely convert uint64 to int64
-	timeVal := result.GetTime()
-	if timeVal > uint64(1<<63-1) {
-		timeVal = uint64(1<<63 - 1)
-	}
-	memVal := result.GetMemory()
-	if memVal > uint64(1<<63-1) {
-		memVal = uint64(1<<63 - 1)
+func (c *Client) executeInteractiveGRPC(ctx context.Context, req InteractiveExecutionRequest) (*InteractiveExecutionResult, error) {
+	if c.grpcClient == nil {
+		return nil, fmt.Errorf("gRPC client is not initialized")
 	}
 
-	execResult := &ExecuteResult{
-		Status:     statusToString(result.GetStatus()),
-		ExitStatus: int(result.GetExitStatus()),
-		Time:       int64(timeVal),
-		Memory:     int64(memVal),
-		Stdout:     result.GetFiles()["stdout"],
-		Stderr:     result.GetFiles()["stderr"],
+	solutionCopyIn := prepareCopyIn(req.Solution)
+	interactorCopyIn := prepareCopyIn(req.Interactor)
+
+	solutionCmd := pb.Request_CmdType_builder{
+		Args: append([]string{req.Solution.ExecutableName}, req.Solution.Args...),
+		Env:  defaultExecEnv(req.Solution.Env),
+		Files: []*pb.Request_File{
+			nil,
+			nil,
+			newPipeFile("stderr"),
+		},
+		CpuTimeLimit:   uint64(max(0, req.Solution.Limits.ToNanoseconds())),
+		ClockTimeLimit: uint64(max(0, req.Solution.Limits.ToNanoseconds()*2)),
+		MemoryLimit:    uint64(req.Solution.Limits.ToBytes()),
+		ProcLimit:      uint64(req.Solution.Limits.ProcLimit),
+		CopyIn:         solutionCopyIn,
+	}.Build()
+
+	interactorCmd := pb.Request_CmdType_builder{
+		Args: append([]string{req.Interactor.ExecutableName}, req.Interactor.Args...),
+		Env:  defaultExecEnv(req.Interactor.Env),
+		Files: []*pb.Request_File{
+			nil,
+			nil,
+			newPipeFile("stderr"),
+		},
+		CpuTimeLimit:   uint64(max(0, req.Interactor.Limits.ToNanoseconds())),
+		ClockTimeLimit: uint64(max(0, req.Interactor.Limits.ToNanoseconds()*2)),
+		MemoryLimit:    uint64(req.Interactor.Limits.ToBytes()),
+		ProcLimit:      uint64(req.Interactor.Limits.ProcLimit),
+		CopyIn:         interactorCopyIn,
+	}.Build()
+
+	pipeMappings := req.PipeMapping
+	if len(pipeMappings) == 0 {
+		pipeMappings = []PipeMapping{
+			{
+				In:  PipeEndpoint{CommandIndex: 0, FD: 1},
+				Out: PipeEndpoint{CommandIndex: 1, FD: 0},
+			},
+			{
+				In:  PipeEndpoint{CommandIndex: 1, FD: 1},
+				Out: PipeEndpoint{CommandIndex: 0, FD: 0},
+			},
+		}
 	}
 
-	return execResult, nil
+	pbPipeMappings := make([]*pb.Request_PipeMap, 0, len(pipeMappings))
+	for _, mapping := range pipeMappings {
+		maxBytes := mapping.MaxBytes
+		if maxBytes == 0 {
+			maxBytes = 10 * 1024 * 1024
+		}
+
+		pbPipeMappings = append(pbPipeMappings, pb.Request_PipeMap_builder{
+			In: pb.Request_PipeMap_PipeIndex_builder{
+				Index: mapping.In.CommandIndex,
+				Fd:    mapping.In.FD,
+			}.Build(),
+			Out: pb.Request_PipeMap_PipeIndex_builder{
+				Index: mapping.Out.CommandIndex,
+				Fd:    mapping.Out.FD,
+			}.Build(),
+			Proxy:           mapping.Proxy,
+			Name:            mapping.Name,
+			Max:             maxBytes,
+			DisableZeroCopy: mapping.DisableZeroCopy,
+		}.Build())
+	}
+
+	grpcReq := pb.Request_builder{
+		Cmd:         []*pb.Request_CmdType{solutionCmd, interactorCmd},
+		PipeMapping: pbPipeMappings,
+	}.Build()
+
+	grpcResp, err := c.grpcClient.Exec(ctx, grpcReq)
+	if err != nil {
+		return nil, fmt.Errorf("gRPC exec failed: %w", err)
+	}
+
+	if len(grpcResp.GetResults()) < 2 {
+		return nil, fmt.Errorf("interactive exec expects 2 results, got %d", len(grpcResp.GetResults()))
+	}
+
+	solutionResult := toExecuteResult(grpcResp.GetResults()[0])
+	interactorResult := toExecuteResult(grpcResp.GetResults()[1])
+
+	return &InteractiveExecutionResult{
+		Solution:   solutionResult,
+		Interactor: interactorResult,
+	}, nil
 }
 
 // Helper functions for gRPC
@@ -269,6 +353,42 @@ func statusToString(status pb.Response_Result_StatusType) string {
 		return "Internal Error"
 	default:
 		return "Runtime Error" // Default for unknown statuses
+	}
+}
+
+func defaultExecEnv(env []string) []string {
+	if len(env) > 0 {
+		return env
+	}
+	return []string{"PATH=/usr/bin:/bin"}
+}
+
+func prepareCopyIn(cmd InteractiveExecutionCommand) map[string]*pb.Request_File {
+	copyIn := make(map[string]*pb.Request_File)
+	if cmd.BinaryFileID != "" {
+		copyIn[strings.TrimPrefix(cmd.ExecutableName, "./")] = newCachedFile(cmd.BinaryFileID)
+	}
+	for filename, content := range cmd.Files {
+		copyIn[filename] = newMemoryFile(content)
+	}
+	return copyIn
+}
+
+func clampUint64ToInt64(v uint64) int64 {
+	if v > uint64(1<<63-1) {
+		return int64(1<<63 - 1)
+	}
+	return int64(v)
+}
+
+func toExecuteResult(result *pb.Response_Result) ExecuteResult {
+	return ExecuteResult{
+		Status:     statusToString(result.GetStatus()),
+		ExitStatus: int(result.GetExitStatus()),
+		Time:       clampUint64ToInt64(result.GetTime()),
+		Memory:     clampUint64ToInt64(result.GetMemory()),
+		Stdout:     result.GetFiles()["stdout"],
+		Stderr:     result.GetFiles()["stderr"],
 	}
 }
 
