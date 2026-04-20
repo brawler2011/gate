@@ -258,12 +258,13 @@ function RegistrationPageContent() {
                 size="md"
                 radius="md"
                 value={formData.username}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const value = e.currentTarget.value;
                   setFormData((prev) => ({
                     ...prev,
-                    username: e.currentTarget.value,
-                  }))
-                }
+                    username: value,
+                  }));
+                }}
               />
 
               <TextInput
@@ -274,12 +275,13 @@ function RegistrationPageContent() {
                 size="md"
                 radius="md"
                 value={formData.email}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const value = e.currentTarget.value;
                   setFormData((prev) => ({
                     ...prev,
-                    email: e.currentTarget.value,
-                  }))
-                }
+                    email: value,
+                  }));
+                }}
               />
 
               <PasswordInput
@@ -289,12 +291,13 @@ function RegistrationPageContent() {
                 size="md"
                 radius="md"
                 value={formData.password}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const value = e.currentTarget.value;
                   setFormData((prev) => ({
                     ...prev,
-                    password: e.currentTarget.value,
-                  }))
-                }
+                    password: value,
+                  }));
+                }}
               />
 
               <Button
