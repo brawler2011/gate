@@ -10,7 +10,6 @@ import {
 import type { OrganizationMemberModel } from "@contracts/gateway/v1";
 import {
   ActionIcon,
-  Autocomplete,
   Badge,
   Button,
   Card,
@@ -130,21 +129,21 @@ export function OrgMembersManagement({ orgId }: Props) {
       <Stack gap="md">
         <Card withBorder padding="lg">
           <Group gap="md" align="flex-end">
-            <Autocomplete
+            <Select
               size="md"
               placeholder="Поиск пользователя..."
-              value={searchQuery}
-              onChange={(v) => {
-                setSearchQuery(v);
-                setSelectedUserId(null);
-              }}
-              onOptionSubmit={(v) => {
-                setSelectedUserId(v);
-                setSearchQuery(
-                  searchResults.find((r) => r.value === v)?.label ?? v,
-                );
-              }}
+              searchable
+              clearable
+              value={selectedUserId}
+              onChange={setSelectedUserId}
               data={searchResults}
+              searchValue={searchQuery}
+              onSearchChange={setSearchQuery}
+              nothingFoundMessage={
+                searchQuery.length < 2
+                  ? "Введите минимум 2 символа"
+                  : "Пользователь не найден"
+              }
               rightSection={searching ? <Loader size="xs" /> : null}
               style={{ flex: 1 }}
             />
