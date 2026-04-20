@@ -209,6 +209,7 @@ services:
     container_name: gate-nats-prod
     hostname: nats
     restart: unless-stopped
+    command: ["--js", "--store_dir=/data"]
     ports:
       - "127.0.0.1:4222:4222"
       - "127.0.0.1:8222:8222"
