@@ -31,7 +31,7 @@ ENV WEBSOCKET_URL=$WEBSOCKET_URL
 
 # Собираем приложение с использованием кэша Next.js
 RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
-    bun run build
+    bun run next build
 
 # Этап 2: Production образ
 # Очень важно!!! Использовать oven/bun:1-slim Не alpine! Bun не оптимизирован под alpine
