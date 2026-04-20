@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 type GlobalErrorProps = {
   error: Error & { digest?: string };
   reset: () => void;
@@ -57,9 +59,9 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               >
                 Попробовать снова
               </button>
-              <a href="/" style={{ color: "#d7d7d7", alignSelf: "center" }}>
+              <Link href="/" style={{ color: "#d7d7d7", alignSelf: "center" }}>
                 На главную
-              </a>
+              </Link>
             </div>
           </section>
         </main>

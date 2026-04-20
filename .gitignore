@@ -3,5 +3,9 @@
 .vscode/
 .idea/
 .github/
+!.github/
+.github/*
+!.github/workflows/
+!.github/workflows/**
 .VSCodeCounter/
 *.log

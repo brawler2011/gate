@@ -258,7 +258,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/gate149.ru.conf:/etc/nginx/conf.d/gate149.ru.conf:ro
+      - ./nginx/steins.ru.conf:/etc/nginx/conf.d/steins.ru.conf:ro
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - certbot-conf:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro

@@ -7,11 +7,11 @@ log:
 
 serve:
   public:
-    base_url: https://gate149.ru/
+    base_url: https://steins.ru/
     cors:
       enabled: true
       allowed_origins:
-        - https://gate149.ru
+        - https://steins.ru
       allowed_methods:
         - GET
         - POST
@@ -30,12 +30,12 @@ serve:
       allow_credentials: true
       debug: false
   admin:
-    base_url: https://gate149.ru/kratos/admin/
+    base_url: https://steins.ru/kratos/admin/
 
 session:
   cookie:
     same_site: Lax
-    domain: gate149.ru
+    domain: steins.ru
     path: /
     persistent: true
 
@@ -46,9 +46,9 @@ identity:
       url: file:///etc/config/kratos/identity.schema.json
 
 selfservice:
-  default_browser_return_url: https://gate149.ru/
+  default_browser_return_url: https://steins.ru/
   allowed_return_urls:
-    - https://gate149.ru/
+    - https://steins.ru/
     - /
     - /auth/login
   flows:
