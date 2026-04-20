@@ -110,7 +110,7 @@ func (r *UsersRepo) ListUsers(ctx context.Context, filter models.UsersListFilter
 	}
 
 	return models.UsersList{
-		Users: userRecords,
+		Users:      userRecords,
 		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
 	}, nil
 }
