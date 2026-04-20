@@ -43,9 +43,15 @@ func (s *IntegrationTestSuite) TestUsers() {
 
 	// 4. ListUsers
 	s.Run("ListUsers", func() {
+		searchPrefix := "pagetest" + uuid.NewString()[:8]
+		searchUser1 := s.createUser(searchPrefix+"alpha", models.UserRoleUser)
+		searchUser2 := s.createUser(searchPrefix+"beta", models.UserRoleAdmin)
+		search := searchPrefix
+
 		resp, err := s.client.ListUsersWithResponse(s.ctx, &corev1.ListUsersParams{
 			Page:     1,
 			PageSize: 10,
+			Search:   &search,
 		}, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", user1.Id.String())
 			return nil
@@ -55,7 +61,23 @@ func (s *IntegrationTestSuite) TestUsers() {
 			s.T().Logf("ListUsers failed: %s", string(resp.Body))
 		}
 		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Require().NotNil(resp.JSON200)
+
+		hasSearchUser1 := false
+		hasSearchUser2 := false
+		for _, user := range resp.JSON200.Users {
+			if user.Username == searchUser1.Username {
+				hasSearchUser1 = true
+			}
+			if user.Username == searchUser2.Username {
+				hasSearchUser2 = true
+			}
+		}
+
+		s.True(hasSearchUser1)
+		s.True(hasSearchUser2)
 		s.GreaterOrEqual(len(resp.JSON200.Users), 2)
+		s.Equal(int32(1), resp.JSON200.Pagination.Total)
 	})
 }
 
