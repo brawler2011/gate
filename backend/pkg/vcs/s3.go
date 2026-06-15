@@ -10,14 +10,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/gate149/gate/backend/pkg"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 
 type StorageClient interface {
 	UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error
-	DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (*s3.GetObjectOutput, error)
+	DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (io.ReadCloser, string, error)
 	DeleteFile(ctx context.Context, bucket, key string) error
 	ListFiles(ctx context.Context, bucket, prefix string) ([]string, error)
 }
@@ -28,8 +27,8 @@ type S3Service struct {
 	locks   sync.Map
 }
 
-func NewS3Service(s3Client *pkg.S3Client, bucket string) *S3Service {
-	return NewS3ServiceWithStorage(s3Client, bucket)
+func NewS3Service(store storage.Storage, bucket string) *S3Service {
+	return NewS3ServiceWithStorage(store, bucket)
 }
 
 func NewS3ServiceWithStorage(storage StorageClient, bucket string) *S3Service {
@@ -124,13 +123,13 @@ func (s *S3Service) ReadFile(ctx context.Context, problemID uuid.UUID, p string)
 	mu.RLock()
 	defer mu.RUnlock()
 
-	obj, err := s.storage.DownloadFile(ctx, s.bucket, key, nil)
+	body, _, err := s.storage.DownloadFile(ctx, s.bucket, key, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", p, err)
 	}
-	defer obj.Body.Close()
+	defer body.Close()
 
-	content, err := io.ReadAll(obj.Body)
+	content, err := io.ReadAll(body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file content %s: %w", p, err)
 	}
@@ -332,20 +331,20 @@ func (c *inMemoryStorageClient) UploadFile(_ context.Context, bucket, key string
 	return nil
 }
 
-func (c *inMemoryStorageClient) DownloadFile(_ context.Context, bucket, key string, _ *string) (*s3.GetObjectOutput, error) {
+func (c *inMemoryStorageClient) DownloadFile(_ context.Context, bucket, key string, _ *string) (io.ReadCloser, string, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	objects := c.existingBucketObjects(bucket)
 	if objects == nil {
-		return nil, fmt.Errorf("failed to download file from S3: object not found")
+		return nil, "", fmt.Errorf("failed to download file from S3: object not found")
 	}
 	content, ok := objects[key]
 	if !ok {
-		return nil, fmt.Errorf("failed to download file from S3: object not found")
+		return nil, "", fmt.Errorf("failed to download file from S3: object not found")
 	}
 
-	return &s3.GetObjectOutput{Body: io.NopCloser(bytes.NewReader(append([]byte(nil), content...)))}, nil
+	return io.NopCloser(bytes.NewReader(append([]byte(nil), content...))), "", nil
 }
 
 func (c *inMemoryStorageClient) DeleteFile(_ context.Context, bucket, key string) error {

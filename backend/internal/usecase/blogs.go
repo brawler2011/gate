@@ -15,14 +15,14 @@ import (
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 
 // BlogsUseCase handles blog post business logic
 type BlogsUseCase struct {
 	blogsRepo   interfaces.BlogsRepo
-	s3Client    *pkg.S3Client
+	storage     storage.Storage
 	imageBucket string
 }
 
@@ -47,12 +47,12 @@ func (p PostImage) Etag() string {
 // NewBlogsUseCase creates a new BlogsUseCase
 func NewBlogsUseCase(
 	blogsRepo interfaces.BlogsRepo,
-	s3Client *pkg.S3Client,
+	storage storage.Storage,
 	imageBucket string,
 ) *BlogsUseCase {
 	return &BlogsUseCase{
 		blogsRepo:   blogsRepo,
-		s3Client:    s3Client,
+		storage:     storage,
 		imageBucket: imageBucket,
 	}
 }
@@ -84,7 +84,7 @@ func (uc *BlogsUseCase) CreatePost(
 
 	if err != nil {
 		// Clean up uploaded image on failure
-		_ = uc.s3Client.DeleteFile(ctx, uc.imageBucket, imageKey)
+		_ = uc.storage.DeleteFile(ctx, uc.imageBucket, imageKey)
 		return uuid.Nil, fmt.Errorf("failed to create post: %w", err)
 	}
 
@@ -170,14 +170,14 @@ func (uc *BlogsUseCase) UpdatePost(
 	if err != nil {
 		// Clean up new image on failure
 		if newImageKey != nil {
-			_ = uc.s3Client.DeleteFile(ctx, uc.imageBucket, *newImageKey)
+			_ = uc.storage.DeleteFile(ctx, uc.imageBucket, *newImageKey)
 		}
 		return fmt.Errorf("failed to update post: %w", err)
 	}
 
 	// Delete old image if new one was uploaded
 	if newImageKey != nil && post.ImageKey != "" {
-		_ = uc.s3Client.DeleteFile(ctx, uc.imageBucket, post.ImageKey)
+		_ = uc.storage.DeleteFile(ctx, uc.imageBucket, post.ImageKey)
 	}
 
 	return nil
@@ -199,23 +199,23 @@ func (uc *BlogsUseCase) DeletePost(ctx context.Context, id uuid.UUID) error {
 
 	// Delete image from S3 (best effort)
 	if post.ImageKey != "" {
-		_ = uc.s3Client.DeleteFile(ctx, uc.imageBucket, post.ImageKey)
+		_ = uc.storage.DeleteFile(ctx, uc.imageBucket, post.ImageKey)
 	}
 
 	return nil
 }
 
-// GetPostImage retrieves a post image from S3
+// GetPostImage retrieves a post image from storage
 func (uc *BlogsUseCase) GetPostImage(ctx context.Context, imageKey string, ifNoneMatch *string) (PostImage, error) {
-	file, err := uc.s3Client.DownloadFile(ctx, uc.imageBucket, imageKey, ifNoneMatch)
+	body, etag, err := uc.storage.DownloadFile(ctx, uc.imageBucket, imageKey, ifNoneMatch)
 	if err != nil {
 		return PostImage{}, fmt.Errorf("failed to download image: %w", err)
 	}
 
 	return PostImage{
-		readCloser:  file.Body,
+		readCloser:  body,
 		contentType: "image/png",
-		etag:        *file.ETag,
+		etag:        etag,
 	}, nil
 }
 
@@ -252,7 +252,7 @@ func (uc *BlogsUseCase) uploadImage(ctx context.Context, imageReader io.Reader, 
 	key := fmt.Sprintf("%d-%s.png", timestamp, randomID)
 
 	// Upload to S3
-	err = uc.s3Client.UploadFile(ctx, uc.imageBucket, key, &buf, "image/png")
+	err = uc.storage.UploadFile(ctx, uc.imageBucket, key, &buf, "image/png")
 	if err != nil {
 		return "", fmt.Errorf("failed to upload to S3: %w", err)
 	}

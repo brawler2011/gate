@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/transport/middleware"
+	"github.com/gate149/gate/backend/pkg/storage"
 )
 
 // ListPosts implements the ListPosts operation
@@ -183,11 +184,11 @@ func (s *CoreServer) GetPostImage(ctx context.Context, request corev1.GetPostIma
 		}, nil
 	}
 
-	// Get image from S3
+	// Get image from storage
 	postImage, err := s.blogsUC.GetPostImage(ctx, post.ImageKey, request.Params.IfNoneMatch)
 
 	var re *http.ResponseError
-	if errors.As(err, &re) && re.HTTPStatusCode() == 304 {
+	if errors.Is(err, storage.ErrNotModified) || (errors.As(err, &re) && re.HTTPStatusCode() == 304) {
 		return corev1.GetPostImage304Response{
 			Headers: corev1.GetPostImage304ResponseHeaders{
 				ETag: *request.Params.IfNoneMatch,

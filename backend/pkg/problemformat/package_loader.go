@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gate149/gate/backend/pkg"
+	"github.com/gate149/gate/backend/pkg/storage"
 )
 
 // ProblemPackage represents a loaded problem package
@@ -40,15 +40,15 @@ type ComponentFile struct {
 
 // PackageLoader handles downloading and extracting problem packages
 type PackageLoader struct {
-	s3Client *pkg.S3Client
+	storage  storage.Storage
 	bucket   string
 	cacheDir string // optional: for caching downloaded packages
 }
 
 // NewPackageLoader creates a new package loader
-func NewPackageLoader(s3Client *pkg.S3Client, bucket string, cacheDir string) *PackageLoader {
+func NewPackageLoader(storage storage.Storage, bucket string, cacheDir string) *PackageLoader {
 	return &PackageLoader{
-		s3Client: s3Client,
+		storage:  storage,
 		bucket:   bucket,
 		cacheDir: cacheDir,
 	}
@@ -62,15 +62,14 @@ func (pl *PackageLoader) LoadPackage(ctx context.Context, problemID, version str
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 
-	// Download package from S3
+	// Download package from storage
 	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID, version)
-	file, err := pl.s3Client.DownloadFile(ctx, pl.bucket, s3Key, nil)
-	if file == nil || err != nil {
+	body, _, err := pl.storage.DownloadFile(ctx, pl.bucket, s3Key, nil)
+	if err != nil {
 		os.RemoveAll(tempDir)
 		return nil, fmt.Errorf("failed to download package: %w", err)
 	}
-	reader := file.Body
-	defer reader.Close()
+	defer body.Close()
 
 	// Save to temporary file
 	zipPath := filepath.Join(tempDir, "package.zip")
@@ -80,7 +79,7 @@ func (pl *PackageLoader) LoadPackage(ctx context.Context, problemID, version str
 		return nil, fmt.Errorf("failed to create zip file: %w", err)
 	}
 
-	_, err = io.Copy(zipFile, reader)
+	_, err = io.Copy(zipFile, body)
 	zipFile.Close()
 	if err != nil {
 		os.RemoveAll(tempDir)

@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/packagegen"
 	"github.com/gate149/gate/backend/pkg/parsers"
 	"github.com/gate149/gate/backend/pkg/problemformat"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -217,7 +217,7 @@ func TestS3ClientOperations(t *testing.T) {
 
 	bucket := "test-bucket-" + uuid.New().String()
 
-	err := s3Client.CreateBucket(ctx, bucket)
+	err := s3Client.EnsureBucket(ctx, bucket)
 	require.NoError(t, err)
 
 	testContent := []byte("Hello, S3!")
@@ -225,11 +225,11 @@ func TestS3ClientOperations(t *testing.T) {
 	err = s3Client.UploadFile(ctx, bucket, testKey, bytes.NewReader(testContent), "text/plain")
 	require.NoError(t, err)
 
-	file, err := s3Client.DownloadFile(ctx, bucket, testKey, nil)
+	body, _, err := s3Client.DownloadFile(ctx, bucket, testKey, nil)
 	require.NoError(t, err)
-	defer file.Body.Close()
+	defer body.Close()
 
-	downloadedContent, err := io.ReadAll(file.Body)
+	downloadedContent, err := io.ReadAll(body)
 	require.NoError(t, err)
 	assert.Equal(t, testContent, downloadedContent)
 
@@ -250,6 +250,54 @@ func TestS3ClientOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	keys, err = s3Client.ListFiles(ctx, bucket, "")
+	require.NoError(t, err)
+	assert.NotContains(t, keys, testKey)
+}
+
+func TestLocalStorageOperations(t *testing.T) {
+	ctx := context.Background()
+
+	baseDir, err := os.MkdirTemp("", "local-storage-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(baseDir)
+
+	localStorage := storage.NewLocalStorage(baseDir)
+
+	bucket := "test-bucket"
+
+	err = localStorage.EnsureBucket(ctx, bucket)
+	require.NoError(t, err)
+
+	testContent := []byte("Hello, Local FS!")
+	testKey := "test-file.txt"
+	err = localStorage.UploadFile(ctx, bucket, testKey, bytes.NewReader(testContent), "text/plain")
+	require.NoError(t, err)
+
+	body, etag, err := localStorage.DownloadFile(ctx, bucket, testKey, nil)
+	require.NoError(t, err)
+	defer body.Close()
+
+	downloadedContent, err := io.ReadAll(body)
+	require.NoError(t, err)
+	assert.Equal(t, testContent, downloadedContent)
+	assert.NotEmpty(t, etag)
+
+	// Test ErrNotModified
+	_, _, err = localStorage.DownloadFile(ctx, bucket, testKey, &etag)
+	assert.ErrorIs(t, err, storage.ErrNotModified)
+
+	keys, err := localStorage.ListFiles(ctx, bucket, "")
+	require.NoError(t, err)
+	assert.Contains(t, keys, testKey)
+
+	url, err := localStorage.GetPresignedURL(ctx, bucket, testKey, 1*time.Hour)
+	require.NoError(t, err)
+	assert.Equal(t, "/api/files/test-bucket/test-file.txt", url)
+
+	err = localStorage.DeleteFile(ctx, bucket, testKey)
+	require.NoError(t, err)
+
+	keys, err = localStorage.ListFiles(ctx, bucket, "")
 	require.NoError(t, err)
 	assert.NotContains(t, keys, testKey)
 }
@@ -317,7 +365,7 @@ func TestPackageBuilder(t *testing.T) {
 	assert.Greater(t, zipBuffer.Len(), 0)
 }
 
-func newMinioBackedS3Client(t *testing.T) (context.Context, *pkg.S3Client) {
+func newMinioBackedS3Client(t *testing.T) (context.Context, storage.Storage) {
 	t.Helper()
 
 	ctx := context.Background()
@@ -350,7 +398,7 @@ func newMinioBackedS3Client(t *testing.T) (context.Context, *pkg.S3Client) {
 
 	endpoint := "http://" + host + ":" + port.Port()
 
-	return ctx, pkg.NewS3Client(pkg.S3Config{
+	return ctx, storage.NewS3Storage(storage.S3Config{
 		Endpoint:  endpoint,
 		AccessKey: "minioadmin",
 		SecretKey: "minioadmin",

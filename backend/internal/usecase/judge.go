@@ -8,9 +8,9 @@ import (
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/worker/judge"
-	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/problemformat"
 	"github.com/gate149/gate/backend/pkg/sandbox"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 
@@ -29,7 +29,7 @@ type JudgeUseCase struct {
 func NewJudgeUseCase(
 	submissionsRepo interfaces.SubmissionsRepo,
 	packagesRepo interfaces.PackagesRepo,
-	s3Client *pkg.S3Client,
+	storage storage.Storage,
 	packageBucket string,
 	tempDir string,
 	sandboxClient *sandbox.Client,
@@ -38,7 +38,7 @@ func NewJudgeUseCase(
 	return &JudgeUseCase{
 		submissionsRepo: submissionsRepo,
 		packagesRepo:    packagesRepo,
-		packageLoader:   problemformat.NewPackageLoader(s3Client, packageBucket, tempDir),
+		packageLoader:   problemformat.NewPackageLoader(storage, packageBucket, tempDir),
 		sandboxClient:   sandboxClient,
 		eventPublisher:  eventPublisher,
 		componentCache:  judge.NewComponentCache(sandboxClient),

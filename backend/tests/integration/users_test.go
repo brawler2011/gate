@@ -4,13 +4,119 @@
 package integration
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"mime/multipart"
 	"net/http"
 
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
 )
+
+func createMultipartBody(fieldName, filename, contentType string, content []byte) (string, io.Reader, error) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile(fieldName, filename)
+	if err != nil {
+		return "", nil, err
+	}
+	_, err = part.Write(content)
+	if err != nil {
+		return "", nil, err
+	}
+	err = writer.Close()
+	if err != nil {
+		return "", nil, err
+	}
+	return writer.FormDataContentType(), &body, nil
+}
+
+func (s *IntegrationTestSuite) TestUserAvatar() {
+	user := s.createUser("avataruser", models.UserRoleUser)
+
+	avatarContent := []byte("fake image content")
+	contentType, body, err := createMultipartBody("avatar", "avatar.png", "image/png", avatarContent)
+	s.Require().NoError(err)
+
+	// 1. Upload Avatar
+	var imgID uuid.UUID
+	s.Run("UploadAvatar", func() {
+		resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, user.Id, contentType, body, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", user.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Require().NotNil(resp.JSON200)
+		s.Require().NotNil(resp.JSON200.ImgId)
+		imgID = *resp.JSON200.ImgId
+		s.NotEmpty(imgID.String())
+	})
+
+	// 2. Get User Profile and Check ImgId
+	s.Run("GetUserProfileWithImgId", func() {
+		resp, err := s.client.GetUserWithResponse(s.ctx, user.Id, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", user.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Require().NotNil(resp.JSON200.User.ImgId)
+		s.Equal(imgID, *resp.JSON200.User.ImgId)
+	})
+
+	// 3. Get Avatar Image
+	var etag string
+	s.Run("GetAvatarImage", func() {
+		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Id, &corev1.GetUserAvatarParams{})
+		s.Require().NoError(err)
+		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Equal("image/png", resp.HTTPResponse.Header.Get("Content-Type"))
+		etag = resp.HTTPResponse.Header.Get("ETag")
+		s.NotEmpty(etag)
+
+		s.Equal(avatarContent, resp.Body)
+	})
+
+	// 4. Get Avatar Image with If-None-Match (304 Not Modified)
+	s.Run("GetAvatarImage304", func() {
+		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Id, &corev1.GetUserAvatarParams{
+			IfNoneMatch: &etag,
+		})
+		s.Require().NoError(err)
+		s.Equal(http.StatusNotModified, resp.StatusCode())
+	})
+
+	// 5. Delete Avatar
+	s.Run("DeleteAvatar", func() {
+		resp, err := s.client.DeleteAvatarWithResponse(s.ctx, user.Id, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", user.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Equal(http.StatusOK, resp.StatusCode())
+	})
+
+	// 6. Get User Profile and Check ImgId is nil
+	s.Run("GetUserProfileWithImgIdNil", func() {
+		resp, err := s.client.GetUserWithResponse(s.ctx, user.Id, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", user.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Nil(resp.JSON200.User.ImgId)
+	})
+
+	// 7. Get Avatar Image (404 Not Found)
+	s.Run("GetAvatarImage404", func() {
+		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Id, &corev1.GetUserAvatarParams{})
+		s.Require().NoError(err)
+		s.Equal(http.StatusNotFound, resp.StatusCode())
+	})
+}
 
 func (s *IntegrationTestSuite) TestUsers() {
 	// 1. Create Users

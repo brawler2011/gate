@@ -14,9 +14,9 @@ import (
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/packagegen"
 	"github.com/gate149/gate/backend/pkg/problemformat"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/google/uuid"
 )
@@ -30,7 +30,7 @@ type ProblemPublishUseCase struct {
 	problemsRepo  interfaces.ProblemsRepo
 	packagesRepo  interfaces.PackagesRepo
 	vcsService    vcs.Service
-	s3Client      *pkg.S3Client
+	storage       storage.Storage
 	packageBucket string
 }
 
@@ -38,14 +38,14 @@ func NewProblemPublishUseCase(
 	problemsRepo interfaces.ProblemsRepo,
 	packagesRepo interfaces.PackagesRepo,
 	vcsService vcs.Service,
-	s3Client *pkg.S3Client,
+	storage storage.Storage,
 	packageBucket string,
 ) *ProblemPublishUseCase {
 	return &ProblemPublishUseCase{
 		problemsRepo:  problemsRepo,
 		packagesRepo:  packagesRepo,
 		vcsService:    vcsService,
-		s3Client:      s3Client,
+		storage:       storage,
 		packageBucket: packageBucket,
 	}
 }
@@ -124,7 +124,7 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 	hashBytes := sha256.Sum256(zipBytes)
 	packageHash := fmt.Sprintf("%x", hashBytes)
 	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID.String(), packageHash)
-	uploadErr := uc.s3Client.UploadFile(
+	uploadErr := uc.storage.UploadFile(
 		ctx,
 		uc.packageBucket,
 		s3Key,
@@ -191,7 +191,7 @@ func (uc *ProblemPublishUseCase) GetPublishedPackageURL(
 	}
 
 	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID.String(), pkgVersion.PackageHash)
-	packageURL, err := uc.s3Client.GetPresignedURL(ctx, uc.packageBucket, s3Key, 1*time.Hour)
+	packageURL, err := uc.storage.GetPresignedURL(ctx, uc.packageBucket, s3Key, 1*time.Hour)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate package URL: %w", err)
 	}

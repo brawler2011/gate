@@ -6,33 +6,44 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
-	"time"
-
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 
 type AvatarsUseCase struct {
 	usersRepo    interfaces.UsersRepo
-	s3Client     *pkg.S3Client
+	storage      storage.Storage
 	avatarBucket string
 }
 
 func NewAvatarsUseCase(
 	usersRepo interfaces.UsersRepo,
-	s3Client *pkg.S3Client,
+	storage storage.Storage,
 	avatarBucket string,
 ) *AvatarsUseCase {
 	return &AvatarsUseCase{
 		usersRepo:    usersRepo,
-		s3Client:     s3Client,
+		storage:      storage,
 		avatarBucket: avatarBucket,
 	}
 }
 
-// UploadAvatar uploads a user's avatar to S3 and updates the user record
+type AvatarImage struct {
+	readCloser io.ReadCloser
+	etag       string
+}
+
+func (a AvatarImage) ReadCloser() io.ReadCloser {
+	return a.readCloser
+}
+
+func (a AvatarImage) Etag() string {
+	return a.etag
+}
+
+// UploadAvatar uploads a user's avatar to storage and updates the user record
 func (uc *AvatarsUseCase) UploadAvatar(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -53,40 +64,31 @@ func (uc *AvatarsUseCase) UploadAvatar(
 		return "", fmt.Errorf("invalid file extension: %s (allowed: jpg, jpeg, png, gif, webp)", ext)
 	}
 
-	// Generate unique key: {user_id}/{timestamp}-{random}{ext}
-	timestamp := time.Now().Unix()
-	randomID := uuid.New().String()[:8]
-	key := fmt.Sprintf("%s/%d-%s%s", userID.String(), timestamp, randomID, ext)
+	// Generate unique image ID
+	imgID := uuid.New().String()
+	key := imgID
 
-	// Upload to S3
-	err := uc.s3Client.UploadFile(ctx, uc.avatarBucket, key, fileReader, contentType)
+	// Upload to storage
+	err := uc.storage.UploadFile(ctx, uc.avatarBucket, key, fileReader, contentType)
 	if err != nil {
 		return "", fmt.Errorf("failed to upload avatar: %w", err)
 	}
 
-	// Generate presigned URL (valid for 7 days)
-	avatarURL, err := uc.s3Client.GetPresignedURL(ctx, uc.avatarBucket, key, 7*24*time.Hour)
-	if err != nil {
-		// Try to clean up uploaded file
-		_ = uc.s3Client.DeleteFile(ctx, uc.avatarBucket, key)
-		return "", fmt.Errorf("failed to generate avatar URL: %w", err)
-	}
-
-	// Update user record with avatar URL
+	// Update user record with avatar ID (stored in avatar_url column)
 	err = uc.usersRepo.UpdateUser(ctx, models.UpdateUserParams{
 		Id:        userID,
-		AvatarUrl: &avatarURL,
+		AvatarUrl: &imgID,
 	})
 	if err != nil {
 		// Try to clean up uploaded file
-		_ = uc.s3Client.DeleteFile(ctx, uc.avatarBucket, key)
+		_ = uc.storage.DeleteFile(ctx, uc.avatarBucket, key)
 		return "", fmt.Errorf("failed to update user avatar: %w", err)
 	}
 
-	return avatarURL, nil
+	return imgID, nil
 }
 
-// DeleteAvatar deletes a user's avatar from S3 and updates the user record
+// DeleteAvatar deletes a user's avatar from storage and updates the user record
 func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, userID uuid.UUID) error {
 	// Get user to find current avatar
 	user, err := uc.usersRepo.GetUserById(ctx, userID)
@@ -98,21 +100,10 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, userID uuid.UUID) er
 		return fmt.Errorf("user has no avatar")
 	}
 
-	// Extract key from URL (assuming format: https://endpoint/bucket/key)
-	// For simplicity, we'll list all files for this user and delete them
-	prefix := fmt.Sprintf("%s/", userID.String())
-	keys, err := uc.s3Client.ListFiles(ctx, uc.avatarBucket, prefix)
+	// Delete the avatar file
+	err = uc.storage.DeleteFile(ctx, uc.avatarBucket, *user.AvatarUrl)
 	if err != nil {
-		return fmt.Errorf("failed to list avatar files: %w", err)
-	}
-
-	// Delete all avatar files for this user
-	for _, key := range keys {
-		err := uc.s3Client.DeleteFile(ctx, uc.avatarBucket, key)
-		if err != nil {
-			// Log error but continue
-			continue
-		}
+		// Log error but continue to update user record
 	}
 
 	// Update user record to remove avatar URL
@@ -126,4 +117,27 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, userID uuid.UUID) er
 	}
 
 	return nil
+}
+
+// GetAvatar retrieves a user's avatar from storage
+func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, userID uuid.UUID, ifNoneMatch *string) (AvatarImage, error) {
+	// Get user to find current avatar key
+	user, err := uc.usersRepo.GetUserById(ctx, userID)
+	if err != nil {
+		return AvatarImage{}, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if user.AvatarUrl == nil || *user.AvatarUrl == "" {
+		return AvatarImage{}, storage.ErrNotFound
+	}
+
+	body, etag, err := uc.storage.DownloadFile(ctx, uc.avatarBucket, *user.AvatarUrl, ifNoneMatch)
+	if err != nil {
+		return AvatarImage{}, err
+	}
+
+	return AvatarImage{
+		readCloser: body,
+		etag:       etag,
+	}, nil
 }

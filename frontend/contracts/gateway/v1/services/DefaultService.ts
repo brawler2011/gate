@@ -750,6 +750,35 @@ export class DefaultService {
         });
     }
     /**
+     * Get user avatar by user ID
+     * @returns string User avatar
+     * @throws ApiError
+     */
+    public getUserAvatar({
+        id,
+        ifNoneMatch,
+    }: {
+        id: string,
+        ifNoneMatch?: string,
+    }): CancelablePromise<string> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/users/{id}/avatar',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'If-None-Match': ifNoneMatch,
+            },
+            responseHeader: 'ETag',
+            errors: {
+                304: `Not modified`,
+                400: `bad request`,
+                404: `not found`,
+            },
+        });
+    }
+    /**
      * Upload user avatar
      * @returns any Avatar uploaded successfully
      * @throws ApiError

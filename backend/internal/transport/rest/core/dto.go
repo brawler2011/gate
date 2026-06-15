@@ -343,6 +343,13 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 }
 
 func userDTO(u models.User) corev1.UserModel {
+	var imgID *uuid.UUID
+	if u.AvatarUrl != nil && *u.AvatarUrl != "" {
+		if parsed, err := uuid.Parse(*u.AvatarUrl); err == nil {
+			imgID = &parsed
+		}
+	}
+
 	return corev1.UserModel{
 		Id:        u.Id,
 		Username:  u.Username,
@@ -351,7 +358,7 @@ func userDTO(u models.User) corev1.UserModel {
 		Name:      &u.Name,
 		Surname:   &u.Surname,
 		Bio:       &u.Bio,
-		ImgId:     nil, // Avatar URL not compatible with UUID type
+		ImgId:     imgID,
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,
 	}

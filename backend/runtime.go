@@ -26,6 +26,7 @@ import (
 	"github.com/gate149/gate/backend/internal/worker/pubsub"
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/sandbox"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
@@ -129,13 +130,19 @@ func runApp(envFile string) error {
 	packagesRepo := pg.NewPackagesRepo(pool)
 	logger.Info("successfully initialized repositories")
 
-	s3Client := pkg.NewS3Client(pkg.S3Config{
-		Endpoint:  cfg.S3Endpoint,
-		AccessKey: cfg.S3AccessKey,
-		SecretKey: cfg.S3SecretKey,
-		Region:    defaultS3Region,
-	})
-	logger.Info("successfully initialized S3 client")
+	var store storage.Storage
+	if cfg.StorageType == "s3" {
+		store = storage.NewS3Storage(storage.S3Config{
+			Endpoint:  cfg.S3Endpoint,
+			AccessKey: cfg.S3AccessKey,
+			SecretKey: cfg.S3SecretKey,
+			Region:    defaultS3Region,
+		})
+		logger.Info("successfully initialized S3 storage client")
+	} else {
+		store = storage.NewLocalStorage(cfg.LocalStoragePath)
+		logger.Info("successfully initialized Local filesystem storage client", slog.String("path", cfg.LocalStoragePath))
+	}
 
 	for bucket, name := range map[string]string{
 		defaultS3AvatarBucket:   "avatar",
@@ -143,27 +150,27 @@ func runApp(envFile string) error {
 		defaultS3WorkshopBucket: "workshop",
 		defaultS3BlogBucket:     "blog",
 	} {
-		if err := s3Client.EnsureBucket(context.Background(), bucket); err != nil {
+		if err := store.EnsureBucket(context.Background(), bucket); err != nil {
 			return fmt.Errorf("ensure %s bucket %q: %w", name, bucket, err)
 		}
 	}
 
-	vcsService := vcs.NewS3Service(s3Client, defaultS3WorkshopBucket)
+	vcsService := vcs.NewS3Service(store, defaultS3WorkshopBucket)
 
 	authRepo := pg.NewAuthRepo(pool)
 
 	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, txManager)
 	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, txManager)
-	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, s3Client, defaultS3AvatarBucket)
+	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
 	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, vcsService)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(contestsRepo)
-	blogsUC := usecase.NewBlogsUseCase(blogsRepo, s3Client, defaultS3BlogBucket)
+	blogsUC := usecase.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)
 	permissionsUC := usecase.NewPermissionsUseCase(contestsRepo, usersUC, problemsRepo, teamsRepo, orgsRepo)
 	orgsUC := usecase.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, txManager)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, txManager)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
-	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, vcsService, s3Client, defaultS3PackageBucket)
+	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, vcsService, store, defaultS3PackageBucket)
 	logger.Info("successfully initialized use cases")
 
 	judgeTempDir, err := prepareJudgeTempDir(cfg.JudgeTempDir)
@@ -201,7 +208,7 @@ func runApp(envFile string) error {
 	judgeUC := usecase.NewJudgeUseCase(
 		submissionsRepo,
 		packagesRepo,
-		s3Client,
+		store,
 		defaultS3PackageBucket,
 		judgeTempDir,
 		sandboxClient,
@@ -236,6 +243,10 @@ func runApp(envFile string) error {
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
+	if cfg.StorageType == "local" {
+		publicMux.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir(cfg.LocalStoragePath))))
+		logger.Info("mounted local files storage server", slog.String("prefix", "/files/"), slog.String("dir", cfg.LocalStoragePath))
+	}
 
 	coreServer := handlers.NewCoreServer(
 		authUC,

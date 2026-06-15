@@ -923,6 +923,11 @@ type ListUsersParams struct {
 	Role     *string `form:"role,omitempty" json:"role,omitempty"`
 }
 
+// GetUserAvatarParams defines parameters for GetUserAvatar.
+type GetUserAvatarParams struct {
+	IfNoneMatch *string `json:"If-None-Match,omitempty"`
+}
+
 // UploadAvatarMultipartBody defines parameters for UploadAvatar.
 type UploadAvatarMultipartBody struct {
 	Avatar *openapi_types.File `json:"avatar,omitempty"`
@@ -1461,6 +1466,9 @@ type ClientInterface interface {
 
 	// DeleteAvatar request
 	DeleteAvatar(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetUserAvatar request
+	GetUserAvatar(ctx context.Context, id openapi_types.UUID, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UploadAvatarWithBody request with any body
 	UploadAvatarWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2998,6 +3006,18 @@ func (c *Client) GetUser(ctx context.Context, id openapi_types.UUID, reqEditors 
 
 func (c *Client) DeleteAvatar(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteAvatarRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetUserAvatar(ctx context.Context, id openapi_types.UUID, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetUserAvatarRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -8420,6 +8440,55 @@ func NewDeleteAvatarRequest(server string, id openapi_types.UUID) (*http.Request
 	return req, nil
 }
 
+// NewGetUserAvatarRequest generates requests for GetUserAvatar
+func NewGetUserAvatarRequest(server string, id openapi_types.UUID, params *GetUserAvatarParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/users/%s/avatar", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.IfNoneMatch != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "If-None-Match", runtime.ParamLocationHeader, *params.IfNoneMatch)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("If-None-Match", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
 // NewUploadAvatarRequestWithBody generates requests for UploadAvatar with any type of body
 func NewUploadAvatarRequestWithBody(server string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
@@ -9113,6 +9182,9 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteAvatarWithResponse request
 	DeleteAvatarWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteAvatarResponse, error)
+
+	// GetUserAvatarWithResponse request
+	GetUserAvatarWithResponse(ctx context.Context, id openapi_types.UUID, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*GetUserAvatarResponse, error)
 
 	// UploadAvatarWithBodyWithResponse request with any body
 	UploadAvatarWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error)
@@ -11545,6 +11617,29 @@ func (r DeleteAvatarResponse) StatusCode() int {
 	return 0
 }
 
+type GetUserAvatarResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *Error
+	JSON404      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r GetUserAvatarResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetUserAvatarResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type UploadAvatarResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -12745,6 +12840,15 @@ func (c *ClientWithResponses) DeleteAvatarWithResponse(ctx context.Context, id o
 		return nil, err
 	}
 	return ParseDeleteAvatarResponse(rsp)
+}
+
+// GetUserAvatarWithResponse request returning *GetUserAvatarResponse
+func (c *ClientWithResponses) GetUserAvatarWithResponse(ctx context.Context, id openapi_types.UUID, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*GetUserAvatarResponse, error) {
+	rsp, err := c.GetUserAvatar(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetUserAvatarResponse(rsp)
 }
 
 // UploadAvatarWithBodyWithResponse request with arbitrary body returning *UploadAvatarResponse
@@ -15464,6 +15568,39 @@ func ParseDeleteAvatarResponse(rsp *http.Response) (*DeleteAvatarResponse, error
 	return response, nil
 }
 
+// ParseGetUserAvatarResponse parses an HTTP response from a GetUserAvatarWithResponse call
+func ParseGetUserAvatarResponse(rsp *http.Response) (*GetUserAvatarResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetUserAvatarResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseUploadAvatarResponse parses an HTTP response from a UploadAvatarWithResponse call
 func ParseUploadAvatarResponse(rsp *http.Response) (*UploadAvatarResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -15876,6 +16013,9 @@ type ServerInterface interface {
 	// Delete user avatar
 	// (DELETE /users/{id}/avatar)
 	DeleteAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Get user avatar by user ID
+	// (GET /users/{id}/avatar)
+	GetUserAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUserAvatarParams)
 	// Upload user avatar
 	// (POST /users/{id}/avatar)
 	UploadAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -19798,6 +19938,55 @@ func (siw *ServerInterfaceWrapper) DeleteAvatar(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetUserAvatar operation middleware
+func (siw *ServerInterfaceWrapper) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetUserAvatarParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-None-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-None-Match")]; found {
+		var IfNoneMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-None-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-None-Match", valueList[0], &IfNoneMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-None-Match", Err: err})
+			return
+		}
+
+		params.IfNoneMatch = &IfNoneMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserAvatar(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UploadAvatar operation middleware
 func (siw *ServerInterfaceWrapper) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 
@@ -20224,6 +20413,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("PATCH "+options.BaseURL+"/users/me", wrapper.PatchMe)
 	m.HandleFunc("GET "+options.BaseURL+"/users/{id}", wrapper.GetUser)
 	m.HandleFunc("DELETE "+options.BaseURL+"/users/{id}/avatar", wrapper.DeleteAvatar)
+	m.HandleFunc("GET "+options.BaseURL+"/users/{id}/avatar", wrapper.GetUserAvatar)
 	m.HandleFunc("POST "+options.BaseURL+"/users/{id}/avatar", wrapper.UploadAvatar)
 	m.HandleFunc("GET "+options.BaseURL+"/users/{user_id}/submissions", wrapper.ListUserSubmissions)
 	m.HandleFunc("GET "+options.BaseURL+"/workshop/contests", wrapper.ListWorkshopContests)
@@ -22421,6 +22611,72 @@ func (response DeleteAvatar200Response) VisitDeleteAvatarResponse(w http.Respons
 	return nil
 }
 
+type GetUserAvatarRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params GetUserAvatarParams
+}
+
+type GetUserAvatarResponseObject interface {
+	VisitGetUserAvatarResponse(w http.ResponseWriter) error
+}
+
+type GetUserAvatar200ResponseHeaders struct {
+	ETag string
+}
+
+type GetUserAvatar200ImagepngResponse struct {
+	Body          io.Reader
+	Headers       GetUserAvatar200ResponseHeaders
+	ContentLength int64
+}
+
+func (response GetUserAvatar200ImagepngResponse) VisitGetUserAvatarResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "image/png")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetUserAvatar304ResponseHeaders struct {
+	ETag string
+}
+
+type GetUserAvatar304Response struct {
+	Headers GetUserAvatar304ResponseHeaders
+}
+
+func (response GetUserAvatar304Response) VisitGetUserAvatarResponse(w http.ResponseWriter) error {
+	w.Header().Set("ETag", fmt.Sprint(response.Headers.ETag))
+	w.WriteHeader(304)
+	return nil
+}
+
+type GetUserAvatar400JSONResponse Error
+
+func (response GetUserAvatar400JSONResponse) VisitGetUserAvatarResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetUserAvatar404JSONResponse Error
+
+func (response GetUserAvatar404JSONResponse) VisitGetUserAvatarResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type UploadAvatarRequestObject struct {
 	Id   openapi_types.UUID `json:"id"`
 	Body *multipart.Reader
@@ -22808,6 +23064,9 @@ type StrictServerInterface interface {
 	// Delete user avatar
 	// (DELETE /users/{id}/avatar)
 	DeleteAvatar(ctx context.Context, request DeleteAvatarRequestObject) (DeleteAvatarResponseObject, error)
+	// Get user avatar by user ID
+	// (GET /users/{id}/avatar)
+	GetUserAvatar(ctx context.Context, request GetUserAvatarRequestObject) (GetUserAvatarResponseObject, error)
 	// Upload user avatar
 	// (POST /users/{id}/avatar)
 	UploadAvatar(ctx context.Context, request UploadAvatarRequestObject) (UploadAvatarResponseObject, error)
@@ -25908,6 +26167,33 @@ func (sh *strictHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request, id
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteAvatarResponseObject); ok {
 		if err := validResponse.VisitDeleteAvatarResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUserAvatar operation middleware
+func (sh *strictHandler) GetUserAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUserAvatarParams) {
+	var request GetUserAvatarRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUserAvatar(ctx, request.(GetUserAvatarRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUserAvatar")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetUserAvatarResponseObject); ok {
+		if err := validResponse.VisitGetUserAvatarResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

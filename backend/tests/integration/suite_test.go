@@ -23,6 +23,7 @@ import (
 	handlers "github.com/gate149/gate/backend/internal/transport/rest/core"
 	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/pkg"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/gate149/gate/backend/tests/mocks"
 	"github.com/google/uuid"
@@ -150,6 +151,10 @@ func (s *IntegrationTestSuite) initApp() {
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
 	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, vcsService, nil, txManager)
 
+	tempStoragePath := s.T().TempDir()
+	testStorage := storage.NewLocalStorage(tempStoragePath)
+	avatarsUC := usecase.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
+
 	// Handler
 	coreServer := handlers.NewCoreServer(
 		authUC,
@@ -162,7 +167,7 @@ func (s *IntegrationTestSuite) initApp() {
 		teamsUC,
 		workshopUC,
 		blogsUC,
-		nil, // avatarsUC - not needed for integration tests
+		avatarsUC,
 		nil, // importUC - not needed for integration tests
 		nil, // publishUC - not needed for integration tests
 		nil, // natsJS - not needed for integration tests

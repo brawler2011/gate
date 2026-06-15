@@ -31,10 +31,14 @@ type Config struct {
 	// Workshop configuration
 	GoJudgeGRPCAddr string `env:"GOJUDGE_GRPC_ADDR" env-default:"localhost:5051"`
 
+	// Storage configuration
+	StorageType      string `env:"STORAGE_TYPE" env-default:"local"`
+	LocalStoragePath string `env:"LOCAL_STORAGE_PATH" env-default:"data"`
+
 	// S3 configuration (SeaweedFS)
-	S3Endpoint  string `env:"S3_ENDPOINT" required:"true"`
-	S3AccessKey string `env:"S3_ACCESS_KEY" required:"true"`
-	S3SecretKey string `env:"S3_SECRET_KEY" required:"true"`
+	S3Endpoint  string `env:"S3_ENDPOINT"`
+	S3AccessKey string `env:"S3_ACCESS_KEY"`
+	S3SecretKey string `env:"S3_SECRET_KEY"`
 
 	// Judging configuration
 	JudgeWorkerCount int    `env:"JUDGE_WORKER_COUNT" env-default:"4"`
