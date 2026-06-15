@@ -8,7 +8,6 @@ export type ContestMemberModel = {
     username: string;
     role: string;
     contest_role: string;
-    kratos_id: string;
     created_at: string;
     updated_at: string;
 };

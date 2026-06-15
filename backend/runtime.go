@@ -19,7 +19,6 @@ import (
 	"github.com/gate149/gate/backend/internal/repository/pg"
 	"github.com/gate149/gate/backend/internal/transport/middleware"
 	handlers "github.com/gate149/gate/backend/internal/transport/rest/core"
-	kratoshandler "github.com/gate149/gate/backend/internal/transport/rest/kratos"
 	wsobserver "github.com/gate149/gate/backend/internal/transport/ws/observer"
 	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/internal/worker/judge"
@@ -30,7 +29,6 @@ import (
 	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
-	ory "github.com/ory/client-go"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -152,7 +150,10 @@ func runApp(envFile string) error {
 
 	vcsService := vcs.NewS3Service(s3Client, defaultS3WorkshopBucket)
 
+	authRepo := pg.NewAuthRepo(pool)
+
 	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, txManager)
+	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, txManager)
 	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, s3Client, defaultS3AvatarBucket)
 	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, vcsService)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
@@ -231,14 +232,13 @@ func runApp(envFile string) error {
 		return fmt.Errorf("create submissions subscriber: %w", err)
 	}
 
-	oryPublicClient := newOryClient(cfg.KratosURl)
-	oryAdminClient := newOryClient(cfg.KratosAdminURL)
-	observer := wsobserver.NewObserver(&cfg, observerHub, newObserverMiddleware(usersUC, oryPublicClient))
+	observer := wsobserver.NewObserver(&cfg, observerHub, newObserverMiddleware(usersUC, authUC))
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
 
 	coreServer := handlers.NewCoreServer(
+		authUC,
 		contestsUC,
 		permissionsUC,
 		submissionsUC,
@@ -267,21 +267,14 @@ func runApp(envFile string) error {
 		BaseRouter: publicMux,
 		Middlewares: []corev1.MiddlewareFunc{
 			middleware.UsersMiddleware(usersUC),
-			middleware.AuthMiddleware(oryPublicClient.FrontendAPI),
+			middleware.AuthMiddleware(authUC),
 			middleware.RequestLoggerMiddleware(logger),
 		},
 	})
 
-	privateMux := http.NewServeMux()
-	privateMux.HandleFunc("POST /webhook/kratos", kratoshandler.NewKratosHandler(usersUC, oryAdminClient.IdentityAPI).HandleKratosWebhook)
-
 	publicServer := &http.Server{
 		Addr:    cfg.Address,
 		Handler: publicMux,
-	}
-	privateServer := &http.Server{
-		Addr:    cfg.PrivateAddress,
-		Handler: privateMux,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -315,7 +308,6 @@ func runApp(envFile string) error {
 			},
 		),
 		newHTTPService("public server", publicServer),
-		newHTTPService("private server", privateServer),
 	}
 
 	return runServices(ctx, logger, services)
@@ -348,15 +340,9 @@ func newLogger(env string) (*slog.Logger, error) {
 	}
 }
 
-func newOryClient(url string) *ory.APIClient {
-	cfg := ory.NewConfiguration()
-	cfg.Servers = []ory.ServerConfiguration{{URL: url}}
-	return ory.NewAPIClient(cfg)
-}
-
-func newObserverMiddleware(usersUC interfaces.UsersUC, oryPublicClient *ory.APIClient) func(http.Handler) http.Handler {
+func newObserverMiddleware(usersUC interfaces.UsersUC, authUC interfaces.AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		return middleware.AuthMiddleware(oryPublicClient.FrontendAPI)(
+		return middleware.AuthMiddleware(authUC)(
 			middleware.UsersMiddleware(usersUC)(next),
 		)
 	}

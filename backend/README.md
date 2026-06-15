@@ -7,14 +7,13 @@
 [![NATS](https://img.shields.io/badge/NATS-27AAE1?style=flat-square)](https://nats.io/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 
-Go backend for a competitive programming platform. Handles problems, contests, submissions, judging, organizations, and teams. Authentication is delegated to [Ory Kratos](https://www.ory.sh/kratos/).
+Go backend for a competitive programming platform. Handles problems, contests, submissions, judging, organizations, and teams. Authentication is implemented locally using custom session tokens and bcrypt password hashing.
 
 ## Architecture overview
 
 The backend now runs as a single long-lived process. One instance starts:
 
 - the public REST API on `ADDRESS`
-- the private Kratos webhook server on `PRIVATE_ADDRESS`
 - the `/ws/submissions` WebSocket endpoint on the public server
 - the async judge worker and outbox/submission consumers over **NATS JetStream**
 
@@ -27,7 +26,6 @@ Database migrations remain a separate one-shot mode.
 | PostgreSQL | Primary datastore |
 | Valkey / Redis | Cache |
 | NATS JetStream | Async messaging (submission events) |
-| Ory Kratos | Identity & authentication |
 | go-judge | Sandboxed code compilation and execution |
 | S3-compatible storage (SeaweedFS) | Avatars, problem packages, blog images |
 
@@ -46,7 +44,6 @@ All configuration is read from environment variables (or a `.env` file passed vi
 # General
 ENV=dev                          # dev | local | prod
 ADDRESS=0.0.0.0:13000            # Main API listen address
-PRIVATE_ADDRESS=:13011           # Kratos webhook server address
 ALLOWED_ORIGINS=http://localhost,http://127.0.0.1
 
 # PostgreSQL
@@ -69,10 +66,6 @@ REDIS_DB_INDEX=0
 NATS_URL=                        # Full URL (overrides individual vars below)
 NATS_HOST=localhost
 NATS_PORT=4222
-
-# Ory Kratos
-KRATOS_URL=http://localhost:4433
-KRATOS_ADMIN_URL=http://localhost:4434
 
 # S3-compatible storage
 S3_ENDPOINT=                     # required

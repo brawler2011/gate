@@ -419,7 +419,6 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, request corev1.List
 			ContestId:   request.ContestId,
 			ContestRole: user.ContestRole,
 			UserId:      user.UserID,
-			KratosId:    user.KratosID,
 			Username:    user.Username,
 			Role:        string(user.Role),
 			CreatedAt:   user.CreatedAt,

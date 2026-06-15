@@ -15,8 +15,6 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB_INDEX}
       - NATS_URL=nats://${NATS_HOST}:${NATS_PORT}
       - GOJUDGE_GRPC_ADDR=go-judge:5051
-      - KRATOS_URL=${KRATOS_INTERNAL_URL}
-      - KRATOS_ADMIN_URL=${KRATOS_ADMIN_URL}
       - S3_ENDPOINT=${S3_ENDPOINT}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
@@ -74,14 +72,12 @@ services:
       args:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
         BACKEND_API_URL: ${BACKEND_API_URL}
-        KRATOS_PUBLIC_URL: ${KRATOS_PUBLIC_URL}
         WEBSOCKET_URL: ${WEBSOCKET_URL}
     container_name: gate-frontend-prod
     hostname: frontend
     restart: unless-stopped
     environment:
       - BACKEND_API_URL=${BACKEND_API_URL}
-      - KRATOS_PUBLIC_URL=${KRATOS_PUBLIC_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - WEBSOCKET_URL=${WEBSOCKET_URL}
     networks:
@@ -133,50 +129,6 @@ services:
           cpus: '0.5'
           memory: 512M
 
-  kratos-migrate:
-    image: oryd/kratos:v1.3.1
-    container_name: gate-kratos-migrate-prod
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./kratos/kratos.yml:/etc/config/kratos/kratos.yml:ro
-    command: migrate sql -e --yes --config /etc/config/kratos/kratos.yml
-    env_file:
-      - .env
-    environment:
-      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_KRATOS_DB}?sslmode=disable
-    networks:
-      - gate-prod
-    restart: "no"
-
-  kratos:
-    image: oryd/kratos:v1.3.1
-    container_name: gate-kratos-prod
-    hostname: kratos
-    restart: unless-stopped
-    depends_on:
-      kratos-migrate:
-        condition: service_completed_successfully
-    volumes:
-      - ../base/kratos/webhook_body.jsonnet:/etc/config/kratos/webhook_body.jsonnet:ro
-      - ./kratos/kratos.yml:/etc/config/kratos/kratos.yml:ro
-      - ../base/kratos/identity.schema.json:/etc/config/kratos/identity.schema.json:ro
-    command: serve --config /etc/config/kratos/kratos.yml
-    env_file:
-      - .env
-    environment:
-      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_KRATOS_DB}?sslmode=disable
-    networks:
-      - gate-prod
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
 
   redis:
     image: redis:7.2.4-alpine
@@ -269,7 +221,6 @@ services:
     depends_on:
       - frontend
       - backend
-      - kratos
       - go-judge
     networks:
       - gate-prod

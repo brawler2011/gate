@@ -47,6 +47,9 @@ func buildStrictAuthzPolicies() map[string]strictAuthzPolicy {
 		"ListProblems":        {public: true},
 		"ListUsers":           {public: true},
 		"GetUser":             {public: true},
+		"Register":            {public: true},
+		"Login":               {public: true},
+		"Logout":              {public: true},
 
 		"GetMe":            {requireAuth: true},
 		"PatchMe":          {requireAuth: true},

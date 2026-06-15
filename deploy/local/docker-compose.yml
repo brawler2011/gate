@@ -23,43 +23,7 @@ services:
       retries: 10
       start_period: 10s
 
-  kratos-migrate:
-    image: oryd/kratos:v1.3.1
-    container_name: gate-kratos-migrate-local
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./kratos/kratos.yml:/etc/config/kratos/kratos.yml:ro
-    command: migrate sql -e --yes --config /etc/config/kratos/kratos.yml
-    environment:
-      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_KRATOS_DB}?sslmode=disable
-    networks:
-      - gate-local
-    restart: "no"
 
-  kratos:
-    image: oryd/kratos:v1.3.1
-    container_name: gate-kratos-local
-    hostname: kratos
-    restart: unless-stopped
-    depends_on:
-      kratos-migrate:
-        condition: service_completed_successfully
-    ports:
-      - "4433:4433"  # Public API
-      - "4434:4434"  # Admin API
-    volumes:
-      - ../base/kratos/webhook_body.jsonnet:/etc/config/kratos/webhook_body.jsonnet:ro
-      - ./kratos/kratos.yml:/etc/config/kratos/kratos.yml:ro
-      - ../base/kratos/identity.schema.json:/etc/config/kratos/identity.schema.json:ro
-    command: serve --dev --config /etc/config/kratos/kratos.yml
-    environment:
-      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_KRATOS_DB}?sslmode=disable
-    networks:
-      - gate-local
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   redis:
     image: redis:7.2.4-alpine
@@ -117,7 +81,6 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - kratos
       - go-judge
     networks:
       - gate-local

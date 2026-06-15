@@ -2,64 +2,64 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 
+	"github.com/gate149/gate/backend/internal/domain/interfaces"
+	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/pkg"
-	ory "github.com/ory/client-go"
+	"github.com/google/uuid"
 )
 
 type contextKey string
 
 const sessionKey contextKey = "session"
-const kratosSessionCookieName = "ory_kratos_session"
+const sessionCookieName = "session_id"
 
-// AuthMiddleware checks for a valid Kratos session cookie and retrieves the session
-func AuthMiddleware(frontendAPI ory.FrontendAPI) func(http.Handler) http.Handler {
+// AuthMiddleware checks for a valid session cookie and retrieves the session
+func AuthMiddleware(authUC interfaces.AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			cookie, err := r.Cookie(kratosSessionCookieName)
+			cookie, err := r.Cookie(sessionCookieName)
 			if err != nil || cookie.Value == "" {
-				slog.Debug("no kratos session cookie found, skipping auth middleware")
+				slog.Debug("no session cookie found, skipping auth middleware")
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			session, _, err := frontendAPI.
-				ToSession(ctx).
-				Cookie(fmt.Sprintf("%s=%s", kratosSessionCookieName, cookie.Value)).
-				Execute()
+			sessionID, err := uuid.Parse(cookie.Value)
 			if err != nil {
-				slog.Error("kratos session cookie found, but failed to get session", "error", err)
+				slog.Error("session cookie found, but failed to parse UUID", "error", err)
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			if session == nil {
-				slog.Error("kratos session cookie found, but session is nil")
+			user, err := authUC.Authenticate(ctx, sessionID)
+			if err != nil {
+				slog.Debug("failed to authenticate session", "error", err)
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			if !*session.Active {
-				slog.Error("kratos session cookie found, but session is not active")
-				next.ServeHTTP(w, r)
-				return
+			session := models.Session{
+				ID:     sessionID,
+				UserID: user.Id,
 			}
 
 			ctx = context.WithValue(ctx, sessionKey, session)
+			ctx = context.WithValue(ctx, userKey, user)
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func getSession(ctx context.Context) (*ory.Session, error) {
-	session, ok := ctx.Value(sessionKey).(*ory.Session)
+func GetSession(ctx context.Context) (models.Session, error) {
+	session, ok := ctx.Value(sessionKey).(models.Session)
 	if !ok {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "no session in context")
+		return models.Session{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "no session in context")
 	}
 	return session, nil
 }

@@ -51,15 +51,15 @@ func (f UsersListFilter) Validate() error {
 }
 
 type CreateUserParams struct {
-	Id        uuid.UUID
-	Username  string
-	Role      UserRole
-	KratosId  uuid.UUID
-	Email     string
-	Name      string
-	Surname   string
-	Bio       string
-	AvatarUrl *string
+	Id           uuid.UUID
+	Username     string
+	Role         UserRole
+	PasswordHash string
+	Email        string
+	Name         string
+	Surname      string
+	Bio          string
+	AvatarUrl    *string
 }
 
 func UsernameValidate(username string) error {
@@ -90,6 +90,13 @@ func SurnameValidate(surname string) error {
 	return nil
 }
 
+func PasswordValidate(password string) error {
+	if len(password) < 8 {
+		return errors.New("password must be at least 8 characters")
+	}
+	return nil
+}
+
 func BioValidate(bio string) error {
 	if !pkg.IsLengthBetween(bio, 0, 500) {
 		return errors.New("bio must be at most 500 characters")
@@ -113,7 +120,7 @@ func (p CreateUserParams) Validate() error {
 type CreateUserInput struct {
 	Username  string
 	Role      string
-	KratosId  uuid.UUID
+	Password  string
 	Email     string
 	Name      string
 	Surname   string
@@ -176,23 +183,22 @@ type UpdateUserInput struct {
 }
 
 type User struct {
-	Id        uuid.UUID
-	Username  string
-	Role      UserRole
-	KratosID  uuid.UUID
-	Email     string
-	Name      string
-	Surname   string
-	Bio       string
-	AvatarUrl *string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Id           uuid.UUID
+	Username     string
+	Role         UserRole
+	PasswordHash string
+	Email        string
+	Name         string
+	Surname      string
+	Bio          string
+	AvatarUrl    *string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 var Guest = User{
-	Id:       uuid.Nil,
-	Role:     UserRoleGuest,
-	KratosID: uuid.Nil,
+	Id:   uuid.Nil,
+	Role: UserRoleGuest,
 }
 
 func (u User) IsGuest() bool {

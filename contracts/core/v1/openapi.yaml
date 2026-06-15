@@ -25,7 +25,7 @@ paths:
           in: query
           schema:
             type: string
-          example: "Fibonacci"
+          example: Fibonacci
         - name: descending
           in: query
           schema:
@@ -41,12 +41,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListProblemsResponseModel"
+                $ref: '#/components/schemas/ListProblemsResponseModel'
     post:
       operationId: CreateProblem
       parameters:
@@ -55,19 +55,19 @@ paths:
           required: true
           schema:
             type: string
-          example: "Problem 1"
+          example: Problem 1
         - name: organization_id
           in: query
           schema:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                $ref: '#/components/schemas/CreationResponseModel'
   /problems/{id}:
     get:
       operationId: GetProblem
@@ -79,12 +79,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetProblemResponseModel"
+                $ref: '#/components/schemas/GetProblemResponseModel'
     delete:
       operationId: DeleteProblem
       parameters:
@@ -95,7 +95,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content: {}
     patch:
@@ -112,9 +112,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateProblemRequestModel"
+              $ref: '#/components/schemas/UpdateProblemRequestModel'
       responses:
-        "200":
+        '200':
           description: OK
           content: {}
   /contests:
@@ -126,19 +126,19 @@ paths:
           required: true
           schema:
             type: string
-          example: "Contest 1"
+          example: Contest 1
         - name: organization_id
           in: query
           schema:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                $ref: '#/components/schemas/CreationResponseModel'
   /admin/contests:
     get:
       operationId: ListAdminContests
@@ -161,7 +161,7 @@ paths:
           in: query
           schema:
             type: string
-          example: "Contest"
+          example: Contest
         - name: visibility
           in: query
           schema:
@@ -177,7 +177,7 @@ paths:
               - created_at
               - updated_at
               - title
-          example: "created_at"
+          example: created_at
         - name: sortOrder
           in: query
           schema:
@@ -185,14 +185,14 @@ paths:
             enum:
               - asc
               - desc
-          example: "desc"
+          example: desc
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListContestsResponseModel"
+                $ref: '#/components/schemas/ListContestsResponseModel'
   /user/{id}/contests:
     get:
       operationId: ListUserContests
@@ -221,7 +221,7 @@ paths:
           in: query
           schema:
             type: string
-          example: "Contest"
+          example: Contest
         - name: sortBy
           in: query
           schema:
@@ -231,7 +231,7 @@ paths:
               - created_at
               - updated_at
               - title
-          example: "last_submission_time"
+          example: last_submission_time
         - name: sortOrder
           in: query
           schema:
@@ -239,14 +239,14 @@ paths:
             enum:
               - asc
               - desc
-          example: "desc"
+          example: desc
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListUserContestsResponseModel"
+                $ref: '#/components/schemas/ListUserContestsResponseModel'
   /workshop/contests:
     get:
       operationId: ListWorkshopContests
@@ -269,7 +269,7 @@ paths:
           in: query
           schema:
             type: string
-          example: "Contest"
+          example: Contest
         - name: sortBy
           in: query
           schema:
@@ -278,7 +278,7 @@ paths:
               - created_at
               - updated_at
               - title
-          example: "created_at"
+          example: created_at
         - name: sortOrder
           in: query
           schema:
@@ -286,19 +286,19 @@ paths:
             enum:
               - asc
               - desc
-          example: "desc"
+          example: desc
         - name: organization_id
           in: query
           schema:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListContestsResponseModel"
+                $ref: '#/components/schemas/ListContestsResponseModel'
   /public/contests:
     get:
       operationId: ListPublicContests
@@ -321,7 +321,7 @@ paths:
           in: query
           schema:
             type: string
-          example: "Contest"
+          example: Contest
         - name: sortBy
           in: query
           schema:
@@ -330,7 +330,7 @@ paths:
               - created_at
               - updated_at
               - title
-          example: "created_at"
+          example: created_at
         - name: sortOrder
           in: query
           schema:
@@ -338,14 +338,14 @@ paths:
             enum:
               - asc
               - desc
-          example: "desc"
+          example: desc
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListContestsResponseModel"
+                $ref: '#/components/schemas/ListContestsResponseModel'
   /contests/{contest_id}:
     get:
       operationId: GetContest
@@ -357,12 +357,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetContestResponseModel"
+                $ref: '#/components/schemas/GetContestResponseModel'
     delete:
       operationId: DeleteContest
       parameters:
@@ -373,7 +373,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
     patch:
       operationId: UpdateContest
@@ -389,9 +389,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateContestRequestModel"
+              $ref: '#/components/schemas/UpdateContestRequestModel'
       responses:
-        "200":
+        '200':
           description: OK
   /contests/{contest_id}/problems:
     post:
@@ -410,12 +410,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                $ref: '#/components/schemas/CreationResponseModel'
   /contests/{contest_id}/problems/{problem_id}:
     get:
       operationId: GetContestProblem
@@ -433,12 +433,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetContestProblemResponseModel"
+                $ref: '#/components/schemas/GetContestProblemResponseModel'
     delete:
       operationId: DeleteContestProblem
       parameters:
@@ -455,7 +455,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
   /contests/{contest_id}/members:
     get:
@@ -482,12 +482,12 @@ paths:
             format: int32
           example: 10
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListContestMembersResponseModel"
+                $ref: '#/components/schemas/ListContestMembersResponseModel'
     post:
       operationId: CreateContestMember
       parameters:
@@ -504,12 +504,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                $ref: '#/components/schemas/CreationResponseModel'
     delete:
       operationId: DeleteContestMember
       parameters:
@@ -526,7 +526,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
     patch:
       operationId: UpdateContestMember
@@ -549,7 +549,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: OK
   /contests/{contest_id}/my-role:
     get:
@@ -562,12 +562,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetMyContestRoleResponseModel"
+                $ref: '#/components/schemas/GetMyContestRoleResponseModel'
   /contests/{contest_id}/submissions:
     get:
       operationId: ListContestSubmissions
@@ -615,7 +615,7 @@ paths:
             enum:
               - asc
               - desc
-          example: "asc"
+          example: asc
         - name: language
           in: query
           schema:
@@ -623,12 +623,12 @@ paths:
             format: int32
           example: 1
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListSubmissionsResponseModel"
+                $ref: '#/components/schemas/ListSubmissionsResponseModel'
   /submissions:
     post:
       operationId: CreateSubmission
@@ -657,14 +657,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateSubmissionRequestModel"
+              $ref: '#/components/schemas/CreateSubmissionRequestModel'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                $ref: '#/components/schemas/CreationResponseModel'
     get:
       operationId: ListSubmissions
       parameters:
@@ -710,7 +710,7 @@ paths:
             enum:
               - asc
               - desc
-          example: "asc"
+          example: asc
         - name: language
           in: query
           schema:
@@ -718,12 +718,12 @@ paths:
             format: int32
           example: 1
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListSubmissionsResponseModel"
+                $ref: '#/components/schemas/ListSubmissionsResponseModel'
   /submissions/{submission_id}:
     get:
       operationId: GetSubmission
@@ -735,22 +735,22 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetSubmissionResponseModel"
+                $ref: '#/components/schemas/GetSubmissionResponseModel'
   /health:
     get:
       operationId: GetHealth
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetHealthResponseModel"
+                $ref: '#/components/schemas/GetHealthResponseModel'
   /users:
     get:
       operationId: ListUsers
@@ -773,19 +773,19 @@ paths:
           in: query
           schema:
             type: string
-          example: "john"
+          example: john
         - name: role
           in: query
           schema:
             type: string
-          example: "admin"
+          example: admin
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListUsersResponseModel"
+                $ref: '#/components/schemas/ListUsersResponseModel'
   /users/{id}:
     get:
       operationId: GetUser
@@ -797,12 +797,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetUserResponseModel"
+                $ref: '#/components/schemas/GetUserResponseModel'
   /users/{user_id}/submissions:
     get:
       operationId: ListUserSubmissions
@@ -850,24 +850,24 @@ paths:
             enum:
               - asc
               - desc
-          example: "asc"
+          example: asc
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListSubmissionsResponseModel"
+                $ref: '#/components/schemas/ListSubmissionsResponseModel'
   /users/me:
     get:
       operationId: GetMe
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetUserResponseModel"
+                $ref: '#/components/schemas/GetUserResponseModel'
     patch:
       operationId: PatchMe
       summary: Update current user profile
@@ -878,9 +878,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PatchMeRequestModel"
+              $ref: '#/components/schemas/PatchMeRequestModel'
       responses:
-        "200":
+        '200':
           description: Profile updated successfully
   /users/{id}/avatar:
     post:
@@ -904,7 +904,7 @@ paths:
                   type: string
                   format: binary
       responses:
-        "200":
+        '200':
           description: Avatar uploaded successfully
           content:
             application/json:
@@ -925,7 +925,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Avatar deleted successfully
   /problems/{id}/import:
     post:
@@ -950,7 +950,7 @@ paths:
                   format: binary
                   description: Problem package archive (zip)
       responses:
-        "200":
+        '200':
           description: Problem imported successfully
           content:
             application/json:
@@ -971,7 +971,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Problem published successfully
           content:
             application/json:
@@ -995,7 +995,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: List of problem packages
           content:
             application/json:
@@ -1040,7 +1040,7 @@ paths:
           schema:
             type: string
       responses:
-        "302":
+        '302':
           description: Redirect to package download URL
           headers:
             Location:
@@ -1059,12 +1059,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Workshop initialized successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/readme:
     get:
       operationId: GetProblemReadme
@@ -1077,7 +1077,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: README content
           content:
             application/octet-stream:
@@ -1102,12 +1102,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: README updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/limits:
     get:
       operationId: GetProblemLimits
@@ -1120,12 +1120,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Problem limits
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemLimits"
+                $ref: '#/components/schemas/ProblemLimits'
     patch:
       operationId: UpdateProblemLimits
       summary: Update problem limits and type settings
@@ -1141,14 +1141,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateProblemLimitsRequest"
+              $ref: '#/components/schemas/UpdateProblemLimitsRequest'
       responses:
-        "200":
+        '200':
           description: Limits updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemLimits"
+                $ref: '#/components/schemas/ProblemLimits'
   /problems/{problemId}/statement:
     get:
       operationId: GetProblemStatement
@@ -1161,12 +1161,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Problem statement
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemStatement"
+                $ref: '#/components/schemas/ProblemStatement'
     patch:
       operationId: UpdateProblemStatement
       summary: Update problem statement
@@ -1182,14 +1182,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateProblemStatementRequest"
+              $ref: '#/components/schemas/UpdateProblemStatementRequest'
       responses:
-        "200":
+        '200':
           description: Statement updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemStatement"
+                $ref: '#/components/schemas/ProblemStatement'
   /problems/{problemId}/checkers:
     get:
       operationId: ListProblemCheckers
@@ -1202,12 +1202,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: List of checkers
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
+                $ref: '#/components/schemas/WorkshopFileListResponse'
     post:
       operationId: CreateProblemChecker
       summary: Create checker file
@@ -1231,12 +1231,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Checker created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/checkers/{name}:
     get:
       operationId: GetProblemChecker
@@ -1254,7 +1254,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Checker content
           content:
             application/octet-stream:
@@ -1284,12 +1284,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Checker updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
     delete:
       operationId: DeleteProblemChecker
       summary: Delete checker file
@@ -1306,12 +1306,12 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Checker deleted successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/checkers/main:
     patch:
       operationId: SetProblemCheckerMain
@@ -1328,14 +1328,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MainComponentSelectionRequest"
+              $ref: '#/components/schemas/MainComponentSelectionRequest'
       responses:
-        "200":
+        '200':
           description: Main checker selected successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/generators:
     get:
       operationId: ListProblemGenerators
@@ -1348,12 +1348,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: List of generators
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
+                $ref: '#/components/schemas/WorkshopFileListResponse'
     post:
       operationId: CreateProblemGenerator
       summary: Create generator file
@@ -1377,12 +1377,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Generator created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/generators/{name}:
     get:
       operationId: GetProblemGenerator
@@ -1400,7 +1400,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Generator content
           content:
             application/octet-stream:
@@ -1430,12 +1430,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Generator updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
     delete:
       operationId: DeleteProblemGenerator
       summary: Delete generator file
@@ -1452,12 +1452,12 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Generator deleted successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/generators/main:
     patch:
       operationId: SetProblemGeneratorMain
@@ -1474,14 +1474,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MainComponentSelectionRequest"
+              $ref: '#/components/schemas/MainComponentSelectionRequest'
       responses:
-        "200":
+        '200':
           description: Main generator selected successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/interactors:
     get:
       operationId: ListProblemInteractors
@@ -1494,12 +1494,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: List of interactors
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
+                $ref: '#/components/schemas/WorkshopFileListResponse'
     post:
       operationId: CreateProblemInteractor
       summary: Create interactor file
@@ -1523,12 +1523,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Interactor created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/interactors/{name}:
     get:
       operationId: GetProblemInteractor
@@ -1546,7 +1546,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Interactor content
           content:
             application/octet-stream:
@@ -1576,12 +1576,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Interactor updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
     delete:
       operationId: DeleteProblemInteractor
       summary: Delete interactor file
@@ -1598,12 +1598,12 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Interactor deleted successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/interactors/main:
     patch:
       operationId: SetProblemInteractorMain
@@ -1620,14 +1620,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MainComponentSelectionRequest"
+              $ref: '#/components/schemas/MainComponentSelectionRequest'
       responses:
-        "200":
+        '200':
           description: Main interactor selected successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/media:
     get:
       operationId: ListProblemMediaFiles
@@ -1640,12 +1640,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: List of media files
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
+                $ref: '#/components/schemas/WorkshopFileListResponse'
     post:
       operationId: CreateProblemMediaFile
       summary: Create media file
@@ -1669,12 +1669,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Media file created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/media/{name}:
     get:
       operationId: GetProblemMediaFile
@@ -1692,7 +1692,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Media file content
           content:
             application/octet-stream:
@@ -1722,12 +1722,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Media file updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
     delete:
       operationId: DeleteProblemMediaFile
       summary: Delete media file
@@ -1744,12 +1744,12 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Media file deleted successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/submissions:
     get:
       operationId: ListProblemWorkshopSubmissions
@@ -1762,12 +1762,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: List of author solutions
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
+                $ref: '#/components/schemas/WorkshopFileListResponse'
     post:
       operationId: CreateProblemWorkshopSubmission
       summary: Create author solution file
@@ -1791,12 +1791,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Author solution file created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/submissions/{name}:
     get:
       operationId: GetProblemWorkshopSubmission
@@ -1814,7 +1814,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Author solution file content
           content:
             application/octet-stream:
@@ -1844,12 +1844,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Author solution file updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
     delete:
       operationId: DeleteProblemWorkshopSubmission
       summary: Delete author solution file
@@ -1866,12 +1866,12 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Author solution file deleted successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/tests:
     get:
       operationId: ListProblemTests
@@ -1884,12 +1884,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: List of tests
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
+                $ref: '#/components/schemas/WorkshopFileListResponse'
     post:
       operationId: CreateProblemTestFile
       summary: Create test file
@@ -1913,12 +1913,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Test file created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/tests/config:
     patch:
       operationId: UpdateProblemTestsConfig
@@ -1935,14 +1935,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateProblemTestsConfigRequest"
+              $ref: '#/components/schemas/UpdateProblemTestsConfigRequest'
       responses:
-        "200":
+        '200':
           description: Tests config updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/tests/{name}:
     get:
       operationId: GetProblemTestFile
@@ -1960,7 +1960,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Test file content
           content:
             application/octet-stream:
@@ -1990,12 +1990,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Test file updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
     delete:
       operationId: DeleteProblemTestFile
       summary: Delete test file
@@ -2012,12 +2012,12 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Test file deleted successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/validators:
     get:
       operationId: ListProblemValidators
@@ -2030,12 +2030,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: List of validators
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
+                $ref: '#/components/schemas/WorkshopFileListResponse'
     post:
       operationId: CreateProblemValidator
       summary: Create validator file
@@ -2059,12 +2059,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Validator created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/validators/{name}:
     get:
       operationId: GetProblemValidator
@@ -2082,7 +2082,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Validator content
           content:
             application/octet-stream:
@@ -2112,12 +2112,12 @@ paths:
               type: string
               format: binary
       responses:
-        "200":
+        '200':
           description: Validator updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
     delete:
       operationId: DeleteProblemValidator
       summary: Delete validator file
@@ -2134,12 +2134,12 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Validator deleted successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/validators/main:
     patch:
       operationId: SetProblemValidatorMain
@@ -2156,14 +2156,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MainComponentSelectionRequest"
+              $ref: '#/components/schemas/MainComponentSelectionRequest'
       responses:
-        "200":
+        '200':
           description: Main validator selected successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/workshop/components/{componentType}/compile:
     post:
       operationId: CompileProblemComponent
@@ -2180,14 +2180,18 @@ paths:
           required: true
           schema:
             type: string
-            enum: [checker, validator, generator, interactor]
+            enum:
+              - checker
+              - validator
+              - generator
+              - interactor
       responses:
-        "200":
+        '200':
           description: Compilation result
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CompileResult"
+                $ref: '#/components/schemas/CompileResult'
   /problems/{problemId}/workshop/tests/generate:
     post:
       operationId: GenerateTests
@@ -2222,7 +2226,7 @@ paths:
                     items:
                       type: string
       responses:
-        "200":
+        '200':
           description: Tests generated successfully
           content:
             application/json:
@@ -2243,12 +2247,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Validation report
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ValidationReport"
+                $ref: '#/components/schemas/ValidationReport'
   /problems/{problemId}/workshop/solutions/test:
     post:
       operationId: TestSolution
@@ -2278,12 +2282,12 @@ paths:
                     type: integer
                   description: Specific test numbers to run (empty = all tests)
       responses:
-        "200":
+        '200':
           description: Test report
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TestReport"
+                $ref: '#/components/schemas/TestReport'
   /organizations:
     get:
       operationId: ListOrganizations
@@ -2308,12 +2312,12 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: List of organizations
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListOrganizationsResponseModel"
+                $ref: '#/components/schemas/ListOrganizationsResponseModel'
     post:
       operationId: CreateOrganization
       summary: Create a new organization
@@ -2324,12 +2328,12 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Organization created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                $ref: '#/components/schemas/CreationResponseModel'
   /organizations/{id}:
     get:
       operationId: GetOrganization
@@ -2342,12 +2346,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Organization details
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetOrganizationResponseModel"
+                $ref: '#/components/schemas/GetOrganizationResponseModel'
     patch:
       operationId: UpdateOrganization
       summary: Update organization
@@ -2363,9 +2367,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateOrganizationRequestModel"
+              $ref: '#/components/schemas/UpdateOrganizationRequestModel'
       responses:
-        "200":
+        '200':
           description: Organization updated successfully
     delete:
       operationId: DeleteOrganization
@@ -2378,7 +2382,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Organization deleted successfully
   /organizations/{id}/members:
     get:
@@ -2406,12 +2410,12 @@ paths:
             format: int32
           example: 10
       responses:
-        "200":
+        '200':
           description: List of organization members
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListOrganizationMembersResponseModel"
+                $ref: '#/components/schemas/ListOrganizationMembersResponseModel'
     post:
       operationId: AddOrganizationMember
       summary: Add member to organization
@@ -2434,7 +2438,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Member added successfully
     delete:
       operationId: RemoveOrganizationMember
@@ -2453,7 +2457,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Member removed successfully
   /teams:
     get:
@@ -2484,12 +2488,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: List of teams
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListTeamsResponseModel"
+                $ref: '#/components/schemas/ListTeamsResponseModel'
     post:
       operationId: CreateTeam
       summary: Create a new team
@@ -2509,12 +2513,12 @@ paths:
                   type: string
                   format: uuid
       responses:
-        "200":
+        '200':
           description: Team created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                $ref: '#/components/schemas/CreationResponseModel'
   /teams/{id}:
     get:
       operationId: GetTeam
@@ -2527,12 +2531,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Team details
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetTeamResponseModel"
+                $ref: '#/components/schemas/GetTeamResponseModel'
     patch:
       operationId: UpdateTeam
       summary: Update team
@@ -2548,9 +2552,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateTeamRequestModel"
+              $ref: '#/components/schemas/UpdateTeamRequestModel'
       responses:
-        "200":
+        '200':
           description: Team updated successfully
     delete:
       operationId: DeleteTeam
@@ -2563,7 +2567,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Team deleted successfully
   /teams/{id}/members:
     get:
@@ -2591,12 +2595,12 @@ paths:
             format: int32
           example: 10
       responses:
-        "200":
+        '200':
           description: List of team members
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListTeamMembersResponseModel"
+                $ref: '#/components/schemas/ListTeamMembersResponseModel'
     post:
       operationId: AddTeamMember
       summary: Add member to team
@@ -2614,7 +2618,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Member added successfully
     delete:
       operationId: RemoveTeamMember
@@ -2633,7 +2637,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Member removed successfully
   /posts:
     get:
@@ -2657,15 +2661,17 @@ paths:
           required: false
           schema:
             type: string
-            enum: [asc, desc]
+            enum:
+              - asc
+              - desc
             default: desc
       responses:
-        "200":
+        '200':
           description: A list of posts
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListPostsResponseModel"
+                $ref: '#/components/schemas/ListPostsResponseModel'
     post:
       security:
         - cookieAuth: []
@@ -2688,30 +2694,30 @@ paths:
                   type: string
                   format: binary
       responses:
-        "201":
+        '201':
           description: Post created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreatedPost"
-        "400":
+                $ref: '#/components/schemas/CreatedPost'
+        '400':
           description: bad request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "401":
+                $ref: '#/components/schemas/Error'
+        '401':
           description: unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "403":
+                $ref: '#/components/schemas/Error'
+        '403':
           description: forbidden
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: '#/components/schemas/Error'
   /posts/{id}:
     get:
       operationId: GetPostById
@@ -2724,24 +2730,24 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: A single post
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostModel"
-        "400":
+                $ref: '#/components/schemas/PostModel'
+        '400':
           description: bad request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "404":
+                $ref: '#/components/schemas/Error'
+        '404':
           description: not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: '#/components/schemas/Error'
     patch:
       security:
         - cookieAuth: []
@@ -2770,32 +2776,32 @@ paths:
                   type: string
                   format: binary
       responses:
-        "200":
+        '200':
           description: Post partially updated successfully
-        "400":
+        '400':
           description: bad request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "401":
+                $ref: '#/components/schemas/Error'
+        '401':
           description: unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "403":
+                $ref: '#/components/schemas/Error'
+        '403':
           description: forbidden
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "404":
+                $ref: '#/components/schemas/Error'
+        '404':
           description: not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: '#/components/schemas/Error'
     delete:
       security:
         - cookieAuth: []
@@ -2809,32 +2815,32 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Post deleted successfully
-        "400":
+        '400':
           description: bad request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "401":
+                $ref: '#/components/schemas/Error'
+        '401':
           description: unauthorized
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "403":
+                $ref: '#/components/schemas/Error'
+        '403':
           description: forbidden
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "404":
+                $ref: '#/components/schemas/Error'
+        '404':
           description: not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: '#/components/schemas/Error'
   /posts/{id}/image:
     get:
       operationId: GetPostImage
@@ -2852,7 +2858,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Post image
           headers:
             ETag:
@@ -2860,24 +2866,68 @@ paths:
                 type: string
           content:
             image/png: {}
-        "304":
+        '304':
           description: Not modified
           headers:
             ETag:
               schema:
                 type: string
-        "400":
+        '400':
           description: bad request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "404":
+                $ref: '#/components/schemas/Error'
+        '404':
           description: not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: '#/components/schemas/Error'
+  /auth/register:
+    post:
+      operationId: Register
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequestModel'
+      responses:
+        '200':
+          description: Successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseModel'
+  /auth/login:
+    post:
+      operationId: Login
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestModel'
+      responses:
+        '200':
+          description: Successfully logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseModel'
+  /auth/logout:
+    post:
+      operationId: Logout
+      tags:
+        - auth
+      responses:
+        '200':
+          description: Successfully logged out
 components:
   schemas:
     Error:
@@ -2912,25 +2962,20 @@ components:
       required:
         - id
         - created_by
-
         - visibility
-
         - title
         - time_limit
         - memory_limit
-
         - legend
         - input_format
         - output_format
         - notes
         - scoring
-
         - legend_html
         - input_format_html
         - output_format_html
         - notes_html
         - scoring_html
-
         - created_at
         - updated_at
       properties:
@@ -2947,7 +2992,7 @@ components:
           type: string
         title:
           type: string
-          example: "Test problem"
+          example: Test problem
         time_limit:
           type: integer
           format: int32
@@ -2956,7 +3001,6 @@ components:
           type: integer
           format: int32
           example: 256
-
         legend:
           type: string
         input_format:
@@ -2967,7 +3011,6 @@ components:
           type: string
         scoring:
           type: string
-
         legend_html:
           type: string
         input_format_html:
@@ -2978,11 +3021,9 @@ components:
           type: string
         scoring_html:
           type: string
-
         is_private:
           type: boolean
           example: true
-
         created_at:
           type: string
           format: date-time
@@ -3027,16 +3068,16 @@ components:
         problems:
           type: array
           items:
-            $ref: "#/components/schemas/ProblemsListItemModel"
+            $ref: '#/components/schemas/ProblemsListItemModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     GetProblemResponseModel:
       type: object
       required:
         - problem
       properties:
         problem:
-          $ref: "#/components/schemas/ProblemModel"
+          $ref: '#/components/schemas/ProblemModel'
     ContestProblemModel:
       type: object
       required:
@@ -3044,15 +3085,12 @@ components:
         - title
         - time_limit
         - memory_limit
-
         - position
-
         - legend_html
         - input_format_html
         - output_format_html
         - notes_html
         - scoring_html
-
         - created_at
         - updated_at
       properties:
@@ -3061,7 +3099,7 @@ components:
           format: uuid
         title:
           type: string
-          example: "Test problem"
+          example: Test problem
         time_limit:
           type: integer
           format: int32
@@ -3070,11 +3108,9 @@ components:
           type: integer
           format: int32
           example: 256
-
         position:
           type: integer
           format: int32
-
         legend_html:
           type: string
         input_format_html:
@@ -3085,7 +3121,6 @@ components:
           type: string
         scoring_html:
           type: string
-
         created_at:
           type: string
           format: date-time
@@ -3098,7 +3133,7 @@ components:
         - problem
       properties:
         problem:
-          $ref: "#/components/schemas/ContestProblemModel"
+          $ref: '#/components/schemas/ContestProblemModel'
     ContestModel:
       type: object
       required:
@@ -3121,7 +3156,7 @@ components:
           format: uuid
         title:
           type: string
-          example: "Test contest"
+          example: Test contest
         description:
           type: string
         visibility:
@@ -3136,7 +3171,7 @@ components:
           type: string
           format: uuid
         owner:
-          $ref: "#/components/schemas/UserModel"
+          $ref: '#/components/schemas/UserModel'
         created_at:
           type: string
           format: date-time
@@ -3152,9 +3187,9 @@ components:
         contests:
           type: array
           items:
-            $ref: "#/components/schemas/ContestModel"
+            $ref: '#/components/schemas/ContestModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     ListUserContestsResponseModel:
       type: object
       required:
@@ -3164,9 +3199,9 @@ components:
         contests:
           type: array
           items:
-            $ref: "#/components/schemas/ContestModel"
+            $ref: '#/components/schemas/ContestModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     ContestProblemListItemModel:
       type: object
       required:
@@ -3186,7 +3221,7 @@ components:
           format: int32
         title:
           type: string
-          example: "Test task"
+          example: Test task
         memory_limit:
           type: integer
           format: int32
@@ -3208,17 +3243,17 @@ components:
         - problems
       properties:
         contest:
-          $ref: "#/components/schemas/ContestModel"
+          $ref: '#/components/schemas/ContestModel'
         problems:
           type: array
           items:
-            $ref: "#/components/schemas/ContestProblemListItemModel"
+            $ref: '#/components/schemas/ContestProblemListItemModel'
     UpdateProblemRequestModel:
       type: object
       properties:
         title:
           type: string
-          example: "Test problem"
+          example: Test problem
         legend:
           type: string
         input_format:
@@ -3245,21 +3280,21 @@ components:
       properties:
         title:
           type: string
-          example: "Test contest"
+          example: Test contest
         description:
           type: string
         visibility:
           type: string
-          example: "private"
+          example: private
         monitor_scope:
           type: string
-          example: "participant"
+          example: participant
         submissions_list_scope:
           type: string
-          example: "moderator"
+          example: moderator
         submissions_review_scope:
           type: string
-          example: "admin"
+          example: admin
     CreateSubmissionRequestModel:
       type: object
       required:
@@ -3279,46 +3314,38 @@ components:
         submissions:
           type: array
           items:
-            $ref: "#/components/schemas/SubmissionsListItemModel"
+            $ref: '#/components/schemas/SubmissionsListItemModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     SubmissionsListItemModel:
       type: object
       required:
         - id
-
         - user_id
         - username
-
         - state
         - score
         - penalty
         - time_stat
         - memory_stat
         - language
-
         - problem_id
         - problem_title
-
         - position
-
         - contest_id
         - contest_title
-
         - updated_at
         - created_at
       properties:
         id:
           type: string
           format: uuid
-
         user_id:
           type: string
           format: uuid
         username:
           type: string
-          example: "user123"
-
+          example: user123
         state:
           type: integer
           format: int32
@@ -3343,26 +3370,22 @@ components:
           type: integer
           format: int32
           example: 1
-
         problem_id:
           type: string
           format: uuid
         problem_title:
           type: string
-          example: "Task title"
-
+          example: Task title
         position:
           type: integer
           format: int32
           example: 1
-
         contest_id:
           type: string
           format: uuid
         contest_title:
           type: string
-          example: "Contest title"
-
+          example: Contest title
         updated_at:
           type: string
           format: date-time
@@ -3373,45 +3396,35 @@ components:
       type: object
       required:
         - id
-
         - user_id
         - username
-
         - submission
-
         - state
         - score
         - penalty
         - time_stat
         - memory_stat
         - language
-
         - problem_id
         - problem_title
-
         - position
-
         - contest_id
         - contest_title
-
         - updated_at
         - created_at
       properties:
         id:
           type: string
           format: uuid
-
         user_id:
           type: string
           format: uuid
         username:
           type: string
-          example: "user123"
-
+          example: user123
         submission:
           type: string
-          example: 'print("Hello, world!")'
-
+          example: print("Hello, world!")
         state:
           type: integer
           format: int32
@@ -3436,26 +3449,22 @@ components:
           type: integer
           format: int32
           example: 1
-
         problem_id:
           type: string
           format: uuid
         problem_title:
           type: string
-          example: "Task title"
-
+          example: Task title
         position:
           type: integer
           format: int32
           example: 1
-
         contest_id:
           type: string
           format: uuid
         contest_title:
           type: string
-          example: "Contest title"
-
+          example: Contest title
         updated_at:
           type: string
           format: date-time
@@ -3468,14 +3477,14 @@ components:
         - submission
       properties:
         submission:
-          $ref: "#/components/schemas/SubmissionModel"
+          $ref: '#/components/schemas/SubmissionModel'
     GetUserResponseModel:
       type: object
       required:
         - user
       properties:
         user:
-          $ref: "#/components/schemas/UserModel"
+          $ref: '#/components/schemas/UserModel'
     UserModel:
       type: object
       required:
@@ -3532,9 +3541,9 @@ components:
         users:
           type: array
           items:
-            $ref: "#/components/schemas/UserModel"
+            $ref: '#/components/schemas/UserModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     ListContestMembersResponseModel:
       type: object
       required:
@@ -3544,9 +3553,9 @@ components:
         members:
           type: array
           items:
-            $ref: "#/components/schemas/ContestMemberModel"
+            $ref: '#/components/schemas/ContestMemberModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     GetHealthResponseModel:
       type: object
       required:
@@ -3555,10 +3564,10 @@ components:
       properties:
         status:
           type: string
-          example: "ok"
+          example: ok
         message:
           type: string
-          example: "Backend is running"
+          example: Backend is running
     ContestMemberModel:
       type: object
       required:
@@ -3567,7 +3576,6 @@ components:
         - username
         - role
         - contest_role
-        - kratos_id
         - created_at
         - updated_at
       properties:
@@ -3579,14 +3587,11 @@ components:
           format: uuid
         username:
           type: string
-          example: "user123"
+          example: user123
         role:
           type: string
         contest_role:
           type: string
-        kratos_id:
-          type: string
-          example: "user123"
         created_at:
           type: string
           format: date-time
@@ -3600,11 +3605,11 @@ components:
       properties:
         role:
           type: string
-          example: "owner"
+          example: owner
         permissions_mask:
           type: integer
           format: int64
-          description: "Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access"
+          description: Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access
           example: 255
     TestProgressEventType:
       type: string
@@ -3625,7 +3630,7 @@ components:
         - total_tests
       properties:
         type:
-          $ref: "#/components/schemas/TestProgressEventType"
+          $ref: '#/components/schemas/TestProgressEventType'
         submission_id:
           type: string
           format: uuid
@@ -3636,7 +3641,7 @@ components:
           description: Total number of test cases for this submission
       example:
         type: testing_started
-        submission_id: "550e8400-e29b-41d4-a716-446655440000"
+        submission_id: 550e8400-e29b-41d4-a716-446655440000
         total_tests: 10
     TestCompletedEventModel:
       type: object
@@ -3648,7 +3653,7 @@ components:
         - passed
       properties:
         type:
-          $ref: "#/components/schemas/TestProgressEventType"
+          $ref: '#/components/schemas/TestProgressEventType'
         submission_id:
           type: string
           format: uuid
@@ -3666,7 +3671,7 @@ components:
           description: Whether the test case passed
       example:
         type: test_completed
-        submission_id: "550e8400-e29b-41d4-a716-446655440000"
+        submission_id: 550e8400-e29b-41d4-a716-446655440000
         test_number: 3
         total_tests: 10
         passed: true
@@ -3679,7 +3684,7 @@ components:
         - state
       properties:
         type:
-          $ref: "#/components/schemas/TestProgressEventType"
+          $ref: '#/components/schemas/TestProgressEventType'
         submission_id:
           type: string
           format: uuid
@@ -3700,10 +3705,18 @@ components:
             - 105: Presentation Error (PE)
             - 106: Wrong Answer (WA)
             - 200: Accepted (AC)
-          enum: [1, 101, 102, 103, 104, 105, 106, 200]
+          enum:
+            - 1
+            - 101
+            - 102
+            - 103
+            - 104
+            - 105
+            - 106
+            - 200
       example:
         type: testing_completed
-        submission_id: "550e8400-e29b-41d4-a716-446655440000"
+        submission_id: 550e8400-e29b-41d4-a716-446655440000
         total_tests: 10
         state: 200
     WebSocketMessageType:
@@ -3727,9 +3740,9 @@ components:
         - message_type
       properties:
         message_type:
-          $ref: "#/components/schemas/WebSocketMessageType"
+          $ref: '#/components/schemas/WebSocketMessageType'
         submission:
-          $ref: "#/components/schemas/SubmissionsListItemModel"
+          $ref: '#/components/schemas/SubmissionsListItemModel'
           description: Full submission data (for submission_created/submission_updated events)
         message:
           type: string
@@ -3785,7 +3798,7 @@ components:
         - sortOrder (string, required): Must be "desc" for real-time updates
       example:
         message_type: test_completed
-        submission_id: "550e8400-e29b-41d4-a716-446655440000"
+        submission_id: 550e8400-e29b-41d4-a716-446655440000
         test_number: 3
         total_tests: 10
         passed: true
@@ -3810,7 +3823,7 @@ components:
         files:
           type: array
           items:
-            $ref: "#/components/schemas/FileEntry"
+            $ref: '#/components/schemas/FileEntry'
     ProblemLimits:
       type: object
       required:
@@ -3923,7 +3936,7 @@ components:
         results:
           type: array
           items:
-            $ref: "#/components/schemas/TestValidationResult"
+            $ref: '#/components/schemas/TestValidationResult'
     TestValidationResult:
       type: object
       properties:
@@ -3947,7 +3960,7 @@ components:
         results:
           type: array
           items:
-            $ref: "#/components/schemas/TestResult"
+            $ref: '#/components/schemas/TestResult'
     TestResult:
       type: object
       properties:
@@ -3993,16 +4006,16 @@ components:
         organizations:
           type: array
           items:
-            $ref: "#/components/schemas/OrganizationModel"
+            $ref: '#/components/schemas/OrganizationModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     GetOrganizationResponseModel:
       type: object
       required:
         - organization
       properties:
         organization:
-          $ref: "#/components/schemas/OrganizationModel"
+          $ref: '#/components/schemas/OrganizationModel'
     UpdateOrganizationRequestModel:
       type: object
       properties:
@@ -4041,9 +4054,9 @@ components:
         members:
           type: array
           items:
-            $ref: "#/components/schemas/OrganizationMemberModel"
+            $ref: '#/components/schemas/OrganizationMemberModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     TeamModel:
       type: object
       required:
@@ -4078,16 +4091,16 @@ components:
         teams:
           type: array
           items:
-            $ref: "#/components/schemas/TeamModel"
+            $ref: '#/components/schemas/TeamModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     GetTeamResponseModel:
       type: object
       required:
         - team
       properties:
         team:
-          $ref: "#/components/schemas/TeamModel"
+          $ref: '#/components/schemas/TeamModel'
     UpdateTeamRequestModel:
       type: object
       properties:
@@ -4123,9 +4136,9 @@ components:
         members:
           type: array
           items:
-            $ref: "#/components/schemas/TeamMemberModel"
+            $ref: '#/components/schemas/TeamMemberModel'
         pagination:
-          $ref: "#/components/schemas/PaginationModel"
+          $ref: '#/components/schemas/PaginationModel'
     PostModel:
       type: object
       properties:
@@ -4175,14 +4188,56 @@ components:
       type: object
       properties:
         pagination:
-          $ref: "#/components/schemas/BlogPaginationModel"
+          $ref: '#/components/schemas/BlogPaginationModel'
         posts:
           type: array
           items:
-            $ref: "#/components/schemas/PostModel"
+            $ref: '#/components/schemas/PostModel'
     CreatedPost:
       type: object
       properties:
         post_id:
+          type: string
+          format: uuid
+    RegisterRequestModel:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          example: john_doe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        password:
+          type: string
+          format: password
+          example: secret123
+    LoginRequestModel:
+      type: object
+      required:
+        - identifier
+        - password
+      properties:
+        identifier:
+          type: string
+          example: john_doe
+        password:
+          type: string
+          format: password
+          example: secret123
+    AuthResponseModel:
+      type: object
+      required:
+        - user
+        - session_id
+      properties:
+        user:
+          $ref: '#/components/schemas/UserModel'
+        session_id:
           type: string
           format: uuid

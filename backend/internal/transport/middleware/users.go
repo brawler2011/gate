@@ -7,7 +7,6 @@ import (
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/google/uuid"
 )
 
 const userKey = "user"
@@ -18,28 +17,21 @@ func UsersMiddleware(usersUC interfaces.UsersUC) func(http.Handler) http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			session, err := getSession(ctx)
-			if err != nil {
-				slog.Error("failed to get session", "error", err)
+			// If user is already set (e.g. by AuthMiddleware or test middleware), proceed
+			if _, ok := ctx.Value(userKey).(models.User); ok {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			if session == nil {
+			session, err := GetSession(ctx)
+			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			kratosId, err := uuid.Parse(session.Identity.Id)
+			user, err := usersUC.GetUserById(ctx, session.UserID)
 			if err != nil {
-				slog.Error("failed to parse kratos id", "error", err, "kratos_id", session.Identity.Id)
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			user, err := usersUC.GetUserByKratosId(ctx, kratosId)
-			if err != nil {
-				slog.Error("failed to get user by kratos id", "error", err, "kratos_id", session.Identity.Id)
+				slog.Error("failed to get user by id from session", "error", err, "user_id", session.UserID)
 				next.ServeHTTP(w, r)
 				return
 			}

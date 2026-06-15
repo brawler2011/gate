@@ -136,8 +136,11 @@ func (s *IntegrationTestSuite) initApp() {
 	txManager := pg.NewTransactor(s.dbPool)
 	vcsService := vcs.NewInMemoryS3Service("integration-workshop")
 
+	authRepo := pg.NewAuthRepo(s.dbPool)
+
 	// UseCases
 	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, txManager)
+	authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo)
 	permissionsUC := usecase.NewPermissionsUseCase(s.contestsRepo, usersUC, problemsRepo, teamsRepo, s.organizationsRepo)
@@ -149,6 +152,7 @@ func (s *IntegrationTestSuite) initApp() {
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
+		authUC,
 		contestsUC,
 		permissionsUC,
 		submissionsUC,

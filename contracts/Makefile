@@ -1,4 +1,4 @@
-.PHONY: all go-gen ts-gen deps clean help list-specs
+.PHONY: all go-gen ts-gen deps clean help list-specs merge
 
 .DEFAULT_GOAL := all
 
@@ -23,7 +23,10 @@ deps: go.sum go.mod package.json
 	@command -v "$(NPX)"  >/dev/null || { echo "Error: npx is not installed"; exit 1; }
 	@command -v "$(NODE)" >/dev/null || { echo "Error: node is not installed"; exit 1; }
 
-go-gen: deps
+merge: deps
+	node tools/merge-openapi.js
+
+go-gen: merge
 	@if [ -z "$(SPECS)" ]; then \
 		echo "Error: No OpenAPI specs found matching */v*/openapi.yaml"; \
 		exit 1; \
@@ -54,10 +57,10 @@ go-gen: deps
 				-package "$$pkg_name" \
 				-o "$$out_dir/$$service.go" \
 				"$$spec_path" || exit 1; \
-		fi; \
+			fi; \
 	done
 
-ts-gen: deps
+ts-gen: merge
 	@if [ -z "$(SPECS)" ]; then \
 		echo "Error: No OpenAPI specs found matching */v*/openapi.yaml"; \
 		exit 1; \

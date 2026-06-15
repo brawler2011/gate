@@ -5,7 +5,9 @@ import (
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
+	"github.com/gate149/gate/backend/pkg"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UsersUseCase struct {
@@ -29,20 +31,25 @@ func NewUsersUseCase(
 func (u *UsersUseCase) CreateUser(ctx context.Context, input models.CreateUserInput) (uuid.UUID, error) {
 	id := uuid.New()
 
+	hashed, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return uuid.Nil, pkg.Wrap(pkg.ErrInternal, err, "failed to hash password")
+	}
+
 	params := models.CreateUserParams{
-		Id:        id,
-		Username:  input.Username,
-		Role:      models.UserRole(input.Role),
-		KratosId:  input.KratosId,
-		Email:     input.Email,
-		Name:      input.Name,
-		Surname:   input.Surname,
-		Bio:       input.Bio,
-		AvatarUrl: input.AvatarUrl,
+		Id:           id,
+		Username:     input.Username,
+		Role:         models.UserRole(input.Role),
+		PasswordHash: string(hashed),
+		Email:        input.Email,
+		Name:         input.Name,
+		Surname:      input.Surname,
+		Bio:          input.Bio,
+		AvatarUrl:    input.AvatarUrl,
 	}
 
 	// Create user directly (no image table anymore)
-	err := u.usersRepo.CreateUser(ctx, params)
+	err = u.usersRepo.CreateUser(ctx, params)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -52,10 +59,6 @@ func (u *UsersUseCase) CreateUser(ctx context.Context, input models.CreateUserIn
 
 func (u *UsersUseCase) GetUserById(ctx context.Context, id uuid.UUID) (models.User, error) {
 	return u.usersRepo.GetUserById(ctx, id)
-}
-
-func (u *UsersUseCase) GetUserByKratosId(ctx context.Context, kratosId uuid.UUID) (models.User, error) {
-	return u.usersRepo.GetUserByKratosId(ctx, kratosId)
 }
 
 func (u *UsersUseCase) ListUsers(ctx context.Context, filter models.UsersListFilter) (models.UsersList, error) {

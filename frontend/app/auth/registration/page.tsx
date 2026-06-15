@@ -19,31 +19,8 @@ import { IconAlertCircle } from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-
-type FlowData = {
-  id: string;
-  return_to?: string;
-  ui: {
-    action: string;
-    method: string;
-    nodes: Array<{
-      attributes: {
-        name?: string;
-        value?: string;
-        type?: string;
-      };
-      messages?: Array<{ text: string }>;
-    }>;
-    messages?: Array<{ text: string }>;
-  };
-};
-
-type RegistrationFormState = {
-  username: string;
-  email: string;
-  password: string;
-};
+import { Suspense, useState } from "react";
+import { registerAction } from "@lib/auth-actions";
 
 export default function RegistrationPage() {
   return (
@@ -62,132 +39,26 @@ export default function RegistrationPage() {
 function RegistrationPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const flowId = searchParams.get("flow");
-  const returnTo = searchParams.get("return_to");
+  const returnTo = searchParams.get("return_to") || "/";
 
-  const [flow, setFlow] = useState<FlowData | null>(null);
-  const [formData, setFormData] = useState<RegistrationFormState>({
-    username: "",
-    email: "",
-    password: "",
-  });
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!flowId) {
-      window.location.href = `/api/.ory/self-service/registration/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
-      return;
-    }
-
-    fetch(`/api/.ory/self-service/registration/flows?id=${flowId}`, {
-      credentials: "include",
-    })
-      .then((res) => {
-        if (res.status === 410 || res.status === 404 || res.status === 403) {
-          window.location.href = `/api/.ory/self-service/registration/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
-          return null;
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data) setFlow(data);
-      })
-      .catch(() => {
-        window.location.href = `/api/.ory/self-service/registration/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
-      });
-  }, [flowId, returnTo]);
-
-  if (!flowId || !flow) {
-    return (
-      <Center h="100vh">
-        <Loader size="lg" />
-      </Center>
-    );
-  }
-
-  const csrfNode = flow.ui.nodes.find(
-    (node) => node.attributes.name === "csrf_token",
-  );
-  const csrfToken = csrfNode?.attributes.value || "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    // Get return_to from flow object, fallback to URL param, then to "/"
-    const targetReturnTo = flow.return_to || returnTo || "/";
-
     try {
-      const response = await fetch(
-        `/api/.ory/self-service/registration?flow=${flowId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            method: "password",
-            traits: {
-              username: formData.username,
-              email: formData.email,
-            },
-            password: formData.password,
-            csrf_token: csrfToken,
-          }),
-          credentials: "include",
-        },
-      );
-
-      const data = await response.json();
-
-      // Check if registration was successful (session exists)
-      if (response.ok && data.session) {
-        // Kratos successfully registered, redirect to return_to URL from flow
-        router.push(targetReturnTo);
+      const result = await registerAction(username, email, password);
+      if (result.success) {
+        router.push(returnTo);
         router.refresh();
-        return;
-      }
-
-      // If response is ok but no session, still redirect (edge case)
-      if (response.ok) {
-        router.push(targetReturnTo);
-        router.refresh();
-        return;
-      }
-
-      if (
-        response.status === 410 ||
-        response.status === 404 ||
-        response.status === 403
-      ) {
-        window.location.href = `/api/.ory/self-service/registration/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
-        return;
-      }
-
-      if (data.ui?.messages) {
-        const messages = data.ui.messages
-          .map((m: { text: string }) => m.text)
-          .join(". ");
-        setError(messages);
-      } else if (data.ui?.nodes) {
-        const fieldErrors: string[] = [];
-        for (const node of data.ui.nodes) {
-          if (node.messages?.length > 0) {
-            fieldErrors.push(
-              ...node.messages.map((m: { text: string }) => m.text),
-            );
-          }
-        }
-        if (fieldErrors.length > 0) {
-          setError(fieldErrors.join(". "));
-        } else {
-          setError("Не удалось создать аккаунт");
-        }
       } else {
-        setError("Не удалось создать аккаунт");
+        setError(result.error || "Ошибка при регистрации");
       }
     } catch {
       setError("Не удалось подключиться к серверу");
@@ -234,7 +105,7 @@ function RegistrationPageContent() {
           style={{ width: "100%" }}
         >
           <Title order={2} ta="center" mb={24} fz={22}>
-            Регистрация
+            Регистрация аккаунта
           </Title>
 
           {error && (
@@ -242,7 +113,7 @@ function RegistrationPageContent() {
               icon={<IconAlertCircle size={18} />}
               color="red"
               mb={20}
-              title="Ошибка регистрации"
+              title="Не удалось зарегистрироваться"
               radius="md"
             >
               {error}
@@ -257,14 +128,8 @@ function RegistrationPageContent() {
                 required
                 size="md"
                 radius="md"
-                value={formData.username}
-                onChange={(e) => {
-                  const value = e.currentTarget.value;
-                  setFormData((prev) => ({
-                    ...prev,
-                    username: value,
-                  }));
-                }}
+                value={username}
+                onChange={(e) => setUsername(e.currentTarget.value)}
               />
 
               <TextInput
@@ -274,30 +139,18 @@ function RegistrationPageContent() {
                 required
                 size="md"
                 radius="md"
-                value={formData.email}
-                onChange={(e) => {
-                  const value = e.currentTarget.value;
-                  setFormData((prev) => ({
-                    ...prev,
-                    email: value,
-                  }));
-                }}
+                value={email}
+                onChange={(e) => setEmail(e.currentTarget.value)}
               />
 
               <PasswordInput
                 label="Пароль"
-                placeholder="Минимум 8 символов"
+                placeholder="Введите пароль"
                 required
                 size="md"
                 radius="md"
-                value={formData.password}
-                onChange={(e) => {
-                  const value = e.currentTarget.value;
-                  setFormData((prev) => ({
-                    ...prev,
-                    password: value,
-                  }));
-                }}
+                value={password}
+                onChange={(e) => setPassword(e.currentTarget.value)}
               />
 
               <Button
@@ -308,7 +161,7 @@ function RegistrationPageContent() {
                 loading={loading}
                 mt={8}
               >
-                Создать аккаунт
+                Зарегистрироваться
               </Button>
             </Stack>
           </form>

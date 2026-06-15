@@ -10,6 +10,7 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export type { AuthResponseModel } from './models/AuthResponseModel';
 export type { BlogPaginationModel } from './models/BlogPaginationModel';
 export type { CompileResult } from './models/CompileResult';
 export type { ContestMemberModel } from './models/ContestMemberModel';
@@ -41,6 +42,7 @@ export type { ListTeamMembersResponseModel } from './models/ListTeamMembersRespo
 export type { ListTeamsResponseModel } from './models/ListTeamsResponseModel';
 export type { ListUserContestsResponseModel } from './models/ListUserContestsResponseModel';
 export type { ListUsersResponseModel } from './models/ListUsersResponseModel';
+export type { LoginRequestModel } from './models/LoginRequestModel';
 export type { MainComponentSelectionRequest } from './models/MainComponentSelectionRequest';
 export type { MessageResponse } from './models/MessageResponse';
 export type { OrganizationMemberModel } from './models/OrganizationMemberModel';
@@ -53,6 +55,7 @@ export type { ProblemLimits } from './models/ProblemLimits';
 export type { ProblemModel } from './models/ProblemModel';
 export type { ProblemsListItemModel } from './models/ProblemsListItemModel';
 export type { ProblemStatement } from './models/ProblemStatement';
+export type { RegisterRequestModel } from './models/RegisterRequestModel';
 export type { SubmissionModel } from './models/SubmissionModel';
 export type { SubmissionsListItemModel } from './models/SubmissionsListItemModel';
 export type { SubmissionWebSocketEventModel } from './models/SubmissionWebSocketEventModel';
@@ -77,5 +80,6 @@ export type { ValidationReport } from './models/ValidationReport';
 export { WebSocketMessageType } from './models/WebSocketMessageType';
 export type { WorkshopFileListResponse } from './models/WorkshopFileListResponse';
 
+export { AuthService } from './services/AuthService';
 export { DefaultService } from './services/DefaultService';
 export { UsersService } from './services/UsersService';

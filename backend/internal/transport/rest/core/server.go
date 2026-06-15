@@ -7,6 +7,7 @@ import (
 )
 
 type CoreServer struct {
+	authUC          interfaces.AuthUC
 	contestsUC      interfaces.ContestsUC
 	permissionsUC   interfaces.PermissionsUC
 	submissionsUC   interfaces.SubmissionsUC
@@ -23,6 +24,7 @@ type CoreServer struct {
 }
 
 func NewCoreServer(
+	authUC interfaces.AuthUC,
 	contestsUC interfaces.ContestsUC,
 	permissionsUC interfaces.PermissionsUC,
 	submissionsUC interfaces.SubmissionsUC,
@@ -38,6 +40,7 @@ func NewCoreServer(
 	natsJS jetstream.JetStream,
 ) *CoreServer {
 	return &CoreServer{
+		authUC:          authUC,
 		contestsUC:      contestsUC,
 		permissionsUC:   permissionsUC,
 		submissionsUC:   submissionsUC,

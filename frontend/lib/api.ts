@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { gateway } from "@contracts/gateway/v1";
 import { ApiError as GatewayApiError } from "@contracts/gateway/v1/core/ApiError";
 
-const oryKratosCookieName = "ory_kratos_session";
+const sessionCookieName = "session_id";
 
 /**
  * API error info returned from Call
@@ -15,20 +15,20 @@ export type ApiError = {
   requestId?: string;
 };
 
-const getKratosCookie = async (): Promise<string | undefined> => {
+const getSessionCookie = async (): Promise<string | undefined> => {
   const requestCookies = await cookies();
 
-  if (!requestCookies.has(oryKratosCookieName)) {
+  if (!requestCookies.has(sessionCookieName)) {
     return;
   }
 
-  const cookie = requestCookies.get(oryKratosCookieName);
+  const cookie = requestCookies.get(sessionCookieName);
 
   if (!cookie || !cookie.name || !cookie.value) {
     return;
   }
 
-  return `${oryKratosCookieName}=${cookie.value}`;
+  return `${sessionCookieName}=${cookie.value}`;
 };
 
 /**
@@ -43,10 +43,10 @@ export const Call = async <T>(
 ): Promise<[ApiError | null, T | null]> => {
   const headers: Record<string, string> = {};
 
-  const kratosCookie = await getKratosCookie();
+  const sessionCookie = await getSessionCookie();
 
-  if (kratosCookie) {
-    headers["Cookie"] = kratosCookie;
+  if (sessionCookie) {
+    headers["Cookie"] = sessionCookie;
   }
 
   const client = new gateway({

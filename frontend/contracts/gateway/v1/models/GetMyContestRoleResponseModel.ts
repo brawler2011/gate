@@ -3,7 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 export type GetMyContestRoleResponseModel = {
-    permissions_mask?: number;
     role: string;
+    /**
+     * Effective contest action permissions represented as a bitmask.
+     */
+    permissions_mask?: number;
 };
 

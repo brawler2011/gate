@@ -5,10 +5,12 @@
 import type { BaseHttpRequest } from './core/BaseHttpRequest';
 import type { OpenAPIConfig } from './core/OpenAPI';
 import { FetchHttpRequest } from './core/FetchHttpRequest';
+import { AuthService } from './services/AuthService';
 import { DefaultService } from './services/DefaultService';
 import { UsersService } from './services/UsersService';
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 export class gateway {
+    public readonly auth: AuthService;
     public readonly default: DefaultService;
     public readonly users: UsersService;
     public readonly request: BaseHttpRequest;
@@ -24,6 +26,7 @@ export class gateway {
             HEADERS: config?.HEADERS,
             ENCODE_PATH: config?.ENCODE_PATH,
         });
+        this.auth = new AuthService(this.request);
         this.default = new DefaultService(this.request);
         this.users = new UsersService(this.request);
     }

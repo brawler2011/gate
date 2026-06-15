@@ -33,15 +33,15 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params models.CreateUserPara
 	}
 
 	err := r.queries.CreateUser(ctx, sqlc.CreateUserParams{
-		ID:        params.Id,
-		Username:  params.Username,
-		Role:      sqlc.UserRole(params.Role),
-		KratosID:  params.KratosId,
-		Email:     params.Email,
-		Name:      params.Name,
-		Surname:   params.Surname,
-		Bio:       params.Bio,
-		AvatarUrl: params.AvatarUrl,
+		ID:           params.Id,
+		Username:     params.Username,
+		Role:         sqlc.UserRole(params.Role),
+		PasswordHash: params.PasswordHash,
+		Email:        params.Email,
+		Name:         params.Name,
+		Surname:      params.Surname,
+		Bio:          params.Bio,
+		AvatarUrl:    params.AvatarUrl,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -59,22 +59,22 @@ func (r *UsersRepo) GetUserById(ctx context.Context, id uuid.UUID) (models.User,
 
 func mapUserToModel(user sqlc.User) models.User {
 	return models.User{
-		Id:        user.ID,
-		Username:  user.Username,
-		Role:      models.UserRole(user.Role),
-		KratosID:  user.KratosID,
-		Email:     user.Email,
-		Name:      user.Name,
-		Surname:   user.Surname,
-		Bio:       user.Bio,
-		AvatarUrl: user.AvatarUrl,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		Id:           user.ID,
+		Username:     user.Username,
+		Role:         models.UserRole(user.Role),
+		PasswordHash: user.PasswordHash,
+		Email:        user.Email,
+		Name:         user.Name,
+		Surname:      user.Surname,
+		Bio:          user.Bio,
+		AvatarUrl:    user.AvatarUrl,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
 	}
 }
 
-func (r *UsersRepo) GetUserByKratosId(ctx context.Context, kratosId uuid.UUID) (models.User, error) {
-	user, err := r.queries.GetUserByKratosId(ctx, kratosId)
+func (r *UsersRepo) GetUserByUsernameOrEmail(ctx context.Context, identifier string) (models.User, error) {
+	user, err := r.queries.GetUserByUsernameOrEmail(ctx, identifier)
 	if err != nil {
 		return models.User{}, HandlePgErr(err)
 	}

@@ -6,7 +6,6 @@ type Config struct {
 	Env string `env:"ENV" env-default:"prod"`
 
 	Address        string `env:"ADDRESS" required:"true"`
-	PrivateAddress string `env:"PRIVATE_ADDRESS" env-default:":13011"`
 	AllowedOrigins string `env:"ALLOWED_ORIGINS" env-default:"http://localhost,http://127.0.0.1"`
 
 	PostgresDSN      string `env:"POSTGRES_DSN"`
@@ -29,10 +28,6 @@ type Config struct {
 	NatsUrl  string `env:"NATS_URL"`
 	NatsHost string `env:"NATS_HOST" env-default:"localhost"`
 	NatsPort string `env:"NATS_PORT" env-default:"4222"`
-
-	KratosURl      string `env:"KRATOS_URL" env-default:"http://localhost:4433"`
-	KratosAdminURL string `env:"KRATOS_ADMIN_URL" env-default:"http://localhost:4434"`
-
 	// Workshop configuration
 	GoJudgeGRPCAddr string `env:"GOJUDGE_GRPC_ADDR" env-default:"localhost:5051"`
 

@@ -19,7 +19,7 @@ A self-hosted competitive programming platform. Gate149 lets you author problems
 | Database | PostgreSQL 14 (`pgx/v5`) |
 | Cache | Valkey / Redis |
 | Message broker | NATS JetStream |
-| Auth | Ory Kratos |
+| Auth | Custom Session Auth (Bcrypt) |
 | Sandbox | `criyle/go-judge` (gRPC) |
 | Object storage | SeaweedFS (S3-compatible) |
 | Reverse proxy | Nginx |
@@ -28,7 +28,7 @@ A self-hosted competitive programming platform. Gate149 lets you author problems
 
 ```
 gate/
-├── backend/      # Go API, WebSocket, Kratos webhook, judge worker, migrations
+├── backend/      # Go API, WebSocket, judge worker, migrations
 ├── frontend/     # Next.js 15 web application
 ├── contracts/    # OpenAPI specs and generated TypeScript/Go client code
 └── deploy/       # Docker Compose configs for local, dev, and production

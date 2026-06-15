@@ -19,25 +19,8 @@ import { IconAlertCircle } from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-
-type FlowData = {
-  id: string;
-  return_to?: string;
-  ui: {
-    action: string;
-    method: string;
-    nodes: Array<{
-      attributes: {
-        name?: string;
-        value?: string;
-        type?: string;
-      };
-      messages?: Array<{ text: string }>;
-    }>;
-    messages?: Array<{ text: string }>;
-  };
-};
+import { Suspense, useState } from "react";
+import { loginAction } from "@lib/auth-actions";
 
 export default function LoginPage() {
   return (
@@ -56,128 +39,25 @@ export default function LoginPage() {
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const flowId = searchParams.get("flow");
-  const returnTo = searchParams.get("return_to");
+  const returnTo = searchParams.get("return_to") || "/";
 
-  const [flow, setFlow] = useState<FlowData | null>(null);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!flowId) {
-      window.location.href = `/api/.ory/self-service/login/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
-      return;
-    }
-
-    fetch(`/api/.ory/self-service/login/flows?id=${flowId}`, {
-      credentials: "include",
-    })
-      .then((res) => {
-        if (res.status === 410 || res.status === 404 || res.status === 403) {
-          window.location.href = `/api/.ory/self-service/login/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
-          return null;
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data) {
-          setFlow(data);
-        }
-      })
-      .catch(() => {
-        window.location.href = `/api/.ory/self-service/login/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
-      });
-  }, [flowId, returnTo]);
-
-  if (!flowId || !flow) {
-    return (
-      <Center h="100vh">
-        <Loader size="lg" />
-      </Center>
-    );
-  }
-
-  const csrfNode = flow.ui.nodes.find(
-    (node) => node.attributes.name === "csrf_token",
-  );
-  const csrfToken = csrfNode?.attributes.value || "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    // Get return_to from flow object, fallback to URL param, then to "/"
-    const targetReturnTo = flow.return_to || returnTo || "/";
-
     try {
-      const response = await fetch(
-        `/api/.ory/self-service/login?flow=${flowId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            method: "password",
-            identifier,
-            password,
-            csrf_token: csrfToken,
-          }),
-          credentials: "include",
-        },
-      );
-
-      const data = await response.json();
-
-      // Check if login was successful (session exists)
-      if (response.ok && data.session) {
-        // Kratos successfully logged in, redirect to return_to URL from flow
-        router.push(targetReturnTo);
+      const result = await loginAction(identifier, password);
+      if (result.success) {
+        router.push(returnTo);
         router.refresh();
-        return;
-      }
-
-      // If response is ok but no session, still redirect (edge case)
-      if (response.ok) {
-        router.push(targetReturnTo);
-        router.refresh();
-        return;
-      }
-
-      if (
-        response.status === 410 ||
-        response.status === 404 ||
-        response.status === 403
-      ) {
-        window.location.href = `/api/.ory/self-service/login/browser${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`;
-        return;
-      }
-
-      if (data.ui?.messages) {
-        const messages = data.ui.messages
-          .map((m: { text: string }) => m.text)
-          .join(". ");
-        setError(messages);
-      } else if (data.ui?.nodes) {
-        const fieldErrors: string[] = [];
-        for (const node of data.ui.nodes) {
-          if (node.messages?.length > 0) {
-            fieldErrors.push(
-              ...node.messages.map((m: { text: string }) => m.text),
-            );
-          }
-        }
-        if (fieldErrors.length > 0) {
-          setError(fieldErrors.join(". "));
-        } else {
-          setError("Неверный логин или пароль");
-        }
       } else {
-        setError("Неверный логин или пароль");
+        setError(result.error || "Неверный логин или пароль");
       }
     } catch {
       setError("Не удалось подключиться к серверу");
@@ -243,7 +123,7 @@ function LoginPageContent() {
             <Stack gap={16}>
               <TextInput
                 label="Email или имя пользователя"
-                placeholder="Введите email"
+                placeholder="Введите email или имя пользователя"
                 required
                 size="md"
                 radius="md"

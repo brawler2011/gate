@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-const oryKratosCookieName = 'ory_kratos_session';
+const sessionCookieName = 'session_id';
 
 export async function GET(
   _: NextRequest,
@@ -12,11 +12,11 @@ export async function GET(
   const { id } = await params;
   
   const requestCookies = await cookies();
-  const kratosCookie = requestCookies.get(oryKratosCookieName);
+  const sessionCookie = requestCookies.get(sessionCookieName);
   
   const headers: Record<string, string> = {};
-  if (kratosCookie) {
-    headers['Cookie'] = `${oryKratosCookieName}=${kratosCookie.value}`;
+  if (sessionCookie) {
+    headers['Cookie'] = `${sessionCookieName}=${sessionCookie.value}`;
   }
 
   const backendUrl = process.env.BACKEND_API_URL;

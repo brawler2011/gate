@@ -270,7 +270,6 @@ type ContestMember struct {
 	Role            UserRole
 	ContestRole     ContestRole
 	PermissionsMask *ContestPermissionMask
-	KratosID        string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

@@ -3,7 +3,7 @@ INSERT INTO users (
         id,
         username,
         role,
-        kratos_id,
+        password_hash,
         email,
         name,
         surname,
@@ -14,7 +14,7 @@ VALUES (
         @id::uuid,
         @username,
         @role,
-        @kratos_id::uuid,
+        @password_hash,
         @email,
         @name,
         @surname,
@@ -28,10 +28,10 @@ FROM users
 WHERE id = @id::uuid
 LIMIT 1;
 
--- name: GetUserByKratosId :one
+-- name: GetUserByUsernameOrEmail :one
 SELECT *
 FROM users
-WHERE kratos_id = @kratos_id::uuid
+WHERE username = @identifier OR email = @identifier
 LIMIT 1;
 
 -- name: GetUserByUsername :one

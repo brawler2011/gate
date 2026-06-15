@@ -154,8 +154,8 @@ func ResponseErrorHandler(logger *slog.Logger) func(w http.ResponseWriter, r *ht
 		if user := GetUser(ctx); !user.IsGuest() {
 			logAttrs = append(logAttrs, slog.String("user_id", user.Id.String()))
 		}
-		if session, _ := getSession(ctx); session != nil {
-			logAttrs = append(logAttrs, slog.String("session_id", session.Id))
+		if session, err := GetSession(ctx); err == nil {
+			logAttrs = append(logAttrs, slog.String("session_id", session.ID.String()))
 		}
 
 		if cErr != nil {
