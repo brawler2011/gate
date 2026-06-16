@@ -1089,24 +1089,6 @@ paths:
               schema:
                 type: string
                 description: Presigned S3 URL for package download
-  /problems/{problemId}/workshop/init:
-    post:
-      operationId: InitProblemWorkshop
-      summary: Initialize problem workspace
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Workshop initialized successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/readme:
     get:
       operationId: GetProblemReadme

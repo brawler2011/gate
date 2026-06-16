@@ -9,7 +9,6 @@ export * from './WorkshopHotbar';
 export * from './WorkshopImportTab';
 export * from './WorkshopInteractorsTab';
 export * from './WorkshopMediaTab';
-export * from './WorkshopNotInitialized';
 export * from './WorkshopPackagesTab';
 export * from './WorkshopSolutionsTab';
 export * from './WorkshopStatementTab';

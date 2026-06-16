@@ -1,6 +1,6 @@
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { WorkshopEditor, WorkshopNotInitialized } from "@/components/workshop";
+import { WorkshopEditor } from "@/components/workshop";
 import { getProblem, getWorkshopProblemLimits } from "@/lib/actions";
 import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
 import { Metadata } from "next";
@@ -137,9 +137,7 @@ const Page = async (props: Props) => {
         },
       }}
     >
-      {limitsError?.status === 404 ? (
-        <WorkshopNotInitialized problemId={problem_id} />
-      ) : limitsError ? (
+      {limitsError ? (
         <ErrorDisplay error={limitsError} />
       ) : (
         <Suspense>

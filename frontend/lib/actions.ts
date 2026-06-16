@@ -372,9 +372,6 @@ export async function removeTeamMember(teamId: string, userId: string) {
 
 // ─── Workshop Files ───────────────────────────────────────────────────────────
 
-export async function initProblemWorkshop(problemId: string) {
-  return Call((client) => client.default.initProblemWorkshop({ problemId }));
-}
 
 const badWorkshopRequest = (message: string): [ApiError, null] => [{ status: 400, message }, null];
 type WorkshopFilesResponse = Promise<[ApiError | null, { files?: FileEntry[] } | null]>;

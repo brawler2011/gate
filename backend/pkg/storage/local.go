@@ -26,6 +26,14 @@ func NewLocalStorage(basePath string) *LocalStorage {
 func (s *LocalStorage) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error {
 	destPath := filepath.Join(s.basePath, bucket, filepath.Clean(key))
 
+	// If it is a directory placeholder, create the directory and return
+	if contentType == "application/x-directory" || strings.HasSuffix(key, "/") {
+		if err := os.MkdirAll(destPath, 0755); err != nil {
+			return fmt.Errorf("failed to create directory for local storage: %w", err)
+		}
+		return nil
+	}
+
 	// Ensure parent directory exists
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 		return fmt.Errorf("failed to create directory for local storage: %w", err)
@@ -80,6 +88,17 @@ func (s *LocalStorage) DeleteFile(ctx context.Context, bucket, key string) error
 	err := os.Remove(targetPath)
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to delete local file: %w", err)
+	}
+
+	// Clean up empty parent directories recursively
+	bucketDir := filepath.Join(s.basePath, bucket)
+	parent := filepath.Dir(targetPath)
+	for parent != bucketDir && parent != s.basePath && len(parent) > len(bucketDir) {
+		err := os.Remove(parent) // os.Remove only removes if directory is empty
+		if err != nil {
+			break // stop if not empty or other error
+		}
+		parent = filepath.Dir(parent)
 	}
 
 	return nil

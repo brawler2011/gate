@@ -1389,9 +1389,6 @@ type ClientInterface interface {
 	// CompileProblemComponent request
 	CompileProblemComponent(ctx context.Context, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// InitProblemWorkshop request
-	InitProblemWorkshop(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// TestSolutionWithBody request with any body
 	TestSolutionWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2670,18 +2667,6 @@ func (c *Client) UpdateProblemValidatorWithBody(ctx context.Context, problemId o
 
 func (c *Client) CompileProblemComponent(ctx context.Context, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCompileProblemComponentRequest(c.Server, problemId, componentType)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) InitProblemWorkshop(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewInitProblemWorkshopRequest(c.Server, problemId)
 	if err != nil {
 		return nil, err
 	}
@@ -7156,40 +7141,6 @@ func NewCompileProblemComponentRequest(server string, problemId openapi_types.UU
 	return req, nil
 }
 
-// NewInitProblemWorkshopRequest generates requests for InitProblemWorkshop
-func NewInitProblemWorkshopRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/workshop/init", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewTestSolutionRequest calls the generic TestSolution builder with application/json body
 func NewTestSolutionRequest(server string, problemId openapi_types.UUID, body TestSolutionJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -9104,9 +9055,6 @@ type ClientWithResponsesInterface interface {
 
 	// CompileProblemComponentWithResponse request
 	CompileProblemComponentWithResponse(ctx context.Context, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType, reqEditors ...RequestEditorFn) (*CompileProblemComponentResponse, error)
-
-	// InitProblemWorkshopWithResponse request
-	InitProblemWorkshopWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*InitProblemWorkshopResponse, error)
 
 	// TestSolutionWithBodyWithResponse request with any body
 	TestSolutionWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TestSolutionResponse, error)
@@ -11137,28 +11085,6 @@ func (r CompileProblemComponentResponse) StatusCode() int {
 	return 0
 }
 
-type InitProblemWorkshopResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *MessageResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r InitProblemWorkshopResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r InitProblemWorkshopResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type TestSolutionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -12594,15 +12520,6 @@ func (c *ClientWithResponses) CompileProblemComponentWithResponse(ctx context.Co
 		return nil, err
 	}
 	return ParseCompileProblemComponentResponse(rsp)
-}
-
-// InitProblemWorkshopWithResponse request returning *InitProblemWorkshopResponse
-func (c *ClientWithResponses) InitProblemWorkshopWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*InitProblemWorkshopResponse, error) {
-	rsp, err := c.InitProblemWorkshop(ctx, problemId, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseInitProblemWorkshopResponse(rsp)
 }
 
 // TestSolutionWithBodyWithResponse request with arbitrary body returning *TestSolutionResponse
@@ -15054,32 +14971,6 @@ func ParseCompileProblemComponentResponse(rsp *http.Response) (*CompileProblemCo
 	return response, nil
 }
 
-// ParseInitProblemWorkshopResponse parses an HTTP response from a InitProblemWorkshopWithResponse call
-func ParseInitProblemWorkshopResponse(rsp *http.Response) (*InitProblemWorkshopResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &InitProblemWorkshopResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest MessageResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseTestSolutionResponse parses an HTTP response from a TestSolutionWithResponse call
 func ParseTestSolutionResponse(rsp *http.Response) (*TestSolutionResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -15947,9 +15838,6 @@ type ServerInterface interface {
 	// Compile checker/validator/generator/interactor
 	// (POST /problems/{problemId}/workshop/components/{componentType}/compile)
 	CompileProblemComponent(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, componentType CompileProblemComponentParamsComponentType)
-	// Initialize problem workspace
-	// (POST /problems/{problemId}/workshop/init)
-	InitProblemWorkshop(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Test solution against tests
 	// (POST /problems/{problemId}/workshop/solutions/test)
 	TestSolution(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
@@ -19056,31 +18944,6 @@ func (siw *ServerInterfaceWrapper) CompileProblemComponent(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
-// InitProblemWorkshop operation middleware
-func (siw *ServerInterfaceWrapper) InitProblemWorkshop(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.InitProblemWorkshop(w, r, problemId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // TestSolution operation middleware
 func (siw *ServerInterfaceWrapper) TestSolution(w http.ResponseWriter, r *http.Request) {
 
@@ -20391,7 +20254,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/validators/{name}", wrapper.GetProblemValidator)
 	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/validators/{name}", wrapper.UpdateProblemValidator)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/components/{componentType}/compile", wrapper.CompileProblemComponent)
-	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/init", wrapper.InitProblemWorkshop)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/solutions/test", wrapper.TestSolution)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/tests/generate", wrapper.GenerateTests)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/workshop/tests/validate", wrapper.ValidateAllTests)
@@ -22234,23 +22096,6 @@ func (response CompileProblemComponent200JSONResponse) VisitCompileProblemCompon
 	return json.NewEncoder(w).Encode(response)
 }
 
-type InitProblemWorkshopRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-}
-
-type InitProblemWorkshopResponseObject interface {
-	VisitInitProblemWorkshopResponse(w http.ResponseWriter) error
-}
-
-type InitProblemWorkshop200JSONResponse MessageResponse
-
-func (response InitProblemWorkshop200JSONResponse) VisitInitProblemWorkshopResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type TestSolutionRequestObject struct {
 	ProblemId openapi_types.UUID `json:"problemId"`
 	Body      *TestSolutionJSONRequestBody
@@ -22998,9 +22843,6 @@ type StrictServerInterface interface {
 	// Compile checker/validator/generator/interactor
 	// (POST /problems/{problemId}/workshop/components/{componentType}/compile)
 	CompileProblemComponent(ctx context.Context, request CompileProblemComponentRequestObject) (CompileProblemComponentResponseObject, error)
-	// Initialize problem workspace
-	// (POST /problems/{problemId}/workshop/init)
-	InitProblemWorkshop(ctx context.Context, request InitProblemWorkshopRequestObject) (InitProblemWorkshopResponseObject, error)
 	// Test solution against tests
 	// (POST /problems/{problemId}/workshop/solutions/test)
 	TestSolution(ctx context.Context, request TestSolutionRequestObject) (TestSolutionResponseObject, error)
@@ -25555,32 +25397,6 @@ func (sh *strictHandler) CompileProblemComponent(w http.ResponseWriter, r *http.
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CompileProblemComponentResponseObject); ok {
 		if err := validResponse.VisitCompileProblemComponentResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// InitProblemWorkshop operation middleware
-func (sh *strictHandler) InitProblemWorkshop(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
-	var request InitProblemWorkshopRequestObject
-
-	request.ProblemId = problemId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.InitProblemWorkshop(ctx, request.(InitProblemWorkshopRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "InitProblemWorkshop")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(InitProblemWorkshopResponseObject); ok {
-		if err := validResponse.VisitInitProblemWorkshopResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

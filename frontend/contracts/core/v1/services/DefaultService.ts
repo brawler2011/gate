@@ -924,24 +924,6 @@ export class DefaultService {
         });
     }
     /**
-     * Initialize problem workspace
-     * @returns MessageResponse Workshop initialized successfully
-     * @throws ApiError
-     */
-    public initProblemWorkshop({
-        problemId,
-    }: {
-        problemId: string,
-    }): CancelablePromise<MessageResponse> {
-        return this.httpRequest.request({
-            method: 'POST',
-            url: '/problems/{problemId}/workshop/init',
-            path: {
-                'problemId': problemId,
-            },
-        });
-    }
-    /**
      * Get problem README
      * @returns binary README content
      * @throws ApiError

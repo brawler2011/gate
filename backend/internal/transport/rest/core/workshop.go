@@ -28,28 +28,6 @@ const (
 	testDir       = "tests"
 )
 
-// InitProblemWorkshop handles POST /problems/{problemId}/workshop/init
-func (h *CoreServer) InitProblemWorkshop(ctx context.Context, request corev1.InitProblemWorkshopRequestObject) (corev1.InitProblemWorkshopResponseObject, error) {
-	if h.workshopUC == nil {
-		return nil, pkg.Wrap(pkg.NotImplemented, nil, "workshop functionality not available")
-	}
-
-	problem, err := h.problemsUC.GetProblemById(ctx, request.ProblemId)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrNotFound, err, "problem not found")
-	}
-
-	title := "New Problem"
-	if problem.Title != "" {
-		title = problem.Title
-	}
-
-	if err := h.workshopUC.InitProblemWorkshop(ctx, request.ProblemId, title); err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to initialize workshop")
-	}
-
-	return corev1.InitProblemWorkshop200JSONResponse{Message: strPtr("Workshop initialized successfully")}, nil
-}
 
 // GetProblemReadme handles GET /problems/{problemId}/readme
 func (h *CoreServer) GetProblemReadme(ctx context.Context, request corev1.GetProblemReadmeRequestObject) (corev1.GetProblemReadmeResponseObject, error) {

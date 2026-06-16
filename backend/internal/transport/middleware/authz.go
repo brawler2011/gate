@@ -47,6 +47,7 @@ func buildStrictAuthzPolicies() map[string]strictAuthzPolicy {
 		"ListProblems":        {public: true},
 		"ListUsers":           {public: true},
 		"GetUser":             {public: true},
+		"GetUserAvatar":       {public: true},
 		"Register":            {public: true},
 		"Login":               {public: true},
 		"Logout":              {public: true},
@@ -110,7 +111,6 @@ func buildStrictAuthzPolicies() map[string]strictAuthzPolicy {
 	}
 
 	for _, operationID := range []string{
-		"InitProblemWorkshop",
 		"GetProblemReadme",
 		"UpdateProblemReadme",
 		"GetProblemLimits",

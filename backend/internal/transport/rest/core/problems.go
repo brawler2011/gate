@@ -102,6 +102,13 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 		return nil, err
 	}
 
+	if h.workshopUC != nil {
+		if err := h.workshopUC.InitProblemWorkshop(ctx, problemID, input.Title); err != nil {
+			_ = h.problemsUC.DeleteProblem(ctx, problemID)
+			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to initialize workshop")
+		}
+	}
+
 	return corev1.CreateProblem200JSONResponse{Id: problemID}, nil
 }
 

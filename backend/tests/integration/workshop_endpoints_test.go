@@ -32,13 +32,6 @@ func (s *IntegrationTestSuite) TestWorkshopStatementEndpointSyncsProblemTitle() 
 
 	problemID := createResp.JSON200.Id
 
-	initResp, err := s.client.InitProblemWorkshopWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-Test-User-ID", admin.Id.String())
-		return nil
-	})
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, initResp.StatusCode())
-
 	newTitle := "Synced From Statement Endpoint"
 	updateResp, err := s.client.UpdateProblemStatementWithResponse(s.ctx, problemID, corev1.UpdateProblemStatementJSONRequestBody{
 		Title: &newTitle,
@@ -78,13 +71,6 @@ func (s *IntegrationTestSuite) TestWorkshopCheckerEndpointsCRUD() {
 	s.Require().NotNil(createResp.JSON200)
 
 	problemID := createResp.JSON200.Id
-
-	initResp, err := s.client.InitProblemWorkshopWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-Test-User-ID", admin.Id.String())
-		return nil
-	})
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, initResp.StatusCode())
 
 	params := &corev1.CreateProblemCheckerParams{Name: "checker.cpp"}
 	checkerSource := []byte("int main(){return 0;}")
@@ -182,13 +168,6 @@ func (s *IntegrationTestSuite) TestWorkshopTestsConfigEndpoint() {
 
 	problemID := createResp.JSON200.Id
 
-	initResp, err := s.client.InitProblemWorkshopWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-Test-User-ID", admin.Id.String())
-		return nil
-	})
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, initResp.StatusCode())
-
 	testsConfig := corev1.UpdateProblemTestsConfigJSONRequestBody{
 		"groups": []map[string]interface{}{
 			{
@@ -254,13 +233,6 @@ func (s *IntegrationTestSuite) TestWorkshopReadmeEndpoint() {
 	s.Require().NotNil(createResp.JSON200)
 
 	problemID := createResp.JSON200.Id
-
-	initResp, err := s.client.InitProblemWorkshopWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-Test-User-ID", admin.Id.String())
-		return nil
-	})
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, initResp.StatusCode())
 
 	readmeContent := []byte("# Problem\n\nREADME content from endpoint test")
 	updateResp, err := s.client.UpdateProblemReadmeWithBodyWithResponse(
