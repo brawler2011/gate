@@ -1,6 +1,7 @@
 "use client";
 
 import type { SessionUser } from "@/lib/auth";
+import { logoutAction } from "@/lib/auth-actions";
 import type {
   HeaderSecondaryNavIcon,
   HeaderSecondaryNavItem,
@@ -13,10 +14,13 @@ import {
   Box,
   Burger,
   Button,
+  Center,
   Divider,
   Drawer,
   Group,
   Image,
+  Loader,
+  Menu,
   Popover,
   ScrollArea,
   Stack,
@@ -27,6 +31,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconDeviceDesktop,
+  IconLogout,
   IconMail,
   IconMoon,
   IconPuzzle,
@@ -80,6 +85,8 @@ export type HeaderOrganization = {
 
 const Profile = ({ user }: { user?: SessionUser }) => {
   const pathname = usePathname();
+  const [logoutLoading, setLogoutLoading] = useState(false);
+
   const isLocalhost =
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" ||
@@ -94,23 +101,71 @@ const Profile = ({ user }: { user?: SessionUser }) => {
     ? `?return_to=${encodeURIComponent(returnUrl)}`
     : "";
 
-  if (user) {
+  const handleLogout = async () => {
+    setLogoutLoading(true);
+    try {
+      await logoutAction();
+      window.location.href = "/auth/login";
+    } catch {
+      window.location.href = "/auth/login";
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
+
+  if (logoutLoading) {
     return (
       <Group justify="flex-end">
-        <LogoutLink variant="default" visibleFrom="sm">
-          Выйти
-        </LogoutLink>
-        <Avatar
-          component={Link}
-          href={`/users/${user.id}`}
-          color={APP_COLORS.users}
-          size="60"
-        >
-          <IconUser size="32" />
-        </Avatar>
+        <Center w={36} h={36}>
+          <Loader size="xs" />
+        </Center>
       </Group>
     );
   }
+
+  if (user) {
+    return (
+      <Group justify="flex-end">
+        <Menu
+          shadow="md"
+          width={200}
+          position="bottom-end"
+          transitionProps={{ transition: "pop-top-right" }}
+        >
+          <Menu.Target>
+            <Avatar
+              color={APP_COLORS.users}
+              size={36}
+              style={{ cursor: "pointer" }}
+            >
+              <IconUser size={20} />
+            </Avatar>
+          </Menu.Target>
+
+          <Menu.Dropdown>
+            <Menu.Item
+              component={Link}
+              href={`/users/${user.id}`}
+              leftSection={<IconUser size={16} />}
+            >
+              Профиль
+            </Menu.Item>
+
+            <Menu.Divider />
+
+            <Menu.Item
+              color="red"
+              onClick={handleLogout}
+              leftSection={<IconLogout size={16} />}
+            >
+              Выйти
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      </Group>
+    );
+  }
+
   return (
     <Group justify="flex-end">
       <Button
@@ -118,6 +173,7 @@ const Profile = ({ user }: { user?: SessionUser }) => {
         href={`/auth/login${returnTo}`}
         variant="filled"
         color={APP_COLORS.actions.primary}
+        size="sm"
       >
         Войти
       </Button>
