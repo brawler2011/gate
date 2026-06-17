@@ -46,7 +46,7 @@ export function OrgContestsTab({
       }
 
       const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", "contests");
+      params.delete("tab");
       params.delete("page");
       if (nextSearch) {
         params.set("search", nextSearch);
@@ -117,7 +117,7 @@ export function OrgContestsTab({
           <NextPagination
             pagination={pagination}
             baseUrl={`/orgs/${org.id}`}
-            queryParams={{ tab: "contests", search }}
+            queryParams={{ search }}
           />
         </Center>
       )}

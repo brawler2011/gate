@@ -138,7 +138,7 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
             <Link
               href={
                 problem.organization_id
-                  ? `/orgs/${problem.organization_id}?tab=problems`
+                  ? `/orgs/${problem.organization_id}/problems`
                   : "/orgs"
               }
               style={{ textDecoration: "none" }}

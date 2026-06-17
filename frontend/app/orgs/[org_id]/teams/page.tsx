@@ -1,21 +1,20 @@
-import { OrgContestsTab } from "@/components/orgs/OrgContestsTab";
+import { OrgTeamsTab } from "@/components/orgs/OrgTeamsTab";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { getContests, getOrganization } from "@/lib/actions";
-import { getCurrentUser } from "@/lib/auth";
+import { listTeams, getOrganization } from "@/lib/actions";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { Container, Stack, Text, Title } from "@mantine/core";
 import { notFound } from "next/navigation";
 
 type Props = {
   params: Promise<{ org_id: string }>;
-  searchParams: Promise<{ page?: string; search?: string }>;
+  searchParams: Promise<{ page?: string }>;
 };
 
-export default async function OrgPage({ params, searchParams }: Props) {
+export default async function OrgTeamsPage({ params, searchParams }: Props) {
   const { org_id } = await params;
-  const { page, search } = await searchParams;
-  const orgHeaderNav = buildOrgHeaderNav({ orgId: org_id, activeTab: "contests" });
+  const { page } = await searchParams;
+  const orgHeaderNav = buildOrgHeaderNav({ orgId: org_id, activeTab: "teams" });
   const currentPage = Number(page) > 0 ? Number(page) : 1;
 
   const [orgError, orgData] = await getOrganization(org_id);
@@ -30,18 +29,10 @@ export default async function OrgPage({ params, searchParams }: Props) {
     );
   }
 
-  const [
-    [contestsError, contestsData],
-    currentUser,
-  ] = await Promise.all([
-    getContests(currentPage, 10, search, org_id),
-    getCurrentUser(),
-  ]);
+  const [teamsError, teamsData] = await listTeams(org_id, currentPage, 20);
 
   const org = orgData!.organization;
-  const contests = contestsData?.contests ?? [];
-  const contestsPagination = contestsData?.pagination ?? { page: 1, total: 1 };
-  const isAuthenticated = currentUser !== null;
+  const teams = teamsData?.teams ?? [];
 
   return (
     <DefaultLayout headerSecondaryNavItems={orgHeaderNav}>
@@ -56,16 +47,10 @@ export default async function OrgPage({ params, searchParams }: Props) {
             )}
           </div>
 
-          {contestsError ? (
-            <ErrorDisplay error={contestsError} />
+          {teamsError ? (
+            <ErrorDisplay error={teamsError} />
           ) : (
-            <OrgContestsTab
-              contests={contests}
-              pagination={contestsPagination}
-              org={org}
-              isAuthenticated={isAuthenticated}
-              search={search}
-            />
+            <OrgTeamsTab teams={teams} orgId={org_id} />
           )}
         </Stack>
       </Container>

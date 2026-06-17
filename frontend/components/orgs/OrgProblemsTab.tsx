@@ -92,8 +92,7 @@ export function OrgProblemsTab({
         <Stack align="center">
           <NextPagination
             pagination={pagination}
-            baseUrl={`/orgs/${org.id}`}
-            queryParams={{ tab: "problems" }}
+            baseUrl={`/orgs/${org.id}/problems`}
           />
         </Stack>
       )}

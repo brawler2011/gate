@@ -23,7 +23,7 @@ function buildOrgOverviewHref(
     return `/orgs/${orgId}`;
   }
 
-  return `/orgs/${orgId}?tab=${tab}`;
+  return `/orgs/${orgId}/${tab}`;
 }
 
 export function buildOrgHeaderNav({

@@ -8,6 +8,5 @@ export { OrgProblemsTab } from './OrgProblemsTab';
 export { OrgSettingsForm } from './OrgSettingsForm';
 export { OrgSettingsMobileNav } from './OrgSettingsMobileNav';
 export { OrgSettingsSidebarNav } from './OrgSettingsSidebarNav';
-export { OrgTabs } from './OrgTabs';
 export { OrgTeamsTab } from './OrgTeamsTab';
 export { TeamMembersManagement } from './TeamMembersManagement';
