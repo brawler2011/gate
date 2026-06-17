@@ -30,6 +30,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
+  IconBuilding,
   IconDeviceDesktop,
   IconLogout,
   IconMail,
@@ -149,6 +150,14 @@ const Profile = ({ user }: { user?: SessionUser }) => {
               leftSection={<IconUser size={16} />}
             >
               Профиль
+            </Menu.Item>
+
+            <Menu.Item
+              component={Link}
+              href="/orgs"
+              leftSection={<IconBuilding size={16} />}
+            >
+              Организации
             </Menu.Item>
 
             <Menu.Divider />
@@ -469,34 +478,7 @@ const Header = ({
                 )}
               </Group>
             </Group>
-            <Group
-              justify="center"
-              h="100%"
-              gap={0}
-              visibleFrom="sm"
-              style={{
-                position: "absolute",
-                left: "50%",
-                transform: "translateX(-50%)",
-              }}
-            >
-              <Anchor
-                component={Link}
-                href="/"
-                className={classes.link}
-                underline="never"
-              >
-                Главная
-              </Anchor>
-              <Anchor
-                component={Link}
-                href="/orgs"
-                className={classes.link}
-                underline="never"
-              >
-                Организации
-              </Anchor>
-            </Group>
+
             <Box hiddenFrom="sm" style={{ flex: 1 }} />
             <Group
               justify="flex-end"
@@ -553,25 +535,6 @@ const Header = ({
       >
         <ScrollArea h="calc(100vh - 80px)" mx="-md">
           <Stack gap="xs" p="md">
-            <Anchor
-              component={Link}
-              href="/"
-              className={classes.link}
-              underline="never"
-              onClick={closeDrawer}
-            >
-              Главная
-            </Anchor>
-            <Anchor
-              component={Link}
-              href="/orgs"
-              className={classes.link}
-              underline="never"
-              onClick={closeDrawer}
-            >
-              Организации
-            </Anchor>
-
             {user?.role === "admin" && (
               <Anchor
                 component={Link}
@@ -623,6 +586,17 @@ const Header = ({
                   onClick={closeDrawer}
                 >
                   Профиль
+                </Button>
+                <Button
+                  component={Link}
+                  href="/orgs"
+                  variant="light"
+                  color={APP_COLORS.orgs}
+                  leftSection={<IconBuilding size={20} />}
+                  fullWidth
+                  onClick={closeDrawer}
+                >
+                  Организации
                 </Button>
                 <LogoutLink variant="outline" fullWidth>
                   Выйти
