@@ -12,7 +12,7 @@ import (
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/worker/judge"
 	"github.com/gate149/gate/backend/pkg"
-	"github.com/gate149/gate/backend/pkg/problemformat"
+	"github.com/gate149/gate/backend/pkg/formats/gfmt"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -26,7 +26,7 @@ const natsPort = "4222/tcp"
 
 func TestVerdictCalculation(t *testing.T) {
 	t.Run("StandardVerdict_AllPassed", func(t *testing.T) {
-		calculator := judge.NewVerdictCalculator("pass-fail", testMetadata())
+		calculator := judge.NewVerdictCalculator("pass-fail", testProblem())
 
 		results := []judge.TestResult{
 			{TestNumber: 1, Verdict: "OK", Time: 1000000, Memory: 1024 * 1024},
@@ -40,7 +40,7 @@ func TestVerdictCalculation(t *testing.T) {
 	})
 
 	t.Run("StandardVerdict_WrongAnswer", func(t *testing.T) {
-		calculator := judge.NewVerdictCalculator("pass-fail", testMetadata())
+		calculator := judge.NewVerdictCalculator("pass-fail", testProblem())
 
 		results := []judge.TestResult{
 			{TestNumber: 1, Verdict: "OK", Time: 1000000, Memory: 1024 * 1024},
@@ -55,7 +55,7 @@ func TestVerdictCalculation(t *testing.T) {
 	})
 
 	t.Run("StandardVerdict_TimeLimitExceeded", func(t *testing.T) {
-		calculator := judge.NewVerdictCalculator("pass-fail", testMetadata())
+		calculator := judge.NewVerdictCalculator("pass-fail", testProblem())
 
 		results := []judge.TestResult{
 			{TestNumber: 1, Verdict: "TLE", Time: 10000000000, Memory: 1024 * 1024, Message: "Time limit exceeded"},
@@ -66,24 +66,19 @@ func TestVerdictCalculation(t *testing.T) {
 	})
 
 	t.Run("ScoringVerdict_PartialScore", func(t *testing.T) {
-		metadata := testMetadataWithGroups()
-		calculator := judge.NewVerdictCalculator("scoring", metadata)
+		prob := testProblemWithGroups()
+		calculator := judge.NewVerdictCalculator("scoring", prob)
 
-		// Group 1: 2 tests (test 1-2), 50 points, each-test policy
-		// Group 2: 2 tests (test 3-4), 50 points, complete-group policy
 		score50 := 50.0
 		results := []judge.TestResult{
-			{TestNumber: 1, Verdict: "OK", Score: &score50}, // Group 1, test 1: OK
-			{TestNumber: 2, Verdict: "WA", Score: nil},      // Group 1, test 2: WA
-			{TestNumber: 3, Verdict: "OK", Score: nil},      // Group 2, test 1: OK
-			{TestNumber: 4, Verdict: "WA", Score: nil},      // Group 2, test 2: WA
+			{TestNumber: 1, Verdict: "OK", Score: &score50},
+			{TestNumber: 2, Verdict: "WA", Score: nil},
+			{TestNumber: 3, Verdict: "OK", Score: nil},
+			{TestNumber: 4, Verdict: "WA", Score: nil},
 		}
 
 		verdict := calculator.Calculate(results)
-		assert.Equal(t, models.Accepted, verdict.State) // Scoring problems always "accept"
-		// Group 1: 1/2 tests passed = 25 points
-		// Group 2: complete-group failed = 0 points
-		// Total: 25 points out of 100 max
+		assert.Equal(t, models.Accepted, verdict.State) // Scoring always Accepted
 		assert.Greater(t, verdict.Score, int32(0))
 	})
 }
@@ -95,10 +90,8 @@ func TestComponentCache(t *testing.T) {
 		key := "problem-123:checker:abc123"
 		fileID := "file-xyz"
 
-		// Set in cache
 		cache.Set(key, fileID)
 
-		// Get from cache
 		cachedFileID, found := cache.Get(key)
 		assert.True(t, found)
 		assert.Equal(t, fileID, cachedFileID)
@@ -121,15 +114,13 @@ func TestComponentCache(t *testing.T) {
 	t.Run("CacheEviction", func(t *testing.T) {
 		cache.Clear()
 
-		// Fill cache to a small size (this test uses the default max size)
-		// The cache will evict oldest entries when full
 		for i := 0; i < 5; i++ {
 			key := "key-" + string(rune(i))
 			cache.Set(key, "file-"+string(rune(i)))
-			time.Sleep(10 * time.Millisecond) // Ensure different access times
+			time.Sleep(10 * time.Millisecond)
 		}
 
-		assert.LessOrEqual(t, cache.Size(), 1000) // Max size
+		assert.LessOrEqual(t, cache.Size(), 1000)
 	})
 }
 
@@ -219,47 +210,42 @@ func newNATSJetStream(t *testing.T) (jetstream.JetStream, *nats.Conn) {
 	return js, natsConn
 }
 
-func testMetadata() problemformat.TestsMetadata {
-	return problemformat.TestsMetadata{
-		Groups: []problemformat.TestGroup{
-			{
-				Ordinal:      1,
-				Name:         "samples",
-				Points:       0,
-				PointsPolicy: "complete-group",
-				Tests:        [2]int{1, 2},
+func testProblem() *gfmt.Problem {
+	return &gfmt.Problem{
+		Type: "pass-fail",
+		Subtasks: map[string]gfmt.Subtask{
+			"samples": {
+				Points: 100,
+				Policy: "complete",
+				Tests: []gfmt.Test{
+					{Manual: "01.in"},
+					{Manual: "02.in"},
+				},
 			},
-		},
-		Tests: []problemformat.TestCase{
-			{Ordinal: 1, Method: "manual", IsSample: true},
-			{Ordinal: 2, Method: "manual", IsSample: false},
 		},
 	}
 }
 
-func testMetadataWithGroups() problemformat.TestsMetadata {
-	return problemformat.TestsMetadata{
-		Groups: []problemformat.TestGroup{
-			{
-				Ordinal:      1,
-				Name:         "group1",
-				Points:       50,
-				PointsPolicy: "each-test",
-				Tests:        [2]int{1, 2},
+func testProblemWithGroups() *gfmt.Problem {
+	return &gfmt.Problem{
+		Type: "scoring",
+		Subtasks: map[string]gfmt.Subtask{
+			"group1": {
+				Points: 50,
+				Policy: "each",
+				Tests: []gfmt.Test{
+					{Manual: "01.in"},
+					{Manual: "02.in"},
+				},
 			},
-			{
-				Ordinal:      2,
-				Name:         "group2",
-				Points:       50,
-				PointsPolicy: "complete-group",
-				Tests:        [2]int{3, 4},
+			"group2": {
+				Points: 50,
+				Policy: "complete",
+				Tests: []gfmt.Test{
+					{Manual: "03.in"},
+					{Manual: "04.in"},
+				},
 			},
-		},
-		Tests: []problemformat.TestCase{
-			{Ordinal: 1, Method: "manual"},
-			{Ordinal: 2, Method: "manual"},
-			{Ordinal: 3, Method: "manual"},
-			{Ordinal: 4, Method: "manual"},
 		},
 	}
 }

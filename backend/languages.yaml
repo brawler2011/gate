@@ -1,0 +1,23 @@
+langs:
+  cpp:
+    type: "compiler"
+    compile: "/usr/bin/g++ -O2 -Wall -std=c++17 -o ${name} foo.cc"
+    code_file: "foo.cc"
+    compile_file: "solution"
+    execute: "${dir}/${name}"
+  python:
+    type: "interpreter"
+    code_file: "foo.py"
+    execute: "/usr/bin/python3 ${dir}/foo.py"
+  go:
+    type: "compiler"
+    compile: "/usr/local/go/bin/go build -o ${name} foo.go"
+    code_file: "foo.go"
+    compile_file: "solution"
+    execute: "${dir}/${name}"
+  java:
+    type: "compiler"
+    compile: "/usr/bin/javac Main.java"
+    code_file: "Main.java"
+    compile_file: "Main.class"
+    execute: "/usr/bin/java -Xmx192m -Xms32m -XX:ActiveProcessorCount=1 -cp ${dir} Main"

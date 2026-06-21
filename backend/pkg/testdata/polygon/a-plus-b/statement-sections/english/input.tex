@@ -1,0 +1,1 @@
+The only line of the input contains integers $a$ and $b$ ($-100 \le a,b \le 100$).

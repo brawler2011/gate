@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE problem PUBLIC "-//PCMS2//DTD Problem Description 1.0//EN"
+  "http://pcms2.ru/dtd/problem-0.2.dtd">
+<problem id="com.codeforces.polygon.author.subtasks-groups" version="1.0">
+    <names>
+        <name language="english" value="Even or Odd Subtasks"/>
+    </names>
+    <statements>
+        <statement language="english" type="application/x-tex" file="statements/english/problem.tex" />
+    </statements>
+    <judging>
+        <input-file></input-file>
+        <output-file></output-file>
+        <run>
+            <verifier type="testlib">
+                <binary executable="check.exe" />
+            </verifier>
+        </run>
+        <testset name="tests">
+            <time-limit>1000</time-limit>
+            <memory-limit>268435456</memory-limit>
+            <test-count>2</test-count>
+            <input-path-pattern>tests/%02d</input-path-pattern>
+            <answer-path-pattern>tests/%02d.a</answer-path-pattern>
+            <tests>
+                <test index="1" input="tests/01" outcome="tests/01.a" group="1" points="40.0" />
+                <test index="2" input="tests/02" outcome="tests/02.a" group="2" points="60.0" />
+            </tests>
+        </testset>
+    </judging>
+</problem>

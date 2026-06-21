@@ -16,20 +16,20 @@ type CacheEntry struct {
 
 // ComponentCache caches compiled problem components
 type ComponentCache struct {
-	cache         map[string]*CacheEntry
-	mu            sync.RWMutex
-	sandboxClient *sandbox.Client
-	maxSize       int
-	ttl           time.Duration
+	cache   map[string]*CacheEntry
+	mu      sync.RWMutex
+	sandbox *sandbox.Sandbox
+	maxSize int
+	ttl     time.Duration
 }
 
 // NewComponentCache creates a new component cache
-func NewComponentCache(sandboxClient *sandbox.Client) *ComponentCache {
+func NewComponentCache(sandbox *sandbox.Sandbox) *ComponentCache {
 	cache := &ComponentCache{
-		cache:         make(map[string]*CacheEntry),
-		sandboxClient: sandboxClient,
-		maxSize:       1000,           // max 1000 cached components
-		ttl:           24 * time.Hour, // cache for 24 hours
+		cache:   make(map[string]*CacheEntry),
+		sandbox: sandbox,
+		maxSize: 1000,           // max 1000 cached components
+		ttl:     24 * time.Hour, // cache for 24 hours
 	}
 
 	// Start background cleanup goroutine

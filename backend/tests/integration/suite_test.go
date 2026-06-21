@@ -24,7 +24,6 @@ import (
 	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/storage"
-	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/gate149/gate/backend/tests/mocks"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -135,7 +134,9 @@ func (s *IntegrationTestSuite) initApp() {
 	teamsRepo := pg.NewTeamsRepo(s.dbPool)
 	blogsRepo := pg.NewBlogsRepo(s.dbPool)
 	txManager := pg.NewTransactor(s.dbPool)
-	vcsService := vcs.NewInMemoryS3Service("integration-workshop")
+	tempStoragePath := s.T().TempDir()
+	testStorage := storage.NewLocalStorage(tempStoragePath)
+	workspaceStorage := usecase.NewWorkspaceStorage(testStorage, "integration-workshop")
 
 	authRepo := pg.NewAuthRepo(s.dbPool)
 
@@ -149,10 +150,8 @@ func (s *IntegrationTestSuite) initApp() {
 	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
-	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, vcsService, nil, txManager)
+	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, workspaceStorage, nil, txManager)
 
-	tempStoragePath := s.T().TempDir()
-	testStorage := storage.NewLocalStorage(tempStoragePath)
 	avatarsUC := usecase.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
 
 	// Handler

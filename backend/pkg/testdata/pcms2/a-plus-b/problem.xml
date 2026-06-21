@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE problem PUBLIC "-//PCMS2//DTD Problem Description 1.0//EN"
+  "http://pcms2.ru/dtd/problem-0.2.dtd">
+<problem id="com.codeforces.polygon.mmirzayanov.example-a-plus-b" version="1.0">
+    <names>
+        <name language="english" value="A+B"/>
+        <name language="russian" value="A+B"/>
+    </names>
+    <statements>
+        <statement language="english" type="application/pdf" file="statements/.pdf/english/problem.pdf" />
+        <statement language="russian" type="application/pdf" file="statements/.pdf/russian/problem.pdf" />
+        <statement language="english" type="text/html" file="statements/.html/english/problem.html" />
+        <statement language="russian" type="text/html" file="statements/.html/russian/problem.html" />
+    </statements>
+    <judging>
+        <input-file></input-file>
+        <output-file></output-file>
+        <run>
+            <verifier type="testlib">
+                <binary executable="check.exe" />
+            </verifier>
+        </run>
+        <testset name="tests">
+            <time-limit>1000</time-limit>
+            <memory-limit>268435456</memory-limit>
+            <test-count>12</test-count>
+            <input-path-pattern>tests/%02d</input-path-pattern>
+            <answer-path-pattern>tests/%02d.a</answer-path-pattern>
+            <tests>
+                <test index="1" input="tests/01" outcome="tests/01.a" />
+                <test index="2" input="tests/02" outcome="tests/02.a" />
+                <test index="3" input="tests/03" outcome="tests/03.a" />
+                <test index="4" input="tests/04" outcome="tests/04.a" />
+                <test index="5" input="tests/05" outcome="tests/05.a" />
+                <test index="6" input="tests/06" outcome="tests/06.a" />
+                <test index="7" input="tests/07" outcome="tests/07.a" />
+                <test index="8" input="tests/08" outcome="tests/08.a" />
+                <test index="9" input="tests/09" outcome="tests/09.a" />
+                <test index="10" input="tests/10" outcome="tests/10.a" />
+                <test index="11" input="tests/11" outcome="tests/11.a" />
+                <test index="12" input="tests/12" outcome="tests/12.a" />
+            </tests>
+        </testset>
+    </judging>
+</problem>

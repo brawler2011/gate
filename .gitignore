@@ -9,3 +9,4 @@
 !.github/workflows/**
 .VSCodeCounter/
 *.log
+poc

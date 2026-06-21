@@ -5,13 +5,16 @@ package integration
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/worker/judge"
 	"github.com/gate149/gate/backend/pkg"
-	"github.com/gate149/gate/backend/pkg/problemformat"
+	"github.com/gate149/gate/backend/pkg/formats/gfmt"
+	"github.com/gate149/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +26,7 @@ func TestInteractiveStrategySmoke(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	orchestrator := newWorkshopSandboxOrchestrator(t)
+	sandboxInst := newWorkshopSandbox(t)
 
 	js, natsConn := newNATSJetStream(t)
 	defer natsConn.Close()
@@ -31,36 +34,47 @@ func TestInteractiveStrategySmoke(t *testing.T) {
 
 	eventPublisher := judge.NewEventPublisher(js)
 
-	binary, err := orchestrator.CompileComponentFromSource(ctx, "interactor", smokeInteractorSource(), "cpp17", nil)
+	// Compile the interactor
+	binary, err := sandboxInst.Compile(ctx, []byte(smokeInteractorSource()), "cpp", nil)
 	require.NoError(t, err)
-	require.True(t, binary.Success, binary.CompileLog)
-	require.NotEmpty(t, binary.FileID)
+	require.NotEmpty(t, binary.PrimaryFileID)
 
-	problemPkg := &problemformat.ProblemPackage{
-		Manifest: problemformat.ProblemManifest{
-			ProblemType:   "interactive",
-			TimeLimitMs:   1000,
-			MemoryLimitMb: 256,
-		},
-		TestsMetadata: problemformat.TestsMetadata{
-			Tests: []problemformat.TestCase{{
-				Ordinal:  1,
-				Method:   "manual",
-				IsSample: true,
-			}},
-		},
-		TestCases: []problemformat.LoadedTestCase{{
-			Ordinal: 1,
-			Input:   []byte("7\n"),
-			Output:  []byte("7\n"),
-		}},
+	// Construct mock gfmt package directory
+	tempPkgDir := t.TempDir()
+	probYaml := `format_version: "1.0"
+title: "interactive-smoke"
+type: "interactive"
+limits:
+  time_ms: 1000
+  memory_mb: 256
+subtasks:
+  samples:
+    points: 100
+    policy: "complete"
+    tests:
+      - manual: "01.in"
+`
+	err = os.WriteFile(filepath.Join(tempPkgDir, "problem.yaml"), []byte(probYaml), 0644)
+	require.NoError(t, err)
+	err = os.MkdirAll(filepath.Join(tempPkgDir, "tests"), 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tempPkgDir, "tests", "01.in"), []byte("7\n"), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tempPkgDir, "tests", "01.out"), []byte("7\n"), 0644)
+	require.NoError(t, err)
+
+	gfmtPkg, err := gfmt.OpenPackage(tempPkgDir)
+	require.NoError(t, err)
+
+	compiledComponents := map[string]sandbox.Executable{
+		"interactor": binary,
 	}
 
 	strategy := judge.NewInteractiveStrategy(
-		orchestrator.Client(),
+		sandboxInst,
 		eventPublisher,
-		problemPkg,
-		map[string]string{"interactor": binary.FileID},
+		gfmtPkg,
+		compiledComponents,
 	)
 
 	verdict, err := strategy.Judge(
@@ -78,6 +92,9 @@ func TestInteractiveStrategySmoke(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	if verdict.State != models.Accepted {
+		t.Logf("Verdict Message: %s", verdict.Message)
+	}
 	assert.Equal(t, models.Accepted, verdict.State)
 	assert.Equal(t, int32(100), verdict.Score)
 }
@@ -106,6 +123,11 @@ int main(int argc, char* argv[]) {
 
     if (reply != expected) {
         return 1;
+    }
+
+    if (argc >= 3) {
+        std::ofstream logFile(argv[2]);
+        logFile << "ok" << std::endl;
     }
 
     return 0;

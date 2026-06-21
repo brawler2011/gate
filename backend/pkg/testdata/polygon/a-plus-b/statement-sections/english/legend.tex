@@ -1,0 +1,1 @@
+You are given two integers $a$ and $b$. Print $a+b$.

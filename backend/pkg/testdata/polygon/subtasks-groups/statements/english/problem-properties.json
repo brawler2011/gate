@@ -1,0 +1,9 @@
+{
+  "authorName": "Antigravity",
+  "name": "Even or Odd Subtasks",
+  "legend": "Determine parity of N.",
+  "input": "N",
+  "output": "Even or Odd",
+  "notes": "None.",
+  "tutorial": "N modulo 2."
+}

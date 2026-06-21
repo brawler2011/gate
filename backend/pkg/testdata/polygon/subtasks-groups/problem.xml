@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<problem double-precision="true" interactive="false" product="polygon" revision="1" short-name="subtasks-groups" url="https://polygon.codeforces.com/p/author/subtasks-groups">
+    <names>
+        <name language="english" value="Even or Odd Subtasks"/>
+    </names>
+    <statements>
+        <statement charset="UTF-8" language="english" mathjax="true" path="statements/english/problem.tex" type="application/x-tex"/>
+    </statements>
+    <judging cpu-name="Intel(R) Core(TM) i7-8700K CPU @ 3.70GHz" cpu-speed="3700" input-file="" output-file="">
+        <testset name="tests">
+            <time-limit>1000</time-limit>
+            <memory-limit>268435456</memory-limit>
+            <test-count>2</test-count>
+            <input-path-pattern>tests/%02d</input-path-pattern>
+            <answer-path-pattern>tests/%02d.a</answer-path-pattern>
+            <tests>
+                <test group="1" points="40.0" method="manual" sample="true"/>
+                <test group="2" points="60.0" method="manual"/>
+            </tests>
+        </testset>
+        <testset name="pretests">
+            <time-limit>1000</time-limit>
+            <memory-limit>268435456</memory-limit>
+            <test-count>1</test-count>
+            <input-path-pattern>pretests/%02d</input-path-pattern>
+            <answer-path-pattern>pretests/%02d.a</answer-path-pattern>
+            <tests>
+                <test method="manual"/>
+            </tests>
+        </testset>
+    </judging>
+    <files>
+        <resources>
+            <file path="files/olymp.sty"/>
+        </resources>
+        <executables>
+            <executable path="files/validator.cpp" type="cpp.g++17"/>
+            <executable path="files/check.cpp" type="cpp.g++17"/>
+        </executables>
+    </files>
+    <assets>
+        <checker type="cpp.g++17">
+            <source path="files/check.cpp"/>
+            <testset name="tests"/>
+            <testset name="pretests"/>
+        </checker>
+        <validators>
+            <validator type="cpp.g++17">
+                <source path="files/validator.cpp"/>
+                <testset name="tests"/>
+                <testset name="pretests"/>
+            </validator>
+        </validators>
+        <solutions>
+            <solution tag="main">
+                <source path="solutions/accepted.cpp" type="cpp.g++17"/>
+            </solution>
+            <solution tag="wrong_answer">
+                <source path="solutions/wrong.cpp" type="cpp.g++17"/>
+            </solution>
+        </solutions>
+    </assets>
+    <properties>
+        <property name="tests-well-formed" value="true"/>
+    </properties>
+</problem>

@@ -17,13 +17,13 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/nats-io/nats.go v1.47.0
 	github.com/oapi-codegen/runtime v1.1.2
-	github.com/ory/client-go v1.22.8
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/redis/go-redis/v9 v9.17.1
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0
 	go.uber.org/mock v0.6.0
+	golang.org/x/crypto v0.46.0
 	golang.org/x/sync v0.19.0
 	google.golang.org/grpc v1.78.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -96,9 +96,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect

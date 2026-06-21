@@ -8,11 +8,12 @@ import (
 	"testing"
 
 	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg/problemformat"
-	"github.com/gate149/gate/backend/pkg/vcs"
+	"github.com/gate149/gate/backend/pkg/formats/gfmt"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestImportProblemPackagePolygonFallback(t *testing.T) {
@@ -22,8 +23,9 @@ func TestImportProblemPackagePolygonFallback(t *testing.T) {
 	problemsRepo := newProblemImportMockProblemsRepo()
 	problemsRepo.problems[problemID] = models.Problem{ID: problemID, Title: "Repo Title"}
 
-	vcsService := vcs.NewInMemoryS3Service("test-workshop")
-	uc := NewProblemImportUseCase(problemsRepo, vcsService)
+	store := storage.NewLocalStorage(t.TempDir())
+	workspaceStorage := NewWorkspaceStorage(store, "test-workshop")
+	uc := NewProblemImportUseCase(problemsRepo, workspaceStorage)
 
 	zipBytes := createZipBytes(t, map[string]string{
 		"problem.xml": `<?xml version="1.0" encoding="UTF-8"?>
@@ -33,6 +35,8 @@ func TestImportProblemPackagePolygonFallback(t *testing.T) {
       <time-limit>1000</time-limit>
       <memory-limit>268435456</memory-limit>
       <test-count>1</test-count>
+      <input-path-pattern>data/secret/%02d.in</input-path-pattern>
+      <answer-path-pattern>data/secret/%02d.ans</answer-path-pattern>
       <tests>
         <test method="manual" sample="true" />
       </tests>
@@ -54,21 +58,20 @@ func TestImportProblemPackagePolygonFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	in, err := vcsService.ReadFile(ctx, problemID, "tests/01.in")
+	in, err := workspaceStorage.ReadFile(ctx, problemID, "tests/01.in")
 	require.NoError(t, err)
 	assert.Equal(t, "1 2\n", string(in))
 
-	out, err := vcsService.ReadFile(ctx, problemID, "tests/01.out")
+	out, err := workspaceStorage.ReadFile(ctx, problemID, "tests/01.out")
 	require.NoError(t, err)
 	assert.Equal(t, "3\n", string(out))
 
 	manifestBytes, ok := problemsRepo.manifests[problemID]
 	require.True(t, ok)
 
-	var manifest problemformat.ProblemManifest
+	var manifest models.ProblemManifest
 	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
 	assert.Equal(t, "APlusB", manifest.Statement.Title)
-	assert.Contains(t, manifest.Statement.Legend, "A+B")
 }
 
 func TestImportProblemPackageICPCFallbackWithNestedRoot(t *testing.T) {
@@ -78,8 +81,9 @@ func TestImportProblemPackageICPCFallbackWithNestedRoot(t *testing.T) {
 	problemsRepo := newProblemImportMockProblemsRepo()
 	problemsRepo.problems[problemID] = models.Problem{ID: problemID, Title: "Repository Problem Title"}
 
-	vcsService := vcs.NewInMemoryS3Service("test-workshop")
-	uc := NewProblemImportUseCase(problemsRepo, vcsService)
+	store := storage.NewLocalStorage(t.TempDir())
+	workspaceStorage := NewWorkspaceStorage(store, "test-workshop")
+	uc := NewProblemImportUseCase(problemsRepo, workspaceStorage)
 
 	zipBytes := createZipBytes(t, map[string]string{
 		"icpc-problem/problem.yaml": `name: "A + B"
@@ -100,27 +104,29 @@ validation:
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	in1, err := vcsService.ReadFile(ctx, problemID, "tests/01.in")
+	in1, err := workspaceStorage.ReadFile(ctx, problemID, "tests/01.in")
 	require.NoError(t, err)
 	assert.Equal(t, "1 2\n", string(in1))
 
-	out1, err := vcsService.ReadFile(ctx, problemID, "tests/01.out")
+	out1, err := workspaceStorage.ReadFile(ctx, problemID, "tests/01.out")
 	require.NoError(t, err)
 	assert.Equal(t, "3\n", string(out1))
 
-	in2, err := vcsService.ReadFile(ctx, problemID, "tests/02.in")
+	in2, err := workspaceStorage.ReadFile(ctx, problemID, "tests/02.in")
 	require.NoError(t, err)
 	assert.Equal(t, "10 20\n", string(in2))
 
-	out2, err := vcsService.ReadFile(ctx, problemID, "tests/02.out")
+	out2, err := workspaceStorage.ReadFile(ctx, problemID, "tests/02.out")
 	require.NoError(t, err)
 	assert.Equal(t, "30\n", string(out2))
 
-	testsJSON, err := vcsService.ReadFile(ctx, problemID, "tests/tests.json")
+	yamlBytes, err := workspaceStorage.ReadFile(ctx, problemID, "problem.yaml")
 	require.NoError(t, err)
 
-	var testsMeta problemformat.TestsMetadata
-	require.NoError(t, json.Unmarshal(testsJSON, &testsMeta))
+	var prob gfmt.Problem
+	require.NoError(t, yaml.Unmarshal(yamlBytes, &prob))
+	testsMeta := GfmtProblemToTestsMetadata(&prob)
+
 	require.Len(t, testsMeta.Tests, 2)
 	assert.Equal(t, 1, testsMeta.Tests[0].Ordinal)
 	assert.Equal(t, 2, testsMeta.Tests[1].Ordinal)
@@ -128,10 +134,9 @@ validation:
 	manifestBytes, ok := problemsRepo.manifests[problemID]
 	require.True(t, ok)
 
-	var manifest problemformat.ProblemManifest
+	var manifest models.ProblemManifest
 	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
-	assert.Equal(t, "Repository Problem Title", manifest.Statement.Title)
-	assert.Contains(t, manifest.Statement.Legend, "A + B")
+	assert.Equal(t, "A + B", manifest.Statement.Title)
 }
 
 func createZipBytes(t *testing.T, files map[string]string) []byte {

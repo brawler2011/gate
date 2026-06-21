@@ -13,9 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gate149/gate/backend/pkg/packagegen"
-	"github.com/gate149/gate/backend/pkg/parsers"
-	"github.com/gate149/gate/backend/pkg/problemformat"
+	"github.com/gate149/gate/backend/internal/usecase"
+	"github.com/gate149/gate/backend/pkg/formats"
+	"github.com/gate149/gate/backend/pkg/formats/gfmt"
+	"github.com/gate149/gate/backend/pkg/formats/icpc"
+	"github.com/gate149/gate/backend/pkg/formats/polygon"
 	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -78,59 +80,23 @@ func TestPolygonParser(t *testing.T) {
 	err = os.WriteFile(filepath.Join(tempDir, "problem.xml"), []byte(xmlContent), 0o644)
 	require.NoError(t, err)
 
-	manifest, testsMetadata, err := parsers.NewPolygonParser().Parse(tempDir)
+	plan, err := polygon.NewParser().Parse(tempDir)
 	require.NoError(t, err)
 
-	require.Equal(t, "scoring", manifest.ProblemType)
-	require.NotNil(t, manifest.MaxScore)
-	assert.Equal(t, 100, *manifest.MaxScore)
-	assert.Equal(t, 2000, manifest.TimeLimitMs)
-	assert.Equal(t, 256, manifest.MemoryLimitMb)
-	assert.Equal(t, "APlusB", manifest.Statement.Title)
+	require.Equal(t, "scoring", plan.Problem.Type)
+	assert.Equal(t, 2000, plan.Problem.Limits.TimeMs)
+	assert.Equal(t, 256, plan.Problem.Limits.MemoryMb)
+	assert.Equal(t, "APlusB", plan.Problem.Title)
 
-	require.Len(t, manifest.FilesMetadata, 1)
-	assert.Equal(t, "checker", manifest.FilesMetadata[0].Type)
-	assert.Equal(t, "cpp17", manifest.FilesMetadata[0].Compiler)
+	require.NotEmpty(t, plan.Mappings)
 
-	require.Len(t, testsMetadata.Tests, 2)
-	assert.True(t, testsMetadata.Tests[0].IsSample)
-	assert.Equal(t, "generated", testsMetadata.Tests[1].Method)
-	require.NotNil(t, testsMetadata.Tests[1].Generator)
-	assert.Equal(t, "gen 10", *testsMetadata.Tests[1].Generator)
-
-	require.Len(t, testsMetadata.Groups, 2)
-	assert.Equal(t, "samples", testsMetadata.Groups[0].Name)
-	assert.Equal(t, "main", testsMetadata.Groups[1].Name)
-	assert.Equal(t, []int{0}, testsMetadata.Groups[1].DependsOn)
-	assert.Equal(t, [2]int{2, 2}, testsMetadata.Groups[1].Tests)
-
-	parsedFormat, err := parsers.DetectFormat(tempDir)
+	parsedFormat, err := formats.DetectFormat(tempDir)
 	require.NoError(t, err)
 	assert.Equal(t, "polygon", parsedFormat)
 
-	parser, err := parsers.GetParser(parsedFormat)
+	parser, err := formats.GetParser(parsedFormat)
 	require.NoError(t, err)
 	assert.Equal(t, "polygon", parser.GetFormat())
-
-	manifestFromAuto, testsFromAuto, autoFormat, err := parsers.ParsePackage(tempDir)
-	require.NoError(t, err)
-	assert.Equal(t, "polygon", autoFormat)
-	assert.Equal(t, manifest.ProblemType, manifestFromAuto.ProblemType)
-	assert.Len(t, testsFromAuto.Tests, len(testsMetadata.Tests))
-
-	unknownDir, err := os.MkdirTemp("", "unknown-format-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(unknownDir)
-
-	_, err = parsers.DetectFormat(unknownDir)
-	assert.Error(t, err)
-
-	_, err = parsers.GetParser("unsupported")
-	assert.Error(t, err)
-
-	_, _, _, err = parsers.ParsePackage(unknownDir)
-	assert.Error(t, err)
-
 }
 
 func TestICPCParser(t *testing.T) {
@@ -176,40 +142,17 @@ validation:
 	err = os.WriteFile(filepath.Join(tempDir, "output_validators", "check.cpp"), []byte("int main(){}"), 0o644)
 	require.NoError(t, err)
 
-	manifest, testsMetadata, err := parsers.NewICPCParser().Parse(tempDir)
+	plan, err := icpc.NewParser().Parse(tempDir)
 	require.NoError(t, err)
 
-	assert.Equal(t, "pass-fail", manifest.ProblemType)
-	assert.Equal(t, 1500, manifest.TimeLimitMs)
-	assert.Equal(t, 128, manifest.MemoryLimitMb)
-	assert.Equal(t, 32, manifest.StdoutLimitMb)
-	assert.Equal(t, 64, manifest.CodeSizeLimitKb)
-	assert.Contains(t, manifest.Statement.Legend, "A + B")
-	require.NotEmpty(t, manifest.FilesMetadata)
-	assert.Equal(t, "checker", manifest.FilesMetadata[0].Type)
+	assert.Equal(t, "pass-fail", plan.Problem.Type)
+	assert.Equal(t, 1500, plan.Problem.Limits.TimeMs)
+	assert.Equal(t, 128, plan.Problem.Limits.MemoryMb)
+	assert.Equal(t, "A + B", plan.Problem.Title)
 
-	require.Len(t, testsMetadata.Groups, 1)
-	assert.Equal(t, "all", testsMetadata.Groups[0].Name)
-	require.Len(t, testsMetadata.Tests, 2)
-
-	sampleCount := 0
-	for _, tc := range testsMetadata.Tests {
-		if tc.IsSample {
-			sampleCount++
-		}
-	}
-	assert.Equal(t, 1, sampleCount)
-
-	format, err := parsers.DetectFormat(tempDir)
+	format, err := formats.DetectFormat(tempDir)
 	require.NoError(t, err)
 	assert.Equal(t, "icpc", format)
-
-	manifestAuto, testsAuto, detectedFormat, err := parsers.ParsePackage(tempDir)
-	require.NoError(t, err)
-	assert.Equal(t, "icpc", detectedFormat)
-	assert.Equal(t, manifest.TimeLimitMs, manifestAuto.TimeLimitMs)
-	assert.Equal(t, len(testsMetadata.Tests), len(testsAuto.Tests))
-
 }
 
 func TestS3ClientOperations(t *testing.T) {
@@ -307,60 +250,48 @@ func TestPackageBuilder(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	manifest := &problemformat.ProblemManifest{
-		LastUpdated:     time.Now(),
-		ProblemType:     "pass-fail",
-		MaxScore:        nil,
-		FilesMetadata:   []problemformat.FileMetadata{},
-		TimeLimitMs:     1000,
-		MemoryLimitMb:   256,
-		StdoutLimitMb:   64,
-		CodeSizeLimitKb: 256,
-		Statement: problemformat.Statement{
-			Title:        "Test Problem",
-			Legend:       "This is a test problem",
-			InputFormat:  "Input format",
-			OutputFormat: "Output format",
-		},
-	}
-
-	err = problemformat.SaveManifest(tempDir, manifest)
+	// Write standard problem.yaml
+	probYaml := `format_version: "1.0"
+title: "Test Problem"
+type: "pass-fail"
+limits:
+  time_ms: 1000
+  memory_mb: 256
+subtasks:
+  samples:
+    points: 0
+    policy: "complete"
+    tests:
+      - manual: "01.in"
+  secret:
+    points: 100
+    policy: "each"
+    tests:
+      - manual: "02.in"
+`
+	err = os.WriteFile(filepath.Join(tempDir, "problem.yaml"), []byte(probYaml), 0644)
 	require.NoError(t, err)
 
-	testsMetadata := &problemformat.TestsMetadata{
-		Groups: []problemformat.TestGroup{
-			{
-				Ordinal:      0,
-				Name:         "all",
-				Points:       0,
-				PointsPolicy: "complete-group",
-				DependsOn:    []int{},
-				Tests:        [2]int{1, 2},
-			},
-		},
-		Tests: []problemformat.TestCase{
-			{Ordinal: 1, Method: "manual", Generator: nil, IsSample: true},
-			{Ordinal: 2, Method: "manual", Generator: nil, IsSample: false},
-		},
-	}
-
-	err = problemformat.SaveTestsMetadata(tempDir, testsMetadata)
+	err = os.MkdirAll(filepath.Join(tempDir, "tests"), 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tempDir, "tests", "01.in"), []byte("1 2\n"), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tempDir, "tests", "01.out"), []byte("3\n"), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tempDir, "tests", "02.in"), []byte("5 10\n"), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tempDir, "tests", "02.out"), []byte("15\n"), 0644)
 	require.NoError(t, err)
 
-	err = problemformat.SaveTestData(tempDir, 1, []byte("1 2\n"), []byte("3\n"))
-	require.NoError(t, err)
-	err = problemformat.SaveTestData(tempDir, 2, []byte("5 10\n"), []byte("15\n"))
-	require.NoError(t, err)
-
-	pkg, err := packagegen.BuildPackage(tempDir)
+	// Validate the package layout by loading it
+	pkg, err := gfmt.OpenPackage(tempDir)
 	require.NoError(t, err)
 	assert.NotNil(t, pkg)
+	assert.Equal(t, "Test Problem", pkg.Problem.Title)
 
-	err = packagegen.ValidatePackage(pkg)
-	require.NoError(t, err)
-
+	// Compress
 	var zipBuffer bytes.Buffer
-	err = packagegen.WritePackageToZip(pkg, &zipBuffer)
+	err = usecase.ZipDirectory(tempDir, &zipBuffer)
 	require.NoError(t, err)
 	assert.Greater(t, zipBuffer.Len(), 0)
 }

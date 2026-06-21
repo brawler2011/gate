@@ -3,266 +3,498 @@ package judge
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg/problemformat"
+	"github.com/gate149/gate/backend/pkg/formats/gfmt"
 	"github.com/gate149/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 )
 
-// JudgingStrategy defines the interface for different judging strategies
 type JudgingStrategy interface {
 	Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language models.LanguageName, meta models.SubmissionEventMeta) (*FinalVerdict, error)
 }
 
-// StandardStrategy implements fail-fast judging for standard problems
-type StandardStrategy struct {
-	sandboxClient      *sandbox.Client
-	eventPublisher     *EventPublisher
-	pkg                *problemformat.ProblemPackage
-	compiledComponents map[string]string // component type -> fileID
+type FlatTest struct {
+	SubtaskName string
+	TestIndex   int
+	Test        gfmt.Test
 }
 
-// NewStandardStrategy creates a new standard strategy
+type StandardStrategy struct {
+	sandbox            *sandbox.Sandbox
+	eventPublisher     *EventPublisher
+	pkg                *gfmt.GateFormat
+	compiledComponents map[string]sandbox.Executable
+}
+
 func NewStandardStrategy(
-	sandboxClient *sandbox.Client,
+	sandbox *sandbox.Sandbox,
 	eventPublisher *EventPublisher,
-	pkg *problemformat.ProblemPackage,
-	compiledComponents map[string]string,
+	pkg *gfmt.GateFormat,
+	compiledComponents map[string]sandbox.Executable,
 ) *StandardStrategy {
 	return &StandardStrategy{
-		sandboxClient:      sandboxClient,
+		sandbox:            sandbox,
 		eventPublisher:     eventPublisher,
 		pkg:                pkg,
 		compiledComponents: compiledComponents,
 	}
 }
 
-// Judge executes standard judging with fail-fast strategy
 func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language models.LanguageName, meta models.SubmissionEventMeta) (*FinalVerdict, error) {
-	orchestrator := sandbox.NewOrchestrator(s.sandboxClient)
+	languageStr := convertLanguage(language)
 
-	// Get checker (optional for standard problems)
-	checkerFileID := ""
-	if fileID, exists := s.compiledComponents["checker"]; exists {
-		checkerFileID = fileID
+	// Compile user solution
+	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
+	if err != nil {
+		return &FinalVerdict{
+			State:     models.GotCE,
+			Score:     0,
+			MaxTime:   0,
+			MaxMemory: 0,
+			Message:   fmt.Sprintf("Compilation failed: %v", err),
+		}, nil
 	}
 
-	// Convert language
-	languageStr := convertLanguage(language)
+	checkerExec, hasChecker := s.compiledComponents["checker"]
+
+	// Collect tests
+	flatTests := collectFlatTests(s.pkg.Problem)
 
 	var results []TestResult
 
-	// Publish testing started
 	if err := s.eventPublisher.PublishTestingStarted(ctx, submissionID, meta); err != nil {
 		return nil, fmt.Errorf("failed to publish testing started: %w", err)
 	}
 
-	// Run tests in order, stop on first failure
-	for _, testCase := range s.pkg.TestCases {
-		// Publish test started
-		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, int32(testCase.Ordinal), meta); err != nil {
+	for _, tc := range flatTests {
+		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, int32(tc.TestIndex), meta); err != nil {
 			return nil, fmt.Errorf("failed to publish test started: %w", err)
 		}
 
-		// Judge solution on this test
-		judgeReq := sandbox.JudgeSolutionRequest{
-			SolutionCode:     sourceCode,
-			SolutionLanguage: languageStr,
-			CheckerFileID:    checkerFileID,
-			Input:            testCase.Input,
-			Answer:           testCase.Output,
-			TimeLimitMs:      int64(s.pkg.Manifest.TimeLimitMs),
-			MemoryLimitMB:    int64(s.pkg.Manifest.MemoryLimitMb),
-		}
-
-		result, err := orchestrator.JudgeSolution(ctx, judgeReq)
+		input, err := s.getTestInput(ctx, tc.Test)
 		if err != nil {
-			return nil, fmt.Errorf("failed to judge test %d: %w", testCase.Ordinal, err)
+			return nil, fmt.Errorf("failed to get input for test %d: %w", tc.TestIndex, err)
 		}
 
-		testResult := ConvertJudgeResultToTestResult(testCase.Ordinal, result)
-		results = append(results, testResult)
+		answer, err := s.getTestAnswer(ctx, tc.Test, input)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get answer for test %d: %w", tc.TestIndex, err)
+		}
 
-		// Stop on first non-AC verdict (fail-fast)
-		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" {
+		// Run solution
+		runRes, err := s.sandbox.Test(ctx, solExec, languageStr, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
+		if err != nil {
+			return nil, fmt.Errorf("failed to run solution for test %d: %w", tc.TestIndex, err)
+		}
+
+		verdict := string(runRes.Status)
+		message := string(runRes.Stderr)
+		var checkerScore *float64
+
+		if runRes.Status == sandbox.StatusOK {
+			if hasChecker {
+				chkRes, err := s.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
+				if err != nil {
+					verdict = "IE"
+					message = fmt.Sprintf("Checker execution failed: %v", err)
+				} else {
+					verdict = string(chkRes.Status)
+					message = chkRes.Message
+					checkerScore = chkRes.Score
+				}
+			} else {
+				if string(runRes.Stdout) == string(answer) || strings.TrimSpace(string(runRes.Stdout)) == strings.TrimSpace(string(answer)) {
+					verdict = "OK"
+					message = "Answer is correct"
+				} else {
+					verdict = "WA"
+					message = "Output does not match expected answer"
+				}
+			}
+		}
+
+		res := TestResult{
+			TestNumber: tc.TestIndex,
+			Verdict:    verdict,
+			Score:      checkerScore,
+			Time:       runRes.Time.Nanoseconds(),
+			Memory:     runRes.Memory,
+			Message:    message,
+		}
+		results = append(results, res)
+
+		if verdict != "OK" && verdict != "AC" && verdict != "Accepted" {
 			break
 		}
 	}
 
-	// Calculate final verdict
-	calculator := NewVerdictCalculator("pass-fail", s.pkg.TestsMetadata)
-	verdict := calculator.Calculate(results)
-
-	return verdict, nil
+	calculator := NewVerdictCalculator(s.pkg.Problem.Type, s.pkg.Problem)
+	return calculator.Calculate(results), nil
 }
 
-// ScoringStrategy implements judging for scoring problems with test groups
+func (s *StandardStrategy) getTestInput(ctx context.Context, test gfmt.Test) ([]byte, error) {
+	if test.Manual != "" {
+		return s.pkg.GetTestInput(test.Manual)
+	}
+
+	if test.Generate != "" {
+		parts := strings.Fields(test.Generate)
+		if len(parts) == 0 {
+			return nil, fmt.Errorf("empty generate command")
+		}
+		genName := parts[0]
+		genArgs := parts[1:]
+
+		genExec, exists := s.compiledComponents["generator_"+genName]
+		if !exists {
+			dir := filepath.Join(s.pkg.Path, "generators")
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				return nil, err
+			}
+			var filename string
+			for _, entry := range entries {
+				if !entry.IsDir() && strings.HasPrefix(entry.Name(), genName) {
+					filename = entry.Name()
+					break
+				}
+			}
+			if filename == "" {
+				return nil, fmt.Errorf("generator source not found for %s", genName)
+			}
+			data, err := os.ReadFile(filepath.Join(dir, filename))
+			if err != nil {
+				return nil, err
+			}
+			deps, _ := loadLibDependencies(s.pkg.Path)
+			lang := detectLanguage(filepath.Ext(filename))
+			compiled, err := s.sandbox.Compile(ctx, data, lang, deps)
+			if err != nil {
+				return nil, err
+			}
+			genExec = compiled
+			s.compiledComponents["generator_"+genName] = genExec
+		}
+
+		return s.sandbox.Generate(ctx, genExec, genArgs)
+	}
+
+	return nil, fmt.Errorf("invalid test case")
+}
+
+func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, input []byte) ([]byte, error) {
+	if test.Manual != "" {
+		ansFile := strings.TrimSuffix(test.Manual, ".in") + ".out"
+		data, err := s.pkg.GetTestOutput(ansFile)
+		if err != nil {
+			ansFile = strings.TrimSuffix(test.Manual, ".in") + ".ans"
+			data, err = s.pkg.GetTestOutput(ansFile)
+		}
+		return data, err
+	}
+
+	var okSol string
+	for solFile, tag := range s.pkg.Problem.Solutions {
+		if tag == "OK" || tag == "Accepted" || tag == "main" {
+			okSol = solFile
+			break
+		}
+	}
+	if okSol == "" {
+		return nil, fmt.Errorf("no correct solution found to generate answer")
+	}
+
+	solExec, exists := s.compiledComponents["correct_sol"]
+	if !exists {
+		data, err := os.ReadFile(filepath.Join(s.pkg.Path, "solutions", okSol))
+		if err != nil {
+			return nil, err
+		}
+		lang := detectLanguage(filepath.Ext(okSol))
+		compiled, err := s.sandbox.Compile(ctx, data, lang, nil)
+		if err != nil {
+			return nil, err
+		}
+		solExec = compiled
+		s.compiledComponents["correct_sol"] = solExec
+	}
+
+	runRes, err := s.sandbox.Test(ctx, solExec, detectLanguage(filepath.Ext(okSol)), input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
+	if err != nil {
+		return nil, err
+	}
+	if runRes.Status != sandbox.StatusOK {
+		return nil, fmt.Errorf("correct solution failed to run: %s", runRes.Status)
+	}
+	return runRes.Stdout, nil
+}
+
 type ScoringStrategy struct {
-	sandboxClient      *sandbox.Client
+	sandbox            *sandbox.Sandbox
 	eventPublisher     *EventPublisher
-	pkg                *problemformat.ProblemPackage
-	compiledComponents map[string]string
+	pkg                *gfmt.GateFormat
+	compiledComponents map[string]sandbox.Executable
 }
 
-// NewScoringStrategy creates a new scoring strategy
 func NewScoringStrategy(
-	sandboxClient *sandbox.Client,
+	sandbox *sandbox.Sandbox,
 	eventPublisher *EventPublisher,
-	pkg *problemformat.ProblemPackage,
-	compiledComponents map[string]string,
+	pkg *gfmt.GateFormat,
+	compiledComponents map[string]sandbox.Executable,
 ) *ScoringStrategy {
 	return &ScoringStrategy{
-		sandboxClient:      sandboxClient,
+		sandbox:            sandbox,
 		eventPublisher:     eventPublisher,
 		pkg:                pkg,
 		compiledComponents: compiledComponents,
 	}
 }
 
-// Judge executes scoring judging (runs all tests)
 func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language models.LanguageName, meta models.SubmissionEventMeta) (*FinalVerdict, error) {
-	orchestrator := sandbox.NewOrchestrator(s.sandboxClient)
-
-	// Get checker (required for scoring problems)
-	checkerFileID, exists := s.compiledComponents["checker"]
-	if !exists {
-		return nil, fmt.Errorf("checker is required for scoring problems")
-	}
-
-	// Convert language
 	languageStr := convertLanguage(language)
 
+	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
+	if err != nil {
+		return &FinalVerdict{
+			State:     models.GotCE,
+			Score:     0,
+			MaxTime:   0,
+			MaxMemory: 0,
+			Message:   fmt.Sprintf("Compilation failed: %v", err),
+		}, nil
+	}
+
+	checkerExec, hasChecker := s.compiledComponents["checker"]
+	if !hasChecker {
+		return nil, fmt.Errorf("checker is required for scoring strategy")
+	}
+
+	flatTests := collectFlatTests(s.pkg.Problem)
 	var results []TestResult
 
-	// Publish testing started
 	if err := s.eventPublisher.PublishTestingStarted(ctx, submissionID, meta); err != nil {
 		return nil, fmt.Errorf("failed to publish testing started: %w", err)
 	}
 
-	// Run all tests (no fail-fast)
-	for _, testCase := range s.pkg.TestCases {
-		// Publish test started
-		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, int32(testCase.Ordinal), meta); err != nil {
+	for _, tc := range flatTests {
+		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, int32(tc.TestIndex), meta); err != nil {
 			return nil, fmt.Errorf("failed to publish test started: %w", err)
 		}
 
-		// Judge solution on this test
-		judgeReq := sandbox.JudgeSolutionRequest{
-			SolutionCode:     sourceCode,
-			SolutionLanguage: languageStr,
-			CheckerFileID:    checkerFileID,
-			Input:            testCase.Input,
-			Answer:           testCase.Output,
-			TimeLimitMs:      int64(s.pkg.Manifest.TimeLimitMs),
-			MemoryLimitMB:    int64(s.pkg.Manifest.MemoryLimitMb),
+		// Reuse StandardStrategy helpers by wrapping them
+		wrapper := StandardStrategy{
+			sandbox:            s.sandbox,
+			pkg:                s.pkg,
+			compiledComponents: s.compiledComponents,
 		}
 
-		result, err := orchestrator.JudgeSolution(ctx, judgeReq)
+		input, err := wrapper.getTestInput(ctx, tc.Test)
 		if err != nil {
-			return nil, fmt.Errorf("failed to judge test %d: %w", testCase.Ordinal, err)
+			return nil, fmt.Errorf("failed to get input for test %d: %w", tc.TestIndex, err)
 		}
 
-		testResult := ConvertJudgeResultToTestResult(testCase.Ordinal, result)
-		results = append(results, testResult)
+		answer, err := wrapper.getTestAnswer(ctx, tc.Test, input)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get answer for test %d: %w", tc.TestIndex, err)
+		}
 
-		// Continue even if test failed (scoring problems run all tests)
+		runRes, err := s.sandbox.Test(ctx, solExec, languageStr, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
+		if err != nil {
+			return nil, fmt.Errorf("failed to run solution for test %d: %w", tc.TestIndex, err)
+		}
+
+		verdict := string(runRes.Status)
+		message := string(runRes.Stderr)
+		var checkerScore *float64
+
+		if runRes.Status == sandbox.StatusOK {
+			chkRes, err := s.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
+			if err != nil {
+				verdict = "IE"
+				message = fmt.Sprintf("Checker execution failed: %v", err)
+			} else {
+				verdict = string(chkRes.Status)
+				message = chkRes.Message
+				checkerScore = chkRes.Score
+			}
+		}
+
+		res := TestResult{
+			TestNumber: tc.TestIndex,
+			Verdict:    verdict,
+			Score:      checkerScore,
+			Time:       runRes.Time.Nanoseconds(),
+			Memory:     runRes.Memory,
+			Message:    message,
+		}
+		results = append(results, res)
 	}
 
-	// Calculate final verdict with scoring
-	calculator := NewVerdictCalculator("scoring", s.pkg.TestsMetadata)
-	verdict := calculator.Calculate(results)
-
-	return verdict, nil
+	calculator := NewVerdictCalculator(s.pkg.Problem.Type, s.pkg.Problem)
+	return calculator.Calculate(results), nil
 }
 
-// InteractiveStrategy implements judging for interactive problems
 type InteractiveStrategy struct {
-	sandboxClient      *sandbox.Client
+	sandbox            *sandbox.Sandbox
 	eventPublisher     *EventPublisher
-	pkg                *problemformat.ProblemPackage
-	compiledComponents map[string]string
+	pkg                *gfmt.GateFormat
+	compiledComponents map[string]sandbox.Executable
 }
 
-// NewInteractiveStrategy creates a new interactive strategy
 func NewInteractiveStrategy(
-	sandboxClient *sandbox.Client,
+	sandbox *sandbox.Sandbox,
 	eventPublisher *EventPublisher,
-	pkg *problemformat.ProblemPackage,
-	compiledComponents map[string]string,
+	pkg *gfmt.GateFormat,
+	compiledComponents map[string]sandbox.Executable,
 ) *InteractiveStrategy {
 	return &InteractiveStrategy{
-		sandboxClient:      sandboxClient,
+		sandbox:            sandbox,
 		eventPublisher:     eventPublisher,
 		pkg:                pkg,
 		compiledComponents: compiledComponents,
 	}
 }
 
-// Judge executes interactive judging.
 func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language models.LanguageName, meta models.SubmissionEventMeta) (*FinalVerdict, error) {
-	orchestrator := sandbox.NewOrchestrator(s.sandboxClient)
-
-	// Get interactor (required for interactive problems)
-	interactorFileID, exists := s.compiledComponents["interactor"]
-	if !exists {
-		return nil, fmt.Errorf("interactor is required for interactive problems")
-	}
-
-	// Convert language
 	languageStr := convertLanguage(language)
 
+	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
+	if err != nil {
+		return &FinalVerdict{
+			State:     models.GotCE,
+			Score:     0,
+			MaxTime:   0,
+			MaxMemory: 0,
+			Message:   fmt.Sprintf("Compilation failed: %v", err),
+		}, nil
+	}
+
+	interactorExec, hasInteractor := s.compiledComponents["interactor"]
+	if !hasInteractor {
+		return nil, fmt.Errorf("interactor is required for interactive strategy")
+	}
+
+	flatTests := collectFlatTests(s.pkg.Problem)
 	var results []TestResult
 
-	// Publish testing started
 	if err := s.eventPublisher.PublishTestingStarted(ctx, submissionID, meta); err != nil {
 		return nil, fmt.Errorf("failed to publish testing started: %w", err)
 	}
 
-	// Run tests with interactor
-	for _, testCase := range s.pkg.TestCases {
-		// Publish test started
-		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, int32(testCase.Ordinal), meta); err != nil {
+	for _, tc := range flatTests {
+		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, int32(tc.TestIndex), meta); err != nil {
 			return nil, fmt.Errorf("failed to publish test started: %w", err)
 		}
 
-		judgeReq := sandbox.JudgeSolutionRequest{
-			SolutionCode:     sourceCode,
-			SolutionLanguage: languageStr,
-			InteractorFileID: interactorFileID,
-			Input:            testCase.Input,
-			Answer:           testCase.Output,
-			TimeLimitMs:      int64(s.pkg.Manifest.TimeLimitMs),
-			MemoryLimitMB:    int64(s.pkg.Manifest.MemoryLimitMb),
+		wrapper := StandardStrategy{
+			sandbox:            s.sandbox,
+			pkg:                s.pkg,
+			compiledComponents: s.compiledComponents,
 		}
 
-		result, err := orchestrator.JudgeSolutionInteractive(ctx, judgeReq)
+		input, err := wrapper.getTestInput(ctx, tc.Test)
 		if err != nil {
-			return nil, fmt.Errorf("failed to judge test %d: %w", testCase.Ordinal, err)
+			return nil, fmt.Errorf("failed to get input for test %d: %w", tc.TestIndex, err)
 		}
 
-		testResult := ConvertJudgeResultToTestResult(testCase.Ordinal, result)
-		results = append(results, testResult)
+		interactRes, err := s.sandbox.Interact(ctx, solExec, languageStr, interactorExec, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
+		if err != nil {
+			return nil, fmt.Errorf("failed to interact for test %d: %w", tc.TestIndex, err)
+		}
 
+		res := TestResult{
+			TestNumber: tc.TestIndex,
+			Verdict:    string(interactRes.Status),
+			Score:      interactRes.Score,
+			Time:       interactRes.SolutionResult.Time.Nanoseconds(),
+			Memory:     interactRes.SolutionResult.Memory,
+			Message:    interactRes.Message,
+		}
+		results = append(results, res)
 	}
 
-	// Calculate final verdict
-	calculator := NewVerdictCalculator("interactive", s.pkg.TestsMetadata)
-	verdict := calculator.Calculate(results)
-
-	return verdict, nil
+	calculator := NewVerdictCalculator(s.pkg.Problem.Type, s.pkg.Problem)
+	return calculator.Calculate(results), nil
 }
 
-// convertLanguage converts models.LanguageName to string for sandbox
+func collectFlatTests(prob *gfmt.Problem) []FlatTest {
+	var flatTests []FlatTest
+	var subtaskNames []string
+	if _, exists := prob.Subtasks["samples"]; exists {
+		subtaskNames = append(subtaskNames, "samples")
+	}
+	for k := range prob.Subtasks {
+		if k != "samples" {
+			subtaskNames = append(subtaskNames, k)
+		}
+	}
+
+	testIdx := 1
+	for _, subName := range subtaskNames {
+		sub := prob.Subtasks[subName]
+		for _, t := range sub.Tests {
+			flatTests = append(flatTests, FlatTest{
+				SubtaskName: subName,
+				TestIndex:   testIdx,
+				Test:        t,
+			})
+			testIdx++
+		}
+	}
+	return flatTests
+}
+
 func convertLanguage(lang models.LanguageName) string {
 	switch lang {
 	case models.Golang:
 		return "go"
 	case models.Cpp:
-		return "cpp17"
+		return "cpp"
 	case models.Python:
-		return "python3"
+		return "python"
 	default:
-		return "cpp17" // default
+		return "cpp"
 	}
+}
+
+func detectLanguage(ext string) string {
+	switch ext {
+	case ".cpp", ".cc", ".cxx":
+		return "cpp"
+	case ".py":
+		return "python"
+	case ".go":
+		return "go"
+	case ".java":
+		return "java"
+	default:
+		return "cpp"
+	}
+}
+
+func loadLibDependencies(pkgPath string) (map[string][]byte, error) {
+	deps := make(map[string][]byte)
+	libDir := filepath.Join(pkgPath, "lib")
+	entries, err := os.ReadDir(libDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return deps, nil
+		}
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			data, err := os.ReadFile(filepath.Join(libDir, entry.Name()))
+			if err != nil {
+				return nil, err
+			}
+			deps[entry.Name()] = data
+		}
+	}
+	return deps, nil
 }

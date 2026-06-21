@@ -1,0 +1,41 @@
+format_version: "1.0"
+title: "A+B"
+type: "pass-fail"
+
+limits:
+  time_ms: 1000
+  memory_mb: 256
+
+subtasks:
+  samples:
+    points: 0
+    policy: "complete"
+    tests:
+      - manual: "01.in"
+      - manual: "02.in"
+      - manual: "03.in"
+
+  secret:
+    points: 100
+    policy: "each"
+    dependencies:
+      - "samples"
+    tests:
+      - generate: "echo 10 20"
+      - generate: "echo -50 50"
+      - generate: "echo -100 100"
+      - generate: "echo 0 0"
+      - generate: "echo -7 -99"
+      - generate: "echo 100 100"
+
+solutions:
+  ok.cpp: "OK"
+  ok.py: "OK"
+  ok.go: "OK"
+  ok.java: "OK"
+  wa.py: "WA"
+  wa.go: "WA"
+  ce.cpp: "CE"
+  tl.cpp: "TLE"
+  ml.cpp: "MLE"
+  re.cpp: "RE"

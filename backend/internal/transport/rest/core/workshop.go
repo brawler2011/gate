@@ -13,8 +13,6 @@ import (
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/transport/middleware"
 	"github.com/gate149/gate/backend/pkg"
-	"github.com/gate149/gate/backend/pkg/problemformat"
-	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/google/uuid"
 )
 
@@ -114,7 +112,7 @@ func (h *CoreServer) UpdateProblemLimits(ctx context.Context, request corev1.Upd
 		manifest.MaxScore = nil
 	}
 
-	if err := problemformat.ValidateManifest(manifest); err != nil {
+	if err := validateManifest(manifest); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid limits update")
 	}
 
@@ -169,7 +167,7 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, request corev1.
 		manifest.Statement.Scoring = *body.Scoring
 	}
 
-	if err := problemformat.ValidateManifest(manifest); err != nil {
+	if err := validateManifest(manifest); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
 	}
 
@@ -515,11 +513,11 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, request corev
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config payload")
 	}
 
-	var testsMeta problemformat.TestsMetadata
+	var testsMeta models.TestsMetadata
 	if err := json.Unmarshal(bodyBytes, &testsMeta); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to parse tests config")
 	}
-	if err := problemformat.ValidateTestsMetadata(&testsMeta, manifest); err != nil {
+	if err := validateTestsMetadata(&testsMeta, manifest); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config")
 	}
 
@@ -843,17 +841,16 @@ func (h *CoreServer) setMainComponent(ctx context.Context, problemID uuid.UUID, 
 			manifest.FilesMetadata[index].Compiler = compilerByFilename(cleanName)
 		}
 		manifest.FilesMetadata[index].BinarySha256 = nil
-	} else {
-		manifest.FilesMetadata = append(manifest.FilesMetadata, problemformat.FileMetadata{
+		manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{
 			Type:         componentType,
 			Filename:     componentPath,
 			Compiler:     compilerByFilename(cleanName),
 			BinarySha256: nil,
-			Dependencies: []problemformat.Dependency{},
+			Dependencies: []models.Dependency{},
 		})
 	}
 
-	if err := problemformat.ValidateManifest(manifest); err != nil {
+	if err := validateManifest(manifest); err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "failed to set main component")
 	}
 
@@ -871,7 +868,7 @@ func (h *CoreServer) removeMainComponentIfMatches(ctx context.Context, problemID
 	}
 
 	changed := false
-	filtered := make([]problemformat.FileMetadata, 0, len(manifest.FilesMetadata))
+	filtered := make([]models.FileMetadata, 0, len(manifest.FilesMetadata))
 	for _, meta := range manifest.FilesMetadata {
 		if meta.Type == componentType && meta.Filename == deletedPath {
 			changed = true
@@ -885,13 +882,13 @@ func (h *CoreServer) removeMainComponentIfMatches(ctx context.Context, problemID
 	}
 
 	manifest.FilesMetadata = filtered
-	if err := problemformat.ValidateManifest(manifest); err != nil {
+	if err := validateManifest(manifest); err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "failed to update manifest metadata")
 	}
 	return h.saveWorkshopManifest(ctx, problemID, userID, manifest)
 }
 
-func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UUID) (*problemformat.ProblemManifest, error) {
+func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UUID) (*models.ProblemManifest, error) {
 	if !h.workshopUC.IsInitialized(ctx, problemID) {
 		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
@@ -901,7 +898,7 @@ func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UU
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "manifest not found")
 	}
 
-	var manifest problemformat.ProblemManifest
+	var manifest models.ProblemManifest
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to decode manifest")
 	}
@@ -909,7 +906,7 @@ func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UU
 	return &manifest, nil
 }
 
-func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID, userID uuid.UUID, manifest *problemformat.ProblemManifest) error {
+func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID, userID uuid.UUID, manifest *models.ProblemManifest) error {
 	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to encode manifest")
@@ -948,7 +945,7 @@ func (h *CoreServer) syncProblemTitleIfNeeded(ctx context.Context, problemID uui
 	return nil
 }
 
-func (h *CoreServer) toContractLimits(manifest *problemformat.ProblemManifest) corev1.ProblemLimits {
+func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) corev1.ProblemLimits {
 	return corev1.ProblemLimits{
 		CodeSizeLimitKb: manifest.CodeSizeLimitKb,
 		MaxScore:        manifest.MaxScore,
@@ -959,7 +956,7 @@ func (h *CoreServer) toContractLimits(manifest *problemformat.ProblemManifest) c
 	}
 }
 
-func (h *CoreServer) toContractStatement(manifest *problemformat.ProblemManifest) corev1.ProblemStatement {
+func (h *CoreServer) toContractStatement(manifest *models.ProblemManifest) corev1.ProblemStatement {
 	return corev1.ProblemStatement{
 		InputFormat:  manifest.Statement.InputFormat,
 		Interaction:  optionalString(manifest.Statement.Interaction),
@@ -971,7 +968,7 @@ func (h *CoreServer) toContractStatement(manifest *problemformat.ProblemManifest
 	}
 }
 
-func toContractFileEntries(files []vcs.FileEntry) []corev1.FileEntry {
+func toContractFileEntries(files []models.FileEntry) []corev1.FileEntry {
 	contractFiles := make([]corev1.FileEntry, len(files))
 	for i, f := range files {
 		contractFiles[i] = corev1.FileEntry{
@@ -981,6 +978,23 @@ func toContractFileEntries(files []vcs.FileEntry) []corev1.FileEntry {
 		}
 	}
 	return contractFiles
+}
+
+func validateManifest(m *models.ProblemManifest) error {
+	if m.TimeLimitMs <= 0 || m.MemoryLimitMb <= 0 {
+		return fmt.Errorf("limits must be positive")
+	}
+	if strings.TrimSpace(m.Statement.Title) == "" {
+		return fmt.Errorf("title is required")
+	}
+	return nil
+}
+
+func validateTestsMetadata(t *models.TestsMetadata, m *models.ProblemManifest) error {
+	if len(t.Tests) == 0 {
+		return fmt.Errorf("at least one test case is required")
+	}
+	return nil
 }
 
 func sanitizeFileName(name string) (string, error) {

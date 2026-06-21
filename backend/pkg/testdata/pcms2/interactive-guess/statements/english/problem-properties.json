@@ -1,0 +1,9 @@
+{
+  "authorName": "Antigravity",
+  "name": "Interactive Guessing",
+  "legend": "Guess the hidden number in 30 queries.",
+  "input": "N",
+  "output": "? Y or ! Y",
+  "notes": "Flush output.",
+  "tutorial": "Binary search."
+}

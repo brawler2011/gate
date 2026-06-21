@@ -1,11 +1,13 @@
 package usecase
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,10 +16,8 @@ import (
 
 	"github.com/gate149/gate/backend/internal/domain/interfaces"
 	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg/packagegen"
-	"github.com/gate149/gate/backend/pkg/problemformat"
+	"github.com/gate149/gate/backend/pkg/formats/gfmt"
 	"github.com/gate149/gate/backend/pkg/storage"
-	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/google/uuid"
 )
 
@@ -27,30 +27,29 @@ type PublishResult struct {
 }
 
 type ProblemPublishUseCase struct {
-	problemsRepo  interfaces.ProblemsRepo
-	packagesRepo  interfaces.PackagesRepo
-	vcsService    vcs.Service
-	storage       storage.Storage
-	packageBucket string
+	problemsRepo     interfaces.ProblemsRepo
+	packagesRepo     interfaces.PackagesRepo
+	workspaceStorage *WorkspaceStorage
+	storage          storage.Storage
+	packageBucket    string
 }
 
 func NewProblemPublishUseCase(
 	problemsRepo interfaces.ProblemsRepo,
 	packagesRepo interfaces.PackagesRepo,
-	vcsService vcs.Service,
+	workspaceStorage *WorkspaceStorage,
 	storage storage.Storage,
 	packageBucket string,
 ) *ProblemPublishUseCase {
 	return &ProblemPublishUseCase{
-		problemsRepo:  problemsRepo,
-		packagesRepo:  packagesRepo,
-		vcsService:    vcsService,
-		storage:       storage,
-		packageBucket: packageBucket,
+		problemsRepo:     problemsRepo,
+		packagesRepo:     packagesRepo,
+		workspaceStorage: workspaceStorage,
+		storage:          storage,
+		packageBucket:    packageBucket,
 	}
 }
 
-// PublishProblem publishes a problem by creating a package and uploading to S3
 func (uc *ProblemPublishUseCase) PublishProblem(
 	ctx context.Context,
 	problemID uuid.UUID,
@@ -60,39 +59,20 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 		return nil, fmt.Errorf("failed to get problem: %w", err)
 	}
 
-	manifestBytes, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get problem manifest: %w", err)
-	}
-	if len(manifestBytes) == 0 {
-		return nil, fmt.Errorf("problem manifest is not initialized")
-	}
-
-	var manifest problemformat.ProblemManifest
-	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
-		return nil, fmt.Errorf("failed to parse manifest: %w", err)
-	}
-
 	tempDir, err := os.MkdirTemp("", "problem-publish-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	if err := os.WriteFile(filepath.Join(tempDir, "manifest.json"), manifestBytes, 0o644); err != nil {
-		return nil, fmt.Errorf("failed to write manifest.json: %w", err)
-	}
-
-	workspaceFiles, err := uc.vcsService.ListAllFiles(ctx, problemID)
+	// Download draft files from workspace storage to local temp directory
+	workspaceFiles, err := uc.workspaceStorage.ListAllFiles(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workspace files: %w", err)
 	}
 
 	for _, filePath := range workspaceFiles {
-		if filePath == "manifest.json" {
-			continue
-		}
-		content, err := uc.vcsService.ReadFile(ctx, problemID, filePath)
+		content, err := uc.workspaceStorage.ReadFile(ctx, problemID, filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read workspace file %s: %w", filePath, err)
 		}
@@ -106,17 +86,15 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 		}
 	}
 
-	builtPkg, err := packagegen.BuildPackage(tempDir)
+	// Validate the package layout by loading problem.yaml
+	_, err = gfmt.OpenPackage(tempDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build package: %w", err)
+		return nil, fmt.Errorf("invalid problem package: %w", err)
 	}
 
-	if err := packagegen.ValidatePackage(builtPkg); err != nil {
-		return nil, fmt.Errorf("package validation failed: %w", err)
-	}
-
+	// Directly compress the temp directory into a ZIP archive
 	var zipBuffer bytes.Buffer
-	if err := packagegen.WritePackageToZip(builtPkg, &zipBuffer); err != nil {
+	if err := ZipDirectory(tempDir, &zipBuffer); err != nil {
 		return nil, fmt.Errorf("failed to create ZIP: %w", err)
 	}
 
@@ -147,10 +125,7 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 		return nil, fmt.Errorf("failed to create package record: %w", err)
 	}
 
-	// Use a background context for status updates so they are never cancelled
-	// by the incoming request context (e.g. client disconnect or deadline).
 	bgCtx := context.Background()
-
 	if err := uc.packagesRepo.UpdatePackageStatus(bgCtx, &models.UpdatePackageStatusParams{
 		ID:     packageID,
 		Status: "ready",
@@ -165,7 +140,6 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 	}, nil
 }
 
-// ListPackages returns all packages for a problem ordered by creation date descending.
 func (uc *ProblemPublishUseCase) ListPackages(
 	ctx context.Context,
 	problemID uuid.UUID,
@@ -173,7 +147,6 @@ func (uc *ProblemPublishUseCase) ListPackages(
 	return uc.packagesRepo.ListPackages(ctx, problemID, 100, 0)
 }
 
-// GetPublishedPackageURL returns a presigned S3 URL for the given version.
 func (uc *ProblemPublishUseCase) GetPublishedPackageURL(
 	ctx context.Context,
 	problemID uuid.UUID,
@@ -196,4 +169,40 @@ func (uc *ProblemPublishUseCase) GetPublishedPackageURL(
 		return "", fmt.Errorf("failed to generate package URL: %w", err)
 	}
 	return packageURL, nil
+}
+
+func ZipDirectory(srcDir string, writer io.Writer) error {
+	archive := zip.NewWriter(writer)
+	defer archive.Close()
+
+	err := filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		rel, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		fWriter, err := archive.Create(rel)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(fWriter, file)
+		return err
+	})
+
+	return err
 }

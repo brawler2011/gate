@@ -1,0 +1,6 @@
+name: "A+B"
+limits:
+  time: 1.0
+  memory: 256
+validation:
+  type: "custom"

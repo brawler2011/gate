@@ -4,8 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg/problemformat"
-	"github.com/gate149/gate/backend/pkg/sandbox"
+	"github.com/gate149/gate/backend/pkg/formats/gfmt"
 )
 
 // TestResult represents the result of a single test
@@ -31,15 +30,15 @@ type FinalVerdict struct {
 
 // VerdictCalculator calculates final verdict from test results
 type VerdictCalculator struct {
-	problemType   string
-	testsMetadata problemformat.TestsMetadata
+	problemType string
+	problem     *gfmt.Problem
 }
 
 // NewVerdictCalculator creates a new verdict calculator
-func NewVerdictCalculator(problemType string, testsMetadata problemformat.TestsMetadata) *VerdictCalculator {
+func NewVerdictCalculator(problemType string, problem *gfmt.Problem) *VerdictCalculator {
 	return &VerdictCalculator{
-		problemType:   problemType,
-		testsMetadata: testsMetadata,
+		problemType: problemType,
+		problem:     problem,
 	}
 }
 
@@ -71,7 +70,6 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 	var maxMemory int64
 
 	for _, result := range results {
-		// Update max time and memory
 		if result.Time > maxTime {
 			maxTime = result.Time
 		}
@@ -79,7 +77,6 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 			maxMemory = result.Memory
 		}
 
-		// If any test failed, return that verdict
 		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" {
 			testNum := result.TestNumber
 			return &FinalVerdict{
@@ -93,7 +90,6 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 		}
 	}
 
-	// All tests passed
 	return &FinalVerdict{
 		State:     models.Accepted,
 		Score:     100,
@@ -109,12 +105,9 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 	var maxMemory int64
 	totalScore := 0.0
 
-	// Build map of test results
 	testResults := make(map[int]TestResult)
 	for _, result := range results {
 		testResults[result.TestNumber] = result
-
-		// Update max time and memory
 		if result.Time > maxTime {
 			maxTime = result.Time
 		}
@@ -123,31 +116,25 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 		}
 	}
 
-	// Calculate scores for each group
-	for _, group := range vc.testsMetadata.Groups {
-		// Check if dependencies are satisfied
-		if !vc.checkGroupDependencies(group, testResults) {
-			continue // skip this group
+	for subName, sub := range vc.problem.Subtasks {
+		if !vc.checkSubtaskDependencies(subName, sub, testResults) {
+			continue
 		}
-
-		groupScore := vc.calculateGroupScore(group, testResults)
-		totalScore += groupScore
+		totalScore += vc.calculateSubtaskScore(subName, sub, testResults)
 	}
 
-	// Calculate max possible score
 	maxPossibleScore := 0
-	for _, group := range vc.testsMetadata.Groups {
-		maxPossibleScore += group.Points
+	for _, sub := range vc.problem.Subtasks {
+		maxPossibleScore += sub.Points
 	}
 
-	// Normalize score to 0-100
 	normalizedScore := int32(0)
 	if maxPossibleScore > 0 {
 		normalizedScore = int32((totalScore / float64(maxPossibleScore)) * 100)
 	}
 
 	return &FinalVerdict{
-		State:     models.Accepted, // scoring problems always "accept" with a score
+		State:     models.Accepted, // scoring problems always "Accepted" with a score
 		Score:     normalizedScore,
 		MaxTime:   int32(maxTime / 1_000_000),
 		MaxMemory: int32(maxMemory / 1024 / 1024),
@@ -155,87 +142,73 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 	}
 }
 
-// checkGroupDependencies checks if all group dependencies are satisfied
-func (vc *VerdictCalculator) checkGroupDependencies(group problemformat.TestGroup, results map[int]TestResult) bool {
-	for _, depGroupOrdinal := range group.DependsOn {
-		// Find the dependency group
-		var depGroup *problemformat.TestGroup
-		for _, g := range vc.testsMetadata.Groups {
-			if g.Ordinal == depGroupOrdinal {
-				depGroup = &g
-				break
-			}
+func (vc *VerdictCalculator) getSubtaskTestIndexes(subName string) []int {
+	var idxs []int
+	flat := collectFlatTests(vc.problem)
+	for _, ft := range flat {
+		if ft.SubtaskName == subName {
+			idxs = append(idxs, ft.TestIndex)
 		}
+	}
+	return idxs
+}
 
-		if depGroup == nil {
-			continue
-		}
-
-		// Check if all tests in dependency group passed
-		for testNum := depGroup.Tests[0]; testNum <= depGroup.Tests[1]; testNum++ {
-			result, exists := results[testNum]
-			if !exists || (result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted") {
-				return false // dependency not satisfied
+func (vc *VerdictCalculator) checkSubtaskDependencies(subName string, subtask gfmt.Subtask, results map[int]TestResult) bool {
+	for _, depName := range subtask.Dependencies {
+		depTests := vc.getSubtaskTestIndexes(depName)
+		for _, testNum := range depTests {
+			res, exists := results[testNum]
+			if !exists || (res.Verdict != "OK" && res.Verdict != "AC" && res.Verdict != "Accepted") {
+				return false
 			}
 		}
 	}
 	return true
 }
 
-// calculateGroupScore calculates score for a single group
-func (vc *VerdictCalculator) calculateGroupScore(group problemformat.TestGroup, results map[int]TestResult) float64 {
-	startTest := group.Tests[0]
-	endTest := group.Tests[1]
-	totalTests := endTest - startTest + 1
-
-	if group.PointsPolicy == "complete-group" {
-		// All tests in group must pass to get points
-		for testNum := startTest; testNum <= endTest; testNum++ {
-			result, exists := results[testNum]
-			if !exists || (result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted") {
-				return 0 // group failed
-			}
-		}
-		return float64(group.Points) // all passed
+func (vc *VerdictCalculator) calculateSubtaskScore(subName string, subtask gfmt.Subtask, results map[int]TestResult) float64 {
+	testIdxs := vc.getSubtaskTestIndexes(subName)
+	if len(testIdxs) == 0 {
+		return 0
 	}
 
-	// "each-test" policy: proportional scoring
+	if subtask.Policy == "complete" {
+		for _, testNum := range testIdxs {
+			res, exists := results[testNum]
+			if !exists || (res.Verdict != "OK" && res.Verdict != "AC" && res.Verdict != "Accepted") {
+				return 0
+			}
+		}
+		return float64(subtask.Points)
+	}
+
 	passedTests := 0
 	totalTestScore := 0.0
-
-	for testNum := startTest; testNum <= endTest; testNum++ {
-		result, exists := results[testNum]
-		if exists {
-			if result.Verdict == "OK" || result.Verdict == "AC" || result.Verdict == "Accepted" {
-				if result.Score != nil {
-					totalTestScore += *result.Score // use checker-provided score
-				} else {
-					passedTests++ // full credit for this test
-				}
+	for _, testNum := range testIdxs {
+		res, exists := results[testNum]
+		if exists && (res.Verdict == "OK" || res.Verdict == "AC" || res.Verdict == "Accepted") {
+			if res.Score != nil {
+				totalTestScore += *res.Score
+			} else {
+				passedTests++
 			}
 		}
 	}
 
-	// If checker provides scores, use those
 	if totalTestScore > 0 {
-		// Normalize checker scores to group points
-		return (totalTestScore / float64(totalTests)) * float64(group.Points) / 100.0
+		return (totalTestScore / float64(len(testIdxs))) * float64(subtask.Points) / 100.0
 	}
-
-	// Otherwise, proportional to passed tests
-	return (float64(passedTests) / float64(totalTests)) * float64(group.Points)
+	return (float64(passedTests) / float64(len(testIdxs))) * float64(subtask.Points)
 }
 
 // CalculateInteractiveVerdict calculates verdict for interactive problems
 func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *FinalVerdict {
-	// Interactive problems are similar to standard, but verdict comes from interactor
 	var maxTime int64
 	var maxMemory int64
 	totalScore := 0.0
 	hasScore := false
 
 	for _, result := range results {
-		// Update max time and memory
 		if result.Time > maxTime {
 			maxTime = result.Time
 		}
@@ -243,13 +216,11 @@ func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *
 			maxMemory = result.Memory
 		}
 
-		// Check if interactor provides scores
 		if result.Score != nil {
 			hasScore = true
 			totalScore += *result.Score
 		}
 
-		// If any test failed without score, return that verdict
 		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" && result.Score == nil {
 			testNum := result.TestNumber
 			return &FinalVerdict{
@@ -263,7 +234,6 @@ func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *
 		}
 	}
 
-	// If scoring is used, calculate average
 	if hasScore && len(results) > 0 {
 		avgScore := totalScore / float64(len(results))
 		return &FinalVerdict{
@@ -275,7 +245,6 @@ func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *
 		}
 	}
 
-	// All tests passed (no scoring)
 	return &FinalVerdict{
 		State:     models.Accepted,
 		Score:     100,
@@ -292,20 +261,7 @@ func (vc *VerdictCalculator) Calculate(results []TestResult) *FinalVerdict {
 		return vc.CalculateScoringVerdict(results)
 	case "interactive":
 		return vc.CalculateInteractiveVerdict(results)
-	default: // "pass-fail" or any other type defaults to standard
+	default:
 		return vc.CalculateStandardVerdict(results)
-	}
-}
-
-// ConvertJudgeResultToTestResult converts sandbox JudgeResult to TestResult
-func ConvertJudgeResultToTestResult(testNum int, result *sandbox.JudgeResult) TestResult {
-	return TestResult{
-		TestNumber: testNum,
-		Verdict:    result.Verdict,
-		Score:      result.Score,
-		Time:       result.Time,
-		Memory:     result.Memory,
-		Message:    result.Message,
-		Error:      result.CompileError + result.ExecutionError,
 	}
 }

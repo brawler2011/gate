@@ -1,0 +1,9 @@
+{
+  "authorName": "Antigravity",
+  "name": "Maximum Subarray Sum",
+  "legend": "Find maximum sum of contiguous subarray.",
+  "input": "N and array.",
+  "output": "max sum.",
+  "notes": "Kadane.",
+  "tutorial": "Kadane's algorithm."
+}

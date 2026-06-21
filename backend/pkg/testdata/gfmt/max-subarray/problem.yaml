@@ -1,0 +1,35 @@
+format_version: "1.0"
+title: "Maximum Subarray Sum"
+type: "pass-fail"
+
+limits:
+  time_ms: 1000
+  memory_mb: 256
+
+subtasks:
+  samples:
+    points: 0
+    policy: "complete"
+    tests:
+      - manual: "01.in"
+      - manual: "02.in"
+
+  secret:
+    points: 100
+    policy: "each"
+    dependencies:
+      - "samples"
+    tests:
+      - generate: "generator 10 100"
+      - generate: "generator 100 1000"
+      - generate: "generator 1000 10000"
+      - generate: "generator 10000 100000"
+      - generate: "generator 100000 1000000"
+
+solutions:
+  ok.cpp: "OK"
+  ok.py: "OK"
+  ok.go: "OK"
+  wa.cpp: "WA"
+  wa.py: "WA"
+  wa.go: "WA"

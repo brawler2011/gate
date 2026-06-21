@@ -27,7 +27,6 @@ import (
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/gate149/gate/backend/pkg/sandbox"
 	"github.com/gate149/gate/backend/pkg/storage"
-	"github.com/gate149/gate/backend/pkg/vcs"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
 	"golang.org/x/sync/errgroup"
@@ -155,14 +154,14 @@ func runApp(envFile string) error {
 		}
 	}
 
-	vcsService := vcs.NewS3Service(store, defaultS3WorkshopBucket)
+	workspaceStorage := usecase.NewWorkspaceStorage(store, defaultS3WorkshopBucket)
 
 	authRepo := pg.NewAuthRepo(pool)
 
 	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, txManager)
 	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, txManager)
 	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
-	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, vcsService)
+	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(contestsRepo)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)
@@ -170,7 +169,7 @@ func runApp(envFile string) error {
 	orgsUC := usecase.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, txManager)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, txManager)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
-	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, vcsService, store, defaultS3PackageBucket)
+	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, store, defaultS3PackageBucket)
 	logger.Info("successfully initialized use cases")
 
 	judgeTempDir, err := prepareJudgeTempDir(cfg.JudgeTempDir)
@@ -178,17 +177,20 @@ func runApp(envFile string) error {
 		return fmt.Errorf("prepare judge temp directory: %w", err)
 	}
 
-	sandboxClient, err := sandbox.NewClient(sandbox.ClientConfig{
-		Addr: cfg.GoJudgeGRPCAddr,
-	})
+	sandboxClient, err := sandbox.NewClient(cfg.GoJudgeGRPCAddr)
 	if err != nil {
 		return fmt.Errorf("initialize sandbox client: %w", err)
 	}
 	defer sandboxClient.Close()
 	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudgeGRPCAddr))
 
-	sandboxOrch := sandbox.NewOrchestrator(sandboxClient)
-	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, vcsService, sandboxOrch, txManager)
+	sandboxCfg, err := sandbox.LoadConfig("languages.yaml")
+	if err != nil {
+		return fmt.Errorf("failed to load sandbox config: %w", err)
+	}
+
+	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
+	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, workspaceStorage, sandboxInstance, txManager)
 
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
 	if err != nil {
@@ -211,7 +213,7 @@ func runApp(envFile string) error {
 		store,
 		defaultS3PackageBucket,
 		judgeTempDir,
-		sandboxClient,
+		sandboxInstance,
 		judge.NewEventPublisher(natsJS),
 	)
 

@@ -1,0 +1,26 @@
+format_version: "1.0"
+title: "Even or Odd Subtasks"
+type: "scoring"
+
+limits:
+  time_ms: 1000
+  memory_mb: 256
+
+subtasks:
+  even_subtask:
+    points: 40
+    policy: "complete"
+    tests:
+      - manual: "01.in"
+
+  odd_subtask:
+    points: 60
+    policy: "complete"
+    tests:
+      - manual: "02.in"
+
+solutions:
+  ok.cpp: "OK"
+  ok.py: "OK"
+  wa.cpp: "WA"
+  wa.py: "WA"

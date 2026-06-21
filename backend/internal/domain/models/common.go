@@ -35,3 +35,9 @@ func SortOrderValidate(o SortOrder) error {
 
 	return errors.New("sort order must be one of 'asc' or 'desc'")
 }
+
+type FileEntry struct {
+	Path        string `json:"path"`
+	IsDirectory bool   `json:"is_directory"`
+	Size        int64  `json:"size"`
+}

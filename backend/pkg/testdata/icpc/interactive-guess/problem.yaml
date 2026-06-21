@@ -1,0 +1,6 @@
+name: "Interactive Guessing"
+limits:
+  time: 2.0
+  memory: 256
+validation:
+  type: "interactive"

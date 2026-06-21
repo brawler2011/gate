@@ -16,9 +16,8 @@ import (
 
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/usecase"
-	"github.com/gate149/gate/backend/pkg/problemformat"
 	"github.com/gate149/gate/backend/pkg/sandbox"
-	"github.com/gate149/gate/backend/pkg/vcs"
+	"github.com/gate149/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
@@ -37,10 +36,15 @@ const (
 
 // TestWorkshopE2E tests the complete workshop workflow
 func TestWorkshopE2E(t *testing.T) {
-	sandboxOrch := newWorkshopSandboxOrchestrator(t)
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
-	// Initialize VCS service
-	vcsService := vcs.NewInMemoryS3Service("integration-workshop")
+	sandboxInst := newWorkshopSandbox(t)
+
+	// Initialize Storage-backed Workspace service
+	store := storage.NewLocalStorage(t.TempDir())
+	workspaceStorage := usecase.NewWorkspaceStorage(store, "integration-workshop")
 	ctx := context.Background()
 	problemID := uuid.New()
 
@@ -52,8 +56,8 @@ func TestWorkshopE2E(t *testing.T) {
 	// Initialize WorkshopUseCase
 	workshopUC := usecase.NewWorkshopUseCase(
 		problemsRepo,
-		vcsService,
-		sandboxOrch,
+		workspaceStorage,
+		sandboxInst,
 		txManager,
 	)
 
@@ -62,7 +66,7 @@ func TestWorkshopE2E(t *testing.T) {
 		err := workshopUC.InitProblemWorkshop(ctx, problemID, "A+B Problem")
 		require.NoError(t, err)
 
-		files, err := vcsService.ListAllFiles(ctx, problemID)
+		files, err := workspaceStorage.ListAllFiles(ctx, problemID)
 		require.NoError(t, err)
 		assert.NotEmpty(t, files)
 
@@ -70,13 +74,25 @@ func TestWorkshopE2E(t *testing.T) {
 		manifestBytes, err := workshopUC.ReadProblemFile(ctx, problemID, "manifest.json")
 		require.NoError(t, err)
 
-		var manifest problemformat.ProblemManifest
+		var manifest models.ProblemManifest
 		require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
 		assert.Equal(t, "A+B Problem", manifest.Statement.Title)
 	})
 
-	// Step 2: Upload checker
+	// Step 2: Upload checker and its dependencies
 	t.Run("UploadChecker", func(t *testing.T) {
+		// Upload testlib.h dependency to lib/
+		testlibContent, err := os.ReadFile("../../pkg/testdata/gfmt/a-plus-b/lib/testlib.h")
+		require.NoError(t, err)
+
+		err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+			ProblemID: problemID,
+			UserID:    uuid.Nil,
+			Path:      "lib/testlib.h",
+			Content:   testlibContent,
+		})
+		require.NoError(t, err)
+
 		checkerCode := `#include "testlib.h"
 int main(int argc, char* argv[]) {
     registerTestlibCmd(argc, argv);
@@ -88,11 +104,38 @@ int main(int argc, char* argv[]) {
     quitf(_ok, "answer is correct");
 }
 `
-		err := workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+		err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
 			ProblemID: problemID,
 			UserID:    uuid.Nil,
 			Path:      "checkers/checker.cpp",
 			Content:   []byte(checkerCode),
+		})
+		require.NoError(t, err)
+
+		// Declare checker dependency on testlib.h in manifest.json
+		manifestBytes, err := workshopUC.ReadProblemFile(ctx, problemID, "manifest.json")
+		require.NoError(t, err)
+
+		var manifest models.ProblemManifest
+		require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+
+		for i := range manifest.FilesMetadata {
+			if manifest.FilesMetadata[i].Filename == "checkers/checker.cpp" {
+				manifest.FilesMetadata[i].Dependencies = []models.Dependency{
+					{Filename: "testlib.h", Version: "1.0"},
+				}
+				break
+			}
+		}
+
+		newManifestBytes, err := json.Marshal(manifest)
+		require.NoError(t, err)
+
+		err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+			ProblemID: problemID,
+			UserID:    uuid.Nil,
+			Path:      "manifest.json",
+			Content:   newManifestBytes,
 		})
 		require.NoError(t, err)
 	})
@@ -119,6 +162,22 @@ int main() {
 
 	// Step 4: Test solution
 	t.Run("TestSolution", func(t *testing.T) {
+		// Verify checker and solution exists in files
+		files, err := workspaceStorage.ListAllFiles(ctx, problemID)
+		require.NoError(t, err)
+		assert.Contains(t, files, "checkers/checker.cpp")
+		assert.Contains(t, files, "solutions/main.cpp")
+		assert.Contains(t, files, "tests/01.in")
+		assert.Contains(t, files, "tests/01.out")
+
+		// First we must compile the checker component
+		compRes, err := workshopUC.CompileProblemComponent(ctx, models.CompileComponentRequest{
+			ProblemID:     problemID,
+			ComponentType: "checker",
+		})
+		require.NoError(t, err)
+		require.True(t, compRes.Success, compRes.CompileLog)
+
 		report, err := workshopUC.TestSolution(ctx, models.TestSolutionRequest{
 			ProblemID:    problemID,
 			SolutionPath: "solutions/main.cpp",
@@ -131,12 +190,13 @@ int main() {
 		// Check if test passed
 		if len(report.Results) > 0 {
 			t.Logf("Test result: %s - %s", report.Results[0].Verdict, report.Results[0].Message)
+			assert.Equal(t, "OK", report.Results[0].Verdict)
 		}
 	})
 
 	// Step 5: Verify workspace files were written
 	t.Run("VerifyWorkspaceFiles", func(t *testing.T) {
-		files, err := vcsService.ListAllFiles(ctx, problemID)
+		files, err := workspaceStorage.ListAllFiles(ctx, problemID)
 		require.NoError(t, err)
 		assert.Contains(t, files, "checkers/checker.cpp")
 		assert.Contains(t, files, "solutions/main.cpp")
@@ -145,7 +205,7 @@ int main() {
 	})
 }
 
-func newWorkshopSandboxOrchestrator(t *testing.T) *sandbox.Orchestrator {
+func newWorkshopSandbox(t *testing.T) *sandbox.Sandbox {
 	t.Helper()
 
 	ctx := context.Background()
@@ -195,22 +255,23 @@ func newWorkshopSandboxOrchestrator(t *testing.T) *sandbox.Orchestrator {
 	mappedPort, err := container.MappedPort(ctx, workshopGoJudgeGRPCPort)
 	require.NoError(t, err)
 
-	client, err := sandbox.NewClient(sandbox.ClientConfig{
-		Addr:    net.JoinHostPort(host, mappedPort.Port()),
-		Timeout: 30 * time.Second,
-	})
+	client, err := sandbox.NewClient(net.JoinHostPort(host, mappedPort.Port()))
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		_ = client.Close()
 	})
 
-	waitForWorkshopGoJudgeReady(t, ctx, client)
+	cfg, err := sandbox.LoadConfig("../../languages.yaml")
+	require.NoError(t, err)
 
-	return sandbox.NewOrchestrator(client)
+	sb := sandbox.NewSandbox(client, cfg)
+	waitForWorkshopGoJudgeReady(t, ctx, sb)
+
+	return sb
 }
 
-func waitForWorkshopGoJudgeReady(t *testing.T, ctx context.Context, client *sandbox.Client) {
+func waitForWorkshopGoJudgeReady(t *testing.T, ctx context.Context, sb *sandbox.Sandbox) {
 	t.Helper()
 
 	deadline := time.Now().Add(workshopGoJudgeStartupTimeout)
@@ -218,30 +279,13 @@ func waitForWorkshopGoJudgeReady(t *testing.T, ctx context.Context, client *sand
 
 	for time.Now().Before(deadline) {
 		probeCtx, cancel := context.WithTimeout(ctx, workshopGoJudgeProbeCallTimeout)
-		result, err := client.Compile(probeCtx, sandbox.CompileRequest{
-			SourceCode: "int main(){return 0;}",
-			Language:   "cpp17",
-			SourceFile: "main.cpp",
-			OutputFile: "main",
-			Limits: sandbox.ResourceLimits{
-				CPUTimeMs: 5000,
-				MemoryMB:  256,
-				ProcLimit: 10,
-				StackMB:   64,
-			},
-			Dependencies: map[string]string{},
-		})
+		_, err := sb.Compile(probeCtx, []byte("int main(){return 0;}"), "cpp", nil)
 		cancel()
 
-		if err == nil && result != nil && result.Success {
+		if err == nil {
 			return
 		}
-
-		if err != nil {
-			lastErr = err
-		} else {
-			lastErr = fmt.Errorf("compile probe returned non-success status: %s", result.Stderr)
-		}
+		lastErr = err
 
 		time.Sleep(workshopGoJudgeProbeRetryDelay)
 	}
@@ -255,8 +299,8 @@ func workshopGoJudgeDockerfileContext() (string, string, error) {
 		return "", "", fmt.Errorf("failed to resolve workshop_test.go path")
 	}
 
-	buildContext := filepath.Join(filepath.Dir(thisFile), "../../pkg/sandbox/testdata")
-	return buildContext, "gojudge.Dockerfile", nil
+	buildContext := filepath.Join(filepath.Dir(thisFile), "../../pkg/sandbox")
+	return buildContext, "Dockerfile", nil
 }
 
 // Mock implementations for testing
