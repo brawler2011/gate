@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	"github.com/gate149/gate/backend/internal/domain/models"
@@ -14,13 +13,8 @@ func (h *CoreServer) loadProblemStatement(ctx context.Context, problemID uuid.UU
 		return nil
 	}
 
-	manifestData, err := h.workshopUC.ReadProblemFile(ctx, problemID, "manifest.json")
+	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
 	if err != nil {
-		return nil
-	}
-
-	var manifest models.ProblemManifest
-	if err := json.Unmarshal(manifestData, &manifest); err != nil {
 		return nil
 	}
 

@@ -521,18 +521,7 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, request corev
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config")
 	}
 
-	testsBytes, err := json.MarshalIndent(testsMeta, "", "  ")
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to encode tests config")
-	}
-
-	updateReq := models.UpdateFileRequest{
-		ProblemID: request.ProblemId,
-		UserID:    middleware.GetUser(ctx).Id,
-		Path:      filepath.Join(testDir, "tests.json"),
-		Content:   testsBytes,
-	}
-	if err := h.workshopUC.UpdateProblemFile(ctx, updateReq); err != nil {
+	if err := h.workshopUC.UpdateTestsConfig(ctx, request.ProblemId, &testsMeta); err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to update tests config")
 	}
 
@@ -541,6 +530,18 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, request corev
 
 // GetProblemTestFile handles GET /problems/{problemId}/tests/{name}
 func (h *CoreServer) GetProblemTestFile(ctx context.Context, request corev1.GetProblemTestFileRequestObject) (corev1.GetProblemTestFileResponseObject, error) {
+	if request.Name == "tests.json" {
+		testsMeta, err := h.workshopUC.GetTestsConfig(ctx, request.ProblemId)
+		if err != nil {
+			return nil, pkg.Wrap(pkg.ErrNotFound, err, "tests config not found")
+		}
+		content, err := json.MarshalIndent(testsMeta, "", "  ")
+		if err != nil {
+			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to marshal tests config")
+		}
+		return corev1.GetProblemTestFile200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+	}
+
 	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, testDir, request.Name)
 	if err != nil {
 		return nil, err
@@ -893,31 +894,16 @@ func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UU
 		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
 
-	content, err := h.workshopUC.ReadProblemFile(ctx, problemID, "manifest.json")
+	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "manifest not found")
 	}
 
-	var manifest models.ProblemManifest
-	if err := json.Unmarshal(content, &manifest); err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to decode manifest")
-	}
-
-	return &manifest, nil
+	return manifest, nil
 }
 
 func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID, userID uuid.UUID, manifest *models.ProblemManifest) error {
-	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to encode manifest")
-	}
-
-	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
-		ProblemID: problemID,
-		UserID:    userID,
-		Path:      "manifest.json",
-		Content:   manifestBytes,
-	}); err != nil {
+	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to update manifest")
 	}
 

@@ -44,6 +44,69 @@ func (uc *WorkshopUseCase) IsInitialized(ctx context.Context, problemID uuid.UUI
 	return err == nil && len(manifest) > 0
 }
 
+func ParseStatementMarkdown(content string) models.Statement {
+	var stmt models.Statement
+	parts := strings.Split(content, "<!--")
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		subparts := strings.SplitN(part, "-->", 2)
+		if len(subparts) < 2 {
+			continue
+		}
+		tag := strings.TrimSpace(subparts[0])
+		tag = strings.ToLower(tag)
+		body := strings.TrimSpace(subparts[1])
+		switch tag {
+		case "legend":
+			stmt.Legend = body
+		case "input":
+			stmt.InputFormat = body
+		case "output":
+			stmt.OutputFormat = body
+		case "notes":
+			stmt.Notes = body
+		case "interaction":
+			stmt.Interaction = body
+		case "scoring":
+			stmt.Scoring = body
+		}
+	}
+	return stmt
+}
+
+func RenderStatementMarkdown(stmt models.Statement) string {
+	var sb strings.Builder
+	sb.WriteString("<!--legend -->")
+	if stmt.Legend != "" {
+		sb.WriteString("\n\n")
+		sb.WriteString(stmt.Legend)
+	}
+	if stmt.InputFormat != "" {
+		sb.WriteString("\n\n<!-- input -->\n\n")
+		sb.WriteString(stmt.InputFormat)
+	}
+	if stmt.OutputFormat != "" {
+		sb.WriteString("\n\n<!-- output -->\n\n")
+		sb.WriteString(stmt.OutputFormat)
+	}
+	if stmt.Interaction != "" {
+		sb.WriteString("\n\n<!-- interaction -->\n\n")
+		sb.WriteString(stmt.Interaction)
+	}
+	if stmt.Notes != "" {
+		sb.WriteString("\n\n<!-- notes -->\n\n")
+		sb.WriteString(stmt.Notes)
+	}
+	if stmt.Scoring != "" {
+		sb.WriteString("\n\n<!-- scoring -->\n\n")
+		sb.WriteString(stmt.Scoring)
+	}
+	sb.WriteString("\n")
+	return sb.String()
+}
+
 func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uuid.UUID, title string) error {
 	if uc.IsInitialized(ctx, problemID) {
 		return fmt.Errorf("workshop already initialized for problem %s", problemID)
@@ -71,6 +134,12 @@ func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uu
 		return fmt.Errorf("failed to create default problem.yaml: %w", err)
 	}
 
+	// Save default statement to statements/en.md
+	stmtBytes := []byte(RenderStatementMarkdown(manifest.Statement))
+	if err := uc.workspaceStorage.WriteFile(ctx, problemID, "statements/en.md", stmtBytes); err != nil {
+		return fmt.Errorf("failed to create default statement: %w", err)
+	}
+
 	// Create a sample test file
 	if err := uc.workspaceStorage.WriteFile(ctx, problemID, "tests/01.in", []byte("1 2\n")); err != nil {
 		return fmt.Errorf("failed to create sample input: %w", err)
@@ -83,61 +152,6 @@ func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uu
 }
 
 func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.UpdateFileRequest) error {
-	if req.Path == "manifest.json" {
-		var manifest models.ProblemManifest
-		if err := json.Unmarshal(req.Content, &manifest); err != nil {
-			return fmt.Errorf("invalid manifest.json: %w", err)
-		}
-
-		if err := uc.saveManifest(ctx, req.ProblemID, &manifest); err != nil {
-			return fmt.Errorf("failed to update manifest: %w", err)
-		}
-
-		// Update problem.yaml in workspace storage
-		testsMeta, err := uc.readTestsMetadata(ctx, req.ProblemID)
-		if err != nil {
-			testsMeta = defaultTestsMetadata()
-		}
-		gfmtProb := ManifestAndTestsToGfmtProblem(&manifest, testsMeta)
-		yamlBytes, err := yaml.Marshal(gfmtProb)
-		if err == nil {
-			_ = uc.workspaceStorage.WriteFile(ctx, req.ProblemID, "problem.yaml", yamlBytes)
-		}
-
-		title := strings.TrimSpace(manifest.Statement.Title)
-		if title != "" {
-			problem, err := uc.problemsRepo.GetProblemById(ctx, req.ProblemID)
-			if err == nil && strings.TrimSpace(problem.Title) != title {
-				_ = uc.problemsRepo.UpdateProblem(ctx, req.ProblemID, &models.ProblemUpdate{Title: &title})
-			}
-		}
-
-		return nil
-	}
-
-	if req.Path == "tests/tests.json" || req.Path == "tests\\tests.json" {
-		var testsMeta models.TestsMetadata
-		if err := json.Unmarshal(req.Content, &testsMeta); err != nil {
-			return fmt.Errorf("invalid tests.json: %w", err)
-		}
-
-		manifest, err := uc.loadManifest(ctx, req.ProblemID)
-		if err != nil {
-			return fmt.Errorf("failed to load manifest for tests config update: %w", err)
-		}
-
-		gfmtProb := ManifestAndTestsToGfmtProblem(manifest, &testsMeta)
-		yamlBytes, err := yaml.Marshal(gfmtProb)
-		if err != nil {
-			return fmt.Errorf("failed to marshal problem.yaml: %w", err)
-		}
-		if err := uc.workspaceStorage.WriteFile(ctx, req.ProblemID, "problem.yaml", yamlBytes); err != nil {
-			return fmt.Errorf("failed to write problem.yaml: %w", err)
-		}
-
-		return nil
-	}
-
 	if err := uc.workspaceStorage.WriteFile(ctx, req.ProblemID, req.Path, req.Content); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
@@ -194,10 +208,6 @@ func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.Upd
 }
 
 func (uc *WorkshopUseCase) DeleteProblemFile(ctx context.Context, problemID uuid.UUID, path string) error {
-	if path == "manifest.json" {
-		return fmt.Errorf("manifest.json cannot be deleted")
-	}
-
 	if err := uc.workspaceStorage.DeleteFile(ctx, problemID, path); err != nil {
 		return err
 	}
@@ -223,92 +233,115 @@ func (uc *WorkshopUseCase) DeleteProblemFile(ctx context.Context, problemID uuid
 }
 
 func (uc *WorkshopUseCase) ReadProblemFile(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error) {
-	if path == "manifest.json" {
-		manifestBytes, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
-		if err != nil {
-			return nil, err
-		}
-		if len(manifestBytes) == 0 {
-			return nil, fmt.Errorf("manifest.json not found")
-		}
-		return manifestBytes, nil
-	}
-
-	if path == "tests/tests.json" || path == "tests\\tests.json" {
-		testsMeta, err := uc.readTestsMetadata(ctx, problemID)
-		if err != nil {
-			return nil, err
-		}
-		return json.MarshalIndent(testsMeta, "", "  ")
-	}
-
 	return uc.workspaceStorage.ReadFile(ctx, problemID, path)
 }
 
 func (uc *WorkshopUseCase) ListProblemFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]models.FileEntry, error) {
-	files, err := uc.workspaceStorage.ListFiles(ctx, problemID, dirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if dirPath == "" || dirPath == "." {
-		if uc.IsInitialized(ctx, problemID) {
-			files = append(files, models.FileEntry{Path: "manifest.json", IsDirectory: false, Size: 0})
-		}
-	}
-
-	return files, nil
+	return uc.workspaceStorage.ListFiles(ctx, problemID, dirPath)
 }
 
 func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req models.CompileComponentRequest) (*models.CompileResult, error) {
-	manifest, err := uc.loadManifest(ctx, req.ProblemID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load manifest: %w", err)
+	var folderPrefix string
+	switch req.ComponentType {
+	case "checker":
+		folderPrefix = "checkers/"
+	case "validator":
+		folderPrefix = "validators/"
+	case "interactor":
+		folderPrefix = "interactors/"
+	case "generator":
+		folderPrefix = "generators/"
+	default:
+		return nil, fmt.Errorf("unknown component type: %s", req.ComponentType)
 	}
 
-	var componentMeta *models.FileMetadata
-	for i := range manifest.FilesMetadata {
-		if manifest.FilesMetadata[i].Type == req.ComponentType {
-			componentMeta = &manifest.FilesMetadata[i]
-			break
+	allFiles, err := uc.workspaceStorage.ListAllFiles(ctx, req.ProblemID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workspace files: %w", err)
+	}
+
+	var sourcePath string
+	for _, file := range allFiles {
+		if strings.HasPrefix(file, folderPrefix) {
+			ext := filepath.Ext(file)
+			if ext == ".cpp" || ext == ".py" || ext == ".go" || ext == ".java" {
+				sourcePath = file
+				break
+			}
 		}
 	}
 
-	if componentMeta == nil {
-		return nil, fmt.Errorf("component %s not found in manifest", req.ComponentType)
+	if sourcePath == "" {
+		return nil, fmt.Errorf("no source file found in %s folder", folderPrefix)
 	}
 
-	sourceCode, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, componentMeta.Filename)
+	sourceCode, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, sourcePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read source file: %w", err)
+		return nil, fmt.Errorf("failed to read source file %s: %w", sourcePath, err)
 	}
 
 	dependencies := make(map[string][]byte)
-	for _, dep := range componentMeta.Dependencies {
-		depPath := filepath.Join(filepath.Dir(componentMeta.Filename), dep.Filename)
-		depPath = filepath.ToSlash(depPath)
-		depContent, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, depPath)
-		if err != nil {
-			libPath := filepath.ToSlash(filepath.Join("lib", dep.Filename))
-			depContent, err = uc.workspaceStorage.ReadFile(ctx, req.ProblemID, libPath)
+	for _, file := range allFiles {
+		if strings.HasPrefix(file, "lib/") {
+			depContent, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, file)
 			if err != nil {
-				return nil, fmt.Errorf("failed to read dependency %s: %w", dep.Filename, err)
+				return nil, fmt.Errorf("failed to read dependency %s: %w", file, err)
 			}
+			dependencies[filepath.Base(file)] = depContent
 		}
-		dependencies[dep.Filename] = depContent
 	}
 
-	langKey := detectLanguage(filepath.Ext(componentMeta.Filename))
+	langKey := detectLanguage(filepath.Ext(sourcePath))
 	binary, err := uc.sandbox.Compile(ctx, sourceCode, langKey, dependencies)
 	if err != nil {
 		return &models.CompileResult{Success: false, CompileError: err.Error()}, nil
 	}
 
 	sha256Hash := computeSHA256([]byte(binary.PrimaryFileID))
-	componentMeta.BinarySha256 = &sha256Hash
 
-	if err := uc.saveManifest(ctx, req.ProblemID, manifest); err != nil {
-		return nil, fmt.Errorf("failed to update manifest: %w", err)
+	manifest, err := uc.loadManifest(ctx, req.ProblemID)
+	if err == nil {
+		foundIdx := -1
+		for i := range manifest.FilesMetadata {
+			if manifest.FilesMetadata[i].Type == req.ComponentType {
+				foundIdx = i
+				break
+			}
+		}
+
+		compiler := "cpp17"
+		ext := filepath.Ext(sourcePath)
+		if ext == ".py" {
+			compiler = "python3"
+		} else if ext == ".go" {
+			compiler = "go"
+		} else if ext == ".java" {
+			compiler = "java"
+		}
+
+		var deps []models.Dependency
+		for depName := range dependencies {
+			deps = append(deps, models.Dependency{
+				Filename: depName,
+				Version:  "1.0",
+			})
+		}
+
+		if foundIdx != -1 {
+			manifest.FilesMetadata[foundIdx].Filename = sourcePath
+			manifest.FilesMetadata[foundIdx].Compiler = compiler
+			manifest.FilesMetadata[foundIdx].BinarySha256 = &sha256Hash
+			manifest.FilesMetadata[foundIdx].Dependencies = deps
+		} else {
+			manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{
+				Type:         req.ComponentType,
+				Filename:     sourcePath,
+				Compiler:     compiler,
+				BinarySha256: &sha256Hash,
+				Dependencies: deps,
+			})
+		}
+		_ = uc.saveManifest(ctx, req.ProblemID, manifest)
 	}
 
 	return &models.CompileResult{
@@ -747,4 +780,62 @@ func ManifestAndTestsToGfmtProblem(manifest *models.ProblemManifest, testsMeta *
 	}
 
 	return prob
+}
+
+func (uc *WorkshopUseCase) GetManifest(ctx context.Context, problemID uuid.UUID) (*models.ProblemManifest, error) {
+	return uc.loadManifest(ctx, problemID)
+}
+
+func (uc *WorkshopUseCase) SaveManifest(ctx context.Context, problemID uuid.UUID, manifest *models.ProblemManifest) error {
+	if err := uc.saveManifest(ctx, problemID, manifest); err != nil {
+		return err
+	}
+
+	// Sync to problem.yaml
+	testsMeta, err := uc.readTestsMetadata(ctx, problemID)
+	if err != nil {
+		testsMeta = defaultTestsMetadata()
+	}
+	gfmtProb := ManifestAndTestsToGfmtProblem(manifest, testsMeta)
+	yamlBytes, err := yaml.Marshal(gfmtProb)
+	if err == nil {
+		_ = uc.workspaceStorage.WriteFile(ctx, problemID, "problem.yaml", yamlBytes)
+	}
+
+	// Sync to statements/en.md
+	stmtBytes := []byte(RenderStatementMarkdown(manifest.Statement))
+	_ = uc.workspaceStorage.WriteFile(ctx, problemID, "statements/en.md", stmtBytes)
+
+	// Sync title if changed
+	title := strings.TrimSpace(manifest.Statement.Title)
+	if title != "" {
+		problem, err := uc.problemsRepo.GetProblemById(ctx, problemID)
+		if err == nil && strings.TrimSpace(problem.Title) != title {
+			_ = uc.problemsRepo.UpdateProblem(ctx, problemID, &models.ProblemUpdate{Title: &title})
+		}
+	}
+
+	return nil
+}
+
+func (uc *WorkshopUseCase) UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *models.TestsMetadata) error {
+	manifest, err := uc.loadManifest(ctx, problemID)
+	if err != nil {
+		return fmt.Errorf("failed to load manifest for tests config update: %w", err)
+	}
+
+	gfmtProb := ManifestAndTestsToGfmtProblem(manifest, testsMeta)
+	yamlBytes, err := yaml.Marshal(gfmtProb)
+	if err != nil {
+		return fmt.Errorf("failed to marshal problem.yaml: %w", err)
+	}
+	if err := uc.workspaceStorage.WriteFile(ctx, problemID, "problem.yaml", yamlBytes); err != nil {
+		return fmt.Errorf("failed to write problem.yaml: %w", err)
+	}
+
+	return nil
+}
+
+func (uc *WorkshopUseCase) GetTestsConfig(ctx context.Context, problemID uuid.UUID) (*models.TestsMetadata, error) {
+	return uc.readTestsMetadata(ctx, problemID)
 }

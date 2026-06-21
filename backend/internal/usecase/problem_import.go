@@ -152,6 +152,14 @@ func mapImportPlanToManifest(plan *gfmt.ImportPlan, tempDst string) (*models.Pro
 	manifest.Statement.Title = plan.Problem.Title
 	manifest.Statement.Legend = fmt.Sprintf("Imported from unified package.")
 
+	// Try to load statement from statements/en.md
+	enStatementPath := filepath.Join(tempDst, "statements", "en.md")
+	if data, err := os.ReadFile(enStatementPath); err == nil {
+		parsedStmt := ParseStatementMarkdown(string(data))
+		manifest.Statement = parsedStmt
+		manifest.Statement.Title = plan.Problem.Title // Always preserve title from problem.yaml
+	}
+
 	// Populate FilesMetadata
 	for _, mapping := range plan.Mappings {
 		target := mapping.TargetPath
@@ -341,7 +349,6 @@ func detectPackageRoot(extractedDir string) (string, error) {
 
 func hasPackageMarker(dir string) bool {
 	markers := []string{
-		"manifest.json",
 		"problem.xml",
 		"problem.yaml",
 	}

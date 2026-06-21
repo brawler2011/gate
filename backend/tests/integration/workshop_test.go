@@ -5,7 +5,6 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -71,11 +70,8 @@ func TestWorkshopE2E(t *testing.T) {
 		assert.NotEmpty(t, files)
 
 		// Verify manifest exists
-		manifestBytes, err := workshopUC.ReadProblemFile(ctx, problemID, "manifest.json")
+		manifest, err := workshopUC.GetManifest(ctx, problemID)
 		require.NoError(t, err)
-
-		var manifest models.ProblemManifest
-		require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
 		assert.Equal(t, "A+B Problem", manifest.Statement.Title)
 	})
 
@@ -109,33 +105,6 @@ int main(int argc, char* argv[]) {
 			UserID:    uuid.Nil,
 			Path:      "checkers/checker.cpp",
 			Content:   []byte(checkerCode),
-		})
-		require.NoError(t, err)
-
-		// Declare checker dependency on testlib.h in manifest.json
-		manifestBytes, err := workshopUC.ReadProblemFile(ctx, problemID, "manifest.json")
-		require.NoError(t, err)
-
-		var manifest models.ProblemManifest
-		require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
-
-		for i := range manifest.FilesMetadata {
-			if manifest.FilesMetadata[i].Filename == "checkers/checker.cpp" {
-				manifest.FilesMetadata[i].Dependencies = []models.Dependency{
-					{Filename: "testlib.h", Version: "1.0"},
-				}
-				break
-			}
-		}
-
-		newManifestBytes, err := json.Marshal(manifest)
-		require.NoError(t, err)
-
-		err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
-			ProblemID: problemID,
-			UserID:    uuid.Nil,
-			Path:      "manifest.json",
-			Content:   newManifestBytes,
 		})
 		require.NoError(t, err)
 	})

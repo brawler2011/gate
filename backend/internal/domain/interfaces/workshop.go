@@ -18,4 +18,8 @@ type WorkshopUC interface {
 	GenerateTests(ctx context.Context, req models.GenerateTestsRequest) error
 	ValidateAllTests(ctx context.Context, problemID uuid.UUID, userID uuid.UUID) (*models.ValidationReport, error)
 	TestSolution(ctx context.Context, req models.TestSolutionRequest) (*models.TestReport, error)
+	GetManifest(ctx context.Context, problemID uuid.UUID) (*models.ProblemManifest, error)
+	SaveManifest(ctx context.Context, problemID uuid.UUID, manifest *models.ProblemManifest) error
+	UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *models.TestsMetadata) error
+	GetTestsConfig(ctx context.Context, problemID uuid.UUID) (*models.TestsMetadata, error)
 }
