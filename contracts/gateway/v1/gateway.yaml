@@ -3837,18 +3837,12 @@ components:
         - problem_type
         - time_limit_ms
         - memory_limit_mb
-        - stdout_limit_mb
-        - code_size_limit_kb
       properties:
         problem_type:
           type: string
         time_limit_ms:
           type: integer
         memory_limit_mb:
-          type: integer
-        stdout_limit_mb:
-          type: integer
-        code_size_limit_kb:
           type: integer
         max_score:
           type: integer
@@ -3861,10 +3855,6 @@ components:
         time_limit_ms:
           type: integer
         memory_limit_mb:
-          type: integer
-        stdout_limit_mb:
-          type: integer
-        code_size_limit_kb:
           type: integer
         max_score:
           type: integer

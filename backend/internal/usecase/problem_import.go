@@ -141,12 +141,10 @@ func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipRea
 
 func mapImportPlanToManifest(plan *gfmt.ImportPlan, tempDst string) (*models.ProblemManifest, error) {
 	manifest := &models.ProblemManifest{
-		LastUpdated:     time.Now(),
-		ProblemType:     plan.Problem.Type,
-		TimeLimitMs:     plan.Problem.Limits.TimeMs,
-		MemoryLimitMb:   plan.Problem.Limits.MemoryMb,
-		StdoutLimitMb:   128,
-		CodeSizeLimitKb: 512,
+		LastUpdated:   time.Now(),
+		ProblemType:   plan.Problem.Type,
+		TimeLimitMs:   plan.Problem.Limits.TimeMs,
+		MemoryLimitMb: plan.Problem.Limits.MemoryMb,
 	}
 
 	manifest.Statement.Title = plan.Problem.Title

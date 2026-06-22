@@ -14,10 +14,8 @@ type ProblemManifest struct {
 	MaxScore      *int           `json:"max_score"` // null для pass-fail задач
 	FilesMetadata []FileMetadata `json:"meta_files"`
 
-	TimeLimitMs     int `json:"time_limit_ms"`
-	MemoryLimitMb   int `json:"memory_limit_mb"`
-	StdoutLimitMb   int `json:"stdout_limit_mb"`
-	CodeSizeLimitKb int `json:"code_size_limit_kb"`
+	TimeLimitMs   int `json:"time_limit_ms"`
+	MemoryLimitMb int `json:"memory_limit_mb"`
 
 	Statement Statement `json:"statement"`
 }

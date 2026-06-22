@@ -400,12 +400,10 @@ type PostModel struct {
 
 // ProblemLimits defines model for ProblemLimits.
 type ProblemLimits struct {
-	CodeSizeLimitKb int    `json:"code_size_limit_kb"`
-	MaxScore        *int   `json:"max_score"`
-	MemoryLimitMb   int    `json:"memory_limit_mb"`
-	ProblemType     string `json:"problem_type"`
-	StdoutLimitMb   int    `json:"stdout_limit_mb"`
-	TimeLimitMs     int    `json:"time_limit_ms"`
+	MaxScore      *int   `json:"max_score"`
+	MemoryLimitMb int    `json:"memory_limit_mb"`
+	ProblemType   string `json:"problem_type"`
+	TimeLimitMs   int    `json:"time_limit_ms"`
 }
 
 // ProblemModel defines model for ProblemModel.
@@ -563,12 +561,10 @@ type UpdateOrganizationRequestModel struct {
 
 // UpdateProblemLimitsRequest defines model for UpdateProblemLimitsRequest.
 type UpdateProblemLimitsRequest struct {
-	CodeSizeLimitKb *int    `json:"code_size_limit_kb,omitempty"`
-	MaxScore        *int    `json:"max_score"`
-	MemoryLimitMb   *int    `json:"memory_limit_mb,omitempty"`
-	ProblemType     *string `json:"problem_type,omitempty"`
-	StdoutLimitMb   *int    `json:"stdout_limit_mb,omitempty"`
-	TimeLimitMs     *int    `json:"time_limit_ms,omitempty"`
+	MaxScore      *int    `json:"max_score"`
+	MemoryLimitMb *int    `json:"memory_limit_mb,omitempty"`
+	ProblemType   *string `json:"problem_type,omitempty"`
+	TimeLimitMs   *int    `json:"time_limit_ms,omitempty"`
 }
 
 // UpdateProblemRequestModel defines model for UpdateProblemRequestModel.

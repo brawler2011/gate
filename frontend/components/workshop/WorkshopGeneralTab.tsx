@@ -26,8 +26,6 @@ type LimitsData = {
   max_score: number | null;
   time_limit_ms: number;
   memory_limit_mb: number;
-  stdout_limit_mb: number;
-  code_size_limit_kb: number;
 };
 
 type Props = {
@@ -67,8 +65,6 @@ export function WorkshopGeneralTab({ problemId }: Props) {
         max_score: data.max_score ?? null,
         time_limit_ms: data.time_limit_ms,
         memory_limit_mb: data.memory_limit_mb,
-        stdout_limit_mb: data.stdout_limit_mb,
-        code_size_limit_kb: data.code_size_limit_kb,
       });
       setIsDirty(false);
     });
@@ -111,8 +107,6 @@ export function WorkshopGeneralTab({ problemId }: Props) {
         max_score: limits.problem_type === "scoring" ? limits.max_score : null,
         time_limit_ms: limits.time_limit_ms,
         memory_limit_mb: limits.memory_limit_mb,
-        stdout_limit_mb: limits.stdout_limit_mb,
-        code_size_limit_kb: limits.code_size_limit_kb,
       });
 
       if (error) {
@@ -210,35 +204,7 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                     }
                   />
                 </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 4 }}>
-                  <NumberInput
-                    label="Лимит вывода"
-                    description="В мегабайтах"
-                    suffix=" МБ"
-                    min={0}
-                    value={limits.stdout_limit_mb}
-                    onChange={(value) =>
-                      patchLimits({
-                        stdout_limit_mb: typeof value === "number" ? value : 0,
-                      })
-                    }
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 4 }}>
-                  <NumberInput
-                    label="Лимит размера кода"
-                    description="В килобайтах"
-                    suffix=" КБ"
-                    min={0}
-                    value={limits.code_size_limit_kb}
-                    onChange={(value) =>
-                      patchLimits({
-                        code_size_limit_kb:
-                          typeof value === "number" ? value : 0,
-                      })
-                    }
-                  />
-                </Grid.Col>
+
                 <Grid.Col span={{ base: 12, sm: 4 }}>
                   <NumberInput
                     label="Максимальный балл"

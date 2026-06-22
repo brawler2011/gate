@@ -608,14 +608,12 @@ func (uc *WorkshopUseCase) readTestsMetadata(ctx context.Context, problemID uuid
 
 func defaultManifest(title string) *models.ProblemManifest {
 	return &models.ProblemManifest{
-		LastUpdated:     time.Now(),
-		ProblemType:     "pass-fail",
-		MaxScore:        nil,
-		FilesMetadata:   []models.FileMetadata{},
-		TimeLimitMs:     1000,
-		MemoryLimitMb:   256,
-		StdoutLimitMb:   64,
-		CodeSizeLimitKb: 256,
+		LastUpdated:   time.Now(),
+		ProblemType:   "pass-fail",
+		MaxScore:      nil,
+		FilesMetadata: []models.FileMetadata{},
+		TimeLimitMs:   1000,
+		MemoryLimitMb: 256,
 		Statement: models.Statement{
 			Title:        title,
 			Legend:       "Problem description goes here.",

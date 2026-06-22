@@ -98,12 +98,6 @@ func (h *CoreServer) UpdateProblemLimits(ctx context.Context, request corev1.Upd
 	if body.MemoryLimitMb != nil {
 		manifest.MemoryLimitMb = *body.MemoryLimitMb
 	}
-	if body.StdoutLimitMb != nil {
-		manifest.StdoutLimitMb = *body.StdoutLimitMb
-	}
-	if body.CodeSizeLimitKb != nil {
-		manifest.CodeSizeLimitKb = *body.CodeSizeLimitKb
-	}
 	if body.MaxScore != nil {
 		score := *body.MaxScore
 		manifest.MaxScore = &score
@@ -933,12 +927,10 @@ func (h *CoreServer) syncProblemTitleIfNeeded(ctx context.Context, problemID uui
 
 func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) corev1.ProblemLimits {
 	return corev1.ProblemLimits{
-		CodeSizeLimitKb: manifest.CodeSizeLimitKb,
-		MaxScore:        manifest.MaxScore,
-		MemoryLimitMb:   manifest.MemoryLimitMb,
-		ProblemType:     manifest.ProblemType,
-		StdoutLimitMb:   manifest.StdoutLimitMb,
-		TimeLimitMs:     manifest.TimeLimitMs,
+		MaxScore:      manifest.MaxScore,
+		MemoryLimitMb: manifest.MemoryLimitMb,
+		ProblemType:   manifest.ProblemType,
+		TimeLimitMs:   manifest.TimeLimitMs,
 	}
 }
 
