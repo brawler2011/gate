@@ -10,6 +10,8 @@ import {
   Box,
   Button,
   Group,
+  Modal,
+  Select,
   Stack,
   Text,
   TextInput,
@@ -170,17 +172,28 @@ function WorkshopStatementPreview({
 export function WorkshopStatementTab({ problemId }: Props) {
   const [statement, setStatement] = useState<StatementData | null>(null);
   const [previewMeta, setPreviewMeta] = useState<PreviewMeta | null>(null);
+  const [languages, setLanguages] = useState<string[]>(["en"]);
+  const [activeLang, setActiveLang] = useState<string>("en");
   const [isDirty, setIsDirty] = useState(false);
   const [isLoading, startLoading] = useTransition();
   const [isSaving, startSaving] = useTransition();
   const deferredStatement = useDeferredValue(statement);
 
-  useEffect(() => {
+  // States for custom Mantine modals
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [pendingLang, setPendingLang] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<"switch" | "add" | null>(null);
+  const [isAddLangOpen, setIsAddLangOpen] = useState(false);
+  const [newLangCode, setNewLangCode] = useState("");
+  const [newLangError, setNewLangError] = useState("");
+  const [isAddingServerLang, setIsAddingServerLang] = useState(false);
+
+  const loadStatement = (lang: string) => {
     startLoading(async () => {
       const [[limitsError, limits], [statementError, statementData]] =
         await Promise.all([
           getWorkshopProblemLimits(problemId),
-          getWorkshopProblemStatement(problemId),
+          getWorkshopProblemStatement(problemId, lang),
         ]);
 
       if (limitsError || !limits) {
@@ -217,9 +230,110 @@ export function WorkshopStatementTab({ problemId }: Props) {
         interaction: statementData.interaction ?? "",
         scoring: statementData.scoring ?? "",
       });
+      setLanguages(statementData.languages ?? [lang]);
+      setActiveLang(statementData.current_lang ?? lang);
       setIsDirty(false);
     });
+  };
+
+  useEffect(() => {
+    loadStatement(activeLang);
   }, [problemId]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "У вас есть несохраненные изменения.";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isDirty]);
+
+  const handleLangChange = (newValue: string | null) => {
+    if (!newValue) return;
+    if (newValue === "add_new_lang") {
+      if (isDirty) {
+        setPendingAction("add");
+        setIsConfirmOpen(true);
+      } else {
+        handleAddLanguageClick();
+      }
+    } else {
+      if (isDirty) {
+        setPendingLang(newValue);
+        setPendingAction("switch");
+        setIsConfirmOpen(true);
+      } else {
+        loadStatement(newValue);
+      }
+    }
+  };
+
+  const confirmDiscardChanges = () => {
+    if (pendingAction === "switch" && pendingLang) {
+      loadStatement(pendingLang);
+    } else if (pendingAction === "add") {
+      handleAddLanguageClick();
+    }
+    setIsConfirmOpen(false);
+    setPendingLang(null);
+    setPendingAction(null);
+  };
+
+  const handleAddLanguageClick = () => {
+    setNewLangCode("");
+    setNewLangError("");
+    setIsAddLangOpen(true);
+  };
+
+  const submitAddLanguage = async () => {
+    const cleanLang = newLangCode.trim().toLowerCase();
+    if (!cleanLang) {
+      setNewLangError("Код языка не может быть пустым");
+      return;
+    }
+    if (cleanLang.length !== 2 || !/^[a-zA-Z]{2}$/.test(cleanLang)) {
+      setNewLangError("Код языка должен состоять ровно из 2 букв на английском языке (например: ru, en)");
+      return;
+    }
+    if (languages.includes(cleanLang)) {
+      setNewLangError("Этот язык уже добавлен");
+      return;
+    }
+
+    setIsAddingServerLang(true);
+    const [saveError] = await updateWorkshopProblemStatement(problemId, {
+      title: statement?.title ?? "",
+      legend: "",
+      input_format: "",
+      output_format: "",
+      notes: "",
+      interaction: "",
+      scoring: "",
+    }, cleanLang);
+
+    if (saveError) {
+      setNewLangError(saveError.message ?? "Не удалось создать файл на сервере");
+      setIsAddingServerLang(false);
+      return;
+    }
+
+    setIsAddingServerLang(false);
+    setIsAddLangOpen(false);
+
+    notifications.show({
+      title: "Создано",
+      message: `Создано новое условие для языка ${cleanLang.toUpperCase()}`,
+      color: "green",
+    });
+
+    loadStatement(cleanLang);
+  };
 
   const patchStatement = (patch: Partial<StatementData>) => {
     setStatement((prev) => ({
@@ -248,7 +362,7 @@ export function WorkshopStatementTab({ problemId }: Props) {
         notes: statement.notes,
         interaction: statement.interaction,
         scoring: statement.scoring,
-      });
+      }, activeLang);
 
       if (saveError) {
         notifications.show({
@@ -265,6 +379,9 @@ export function WorkshopStatementTab({ problemId }: Props) {
         message: "Условие задачи обновлено",
         color: "green",
       });
+
+      // Reload to update list of languages
+      loadStatement(activeLang);
     });
   };
 
@@ -273,13 +390,38 @@ export function WorkshopStatementTab({ problemId }: Props) {
       <Box className={classes.editorPane}>
         <Box p="lg">
           <Stack gap="lg" maw={900} mx="auto">
-            <SectionPaper title="Условие задачи (statement)">
+            <SectionPaper>
               {isLoading ? (
                 <Text c="dimmed" size="sm">
                   Загрузка...
                 </Text>
               ) : (
                 <Stack gap="md">
+                  <Group justify="space-between" align="center" mb="xs">
+                    <Group gap="xs" align="center">
+                      <Text size="sm" fw={500} c="dimmed">
+                        Язык:
+                      </Text>
+                      <Select
+                        value={activeLang}
+                        onChange={handleLangChange}
+                        data={[
+                          ...languages.map((l) => ({
+                            label: l.toUpperCase(),
+                            value: l,
+                          })),
+                          { label: "+ Добавить язык...", value: "add_new_lang" },
+                        ]}
+                        allowDeselect={false}
+                        w={180}
+                      />
+                    </Group>
+                    {isDirty && (
+                      <Text size="xs" c="orange" fw={500}>
+                        Есть несохраненные изменения
+                      </Text>
+                    )}
+                  </Group>
                   {!statement ? null : (
                     <>
                       <TextInput
@@ -354,7 +496,12 @@ export function WorkshopStatementTab({ problemId }: Props) {
                         autosize
                       />
 
-                      <Group justify="flex-end">
+                      <Group justify="flex-end" align="center" gap="sm">
+                        {isDirty && (
+                          <Text size="xs" c="orange" fw={500}>
+                            Несохраненные изменения
+                          </Text>
+                        )}
                         <Button
                           size="sm"
                           disabled={!isDirty}
@@ -389,6 +536,90 @@ export function WorkshopStatementTab({ problemId }: Props) {
           </Stack>
         </Box>
       </Box>
+
+      {/* Confirmation Modal for Unsaved Changes */}
+      <Modal
+        opened={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        title="Несохраненные изменения"
+        centered
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            У вас есть несохраненные изменения. При переходе на другой язык или добавлении нового все несохраненные изменения будут потеряны. Вы уверены, что хотите продолжить?
+          </Text>
+          <Group justify="flex-end" gap="xs">
+            <Button variant="subtle" color="gray" onClick={() => setIsConfirmOpen(false)}>
+              Отмена
+            </Button>
+            <Button color="red" onClick={confirmDiscardChanges}>
+              Продолжить без сохранения
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal for Adding New Language */}
+      <Modal
+        opened={isAddLangOpen}
+        onClose={() => !isAddingServerLang && setIsAddLangOpen(false)}
+        title="Добавить язык условия"
+        centered
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Введите двухсимвольный ISO-код языка на английском (например, ru, en, de) или выберите из быстрых вариантов ниже.
+          </Text>
+          
+          <TextInput
+            label="Код языка"
+            placeholder="например: ru, en"
+            value={newLangCode}
+            onChange={(e) => {
+              setNewLangCode(e.currentTarget.value);
+              setNewLangError("");
+            }}
+            error={newLangError}
+            maxLength={2}
+            autoFocus
+            disabled={isAddingServerLang}
+          />
+
+          <Group gap="xs">
+            {["ru", "en", "de"].map((code) => (
+              <Button
+                key={code}
+                variant="light"
+                size="xs"
+                disabled={isAddingServerLang}
+                onClick={() => {
+                  setNewLangCode(code);
+                  setNewLangError("");
+                }}
+              >
+                {code.toUpperCase()}
+              </Button>
+            ))}
+          </Group>
+
+          <Group justify="flex-end" gap="xs" mt="sm">
+            <Button
+              variant="subtle"
+              color="gray"
+              onClick={() => setIsAddLangOpen(false)}
+              disabled={isAddingServerLang}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={submitAddLanguage}
+              loading={isAddingServerLang}
+            >
+              Добавить
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Box>
   );
 }

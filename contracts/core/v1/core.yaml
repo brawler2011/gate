@@ -1185,6 +1185,11 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: Problem statement
@@ -1202,6 +1207,11 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: lang
+          in: query
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -3881,6 +3891,12 @@ components:
         interaction:
           type: string
         scoring:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        current_lang:
           type: string
     UpdateProblemStatementRequest:
       type: object

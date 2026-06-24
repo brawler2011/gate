@@ -1010,14 +1010,19 @@ export class DefaultService {
      */
     public getProblemStatement({
         problemId,
+        lang,
     }: {
         problemId: string,
+        lang?: string,
     }): CancelablePromise<ProblemStatement> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/problems/{problemId}/statement',
             path: {
                 'problemId': problemId,
+            },
+            query: {
+                'lang': lang,
             },
         });
     }
@@ -1029,15 +1034,20 @@ export class DefaultService {
     public updateProblemStatement({
         problemId,
         requestBody,
+        lang,
     }: {
         problemId: string,
         requestBody: UpdateProblemStatementRequest,
+        lang?: string,
     }): CancelablePromise<ProblemStatement> {
         return this.httpRequest.request({
             method: 'PATCH',
             url: '/problems/{problemId}/statement',
             path: {
                 'problemId': problemId,
+            },
+            query: {
+                'lang': lang,
             },
             body: requestBody,
             mediaType: 'application/json',

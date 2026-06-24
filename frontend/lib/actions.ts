@@ -407,12 +407,12 @@ export async function updateWorkshopProblemLimits(problemId: string, requestBody
   return Call((client) => client.default.updateProblemLimits({ problemId, requestBody }));
 }
 
-export async function getWorkshopProblemStatement(problemId: string) {
-  return Call((client) => client.default.getProblemStatement({ problemId }));
+export async function getWorkshopProblemStatement(problemId: string, lang?: string) {
+  return Call((client) => client.default.getProblemStatement({ problemId, lang }));
 }
 
-export async function updateWorkshopProblemStatement(problemId: string, requestBody: UpdateProblemStatementRequest) {
-  return Call((client) => client.default.updateProblemStatement({ problemId, requestBody }));
+export async function updateWorkshopProblemStatement(problemId: string, requestBody: UpdateProblemStatementRequest, lang?: string) {
+  return Call((client) => client.default.updateProblemStatement({ problemId, requestBody, lang }));
 }
 
 export async function getWorkshopProblemReadme(problemId: string): Promise<[ApiError | null, string | null]> {

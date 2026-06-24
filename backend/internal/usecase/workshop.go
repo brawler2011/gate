@@ -59,6 +59,8 @@ func ParseStatementMarkdown(content string) models.Statement {
 		tag = strings.ToLower(tag)
 		body := strings.TrimSpace(subparts[1])
 		switch tag {
+		case "title":
+			stmt.Title = body
 		case "legend":
 			stmt.Legend = body
 		case "input":
@@ -78,6 +80,11 @@ func ParseStatementMarkdown(content string) models.Statement {
 
 func RenderStatementMarkdown(stmt models.Statement) string {
 	var sb strings.Builder
+	if stmt.Title != "" {
+		sb.WriteString("<!-- title -->\n")
+		sb.WriteString(stmt.Title)
+		sb.WriteString("\n\n")
+	}
 	sb.WriteString("<!--legend -->")
 	if stmt.Legend != "" {
 		sb.WriteString("\n\n")

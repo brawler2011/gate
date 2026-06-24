@@ -10,5 +10,7 @@ export type ProblemStatement = {
     notes?: string;
     interaction?: string;
     scoring?: string;
+    languages?: Array<string>;
+    current_lang?: string;
 };
 

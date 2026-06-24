@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/transport/middleware"
+	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -124,7 +126,53 @@ func (h *CoreServer) GetProblemStatement(ctx context.Context, request corev1.Get
 		return nil, err
 	}
 
-	return corev1.GetProblemStatement200JSONResponse(h.toContractStatement(manifest)), nil
+	lang := "en"
+	if request.Params.Lang != nil && *request.Params.Lang != "" {
+		lang = *request.Params.Lang
+	}
+
+	// 1. Get list of available languages from statements/ folder
+	var languages []string
+	if files, err := h.workshopUC.ListProblemFiles(ctx, request.ProblemId, "statements"); err == nil {
+		for _, f := range files {
+			if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
+				base := filepath.Base(f.Path)
+				langCode := strings.TrimSuffix(base, ".md")
+				if langCode != "" {
+					languages = append(languages, langCode)
+				}
+			}
+		}
+	}
+	sort.Strings(languages)
+
+	// Ensure the default language is listed if the list is empty
+	if len(languages) == 0 {
+		languages = []string{"en"}
+	}
+
+	// 2. Read statement for specific language from workspace
+	var stmt models.Statement
+	filePath := fmt.Sprintf("statements/%s.md", lang)
+	fileData, err := h.workshopUC.ReadProblemFile(ctx, request.ProblemId, filePath)
+	if err == nil {
+		stmt = usecase.ParseStatementMarkdown(string(fileData))
+		// If title tag is empty, fallback to the manifest title
+		if strings.TrimSpace(stmt.Title) == "" {
+			stmt.Title = manifest.Statement.Title
+		}
+	} else {
+		// If requested lang is "en" and en.md is missing, fallback to manifest
+		if lang == "en" {
+			stmt = manifest.Statement
+		} else {
+			// Return empty statement with title of the main problem
+			stmt.Title = manifest.Statement.Title
+		}
+	}
+
+	resp := h.toContractStatementForLang(stmt, languages, lang)
+	return corev1.GetProblemStatement200JSONResponse(resp), nil
 }
 
 // UpdateProblemStatement handles PATCH /problems/{problemId}/statement
@@ -138,41 +186,98 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, request corev1.
 		return nil, err
 	}
 
+	lang := "en"
+	if request.Params.Lang != nil && *request.Params.Lang != "" {
+		lang = *request.Params.Lang
+	}
+
+	// 1. Get existing statement for this language to apply patch
+	var stmt models.Statement
+	filePath := fmt.Sprintf("statements/%s.md", lang)
+	fileData, err := h.workshopUC.ReadProblemFile(ctx, request.ProblemId, filePath)
+	if err == nil {
+		stmt = usecase.ParseStatementMarkdown(string(fileData))
+		if strings.TrimSpace(stmt.Title) == "" {
+			stmt.Title = manifest.Statement.Title
+		}
+	} else {
+		if lang == "en" {
+			stmt = manifest.Statement
+		} else {
+			stmt.Title = manifest.Statement.Title
+		}
+	}
+
 	body := request.Body
 	if body.Title != nil {
-		manifest.Statement.Title = *body.Title
+		stmt.Title = *body.Title
 	}
 	if body.Legend != nil {
-		manifest.Statement.Legend = *body.Legend
+		stmt.Legend = *body.Legend
 	}
 	if body.InputFormat != nil {
-		manifest.Statement.InputFormat = *body.InputFormat
+		stmt.InputFormat = *body.InputFormat
 	}
 	if body.OutputFormat != nil {
-		manifest.Statement.OutputFormat = *body.OutputFormat
+		stmt.OutputFormat = *body.OutputFormat
 	}
 	if body.Notes != nil {
-		manifest.Statement.Notes = *body.Notes
+		stmt.Notes = *body.Notes
 	}
 	if body.Interaction != nil {
-		manifest.Statement.Interaction = *body.Interaction
+		stmt.Interaction = *body.Interaction
 	}
 	if body.Scoring != nil {
-		manifest.Statement.Scoring = *body.Scoring
+		stmt.Scoring = *body.Scoring
 	}
 
-	if err := validateManifest(manifest); err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
+	// 2. Write statement back to workspace storage
+	stmtBytes := []byte(usecase.RenderStatementMarkdown(stmt))
+	user := middleware.GetUser(ctx)
+	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+		ProblemID: request.ProblemId,
+		UserID:    user.Id,
+		Path:      filePath,
+		Content:   stmtBytes,
+	}); err != nil {
+		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to save statement file")
 	}
 
-	if err := h.saveWorkshopManifest(ctx, request.ProblemId, middleware.GetUser(ctx).Id, manifest); err != nil {
-		return nil, err
-	}
-	if err := h.syncProblemTitleIfNeeded(ctx, request.ProblemId, manifest.Statement.Title); err != nil {
-		return nil, err
+	// 3. If saving default language statement (en), sync to DB manifest and problem.yaml
+	if lang == "en" {
+		manifest.Statement = stmt
+		if err := validateManifest(manifest); err != nil {
+			return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
+		}
+
+		if err := h.saveWorkshopManifest(ctx, request.ProblemId, user.Id, manifest); err != nil {
+			return nil, err
+		}
+		if err := h.syncProblemTitleIfNeeded(ctx, request.ProblemId, manifest.Statement.Title); err != nil {
+			return nil, err
+		}
 	}
 
-	return corev1.UpdateProblemStatement200JSONResponse(h.toContractStatement(manifest)), nil
+	// 4. Retrieve list of languages for response
+	var languages []string
+	if files, err := h.workshopUC.ListProblemFiles(ctx, request.ProblemId, "statements"); err == nil {
+		for _, f := range files {
+			if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
+				base := filepath.Base(f.Path)
+				langCode := strings.TrimSuffix(base, ".md")
+				if langCode != "" {
+					languages = append(languages, langCode)
+				}
+			}
+		}
+	}
+	sort.Strings(languages)
+	if len(languages) == 0 {
+		languages = []string{"en"}
+	}
+
+	resp := h.toContractStatementForLang(stmt, languages, lang)
+	return corev1.UpdateProblemStatement200JSONResponse(resp), nil
 }
 
 // ListProblemCheckers handles GET /problems/{problemId}/checkers
@@ -943,6 +1048,20 @@ func (h *CoreServer) toContractStatement(manifest *models.ProblemManifest) corev
 		OutputFormat: manifest.Statement.OutputFormat,
 		Scoring:      optionalString(manifest.Statement.Scoring),
 		Title:        manifest.Statement.Title,
+	}
+}
+
+func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages []string, currentLang string) corev1.ProblemStatement {
+	return corev1.ProblemStatement{
+		InputFormat:  stmt.InputFormat,
+		Interaction:  optionalString(stmt.Interaction),
+		Legend:       stmt.Legend,
+		Notes:        optionalString(stmt.Notes),
+		OutputFormat: stmt.OutputFormat,
+		Scoring:      optionalString(stmt.Scoring),
+		Title:        stmt.Title,
+		Languages:    &languages,
+		CurrentLang:  &currentLang,
 	}
 }
 

@@ -432,13 +432,15 @@ type ProblemModel struct {
 
 // ProblemStatement defines model for ProblemStatement.
 type ProblemStatement struct {
-	InputFormat  string  `json:"input_format"`
-	Interaction  *string `json:"interaction,omitempty"`
-	Legend       string  `json:"legend"`
-	Notes        *string `json:"notes,omitempty"`
-	OutputFormat string  `json:"output_format"`
-	Scoring      *string `json:"scoring,omitempty"`
-	Title        string  `json:"title"`
+	CurrentLang  *string   `json:"current_lang,omitempty"`
+	InputFormat  string    `json:"input_format"`
+	Interaction  *string   `json:"interaction,omitempty"`
+	Languages    *[]string `json:"languages,omitempty"`
+	Legend       string    `json:"legend"`
+	Notes        *string   `json:"notes,omitempty"`
+	OutputFormat string    `json:"output_format"`
+	Scoring      *string   `json:"scoring,omitempty"`
+	Title        string    `json:"title"`
 }
 
 // ProblemsListItemModel defines model for ProblemsListItemModel.
@@ -793,6 +795,16 @@ type CreateProblemInteractorParams struct {
 // CreateProblemMediaFileParams defines parameters for CreateProblemMediaFile.
 type CreateProblemMediaFileParams struct {
 	Name string `form:"name" json:"name"`
+}
+
+// GetProblemStatementParams defines parameters for GetProblemStatement.
+type GetProblemStatementParams struct {
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
+// UpdateProblemStatementParams defines parameters for UpdateProblemStatement.
+type UpdateProblemStatementParams struct {
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty"`
 }
 
 // CreateProblemWorkshopSubmissionParams defines parameters for CreateProblemWorkshopSubmission.
@@ -1320,12 +1332,12 @@ type ClientInterface interface {
 	UpdateProblemReadmeWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetProblemStatement request
-	GetProblemStatement(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetProblemStatement(ctx context.Context, problemId openapi_types.UUID, params *GetProblemStatementParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateProblemStatementWithBody request with any body
-	UpdateProblemStatementWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateProblemStatementWithBody(ctx context.Context, problemId openapi_types.UUID, params *UpdateProblemStatementParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateProblemStatement(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateProblemStatement(ctx context.Context, problemId openapi_types.UUID, params *UpdateProblemStatementParams, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListProblemWorkshopSubmissions request
 	ListProblemWorkshopSubmissions(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2397,8 +2409,8 @@ func (c *Client) UpdateProblemReadmeWithBody(ctx context.Context, problemId open
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetProblemStatement(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetProblemStatementRequest(c.Server, problemId)
+func (c *Client) GetProblemStatement(ctx context.Context, problemId openapi_types.UUID, params *GetProblemStatementParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemStatementRequest(c.Server, problemId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -2409,8 +2421,8 @@ func (c *Client) GetProblemStatement(ctx context.Context, problemId openapi_type
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateProblemStatementWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateProblemStatementRequestWithBody(c.Server, problemId, contentType, body)
+func (c *Client) UpdateProblemStatementWithBody(ctx context.Context, problemId openapi_types.UUID, params *UpdateProblemStatementParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemStatementRequestWithBody(c.Server, problemId, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2421,8 +2433,8 @@ func (c *Client) UpdateProblemStatementWithBody(ctx context.Context, problemId o
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateProblemStatement(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateProblemStatementRequest(c.Server, problemId, body)
+func (c *Client) UpdateProblemStatement(ctx context.Context, problemId openapi_types.UUID, params *UpdateProblemStatementParams, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemStatementRequest(c.Server, problemId, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -6283,7 +6295,7 @@ func NewUpdateProblemReadmeRequestWithBody(server string, problemId openapi_type
 }
 
 // NewGetProblemStatementRequest generates requests for GetProblemStatement
-func NewGetProblemStatementRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+func NewGetProblemStatementRequest(server string, problemId openapi_types.UUID, params *GetProblemStatementParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -6306,6 +6318,28 @@ func NewGetProblemStatementRequest(server string, problemId openapi_types.UUID) 
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Lang != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "lang", runtime.ParamLocationQuery, *params.Lang); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
@@ -6317,18 +6351,18 @@ func NewGetProblemStatementRequest(server string, problemId openapi_types.UUID) 
 }
 
 // NewUpdateProblemStatementRequest calls the generic UpdateProblemStatement builder with application/json body
-func NewUpdateProblemStatementRequest(server string, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody) (*http.Request, error) {
+func NewUpdateProblemStatementRequest(server string, problemId openapi_types.UUID, params *UpdateProblemStatementParams, body UpdateProblemStatementJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateProblemStatementRequestWithBody(server, problemId, "application/json", bodyReader)
+	return NewUpdateProblemStatementRequestWithBody(server, problemId, params, "application/json", bodyReader)
 }
 
 // NewUpdateProblemStatementRequestWithBody generates requests for UpdateProblemStatement with any type of body
-func NewUpdateProblemStatementRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateProblemStatementRequestWithBody(server string, problemId openapi_types.UUID, params *UpdateProblemStatementParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -6351,6 +6385,28 @@ func NewUpdateProblemStatementRequestWithBody(server string, problemId openapi_t
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Lang != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "lang", runtime.ParamLocationQuery, *params.Lang); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("PATCH", queryURL.String(), body)
@@ -8987,12 +9043,12 @@ type ClientWithResponsesInterface interface {
 	UpdateProblemReadmeWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemReadmeResponse, error)
 
 	// GetProblemStatementWithResponse request
-	GetProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemStatementResponse, error)
+	GetProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, params *GetProblemStatementParams, reqEditors ...RequestEditorFn) (*GetProblemStatementResponse, error)
 
 	// UpdateProblemStatementWithBodyWithResponse request with any body
-	UpdateProblemStatementWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error)
+	UpdateProblemStatementWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *UpdateProblemStatementParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error)
 
-	UpdateProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error)
+	UpdateProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, params *UpdateProblemStatementParams, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error)
 
 	// ListProblemWorkshopSubmissionsWithResponse request
 	ListProblemWorkshopSubmissionsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemWorkshopSubmissionsResponse, error)
@@ -12315,8 +12371,8 @@ func (c *ClientWithResponses) UpdateProblemReadmeWithBodyWithResponse(ctx contex
 }
 
 // GetProblemStatementWithResponse request returning *GetProblemStatementResponse
-func (c *ClientWithResponses) GetProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemStatementResponse, error) {
-	rsp, err := c.GetProblemStatement(ctx, problemId, reqEditors...)
+func (c *ClientWithResponses) GetProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, params *GetProblemStatementParams, reqEditors ...RequestEditorFn) (*GetProblemStatementResponse, error) {
+	rsp, err := c.GetProblemStatement(ctx, problemId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -12324,16 +12380,16 @@ func (c *ClientWithResponses) GetProblemStatementWithResponse(ctx context.Contex
 }
 
 // UpdateProblemStatementWithBodyWithResponse request with arbitrary body returning *UpdateProblemStatementResponse
-func (c *ClientWithResponses) UpdateProblemStatementWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error) {
-	rsp, err := c.UpdateProblemStatementWithBody(ctx, problemId, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateProblemStatementWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *UpdateProblemStatementParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error) {
+	rsp, err := c.UpdateProblemStatementWithBody(ctx, problemId, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateProblemStatementResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error) {
-	rsp, err := c.UpdateProblemStatement(ctx, problemId, body, reqEditors...)
+func (c *ClientWithResponses) UpdateProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, params *UpdateProblemStatementParams, body UpdateProblemStatementJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateProblemStatementResponse, error) {
+	rsp, err := c.UpdateProblemStatement(ctx, problemId, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -15776,10 +15832,10 @@ type ServerInterface interface {
 	UpdateProblemReadme(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Get problem statement
 	// (GET /problems/{problemId}/statement)
-	GetProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	GetProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params GetProblemStatementParams)
 	// Update problem statement
 	// (PATCH /problems/{problemId}/statement)
-	UpdateProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	UpdateProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params UpdateProblemStatementParams)
 	// List author solution files
 	// (GET /problems/{problemId}/submissions)
 	ListProblemWorkshopSubmissions(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
@@ -18310,8 +18366,19 @@ func (siw *ServerInterfaceWrapper) GetProblemStatement(w http.ResponseWriter, r 
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetProblemStatementParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "lang", r.URL.Query(), &params.Lang)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetProblemStatement(w, r, problemId)
+		siw.Handler.GetProblemStatement(w, r, problemId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -18335,8 +18402,19 @@ func (siw *ServerInterfaceWrapper) UpdateProblemStatement(w http.ResponseWriter,
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateProblemStatementParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "lang", r.URL.Query(), &params.Lang)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateProblemStatement(w, r, problemId)
+		siw.Handler.UpdateProblemStatement(w, r, problemId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -21702,6 +21780,7 @@ func (response UpdateProblemReadme200JSONResponse) VisitUpdateProblemReadmeRespo
 
 type GetProblemStatementRequestObject struct {
 	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    GetProblemStatementParams
 }
 
 type GetProblemStatementResponseObject interface {
@@ -21719,6 +21798,7 @@ func (response GetProblemStatement200JSONResponse) VisitGetProblemStatementRespo
 
 type UpdateProblemStatementRequestObject struct {
 	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    UpdateProblemStatementParams
 	Body      *UpdateProblemStatementJSONRequestBody
 }
 
@@ -24835,10 +24915,11 @@ func (sh *strictHandler) UpdateProblemReadme(w http.ResponseWriter, r *http.Requ
 }
 
 // GetProblemStatement operation middleware
-func (sh *strictHandler) GetProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+func (sh *strictHandler) GetProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params GetProblemStatementParams) {
 	var request GetProblemStatementRequestObject
 
 	request.ProblemId = problemId
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetProblemStatement(ctx, request.(GetProblemStatementRequestObject))
@@ -24861,10 +24942,11 @@ func (sh *strictHandler) GetProblemStatement(w http.ResponseWriter, r *http.Requ
 }
 
 // UpdateProblemStatement operation middleware
-func (sh *strictHandler) UpdateProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+func (sh *strictHandler) UpdateProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params UpdateProblemStatementParams) {
 	var request UpdateProblemStatementRequestObject
 
 	request.ProblemId = problemId
+	request.Params = params
 
 	var body UpdateProblemStatementJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
