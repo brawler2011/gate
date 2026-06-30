@@ -4,6 +4,17 @@
   min-height: 0;
 }
 
+.outerRoot {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.topBar {
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+}
+
 .editorPane,
 .previewPane {
   flex: 1 1 50%;

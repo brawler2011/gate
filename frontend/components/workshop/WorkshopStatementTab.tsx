@@ -386,44 +386,57 @@ export function WorkshopStatementTab({ problemId }: Props) {
   };
 
   return (
-    <Box className={classes.root}>
-      <Box className={classes.editorPane}>
-        <Box p="lg">
-          <Stack gap="lg" maw={900} mx="auto">
-            <SectionPaper>
-              {isLoading ? (
-                <Text c="dimmed" size="sm">
-                  Загрузка...
-                </Text>
-              ) : (
-                <Stack gap="md">
-                  <Group justify="space-between" align="center" mb="xs">
-                    <Group gap="xs" align="center">
-                      <Text size="sm" fw={500} c="dimmed">
-                        Язык:
-                      </Text>
-                      <Select
-                        value={activeLang}
-                        onChange={handleLangChange}
-                        data={[
-                          ...languages.map((l) => ({
-                            label: l.toUpperCase(),
-                            value: l,
-                          })),
-                          { label: "+ Добавить язык...", value: "add_new_lang" },
-                        ]}
-                        allowDeselect={false}
-                        w={180}
-                      />
-                    </Group>
-                    {isDirty && (
-                      <Text size="xs" c="orange" fw={500}>
-                        Есть несохраненные изменения
-                      </Text>
-                    )}
-                  </Group>
-                  {!statement ? null : (
-                    <>
+    <Box className={classes.outerRoot}>
+      <Box className={classes.topBar}>
+        <Group justify="flex-end" align="center" px="lg" py="sm" gap="lg">
+          {isDirty && (
+            <Text size="xs" c="orange" fw={500}>
+              Несохраненные изменения
+            </Text>
+          )}
+          <Button
+            size="sm"
+            disabled={!isDirty}
+            loading={isSaving}
+            onClick={handleSave}
+          >
+            Сохранить
+          </Button>
+          <Group gap="xs" align="center">
+            <Text size="sm" fw={500} c="dimmed">
+              Язык:
+            </Text>
+            <Select
+              value={activeLang}
+              onChange={handleLangChange}
+              data={[
+                ...languages.map((l) => ({
+                  label: l.toUpperCase(),
+                  value: l,
+                })),
+                { label: "+ Добавить язык...", value: "add_new_lang" },
+              ]}
+              allowDeselect={false}
+              w={180}
+              disabled={isLoading}
+            />
+          </Group>
+        </Group>
+      </Box>
+
+      <Box className={classes.root}>
+        <Box className={classes.editorPane}>
+          <Box p="lg">
+            <Stack gap="lg" maw={900} mx="auto">
+              <SectionPaper>
+                {isLoading ? (
+                  <Text c="dimmed" size="sm">
+                    Загрузка...
+                  </Text>
+                ) : (
+                  <Stack gap="md">
+                    {!statement ? null : (
+                      <>
                       <TextInput
                         label="Заголовок"
                         value={statement.title}
@@ -496,21 +509,6 @@ export function WorkshopStatementTab({ problemId }: Props) {
                         autosize
                       />
 
-                      <Group justify="flex-end" align="center" gap="sm">
-                        {isDirty && (
-                          <Text size="xs" c="orange" fw={500}>
-                            Несохраненные изменения
-                          </Text>
-                        )}
-                        <Button
-                          size="sm"
-                          disabled={!isDirty}
-                          loading={isSaving}
-                          onClick={handleSave}
-                        >
-                          Сохранить условие
-                        </Button>
-                      </Group>
                     </>
                   )}
                 </Stack>
@@ -536,6 +534,7 @@ export function WorkshopStatementTab({ problemId }: Props) {
           </Stack>
         </Box>
       </Box>
+    </Box>
 
       {/* Confirmation Modal for Unsaved Changes */}
       <Modal
