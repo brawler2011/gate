@@ -11,7 +11,6 @@ type Problem struct {
 	Checker       string             `yaml:"checker,omitempty" json:"checker,omitempty"`
 	Interactor    string             `yaml:"interactor,omitempty" json:"interactor,omitempty"`
 	Validator     string             `yaml:"validator,omitempty" json:"validator,omitempty"`
-	Generator     string             `yaml:"generator,omitempty" json:"generator,omitempty"`
 }
 
 // Limits defines the resource limits for a problem.

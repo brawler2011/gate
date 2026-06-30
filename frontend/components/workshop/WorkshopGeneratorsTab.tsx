@@ -5,7 +5,6 @@ import {
   getWorkshopGeneratorFile,
   listWorkshopGeneratorFiles,
   updateWorkshopGeneratorFile,
-  setWorkshopGeneratorMain,
 } from "@/lib/actions";
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
 import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
@@ -19,7 +18,6 @@ export function WorkshopGeneratorsTab(props: WorkshopFileTabProps) {
       getFile={getWorkshopGeneratorFile}
       createFile={createWorkshopGeneratorFile}
       updateFile={updateWorkshopGeneratorFile}
-      setMain={setWorkshopGeneratorMain}
     />
   );
 }

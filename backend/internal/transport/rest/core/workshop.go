@@ -15,9 +15,7 @@ import (
 	"github.com/gate149/gate/backend/internal/transport/middleware"
 	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/pkg"
-	"github.com/gate149/gate/backend/pkg/formats/gfmt"
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -763,14 +761,12 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 		return corev1.WorkshopFileListResponse{}, pkg.Wrap(pkg.ErrInternal, err, "failed to list files")
 	}
 
-	// Read problem.yaml to get the active components
-	var gfmtProblem gfmt.Problem
-	yamlBytes, err := h.workshopUC.ReadProblemFile(ctx, problemID, "problem.yaml")
-	if err == nil {
-		_ = yaml.Unmarshal(yamlBytes, &gfmtProblem)
+	manifest, err := h.readWorkshopManifest(ctx, problemID)
+	if err != nil {
+		manifest = &models.ProblemManifest{}
 	}
 
-	contractFiles := toContractFileEntries(files, &gfmtProblem)
+	contractFiles := toContractFileEntries(files, manifest)
 	return corev1.WorkshopFileListResponse{Files: &contractFiles}, nil
 }
 
@@ -1049,16 +1045,37 @@ func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages
 	}
 }
 
-func toContractFileEntries(files []models.FileEntry, prob *gfmt.Problem) []corev1.FileEntry {
+func toContractFileEntries(files []models.FileEntry, manifest *models.ProblemManifest) []corev1.FileEntry {
+	var mainChecker, mainInteractor, mainValidator string
+	if manifest != nil {
+		for _, meta := range manifest.FilesMetadata {
+			switch meta.Type {
+			case "checker":
+				if mainChecker == "" {
+					mainChecker = filepath.ToSlash(meta.Filename)
+				}
+			case "interactor":
+				if mainInteractor == "" {
+					mainInteractor = filepath.ToSlash(meta.Filename)
+				}
+			case "validator":
+				if mainValidator == "" {
+					mainValidator = filepath.ToSlash(meta.Filename)
+				}
+			}
+		}
+	}
+
 	contractFiles := make([]corev1.FileEntry, len(files))
 	for i, f := range files {
 		isMain := false
 		normalizedPath := filepath.ToSlash(f.Path)
-		if prob != nil {
-			if (prob.Checker != "" && normalizedPath == filepath.ToSlash(prob.Checker)) ||
-				(prob.Interactor != "" && normalizedPath == filepath.ToSlash(prob.Interactor)) ||
-				(prob.Validator != "" && normalizedPath == filepath.ToSlash(prob.Validator)) ||
-				(prob.Generator != "" && normalizedPath == filepath.ToSlash(prob.Generator)) {
+		if manifest != nil {
+			if strings.HasPrefix(normalizedPath, "checkers/") && normalizedPath == mainChecker {
+				isMain = true
+			} else if strings.HasPrefix(normalizedPath, "interactors/") && normalizedPath == mainInteractor {
+				isMain = true
+			} else if strings.HasPrefix(normalizedPath, "validators/") && normalizedPath == mainValidator {
 				isMain = true
 			}
 		}

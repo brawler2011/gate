@@ -156,6 +156,10 @@ func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uu
 }
 
 func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.UpdateFileRequest) error {
+	if req.Path == "problem.yaml" {
+		return fmt.Errorf("cannot modify problem.yaml directly")
+	}
+
 	if err := uc.workspaceStorage.WriteFile(ctx, req.ProblemID, req.Path, req.Content); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
@@ -212,6 +216,10 @@ func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.Upd
 }
 
 func (uc *WorkshopUseCase) DeleteProblemFile(ctx context.Context, problemID uuid.UUID, path string) error {
+	if path == "problem.yaml" {
+		return fmt.Errorf("cannot delete problem.yaml directly")
+	}
+
 	if err := uc.workspaceStorage.DeleteFile(ctx, problemID, path); err != nil {
 		return err
 	}
@@ -584,13 +592,24 @@ func (uc *WorkshopUseCase) loadManifest(ctx context.Context, problemID uuid.UUID
 func (uc *WorkshopUseCase) saveManifest(ctx context.Context, problemID uuid.UUID, manifest *models.ProblemManifest) error {
 	manifest.LastUpdated = time.Now()
 
-	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
+	// Sync to problem.yaml
+	testsMeta, err := uc.readTestsMetadata(ctx, problemID)
 	if err != nil {
-		return fmt.Errorf("failed to marshal manifest: %w", err)
+		testsMeta = defaultTestsMetadata()
+	}
+	gfmtProb := ManifestAndTestsToGfmtProblem(manifest, testsMeta)
+	yamlBytes, err := yaml.Marshal(gfmtProb)
+	if err != nil {
+		return fmt.Errorf("failed to marshal problem.yaml: %w", err)
+	}
+	if err := uc.workspaceStorage.WriteFile(ctx, problemID, "problem.yaml", yamlBytes); err != nil {
+		return fmt.Errorf("failed to write problem.yaml: %w", err)
 	}
 
-	if err := uc.problemsRepo.UpdateProblemManifest(ctx, problemID, manifestBytes); err != nil {
-		return fmt.Errorf("failed to save manifest to database: %w", err)
+	// Also sync to database manifest as write-only DB cache
+	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
+	if err == nil {
+		_ = uc.problemsRepo.UpdateProblemManifest(ctx, problemID, manifestBytes)
 	}
 
 	return nil
@@ -755,10 +774,6 @@ func ManifestAndTestsToGfmtProblem(manifest *models.ProblemManifest, testsMeta *
 			if prob.Validator == "" {
 				prob.Validator = meta.Filename
 			}
-		case "generator":
-			if prob.Generator == "" {
-				prob.Generator = meta.Filename
-			}
 		}
 	}
 
@@ -814,31 +829,79 @@ func (uc *WorkshopUseCase) SaveManifest(ctx context.Context, problemID uuid.UUID
 		return err
 	}
 
-	// Sync to problem.yaml
-	testsMeta, err := uc.readTestsMetadata(ctx, problemID)
-	if err != nil {
-		testsMeta = defaultTestsMetadata()
-	}
-	gfmtProb := ManifestAndTestsToGfmtProblem(manifest, testsMeta)
-	yamlBytes, err := yaml.Marshal(gfmtProb)
-	if err == nil {
-		_ = uc.workspaceStorage.WriteFile(ctx, problemID, "problem.yaml", yamlBytes)
-	}
-
 	// Sync to statements/en.md
 	stmtBytes := []byte(RenderStatementMarkdown(manifest.Statement))
 	_ = uc.workspaceStorage.WriteFile(ctx, problemID, "statements/en.md", stmtBytes)
 
 	// Sync title if changed
-	title := strings.TrimSpace(manifest.Statement.Title)
+	uc.syncProblemTitle(ctx, problemID, manifest.Statement.Title)
+
+	return nil
+}
+
+func (uc *WorkshopUseCase) syncProblemTitle(ctx context.Context, problemID uuid.UUID, title string) {
+	title = strings.TrimSpace(title)
 	if title != "" {
 		problem, err := uc.problemsRepo.GetProblemById(ctx, problemID)
 		if err == nil && strings.TrimSpace(problem.Title) != title {
 			_ = uc.problemsRepo.UpdateProblem(ctx, problemID, &models.ProblemUpdate{Title: &title})
 		}
 	}
+}
 
-	return nil
+func (uc *WorkshopUseCase) setComponentActive(manifest *models.ProblemManifest, componentType, filename string) {
+	filename = filepath.ToSlash(filename)
+	if filename == "" {
+		return
+	}
+
+	firstIdx := -1
+	selectedIdx := -1
+	for i := range manifest.FilesMetadata {
+		if manifest.FilesMetadata[i].Type == componentType {
+			if firstIdx == -1 {
+				firstIdx = i
+			}
+			if filepath.ToSlash(manifest.FilesMetadata[i].Filename) == filename {
+				selectedIdx = i
+			}
+		}
+	}
+
+	if selectedIdx < 0 {
+		manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{
+			Type:         componentType,
+			Filename:     filename,
+			Compiler:     compilerByFilename(filepath.Base(filename)),
+			Dependencies: []models.Dependency{},
+		})
+		selectedIdx = len(manifest.FilesMetadata) - 1
+		if firstIdx == -1 {
+			firstIdx = selectedIdx
+		}
+	}
+
+	if firstIdx >= 0 && firstIdx != selectedIdx {
+		item := manifest.FilesMetadata[selectedIdx]
+		// Remove from selectedIdx
+		manifest.FilesMetadata = append(manifest.FilesMetadata[:selectedIdx], manifest.FilesMetadata[selectedIdx+1:]...)
+		// Insert at firstIdx
+		manifest.FilesMetadata = append(manifest.FilesMetadata[:firstIdx], append([]models.FileMetadata{item}, manifest.FilesMetadata[firstIdx:]...)...)
+	}
+}
+
+func compilerByFilename(name string) string {
+	ext := filepath.Ext(name)
+	switch ext {
+	case ".py":
+		return "python3"
+	case ".go":
+		return "go"
+	case ".java":
+		return "java"
+	default:
+		return "cpp17"
+	}
 }
 
 func (uc *WorkshopUseCase) UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *models.TestsMetadata) error {
