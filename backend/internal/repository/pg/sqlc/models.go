@@ -615,9 +615,6 @@ type User struct {
 	Username     string    `json:"username"`
 	Role         UserRole  `json:"role"`
 	Email        string    `json:"email"`
-	Name         string    `json:"name"`
-	Surname      string    `json:"surname"`
-	Bio          string    `json:"bio"`
 	AvatarUrl    *string   `json:"avatar_url"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`

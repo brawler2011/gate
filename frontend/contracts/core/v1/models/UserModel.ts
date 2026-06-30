@@ -9,9 +9,6 @@ export type UserModel = {
     updatedAt: string;
     role: string;
     email?: string;
-    name?: string;
-    surname?: string;
-    bio?: string;
     imgId?: string;
 };
 

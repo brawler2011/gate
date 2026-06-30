@@ -44,9 +44,8 @@ export function UsersTable({ users, pagination, page, search, role }: Props) {
       <Table striped highlightOnHover style={{ tableLayout: "fixed" }}>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th style={{ width: "20%" }}>Имя пользователя</Table.Th>
-            <Table.Th style={{ width: "15%" }}>Имя</Table.Th>
-            <Table.Th style={{ width: "10%" }}>ID</Table.Th>
+            <Table.Th style={{ width: "30%" }}>Имя пользователя</Table.Th>
+            <Table.Th style={{ width: "15%" }}>ID</Table.Th>
             <Table.Th style={{ width: "10%" }}>Роль</Table.Th>
             <Table.Th style={{ width: "10%" }}>Дата создания</Table.Th>
           </Table.Tr>
@@ -65,11 +64,6 @@ export function UsersTable({ users, pagination, page, search, role }: Props) {
               style={{ cursor: "pointer" }}
             >
               <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>{user.username}</Table.Td>
-              <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>
-                <Text c="dimmed" size="sm">
-                  {[user.name, user.surname].filter(Boolean).join(" ") || "—"}
-                </Text>
-              </Table.Td>
               <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>
                 <TruncatedWithCopy value={user.id} />
               </Table.Td>

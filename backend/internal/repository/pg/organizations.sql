@@ -43,7 +43,7 @@ WHERE organization_id = $1 AND user_id = $2;
 
 -- name: ListOrganizationMembers :many
 SELECT om.organization_id, om.user_id, om.role, om.created_at,
-       u.username, u.email, u.name, u.surname
+       u.username, u.email
 FROM organization_members om
 JOIN users u ON om.user_id = u.id
 WHERE om.organization_id = $1

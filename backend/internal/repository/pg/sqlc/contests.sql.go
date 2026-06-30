@@ -365,7 +365,7 @@ func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams
 }
 
 const listContestMembers = `-- name: ListContestMembers :many
-SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, cm.permissions_mask, u.username, u.email, u.name, u.surname
+SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, cm.permissions_mask, u.username, u.email
 FROM contest_members cm
 JOIN users u ON cm.user_id = u.id
 WHERE cm.contest_id = $1
@@ -380,8 +380,6 @@ type ListContestMembersRow struct {
 	PermissionsMask int64              `json:"permissions_mask"`
 	Username        string             `json:"username"`
 	Email           string             `json:"email"`
-	Name            string             `json:"name"`
-	Surname         string             `json:"surname"`
 }
 
 func (q *Queries) ListContestMembers(ctx context.Context, contestID uuid.UUID) ([]ListContestMembersRow, error) {
@@ -401,8 +399,6 @@ func (q *Queries) ListContestMembers(ctx context.Context, contestID uuid.UUID) (
 			&i.PermissionsMask,
 			&i.Username,
 			&i.Email,
-			&i.Name,
-			&i.Surname,
 		); err != nil {
 			return nil, err
 		}

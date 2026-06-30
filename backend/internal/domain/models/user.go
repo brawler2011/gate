@@ -56,9 +56,6 @@ type CreateUserParams struct {
 	Role         UserRole
 	PasswordHash string
 	Email        string
-	Name         string
-	Surname      string
-	Bio          string
 	AvatarUrl    *string
 }
 
@@ -76,30 +73,9 @@ func EmailValidate(email string) error {
 	return nil
 }
 
-func NameValidate(name string) error {
-	if !pkg.IsLengthBetween(name, 0, 70) {
-		return errors.New("name must be at most 70 characters")
-	}
-	return nil
-}
-
-func SurnameValidate(surname string) error {
-	if !pkg.IsLengthBetween(surname, 0, 70) {
-		return errors.New("surname must be at most 70 characters")
-	}
-	return nil
-}
-
 func PasswordValidate(password string) error {
 	if len(password) < 8 {
 		return errors.New("password must be at least 8 characters")
-	}
-	return nil
-}
-
-func BioValidate(bio string) error {
-	if !pkg.IsLengthBetween(bio, 0, 500) {
-		return errors.New("bio must be at most 500 characters")
 	}
 	return nil
 }
@@ -109,9 +85,6 @@ func (p CreateUserParams) Validate() error {
 		UsernameValidate(p.Username),
 		UserRoleValidate(p.Role),
 		EmailValidate(p.Email),
-		NameValidate(p.Name),
-		SurnameValidate(p.Surname),
-		BioValidate(p.Bio),
 	}
 
 	return errors.Join(errs...)
@@ -122,9 +95,6 @@ type CreateUserInput struct {
 	Role      string
 	Password  string
 	Email     string
-	Name      string
-	Surname   string
-	Bio       string
 	AvatarUrl *string
 }
 
@@ -140,9 +110,6 @@ type UpdateUserParams struct {
 	Username  *string
 	Role      *UserRole
 	Email     *string
-	Name      *string
-	Surname   *string
-	Bio       *string
 	AvatarUrl *string
 }
 
@@ -158,15 +125,6 @@ func (p UpdateUserParams) Validate() error {
 	if p.Email != nil {
 		errs = append(errs, EmailValidate(*p.Email))
 	}
-	if p.Name != nil {
-		errs = append(errs, NameValidate(*p.Name))
-	}
-	if p.Surname != nil {
-		errs = append(errs, SurnameValidate(*p.Surname))
-	}
-	if p.Bio != nil {
-		errs = append(errs, BioValidate(*p.Bio))
-	}
 
 	return errors.Join(errs...)
 }
@@ -176,9 +134,6 @@ type UpdateUserInput struct {
 	Username  *string
 	Role      *string
 	Email     *string
-	Name      *string
-	Surname   *string
-	Bio       *string
 	AvatarUrl *string
 }
 
@@ -188,9 +143,6 @@ type User struct {
 	Role         UserRole
 	PasswordHash string
 	Email        string
-	Name         string
-	Surname      string
-	Bio          string
 	AvatarUrl    *string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time

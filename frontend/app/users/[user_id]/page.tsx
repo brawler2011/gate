@@ -51,10 +51,7 @@ const Page = async ({ params, searchParams }: Props) => {
     <DefaultLayout>
       <Profile
         username={user.username}
-        name={user.name}
-        surname={user.surname}
         role={user.role}
-        bio={user.bio}
         createdAt={user.createdAt}
         userId={user_id}
         contests={contestsData?.contests ?? []}

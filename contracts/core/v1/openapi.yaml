@@ -868,20 +868,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetUserResponseModel'
-    patch:
-      operationId: PatchMe
-      summary: Update current user profile
-      tags:
-        - users
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchMeRequestModel'
-      responses:
-        '200':
-          description: Profile updated successfully
   /users/{id}/avatar:
     get:
       operationId: GetUserAvatar
@@ -3502,27 +3488,9 @@ components:
         email:
           type: string
           example: user@example.com
-        name:
-          type: string
-          example: John
-        surname:
-          type: string
-          example: Doe
-        bio:
-          type: string
-          example: Software developer passionate about coding
         imgId:
           type: string
           format: uuid
-    PatchMeRequestModel:
-      type: object
-      properties:
-        name:
-          type: string
-        surname:
-          type: string
-        bio:
-          type: string
     ListUsersResponseModel:
       type: object
       required:

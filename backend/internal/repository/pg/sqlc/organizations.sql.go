@@ -219,7 +219,7 @@ func (q *Queries) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([
 
 const listOrganizationMembers = `-- name: ListOrganizationMembers :many
 SELECT om.organization_id, om.user_id, om.role, om.created_at,
-       u.username, u.email, u.name, u.surname
+       u.username, u.email
 FROM organization_members om
 JOIN users u ON om.user_id = u.id
 WHERE om.organization_id = $1
@@ -233,8 +233,6 @@ type ListOrganizationMembersRow struct {
 	CreatedAt      time.Time        `json:"created_at"`
 	Username       string           `json:"username"`
 	Email          string           `json:"email"`
-	Name           string           `json:"name"`
-	Surname        string           `json:"surname"`
 }
 
 func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID uuid.UUID) ([]ListOrganizationMembersRow, error) {
@@ -253,8 +251,6 @@ func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID uu
 			&i.CreatedAt,
 			&i.Username,
 			&i.Email,
-			&i.Name,
-			&i.Surname,
 		); err != nil {
 			return nil, err
 		}

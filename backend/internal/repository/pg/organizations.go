@@ -205,8 +205,6 @@ func (r *OrganizationsRepo) ListMembers(ctx context.Context, orgID uuid.UUID) ([
 			Role:           models.OrganizationRole(m.Role),
 			Username:       m.Username,
 			Email:          m.Email,
-			Name:           m.Name,
-			Surname:        m.Surname,
 			CreatedAt:      m.CreatedAt,
 		}
 	}

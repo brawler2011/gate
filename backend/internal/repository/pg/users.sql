@@ -5,9 +5,6 @@ INSERT INTO users (
         role,
         password_hash,
         email,
-        name,
-        surname,
-        bio,
         avatar_url
     )
 VALUES (
@@ -16,9 +13,6 @@ VALUES (
         @role,
         @password_hash,
         @email,
-        @name,
-        @surname,
-        @bio,
         @avatar_url
     );
 
@@ -74,8 +68,5 @@ UPDATE users
 SET username = COALESCE(sqlc.narg(username), username),
     role = COALESCE(sqlc.narg(role), role),
     email = COALESCE(sqlc.narg(email), email),
-    name = COALESCE(sqlc.narg(name), name),
-    surname = COALESCE(sqlc.narg(surname), surname),
-    bio = COALESCE(sqlc.narg(bio), bio),
     avatar_url = COALESCE(sqlc.narg(avatar_url), avatar_url)
 WHERE id = @id::uuid;

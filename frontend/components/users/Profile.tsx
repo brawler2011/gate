@@ -4,37 +4,26 @@ import {
   Anchor,
   Avatar,
   Badge,
-  Button,
   Center,
   Container,
   Group,
-  Modal,
   Paper,
   Stack,
   Table,
   Tabs,
   Text,
-  Textarea,
-  TextInput,
   Title,
 } from "@mantine/core";
 import { NextPagination } from '@/components/shared/Pagination';
-import { useDisclosure } from "@mantine/hooks";
-import { useForm } from "@mantine/form";
-import { IconCalendar, IconEdit, IconTrophy } from "@tabler/icons-react";
+import { IconCalendar, IconTrophy } from "@tabler/icons-react";
 import { getRoleColor, TimeBeautify } from "@/lib/lib";
 import { APP_COLORS } from "@/lib/theme/colors";
-import { patchMe } from "@/lib/actions";
 import type { ContestModel } from "@contracts/core/v1";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 type ProfileProps = {
   username: string;
-  name?: string;
-  surname?: string;
   role: string;
-  bio?: string;
   createdAt?: string;
   userId: string;
   contests?: ContestModel[];
@@ -45,30 +34,8 @@ type ProfileProps = {
 
 const Profile = (props: ProfileProps) => {
   const showRole = props.role?.toLowerCase() !== "user";
-  const fullName = [props.name, props.surname].filter(Boolean).join(" ");
   const initials = props.username?.[0]?.toUpperCase() ?? "?";
   const contests = props.contests ?? [];
-
-  const [opened, { open, close }] = useDisclosure(false);
-  const router = useRouter();
-
-  const form = useForm({
-    initialValues: {
-      name: props.name ?? "",
-      surname: props.surname ?? "",
-      bio: props.bio ?? "",
-    },
-  });
-
-  const handleSubmit = async (values: typeof form.values) => {
-    await patchMe({
-      name: values.name || undefined,
-      surname: values.surname || undefined,
-      bio: values.bio || undefined,
-    });
-    close();
-    router.refresh();
-  };
 
   return (
     <Container size="md" px={0}>
@@ -89,27 +56,7 @@ const Profile = (props: ProfileProps) => {
                     </Badge>
                   )}
                 </Group>
-                {props.isOwnProfile && (
-                  <Button
-                    variant="filled"
-                    size="xs"
-                    leftSection={<IconEdit size={14} />}
-                    onClick={open}
-                  >
-                    Редактировать
-                  </Button>
-                )}
               </Group>
-              {fullName && (
-                <Text size="lg" fw={500}>
-                  {fullName}
-                </Text>
-              )}
-              {props.bio && (
-                <Text c="dimmed" size="sm">
-                  {props.bio}
-                </Text>
-              )}
               <Group gap="lg">
                 {props.createdAt && (
                   <Group gap="xs">
@@ -189,24 +136,6 @@ const Profile = (props: ProfileProps) => {
             )}
           </Tabs.Panel>
         </Tabs>
-
-        {/* Edit profile modal */}
-        <Modal opened={opened} onClose={close} title="Редактировать профиль">
-          <form onSubmit={form.onSubmit(handleSubmit)}>
-            <Stack>
-              <TextInput label="Имя" placeholder="Иван" {...form.getInputProps("name")} />
-              <TextInput label="Фамилия" placeholder="Иванов" {...form.getInputProps("surname")} />
-              <Textarea
-                label="О себе"
-                placeholder="Расскажите о себе..."
-                autosize
-                minRows={3}
-                {...form.getInputProps("bio")}
-              />
-              <Button type="submit">Сохранить</Button>
-            </Stack>
-          </form>
-        </Modal>
       </Stack>
     </Container>
   );

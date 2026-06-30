@@ -33,8 +33,6 @@ type OrganizationMember struct {
 	Role           OrganizationRole
 	Username       string
 	Email          string
-	Name           string
-	Surname        string
 	CreatedAt      time.Time
 }
 

@@ -43,9 +43,6 @@ INSERT INTO users (
         role,
         password_hash,
         email,
-        name,
-        surname,
-        bio,
         avatar_url
     )
 VALUES (
@@ -54,10 +51,7 @@ VALUES (
         $3,
         $4,
         $5,
-        $6,
-        $7,
-        $8,
-        $9
+        $6
     )
 `
 
@@ -67,9 +61,6 @@ type CreateUserParams struct {
 	Role         UserRole  `json:"role"`
 	PasswordHash string    `json:"password_hash"`
 	Email        string    `json:"email"`
-	Name         string    `json:"name"`
-	Surname      string    `json:"surname"`
-	Bio          string    `json:"bio"`
 	AvatarUrl    *string   `json:"avatar_url"`
 }
 
@@ -80,16 +71,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.Role,
 		arg.PasswordHash,
 		arg.Email,
-		arg.Name,
-		arg.Surname,
-		arg.Bio,
 		arg.AvatarUrl,
 	)
 	return err
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, username, role, email, name, surname, bio, avatar_url, created_at, updated_at, password_hash
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
 FROM users
 WHERE id = $1::uuid
 LIMIT 1
@@ -103,9 +91,6 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Username,
 		&i.Role,
 		&i.Email,
-		&i.Name,
-		&i.Surname,
-		&i.Bio,
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -115,7 +100,7 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, role, email, name, surname, bio, avatar_url, created_at, updated_at, password_hash
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
 FROM users
 WHERE username = $1
 LIMIT 1
@@ -129,9 +114,6 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.Username,
 		&i.Role,
 		&i.Email,
-		&i.Name,
-		&i.Surname,
-		&i.Bio,
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -141,7 +123,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 }
 
 const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
-SELECT id, username, role, email, name, surname, bio, avatar_url, created_at, updated_at, password_hash
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
 FROM users
 WHERE username = $1 OR email = $1
 LIMIT 1
@@ -155,9 +137,6 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, identifier strin
 		&i.Username,
 		&i.Role,
 		&i.Email,
-		&i.Name,
-		&i.Surname,
-		&i.Bio,
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -167,7 +146,7 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, identifier strin
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, role, email, name, surname, bio, avatar_url, created_at, updated_at, password_hash
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
 FROM users
 WHERE (
         $1::text = ''
@@ -210,9 +189,6 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.Username,
 			&i.Role,
 			&i.Email,
-			&i.Name,
-			&i.Surname,
-			&i.Bio,
 			&i.AvatarUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -233,20 +209,14 @@ UPDATE users
 SET username = COALESCE($1, username),
     role = COALESCE($2, role),
     email = COALESCE($3, email),
-    name = COALESCE($4, name),
-    surname = COALESCE($5, surname),
-    bio = COALESCE($6, bio),
-    avatar_url = COALESCE($7, avatar_url)
-WHERE id = $8::uuid
+    avatar_url = COALESCE($4, avatar_url)
+WHERE id = $5::uuid
 `
 
 type UpdateUserParams struct {
 	Username  *string      `json:"username"`
 	Role      NullUserRole `json:"role"`
 	Email     *string      `json:"email"`
-	Name      *string      `json:"name"`
-	Surname   *string      `json:"surname"`
-	Bio       *string      `json:"bio"`
 	AvatarUrl *string      `json:"avatar_url"`
 	ID        uuid.UUID    `json:"id"`
 }
@@ -256,9 +226,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 		arg.Username,
 		arg.Role,
 		arg.Email,
-		arg.Name,
-		arg.Surname,
-		arg.Bio,
 		arg.AvatarUrl,
 		arg.ID,
 	)

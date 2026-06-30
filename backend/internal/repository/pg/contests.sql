@@ -64,7 +64,7 @@ SELECT * FROM contest_members
 WHERE contest_id = $1 AND user_id = $2;
 
 -- name: ListContestMembers :many
-SELECT cm.*, u.username, u.email, u.name, u.surname
+SELECT cm.*, u.username, u.email
 FROM contest_members cm
 JOIN users u ON cm.user_id = u.id
 WHERE cm.contest_id = $1

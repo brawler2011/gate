@@ -99,9 +99,6 @@ export async function getUser(userId: string) {
     return Call((client) => client.default.getUser({id: userId}));
 }
 
-export async function patchMe(data: { name?: string; surname?: string; bio?: string }) {
-    return Call((client) => client.users.patchMe({ requestBody: data }));
-}
 
 export async function getContest(contestId: string) {
     return Call((client) => client.default.getContest({contestId}));

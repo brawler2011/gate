@@ -378,13 +378,6 @@ type PaginationModel struct {
 	Total int32 `json:"total"`
 }
 
-// PatchMeRequestModel defines model for PatchMeRequestModel.
-type PatchMeRequestModel struct {
-	Bio     *string `json:"bio,omitempty"`
-	Name    *string `json:"name,omitempty"`
-	Surname *string `json:"surname,omitempty"`
-}
-
 // PostModel defines model for PostModel.
 type PostModel struct {
 	AuthorId       *openapi_types.UUID `json:"author_id,omitempty"`
@@ -604,14 +597,11 @@ type UpdateTeamRequestModel struct {
 
 // UserModel defines model for UserModel.
 type UserModel struct {
-	Bio       *string             `json:"bio,omitempty"`
 	CreatedAt time.Time           `json:"createdAt"`
 	Email     *string             `json:"email,omitempty"`
 	Id        openapi_types.UUID  `json:"id"`
 	ImgId     *openapi_types.UUID `json:"imgId,omitempty"`
-	Name      *string             `json:"name,omitempty"`
 	Role      string              `json:"role"`
-	Surname   *string             `json:"surname,omitempty"`
 	UpdatedAt time.Time           `json:"updatedAt"`
 	Username  string              `json:"username"`
 }
@@ -1029,9 +1019,6 @@ type CreateTeamJSONRequestBody CreateTeamJSONBody
 
 // UpdateTeamJSONRequestBody defines body for UpdateTeam for application/json ContentType.
 type UpdateTeamJSONRequestBody = UpdateTeamRequestModel
-
-// PatchMeJSONRequestBody defines body for PatchMe for application/json ContentType.
-type PatchMeJSONRequestBody = PatchMeRequestModel
 
 // UploadAvatarMultipartRequestBody defines body for UploadAvatar for multipart/form-data ContentType.
 type UploadAvatarMultipartRequestBody UploadAvatarMultipartBody
@@ -1454,11 +1441,6 @@ type ClientInterface interface {
 
 	// GetMe request
 	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PatchMeWithBody request with any body
-	PatchMeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	PatchMe(ctx context.Context, body PatchMeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUser request
 	GetUser(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2921,30 +2903,6 @@ func (c *Client) ListUsers(ctx context.Context, params *ListUsersParams, reqEdit
 
 func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetMeRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PatchMeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPatchMeRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PatchMe(ctx context.Context, body PatchMeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPatchMeRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -8235,46 +8193,6 @@ func NewGetMeRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
-// NewPatchMeRequest calls the generic PatchMe builder with application/json body
-func NewPatchMeRequest(server string, body PatchMeJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPatchMeRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewPatchMeRequestWithBody generates requests for PatchMe with any type of body
-func NewPatchMeRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/users/me")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PATCH", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
 // NewGetUserRequest generates requests for GetUser
 func NewGetUserRequest(server string, id openapi_types.UUID) (*http.Request, error) {
 	var err error
@@ -9065,11 +8983,6 @@ type ClientWithResponsesInterface interface {
 
 	// GetMeWithResponse request
 	GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
-
-	// PatchMeWithBodyWithResponse request with any body
-	PatchMeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchMeResponse, error)
-
-	PatchMeWithResponse(ctx context.Context, body PatchMeJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchMeResponse, error)
 
 	// GetUserWithResponse request
 	GetUserWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetUserResponse, error)
@@ -11382,27 +11295,6 @@ func (r GetMeResponse) StatusCode() int {
 	return 0
 }
 
-type PatchMeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r PatchMeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PatchMeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type GetUserResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -12607,23 +12499,6 @@ func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors 
 		return nil, err
 	}
 	return ParseGetMeResponse(rsp)
-}
-
-// PatchMeWithBodyWithResponse request with arbitrary body returning *PatchMeResponse
-func (c *ClientWithResponses) PatchMeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchMeResponse, error) {
-	rsp, err := c.PatchMeWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePatchMeResponse(rsp)
-}
-
-func (c *ClientWithResponses) PatchMeWithResponse(ctx context.Context, body PatchMeJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchMeResponse, error) {
-	rsp, err := c.PatchMe(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePatchMeResponse(rsp)
 }
 
 // GetUserWithResponse request returning *GetUserResponse
@@ -15244,22 +15119,6 @@ func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 	return response, nil
 }
 
-// ParsePatchMeResponse parses an HTTP response from a PatchMeWithResponse call
-func ParsePatchMeResponse(rsp *http.Response) (*PatchMeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PatchMeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	return response, nil
-}
-
 // ParseGetUserResponse parses an HTTP response from a GetUserWithResponse call
 func ParseGetUserResponse(rsp *http.Response) (*GetUserResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -15729,9 +15588,6 @@ type ServerInterface interface {
 
 	// (GET /users/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
-	// Update current user profile
-	// (PATCH /users/me)
-	PatchMe(w http.ResponseWriter, r *http.Request)
 
 	// (GET /users/{id})
 	GetUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -19546,20 +19402,6 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 	handler.ServeHTTP(w, r)
 }
 
-// PatchMe operation middleware
-func (siw *ServerInterfaceWrapper) PatchMe(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PatchMe(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetUser operation middleware
 func (siw *ServerInterfaceWrapper) GetUser(w http.ResponseWriter, r *http.Request) {
 
@@ -20079,7 +19921,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/user/{id}/contests", wrapper.ListUserContests)
 	m.HandleFunc("GET "+options.BaseURL+"/users", wrapper.ListUsers)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetMe)
-	m.HandleFunc("PATCH "+options.BaseURL+"/users/me", wrapper.PatchMe)
 	m.HandleFunc("GET "+options.BaseURL+"/users/{id}", wrapper.GetUser)
 	m.HandleFunc("DELETE "+options.BaseURL+"/users/{id}/avatar", wrapper.DeleteAvatar)
 	m.HandleFunc("GET "+options.BaseURL+"/users/{id}/avatar", wrapper.GetUserAvatar)
@@ -22171,22 +22012,6 @@ func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) e
 	return json.NewEncoder(w).Encode(response)
 }
 
-type PatchMeRequestObject struct {
-	Body *PatchMeJSONRequestBody
-}
-
-type PatchMeResponseObject interface {
-	VisitPatchMeResponse(w http.ResponseWriter) error
-}
-
-type PatchMe200Response struct {
-}
-
-func (response PatchMe200Response) VisitPatchMeResponse(w http.ResponseWriter) error {
-	w.WriteHeader(200)
-	return nil
-}
-
 type GetUserRequestObject struct {
 	Id openapi_types.UUID `json:"id"`
 }
@@ -22655,9 +22480,6 @@ type StrictServerInterface interface {
 
 	// (GET /users/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
-	// Update current user profile
-	// (PATCH /users/me)
-	PatchMe(ctx context.Context, request PatchMeRequestObject) (PatchMeResponseObject, error)
 
 	// (GET /users/{id})
 	GetUser(ctx context.Context, request GetUserRequestObject) (GetUserResponseObject, error)
@@ -25606,37 +25428,6 @@ func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMeResponseObject); ok {
 		if err := validResponse.VisitGetMeResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// PatchMe operation middleware
-func (sh *strictHandler) PatchMe(w http.ResponseWriter, r *http.Request) {
-	var request PatchMeRequestObject
-
-	var body PatchMeJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PatchMe(ctx, request.(PatchMeRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PatchMe")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PatchMeResponseObject); ok {
-		if err := validResponse.VisitPatchMeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

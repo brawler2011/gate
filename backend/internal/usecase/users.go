@@ -42,9 +42,6 @@ func (u *UsersUseCase) CreateUser(ctx context.Context, input models.CreateUserIn
 		Role:         models.UserRole(input.Role),
 		PasswordHash: string(hashed),
 		Email:        input.Email,
-		Name:         input.Name,
-		Surname:      input.Surname,
-		Bio:          input.Bio,
 		AvatarUrl:    input.AvatarUrl,
 	}
 
@@ -89,9 +86,6 @@ func (u *UsersUseCase) UpdateUser(ctx context.Context, input models.UpdateUserIn
 		Username:  input.Username,
 		Role:      role,
 		Email:     input.Email,
-		Name:      input.Name,
-		Surname:   input.Surname,
-		Bio:       input.Bio,
 		AvatarUrl: input.AvatarUrl,
 	}
 

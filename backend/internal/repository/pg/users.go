@@ -38,9 +38,6 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params models.CreateUserPara
 		Role:         sqlc.UserRole(params.Role),
 		PasswordHash: params.PasswordHash,
 		Email:        params.Email,
-		Name:         params.Name,
-		Surname:      params.Surname,
-		Bio:          params.Bio,
 		AvatarUrl:    params.AvatarUrl,
 	})
 	if err != nil {
@@ -64,9 +61,6 @@ func mapUserToModel(user sqlc.User) models.User {
 		Role:         models.UserRole(user.Role),
 		PasswordHash: user.PasswordHash,
 		Email:        user.Email,
-		Name:         user.Name,
-		Surname:      user.Surname,
-		Bio:          user.Bio,
 		AvatarUrl:    user.AvatarUrl,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
@@ -133,9 +127,6 @@ func (r *UsersRepo) UpdateUser(
 		Username:  params.Username,
 		Role:      role,
 		Email:     params.Email,
-		Name:      params.Name,
-		Surname:   params.Surname,
-		Bio:       params.Bio,
 		AvatarUrl: params.AvatarUrl,
 	})
 	if err != nil {
