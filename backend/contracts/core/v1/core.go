@@ -1325,12 +1325,6 @@ type ClientInterface interface {
 	// UpdateProblemMediaFileWithBody request with any body
 	UpdateProblemMediaFileWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetProblemReadme request
-	GetProblemReadme(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// UpdateProblemReadmeWithBody request with any body
-	UpdateProblemReadmeWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// GetProblemStatement request
 	GetProblemStatement(ctx context.Context, problemId openapi_types.UUID, params *GetProblemStatementParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2375,30 +2369,6 @@ func (c *Client) GetProblemMediaFile(ctx context.Context, problemId openapi_type
 
 func (c *Client) UpdateProblemMediaFileWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateProblemMediaFileRequestWithBody(c.Server, problemId, name, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetProblemReadme(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetProblemReadmeRequest(c.Server, problemId)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) UpdateProblemReadmeWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateProblemReadmeRequestWithBody(c.Server, problemId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -6224,76 +6194,6 @@ func NewUpdateProblemMediaFileRequestWithBody(server string, problemId openapi_t
 	return req, nil
 }
 
-// NewGetProblemReadmeRequest generates requests for GetProblemReadme
-func NewGetProblemReadmeRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/readme", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewUpdateProblemReadmeRequestWithBody generates requests for UpdateProblemReadme with any type of body
-func NewUpdateProblemReadmeRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/readme", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
 // NewGetProblemStatementRequest generates requests for GetProblemStatement
 func NewGetProblemStatementRequest(server string, problemId openapi_types.UUID, params *GetProblemStatementParams) (*http.Request, error) {
 	var err error
@@ -9036,12 +8936,6 @@ type ClientWithResponsesInterface interface {
 	// UpdateProblemMediaFileWithBodyWithResponse request with any body
 	UpdateProblemMediaFileWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemMediaFileResponse, error)
 
-	// GetProblemReadmeWithResponse request
-	GetProblemReadmeWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemReadmeResponse, error)
-
-	// UpdateProblemReadmeWithBodyWithResponse request with any body
-	UpdateProblemReadmeWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemReadmeResponse, error)
-
 	// GetProblemStatementWithResponse request
 	GetProblemStatementWithResponse(ctx context.Context, problemId openapi_types.UUID, params *GetProblemStatementParams, reqEditors ...RequestEditorFn) (*GetProblemStatementResponse, error)
 
@@ -10651,49 +10545,6 @@ func (r UpdateProblemMediaFileResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UpdateProblemMediaFileResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GetProblemReadmeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r GetProblemReadmeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetProblemReadmeResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type UpdateProblemReadmeResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *MessageResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r UpdateProblemReadmeResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r UpdateProblemReadmeResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -12350,24 +12201,6 @@ func (c *ClientWithResponses) UpdateProblemMediaFileWithBodyWithResponse(ctx con
 		return nil, err
 	}
 	return ParseUpdateProblemMediaFileResponse(rsp)
-}
-
-// GetProblemReadmeWithResponse request returning *GetProblemReadmeResponse
-func (c *ClientWithResponses) GetProblemReadmeWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemReadmeResponse, error) {
-	rsp, err := c.GetProblemReadme(ctx, problemId, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetProblemReadmeResponse(rsp)
-}
-
-// UpdateProblemReadmeWithBodyWithResponse request with arbitrary body returning *UpdateProblemReadmeResponse
-func (c *ClientWithResponses) UpdateProblemReadmeWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemReadmeResponse, error) {
-	rsp, err := c.UpdateProblemReadmeWithBody(ctx, problemId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUpdateProblemReadmeResponse(rsp)
 }
 
 // GetProblemStatementWithResponse request returning *GetProblemStatementResponse
@@ -14491,48 +14324,6 @@ func ParseUpdateProblemMediaFileResponse(rsp *http.Response) (*UpdateProblemMedi
 	return response, nil
 }
 
-// ParseGetProblemReadmeResponse parses an HTTP response from a GetProblemReadmeWithResponse call
-func ParseGetProblemReadmeResponse(rsp *http.Response) (*GetProblemReadmeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetProblemReadmeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	return response, nil
-}
-
-// ParseUpdateProblemReadmeResponse parses an HTTP response from a UpdateProblemReadmeWithResponse call
-func ParseUpdateProblemReadmeResponse(rsp *http.Response) (*UpdateProblemReadmeResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &UpdateProblemReadmeResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest MessageResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseGetProblemStatementResponse parses an HTTP response from a GetProblemStatementWithResponse call
 func ParseGetProblemStatementResponse(rsp *http.Response) (*GetProblemStatementResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -15824,12 +15615,6 @@ type ServerInterface interface {
 	// Update media file
 	// (PUT /problems/{problemId}/media/{name})
 	UpdateProblemMediaFile(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
-	// Get problem README
-	// (GET /problems/{problemId}/readme)
-	GetProblemReadme(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
-	// Update problem README
-	// (PUT /problems/{problemId}/readme)
-	UpdateProblemReadme(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Get problem statement
 	// (GET /problems/{problemId}/statement)
 	GetProblemStatement(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params GetProblemStatementParams)
@@ -18302,56 +18087,6 @@ func (siw *ServerInterfaceWrapper) UpdateProblemMediaFile(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
-// GetProblemReadme operation middleware
-func (siw *ServerInterfaceWrapper) GetProblemReadme(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetProblemReadme(w, r, problemId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UpdateProblemReadme operation middleware
-func (siw *ServerInterfaceWrapper) UpdateProblemReadme(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateProblemReadme(w, r, problemId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetProblemStatement operation middleware
 func (siw *ServerInterfaceWrapper) GetProblemStatement(w http.ResponseWriter, r *http.Request) {
 
@@ -20306,8 +20041,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/media/{name}", wrapper.DeleteProblemMediaFile)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/media/{name}", wrapper.GetProblemMediaFile)
 	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/media/{name}", wrapper.UpdateProblemMediaFile)
-	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/readme", wrapper.GetProblemReadme)
-	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/readme", wrapper.UpdateProblemReadme)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/statement", wrapper.GetProblemStatement)
 	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/statement", wrapper.UpdateProblemStatement)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/submissions", wrapper.ListProblemWorkshopSubmissions)
@@ -21733,51 +21466,6 @@ func (response UpdateProblemMediaFile200JSONResponse) VisitUpdateProblemMediaFil
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetProblemReadmeRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-}
-
-type GetProblemReadmeResponseObject interface {
-	VisitGetProblemReadmeResponse(w http.ResponseWriter) error
-}
-
-type GetProblemReadme200ApplicationoctetStreamResponse struct {
-	Body          io.Reader
-	ContentLength int64
-}
-
-func (response GetProblemReadme200ApplicationoctetStreamResponse) VisitGetProblemReadmeResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/octet-stream")
-	if response.ContentLength != 0 {
-		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
-	}
-	w.WriteHeader(200)
-
-	if closer, ok := response.Body.(io.ReadCloser); ok {
-		defer closer.Close()
-	}
-	_, err := io.Copy(w, response.Body)
-	return err
-}
-
-type UpdateProblemReadmeRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Body      io.Reader
-}
-
-type UpdateProblemReadmeResponseObject interface {
-	VisitUpdateProblemReadmeResponse(w http.ResponseWriter) error
-}
-
-type UpdateProblemReadme200JSONResponse MessageResponse
-
-func (response UpdateProblemReadme200JSONResponse) VisitUpdateProblemReadmeResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type GetProblemStatementRequestObject struct {
 	ProblemId openapi_types.UUID `json:"problemId"`
 	Params    GetProblemStatementParams
@@ -22853,12 +22541,6 @@ type StrictServerInterface interface {
 	// Update media file
 	// (PUT /problems/{problemId}/media/{name})
 	UpdateProblemMediaFile(ctx context.Context, request UpdateProblemMediaFileRequestObject) (UpdateProblemMediaFileResponseObject, error)
-	// Get problem README
-	// (GET /problems/{problemId}/readme)
-	GetProblemReadme(ctx context.Context, request GetProblemReadmeRequestObject) (GetProblemReadmeResponseObject, error)
-	// Update problem README
-	// (PUT /problems/{problemId}/readme)
-	UpdateProblemReadme(ctx context.Context, request UpdateProblemReadmeRequestObject) (UpdateProblemReadmeResponseObject, error)
 	// Get problem statement
 	// (GET /problems/{problemId}/statement)
 	GetProblemStatement(ctx context.Context, request GetProblemStatementRequestObject) (GetProblemStatementResponseObject, error)
@@ -24853,60 +24535,6 @@ func (sh *strictHandler) UpdateProblemMediaFile(w http.ResponseWriter, r *http.R
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateProblemMediaFileResponseObject); ok {
 		if err := validResponse.VisitUpdateProblemMediaFileResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetProblemReadme operation middleware
-func (sh *strictHandler) GetProblemReadme(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
-	var request GetProblemReadmeRequestObject
-
-	request.ProblemId = problemId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetProblemReadme(ctx, request.(GetProblemReadmeRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetProblemReadme")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetProblemReadmeResponseObject); ok {
-		if err := validResponse.VisitGetProblemReadmeResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// UpdateProblemReadme operation middleware
-func (sh *strictHandler) UpdateProblemReadme(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
-	var request UpdateProblemReadmeRequestObject
-
-	request.ProblemId = problemId
-
-	request.Body = r.Body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UpdateProblemReadme(ctx, request.(UpdateProblemReadmeRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UpdateProblemReadme")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UpdateProblemReadmeResponseObject); ok {
-		if err := validResponse.VisitUpdateProblemReadmeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

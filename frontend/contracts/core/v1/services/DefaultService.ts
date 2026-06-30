@@ -924,46 +924,6 @@ export class DefaultService {
         });
     }
     /**
-     * Get problem README
-     * @returns binary README content
-     * @throws ApiError
-     */
-    public getProblemReadme({
-        problemId,
-    }: {
-        problemId: string,
-    }): CancelablePromise<Blob> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/problems/{problemId}/readme',
-            path: {
-                'problemId': problemId,
-            },
-        });
-    }
-    /**
-     * Update problem README
-     * @returns MessageResponse README updated successfully
-     * @throws ApiError
-     */
-    public updateProblemReadme({
-        problemId,
-        requestBody,
-    }: {
-        problemId: string,
-        requestBody: Blob,
-    }): CancelablePromise<MessageResponse> {
-        return this.httpRequest.request({
-            method: 'PUT',
-            url: '/problems/{problemId}/readme',
-            path: {
-                'problemId': problemId,
-            },
-            body: requestBody,
-            mediaType: 'application/octet-stream',
-        });
-    }
-    /**
      * Get problem limits and type settings
      * @returns ProblemLimits Problem limits
      * @throws ApiError

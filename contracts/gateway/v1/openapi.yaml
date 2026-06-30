@@ -1107,49 +1107,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
-  /problems/{problemId}/readme:
-    get:
-      operationId: GetProblemReadme
-      summary: Get problem README
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: README content
-          content:
-            application/octet-stream:
-              schema:
-                type: string
-                format: binary
-    put:
-      operationId: UpdateProblemReadme
-      summary: Update problem README
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/octet-stream:
-            schema:
-              type: string
-              format: binary
-      responses:
-        '200':
-          description: README updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageResponse'
   /problems/{problemId}/limits:
     get:
       operationId: GetProblemLimits

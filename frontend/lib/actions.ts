@@ -415,16 +415,6 @@ export async function updateWorkshopProblemStatement(problemId: string, requestB
   return Call((client) => client.default.updateProblemStatement({ problemId, requestBody, lang }));
 }
 
-export async function getWorkshopProblemReadme(problemId: string): Promise<[ApiError | null, string | null]> {
-  const [error, data] = await Call((client) => client.default.getProblemReadme({ problemId }));
-  if (error || !data) return [error, null];
-  return [null, await toText(data)];
-}
-
-export async function updateWorkshopProblemReadme(problemId: string, content: string) {
-  const blob = new Blob([content], { type: 'application/octet-stream' });
-  return Call((client) => client.default.updateProblemReadme({ problemId, requestBody: blob }));
-}
 
 export async function listWorkshopCheckerFiles(problemId: string): WorkshopFilesResponse {
   return Call((client) => client.default.listProblemCheckers({ problemId }));

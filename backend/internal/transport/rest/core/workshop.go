@@ -29,45 +29,6 @@ const (
 )
 
 
-// GetProblemReadme handles GET /problems/{problemId}/readme
-func (h *CoreServer) GetProblemReadme(ctx context.Context, request corev1.GetProblemReadmeRequestObject) (corev1.GetProblemReadmeResponseObject, error) {
-	if !h.workshopUC.IsInitialized(ctx, request.ProblemId) {
-		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
-	}
-
-	content, err := h.workshopUC.ReadProblemFile(ctx, request.ProblemId, "README.md")
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrNotFound, err, "README.md not found")
-	}
-
-	return corev1.GetProblemReadme200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
-}
-
-// UpdateProblemReadme handles PUT /problems/{problemId}/readme
-func (h *CoreServer) UpdateProblemReadme(ctx context.Context, request corev1.UpdateProblemReadmeRequestObject) (corev1.UpdateProblemReadmeResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
-	}
-	if !h.workshopUC.IsInitialized(ctx, request.ProblemId) {
-		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
-	}
-
-	content, err := io.ReadAll(request.Body)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read request body")
-	}
-
-	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
-		ProblemID: request.ProblemId,
-		UserID:    middleware.GetUser(ctx).Id,
-		Path:      "README.md",
-		Content:   content,
-	}); err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to update README.md")
-	}
-
-	return corev1.UpdateProblemReadme200JSONResponse{Message: strPtr("README.md updated successfully")}, nil
-}
 
 // GetProblemLimits handles GET /problems/{problemId}/limits
 func (h *CoreServer) GetProblemLimits(ctx context.Context, request corev1.GetProblemLimitsRequestObject) (corev1.GetProblemLimitsResponseObject, error) {

@@ -33,7 +33,7 @@ func (s *IntegrationTestSuite) TestWorkshopStatementEndpointSyncsProblemTitle() 
 	problemID := createResp.JSON200.Id
 
 	newTitle := "Synced From Statement Endpoint"
-	updateResp, err := s.client.UpdateProblemStatementWithResponse(s.ctx, problemID, corev1.UpdateProblemStatementJSONRequestBody{
+	updateResp, err := s.client.UpdateProblemStatementWithResponse(s.ctx, problemID, nil, corev1.UpdateProblemStatementJSONRequestBody{
 		Title: &newTitle,
 	}, func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("X-Test-User-ID", admin.Id.String())
@@ -216,43 +216,3 @@ func (s *IntegrationTestSuite) TestWorkshopTestsConfigEndpoint() {
 	s.Equal("Updated Samples", group0["name"])
 }
 
-func (s *IntegrationTestSuite) TestWorkshopReadmeEndpoint() {
-	admin := s.createUser("workshop_readme_admin", models.UserRoleAdmin)
-	org := s.createOrganization("workshop-readme-org", "Workshop Readme Org", admin.Id)
-
-	organizationID := openapi_types.UUID(org.ID)
-	createResp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
-		Title:          "Readme Endpoint Problem",
-		OrganizationId: &organizationID,
-	}, func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-Test-User-ID", admin.Id.String())
-		return nil
-	})
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, createResp.StatusCode())
-	s.Require().NotNil(createResp.JSON200)
-
-	problemID := createResp.JSON200.Id
-
-	readmeContent := []byte("# Problem\n\nREADME content from endpoint test")
-	updateResp, err := s.client.UpdateProblemReadmeWithBodyWithResponse(
-		s.ctx,
-		problemID,
-		"application/octet-stream",
-		bytes.NewReader(readmeContent),
-		func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", admin.Id.String())
-			return nil
-		},
-	)
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, updateResp.StatusCode())
-
-	getResp, err := s.client.GetProblemReadmeWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-Test-User-ID", admin.Id.String())
-		return nil
-	})
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, getResp.StatusCode())
-	s.Equal(string(readmeContent), string(getResp.Body))
-}

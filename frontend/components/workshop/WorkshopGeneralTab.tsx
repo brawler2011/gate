@@ -3,9 +3,7 @@
 import { SectionPaper } from "@/components/workshop/SectionPaper";
 import {
   getWorkshopProblemLimits,
-  getWorkshopProblemReadme,
   updateWorkshopProblemLimits,
-  updateWorkshopProblemReadme,
 } from "@/lib/actions";
 import {
   Box,
@@ -16,7 +14,6 @@ import {
   Select,
   Stack,
   Text,
-  Textarea,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useCallback, useEffect, useState, useTransition } from "react";
@@ -43,10 +40,6 @@ export function WorkshopGeneralTab({ problemId }: Props) {
   const [isLoading, startLoading] = useTransition();
   const [isSaving, startSaving] = useTransition();
   const [isDirty, setIsDirty] = useState(false);
-  const [readme, setReadme] = useState("");
-  const [isReadmeLoading, setIsReadmeLoading] = useState(false);
-  const [isReadmeDirty, setIsReadmeDirty] = useState(false);
-  const [isReadmeSaving, startReadmeSaving] = useTransition();
 
   const loadLimits = useCallback(() => {
     startLoading(async () => {
@@ -69,29 +62,9 @@ export function WorkshopGeneralTab({ problemId }: Props) {
       setIsDirty(false);
     });
   }, [problemId, startLoading]);
-
-  const loadReadme = useCallback(async () => {
-    setIsReadmeLoading(true);
-    const [error, data] = await getWorkshopProblemReadme(problemId);
-    setIsReadmeLoading(false);
-
-    if (error) {
-      notifications.show({
-        title: "Ошибка загрузки README.md",
-        message: error.message ?? "Не удалось загрузить README.md",
-        color: "red",
-      });
-      return;
-    }
-
-    setReadme(data ?? "");
-    setIsReadmeDirty(false);
-  }, [problemId]);
-
   useEffect(() => {
     loadLimits();
-    void loadReadme();
-  }, [loadLimits, loadReadme]);
+  }, [loadLimits]);
 
   const patchLimits = (patch: Partial<LimitsData>) => {
     setLimits((prev) => (prev ? { ...prev, ...patch } : prev));
@@ -122,28 +95,6 @@ export function WorkshopGeneralTab({ problemId }: Props) {
       notifications.show({
         title: "Сохранено",
         message: "Лимиты задачи обновлены",
-        color: "green",
-      });
-    });
-  };
-
-  const handleReadmeSave = () => {
-    startReadmeSaving(async () => {
-      const [error] = await updateWorkshopProblemReadme(problemId, readme);
-
-      if (error) {
-        notifications.show({
-          title: "Ошибка сохранения",
-          message: error.message ?? "Не удалось сохранить README.md",
-          color: "red",
-        });
-        return;
-      }
-
-      setIsReadmeDirty(false);
-      notifications.show({
-        title: "Сохранено",
-        message: "README.md обновлен",
         color: "green",
       });
     });
@@ -236,45 +187,7 @@ export function WorkshopGeneralTab({ problemId }: Props) {
           )}
         </SectionPaper>
 
-        <SectionPaper title="README.md">
-          {isReadmeLoading ? (
-            <Text c="dimmed" size="sm">
-              Загрузка...
-            </Text>
-          ) : (
-            <Stack gap="sm">
-              <Box>
-                <Textarea
-                  value={readme}
-                  onChange={(event) => {
-                    setReadme(event.currentTarget.value);
-                    setIsReadmeDirty(true);
-                  }}
-                  minRows={8}
-                  autosize
-                  styles={{
-                    input: {
-                      fontFamily: "var(--mantine-font-family-monospace)",
-                      fontSize: 13,
-                    },
-                  }}
-                />
-              </Box>
 
-              <Group justify="flex-end">
-                <Button
-                  size="sm"
-                  variant="default"
-                  disabled={!isReadmeDirty}
-                  loading={isReadmeSaving}
-                  onClick={handleReadmeSave}
-                >
-                  Сохранить README.md
-                </Button>
-              </Group>
-            </Stack>
-          )}
-        </SectionPaper>
       </Stack>
     </Box>
   );

@@ -119,9 +119,6 @@ func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uu
 		return fmt.Errorf("workshop already initialized for problem %s", problemID)
 	}
 
-	if err := uc.workspaceStorage.WriteFile(ctx, problemID, "README.md", []byte("# Problem\n\nThis is a problem workspace.\n")); err != nil {
-		return fmt.Errorf("failed to create README: %w", err)
-	}
 
 	testsMeta := defaultTestsMetadata()
 	manifest := defaultManifest(title)

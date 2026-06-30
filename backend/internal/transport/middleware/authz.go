@@ -111,8 +111,6 @@ func buildStrictAuthzPolicies() map[string]strictAuthzPolicy {
 	}
 
 	for _, operationID := range []string{
-		"GetProblemReadme",
-		"UpdateProblemReadme",
 		"GetProblemLimits",
 		"UpdateProblemLimits",
 		"GetProblemStatement",
