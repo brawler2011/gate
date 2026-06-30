@@ -13,6 +13,7 @@ type AuthRepo interface {
 	GetSession(ctx context.Context, sessionID uuid.UUID) (models.Session, error)
 	DeleteSession(ctx context.Context, sessionID uuid.UUID) error
 	UpdateSessionExpiry(ctx context.Context, sessionID uuid.UUID, expiresAt time.Time) error
+	CleanupExpiredSessions(ctx context.Context, hardLimitCutoff time.Time) error
 }
 
 type AuthUC interface {
@@ -20,4 +21,6 @@ type AuthUC interface {
 	Login(ctx context.Context, identifier, password string) (models.User, uuid.UUID, error)
 	Logout(ctx context.Context, sessionID uuid.UUID) error
 	Authenticate(ctx context.Context, sessionID uuid.UUID) (models.User, error)
+	CleanupExpiredSessions(ctx context.Context) error
 }
+

@@ -16,3 +16,9 @@ WHERE id = @id::uuid;
 UPDATE sessions
 SET expires_at = @expires_at::timestamptz
 WHERE id = @id::uuid;
+
+-- name: CleanupExpiredSessions :exec
+DELETE FROM sessions
+WHERE expires_at < NOW()
+   OR created_at < @hard_limit_cutoff::timestamptz;
+

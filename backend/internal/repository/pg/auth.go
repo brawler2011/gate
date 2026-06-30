@@ -64,3 +64,12 @@ func (r *AuthRepo) UpdateSessionExpiry(ctx context.Context, sessionID uuid.UUID,
 	}
 	return nil
 }
+
+func (r *AuthRepo) CleanupExpiredSessions(ctx context.Context, hardLimitCutoff time.Time) error {
+	err := r.queries.CleanupExpiredSessions(ctx, hardLimitCutoff)
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+

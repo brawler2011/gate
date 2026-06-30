@@ -6,6 +6,7 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -30,6 +31,7 @@ type Querier interface {
 	// Access check helpers
 	CheckUserHasProblemAccess(ctx context.Context, arg CheckUserHasProblemAccessParams) (bool, error)
 	CheckUserIsContestModerator(ctx context.Context, arg CheckUserIsContestModeratorParams) (bool, error)
+	CleanupExpiredSessions(ctx context.Context, hardLimitCutoff time.Time) error
 	CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error)
 	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
 	CountContests(ctx context.Context, arg CountContestsParams) (int64, error)

@@ -11,6 +11,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	sessionHardLifetime = 7 * 24 * time.Hour // 7 days
+	sessionSoftLifetime = 40 * time.Minute   // 40 minutes
+)
+
 type AuthUseCase struct {
 	usersRepo interfaces.UsersRepo
 	authRepo  interfaces.AuthRepo
@@ -47,7 +52,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, email, password s
 
 	userID := uuid.New()
 	sessionID := uuid.New()
-	expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7 days sliding
+	expiresAt := time.Now().Add(sessionSoftLifetime)
 
 	err = uc.usersRepo.CreateUser(ctx, models.CreateUserParams{
 		Id:           userID,
@@ -85,7 +90,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 	}
 
 	sessionID := uuid.New()
-	expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7-day sliding session
+	expiresAt := time.Now().Add(sessionSoftLifetime)
 
 	err = uc.authRepo.CreateSession(ctx, sessionID, user.Id, expiresAt)
 	if err != nil {
@@ -105,13 +110,24 @@ func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (m
 		return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid session")
 	}
 
+	// 1. Hard lifetime check: expires 7 days after creation
+	hardExpiry := session.CreatedAt.Add(sessionHardLifetime)
+	if time.Now().After(hardExpiry) {
+		_ = uc.authRepo.DeleteSession(ctx, sessionID)
+		return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "session expired (hard limit)")
+	}
+
+	// 2. Soft lifetime check: expires if user was inactive for 40 minutes (session.ExpiresAt is the soft expiry)
 	if session.IsExpired() {
 		_ = uc.authRepo.DeleteSession(ctx, sessionID)
-		return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "session expired")
+		return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "session expired (soft limit)")
 	}
 
 	// Update session expiry in database (sliding session)
-	newExpiry := time.Now().Add(7 * 24 * time.Hour)
+	newExpiry := time.Now().Add(sessionSoftLifetime)
+	if newExpiry.After(hardExpiry) {
+		newExpiry = hardExpiry
+	}
 	err = uc.authRepo.UpdateSessionExpiry(ctx, sessionID, newExpiry)
 	if err != nil {
 		// Log error but don't fail authentication
@@ -124,4 +140,9 @@ func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (m
 	}
 
 	return user, nil
+}
+
+func (uc *AuthUseCase) CleanupExpiredSessions(ctx context.Context) error {
+	cutoff := time.Now().Add(-sessionHardLifetime)
+	return uc.authRepo.CleanupExpiredSessions(ctx, cutoff)
 }

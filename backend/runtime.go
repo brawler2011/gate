@@ -320,6 +320,32 @@ func runApp(envFile string) error {
 				return nil
 			},
 		),
+		newService(
+			"session cleanup worker",
+			func(ctx context.Context) error {
+				ticker := time.NewTicker(10 * time.Minute)
+				defer ticker.Stop()
+
+				// Run first cleanup immediately on startup
+				if err := authUC.CleanupExpiredSessions(ctx); err != nil {
+					slog.Error("failed to cleanup expired sessions", "error", err)
+				}
+
+				for {
+					select {
+					case <-ctx.Done():
+						return nil
+					case <-ticker.C:
+						if err := authUC.CleanupExpiredSessions(ctx); err != nil {
+							slog.Error("failed to cleanup expired sessions", "error", err)
+						}
+					}
+				}
+			},
+			func(context.Context) error {
+				return nil
+			},
+		),
 		newHTTPService("public server", publicServer),
 	}
 

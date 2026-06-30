@@ -198,4 +198,117 @@ func (s *IntegrationTestSuite) TestAuth() {
 		// Expiry must be later than initial expiry
 		s.True(updatedExpiry.After(initialExpiry))
 	})
+
+	// 5. Dual session lifetimes and cleanup test
+	s.Run("Session lifetimes and cleanup", func() {
+		username := "lifetimesuser_" + uuid.NewString()[:8]
+		email := username + "@example.com"
+		password := "lifetimespass"
+
+		regResp, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+			Username: username,
+			Email:    types.Email(email),
+			Password: password,
+		})
+		s.Require().NoError(err)
+		sessionID := regResp.JSON200.SessionId
+		userID := regResp.JSON200.User.Id
+
+		authRepo := pg.NewAuthRepo(s.dbPool)
+		txManager := pg.NewTransactor(s.dbPool)
+		authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager)
+
+		// Test Case A: Soft timeout (expires_at in past)
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE sessions SET expires_at = NOW() - INTERVAL '5 minutes' WHERE id = $1", sessionID)
+		s.Require().NoError(err)
+
+		_, err = authUC.Authenticate(s.ctx, sessionID)
+		s.Require().Error(err)
+		s.Contains(err.Error(), "session expired (soft limit)")
+
+		// Verify session is deleted
+		var count int
+		err = s.dbPool.QueryRow(s.ctx, "SELECT COUNT(*) FROM sessions WHERE id = $1", sessionID).Scan(&count)
+		s.Require().NoError(err)
+		s.Equal(0, count)
+
+		// Recreate session for Hard timeout test
+		newSessionID := uuid.New()
+		err = authRepo.CreateSession(s.ctx, newSessionID, userID, time.Now().Add(40*time.Minute))
+		s.Require().NoError(err)
+
+		// Test Case B: Hard timeout (created_at older than 7 days)
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE sessions SET created_at = NOW() - INTERVAL '8 days' WHERE id = $1", newSessionID)
+		s.Require().NoError(err)
+
+		_, err = authUC.Authenticate(s.ctx, newSessionID)
+		s.Require().Error(err)
+		s.Contains(err.Error(), "session expired (hard limit)")
+
+		// Verify session is deleted
+		err = s.dbPool.QueryRow(s.ctx, "SELECT COUNT(*) FROM sessions WHERE id = $1", newSessionID).Scan(&count)
+		s.Require().NoError(err)
+		s.Equal(0, count)
+
+		// Recreate session for Capping test
+		capSessionID := uuid.New()
+		err = authRepo.CreateSession(s.ctx, capSessionID, userID, time.Now().Add(40*time.Minute))
+		s.Require().NoError(err)
+
+		// Set created_at to almost 7 days ago (6 days, 23 hours, 50 minutes ago)
+		// So hard limit is in 10 minutes.
+		hardExpiryIn := 10 * time.Minute
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE sessions SET created_at = NOW() - INTERVAL '7 days' + $1::interval WHERE id = $2", hardExpiryIn.String(), capSessionID)
+		s.Require().NoError(err)
+
+		// Call Authenticate, which should slide but cap at hardExpiry
+		_, err = authUC.Authenticate(s.ctx, capSessionID)
+		s.Require().NoError(err)
+
+		var cappedExpiry time.Time
+		err = s.dbPool.QueryRow(s.ctx, "SELECT expires_at FROM sessions WHERE id = $1", capSessionID).Scan(&cappedExpiry)
+		s.Require().NoError(err)
+
+		// The expires_at should be roughly Now() + 10 minutes (hardExpiry), not Now() + 40 minutes (softExpiry)
+		expectedCapped := time.Now().Add(hardExpiryIn)
+		s.WithinDuration(expectedCapped, cappedExpiry, 5*time.Second)
+
+		// Test Case C: Background Cleanup query
+		// Create an expired session (soft)
+		softExpiredID := uuid.New()
+		err = authRepo.CreateSession(s.ctx, softExpiredID, userID, time.Now().Add(-5*time.Minute))
+		s.Require().NoError(err)
+
+		// Create a hard-expired session
+		hardExpiredID := uuid.New()
+		err = authRepo.CreateSession(s.ctx, hardExpiredID, userID, time.Now().Add(40*time.Minute))
+		s.Require().NoError(err)
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE sessions SET created_at = NOW() - INTERVAL '8 days' WHERE id = $1", hardExpiredID)
+		s.Require().NoError(err)
+
+		// Create a valid session
+		validSessionID := uuid.New()
+		err = authRepo.CreateSession(s.ctx, validSessionID, userID, time.Now().Add(40*time.Minute))
+		s.Require().NoError(err)
+
+		// Run Cleanup
+		err = authUC.CleanupExpiredSessions(s.ctx)
+		s.Require().NoError(err)
+
+		// Verify softExpired is deleted
+		err = s.dbPool.QueryRow(s.ctx, "SELECT COUNT(*) FROM sessions WHERE id = $1", softExpiredID).Scan(&count)
+		s.Require().NoError(err)
+		s.Equal(0, count)
+
+		// Verify hardExpired is deleted
+		err = s.dbPool.QueryRow(s.ctx, "SELECT COUNT(*) FROM sessions WHERE id = $1", hardExpiredID).Scan(&count)
+		s.Require().NoError(err)
+		s.Equal(0, count)
+
+		// Verify valid session remains
+		err = s.dbPool.QueryRow(s.ctx, "SELECT COUNT(*) FROM sessions WHERE id = $1", validSessionID).Scan(&count)
+		s.Require().NoError(err)
+		s.Equal(1, count)
+	})
 }
+

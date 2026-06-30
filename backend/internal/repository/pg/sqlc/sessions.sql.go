@@ -12,6 +12,17 @@ import (
 	"github.com/google/uuid"
 )
 
+const cleanupExpiredSessions = `-- name: CleanupExpiredSessions :exec
+DELETE FROM sessions
+WHERE expires_at < NOW()
+   OR created_at < $1::timestamptz
+`
+
+func (q *Queries) CleanupExpiredSessions(ctx context.Context, hardLimitCutoff time.Time) error {
+	_, err := q.db.Exec(ctx, cleanupExpiredSessions, hardLimitCutoff)
+	return err
+}
+
 const createSession = `-- name: CreateSession :exec
 INSERT INTO sessions (id, user_id, expires_at, created_at)
 VALUES ($1::uuid, $2::uuid, $3::timestamptz, NOW())
