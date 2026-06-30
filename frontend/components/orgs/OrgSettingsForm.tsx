@@ -6,7 +6,7 @@ import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import type { OrganizationModel } from '@contracts/gateway/v1';
+import type { OrganizationModel } from '@contracts/core/v1';
 
 type Props = { org: OrganizationModel };
 

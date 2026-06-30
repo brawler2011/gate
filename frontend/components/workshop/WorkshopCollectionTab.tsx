@@ -1,7 +1,7 @@
 "use client";
 
 import type { ApiError } from "@/lib/api";
-import type { FileEntry } from "@contracts/gateway/v1";
+import type { FileEntry } from "@contracts/core/v1";
 import {
   ActionIcon,
   Box,

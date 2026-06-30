@@ -7,7 +7,7 @@ import type {
   ContestModel,
   OrganizationModel,
   PaginationModel,
-} from "@contracts/gateway/v1";
+} from "@contracts/core/v1";
 import { Button, Center, Group, Input, Stack, Text } from "@mantine/core";
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";

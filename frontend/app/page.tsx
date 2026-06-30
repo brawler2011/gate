@@ -1,7 +1,7 @@
 import { DefaultLayout } from '@/components/shared';
 import { isAuthenticated } from "@/lib/auth";
 import { listPosts } from "@/lib/actions";
-import type { PaginationModel } from "@contracts/gateway/v1";
+import type { PaginationModel } from "@contracts/core/v1";
 import {
   Container,
   Group,

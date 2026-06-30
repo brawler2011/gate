@@ -17,7 +17,7 @@ import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconPlus, IconTrash, IconUsers } from '@tabler/icons-react';
 import { useCallback, useEffect, useState } from 'react';
-import type { TeamMemberModel } from '@contracts/gateway/v1';
+import type { TeamMemberModel } from '@contracts/core/v1';
 import { StatusMessage } from '@/components/shared/StatusMessage';
 
 type Props = { teamId: string };

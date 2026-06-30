@@ -1,5 +1,5 @@
 "use client";
-import type { TeamModel } from '@contracts/gateway/v1';
+import type { TeamModel } from '@contracts/core/v1';
 import { Table, Text, Anchor } from '@mantine/core';
 import Link from 'next/link';
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContest } from "@/lib/actions";
-import type { OrganizationModel } from "@contracts/gateway/v1";
+import type { OrganizationModel } from "@contracts/core/v1";
 import { Button, Modal, Select, Stack, TextInput } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";

@@ -1,7 +1,7 @@
 "use client";
 
 import { createProblem, updateProblem } from "@/lib/actions";
-import type { OrganizationModel } from "@contracts/gateway/v1";
+import type { OrganizationModel } from "@contracts/core/v1";
 import {
   Button,
   Modal,

@@ -1,11 +1,9 @@
-.PHONY: all go-gen ts-gen deps clean help list-specs merge
+.PHONY: all go-gen ts-gen deps clean
 
 .DEFAULT_GOAL := all
 
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eu -o pipefail -c
-
-SPECS := $(shell find . -type f -path "*/v*/openapi.yaml" 2>/dev/null)
 
 GO   ?= go
 NPM  ?= npm
@@ -23,69 +21,34 @@ deps: go.sum go.mod package.json
 	@command -v "$(NPX)"  >/dev/null || { echo "Error: npx is not installed"; exit 1; }
 	@command -v "$(NODE)" >/dev/null || { echo "Error: node is not installed"; exit 1; }
 
-merge: deps
-	node tools/merge-openapi.js
+go-gen: deps
+	mkdir -p $(GO_OUT)/core/v1
+	go run $(OAPI_CODEGEN) \
+		-generate std-http-server,models,strict-server,client \
+		-package corev1 \
+		-o $(GO_OUT)/core/v1/core.go \
+		core/v1/openapi.yaml
+	sed -i 's|/workshop/files/{path}"|/workshop/files/{path...}"|g' $(GO_OUT)/core/v1/core.go
 
-go-gen: merge
-	@if [ -z "$(SPECS)" ]; then \
-		echo "Error: No OpenAPI specs found matching */v*/openapi.yaml"; \
-		exit 1; \
-	fi
-	@for spec in $(SPECS); do \
-		spec_path="$$spec"; \
-		dir="$${spec_path%/*}"; \
-		parent="$${dir%/*}"; \
-		service="$${parent##*/}"; \
-		version="$${dir##*/}"; \
-		pkg_name="$${service}$${version}"; \
-		out_dir="$(GO_OUT)/$$service/$$version"; \
-		\
-		mkdir -p "$$out_dir"; \
-		\
-		if [ "$$service" = "core" ]; then \
-			go run $(OAPI_CODEGEN) \
-				-generate std-http-server,models,strict-server,client \
-				-package "$$pkg_name" \
-				-o "$$out_dir/$$service.go" \
-				"$$spec_path" || exit 1; \
-			sed -i 's|/workshop/files/{path}"|/workshop/files/{path...}"|g' "$$out_dir/$$service.go"; \
-		elif [ "$$service" = "gateway" ]; then \
-			:; \
-		else \
-			go run $(OAPI_CODEGEN) \
-				-generate std-http-server,models,strict-server,skip-prune \
-				-package "$$pkg_name" \
-				-o "$$out_dir/$$service.go" \
-				"$$spec_path" || exit 1; \
-			fi; \
-	done
+	mkdir -p $(GO_OUT)/observer/v1
+	go run $(OAPI_CODEGEN) \
+		-generate std-http-server,models,strict-server,skip-prune \
+		-package observerv1 \
+		-o $(GO_OUT)/observer/v1/observer.go \
+		observer/v1/openapi.yaml
 
-ts-gen: merge
-	@if [ -z "$(SPECS)" ]; then \
-		echo "Error: No OpenAPI specs found matching */v*/openapi.yaml"; \
-		exit 1; \
-	fi
-	@for spec in $(SPECS); do \
-		spec_path="$$spec"; \
-		dir="$${spec_path%/*}"; \
-		parent="$${dir%/*}"; \
-		service="$${parent##*/}"; \
-		version="$${dir##*/}"; \
-		out_dir="$(TS_OUT)/$$service/$$version"; \
-		\
-		bunx openapi-typescript-codegen --input "$$spec_path" --output "$$out_dir" --client fetch --name "$$service" --useOptions || exit 1; \
-	done
+ts-gen: deps
+	rm -rf $(TS_OUT)/core/v1
+	mkdir -p $(TS_OUT)/core/v1
+	bunx openapi-typescript-codegen --input core/v1/openapi.yaml --output $(TS_OUT)/core/v1 --client fetch --name core --useOptions
+
+	rm -rf $(TS_OUT)/observer/v1
+	mkdir -p $(TS_OUT)/observer/v1
+	bunx openapi-typescript-codegen --input observer/v1/openapi.yaml --output $(TS_OUT)/observer/v1 --client fetch --name observer --useOptions
 
 all: go-gen ts-gen
 
 clean:
-	@for spec in $(SPECS); do \
-		spec_path="$$spec"; \
-		dir="$${spec_path%/*}"; \
-		parent="$${dir%/*}"; \
-		service="$${parent##*/}"; \
-		version="$${dir##*/}"; \
-		rm -rf \
-			"$(GO_OUT)/$$service/$$version/$$service.go" \
-			"$(TS_OUT)/$$service/$$version"; \
-	done
+	rm -rf $(GO_OUT)/core/v1 $(GO_OUT)/observer/v1
+	rm -rf $(TS_OUT)/core/v1 $(TS_OUT)/observer/v1
+

@@ -7,7 +7,7 @@ import {
   removeOrganizationMember,
   searchUsers,
 } from "@/lib/actions";
-import type { OrganizationMemberModel } from "@contracts/gateway/v1";
+import type { OrganizationMemberModel } from "@contracts/core/v1";
 import {
   ActionIcon,
   Badge,

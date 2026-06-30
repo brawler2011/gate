@@ -5,7 +5,7 @@ import type {
     ListSubmissionsResponseModel,
     UpdateProblemLimitsRequest,
     UpdateProblemStatementRequest
-} from '@contracts/gateway/v1';
+} from '@contracts/core/v1';
 import { Call, type ApiError } from './api';
 
 export async function getContests(page: number = 1, pageSize: number = 10, search?: string, organizationId?: string) {

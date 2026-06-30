@@ -7,7 +7,7 @@ import type {
   OrganizationModel,
   PaginationModel,
   ProblemsListItemModel,
-} from "@contracts/gateway/v1";
+} from "@contracts/core/v1";
 import {
   Button,
   Center,

@@ -25,7 +25,7 @@ import { IconCalendar, IconEdit, IconTrophy } from "@tabler/icons-react";
 import { getRoleColor, TimeBeautify } from "@/lib/lib";
 import { APP_COLORS } from "@/lib/theme/colors";
 import { patchMe } from "@/lib/actions";
-import type { ContestModel } from "@contracts/gateway/v1";
+import type { ContestModel } from "@contracts/core/v1";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 

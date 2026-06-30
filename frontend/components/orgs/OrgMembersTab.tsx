@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrganizationMemberModel } from "@contracts/gateway/v1";
+import type { OrganizationMemberModel } from "@contracts/core/v1";
 import { Badge, Table, Text } from "@mantine/core";
 
 const ROLE_COLORS: Record<string, string> = {

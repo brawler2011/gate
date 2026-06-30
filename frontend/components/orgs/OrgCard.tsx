@@ -1,5 +1,5 @@
 "use client";
-import type { OrganizationModel } from '@contracts/gateway/v1';
+import type { OrganizationModel } from '@contracts/core/v1';
 import { Card, Text, Title, Group } from '@mantine/core';
 import { IconBuilding } from '@tabler/icons-react';
 import Link from 'next/link';

@@ -12,7 +12,7 @@ import {
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { PostModel } from "@contracts/gateway/v1";
+import type { PostModel } from "@contracts/core/v1";
 import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
 import { DeleteBlogPostModal } from "./DeleteBlogPostModal";
 import { formatDate } from "@/lib/formatDate";
