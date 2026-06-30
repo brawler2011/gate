@@ -218,6 +218,7 @@ type Error struct {
 // FileEntry defines model for FileEntry.
 type FileEntry struct {
 	IsDirectory *bool   `json:"is_directory,omitempty"`
+	IsMain      *bool   `json:"is_main,omitempty"`
 	Path        *string `json:"path,omitempty"`
 	Size        *int64  `json:"size,omitempty"`
 }

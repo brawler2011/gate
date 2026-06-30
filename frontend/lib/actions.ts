@@ -585,3 +585,19 @@ export async function importProblemPackage(problemId: string, packageFile: Blob)
 export async function listProblemPackages(problemId: string) {
   return Call((client) => client.default.listProblemPackages({ id: problemId }));
 }
+
+export async function setWorkshopCheckerMain(problemId: string, name: string) {
+  return Call((client) => client.default.setProblemCheckerMain({ problemId, requestBody: { name } }));
+}
+
+export async function setWorkshopGeneratorMain(problemId: string, name: string) {
+  return Call((client) => client.default.setProblemGeneratorMain({ problemId, requestBody: { name } }));
+}
+
+export async function setWorkshopInteractorMain(problemId: string, name: string) {
+  return Call((client) => client.default.setProblemInteractorMain({ problemId, requestBody: { name } }));
+}
+
+export async function setWorkshopValidatorMain(problemId: string, name: string) {
+  return Call((client) => client.default.setProblemValidatorMain({ problemId, requestBody: { name } }));
+}

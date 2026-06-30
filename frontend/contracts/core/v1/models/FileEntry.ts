@@ -6,5 +6,6 @@ export type FileEntry = {
     path?: string;
     is_directory?: boolean;
     size?: number;
+    is_main?: boolean;
 };
 

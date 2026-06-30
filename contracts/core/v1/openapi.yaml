@@ -3771,6 +3771,8 @@ components:
         size:
           type: integer
           format: int64
+        is_main:
+          type: boolean
     MessageResponse:
       type: object
       properties:

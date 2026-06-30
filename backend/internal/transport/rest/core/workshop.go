@@ -15,7 +15,9 @@ import (
 	"github.com/gate149/gate/backend/internal/transport/middleware"
 	"github.com/gate149/gate/backend/internal/usecase"
 	"github.com/gate149/gate/backend/pkg"
+	"github.com/gate149/gate/backend/pkg/formats/gfmt"
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -761,7 +763,14 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 		return corev1.WorkshopFileListResponse{}, pkg.Wrap(pkg.ErrInternal, err, "failed to list files")
 	}
 
-	contractFiles := toContractFileEntries(files)
+	// Read problem.yaml to get the active components
+	var gfmtProblem gfmt.Problem
+	yamlBytes, err := h.workshopUC.ReadProblemFile(ctx, problemID, "problem.yaml")
+	if err == nil {
+		_ = yaml.Unmarshal(yamlBytes, &gfmtProblem)
+	}
+
+	contractFiles := toContractFileEntries(files, &gfmtProblem)
 	return corev1.WorkshopFileListResponse{Files: &contractFiles}, nil
 }
 
@@ -888,20 +897,22 @@ func (h *CoreServer) setMainComponent(ctx context.Context, problemID uuid.UUID, 
 		return err
 	}
 
-	index := -1
+	componentPath = filepath.ToSlash(componentPath)
+
+	firstIdx := -1
+	selectedIdx := -1
 	for i := range manifest.FilesMetadata {
 		if manifest.FilesMetadata[i].Type == componentType {
-			index = i
-			break
+			if firstIdx == -1 {
+				firstIdx = i
+			}
+			if filepath.ToSlash(manifest.FilesMetadata[i].Filename) == componentPath {
+				selectedIdx = i
+			}
 		}
 	}
 
-	if index >= 0 {
-		manifest.FilesMetadata[index].Filename = componentPath
-		if strings.TrimSpace(manifest.FilesMetadata[index].Compiler) == "" {
-			manifest.FilesMetadata[index].Compiler = compilerByFilename(cleanName)
-		}
-		manifest.FilesMetadata[index].BinarySha256 = nil
+	if selectedIdx < 0 {
 		manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{
 			Type:         componentType,
 			Filename:     componentPath,
@@ -909,6 +920,18 @@ func (h *CoreServer) setMainComponent(ctx context.Context, problemID uuid.UUID, 
 			BinarySha256: nil,
 			Dependencies: []models.Dependency{},
 		})
+		selectedIdx = len(manifest.FilesMetadata) - 1
+		if firstIdx == -1 {
+			firstIdx = selectedIdx
+		}
+	}
+
+	if firstIdx >= 0 && firstIdx != selectedIdx {
+		item := manifest.FilesMetadata[selectedIdx]
+		// Remove from selectedIdx
+		manifest.FilesMetadata = append(manifest.FilesMetadata[:selectedIdx], manifest.FilesMetadata[selectedIdx+1:]...)
+		// Insert at firstIdx
+		manifest.FilesMetadata = append(manifest.FilesMetadata[:firstIdx], append([]models.FileMetadata{item}, manifest.FilesMetadata[firstIdx:]...)...)
 	}
 
 	if err := validateManifest(manifest); err != nil {
@@ -1026,13 +1049,24 @@ func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages
 	}
 }
 
-func toContractFileEntries(files []models.FileEntry) []corev1.FileEntry {
+func toContractFileEntries(files []models.FileEntry, prob *gfmt.Problem) []corev1.FileEntry {
 	contractFiles := make([]corev1.FileEntry, len(files))
 	for i, f := range files {
+		isMain := false
+		normalizedPath := filepath.ToSlash(f.Path)
+		if prob != nil {
+			if (prob.Checker != "" && normalizedPath == filepath.ToSlash(prob.Checker)) ||
+				(prob.Interactor != "" && normalizedPath == filepath.ToSlash(prob.Interactor)) ||
+				(prob.Validator != "" && normalizedPath == filepath.ToSlash(prob.Validator)) ||
+				(prob.Generator != "" && normalizedPath == filepath.ToSlash(prob.Generator)) {
+				isMain = true
+			}
+		}
 		contractFiles[i] = corev1.FileEntry{
 			Path:        strPtr(f.Path),
 			IsDirectory: boolPtr(f.IsDirectory),
 			Size:        int64Ptr(f.Size),
+			IsMain:      boolPtr(isMain),
 		}
 	}
 	return contractFiles

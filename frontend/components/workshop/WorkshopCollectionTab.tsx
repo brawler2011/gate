@@ -17,7 +17,7 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconFile, IconPlus, IconRefresh, IconX } from "@tabler/icons-react";
+import { IconFile, IconPlus, IconRefresh, IconX, IconStar } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import classes from "./WorkshopFolderTab.module.css";
 
@@ -45,6 +45,10 @@ type Props = {
     name: string,
     content: string,
   ) => SaveFileResult;
+  setMain?: (
+    problemId: string,
+    name: string,
+  ) => SaveFileResult;
 };
 
 export function WorkshopCollectionTab({
@@ -57,6 +61,7 @@ export function WorkshopCollectionTab({
   getFile,
   createFile,
   updateFile,
+  setMain,
 }: Props) {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
@@ -209,7 +214,10 @@ export function WorkshopCollectionTab({
             if (selectedFile !== file.path) onFileSelect(file.path!);
           }}
         >
-          {getFileName(file.path!)}
+          <Group gap={4} wrap="nowrap" align="center" style={{ display: "inline-flex" }}>
+            {file.is_main && <IconStar size={12} fill="currentColor" color="var(--mantine-color-yellow-5)" />}
+            <span>{getFileName(file.path!)}</span>
+          </Group>
         </button>
       ))}
 
@@ -319,6 +327,41 @@ export function WorkshopCollectionTab({
           {isLoadingFile && <Loader size="xs" />}
         </Group>
         <Group gap="xs">
+          {selectedFile && setMain && (
+            (() => {
+              const selectedEntry = leafFiles.find(f => f.path === selectedFile);
+              const isMain = selectedEntry?.is_main === true;
+              return (
+                <Button
+                  size="xs"
+                  variant={isMain ? "light" : "outline"}
+                  color={isMain ? "yellow" : "gray"}
+                  leftSection={<IconStar size={14} fill={isMain ? "currentColor" : "none"} />}
+                  disabled={isMain || isSaving || isLoadingFile}
+                  onClick={async () => {
+                    const fileName = getFileName(selectedFile);
+                    const [error] = await setMain(problemId, fileName);
+                    if (error) {
+                      notifications.show({
+                        title: "Ошибка",
+                        message: error.message ?? "Не удалось сделать файл основным",
+                        color: "red",
+                      });
+                      return;
+                    }
+                    notifications.show({
+                      title: "Успешно",
+                      message: `${fileName} теперь используется как основной`,
+                      color: "green",
+                    });
+                    await fetchFiles();
+                  }}
+                >
+                  {isMain ? "Основной" : "Сделать основным"}
+                </Button>
+              );
+            })()
+          )}
           {selectedFile && (
             <ActionIcon
               variant="subtle"

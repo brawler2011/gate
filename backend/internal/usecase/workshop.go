@@ -741,6 +741,27 @@ func ManifestAndTestsToGfmtProblem(manifest *models.ProblemManifest, testsMeta *
 		Solutions: make(map[string]string),
 	}
 
+	for _, meta := range manifest.FilesMetadata {
+		switch meta.Type {
+		case "checker":
+			if prob.Checker == "" {
+				prob.Checker = meta.Filename
+			}
+		case "interactor":
+			if prob.Interactor == "" {
+				prob.Interactor = meta.Filename
+			}
+		case "validator":
+			if prob.Validator == "" {
+				prob.Validator = meta.Filename
+			}
+		case "generator":
+			if prob.Generator == "" {
+				prob.Generator = meta.Filename
+			}
+		}
+	}
+
 	if testsMeta != nil {
 		for _, grp := range testsMeta.Groups {
 			var tests []gfmt.Test

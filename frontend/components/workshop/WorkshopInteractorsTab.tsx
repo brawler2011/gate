@@ -5,6 +5,7 @@ import {
   getWorkshopInteractorFile,
   listWorkshopInteractorFiles,
   updateWorkshopInteractorFile,
+  setWorkshopInteractorMain,
 } from "@/lib/actions";
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
 import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
@@ -18,6 +19,7 @@ export function WorkshopInteractorsTab(props: WorkshopFileTabProps) {
       getFile={getWorkshopInteractorFile}
       createFile={createWorkshopInteractorFile}
       updateFile={updateWorkshopInteractorFile}
+      setMain={setWorkshopInteractorMain}
     />
   );
 }

@@ -5,6 +5,7 @@ import {
   getWorkshopValidatorFile,
   listWorkshopValidatorFiles,
   updateWorkshopValidatorFile,
+  setWorkshopValidatorMain,
 } from "@/lib/actions";
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
 import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
@@ -18,6 +19,7 @@ export function WorkshopValidatorsTab(props: WorkshopFileTabProps) {
       getFile={getWorkshopValidatorFile}
       createFile={createWorkshopValidatorFile}
       updateFile={updateWorkshopValidatorFile}
+      setMain={setWorkshopValidatorMain}
     />
   );
 }
