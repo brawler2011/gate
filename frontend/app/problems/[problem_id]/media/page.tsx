@@ -1,4 +1,4 @@
-import ProblemPage, { generateMetadata as sharedGenerateMetadata } from "./ProblemPage";
+import ProblemPage, { generateMetadata as sharedGenerateMetadata } from "../ProblemPage";
 
 type SearchParams = Promise<{
   file?: string;
@@ -13,5 +13,5 @@ type Props = {
 export const generateMetadata = sharedGenerateMetadata;
 
 export default async function Page({ params, searchParams }: Props) {
-  return <ProblemPage params={params} searchParams={searchParams} activeTab="general" />;
+  return <ProblemPage params={params} searchParams={searchParams} activeTab="media" />;
 }

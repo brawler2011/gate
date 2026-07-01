@@ -1,7 +1,7 @@
 "use client";
 
 import { Stack } from "@mantine/core";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
 import { WorkshopCheckersTab } from "./WorkshopCheckersTab";
 import classes from "./WorkshopEditor.module.css";
@@ -18,6 +18,7 @@ import { WorkshopValidatorsTab } from "./WorkshopValidatorsTab";
 
 type Props = {
   problemId: string;
+  activeTab: string;
 };
 
 const GENERAL_TAB = "general";
@@ -25,29 +26,29 @@ const STATEMENT_TAB = "statement";
 const PACKAGES_TAB = "packages";
 const IMPORT_TAB = "import";
 
-export function WorkshopEditor({ problemId }: Props) {
+export function WorkshopEditor({ problemId, activeTab }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  const activeTab = searchParams.get("tab") ?? GENERAL_TAB;
   const selectedFile = searchParams.get("file");
 
   const setFile = useCallback(
     (filePath: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("file", filePath);
-      router.push(`?${params.toString()}`, { scroll: false });
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     },
-    [router, searchParams],
+    [router, searchParams, pathname],
   );
 
   const handleFileCreated = useCallback(
     (filePath: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("file", filePath);
-      router.push(`?${params.toString()}`, { scroll: false });
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     },
-    [router, searchParams],
+    [router, searchParams, pathname],
   );
 
   const renderFolderTab = () => {
