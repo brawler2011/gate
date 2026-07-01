@@ -314,7 +314,7 @@ export function useSubmissionsWebSocket({
     }, HIGHLIGHT_DURATION);
   }, []);
 
-  // Build WebSocket URL with filter params
+  // Build WebSocket URL with filter params (without problemId to keep connection alive when switching tasks)
   // Use individual filter values as dependencies to prevent reconnection on every render
   const buildWsUrl = useCallback(() => {
     if (!wsUrl) {
@@ -325,13 +325,12 @@ export function useSubmissionsWebSocket({
     url.searchParams.set('sortOrder', 'desc');
     if (filter.contestId) url.searchParams.set('contestId', filter.contestId);
     if (filter.userId) url.searchParams.set('userId', filter.userId);
-    if (filter.problemId) url.searchParams.set('problemId', filter.problemId);
     return url.toString();
-  }, [wsUrl, sinceState, filter.contestId, filter.userId, filter.problemId]);
+  }, [wsUrl, sinceState, filter.contestId, filter.userId]);
 
   const connectionKey = useMemo(
-    () => `${wsUrl}|${sinceState ?? 0}|${filter.contestId ?? ''}|${filter.userId ?? ''}|${filter.problemId ?? ''}`,
-    [wsUrl, sinceState, filter.contestId, filter.userId, filter.problemId],
+    () => `${wsUrl}|${sinceState ?? 0}|${filter.contestId ?? ''}|${filter.userId ?? ''}`,
+    [wsUrl, sinceState, filter.contestId, filter.userId],
   );
 
   const contestId = filter.contestId;
@@ -398,10 +397,26 @@ export function useSubmissionsWebSocket({
       return;
     }
 
+    const payload = data.payload as { problem_id?: string; user_id?: string; contest_id?: string } | null | undefined;
+    if (!payload) {
+      return;
+    }
+
+    // Client-side filtering: check if the event matches the current task, user, and contest
+    if (problemId && payload.problem_id !== problemId) {
+      return;
+    }
+    if (userId && payload.user_id !== userId) {
+      return;
+    }
+    if (contestId && payload.contest_id !== contestId) {
+      return;
+    }
+
     switch (data.event_type) {
       case SubmissionsEventType.SUBMISSIONS_CREATED: {
-        const payload = data.payload as MessageSubmissionCreated;
-        const newSubmission = buildSubmissionFromCreated(payload);
+        const p = data.payload as MessageSubmissionCreated;
+        const newSubmission = buildSubmissionFromCreated(p);
         setSubmissions(prev => {
           const filtered = prev.filter(s => s.id !== newSubmission.id);
           const updated = [newSubmission, ...filtered];
@@ -410,14 +425,14 @@ export function useSubmissionsWebSocket({
           }
           return updated;
         });
-        addHighlight(payload.id);
+        addHighlight(p.id);
         break;
       }
 
       case SubmissionsEventType.SUBMISSIONS_QUEUED:
       case SubmissionsEventType.SUBMISSIONS_COMPILING_STARTED:
       case SubmissionsEventType.SUBMISSIONS_TESTING_STARTED: {
-        const payload = data.payload as MessageSubmissionQueued | MessageSubmissionCompilingStarted | MessageSubmissionTestingStarted;
+        const p = data.payload as MessageSubmissionQueued | MessageSubmissionCompilingStarted | MessageSubmissionTestingStarted;
         let phase: TestProgress['phase'];
         if (data.event_type === SubmissionsEventType.SUBMISSIONS_QUEUED) {
           phase = 'queued';
@@ -427,14 +442,14 @@ export function useSubmissionsWebSocket({
           phase = 'testing';
         }
         const progress: TestProgress = { phase };
-        progressMapRef.current.set(payload.id, progress);
+        progressMapRef.current.set(p.id, progress);
 
         setSubmissions(prev => {
-          const index = prev.findIndex(s => s.id === payload.id);
+          const index = prev.findIndex(s => s.id === p.id);
           if (index === -1) {
             const fallback = buildSubmissionFromCreated({
-              ...payload,
-              id: payload.id,
+              ...p,
+              id: p.id,
               state: 1,
               source: '',
             });
@@ -449,24 +464,24 @@ export function useSubmissionsWebSocket({
           updated[index] = { ...updated[index], progress, isUpdated: true };
           return updated;
         });
-        addHighlight(payload.id);
+        addHighlight(p.id);
         break;
       }
 
       case SubmissionsEventType.SUBMISSIONS_TEST_STARTED: {
-        const payload = data.payload as MessageSubmissionTestStarted;
+        const p = data.payload as MessageSubmissionTestStarted;
         const progress: TestProgress = {
           phase: 'testing',
-          testNumber: payload.number,
+          testNumber: p.number,
         };
-        progressMapRef.current.set(payload.id, progress);
+        progressMapRef.current.set(p.id, progress);
 
         setSubmissions(prev => {
-          const index = prev.findIndex(s => s.id === payload.id);
+          const index = prev.findIndex(s => s.id === p.id);
           if (index === -1) {
             const fallback = buildSubmissionFromCreated({
-              ...payload,
-              id: payload.id,
+              ...p,
+              id: p.id,
               state: 1,
               source: '',
             });
@@ -481,17 +496,17 @@ export function useSubmissionsWebSocket({
           updated[index] = { ...updated[index], progress, isUpdated: true };
           return updated;
         });
-        addHighlight(payload.id);
+        addHighlight(p.id);
         break;
       }
 
       case SubmissionsEventType.SUBMISSIONS_COMPLETED: {
-        const payload = data.payload as MessageSubmissionCompleted;
-        progressMapRef.current.delete(payload.id);
+        const p = data.payload as MessageSubmissionCompleted;
+        progressMapRef.current.delete(p.id);
 
         setSubmissions(prev => {
-          const index = prev.findIndex(s => s.id === payload.id);
-          const completed = buildSubmissionFromCompleted(payload);
+          const index = prev.findIndex(s => s.id === p.id);
+          const completed = buildSubmissionFromCompleted(p);
           if (index === -1) {
             const updated = [completed, ...prev];
             if (updated.length > pageSize) {
@@ -503,14 +518,14 @@ export function useSubmissionsWebSocket({
           updated[index] = { ...updated[index], ...completed, progress: undefined, isUpdated: true };
           return updated;
         });
-        addHighlight(payload.id);
+        addHighlight(p.id);
         break;
       }
 
       default:
         log('Unknown websocket event type:', data.event_type);
     }
-  }, [pageSize, addHighlight, connectionKey]);
+  }, [pageSize, addHighlight, connectionKey, contestId, userId, problemId]);
 
   // Setup and cleanup WebSocket subscription
   const listenerIdRef = useRef<number | null>(null);
