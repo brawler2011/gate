@@ -70,6 +70,10 @@ func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, prob
 	return nil
 }
 
+func (uc *ProblemsUseCase) UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error {
+	return uc.repo.UpdateProblemLimits(ctx, id, timeLimitMs, memoryLimitMb)
+}
+
 func (uc *ProblemsUseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	return uc.repo.DeleteProblem(ctx, id)
 }

@@ -8,6 +8,7 @@ export type ProblemsListItemModel = {
     visibility?: string;
     memory_limit: number;
     time_limit: number;
+    is_template: boolean;
     created_at: string;
     updated_at: string;
 };

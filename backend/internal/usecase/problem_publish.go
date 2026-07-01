@@ -171,6 +171,23 @@ func (uc *ProblemPublishUseCase) GetPublishedPackageURL(
 	return packageURL, nil
 }
 
+func (uc *ProblemPublishUseCase) GetReadyPackage(
+	ctx context.Context,
+	problemID uuid.UUID,
+) (models.ProblemPackage, error) {
+	return uc.packagesRepo.GetReadyPackage(ctx, problemID)
+}
+
+func (uc *ProblemPublishUseCase) DownloadPackage(
+	ctx context.Context,
+	problemID uuid.UUID,
+	packageHash string,
+) (io.ReadCloser, error) {
+	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID.String(), packageHash)
+	reader, _, err := uc.storage.DownloadFile(ctx, uc.packageBucket, s3Key, nil)
+	return reader, err
+}
+
 func ZipDirectory(srcDir string, writer io.Writer) error {
 	archive := zip.NewWriter(writer)
 	defer archive.Close()

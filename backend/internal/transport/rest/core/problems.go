@@ -1,7 +1,9 @@
 package core
 
 import (
+	"bytes"
 	"context"
+	"io"
 
 	corev1 "github.com/gate149/contracts/core/v1"
 	"github.com/gate149/gate/backend/internal/domain/models"
@@ -50,6 +52,10 @@ func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProble
 		}
 	}
 
+	if request.Params.IsTemplate != nil {
+		filter.IsTemplate = request.Params.IsTemplate
+	}
+
 	problemsList, err := h.problemsUC.ListProblems(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -95,6 +101,57 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 		Title:          request.Params.Title,
 		ShortName:      shortName,
 		Visibility:     models.ProblemVisibilityPrivate,
+	}
+
+	if request.Params.TemplateId != nil {
+		templateID := uuid.UUID(*request.Params.TemplateId)
+		templateProblem, err := h.problemsUC.GetProblemById(ctx, templateID)
+		if err != nil {
+			return nil, err
+		}
+		if !templateProblem.IsTemplate {
+			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "выбранная задача не является шаблоном")
+		}
+		if templateProblem.OrganizationID != orgID {
+			return nil, pkg.Wrap(pkg.NoPermission, nil, "шаблон должен принадлежать той же организации")
+		}
+
+		readyPkg, err := h.publishUC.GetReadyPackage(ctx, templateID)
+		if err != nil {
+			return nil, pkg.Wrap(pkg.ErrBadInput, err, "не удалось найти готовый пакет шаблона")
+		}
+
+		problemID, err := h.problemsUC.CreateProblem(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		zipReader, err := h.publishUC.DownloadPackage(ctx, templateID, readyPkg.PackageHash)
+		if err != nil {
+			_ = h.problemsUC.DeleteProblem(ctx, problemID)
+			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to download template package")
+		}
+		defer zipReader.Close()
+
+		fileBytes, err := io.ReadAll(zipReader)
+		if err != nil {
+			_ = h.problemsUC.DeleteProblem(ctx, problemID)
+			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to read template package")
+		}
+
+		_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), problemID)
+		if err != nil {
+			_ = h.problemsUC.DeleteProblem(ctx, problemID)
+			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import template package")
+		}
+
+		manifest, err := h.workshopUC.GetManifest(ctx, problemID)
+		if err == nil {
+			manifest.Statement.Title = input.Title
+			_ = h.workshopUC.SaveManifest(ctx, problemID, manifest)
+		}
+
+		return corev1.CreateProblem200JSONResponse{Id: problemID}, nil
 	}
 
 	problemID, err := h.problemsUC.CreateProblem(ctx, input)
@@ -149,6 +206,27 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdatePro
 	// Handle visibility update
 	if req.Visibility != nil {
 		update.Visibility = req.Visibility
+	}
+
+	// Handle is_template update
+	if req.IsTemplate != nil {
+		if *req.IsTemplate {
+			pkgs, err := h.publishUC.ListPackages(ctx, request.Id)
+			if err != nil {
+				return nil, err
+			}
+			hasReady := false
+			for _, p := range pkgs {
+				if p.Status == "ready" {
+					hasReady = true
+					break
+				}
+			}
+			if !hasReady {
+				return nil, pkg.Wrap(pkg.ErrBadInput, nil, "для перевода задачи в шаблон необходим хотя бы один успешно собранный пакет")
+			}
+		}
+		update.IsTemplate = req.IsTemplate
 	}
 
 	// Note: Other fields (Legend, InputFormat, etc.) are now stored in git repos

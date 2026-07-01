@@ -56,6 +56,7 @@ export class DefaultService {
         descending,
         owner,
         organizationId,
+        isTemplate,
     }: {
         page: number,
         pageSize: number,
@@ -63,6 +64,7 @@ export class DefaultService {
         descending?: boolean,
         owner?: boolean,
         organizationId?: string,
+        isTemplate?: boolean,
     }): CancelablePromise<ListProblemsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
@@ -74,6 +76,7 @@ export class DefaultService {
                 'descending': descending,
                 'owner': owner,
                 'organization_id': organizationId,
+                'is_template': isTemplate,
             },
         });
     }
@@ -84,9 +87,11 @@ export class DefaultService {
     public createProblem({
         title,
         organizationId,
+        templateId,
     }: {
         title: string,
         organizationId?: string,
+        templateId?: string,
     }): CancelablePromise<CreationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
@@ -94,6 +99,7 @@ export class DefaultService {
             query: {
                 'title': title,
                 'organization_id': organizationId,
+                'template_id': templateId,
             },
         });
     }

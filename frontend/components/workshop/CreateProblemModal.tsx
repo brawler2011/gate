@@ -1,11 +1,10 @@
 "use client";
 
-import { createProblem, updateProblem } from "@/lib/actions";
+import { createProblem, getProblems } from "@/lib/actions";
 import type { OrganizationModel } from "@contracts/core/v1";
 import {
   Button,
   Modal,
-  NumberInput,
   Select,
   Stack,
   TextInput,
@@ -32,8 +31,9 @@ export function CreateProblemModal({
   const router = useRouter();
   const [title, setTitle] = useState("New Problem");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
-  const [timeLimit, setTimeLimit] = useState<number | string>(1000);
-  const [memoryLimit, setMemoryLimit] = useState<number | string>(256);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<Array<{ value: string; label: string }>>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -43,39 +43,54 @@ export function CreateProblemModal({
       const validDefault =
         defaultOrgId && orgIds.has(defaultOrgId) ? defaultOrgId : null;
       setOrgId(validDefault ?? (orgs.length === 1 ? orgs[0].id : null));
-      setTimeLimit(1000);
-      setMemoryLimit(256);
+      setTemplateId(null);
     }
   }, [opened, defaultOrgId, orgs]);
+
+  useEffect(() => {
+    if (opened && orgId) {
+      setLoadingTemplates(true);
+      getProblems(1, 100, undefined, undefined, undefined, orgId, true)
+        .then(([err, res]) => {
+          if (!err && res?.problems) {
+            setTemplates(
+              res.problems.map((p) => ({
+                value: p.id,
+                label: p.title,
+              }))
+            );
+          } else {
+            setTemplates([]);
+          }
+        })
+        .catch(() => {
+          setTemplates([]);
+        })
+        .finally(() => {
+          setLoadingTemplates(false);
+        });
+    } else {
+      setTemplates([]);
+      setTemplateId(null);
+    }
+  }, [opened, orgId]);
 
   const orgData = orgs.map((o) => ({ value: o.id, label: o.name }));
 
   const handleSubmit = async () => {
     if (!orgId) return;
 
-    const tl =
-      typeof timeLimit === "number" ? timeLimit : parseInt(timeLimit, 10);
-    const ml =
-      typeof memoryLimit === "number" ? memoryLimit : parseInt(memoryLimit, 10);
-
-    if (!tl || !ml) return;
-
     setLoading(true);
     try {
       const [createError, createResponse] = await createProblem(
         title.trim() || "New Problem",
         orgId,
+        templateId ?? undefined,
       );
       if (createError) throw new Error(createError.message);
       if (!createResponse?.id) throw new Error("Не получен ID задачи");
 
       const problemId = createResponse.id;
-
-      const [updateError] = await updateProblem(problemId, {
-        time_limit: tl,
-        memory_limit: ml,
-      });
-      if (updateError) throw new Error(updateError.message);
 
       onClose();
       router.push(`/problems/${problemId}`);
@@ -91,7 +106,7 @@ export function CreateProblemModal({
     }
   };
 
-  const isValid = title.trim() && orgId && timeLimit && memoryLimit;
+  const isValid = title.trim() && orgId;
 
   return (
     <Modal
@@ -122,23 +137,14 @@ export function CreateProblemModal({
             required
           />
         )}
-        <NumberInput
-          label="Лимит времени (мс)"
-          value={timeLimit}
-          onChange={setTimeLimit}
-          min={100}
-          max={30000}
-          step={100}
-          required
-        />
-        <NumberInput
-          label="Лимит памяти (МБ)"
-          value={memoryLimit}
-          onChange={setMemoryLimit}
-          min={16}
-          max={4096}
-          step={64}
-          required
+        <Select
+          label="Шаблон задачи"
+          placeholder={loadingTemplates ? "Загрузка шаблонов..." : "Выберите шаблон (необязательно)"}
+          data={templates}
+          value={templateId}
+          onChange={setTemplateId}
+          clearable
+          disabled={loadingTemplates || templates.length === 0}
         />
         <Button
           onClick={handleSubmit}

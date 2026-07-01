@@ -59,18 +59,20 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 	// If no organization filter, list all problems
 	if filter.OrganizationID == nil {
 		total, err := r.queries.CountAllProblems(ctx, sqlc.CountAllProblemsParams{
-			Column1: filter.Search,
-			Column2: filter.Visibility,
+			Column1:    filter.Search,
+			Column2:    filter.Visibility,
+			IsTemplate: filter.IsTemplate,
 		})
 		if err != nil {
 			return nil, 0, HandlePgErr(err)
 		}
 
 		rows, err := r.queries.ListAllProblems(ctx, sqlc.ListAllProblemsParams{
-			Column1: filter.Search,
-			Column2: filter.Visibility,
-			Limit:   filter.PageSize,
-			Offset:  offset,
+			Column1:    filter.Search,
+			Column2:    filter.Visibility,
+			Limit:      filter.PageSize,
+			Offset:     offset,
+			IsTemplate: filter.IsTemplate,
 		})
 		if err != nil {
 			return nil, 0, HandlePgErr(err)
@@ -89,6 +91,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 		OrganizationID: *filter.OrganizationID,
 		Column2:        filter.Search,
 		Column3:        filter.Visibility,
+		IsTemplate:     filter.IsTemplate,
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
@@ -100,6 +103,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 		Column3:        filter.Visibility,
 		Limit:          filter.PageSize,
 		Offset:         offset,
+		IsTemplate:     filter.IsTemplate,
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
@@ -117,8 +121,9 @@ func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem 
 	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
 		ID:         id,
 		Title:      problem.Title,
-		Visibility: stringToNullProblemVisibility(problem.Visibility),
+		Visibility: stringToProblemVisibilityPtr(problem.Visibility),
 		OwnerID:    uuidPtrToNullUUID(problem.OwnerID),
+		IsTemplate: problem.IsTemplate,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -181,14 +186,12 @@ func (r *ProblemsRepo) GetProblemTeams(ctx context.Context, problemId uuid.UUID)
 	return teams, nil
 }
 
-func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
+func stringToProblemVisibilityPtr(s *string) *sqlc.ProblemVisibility {
 	if s == nil {
-		return sqlc.NullProblemVisibility{Valid: false}
+		return nil
 	}
-	return sqlc.NullProblemVisibility{
-		ProblemVisibility: sqlc.ProblemVisibility(*s),
-		Valid:             true,
-	}
+	v := sqlc.ProblemVisibility(*s)
+	return &v
 }
 
 func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) models.Problem {
@@ -201,6 +204,7 @@ func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) models.Problem {
 		ShortName:      p.ShortName,
 		TimeLimitMs:    int(p.TimeLimitMs),
 		MemoryLimitMb:  int(p.MemoryLimitMb),
+		IsTemplate:     p.IsTemplate,
 		CreatedAt:      p.CreatedAt,
 		UpdatedAt:      p.UpdatedAt,
 	}
@@ -216,6 +220,7 @@ func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) models.Problem {
 		ShortName:      p.ShortName,
 		TimeLimitMs:    int(p.TimeLimitMs),
 		MemoryLimitMb:  int(p.MemoryLimitMb),
+		IsTemplate:     p.IsTemplate,
 		CreatedAt:      p.CreatedAt,
 		UpdatedAt:      p.UpdatedAt,
 	}
@@ -231,6 +236,7 @@ func mapListProblemsRow(p sqlc.ListProblemsRow) models.Problem {
 		ShortName:      p.ShortName,
 		TimeLimitMs:    int(p.TimeLimitMs),
 		MemoryLimitMb:  int(p.MemoryLimitMb),
+		IsTemplate:     p.IsTemplate,
 		CreatedAt:      p.CreatedAt,
 		UpdatedAt:      p.UpdatedAt,
 	}

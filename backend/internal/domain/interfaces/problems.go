@@ -36,5 +36,6 @@ type ProblemsUC interface {
 	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTest, error)
 	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error
+	UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error
 	UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error
 }

@@ -89,3 +89,100 @@ func (s *IntegrationTestSuite) TestProblems() {
 		s.Equal(http.StatusOK, resp.StatusCode())
 	})
 }
+
+func (s *IntegrationTestSuite) TestProblemTemplates() {
+	admin := s.createUser("admin_templates", models.UserRoleAdmin)
+	org := s.createOrganization("templates-org", "Templates Organization", admin.Id)
+
+	var problemID uuid.UUID
+
+	// 1. Create Problem A
+	s.Run("CreateProblemA", func() {
+		title := "Problem A"
+		organizationID := openapi_types.UUID(org.ID)
+		resp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
+			Title:          title,
+			OrganizationId: &organizationID,
+		}, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", admin.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusOK, resp.StatusCode())
+		problemID = resp.JSON200.Id
+	})
+
+	// 2. Try to set as template (should fail because there are no packages)
+	s.Run("SetTemplateFailsNoPackages", func() {
+		isTemplate := true
+		resp, err := s.client.UpdateProblemWithResponse(s.ctx, problemID, corev1.UpdateProblemJSONRequestBody{
+			IsTemplate: &isTemplate,
+		}, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", admin.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusBadRequest, resp.StatusCode())
+	})
+
+	// 3. Publish a package for Problem A
+	s.Run("PublishPackage", func() {
+		resp, err := s.client.PublishProblemWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", admin.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusOK, resp.StatusCode())
+	})
+
+	// 4. Set as template (should succeed now)
+	s.Run("SetTemplateSucceeds", func() {
+		isTemplate := true
+		resp, err := s.client.UpdateProblemWithResponse(s.ctx, problemID, corev1.UpdateProblemJSONRequestBody{
+			IsTemplate: &isTemplate,
+		}, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", admin.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusOK, resp.StatusCode())
+
+		// Verify metadata in GetProblem
+		getResp, err := s.client.GetProblemWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", admin.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusOK, getResp.StatusCode())
+		s.True(getResp.JSON200.Problem.IsTemplate)
+	})
+
+	// 5. Create Problem B using Problem A as a template
+	s.Run("CreateProblemFromTemplate", func() {
+		title := "Problem B"
+		organizationID := openapi_types.UUID(org.ID)
+		templateID := openapi_types.UUID(problemID)
+		resp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
+			Title:          title,
+			OrganizationId: &organizationID,
+			TemplateId:     &templateID,
+		}, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", admin.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusOK, resp.StatusCode())
+		newProblemID := resp.JSON200.Id
+
+		// Verify Problem B details
+		getResp, err := s.client.GetProblemWithResponse(s.ctx, newProblemID, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", admin.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusOK, getResp.StatusCode())
+		s.Equal("Problem B", getResp.JSON200.Problem.Title)
+		s.False(getResp.JSON200.Problem.IsTemplate)
+	})
+}
+

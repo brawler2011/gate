@@ -229,6 +229,7 @@ func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
 		Visibility:  &p.Visibility,
 		MemoryLimit: int32(p.MemoryLimitMb),
 		TimeLimit:   int32(p.TimeLimitMs),
+		IsTemplate:  p.IsTemplate,
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
 	}
@@ -275,8 +276,9 @@ func ProblemDTO(p models.Problem, statement *models.Statement) *corev1.ProblemMo
 		NotesHtml:        notes,
 		ScoringHtml:      scoring,
 
-		CreatedAt: p.CreatedAt,
-		UpdatedAt: p.UpdatedAt,
+		IsTemplate: p.IsTemplate,
+		CreatedAt:  p.CreatedAt,
+		UpdatedAt:  p.UpdatedAt,
 	}
 }
 

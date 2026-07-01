@@ -6,17 +6,18 @@ VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetProblemByID :one
-SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems WHERE id = $1;
+SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb, is_template FROM problems WHERE id = $1;
 
 -- name: GetProblemByShortName :one
-SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems
+SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb, is_template FROM problems
 WHERE organization_id = $1 AND short_name = $2;
 
 -- name: ListProblems :many
-SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb FROM problems
+SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb, is_template FROM problems
 WHERE organization_id = $1
   AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
   AND ($3::text = '' OR visibility = $3::problem_visibility)
+  AND (sqlc.narg('is_template')::boolean IS NULL OR is_template = sqlc.narg('is_template')::boolean)
 ORDER BY created_at DESC
 LIMIT $4 OFFSET $5;
 
@@ -24,25 +25,29 @@ LIMIT $4 OFFSET $5;
 SELECT COUNT(*) FROM problems
 WHERE organization_id = $1
   AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR visibility = $3::problem_visibility);
+  AND ($3::text = '' OR visibility = $3::problem_visibility)
+  AND (sqlc.narg('is_template')::boolean IS NULL OR is_template = sqlc.narg('is_template')::boolean);
 
 -- name: ListAllProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template FROM problems p
 WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR p.visibility = $2::problem_visibility)
+  AND (sqlc.narg('is_template')::boolean IS NULL OR p.is_template = sqlc.narg('is_template')::boolean)
 ORDER BY p.created_at DESC
 LIMIT $3 OFFSET $4;
 
 -- name: CountAllProblems :one
 SELECT COUNT(*) FROM problems p
 WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
-  AND ($2::text = '' OR p.visibility = $2::problem_visibility);
+  AND ($2::text = '' OR p.visibility = $2::problem_visibility)
+  AND (sqlc.narg('is_template')::boolean IS NULL OR p.is_template = sqlc.narg('is_template')::boolean);
 
 -- name: UpdateProblem :exec
 UPDATE problems
 SET title = COALESCE(sqlc.narg('title'), title),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
-    owner_id = COALESCE(sqlc.narg('owner_id'), owner_id)
+    owner_id = COALESCE(sqlc.narg('owner_id'), owner_id),
+    is_template = COALESCE(sqlc.narg('is_template'), is_template)
 WHERE id = $1;
 
 -- name: DeleteProblem :exec
@@ -80,7 +85,7 @@ WHERE problem_id = $1 AND user_id = $2;
 SELECT user_has_problem_access($1, $2) as has_access;
 
 -- name: ListUserAccessibleProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template FROM problems p
 WHERE user_has_problem_access($1, p.id)
 ORDER BY p.created_at DESC
 LIMIT $2 OFFSET $3;

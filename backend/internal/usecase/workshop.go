@@ -610,6 +610,7 @@ func (uc *WorkshopUseCase) saveManifest(ctx context.Context, problemID uuid.UUID
 	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
 	if err == nil {
 		_ = uc.problemsRepo.UpdateProblemManifest(ctx, problemID, manifestBytes)
+		_ = uc.problemsRepo.UpdateProblemLimits(ctx, problemID, manifest.TimeLimitMs, manifest.MemoryLimitMb)
 	}
 
 	return nil

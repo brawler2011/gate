@@ -12,5 +12,6 @@ export type UpdateProblemRequestModel = {
     memory_limit?: number;
     time_limit?: number;
     visibility?: string;
+    is_template?: boolean;
 };
 

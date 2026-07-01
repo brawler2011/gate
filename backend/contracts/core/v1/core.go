@@ -408,6 +408,7 @@ type ProblemModel struct {
 	InputFormat      string              `json:"input_format"`
 	InputFormatHtml  string              `json:"input_format_html"`
 	IsPrivate        *bool               `json:"is_private,omitempty"`
+	IsTemplate       bool                `json:"is_template"`
 	Legend           string              `json:"legend"`
 	LegendHtml       string              `json:"legend_html"`
 	MemoryLimit      int32               `json:"memory_limit"`
@@ -441,6 +442,7 @@ type ProblemStatement struct {
 type ProblemsListItemModel struct {
 	CreatedAt   time.Time          `json:"created_at"`
 	Id          openapi_types.UUID `json:"id"`
+	IsTemplate  bool               `json:"is_template"`
 	MemoryLimit int32              `json:"memory_limit"`
 	TimeLimit   int32              `json:"time_limit"`
 	Title       string             `json:"title"`
@@ -566,6 +568,7 @@ type UpdateProblemLimitsRequest struct {
 // UpdateProblemRequestModel defines model for UpdateProblemRequestModel.
 type UpdateProblemRequestModel struct {
 	InputFormat  *string `json:"input_format,omitempty"`
+	IsTemplate   *bool   `json:"is_template,omitempty"`
 	Legend       *string `json:"legend,omitempty"`
 	MemoryLimit  *int32  `json:"memory_limit,omitempty"`
 	Notes        *string `json:"notes,omitempty"`
@@ -754,12 +757,14 @@ type ListProblemsParams struct {
 	Descending     *bool               `form:"descending,omitempty" json:"descending,omitempty"`
 	Owner          *bool               `form:"owner,omitempty" json:"owner,omitempty"`
 	OrganizationId *openapi_types.UUID `form:"organization_id,omitempty" json:"organization_id,omitempty"`
+	IsTemplate     *bool               `form:"is_template,omitempty" json:"is_template,omitempty"`
 }
 
 // CreateProblemParams defines parameters for CreateProblem.
 type CreateProblemParams struct {
 	Title          string              `form:"title" json:"title"`
 	OrganizationId *openapi_types.UUID `form:"organization_id,omitempty" json:"organization_id,omitempty"`
+	TemplateId     *openapi_types.UUID `form:"template_id,omitempty" json:"template_id,omitempty"`
 }
 
 // ImportProblemMultipartBody defines parameters for ImportProblem.
@@ -4747,6 +4752,22 @@ func NewListProblemsRequest(server string, params *ListProblemsParams) (*http.Re
 
 		}
 
+		if params.IsTemplate != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "is_template", runtime.ParamLocationQuery, *params.IsTemplate); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
 		queryURL.RawQuery = queryValues.Encode()
 	}
 
@@ -4795,6 +4816,22 @@ func NewCreateProblemRequest(server string, params *CreateProblemParams) (*http.
 		if params.OrganizationId != nil {
 
 			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "organization_id", runtime.ParamLocationQuery, *params.OrganizationId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.TemplateId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "template_id", runtime.ParamLocationQuery, *params.TemplateId); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -16902,6 +16939,14 @@ func (siw *ServerInterfaceWrapper) ListProblems(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "is_template" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "is_template", r.URL.Query(), &params.IsTemplate)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "is_template", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListProblems(w, r, params)
 	}))
@@ -16941,6 +16986,14 @@ func (siw *ServerInterfaceWrapper) CreateProblem(w http.ResponseWriter, r *http.
 	err = runtime.BindQueryParameter("form", true, false, "organization_id", r.URL.Query(), &params.OrganizationId)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "organization_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "template_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "template_id", r.URL.Query(), &params.TemplateId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "template_id", Err: err})
 		return
 	}
 

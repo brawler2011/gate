@@ -40,6 +40,10 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: is_template
+          in: query
+          schema:
+            type: boolean
       responses:
         '200':
           description: OK
@@ -57,6 +61,11 @@ paths:
             type: string
           example: Problem 1
         - name: organization_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: template_id
           in: query
           schema:
             type: string
@@ -2953,6 +2962,7 @@ components:
         - output_format_html
         - notes_html
         - scoring_html
+        - is_template
         - created_at
         - updated_at
       properties:
@@ -2978,6 +2988,9 @@ components:
           type: integer
           format: int32
           example: 256
+        is_template:
+          type: boolean
+          example: false
         legend:
           type: string
         input_format:
@@ -3014,6 +3027,7 @@ components:
         - title
         - memory_limit
         - time_limit
+        - is_template
         - created_at
         - updated_at
       properties:
@@ -3030,6 +3044,8 @@ components:
         time_limit:
           type: integer
           format: int32
+        is_template:
+          type: boolean
         created_at:
           type: string
           format: date-time
@@ -3252,6 +3268,8 @@ components:
         visibility:
           type: string
           example: private
+        is_template:
+          type: boolean
     UpdateContestRequestModel:
       type: object
       properties:

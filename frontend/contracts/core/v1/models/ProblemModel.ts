@@ -10,6 +10,7 @@ export type ProblemModel = {
     title: string;
     time_limit: number;
     memory_limit: number;
+    is_template: boolean;
     legend: string;
     input_format: string;
     output_format: string;

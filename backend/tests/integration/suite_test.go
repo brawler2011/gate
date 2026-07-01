@@ -154,6 +154,10 @@ func (s *IntegrationTestSuite) initApp() {
 
 	avatarsUC := usecase.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
 
+	packagesRepo := pg.NewPackagesRepo(s.dbPool)
+	importUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
+	publishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages")
+
 	// Handler
 	coreServer := handlers.NewCoreServer(
 		authUC,
@@ -167,8 +171,8 @@ func (s *IntegrationTestSuite) initApp() {
 		workshopUC,
 		blogsUC,
 		avatarsUC,
-		nil, // importUC - not needed for integration tests
-		nil, // publishUC - not needed for integration tests
+		importUC,
+		publishUC,
 		nil, // natsJS - not needed for integration tests
 	)
 

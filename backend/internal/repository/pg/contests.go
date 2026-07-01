@@ -86,7 +86,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdate
 		ID:           c.ID,
 		Title:        c.Title,
 		Description:  c.Description,
-		Visibility:   stringToNullContestVisibility(c.Visibility),
+		Visibility:   stringToContestVisibilityPtr(c.Visibility),
 		Settings:     settingsJSON,
 		AccessPolicy: accessPolicyJSON,
 		StartTime:    timePtrToNullTime(c.StartTime),
@@ -623,14 +623,12 @@ func nullInt32ToInt32(i *int32) int32 {
 	return *i
 }
 
-func stringToNullContestVisibility(s *models.ContestVisibility) sqlc.NullContestVisibility {
+func stringToContestVisibilityPtr(s *models.ContestVisibility) *sqlc.ContestVisibility {
 	if s == nil {
-		return sqlc.NullContestVisibility{Valid: false}
+		return nil
 	}
-	return sqlc.NullContestVisibility{
-		ContestVisibility: sqlc.ContestVisibility(*s),
-		Valid:             true,
-	}
+	v := sqlc.ContestVisibility(*s)
+	return &v
 }
 
 func stringToNullContestRole(s *models.ContestRole) sqlc.NullContestRole {

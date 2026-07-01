@@ -136,6 +136,10 @@ func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipRea
 		return nil, fmt.Errorf("failed to save manifest to database: %w", err)
 	}
 
+	if err := uc.problemsRepo.UpdateProblemLimits(ctx, problemID, manifest.TimeLimitMs, manifest.MemoryLimitMb); err != nil {
+		return nil, fmt.Errorf("failed to save limits to database: %w", err)
+	}
+
 	return manifest, nil
 }
 

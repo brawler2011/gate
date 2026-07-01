@@ -103,6 +103,7 @@ type Problem struct {
 	ShortName      string
 	TimeLimitMs    int
 	MemoryLimitMb  int
+	IsTemplate     bool
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -176,6 +177,7 @@ type ProblemsFilter struct {
 	OwnerID        *uuid.UUID
 	Search         string
 	Visibility     string
+	IsTemplate     *bool
 }
 
 type ProblemsList struct {
@@ -187,6 +189,7 @@ type ProblemUpdate struct {
 	Title      *string
 	Visibility *string
 	OwnerID    *uuid.UUID
+	IsTemplate *bool
 }
 
 type CreateProblemMemberParams struct {

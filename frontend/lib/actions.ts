@@ -16,7 +16,7 @@ export async function getUserContests(userId: string, page: number = 1, pageSize
     return Call((client) => client.default.listUserContests({id: userId, page, pageSize, search}));
 }
 
-export async function getProblems(page: number = 1, pageSize: number = 10, search?: string, order?: number, owner?: boolean, organizationId?: string) {
+export async function getProblems(page: number = 1, pageSize: number = 10, search?: string, order?: number, owner?: boolean, organizationId?: string, isTemplate?: boolean) {
     const params: {
         page: number;
         pageSize: number;
@@ -24,6 +24,7 @@ export async function getProblems(page: number = 1, pageSize: number = 10, searc
         order?: number;
         owner?: boolean;
         organizationId?: string;
+        isTemplate?: boolean;
     } = {
         page,
         pageSize,
@@ -31,6 +32,7 @@ export async function getProblems(page: number = 1, pageSize: number = 10, searc
         order,
         owner,
         organizationId,
+        isTemplate,
     };
 
     return Call((client) => client.default.listProblems(params));
@@ -124,8 +126,8 @@ export async function createContest(title: string, organizationId?: string) {
     return Call((client) => client.default.createContest({title, organizationId}));
 }
 
-export async function createProblem(title: string, organizationId?: string) {
-    return Call((client) => client.default.createProblem({title, organizationId}));
+export async function createProblem(title: string, organizationId?: string, templateId?: string) {
+    return Call((client) => client.default.createProblem({title, organizationId, templateId}));
 }
 
 export async function updateProblem(
@@ -139,7 +141,8 @@ export async function updateProblem(
         scoring?: string;
         memory_limit?: number;
         time_limit?: number;
-        is_private?: boolean;
+        visibility?: string;
+        is_template?: boolean;
     }
 ) {
     return Call((client) => client.default.updateProblem({id: problemId, requestBody: data}));
