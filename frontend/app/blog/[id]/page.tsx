@@ -1,5 +1,5 @@
 import { DefaultLayout } from '@/components/shared';
-import { getPostById } from "@/lib/actions";
+import { getPostByIdPublic, listPostsPublic } from "@/lib/actions";
 import { formatDate } from "@/lib/formatDate";
 import { Avatar, Container, Group, Stack, Text, Title } from "@mantine/core";
 import { Metadata } from "next";
@@ -11,13 +11,31 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import classes from "./styles.module.css";
 
+// Revalidate cache every 10 minutes
+export const revalidate = 600;
+
 type Props = {
   params: Promise<{ id: string }>;
 };
 
+export async function generateStaticParams() {
+  try {
+    const [error, postsData] = await listPostsPublic(1, 50);
+    if (error || !postsData || !postsData.posts) return [];
+    return postsData.posts
+      .filter((post) => post.id !== undefined && post.id !== null)
+      .map((post) => ({
+        id: post.id!.toString(),
+      }));
+  } catch (e) {
+    console.warn("Бэкенд недоступен при сборке, статический рендеринг пропущен:", e);
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const [error, post] = await getPostById(id);
+  const [error, post] = await getPostByIdPublic(id);
 
   if (error || !post) {
     return {
@@ -33,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { id } = await params;
-  const [error, post] = await getPostById(id);
+  const [error, post] = await getPostByIdPublic(id);
 
   if (error || !post) {
     notFound();

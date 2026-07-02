@@ -13,13 +13,14 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
-import type { PostModel, PaginationModel } from "@contracts/core/v1";
+import { useState } from "react";
+import type { PostModel } from "@contracts/core/v1";
 import { NextPagination } from '@/components/shared/Pagination';
 import { StatusMessage } from '@/components/shared/StatusMessage';
 import { AdminBlogsSearchInput } from "./AdminBlogsSearchInput";
 import { AdminBlogsTable } from "./AdminBlogsTable";
 import { BlogPostForm } from "./BlogPostForm";
+import useSWR from "swr";
 
 type AdminBlogsContentProps = {
   page: number;
@@ -27,13 +28,6 @@ type AdminBlogsContentProps = {
 };
 
 export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
-  const [posts, setPosts] = useState<PostModel[]>([]);
-  const [pagination, setPagination] = useState<PaginationModel>({
-    total: 0,
-    page: page,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;
@@ -43,31 +37,17 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
   const [formOpened, setFormOpened] = useState(false);
   const [editingPost, setEditingPost] = useState<PostModel | null>(null);
 
-  const loadPosts = useCallback(async (currentPage: number) => {
-    setLoading(true);
-    setError(false);
-
-    const [err, data] = await listPosts(currentPage, 10);
-
-    if (err || !data) {
-      console.error("Error fetching posts:", err);
-      setError(true);
-      setLoading(false);
-      return;
+  const { data, error, isLoading, mutate } = useSWR(
+    ["admin", "blogs", page],
+    async () => {
+      const [err, res] = await listPosts(page, 10);
+      if (err) throw err;
+      return res;
     }
+  );
 
-    setPosts(data.posts || []);
-    setPagination({
-      total: data.pagination?.total ?? 0,
-      page: data.pagination?.page ?? currentPage,
-    });
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    setPagination((prev) => ({ ...prev, page }));
-    loadPosts(page);
-  }, [page, search, loadPosts]);
+  const posts = data?.posts || [];
+  const pagination = data?.pagination || { total: 0, page: page };
 
   const handleCreatePost = () => {
     setEditingPost(null);
@@ -132,7 +112,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
       });
     }
 
-    await loadPosts(page);
+    mutate();
   };
 
   const handleDeletePost = async (postId: string) => {
@@ -153,7 +133,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
       message: "Пост успешно удалён",
     });
     // Reload posts after deletion
-    await loadPosts(page);
+    mutate();
   };
 
   if (error) {
@@ -188,7 +168,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
 
         <AdminBlogsSearchInput />
 
-        {loading ? (
+        {isLoading ? (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />

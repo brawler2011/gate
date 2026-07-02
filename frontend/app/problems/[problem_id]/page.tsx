@@ -1,17 +1,7 @@
-import ProblemPage, { generateMetadata as sharedGenerateMetadata } from "./ProblemPage";
+"use client";
 
-type SearchParams = Promise<{
-  file?: string;
-  [key: string]: string | string[] | undefined;
-}>;
+import ProblemPage from "./ProblemPage";
 
-type Props = {
-  params: Promise<{ problem_id: string }>;
-  searchParams: SearchParams;
-};
-
-export const generateMetadata = sharedGenerateMetadata;
-
-export default async function Page({ params, searchParams }: Props) {
-  return <ProblemPage params={params} searchParams={searchParams} activeTab="general" />;
+export default function Page() {
+  return <ProblemPage activeTab="general" />;
 }

@@ -18,8 +18,9 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconFile, IconPlus, IconRefresh, IconX, IconStar } from "@tabler/icons-react";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import classes from "./WorkshopFolderTab.module.css";
+import useSWR from "swr";
 
 type ListFilesResult = Promise<
   [ApiError | null, { files?: FileEntry[] } | null]
@@ -63,11 +64,8 @@ export function WorkshopCollectionTab({
   updateFile,
   setMain,
 }: Props) {
-  const [files, setFiles] = useState<FileEntry[]>([]);
-  const [isLoadingFiles, setIsLoadingFiles] = useState(true);
   const [content, setContent] = useState<string>("");
   const [isDirty, setIsDirty] = useState(false);
-  const [isLoadingFile, startLoadingFile] = useTransition();
   const [isSaving, startSaving] = useTransition();
 
   const [isCreating, setIsCreating] = useState(false);
@@ -77,64 +75,48 @@ export function WorkshopCollectionTab({
 
   const getFileName = (path: string) => path.split("/").pop() ?? path;
 
-  const fetchFiles = useCallback(async () => {
-    setIsLoadingFiles(true);
-    const [error, data] = await listFiles(problemId);
-    setIsLoadingFiles(false);
-
-    if (error) {
-      notifications.show({
-        title: "Ошибка загрузки файлов",
-        message: error.message ?? "Не удалось загрузить список файлов",
-        color: "red",
-      });
-      return;
+  const { data: filesData, isLoading: isLoadingFiles, mutate: mutateFiles } = useSWR(
+    ["workshop-files", problemId, folderName],
+    async () => {
+      const [err, res] = await listFiles(problemId);
+      if (err) throw err;
+      return res;
     }
+  );
 
-    setFiles(data?.files ?? []);
-  }, [listFiles, problemId]);
+  const files = filesData?.files || [];
 
-  useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+  const fileName = selectedFile ? getFileName(selectedFile) : null;
+  const { data: fileContent, isLoading: isLoadingFile, mutate: mutateContent } = useSWR(
+    fileName ? ["workshop-file-content", problemId, folderName, fileName] : null,
+    async () => {
+      const [err, res] = await getFile(problemId, fileName!);
+      if (err) throw err;
+      return res;
+    }
+  );
 
   const leafFiles = files.filter((file) => !file.is_directory);
 
-  const loadFile = useCallback(
-    (path: string) => {
-      startLoadingFile(async () => {
-        const fileName = getFileName(path);
-        const [error, data] = await getFile(problemId, fileName);
-        if (error) {
-          notifications.show({
-            title: "Ошибка загрузки файла",
-            message: error.message ?? "Не удалось загрузить файл",
-            color: "red",
-          });
-          return;
-        }
+  useEffect(() => {
+    if (fileContent !== undefined && selectedFile) {
+      setContent(fileContent || "");
+      setIsDirty(false);
+    }
+  }, [fileContent, selectedFile]);
 
-        setContent(typeof data === "string" ? data : "");
-        setIsDirty(false);
-      });
-    },
-    [getFile, problemId],
-  );
+  useEffect(() => {
+    if (!selectedFile) {
+      setContent("");
+      setIsDirty(false);
+    }
+  }, [selectedFile]);
 
   useEffect(() => {
     if (!selectedFile && leafFiles.length === 1) {
       onFileSelect(leafFiles[0].path!);
-      return;
     }
-
-    if (selectedFile) {
-      loadFile(selectedFile);
-      return;
-    }
-
-    setContent("");
-    setIsDirty(false);
-  }, [leafFiles.length, loadFile, onFileSelect, selectedFile]);
+  }, [leafFiles, onFileSelect, selectedFile]);
 
   const handleSave = () => {
     if (!selectedFile) return;
@@ -162,7 +144,8 @@ export function WorkshopCollectionTab({
         message: selectedFile,
         color: "green",
       });
-      await fetchFiles();
+      mutateFiles();
+      mutateContent();
     });
   };
 
@@ -196,7 +179,7 @@ export function WorkshopCollectionTab({
 
       setIsCreating(false);
       setNewFileName("");
-      await fetchFiles();
+      mutateFiles();
       onFileCreated(fullPath);
     });
   };
@@ -354,7 +337,7 @@ export function WorkshopCollectionTab({
                       message: `${fileName} теперь используется как основной`,
                       color: "green",
                     });
-                    await fetchFiles();
+                    mutateFiles();
                   }}
                 >
                   {isMain ? "Основной" : "Сделать основным"}
@@ -367,7 +350,7 @@ export function WorkshopCollectionTab({
               variant="subtle"
               title="Перезагрузить"
               disabled={isSaving || isLoadingFile}
-              onClick={() => loadFile(selectedFile)}
+              onClick={() => mutateContent()}
             >
               <IconRefresh size={16} />
             </ActionIcon>

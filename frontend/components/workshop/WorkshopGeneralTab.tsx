@@ -20,7 +20,8 @@ import {
   Text,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import useSWR, { useSWRConfig } from "swr";
 
 type LimitsData = {
   problem_type: string;
@@ -42,46 +43,46 @@ const PROBLEM_TYPE_OPTIONS = [
 export function WorkshopGeneralTab({ problemId }: Props) {
   const [limits, setLimits] = useState<LimitsData | null>(null);
   const [isTemplate, setIsTemplate] = useState<boolean>(false);
-  const [isLoading, startLoading] = useTransition();
   const [isSaving, startSaving] = useTransition();
   const [isDirty, setIsDirty] = useState(false);
+  const { mutate: mutateGlobal } = useSWRConfig();
 
-  const loadLimits = useCallback(() => {
-    startLoading(async () => {
-      const [limitsError, data] = await getWorkshopProblemLimits(problemId);
-      if (limitsError || !data) {
-        notifications.show({
-          title: "Ошибка загрузки лимитов",
-          message: limitsError?.message ?? "Не удалось загрузить лимиты задачи",
-          color: "red",
-        });
-        return;
-      }
+  const { data: problemData, isLoading: isLoadingProblem } = useSWR(
+    ["problem", problemId],
+    async () => {
+      const [err, res] = await getProblem(problemId);
+      if (err) throw err;
+      return res;
+    }
+  );
 
-      const [problemError, problemData] = await getProblem(problemId);
-      if (problemError || !problemData) {
-        notifications.show({
-          title: "Ошибка загрузки данных задачи",
-          message: problemError?.message ?? "Не удалось загрузить данные задачи",
-          color: "red",
-        });
-        return;
-      }
+  const { data: limitsData, isLoading: isLoadingLimits } = useSWR(
+    ["problem-limits", problemId],
+    async () => {
+      const [err, res] = await getWorkshopProblemLimits(problemId);
+      if (err) throw err;
+      return res;
+    }
+  );
 
-      setLimits({
-        problem_type: data.problem_type,
-        max_score: data.max_score ?? null,
-        time_limit_ms: data.time_limit_ms,
-        memory_limit_mb: data.memory_limit_mb,
-      });
-      setIsTemplate(!!problemData.problem.is_template);
-      setIsDirty(false);
-    });
-  }, [problemId, startLoading]);
+  const isLoading = isLoadingProblem || isLoadingLimits;
 
   useEffect(() => {
-    loadLimits();
-  }, [loadLimits]);
+    if (limitsData) {
+      setLimits({
+        problem_type: limitsData.problem_type,
+        max_score: limitsData.max_score ?? null,
+        time_limit_ms: limitsData.time_limit_ms,
+        memory_limit_mb: limitsData.memory_limit_mb,
+      });
+    }
+  }, [limitsData]);
+
+  useEffect(() => {
+    if (problemData) {
+      setIsTemplate(!!problemData.problem.is_template);
+    }
+  }, [problemData]);
 
   const patchLimits = (patch: Partial<LimitsData>) => {
     setLimits((prev) => (prev ? { ...prev, ...patch } : prev));
@@ -102,7 +103,7 @@ export function WorkshopGeneralTab({ problemId }: Props) {
       if (limitsError) {
         notifications.show({
           title: "Ошибка сохранения",
-          message: limitsError.message ?? "Не удалось сохранить лимиты",
+          message: limitsError.message || "Не удалось сохранить лимиты",
           color: "red",
         });
         return;
@@ -115,10 +116,9 @@ export function WorkshopGeneralTab({ problemId }: Props) {
       if (problemError) {
         notifications.show({
           title: "Ошибка сохранения шаблона",
-          message: problemError.message ?? "Не удалось обновить настройки шаблона",
+          message: problemError.message || "Не удалось обновить настройки шаблона",
           color: "red",
         });
-        loadLimits();
         return;
       }
 
@@ -128,6 +128,9 @@ export function WorkshopGeneralTab({ problemId }: Props) {
         message: "Настройки задачи обновлены",
         color: "green",
       });
+
+      mutateGlobal(["problem", problemId]);
+      mutateGlobal(["problem-limits", problemId]);
     });
   };
 

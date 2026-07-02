@@ -6,7 +6,7 @@ import type {
     UpdateProblemLimitsRequest,
     UpdateProblemStatementRequest
 } from '@contracts/core/v1';
-import { Call, type ApiError } from './api';
+import { Call, CallPublic, type ApiError } from './api';
 
 export async function getContests(page: number = 1, pageSize: number = 10, search?: string, organizationId?: string) {
     return Call((client) => client.default.listWorkshopContests({page, pageSize, search, organizationId}));
@@ -273,8 +273,20 @@ export async function listPosts(
   return Call((client) => client.default.listPosts({ page, pageSize, sortOrder }));
 }
 
+export async function listPostsPublic(
+  page: number = 1,
+  pageSize: number = 10,
+  sortOrder: 'asc' | 'desc' = 'desc'
+) {
+  return CallPublic((client) => client.default.listPosts({ page, pageSize, sortOrder }));
+}
+
 export async function getPostById(id: string) {
   return Call((client) => client.default.getPostById({ id }));
+}
+
+export async function getPostByIdPublic(id: string) {
+  return CallPublic((client) => client.default.getPostById({ id }));
 }
 
 export async function createPost(formData: {

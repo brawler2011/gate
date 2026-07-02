@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { UsersRoleFilter } from '@/components/users/UsersRoleFilter';
 import { UsersSearchInput } from '@/components/users/UsersSearchInput';
 import { UsersTable } from '@/components/users/UsersTable';
 import { listUsers } from "@/lib/actions";
 import { Center, Container, Group, Skeleton, Stack, Text, Title } from "@mantine/core";
-import type { UserModel, PaginationModel } from "@contracts/core/v1";
+import type { UserModel } from "@contracts/core/v1";
+import useSWR from "swr";
 
 type UsersContentProps = {
   page: number;
@@ -15,35 +15,17 @@ type UsersContentProps = {
 };
 
 export function UsersContent({ page, search, role }: UsersContentProps) {
-  const [users, setUsers] = useState<UserModel[]>([]);
-  const [pagination, setPagination] = useState<PaginationModel>({
-    total: 0,
-    page: 1,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { data, error, isLoading } = useSWR(
+    ["admin", "users", page, search, role],
+    async () => {
+      const [err, res] = await listUsers(page, 10, search, role);
+      if (err) throw err;
+      return res;
+    }
+  );
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      setError(false);
-
-      const [err, data] = await listUsers(page, 10, search, role);
-      
-      if (err || !data) {
-        console.error("Error fetching users:", err);
-        setError(true);
-        setLoading(false);
-        return;
-      }
-
-      setUsers(data.users || []);
-      setPagination(data.pagination || { total: 0, page: 1, pageSize: 10 });
-      setLoading(false);
-    };
-
-    fetchUsers();
-  }, [page, search, role]);
+  const users = data?.users || [];
+  const pagination = data?.pagination || { total: 0, page: page };
 
   if (error) {
     return (
@@ -67,7 +49,7 @@ export function UsersContent({ page, search, role }: UsersContentProps) {
           <UsersRoleFilter />
         </Group>
 
-        {loading ? (
+        {isLoading ? (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />

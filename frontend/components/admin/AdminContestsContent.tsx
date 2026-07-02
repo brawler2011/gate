@@ -10,12 +10,13 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { useCallback, useEffect, useState } from "react";
-import type { ContestModel, PaginationModel } from "@contracts/core/v1";
+import { useState } from "react";
+import type { ContestModel } from "@contracts/core/v1";
 import { NextPagination } from '@/components/shared/Pagination';
 import { StatusMessage } from '@/components/shared/StatusMessage';
 import { AdminContestsSearchInput } from "./AdminContestsSearchInput";
 import { AdminContestsTable } from "./AdminContestsTable";
+import useSWR from "swr";
 
 type AdminContestsContentProps = {
   page: number;
@@ -23,40 +24,22 @@ type AdminContestsContentProps = {
 };
 
 export function AdminContestsContent({ page, search }: AdminContestsContentProps) {
-  const [contests, setContests] = useState<ContestModel[]>([]);
-  const [pagination, setPagination] = useState<PaginationModel>({
-    total: 0,
-    page: page,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  const loadContests = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-
-    const [err, data] = await listAdminContests(page, 10, search);
-
-    if (err || !data) {
-      console.error("Error fetching contests:", err);
-      setError(true);
-      setLoading(false);
-      return;
+  const { data, error, isLoading, mutate } = useSWR(
+    ["admin", "contests", page, search],
+    async () => {
+      const [err, res] = await listAdminContests(page, 10, search);
+      if (err) throw err;
+      return res;
     }
+  );
 
-    setContests(data.contests || []);
-    setPagination(data.pagination || { total: 0, page: 1 });
-    setLoading(false);
-  }, [page, search]);
-
-  useEffect(() => {
-    setPagination((prev) => ({ ...prev, page }));
-    loadContests();
-  }, [page, loadContests]);
+  const contests = data?.contests || [];
+  const pagination = data?.pagination || { total: 0, page: page };
 
   const handleDeleteContest = async (contestId: string) => {
     const [err] = await deleteContest(contestId);
@@ -76,7 +59,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
       message: "Контест успешно удалён",
     });
     // Reload contests after deletion
-    await loadContests();
+    mutate();
   };
 
   if (error) {
@@ -103,7 +86,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
 
         <AdminContestsSearchInput />
 
-        {loading ? (
+        {isLoading ? (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />

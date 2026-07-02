@@ -72,3 +72,34 @@ export const Call = async <T>(
     return [{ status: 500, message: 'Неизвестная ошибка' }, null];
   }
 };
+
+/**
+ * Call public Core API method without using session cookies
+ * This is safe for static site generation (SSG) and incremental static regeneration (ISR)
+ */
+export const CallPublic = async <T>(
+  method: (client: core) => Promise<T>
+): Promise<[ApiError | null, T | null]> => {
+  const client = new core({
+    BASE: process.env.BACKEND_API_URL,
+    CREDENTIALS: "omit",
+  });
+
+  try {
+    const data = await method(client);
+    return [null, data];
+  } catch (error) {
+    if (error instanceof CoreApiError) {
+      console.log("public api error", error);
+      const body = error.body as { message?: string; request_id?: string } | undefined;
+      return [{
+        status: error.status,
+        message: body?.message || error.statusText,
+        requestId: body?.request_id,
+      }, null];
+    }
+    console.error('Unknown public api error:', error);
+    return [{ status: 500, message: 'Неизвестная ошибка' }, null];
+  }
+};
+
