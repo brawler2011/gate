@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ProblemSampleModel } from './ProblemSampleModel';
 export type ProblemModel = {
     id: string;
     organization_id?: string;
@@ -24,5 +25,6 @@ export type ProblemModel = {
     is_private?: boolean;
     created_at: string;
     updated_at: string;
+    samples: Array<ProblemSampleModel>;
 };
 

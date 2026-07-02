@@ -2,22 +2,29 @@
 
 import { SectionPaper } from "@/components/workshop/SectionPaper";
 import {
+  getProblem,
   getWorkshopProblemLimits,
   getWorkshopProblemStatement,
   updateWorkshopProblemStatement,
 } from "@/lib/actions";
 import {
+  ActionIcon,
   Box,
   Button,
+  Flex,
   Group,
   Modal,
+  Paper,
   Select,
   Stack,
   Text,
   TextInput,
   Textarea,
   Title,
+  Tooltip,
 } from "@mantine/core";
+import { useClipboard } from "@mantine/hooks";
+import { IconCheck, IconCopy } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import "katex/dist/katex.min.css";
 import { useDeferredValue, useEffect, useState, useTransition } from "react";
@@ -107,12 +114,51 @@ function PreviewSection({ title, value }: { title: string; value: string }) {
   );
 }
 
+const CopyableSection = ({ label, value }: { label: string; value: string }) => {
+  const clipboard = useClipboard({ timeout: 2000 });
+  return (
+    <Stack gap="xs" style={{ flex: "1 1 300px", minWidth: 0 }}>
+      <Group justify="space-between" align="center" h={28}>
+        <Text fw={600} size="sm">{label}</Text>
+        <Tooltip label={clipboard.copied ? "Скопировано!" : "Скопировать"} position="top" withArrow>
+          <ActionIcon
+            variant="subtle"
+            color={clipboard.copied ? "green" : "gray"}
+            onClick={() => clipboard.copy(value)}
+            size="sm"
+          >
+            {clipboard.copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+      <Box
+        component="pre"
+        p="xs"
+        bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))"
+        style={{
+          border: "1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))",
+          borderRadius: "var(--mantine-radius-sm)",
+          overflowX: "auto",
+          fontFamily: "var(--mantine-font-monospace)",
+          fontSize: "var(--mantine-font-size-sm)",
+          whiteSpace: "pre",
+          margin: 0,
+        }}
+      >
+        {value}
+      </Box>
+    </Stack>
+  );
+};
+
 function WorkshopStatementPreview({
   statement,
   previewMeta,
+  samples,
 }: {
   statement: StatementData;
   previewMeta: LoadedPreviewMeta;
+  samples: Array<{ input: string; output: string }>;
 }) {
   const hasContent = [
     statement.legend,
@@ -120,7 +166,7 @@ function WorkshopStatementPreview({
     statement.output_format,
     statement.notes,
     statement.scoring,
-  ].some((value) => value.trim());
+  ].some((value) => value.trim()) || (samples && samples.length > 0);
 
   return (
     <Stack className="container" gap="md">
@@ -157,6 +203,34 @@ function WorkshopStatementPreview({
             title="Выходные данные"
             value={statement.output_format}
           />
+          {samples && samples.length > 0 && (
+            <Stack gap="xs">
+              <Title order={3} className={classes.sectionTitle}>
+                Примеры
+              </Title>
+              <Stack gap="md">
+                {samples.map((sample, index) => (
+                  <Paper
+                    key={index}
+                    withBorder
+                    p="md"
+                    radius="md"
+                    bg="light-dark(var(--mantine-color-white), var(--mantine-color-dark-7))"
+                  >
+                    <Stack gap="xs">
+                      <Text fw={700} size="sm" c="dimmed">
+                        Пример {index + 1}
+                      </Text>
+                      <Flex gap="md" wrap="wrap">
+                        <CopyableSection label="Входные данные" value={sample.input} />
+                        <CopyableSection label="Выходные данные" value={sample.output} />
+                      </Flex>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            </Stack>
+          )}
           <PreviewSection title="Система оценки" value={statement.scoring} />
           <PreviewSection title="Примечание" value={statement.notes} />
         </>
@@ -172,6 +246,7 @@ function WorkshopStatementPreview({
 export function WorkshopStatementTab({ problemId }: Props) {
   const [statement, setStatement] = useState<StatementData | null>(null);
   const [previewMeta, setPreviewMeta] = useState<PreviewMeta | null>(null);
+  const [samples, setSamples] = useState<Array<{ input: string; output: string }>>([]);
   const [languages, setLanguages] = useState<string[]>(["en"]);
   const [activeLang, setActiveLang] = useState<string>("en");
   const [isDirty, setIsDirty] = useState(false);
@@ -190,10 +265,11 @@ export function WorkshopStatementTab({ problemId }: Props) {
 
   const loadStatement = (lang: string) => {
     startLoading(async () => {
-      const [[limitsError, limits], [statementError, statementData]] =
+      const [[limitsError, limits], [statementError, statementData], [problemError, problemData]] =
         await Promise.all([
           getWorkshopProblemLimits(problemId),
           getWorkshopProblemStatement(problemId, lang),
+          getProblem(problemId),
         ]);
 
       if (limitsError || !limits) {
@@ -213,6 +289,12 @@ export function WorkshopStatementTab({ problemId }: Props) {
           color: "red",
         });
         return;
+      }
+
+      if (!problemError && problemData?.problem) {
+        setSamples(problemData.problem.samples || []);
+      } else {
+        setSamples([]);
       }
 
       setPreviewMeta({
@@ -529,6 +611,7 @@ export function WorkshopStatementTab({ problemId }: Props) {
               <WorkshopStatementPreview
                 statement={deferredStatement}
                 previewMeta={previewMeta}
+                samples={samples}
               />
             )}
           </Stack>

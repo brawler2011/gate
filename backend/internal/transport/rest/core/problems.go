@@ -185,8 +185,9 @@ func (h *CoreServer) GetProblem(ctx context.Context, request corev1.GetProblemRe
 	}
 
 	statement := h.loadProblemStatement(ctx, request.Id)
+	samples := h.loadProblemSamples(ctx, request.Id)
 
-	return corev1.GetProblem200JSONResponse{Problem: *ProblemDTO(problem, statement)}, nil
+	return corev1.GetProblem200JSONResponse{Problem: *ProblemDTO(problem, statement, samples)}, nil
 }
 
 func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdateProblemRequestObject) (corev1.UpdateProblemResponseObject, error) {

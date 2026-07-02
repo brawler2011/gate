@@ -52,6 +52,7 @@ export type { PostModel } from './models/PostModel';
 export type { PostPatchRequestModel } from './models/PostPatchRequestModel';
 export type { ProblemLimits } from './models/ProblemLimits';
 export type { ProblemModel } from './models/ProblemModel';
+export type { ProblemSampleModel } from './models/ProblemSampleModel';
 export type { ProblemsListItemModel } from './models/ProblemsListItemModel';
 export type { ProblemStatement } from './models/ProblemStatement';
 export type { RegisterRequestModel } from './models/RegisterRequestModel';

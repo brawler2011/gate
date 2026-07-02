@@ -340,8 +340,9 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, request corev1.GetCo
 	}
 
 	statement := h.loadProblemStatement(ctx, request.ProblemId)
+	samples := h.loadProblemSamples(ctx, request.ProblemId)
 
-	return corev1.GetContestProblem200JSONResponse(*GetContestProblemResponseDTO(p, problem, statement)), nil
+	return corev1.GetContestProblem200JSONResponse(*GetContestProblemResponseDTO(p, problem, statement, samples)), nil
 }
 
 func (h *CoreServer) DeleteContestProblem(ctx context.Context, request corev1.DeleteContestProblemRequestObject) (corev1.DeleteContestProblemResponseObject, error) {

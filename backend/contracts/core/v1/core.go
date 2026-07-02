@@ -183,18 +183,19 @@ type ContestProblemListItemModel struct {
 
 // ContestProblemModel defines model for ContestProblemModel.
 type ContestProblemModel struct {
-	CreatedAt        time.Time          `json:"created_at"`
-	InputFormatHtml  string             `json:"input_format_html"`
-	LegendHtml       string             `json:"legend_html"`
-	MemoryLimit      int32              `json:"memory_limit"`
-	NotesHtml        string             `json:"notes_html"`
-	OutputFormatHtml string             `json:"output_format_html"`
-	Position         int32              `json:"position"`
-	ProblemId        openapi_types.UUID `json:"problem_id"`
-	ScoringHtml      string             `json:"scoring_html"`
-	TimeLimit        int32              `json:"time_limit"`
-	Title            string             `json:"title"`
-	UpdatedAt        time.Time          `json:"updated_at"`
+	CreatedAt        time.Time            `json:"created_at"`
+	InputFormatHtml  string               `json:"input_format_html"`
+	LegendHtml       string               `json:"legend_html"`
+	MemoryLimit      int32                `json:"memory_limit"`
+	NotesHtml        string               `json:"notes_html"`
+	OutputFormatHtml string               `json:"output_format_html"`
+	Position         int32                `json:"position"`
+	ProblemId        openapi_types.UUID   `json:"problem_id"`
+	Samples          []ProblemSampleModel `json:"samples"`
+	ScoringHtml      string               `json:"scoring_html"`
+	TimeLimit        int32                `json:"time_limit"`
+	Title            string               `json:"title"`
+	UpdatedAt        time.Time            `json:"updated_at"`
 }
 
 // CreateSubmissionRequestModel defines model for CreateSubmissionRequestModel.
@@ -404,27 +405,34 @@ type ProblemLimits struct {
 
 // ProblemModel defines model for ProblemModel.
 type ProblemModel struct {
-	CreatedAt        time.Time           `json:"created_at"`
-	CreatedBy        openapi_types.UUID  `json:"created_by"`
-	Id               openapi_types.UUID  `json:"id"`
-	InputFormat      string              `json:"input_format"`
-	InputFormatHtml  string              `json:"input_format_html"`
-	IsPrivate        *bool               `json:"is_private,omitempty"`
-	IsTemplate       bool                `json:"is_template"`
-	Legend           string              `json:"legend"`
-	LegendHtml       string              `json:"legend_html"`
-	MemoryLimit      int32               `json:"memory_limit"`
-	Notes            string              `json:"notes"`
-	NotesHtml        string              `json:"notes_html"`
-	OrganizationId   *openapi_types.UUID `json:"organization_id,omitempty"`
-	OutputFormat     string              `json:"output_format"`
-	OutputFormatHtml string              `json:"output_format_html"`
-	Scoring          string              `json:"scoring"`
-	ScoringHtml      string              `json:"scoring_html"`
-	TimeLimit        int32               `json:"time_limit"`
-	Title            string              `json:"title"`
-	UpdatedAt        time.Time           `json:"updated_at"`
-	Visibility       string              `json:"visibility"`
+	CreatedAt        time.Time            `json:"created_at"`
+	CreatedBy        openapi_types.UUID   `json:"created_by"`
+	Id               openapi_types.UUID   `json:"id"`
+	InputFormat      string               `json:"input_format"`
+	InputFormatHtml  string               `json:"input_format_html"`
+	IsPrivate        *bool                `json:"is_private,omitempty"`
+	IsTemplate       bool                 `json:"is_template"`
+	Legend           string               `json:"legend"`
+	LegendHtml       string               `json:"legend_html"`
+	MemoryLimit      int32                `json:"memory_limit"`
+	Notes            string               `json:"notes"`
+	NotesHtml        string               `json:"notes_html"`
+	OrganizationId   *openapi_types.UUID  `json:"organization_id,omitempty"`
+	OutputFormat     string               `json:"output_format"`
+	OutputFormatHtml string               `json:"output_format_html"`
+	Samples          []ProblemSampleModel `json:"samples"`
+	Scoring          string               `json:"scoring"`
+	ScoringHtml      string               `json:"scoring_html"`
+	TimeLimit        int32                `json:"time_limit"`
+	Title            string               `json:"title"`
+	UpdatedAt        time.Time            `json:"updated_at"`
+	Visibility       string               `json:"visibility"`
+}
+
+// ProblemSampleModel defines model for ProblemSampleModel.
+type ProblemSampleModel struct {
+	Input  string `json:"input"`
+	Output string `json:"output"`
 }
 
 // ProblemStatement defines model for ProblemStatement.

@@ -2943,6 +2943,16 @@ components:
           type: integer
           format: int32
           example: 10
+    ProblemSampleModel:
+      type: object
+      required:
+        - input
+        - output
+      properties:
+        input:
+          type: string
+        output:
+          type: string
     ProblemModel:
       type: object
       required:
@@ -2965,6 +2975,7 @@ components:
         - is_template
         - created_at
         - updated_at
+        - samples
       properties:
         id:
           type: string
@@ -3020,6 +3031,10 @@ components:
         updated_at:
           type: string
           format: date-time
+        samples:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemSampleModel'
     ProblemsListItemModel:
       type: object
       required:
@@ -3086,6 +3101,7 @@ components:
         - scoring_html
         - created_at
         - updated_at
+        - samples
       properties:
         problem_id:
           type: string
@@ -3120,6 +3136,10 @@ components:
         updated_at:
           type: string
           format: date-time
+        samples:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemSampleModel'
     GetContestProblemResponseModel:
       type: object
       required:

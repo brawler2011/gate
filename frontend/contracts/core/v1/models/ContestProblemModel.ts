@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ProblemSampleModel } from './ProblemSampleModel';
 export type ContestProblemModel = {
     problem_id: string;
     title: string;
@@ -15,5 +16,6 @@ export type ContestProblemModel = {
     scoring_html: string;
     created_at: string;
     updated_at: string;
+    samples: Array<ProblemSampleModel>;
 };
 

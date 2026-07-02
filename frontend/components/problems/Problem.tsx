@@ -1,6 +1,8 @@
 "use client";
 
-import { Stack, Text, Title } from "@mantine/core";
+import { ActionIcon, Box, Flex, Group, Paper, Stack, Text, Title, Tooltip } from "@mantine/core";
+import { useClipboard } from "@mantine/hooks";
+import { IconCheck, IconCopy } from "@tabler/icons-react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { useEffect, useRef } from "react";
@@ -23,6 +25,10 @@ type Props = {
     scoring_html: string;
     created_at: string;
     updated_at: string;
+    samples?: Array<{
+      input: string;
+      output: string;
+    }>;
   };
 
   letter?: string;
@@ -42,6 +48,43 @@ const prettifyMemoryLimit = (memory_limit: number) => {
   }
 
   return `${memory_limit} МБ`;
+};
+
+const CopyableSection = ({ label, value }: { label: string; value: string }) => {
+  const clipboard = useClipboard({ timeout: 2000 });
+  return (
+    <Stack gap="xs" style={{ flex: "1 1 300px", minWidth: 0 }}>
+      <Group justify="space-between" align="center" h={28}>
+        <Text fw={600} size="sm">{label}</Text>
+        <Tooltip label={clipboard.copied ? "Скопировано!" : "Скопировать"} position="top" withArrow>
+          <ActionIcon
+            variant="subtle"
+            color={clipboard.copied ? "green" : "gray"}
+            onClick={() => clipboard.copy(value)}
+            size="sm"
+          >
+            {clipboard.copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+      <Box
+        component="pre"
+        p="xs"
+        bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))"
+        style={{
+          border: "1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))",
+          borderRadius: "var(--mantine-radius-sm)",
+          overflowX: "auto",
+          fontFamily: "var(--mantine-font-monospace)",
+          fontSize: "var(--mantine-font-size-sm)",
+          whiteSpace: "pre",
+          margin: 0,
+        }}
+      >
+        {value}
+      </Box>
+    </Stack>
+  );
 };
 
 const StatementContent = ({ value }: { value: string }) => {
@@ -116,6 +159,32 @@ const Problem = ({ problem, letter }: Props) => {
         <Stack gap="xs">
           <Title order={3}>Выходные данные</Title>
           <StatementContent value={problem.output_format_html} />
+        </Stack>
+      )}
+      {problem.samples && problem.samples.length > 0 && (
+        <Stack gap="xs">
+          <Title order={3}>Примеры</Title>
+          <Stack gap="md">
+            {problem.samples.map((sample, index) => (
+              <Paper
+                key={index}
+                withBorder
+                p="md"
+                radius="md"
+                bg="light-dark(var(--mantine-color-white), var(--mantine-color-dark-7))"
+              >
+                <Stack gap="xs">
+                  <Text fw={700} size="sm" c="dimmed">
+                    Пример {index + 1}
+                  </Text>
+                  <Flex gap="md" wrap="wrap">
+                    <CopyableSection label="Входные данные" value={sample.input} />
+                    <CopyableSection label="Выходные данные" value={sample.output} />
+                  </Flex>
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
         </Stack>
       )}
       {problem.scoring_html && (

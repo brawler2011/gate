@@ -73,7 +73,7 @@ func ListUserContestsResponseDTO(contestsList *models.ContestsList) *corev1.List
 	return &resp
 }
 
-func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem models.Problem, statement *models.Statement) *corev1.GetContestProblemResponseModel {
+func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem models.Problem, statement *models.Statement, samples []corev1.ProblemSampleModel) *corev1.GetContestProblemResponseModel {
 	title := strings.TrimSpace(problem.Title)
 	if title == "" {
 		title = strings.TrimSpace(contestProblem.Title)
@@ -83,6 +83,10 @@ func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem 
 		if statementTitle != "" {
 			title = statementTitle
 		}
+	}
+
+	if samples == nil {
+		samples = []corev1.ProblemSampleModel{}
 	}
 
 	return &corev1.GetContestProblemResponseModel{
@@ -99,6 +103,7 @@ func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem 
 			ScoringHtml:      statementField(statement, func(s models.Statement) string { return s.Scoring }),
 			CreatedAt:        problem.CreatedAt,
 			UpdatedAt:        problem.UpdatedAt,
+			Samples:          samples,
 		},
 	}
 }
@@ -237,7 +242,7 @@ func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
 	}
 }
 
-func ProblemDTO(p models.Problem, statement *models.Statement) *corev1.ProblemModel {
+func ProblemDTO(p models.Problem, statement *models.Statement, samples []corev1.ProblemSampleModel) *corev1.ProblemModel {
 	title := strings.TrimSpace(p.Title)
 	if statement != nil {
 		statementTitle := strings.TrimSpace(statement.Title)
@@ -256,6 +261,10 @@ func ProblemDTO(p models.Problem, statement *models.Statement) *corev1.ProblemMo
 	outputFormat := statementField(statement, func(s models.Statement) string { return s.OutputFormat })
 	notes := statementField(statement, func(s models.Statement) string { return s.Notes })
 	scoring := statementField(statement, func(s models.Statement) string { return s.Scoring })
+
+	if samples == nil {
+		samples = []corev1.ProblemSampleModel{}
+	}
 
 	return &corev1.ProblemModel{
 		Id:             p.ID,
@@ -281,6 +290,7 @@ func ProblemDTO(p models.Problem, statement *models.Statement) *corev1.ProblemMo
 		IsTemplate: p.IsTemplate,
 		CreatedAt:  p.CreatedAt,
 		UpdatedAt:  p.UpdatedAt,
+		Samples:    samples,
 	}
 }
 
