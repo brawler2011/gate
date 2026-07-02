@@ -13,8 +13,8 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconPaperclip, IconTrash } from "@tabler/icons-react";
-import { useMutation } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
+import useSWRMutation from "swr/mutation";
 import React, { useRef, useState } from "react";
 import type CodeEditor from "react-simple-code-editor";
 import classes from "./CreateSubmissionForm.module.css";
@@ -72,31 +72,34 @@ const CreateSubmissionForm = ({
     },
   });
 
-  // React Query mutation for form submission
-  const mutation = useMutation({
-    mutationFn: async (values: typeof form.values) => {
+  // SWR mutation for form submission
+  const { trigger, isMutating } = useSWRMutation(
+    "createSubmission",
+    async (_, { arg }: { arg: typeof form.values }) => {
       const formData = new FormData();
       if (file) {
         formData.append("submission", file);
       } else {
-        formData.append("submission", values.code);
+        formData.append("submission", arg.code);
       }
-      return await onSubmit(formData, values.language);
+      return await onSubmit(formData, arg.language);
     },
-    onSuccess: (data) => {
-      if (data) {
-        form.reset();
-        setFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
+    {
+      onSuccess: (data) => {
+        if (data) {
+          form.reset();
+          setFile(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
         }
-      }
-    },
-    onError: (error) => {
-      console.error("Submission error:", error);
-      // You can add notification here
-    },
-  });
+      },
+      onError: (error) => {
+        console.error("Submission error:", error);
+        // You can add notification here
+      },
+    }
+  );
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -172,7 +175,7 @@ const CreateSubmissionForm = ({
   };
 
   return (
-    <form onSubmit={form.onSubmit((values) => mutation.mutate(values))}>
+    <form onSubmit={form.onSubmit((values) => trigger(values))}>
       <Stack
         className={`${classes.code} ${large ? classes.codeLarge : ""}`}
         onDrop={handleDrop}
@@ -288,7 +291,7 @@ const CreateSubmissionForm = ({
 
         <Button
           type="submit"
-          loading={mutation.isPending}
+          loading={isMutating}
           disabled={disabled}
           color={APP_COLORS.submissions}
         >

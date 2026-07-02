@@ -19,8 +19,8 @@ import {
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { IconArrowLeft, IconUpload } from "@tabler/icons-react";
-import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
+import useSWRMutation from "swr/mutation";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
@@ -65,68 +65,73 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
     },
   });
 
-  const mutation = useMutation({
-    mutationFn: async (data: ProblemFormData) => {
-      const [error, response] = await onSubmitFn(problem.id, data);
+  const { trigger: triggerUpdate, isMutating: isUpdating } = useSWRMutation(
+    `problem/update/${problem.id}`,
+    async (_, { arg }: { arg: ProblemFormData }) => {
+      const [error, response] = await onSubmitFn(problem.id, arg);
       if (error) throw new Error(error.message);
       return response;
     },
-    onSuccess: async () => {
-      console.log("✅ Problem updated successfully");
-      form.resetDirty();
-      router.refresh();
-    },
-    onError: (error) => {
-      console.error("❌ Problem update failed:", error);
-      notifications.show({
-        title: "Ошибка",
-        message:
-          error instanceof Error ? error.message : "Не удалось обновить задачу",
-        color: "red",
-      });
-      form.clearErrors();
-    },
-    retry: false,
-  });
+    {
+      onSuccess: async () => {
+        console.log("✅ Problem updated successfully");
+        form.resetDirty();
+        router.refresh();
+      },
+      onError: (error) => {
+        console.error("❌ Problem update failed:", error);
+        notifications.show({
+          title: "Ошибка",
+          message:
+            error instanceof Error ? error.message : "Не удалось обновить задачу",
+          color: "red",
+        });
+        form.clearErrors();
+      },
+    }
+  );
 
-  const uploadMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      const [error, response] = await onUploadFn(problem.id, formData);
+  const { trigger: triggerUpload, isMutating: isUploading } = useSWRMutation(
+    `problem/upload/${problem.id}`,
+    async (_, { arg }: { arg: FormData }) => {
+      const [error, response] = await onUploadFn(problem.id, arg);
       if (error) throw new Error(error.message);
       return response;
     },
-    onSuccess: () => {
-      setOpened(false);
-      setFile(null);
-      notifications.show({
-        title: "Успешно",
-        message: "Файл загружен",
-        color: "green",
-      });
-    },
-    onError: (error) => {
-      console.error("Upload failed:", error);
-      notifications.show({
-        title: "Ошибка",
-        message:
-          error instanceof Error ? error.message : "Не удалось загрузить файл",
-        color: "red",
-      });
-    },
-  });
+    {
+      onSuccess: () => {
+        setOpened(false);
+        setFile(null);
+        notifications.show({
+          title: "Успешно",
+          message: "Файл загружен",
+          color: "green",
+        });
+      },
+      onError: (error) => {
+        console.error("Upload failed:", error);
+        notifications.show({
+          title: "Ошибка",
+          message:
+            error instanceof Error ? error.message : "Не удалось загрузить файл",
+          color: "red",
+        });
+      },
+    }
+  );
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const values = form.getValues();
     console.log("📝 ProblemForm - submitting values:", values);
-    mutation.mutate(values);
+    triggerUpdate(values);
   };
 
   const handleUpload = () => {
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
-      uploadMutation.mutate(formData);
+      triggerUpload(formData);
     }
   };
 
@@ -171,7 +176,7 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
               form="problem-form"
               size="sm"
               disabled={!form.isDirty()}
-              loading={mutation.isPending}
+              loading={isUpdating}
             >
               Сохранить
             </Button>
@@ -311,7 +316,7 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
               <Button
                 type="submit"
                 size="md"
-                loading={mutation.isPending}
+                loading={isUpdating}
                 disabled={!form.isDirty()}
               >
                 Сохранить изменения
@@ -338,7 +343,7 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
           <Button
             onClick={handleUpload}
             disabled={!file}
-            loading={uploadMutation.isPending}
+            loading={isUploading}
           >
             Загрузить
           </Button>
