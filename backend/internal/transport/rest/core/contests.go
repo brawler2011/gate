@@ -60,9 +60,18 @@ func (h *CoreServer) GetContest(ctx context.Context, request corev1.GetContestRe
 		return nil, err
 	}
 
-	ps, err := h.contestsUC.GetContestProblems(ctx, request.ContestId)
+	user := middleware.GetUser(ctx)
+	allowed, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetContestProblem)
 	if err != nil {
 		return nil, err
+	}
+
+	var ps []models.ContestProblem
+	if allowed {
+		ps, err = h.contestsUC.GetContestProblems(ctx, request.ContestId)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	problemDetails := make(map[uuid.UUID]models.Problem, len(ps))
@@ -123,8 +132,8 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 		Visibility:   req.Visibility,
 		Settings:     settings,
 		AccessPolicy: nil,
-		StartTime:    nil,
-		EndTime:      nil,
+		StartTime:    req.StartTime,
+		EndTime:      req.EndTime,
 		OwnerID:      nil,
 	})
 	if err != nil {

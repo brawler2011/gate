@@ -74,6 +74,10 @@ func validateUpdateContestRequest(params corev1.UpdateContestRequestModel) error
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid submissions review scope value")
 	}
 
+	if params.StartTime != nil && params.EndTime != nil && !params.EndTime.After(*params.StartTime) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "end_time must be after start_time")
+	}
+
 	return nil
 }
 

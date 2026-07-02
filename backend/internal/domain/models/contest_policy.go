@@ -13,6 +13,7 @@ var contestActionPolicyKeys = map[ContestAction]string{
 
 var contestActionPermissionBits = map[ContestAction]ContestPermissionMask{
 	ActionGetContest:             ContestPermissionGetContest,
+	ActionGetContestProblem:      ContestPermissionGetContest,
 	ActionManageContest:          ContestPermissionManageContest,
 	ActionGetMonitor:             ContestPermissionGetMonitor,
 	ActionListUsersSubmissions:   ContestPermissionListUsersSubmissions,

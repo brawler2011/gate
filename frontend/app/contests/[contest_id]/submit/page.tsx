@@ -11,6 +11,8 @@ import {
 } from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
+import { PermissionChecker } from "@/lib/permissions";
+import { redirect } from "next/navigation";
 import {
   AppShellFooter,
   AppShellHeader,
@@ -53,6 +55,15 @@ const Page = async ({ params }: Props) => {
   // Get user and contest role for permissions
   const user = await getCurrentUser();
   const contestRole = user ? await getMyContestRole(contest_id) : null;
+
+  const checker = new PermissionChecker(user, contestRole?.role ?? null);
+  const isManager = checker.canManageContest(response!.contest);
+  const hasStarted = !response!.contest.start_time || new Date(response!.contest.start_time) <= new Date();
+
+  if (!isManager && !hasStarted) {
+    redirect(`/contests/${contest_id}`);
+  }
+
   const contestHeaderNav = buildContestHeaderNav({
     contest: response!.contest,
     user,

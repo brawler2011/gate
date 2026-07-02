@@ -157,10 +157,12 @@ type ContestModel struct {
 	CreatedAt              time.Time           `json:"created_at"`
 	CreatedBy              openapi_types.UUID  `json:"created_by"`
 	Description            string              `json:"description"`
+	EndTime                *time.Time          `json:"end_time"`
 	Id                     openapi_types.UUID  `json:"id"`
 	MonitorScope           string              `json:"monitor_scope"`
 	OrganizationId         *openapi_types.UUID `json:"organization_id,omitempty"`
 	Owner                  *UserModel          `json:"owner,omitempty"`
+	StartTime              *time.Time          `json:"start_time"`
 	SubmissionsListScope   string              `json:"submissions_list_scope"`
 	SubmissionsReviewScope string              `json:"submissions_review_scope"`
 	Title                  string              `json:"title"`
@@ -543,12 +545,14 @@ type TestValidationResult struct {
 
 // UpdateContestRequestModel defines model for UpdateContestRequestModel.
 type UpdateContestRequestModel struct {
-	Description            *string `json:"description,omitempty"`
-	MonitorScope           *string `json:"monitor_scope,omitempty"`
-	SubmissionsListScope   *string `json:"submissions_list_scope,omitempty"`
-	SubmissionsReviewScope *string `json:"submissions_review_scope,omitempty"`
-	Title                  *string `json:"title,omitempty"`
-	Visibility             *string `json:"visibility,omitempty"`
+	Description            *string    `json:"description,omitempty"`
+	EndTime                *time.Time `json:"end_time"`
+	MonitorScope           *string    `json:"monitor_scope,omitempty"`
+	StartTime              *time.Time `json:"start_time"`
+	SubmissionsListScope   *string    `json:"submissions_list_scope,omitempty"`
+	SubmissionsReviewScope *string    `json:"submissions_review_scope,omitempty"`
+	Title                  *string    `json:"title,omitempty"`
+	Visibility             *string    `json:"visibility,omitempty"`
 }
 
 // UpdateOrganizationRequestModel defines model for UpdateOrganizationRequestModel.

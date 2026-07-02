@@ -80,6 +80,19 @@ function CustomSelect({ label, value, onChange, options, description }: CustomSe
   );
 }
 
+function toLocalDatetimeString(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const y = date.getFullYear();
+  const m = pad(date.getMonth() + 1);
+  const d = pad(date.getDate());
+  const h = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  return `${y}-${m}-${d}T${h}:${min}`;
+}
+
 export function SettingsSection({ contest }: SettingsSectionProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -96,12 +109,19 @@ export function SettingsSection({ contest }: SettingsSectionProps) {
       monitor_scope: contest.monitor_scope,
       submissions_list_scope: contest.submissions_list_scope,
       submissions_review_scope: contest.submissions_review_scope,
+      start_time: toLocalDatetimeString(contest.start_time),
+      end_time: toLocalDatetimeString(contest.end_time),
     },
   });
 
   const handleSave = async (values: typeof form.values) => {
     setSaving(true);
-    const [error] = await updateContest(contest.id, values);
+    const payload = {
+      ...values,
+      start_time: values.start_time ? new Date(values.start_time).toISOString() : null,
+      end_time: values.end_time ? new Date(values.end_time).toISOString() : null,
+    };
+    const [error] = await updateContest(contest.id, payload);
     setSaving(false);
 
     if (error) {
@@ -141,6 +161,18 @@ export function SettingsSection({ contest }: SettingsSectionProps) {
             label="Описание"
             placeholder="Введите описание контеста"
             {...form.getInputProps("description")}
+          />
+
+          <TextInput
+            label="Время начала контеста"
+            type="datetime-local"
+            {...form.getInputProps("start_time")}
+          />
+
+          <TextInput
+            label="Время окончания контеста"
+            type="datetime-local"
+            {...form.getInputProps("end_time")}
           />
 
           <CustomSelect

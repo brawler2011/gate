@@ -8,6 +8,8 @@ import {
 } from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
+import { PermissionChecker } from "@/lib/permissions";
+import { redirect } from "next/navigation";
 import { Box, Container, Text, Title } from "@mantine/core";
 import { Metadata } from "next";
 import classes from "../contestLayout.module.css";
@@ -27,6 +29,17 @@ const Page = async ({ params }: PageProps) => {
   const [, contestResponse] = await getContest(contest_id);
   const user = await getCurrentUser();
   const contestRole = user ? await getMyContestRole(contest_id) : null;
+
+  if (contestResponse?.contest) {
+    const checker = new PermissionChecker(user, contestRole?.role ?? null);
+    const isManager = checker.canManageContest(contestResponse.contest);
+    const hasStarted = !contestResponse.contest.start_time || new Date(contestResponse.contest.start_time) <= new Date();
+
+    if (!isManager && !hasStarted) {
+      redirect(`/contests/${contest_id}`);
+    }
+  }
+
   const contestHeaderNav = contestResponse?.contest
     ? buildContestHeaderNav({
         contest: contestResponse.contest,

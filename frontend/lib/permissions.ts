@@ -81,73 +81,70 @@ export class PermissionChecker {
   }
 
   canViewProblems(contest: ContestModel): boolean {
-    // Global admin всегда может
     if (this.isGlobalAdmin()) {
       return true;
     }
+    if (this.canManageContest(contest)) {
+      return true;
+    }
 
-    // Public contests can be viewed by anyone (including unauthenticated users)
+    const hasStarted = !contest.start_time || new Date(contest.start_time) <= new Date();
+    if (!hasStarted) {
+      return false;
+    }
+
     if (contest.visibility === "public") {
       return true;
     }
 
-    // Private contests require authentication and membership
-    // TODO: Когда появится problems_view_scope в backend:
-    // if (!this.contestRole) return false;
-    // return hasRequiredRole(this.contestRole, contest.problems_view_scope as ContestScope);
-
-    // Временно: все authenticated могут просматривать задачи приватных контестов если они участники
     return this.isAuthenticated() && this.contestRole !== null;
   }
 
   canSubmitSolution(contest: ContestModel): boolean {
-    // Global admin всегда может
     if (this.isGlobalAdmin()) {
       return true;
     }
+    if (this.canManageContest(contest)) {
+      return true;
+    }
 
-    // Submissions always require authentication (even for public contests)
-    // because submissions must be associated with a user
+    const hasStarted = !contest.start_time || new Date(contest.start_time) <= new Date();
+    if (!hasStarted) {
+      return false;
+    }
+
     if (!this.isAuthenticated()) {
       return false;
     }
 
-    // Public contests allow submissions from any authenticated user
     if (contest.visibility === "public") {
       return true;
     }
 
-    // Private contests require contest membership
-    // TODO: Когда появится problems_view_scope в backend:
-    // if (!this.contestRole) return false;
-    // return hasRequiredRole(this.contestRole, contest.problems_view_scope as ContestScope);
-
-    // Временно: все authenticated участники могут отправлять решения в приватных контестах
     return this.contestRole !== null;
   }
 
   canViewMySubmissions(contest: ContestModel): boolean {
-    // Global admin всегда может
     if (this.isGlobalAdmin()) {
       return true;
     }
+    if (this.canManageContest(contest)) {
+      return true;
+    }
 
-    // Viewing own submissions requires authentication
+    const hasStarted = !contest.start_time || new Date(contest.start_time) <= new Date();
+    if (!hasStarted) {
+      return false;
+    }
+
     if (!this.isAuthenticated()) {
       return false;
     }
 
-    // Public contests allow viewing own submissions for any authenticated user
     if (contest.visibility === "public") {
       return true;
     }
 
-    // Private contests require contest membership
-    // TODO: Когда появится problems_view_scope в backend:
-    // if (!this.contestRole) return false;
-    // return hasRequiredRole(this.contestRole, contest.problems_view_scope as ContestScope);
-
-    // Временно: все authenticated участники могут просматривать свои посылки
     return this.contestRole !== null;
   }
 

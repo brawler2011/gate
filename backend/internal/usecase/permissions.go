@@ -103,6 +103,8 @@ func (uc *PermissionsUseCase) HasContestPermission(
 	switch action {
 	case models.ActionGetContest:
 		return uc.canViewContest(cc), nil
+	case models.ActionGetContestProblem:
+		return uc.canViewContestProblem(cc), nil
 	case models.ActionUpdateContest, models.ActionAdminContest:
 		return uc.canAdminContest(cc), nil
 	case models.ActionManageContest:
@@ -122,6 +124,29 @@ func (uc *PermissionsUseCase) HasContestPermission(
 	default:
 		return false, fmt.Errorf("unknown contest action: %s", action)
 	}
+}
+
+func (uc *PermissionsUseCase) canViewContestProblem(cc *contestContext) bool {
+	if cc.isAdmin || cc.isOwner {
+		return true
+	}
+	if cc.contestRole != nil && (*cc.contestRole == models.ContestRoleOwner || *cc.contestRole == models.ContestRoleModerator) {
+		return true
+	}
+
+	if !cc.isStarted {
+		return false
+	}
+
+	if cc.isPublic {
+		return true
+	}
+
+	if cc.contestRole == nil {
+		return false
+	}
+
+	return models.HasContestActionPermission(cc.contestPermissions, models.ActionGetContest)
 }
 
 func (uc *PermissionsUseCase) canViewContest(cc *contestContext) bool {

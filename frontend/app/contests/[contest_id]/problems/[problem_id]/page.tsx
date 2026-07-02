@@ -5,8 +5,10 @@ import { getContest, getContestProblem, getMySubmissions } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
+import { PermissionChecker } from "@/lib/permissions";
 import { numberToLetters } from "@/lib/lib";
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { cache } from "react";
 
 type Props = {
@@ -86,6 +88,15 @@ const Page = async (props: Props) => {
 
   // Get contest role for permissions
   const contestRole = user ? await getMyContestRole(params.contest_id) : null;
+
+  const checker = new PermissionChecker(user, contestRole?.role ?? null);
+  const isManager = checker.canManageContest(contestResponse.contest);
+  const hasStarted = !contestResponse.contest.start_time || new Date(contestResponse.contest.start_time) <= new Date();
+
+  if (!isManager && !hasStarted) {
+    redirect(`/contests/${params.contest_id}`);
+  }
+
   const contestHeaderNav = buildContestHeaderNav({
     contest: contestResponse.contest,
     user,

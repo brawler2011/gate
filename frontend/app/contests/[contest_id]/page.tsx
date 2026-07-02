@@ -1,4 +1,5 @@
 import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
+import { ContestCountdown } from "@/components/contests/ContestCountdown";
 import { Layout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { Footer } from "@/components/shared/Footer";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
+import { PermissionChecker } from "@/lib/permissions";
 import type {
   ContestModel,
   ContestProblemListItemModel,
@@ -56,6 +58,7 @@ type ContestProps = {
   problems: Array<ContestProblemListItemModel>;
   user: Awaited<ReturnType<typeof getCurrentUser>>;
   contestHeaderNav: ReturnType<typeof buildContestHeaderNav>;
+  isManager: boolean;
 };
 
 const Contest = ({
@@ -63,7 +66,10 @@ const Contest = ({
   problems,
   user,
   contestHeaderNav,
+  isManager,
 }: ContestProps) => {
+  const hasStarted = !contest.start_time || new Date(contest.start_time) <= new Date();
+  const showCountdown = !isManager && !hasStarted;
   return (
     <Layout>
       <AppShellHeader>
@@ -98,7 +104,12 @@ const Contest = ({
                 style={{ maxWidth: "100%" }}
               >
                 {/* Tasks Section */}
-                {problems.length === 0 ? (
+                {showCountdown ? (
+                  <ContestCountdown
+                    startTime={contest.start_time!}
+                    title={contest.title}
+                  />
+                ) : problems.length === 0 ? (
                   <Center py={{ base: "xl", md: "3xl" }}>
                     <Stack gap="md" align="center">
                       <Box component="div" style={{ fontSize: "2.5rem" }}>
@@ -144,12 +155,16 @@ const Page = async ({ params }: Props) => {
     activeTab: "tasks",
   });
 
+  const checker = new PermissionChecker(user, contestRole?.role ?? null);
+  const isManager = checker.canManageContest(response!.contest);
+
   return (
     <Contest
       contest={response!.contest}
       problems={response!.problems || []}
       user={user}
       contestHeaderNav={contestHeaderNav}
+      isManager={isManager}
     />
   );
 };

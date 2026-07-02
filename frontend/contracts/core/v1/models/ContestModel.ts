@@ -16,5 +16,7 @@ export type ContestModel = {
     owner?: UserModel;
     created_at: string;
     updated_at: string;
+    start_time?: string | null;
+    end_time?: string | null;
 };
 

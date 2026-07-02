@@ -23,6 +23,7 @@ type ContestAction string
 
 const (
 	ActionGetContest             ContestAction = "get_contest"
+	ActionGetContestProblem      ContestAction = "get_contest_problem"
 	ActionUpdateContest          ContestAction = "update_contest"
 	ActionAdminContest           ContestAction = "admin_contest"
 	ActionManageContest          ContestAction = "manage_contest"

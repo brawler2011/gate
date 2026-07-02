@@ -3171,6 +3171,14 @@ components:
         updated_at:
           type: string
           format: date-time
+        start_time:
+          type: string
+          format: date-time
+          nullable: true
+        end_time:
+          type: string
+          format: date-time
+          nullable: true
     ListContestsResponseModel:
       type: object
       required:
@@ -3290,6 +3298,14 @@ components:
         submissions_review_scope:
           type: string
           example: admin
+        start_time:
+          type: string
+          format: date-time
+          nullable: true
+        end_time:
+          type: string
+          format: date-time
+          nullable: true
     CreateSubmissionRequestModel:
       type: object
       required:

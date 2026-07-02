@@ -163,6 +163,8 @@ export async function updateContest(
         monitor_scope?: string;
         submissions_list_scope?: string;
         submissions_review_scope?: string;
+        start_time?: string | null;
+        end_time?: string | null;
     }
 ) {
     return Call((client) => client.default.updateContest({contestId, requestBody: data}));

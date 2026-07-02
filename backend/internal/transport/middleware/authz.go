@@ -92,7 +92,7 @@ func buildStrictAuthzPolicies() map[string]strictAuthzPolicy {
 		"UpdateContest":          {contestAction: contestActionPtr(models.ActionUpdateContest)},
 		"DeleteContest":          {contestAction: contestActionPtr(models.ActionAdminContest)},
 		"CreateContestProblem":   {contestAction: contestActionPtr(models.ActionUpdateContest)},
-		"GetContestProblem":      {contestAction: contestActionPtr(models.ActionGetContest)},
+		"GetContestProblem":      {contestAction: contestActionPtr(models.ActionGetContestProblem)},
 		"DeleteContestProblem":   {contestAction: contestActionPtr(models.ActionUpdateContest)},
 		"CreateContestMember":    {contestAction: contestActionPtr(models.ActionUpdateContest)},
 		"UpdateContestMember":    {contestAction: contestActionPtr(models.ActionUpdateContest)},

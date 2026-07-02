@@ -44,7 +44,7 @@ export function buildContestHeaderNav({
 
   const items: HeaderSecondaryNavItem[] = [];
 
-  if (checker.canViewProblems(contest)) {
+  if (checker.canViewContest(contest)) {
     items.push({
       key: "tasks",
       label: "Задачи",

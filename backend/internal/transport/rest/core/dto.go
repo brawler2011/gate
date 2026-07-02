@@ -161,6 +161,8 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,
+		StartTime:              c.StartTime,
+		EndTime:                c.EndTime,
 	}
 
 	if owner != nil {

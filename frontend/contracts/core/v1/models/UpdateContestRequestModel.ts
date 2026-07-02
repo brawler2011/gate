@@ -9,5 +9,7 @@ export type UpdateContestRequestModel = {
     monitor_scope?: string;
     submissions_list_scope?: string;
     submissions_review_scope?: string;
+    start_time?: string | null;
+    end_time?: string | null;
 };
 
