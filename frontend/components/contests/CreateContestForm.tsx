@@ -1,28 +1,38 @@
 "use client";
 
+import { useTransition } from "react";
 import { createContest } from "@/lib/actions";
 import { Button } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import useSWRMutation from "swr/mutation";
 
 const CreateContestForm = () => {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
-  const { trigger, isMutating } = useSWRMutation(
-    "createContest",
-    async () => {
-      const [error, response] = await createContest("New Contest");
-      if (error) throw new Error(error.message);
-      if (!response?.id) throw new Error("Не получен ID контеста");
-      return response.id;
-    },
-    {
-      onSuccess: (contestId) => {
-        router.push(`/contests/${contestId}`);
-      },
-      onError: (error) => {
+  const handleCreate = () => {
+    startTransition(async () => {
+      try {
+        const [error, response] = await createContest("New Contest");
+        if (error) {
+          notifications.show({
+            title: "Ошибка",
+            message: error.message,
+            color: "red",
+          });
+          return;
+        }
+        if (!response?.id) {
+          notifications.show({
+            title: "Ошибка",
+            message: "Не получен ID контеста",
+            color: "red",
+          });
+          return;
+        }
+        router.push(`/contests/${response.id}`);
+      } catch (error) {
         console.error("Не удалось создать контест. Попробуйте позже.", error);
         notifications.show({
           title: "Ошибка",
@@ -30,15 +40,15 @@ const CreateContestForm = () => {
             error instanceof Error ? error.message : "Не удалось создать контест",
           color: "red",
         });
-      },
-    }
-  );
+      }
+    });
+  };
 
   return (
     <Button
       title="Создать новый контест"
-      onClick={() => trigger()}
-      loading={isMutating}
+      onClick={handleCreate}
+      loading={isPending}
       size="md"
       variant="light"
       leftSection={<IconPlus size={18} />}

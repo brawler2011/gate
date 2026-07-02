@@ -20,9 +20,8 @@ import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { IconArrowLeft, IconUpload } from "@tabler/icons-react";
 import Link from "next/link";
-import useSWRMutation from "swr/mutation";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
 
 type ProblemFormData = {
   title?: string;
@@ -51,6 +50,8 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
   const router = useRouter();
   const [opened, setOpened] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [isUpdating, startUpdateTransition] = useTransition();
+  const [isUploading, startUploadTransition] = useTransition();
 
   const form = useForm({
     initialValues: {
@@ -65,73 +66,70 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
     },
   });
 
-  const { trigger: triggerUpdate, isMutating: isUpdating } = useSWRMutation(
-    `problem/update/${problem.id}`,
-    async (_, { arg }: { arg: ProblemFormData }) => {
-      const [error, response] = await onSubmitFn(problem.id, arg);
-      if (error) throw new Error(error.message);
-      return response;
-    },
-    {
-      onSuccess: async () => {
-        console.log("✅ Problem updated successfully");
-        form.resetDirty();
-        router.refresh();
-      },
-      onError: (error) => {
-        console.error("❌ Problem update failed:", error);
-        notifications.show({
-          title: "Ошибка",
-          message:
-            error instanceof Error ? error.message : "Не удалось обновить задачу",
-          color: "red",
-        });
-        form.clearErrors();
-      },
-    }
-  );
-
-  const { trigger: triggerUpload, isMutating: isUploading } = useSWRMutation(
-    `problem/upload/${problem.id}`,
-    async (_, { arg }: { arg: FormData }) => {
-      const [error, response] = await onUploadFn(problem.id, arg);
-      if (error) throw new Error(error.message);
-      return response;
-    },
-    {
-      onSuccess: () => {
-        setOpened(false);
-        setFile(null);
-        notifications.show({
-          title: "Успешно",
-          message: "Файл загружен",
-          color: "green",
-        });
-      },
-      onError: (error) => {
-        console.error("Upload failed:", error);
-        notifications.show({
-          title: "Ошибка",
-          message:
-            error instanceof Error ? error.message : "Не удалось загрузить файл",
-          color: "red",
-        });
-      },
-    }
-  );
-
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const values = form.getValues();
     console.log("📝 ProblemForm - submitting values:", values);
-    triggerUpdate(values);
+    
+    startUpdateTransition(async () => {
+      try {
+        const [error] = await onSubmitFn(problem.id, values);
+        if (error) {
+          notifications.show({
+            title: "Ошибка",
+            message: error.message,
+            color: "red",
+          });
+          form.clearErrors();
+          return;
+        }
+        console.log("✅ Problem updated successfully");
+        form.resetDirty();
+        router.refresh();
+      } catch (error) {
+        console.error("❌ Problem update failed:", error);
+        notifications.show({
+          title: "Ошибка",
+          message: error instanceof Error ? error.message : "Не удалось обновить задачу",
+          color: "red",
+        });
+        form.clearErrors();
+      }
+    });
   };
 
   const handleUpload = () => {
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
-      triggerUpload(formData);
+      
+      startUploadTransition(async () => {
+        try {
+          const [error] = await onUploadFn(problem.id, formData);
+          if (error) {
+            notifications.show({
+              title: "Ошибка",
+              message: error.message,
+              color: "red",
+            });
+            return;
+          }
+          setOpened(false);
+          setFile(null);
+          notifications.show({
+            title: "Успешно",
+            message: "Файл загружен",
+            color: "green",
+          });
+        } catch (error) {
+          console.error("Upload failed:", error);
+          notifications.show({
+            title: "Ошибка",
+            message: error instanceof Error ? error.message : "Не удалось загрузить файл",
+            color: "red",
+          });
+        }
+      });
     }
   };
 

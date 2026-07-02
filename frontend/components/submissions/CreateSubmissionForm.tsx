@@ -14,8 +14,7 @@ import {
 import { useForm } from "@mantine/form";
 import { IconPaperclip, IconTrash } from "@tabler/icons-react";
 import dynamic from "next/dynamic";
-import useSWRMutation from "swr/mutation";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useTransition } from "react";
 import type CodeEditor from "react-simple-code-editor";
 import classes from "./CreateSubmissionForm.module.css";
 import "./vsc-dark-plus.css";
@@ -72,34 +71,33 @@ const CreateSubmissionForm = ({
     },
   });
 
-  // SWR mutation for form submission
-  const { trigger, isMutating } = useSWRMutation(
-    "createSubmission",
-    async (_, { arg }: { arg: typeof form.values }) => {
-      const formData = new FormData();
-      if (file) {
-        formData.append("submission", file);
-      } else {
-        formData.append("submission", arg.code);
-      }
-      return await onSubmit(formData, arg.language);
-    },
-    {
-      onSuccess: (data) => {
-        if (data) {
-          form.reset();
-          setFile(null);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
+  const [isPending, startTransition] = useTransition();
+
+  const onSubmitHandler = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    form.onSubmit((values) => {
+      startTransition(async () => {
+        try {
+          const formData = new FormData();
+          if (file) {
+            formData.append("submission", file);
+          } else {
+            formData.append("submission", values.code);
           }
+          const data = await onSubmit(formData, values.language);
+          if (data) {
+            form.reset();
+            setFile(null);
+            if (fileInputRef.current) {
+              fileInputRef.current.value = "";
+            }
+          }
+        } catch (error) {
+          console.error("Submission error:", error);
         }
-      },
-      onError: (error) => {
-        console.error("Submission error:", error);
-        // You can add notification here
-      },
-    }
-  );
+      });
+    })(event);
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -175,7 +173,7 @@ const CreateSubmissionForm = ({
   };
 
   return (
-    <form onSubmit={form.onSubmit((values) => trigger(values))}>
+    <form onSubmit={onSubmitHandler}>
       <Stack
         className={`${classes.code} ${large ? classes.codeLarge : ""}`}
         onDrop={handleDrop}
@@ -291,7 +289,7 @@ const CreateSubmissionForm = ({
 
         <Button
           type="submit"
-          loading={isMutating}
+          loading={isPending}
           disabled={disabled}
           color={APP_COLORS.submissions}
         >
