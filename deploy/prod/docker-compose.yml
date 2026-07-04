@@ -1,8 +1,6 @@
 services:
   backend:
-    build:
-      context: ../../
-      dockerfile: backend/Dockerfile
+    image: ghcr.io/brawler2011/gate-backend:prod
     container_name: gate-backend-prod
     hostname: backend
     restart: unless-stopped
@@ -20,6 +18,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
     networks:
       - gate-prod
+      - traefik-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,11 +38,42 @@ services:
         condition: service_started
       s3:
         condition: service_started
+    labels:
+      - "traefik.enable=true"
+      # API router (/api)
+      - "traefik.http.routers.gate-backend-prod.rule=Host(`steins.ru`) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.gate-backend-prod.entrypoints=websecure"
+      - "traefik.http.routers.gate-backend-prod.tls=true"
+      - "traefik.http.routers.gate-backend-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gate-backend-prod.middlewares=gate-backend-prod-strip@docker,gate-backend-prod-headers@docker,gate-api-ratelimit@docker"
+      # StripPrefix middleware
+      - "traefik.http.middlewares.gate-backend-prod-strip.stripprefix.prefixes=/api"
+      # WS router (/ws)
+      - "traefik.http.routers.gate-backend-prod-ws.rule=Host(`steins.ru`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.gate-backend-prod-ws.entrypoints=websecure"
+      - "traefik.http.routers.gate-backend-prod-ws.tls=true"
+      - "traefik.http.routers.gate-backend-prod-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gate-backend-prod-ws.middlewares=gate-backend-prod-headers@docker"
+      # Health router (/health)
+      - "traefik.http.routers.gate-backend-prod-health.rule=Host(`steins.ru`) && Path(`/health`)"
+      - "traefik.http.routers.gate-backend-prod-health.entrypoints=websecure"
+      - "traefik.http.routers.gate-backend-prod-health.tls=true"
+      - "traefik.http.routers.gate-backend-prod-health.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gate-backend-prod-health.middlewares=gate-backend-prod-headers@docker"
+      # Port configuration
+      - "traefik.http.services.gate-backend-prod-svc.loadbalancer.server.port=8080"
+      # Security headers middleware
+      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains; preload"
+      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
+      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
+      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
+      # Rate limit middleware (10 req/s, burst 20)
+      - "traefik.http.middlewares.gate-api-ratelimit.ratelimit.average=10"
+      - "traefik.http.middlewares.gate-api-ratelimit.ratelimit.burst=20"
 
   backend-migrate:
-    build:
-      context: ../../
-      dockerfile: backend/Dockerfile
+    image: ghcr.io/brawler2011/gate-backend:prod
     container_name: gate-backend-migrate-prod
     depends_on:
       postgres:
@@ -66,13 +96,7 @@ services:
           memory: 64M
 
   frontend:
-    build:
-      context: ../../
-      dockerfile: frontend/deploy/Dockerfile
-      args:
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-        BACKEND_API_URL: ${BACKEND_API_URL}
-        WEBSOCKET_URL: ${WEBSOCKET_URL}
+    image: ghcr.io/brawler2011/gate-frontend:prod
     container_name: gate-frontend-prod
     hostname: frontend
     restart: unless-stopped
@@ -82,6 +106,7 @@ services:
       - WEBSOCKET_URL=${WEBSOCKET_URL}
     networks:
       - gate-prod
+      - traefik-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
@@ -96,6 +121,27 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gate-frontend-prod.rule=Host(`steins.ru`)"
+      - "traefik.http.routers.gate-frontend-prod.entrypoints=websecure"
+      - "traefik.http.routers.gate-frontend-prod.tls=true"
+      - "traefik.http.routers.gate-frontend-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gate-frontend-prod.middlewares=gate-frontend-prod-headers@docker"
+      - "traefik.http.services.gate-frontend-prod-svc.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains; preload"
+      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
+      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
+      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
+      # IP Allow List middleware to return 403 Forbidden (localhost allowed, rest blocked)
+      - "traefik.http.middlewares.gate-block-ip.ipallowlist.sourcerange=127.0.0.1/32"
+      # Malicious requests block router
+      - "traefik.http.routers.gate-malicious-block.rule=Host(`steins.ru`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\\.env|\\.git)`) || PathRegexp(`.*\\.php$$`) || PathRegexp(`^/_next/(rsc|app-build-manifest|prerender-manifest|middleware-manifest|flight-manifest|module-fetch|dev|entrypoints|turbopack|redirect|refresh|route-loader|script|font|inline)/`) || PathRegexp(`^/_next/.*\\.(json|map)$$`))"
+      - "traefik.http.routers.gate-malicious-block.entrypoints=websecure"
+      - "traefik.http.routers.gate-malicious-block.tls=true"
+      - "traefik.http.routers.gate-malicious-block.middlewares=gate-block-ip@docker"
+      - "traefik.http.routers.gate-malicious-block.service=gate-frontend-prod-svc"
 
   postgres:
     image: postgres:18-alpine
@@ -128,7 +174,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-
 
   redis:
     image: redis:7.2.4-alpine
@@ -186,9 +231,6 @@ services:
     container_name: gate-go-judge-prod
     hostname: go-judge
     restart: unless-stopped
-    command:
-      - "-enable-grpc"
-      - "-grpc-addr=0.0.0.0:5051"
     ports:
       - "5051:5051"
     privileged: true
@@ -204,45 +246,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-
-  nginx:
-    image: nginx:alpine
-    container_name: gate-nginx-prod
-    hostname: nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/steins.ru.conf:/etc/nginx/conf.d/steins.ru.conf:ro
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - certbot-conf:/etc/letsencrypt:ro
-      - certbot-www:/var/www/certbot:ro
-    depends_on:
-      - frontend
-      - backend
-      - go-judge
-    networks:
-      - gate-prod
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 64M
-
-  certbot:
-    image: certbot/certbot:latest
-    container_name: gate-certbot-prod
-    volumes:
-      - certbot-conf:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
-    networks:
-      - gate-prod
-    profiles:
-      - tools
 
   master:
     image: chrislusf/seaweedfs:3.77_full
@@ -294,17 +297,6 @@ services:
       - filer
     restart: always
 
-  certbot-renew:
-    image: certbot/certbot:latest
-    container_name: gate-certbot-renew-prod
-    volumes:
-      - certbot-conf:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    networks:
-      - gate-prod
-    restart: unless-stopped
-
 volumes:
   postgres-data:
     name: gate-postgres-data-prod
@@ -312,10 +304,6 @@ volumes:
     name: gate-redis-data-prod
   nats-data:
     name: gate-nats-data-prod
-  certbot-conf:
-    name: gate-certbot-conf-prod
-  certbot-www:
-    name: gate-certbot-www-prod
   seaweedfs-master:
     name: gate-seaweedfs-master-prod
   seaweedfs-volume:
@@ -327,3 +315,6 @@ networks:
   gate-prod:
     name: gate-network-prod
     driver: bridge
+  traefik-network:
+    name: traefik-network
+    external: true

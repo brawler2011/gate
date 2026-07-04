@@ -1,8 +1,6 @@
 services:
   backend:
-    build:
-      context: ../../
-      dockerfile: backend/Dockerfile
+    image: ghcr.io/brawler2011/gate-backend:dev
     container_name: gate-backend-dev
     hostname: backend
     restart: unless-stopped
@@ -20,6 +18,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
     networks:
       - gate-dev
+      - traefik-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,11 +38,38 @@ services:
         condition: service_started
       s3:
         condition: service_started
+    labels:
+      - "traefik.enable=true"
+      # API router (/api)
+      - "traefik.http.routers.gate-backend-dev.rule=Host(`dev.gate149.ru`) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.gate-backend-dev.entrypoints=websecure"
+      - "traefik.http.routers.gate-backend-dev.tls=true"
+      - "traefik.http.routers.gate-backend-dev.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gate-backend-dev.middlewares=gate-backend-dev-strip@docker,gate-backend-dev-headers@docker"
+      # StripPrefix middleware
+      - "traefik.http.middlewares.gate-backend-dev-strip.stripprefix.prefixes=/api"
+      # WS router (/ws)
+      - "traefik.http.routers.gate-backend-dev-ws.rule=Host(`dev.gate149.ru`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.gate-backend-dev-ws.entrypoints=websecure"
+      - "traefik.http.routers.gate-backend-dev-ws.tls=true"
+      - "traefik.http.routers.gate-backend-dev-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gate-backend-dev-ws.middlewares=gate-backend-dev-headers@docker"
+      # Health router (/health)
+      - "traefik.http.routers.gate-backend-dev-health.rule=Host(`dev.gate149.ru`) && Path(`/health`)"
+      - "traefik.http.routers.gate-backend-dev-health.entrypoints=websecure"
+      - "traefik.http.routers.gate-backend-dev-health.tls=true"
+      - "traefik.http.routers.gate-backend-dev-health.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gate-backend-dev-health.middlewares=gate-backend-dev-headers@docker"
+      # Port configuration
+      - "traefik.http.services.gate-backend-dev-svc.loadbalancer.server.port=8080"
+      # Security headers middleware
+      - "traefik.http.middlewares.gate-backend-dev-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains"
+      - "traefik.http.middlewares.gate-backend-dev-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
+      - "traefik.http.middlewares.gate-backend-dev-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.gate-backend-dev-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
 
   backend-migrate:
-    build:
-      context: ../../
-      dockerfile: backend/Dockerfile
+    image: ghcr.io/brawler2011/gate-backend:dev
     container_name: gate-backend-migrate-dev
     depends_on:
       postgres:
@@ -58,13 +84,7 @@ services:
     restart: "no"
 
   frontend:
-    build:
-      context: ../../
-      dockerfile: frontend/deploy/Dockerfile
-      args:
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-        BACKEND_API_URL: ${BACKEND_API_URL}
-        WEBSOCKET_URL: ${WEBSOCKET_URL}
+    image: ghcr.io/brawler2011/gate-frontend:dev
     container_name: gate-frontend-dev
     hostname: frontend
     restart: unless-stopped
@@ -74,12 +94,25 @@ services:
       - WEBSOCKET_URL=${WEBSOCKET_URL}
     networks:
       - gate-dev
+      - traefik-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gate-frontend-dev.rule=Host(`dev.gate149.ru`)"
+      - "traefik.http.routers.gate-frontend-dev.entrypoints=websecure"
+      - "traefik.http.routers.gate-frontend-dev.tls=true"
+      - "traefik.http.routers.gate-frontend-dev.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gate-frontend-dev.middlewares=gate-frontend-dev-headers@docker"
+      - "traefik.http.services.gate-frontend-dev-svc.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.gate-frontend-dev-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains"
+      - "traefik.http.middlewares.gate-frontend-dev-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
+      - "traefik.http.middlewares.gate-frontend-dev-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.gate-frontend-dev-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
 
   postgres:
     image: postgres:18-alpine
@@ -104,7 +137,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
-
 
   redis:
     image: redis:7.2.4-alpine
@@ -135,9 +167,6 @@ services:
     container_name: gate-go-judge-dev
     hostname: go-judge
     restart: unless-stopped
-    command:
-      - "-enable-grpc"
-      - "-grpc-addr=0.0.0.0:5051"
     ports:
       - "5051:5051"
     privileged: true
@@ -145,37 +174,6 @@ services:
       - ./go-judge-data:/data
     networks:
       - gate-dev
-
-  nginx:
-    image: nginx:alpine
-    container_name: gate-nginx-dev
-    hostname: nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/dev.gate149.ru.conf:/etc/nginx/conf.d/dev.gate149.ru.conf:ro
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - certbot-conf:/etc/letsencrypt:ro
-      - certbot-www:/var/www/certbot:ro
-    depends_on:
-      - frontend
-      - backend
-      - go-judge
-    networks:
-      - gate-dev
-
-  certbot:
-    image: certbot/certbot:latest
-    container_name: gate-certbot-dev
-    volumes:
-      - certbot-conf:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
-    networks:
-      - gate-dev
-    profiles:
-      - tools
 
   master:
     image: chrislusf/seaweedfs:3.77_full
@@ -227,17 +225,6 @@ services:
       - filer
     restart: always
 
-  certbot-renew:
-    image: certbot/certbot:latest
-    container_name: gate-certbot-renew-dev
-    volumes:
-      - certbot-conf:/etc/letsencrypt
-      - certbot-www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    networks:
-      - gate-dev
-    restart: unless-stopped
-
 volumes:
   postgres-data:
     name: gate-postgres-data-dev
@@ -245,10 +232,6 @@ volumes:
     name: gate-redis-data-dev
   nats-data:
     name: gate-nats-data-dev
-  certbot-conf:
-    name: gate-certbot-conf-dev
-  certbot-www:
-    name: gate-certbot-www-dev
   seaweedfs-master:
     name: gate-seaweedfs-master-dev
   seaweedfs-volume:
@@ -260,3 +243,6 @@ networks:
   gate-dev:
     name: gate-network-dev
     driver: bridge
+  traefik-network:
+    name: traefik-network
+    external: true
