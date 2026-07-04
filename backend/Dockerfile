@@ -14,4 +14,6 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 
 FROM scratch AS runner
 COPY --from=builder /bin/backend /bin/
+COPY --from=builder /workspace/backend/languages.yaml /
+WORKDIR /
 ENTRYPOINT [ "/bin/backend" ]
