@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteContest, listAdminContests } from "@/lib/actions";
+import { deleteContest } from "@/lib/actions";
 import {
   Center,
   Container,
@@ -30,11 +30,14 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
   } | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR(
-    ["admin", "contests", page, search],
-    async () => {
-      const [err, res] = await listAdminContests(page, 10, search);
-      if (err) throw err;
-      return res;
+    `/api/admin/contests?page=${page}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+    async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Не удалось загрузить контесты");
+      }
+      return res.json();
     }
   );
 

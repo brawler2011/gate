@@ -1,6 +1,6 @@
 "use client";
 
-import { createPost, deletePost, listPosts, patchPost } from "@/lib/actions";
+import { createPost, deletePost, patchPost } from "@/lib/actions";
 import {
   Button,
   Center,
@@ -38,11 +38,14 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
   const [editingPost, setEditingPost] = useState<PostModel | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR(
-    ["admin", "blogs", page],
-    async () => {
-      const [err, res] = await listPosts(page, 10);
-      if (err) throw err;
-      return res;
+    `/api/admin/blogs?page=${page}`,
+    async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Не удалось загрузить посты");
+      }
+      return res.json();
     }
   );
 
