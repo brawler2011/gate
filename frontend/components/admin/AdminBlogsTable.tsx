@@ -88,7 +88,7 @@ export function AdminBlogsTable({ posts, onDeletePost, onEditPost }: AdminBlogsT
                 >
                   <Table.Td>
                     <Avatar
-                      src={post.preview_image_id ? `/api/blogs/posts/${post.id}/image` : undefined}
+                      src={post.preview_image_id ? `/api/posts/${post.id}/image` : undefined}
                       size={32}
                       radius="sm"
                     />

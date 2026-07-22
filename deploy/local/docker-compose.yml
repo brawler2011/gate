@@ -71,15 +71,17 @@ services:
     networks:
       - gate-local
 
-  nginx:
-    image: nginx:alpine
-    container_name: gate-nginx-local
-    hostname: nginx
+  traefik:
+    image: traefik:v3.7
+    container_name: gate-traefik-local
+    hostname: traefik
     restart: unless-stopped
     ports:
       - "80:80"
+      - "8082:8080"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
     depends_on:
       - go-judge
     networks:

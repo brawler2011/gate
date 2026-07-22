@@ -38,7 +38,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
   const [editingPost, setEditingPost] = useState<PostModel | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR(
-    `/api/admin/blogs?page=${page}`,
+    `/api/posts?page=${page}`,
     async (url) => {
       const res = await fetch(url);
       if (!res.ok) {

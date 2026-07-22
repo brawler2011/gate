@@ -33,7 +33,7 @@ export function BlogPost({
   description,
   date,
 }: BlogPostProps) {
-  const imageUrl = previewImageUrl ? `/api/blogs/posts/${id}/image` : null;
+  const imageUrl = previewImageUrl ? `/api/posts/${id}/image` : null;
 
   return (
     <Link
