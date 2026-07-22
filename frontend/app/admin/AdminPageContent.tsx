@@ -1,6 +1,5 @@
 "use client";
 
-import { DefaultLayout } from '@/components/shared';
 import { UsersContent, UsersContentSkeleton } from '@/components/users';
 import { AdminBlogsContent, AdminContestsContent, AdminTabs } from '@/components/admin';
 import { Container, Skeleton, Stack } from "@mantine/core";
@@ -65,7 +64,7 @@ export default function AdminPageContent() {
   }, []);
 
   return (
-    <DefaultLayout>
+    <>
       <Container size="xl" pt="lg">
         <AdminTabs />
       </Container>
@@ -82,6 +81,6 @@ export default function AdminPageContent() {
           <UsersContent page={page} search={search} role={role} />
         </Suspense>
       )}
-    </DefaultLayout>
+    </>
   );
 }

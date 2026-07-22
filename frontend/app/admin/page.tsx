@@ -8,15 +8,17 @@ export const dynamic = 'force-dynamic';
 
 export default function AdminPage() {
   return (
-    <Suspense fallback={
-      <DefaultLayout>
-        <Container size="xl" pt="lg">
-          <Skeleton height={40} radius="sm" />
-        </Container>
-        <UsersContentSkeleton />
-      </DefaultLayout>
-    }>
-      <AdminClientWrapper />
-    </Suspense>
+    <DefaultLayout>
+      <Suspense fallback={
+        <>
+          <Container size="xl" pt="lg">
+            <Skeleton height={40} radius="sm" />
+          </Container>
+          <UsersContentSkeleton />
+        </>
+      }>
+        <AdminClientWrapper />
+      </Suspense>
+    </DefaultLayout>
   );
 }
