@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import AdminClientWrapper from "./AdminClientWrapper";
+import AdminPageContent from "./AdminPageContent";
 import { DefaultLayout } from "@/components/shared";
 import { Container, Skeleton } from "@mantine/core";
 import { UsersContentSkeleton } from "@/components/users";
@@ -17,7 +17,7 @@ export default function AdminPage() {
           <UsersContentSkeleton />
         </>
       }>
-        <AdminClientWrapper />
+        <AdminPageContent />
       </Suspense>
     </DefaultLayout>
   );
