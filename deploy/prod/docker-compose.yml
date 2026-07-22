@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/brawler2011/gate-backend:prod
+    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG}
     container_name: gate-backend-prod
     hostname: backend
     restart: unless-stopped
@@ -73,7 +73,7 @@ services:
       - "traefik.http.middlewares.gate-api-ratelimit.ratelimit.burst=20"
 
   backend-migrate:
-    image: ghcr.io/brawler2011/gate-backend:prod
+    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG}
     container_name: gate-backend-migrate-prod
     depends_on:
       postgres:
@@ -96,7 +96,7 @@ services:
           memory: 64M
 
   frontend:
-    image: ghcr.io/brawler2011/gate-frontend:prod
+    image: ghcr.io/brawler2011/gate-frontend:${IMAGE_TAG}
     container_name: gate-frontend-prod
     hostname: frontend
     restart: unless-stopped
