@@ -30,7 +30,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
   } | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR(
-    `/api/admin/contests?page=${page}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+    `/api/admin/contests?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}`,
     async (url) => {
       const res = await fetch(url);
       if (!res.ok) {

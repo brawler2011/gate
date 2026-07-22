@@ -15,7 +15,7 @@ type UsersContentProps = {
 
 export function UsersContent({ page, search, role }: UsersContentProps) {
   const { data, error, isLoading } = useSWR(
-    `/api/users?page=${page}${search ? `&search=${encodeURIComponent(search)}` : ""}${role ? `&role=${role}` : ""}`,
+    `/api/users?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}${role ? `&role=${role}` : ""}`,
     async (url) => {
       const res = await fetch(url);
       if (!res.ok) {
