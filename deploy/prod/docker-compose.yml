@@ -231,6 +231,7 @@ services:
     container_name: gate-go-judge-prod
     hostname: go-judge
     restart: unless-stopped
+    pull_policy: build
     command:
       - "-enable-grpc"
       - "-grpc-addr=0.0.0.0:5051"
