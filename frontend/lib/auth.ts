@@ -28,10 +28,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser> => {
     return null;
   }
 
-  console.log("GetMe response:", response);
-
   if (!response.user) {
-    console.log("GetMe: no user in response");
     return null;
   }
 
