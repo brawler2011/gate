@@ -32,6 +32,7 @@ type ContestsRepo interface {
 	GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]models.ContestTeam, error)
 
 	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]models.Contest, int32, error)
+	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error)
 }
 
 type ContestsUC interface {
@@ -43,6 +44,7 @@ type ContestsUC interface {
 	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error)
 	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error)
 	ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.ContestsList, error)
+	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error)
 	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error)
 
 	CreateParticipant(ctx context.Context, c models.ParticipantCreation) error

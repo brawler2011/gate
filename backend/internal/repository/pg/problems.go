@@ -6,6 +6,7 @@ import (
 	"github.com/gate149/gate/backend/internal/domain/models"
 	"github.com/gate149/gate/backend/internal/repository/pg/sqlc"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -121,7 +122,7 @@ func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem 
 	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
 		ID:         id,
 		Title:      problem.Title,
-		Visibility: stringToProblemVisibilityPtr(problem.Visibility),
+		Visibility: stringToNullProblemVisibility(problem.Visibility),
 		OwnerID:    uuidPtrToNullUUID(problem.OwnerID),
 		IsTemplate: problem.IsTemplate,
 	})
@@ -186,12 +187,14 @@ func (r *ProblemsRepo) GetProblemTeams(ctx context.Context, problemId uuid.UUID)
 	return teams, nil
 }
 
-func stringToProblemVisibilityPtr(s *string) *sqlc.ProblemVisibility {
+func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
 	if s == nil {
-		return nil
+		return sqlc.NullProblemVisibility{Valid: false}
 	}
-	v := sqlc.ProblemVisibility(*s)
-	return &v
+	return sqlc.NullProblemVisibility{
+		ProblemVisibility: sqlc.ProblemVisibility(*s),
+		Valid:             true,
+	}
 }
 
 func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) models.Problem {
@@ -309,6 +312,35 @@ func mapProblemTeam(pt sqlc.ListProblemTeamsRow) models.ProblemTeam {
 		TeamName:   pt.TeamName,
 		TeamSlug:   pt.TeamSlug,
 		CreatedAt:  pt.CreatedAt,
+	}
+}
+
+func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error) {
+	rows, err := r.queries.ListDashboardProblems(ctx, sqlc.ListDashboardProblemsParams{
+		OwnerID: pgtype.UUID{Bytes: userID, Valid: true},
+		Limit:   limit,
+	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	problems := make([]models.DashboardProblem, len(rows))
+	for i, row := range rows {
+		problems[i] = mapDashboardProblem(row)
+	}
+
+	return problems, nil
+}
+
+func mapDashboardProblem(row sqlc.ListDashboardProblemsRow) models.DashboardProblem {
+	return models.DashboardProblem{
+		ID:               row.ProblemID,
+		Title:            row.ProblemTitle,
+		OrganizationID:   row.OrgID,
+		OrganizationName: row.OrgName,
+		TimeLimitMs:      int(row.TimeLimitMs),
+		MemoryLimitMb:    int(row.MemoryLimitMb),
+		UpdatedAt:        row.UpdatedAt,
 	}
 }
 

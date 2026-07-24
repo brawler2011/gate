@@ -128,3 +128,32 @@ WHERE user_has_contest_access($1, c.id)
   AND c.organization_id = $2
 ORDER BY c.created_at DESC
 LIMIT $3 OFFSET $4;
+
+-- name: ListDashboardContests :many
+SELECT 
+    c.id as contest_id,
+    c.title as contest_title,
+    c.start_time as contest_start_time,
+    c.end_time as contest_end_time,
+    c.created_at as contest_created_at,
+    o.id as org_id,
+    o.name as org_name,
+    COALESCE(
+        (SELECT cm.role::text FROM contest_members cm WHERE cm.contest_id = c.id AND cm.user_id = $1),
+        CASE WHEN EXISTS(
+            SELECT 1 FROM organization_members om 
+            WHERE om.organization_id = c.organization_id AND om.user_id = $1 AND om.role IN ('owner', 'admin')
+        ) THEN 'moderator' ELSE 'participant' END
+    )::text as user_role,
+    sub.last_sub_time
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
+LEFT JOIN (
+    SELECT submissions.contest_id, MAX(submissions.created_at) as last_sub_time
+    FROM submissions
+    WHERE submissions.owner_id = $1
+    GROUP BY submissions.contest_id
+) sub ON c.id = sub.contest_id
+WHERE user_has_contest_access($1, c.id)
+ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC, c.created_at DESC
+LIMIT $2;

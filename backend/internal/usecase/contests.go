@@ -207,3 +207,11 @@ func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestId uu
 
 	return nil
 }
+
+func (uc *ContestsUseCase) ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error) {
+	contests, err := uc.contestRepo.ListDashboardContests(ctx, userID, limit)
+	if err != nil {
+		return nil, pkg.Wrap(err, nil, "can't list dashboard contests")
+	}
+	return contests, nil
+}

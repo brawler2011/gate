@@ -25,6 +25,22 @@ func (h *CoreServer) GetMe(ctx context.Context, request corev1.GetMeRequestObjec
 		User: userDTO(user),
 	}, nil
 }
+
+func (h *CoreServer) GetMyDashboard(ctx context.Context, request corev1.GetMyDashboardRequestObject) (corev1.GetMyDashboardResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	contests, err := h.contestsUC.ListDashboardContests(ctx, user.Id, 5)
+	if err != nil {
+		return nil, err
+	}
+
+	problems, err := h.problemsUC.ListDashboardProblems(ctx, user.Id, 5)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.GetMyDashboard200JSONResponse(DashboardResponseDTO(contests, problems)), nil
+}
 func (h *CoreServer) ListUsers(ctx context.Context, request corev1.ListUsersRequestObject) (corev1.ListUsersResponseObject, error) {
 	filter, err := validateGetUsersParams(request.Params)
 	if err != nil {

@@ -86,7 +86,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdate
 		ID:           c.ID,
 		Title:        c.Title,
 		Description:  c.Description,
-		Visibility:   stringToContestVisibilityPtr(c.Visibility),
+		Visibility:   stringToNullContestVisibility(c.Visibility),
 		Settings:     settingsJSON,
 		AccessPolicy: accessPolicyJSON,
 		StartTime:    timePtrToNullTime(c.StartTime),
@@ -623,12 +623,14 @@ func nullInt32ToInt32(i *int32) int32 {
 	return *i
 }
 
-func stringToContestVisibilityPtr(s *models.ContestVisibility) *sqlc.ContestVisibility {
+func stringToNullContestVisibility(s *models.ContestVisibility) sqlc.NullContestVisibility {
 	if s == nil {
-		return nil
+		return sqlc.NullContestVisibility{Valid: false}
 	}
-	v := sqlc.ContestVisibility(*s)
-	return &v
+	return sqlc.NullContestVisibility{
+		ContestVisibility: sqlc.ContestVisibility(*s),
+		Valid:             true,
+	}
 }
 
 func stringToNullContestRole(s *models.ContestRole) sqlc.NullContestRole {
@@ -699,4 +701,52 @@ func marshalJSON(v interface{}) ([]byte, error) {
 		return []byte("{}"), nil
 	}
 	return json.Marshal(v)
+}
+
+func (r *ContestsRepo) ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error) {
+	rows, err := r.queries.ListDashboardContests(ctx, sqlc.ListDashboardContestsParams{
+		UserID:  userID,
+		Limit:   limit,
+	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	contests := make([]models.DashboardContest, len(rows))
+	for i, row := range rows {
+		contests[i] = mapDashboardContest(row)
+	}
+
+	return contests, nil
+}
+
+func mapDashboardContest(row sqlc.ListDashboardContestsRow) models.DashboardContest {
+	var lastSubTime *time.Time
+	if row.LastSubTime != nil {
+		if t, ok := row.LastSubTime.(time.Time); ok {
+			lastSubTime = &t
+		}
+	}
+
+	var startTime *time.Time
+	if row.ContestStartTime.Valid {
+		startTime = &row.ContestStartTime.Time
+	}
+
+	var endTime *time.Time
+	if row.ContestEndTime.Valid {
+		endTime = &row.ContestEndTime.Time
+	}
+
+	return models.DashboardContest{
+		ID:                 row.ContestID,
+		Title:              row.ContestTitle,
+		StartTime:          startTime,
+		EndTime:            endTime,
+		CreatedAt:          row.ContestCreatedAt,
+		OrganizationID:     row.OrgID,
+		OrganizationName:   row.OrgName,
+		UserRole:           row.UserRole,
+		LastSubmissionTime: lastSubTime,
+	}
 }

@@ -877,6 +877,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetUserResponseModel'
+  /users/me/dashboard:
+    get:
+      operationId: GetMyDashboard
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetUserDashboardResponseModel'
   /users/{id}/avatar:
     get:
       operationId: GetUserAvatar
@@ -3509,6 +3519,87 @@ components:
       properties:
         submission:
           $ref: '#/components/schemas/SubmissionModel'
+    DashboardContestModel:
+      type: object
+      required:
+        - id
+        - title
+        - organization_id
+        - organization_name
+        - user_role
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        organization_id:
+          type: string
+          format: uuid
+        organization_name:
+          type: string
+        user_role:
+          type: string
+        last_submission_time:
+          type: string
+          format: date-time
+          nullable: true
+        start_time:
+          type: string
+          format: date-time
+          nullable: true
+        end_time:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    DashboardProblemModel:
+      type: object
+      required:
+        - id
+        - title
+        - organization_id
+        - organization_name
+        - time_limit
+        - memory_limit
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        organization_id:
+          type: string
+          format: uuid
+        organization_name:
+          type: string
+        time_limit:
+          type: integer
+          format: int32
+        memory_limit:
+          type: integer
+          format: int32
+        updated_at:
+          type: string
+          format: date-time
+    GetUserDashboardResponseModel:
+      type: object
+      required:
+        - recent_contests
+        - my_problems
+      properties:
+        recent_contests:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardContestModel'
+        my_problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardProblemModel'
     GetUserResponseModel:
       type: object
       required:

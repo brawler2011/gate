@@ -636,3 +636,7 @@ export async function listSubmissions(params: {
   return Call((client) => client.default.listSubmissions(params));
 }
 
+export async function getMyDashboard() {
+  return Call((client) => client.default.getMyDashboard());
+}
+

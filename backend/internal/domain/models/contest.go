@@ -278,3 +278,15 @@ type ContestMembersList struct {
 	Members    []ContestMember
 	Pagination Pagination
 }
+
+type DashboardContest struct {
+	ID                 uuid.UUID
+	Title              string
+	StartTime          *time.Time
+	EndTime            *time.Time
+	CreatedAt          time.Time
+	OrganizationID     uuid.UUID
+	OrganizationName   string
+	UserRole           string
+	LastSubmissionTime *time.Time
+}

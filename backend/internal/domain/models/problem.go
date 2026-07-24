@@ -208,3 +208,13 @@ type ProblemTest struct {
 }
 
 type ProblemTests []ProblemTest
+
+type DashboardProblem struct {
+	ID               uuid.UUID
+	Title            string
+	OrganizationID   uuid.UUID
+	OrganizationName string
+	TimeLimitMs      int
+	MemoryLimitMb    int
+	UpdatedAt        time.Time
+}

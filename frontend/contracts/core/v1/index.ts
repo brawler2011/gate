@@ -20,6 +20,8 @@ export type { ContestProblemModel } from './models/ContestProblemModel';
 export type { CreatedPost } from './models/CreatedPost';
 export type { CreateSubmissionRequestModel } from './models/CreateSubmissionRequestModel';
 export type { CreationResponseModel } from './models/CreationResponseModel';
+export type { DashboardContestModel } from './models/DashboardContestModel';
+export type { DashboardProblemModel } from './models/DashboardProblemModel';
 export type { Error } from './models/Error';
 export type { FileEntry } from './models/FileEntry';
 export type { GetContestProblemResponseModel } from './models/GetContestProblemResponseModel';
@@ -30,6 +32,7 @@ export type { GetOrganizationResponseModel } from './models/GetOrganizationRespo
 export type { GetProblemResponseModel } from './models/GetProblemResponseModel';
 export type { GetSubmissionResponseModel } from './models/GetSubmissionResponseModel';
 export type { GetTeamResponseModel } from './models/GetTeamResponseModel';
+export type { GetUserDashboardResponseModel } from './models/GetUserDashboardResponseModel';
 export type { GetUserResponseModel } from './models/GetUserResponseModel';
 export type { ListContestMembersResponseModel } from './models/ListContestMembersResponseModel';
 export type { ListContestsResponseModel } from './models/ListContestsResponseModel';

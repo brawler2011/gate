@@ -568,3 +568,46 @@ func listTeamMembersDTO(members []models.TeamMember, page, total int32) *corev1.
 
 	return &resp
 }
+
+func DashboardContestDTO(c models.DashboardContest) corev1.DashboardContestModel {
+	return corev1.DashboardContestModel{
+		Id:                 c.ID,
+		Title:              c.Title,
+		OrganizationId:     c.OrganizationID,
+		OrganizationName:   c.OrganizationName,
+		UserRole:           c.UserRole,
+		StartTime:          c.StartTime,
+		EndTime:            c.EndTime,
+		LastSubmissionTime: c.LastSubmissionTime,
+		CreatedAt:          c.CreatedAt,
+	}
+}
+
+func DashboardProblemDTO(p models.DashboardProblem) corev1.DashboardProblemModel {
+	return corev1.DashboardProblemModel{
+		Id:               p.ID,
+		Title:            p.Title,
+		OrganizationId:   p.OrganizationID,
+		OrganizationName: p.OrganizationName,
+		TimeLimit:        int32(p.TimeLimitMs),
+		MemoryLimit:      int32(p.MemoryLimitMb),
+		UpdatedAt:        p.UpdatedAt,
+	}
+}
+
+func DashboardResponseDTO(contests []models.DashboardContest, problems []models.DashboardProblem) corev1.GetUserDashboardResponseModel {
+	contestDTOs := make([]corev1.DashboardContestModel, len(contests))
+	for i, c := range contests {
+		contestDTOs[i] = DashboardContestDTO(c)
+	}
+
+	problemDTOs := make([]corev1.DashboardProblemModel, len(problems))
+	for i, p := range problems {
+		problemDTOs[i] = DashboardProblemDTO(p)
+	}
+
+	return corev1.GetUserDashboardResponseModel{
+		RecentContests: contestDTOs,
+		MyProblems:     problemDTOs,
+	}
+}

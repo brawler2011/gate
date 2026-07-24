@@ -117,10 +117,12 @@ func (r *UsersRepo) UpdateUser(
 		return err
 	}
 
-	var role *sqlc.UserRole
+	var role sqlc.NullUserRole
 	if params.Role != nil {
-		rVal := sqlc.UserRole(*params.Role)
-		role = &rVal
+		role = sqlc.NullUserRole{
+			UserRole: sqlc.UserRole(*params.Role),
+			Valid:    true,
+		}
 	}
 
 	err := r.queries.UpdateUser(ctx, sqlc.UpdateUserParams{

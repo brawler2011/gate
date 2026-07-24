@@ -24,6 +24,7 @@ type ProblemsRepo interface {
 	UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error
 	GetProblemManifest(ctx context.Context, id uuid.UUID) ([]byte, error)
 	UpdateProblemManifest(ctx context.Context, id uuid.UUID, manifest []byte) error
+	ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error)
 }
 
 type ProblemsUC interface {
@@ -38,4 +39,5 @@ type ProblemsUC interface {
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error
 	UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error
 	UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error
+	ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error)
 }

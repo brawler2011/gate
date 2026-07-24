@@ -14,6 +14,7 @@ import type { GetOrganizationResponseModel } from '../models/GetOrganizationResp
 import type { GetProblemResponseModel } from '../models/GetProblemResponseModel';
 import type { GetSubmissionResponseModel } from '../models/GetSubmissionResponseModel';
 import type { GetTeamResponseModel } from '../models/GetTeamResponseModel';
+import type { GetUserDashboardResponseModel } from '../models/GetUserDashboardResponseModel';
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
 import type { ListContestMembersResponseModel } from '../models/ListContestMembersResponseModel';
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
@@ -753,6 +754,16 @@ export class DefaultService {
         return this.httpRequest.request({
             method: 'GET',
             url: '/users/me',
+        });
+    }
+    /**
+     * @returns GetUserDashboardResponseModel OK
+     * @throws ApiError
+     */
+    public getMyDashboard(): CancelablePromise<GetUserDashboardResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/users/me/dashboard',
         });
     }
     /**

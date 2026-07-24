@@ -219,3 +219,11 @@ func extractNumber(s string) string {
 	}
 	return numStr
 }
+
+func (uc *ProblemsUseCase) ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error) {
+	problems, err := uc.repo.ListDashboardProblems(ctx, userID, limit)
+	if err != nil {
+		return nil, pkg.Wrap(err, nil, "can't list dashboard problems")
+	}
+	return problems, nil
+}

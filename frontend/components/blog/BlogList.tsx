@@ -17,7 +17,7 @@ export function BlogList({ posts, pagination, error }: BlogListProps) {
   }
 
   if (posts.length === 0) {
-    return <Text c="dimmed">Пока нет постов</Text>;
+    return null;
   }
 
   return (

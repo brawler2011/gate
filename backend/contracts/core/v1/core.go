@@ -213,6 +213,30 @@ type CreationResponseModel struct {
 	Id openapi_types.UUID `json:"id"`
 }
 
+// DashboardContestModel defines model for DashboardContestModel.
+type DashboardContestModel struct {
+	CreatedAt          time.Time          `json:"created_at"`
+	EndTime            *time.Time         `json:"end_time"`
+	Id                 openapi_types.UUID `json:"id"`
+	LastSubmissionTime *time.Time         `json:"last_submission_time"`
+	OrganizationId     openapi_types.UUID `json:"organization_id"`
+	OrganizationName   string             `json:"organization_name"`
+	StartTime          *time.Time         `json:"start_time"`
+	Title              string             `json:"title"`
+	UserRole           string             `json:"user_role"`
+}
+
+// DashboardProblemModel defines model for DashboardProblemModel.
+type DashboardProblemModel struct {
+	Id               openapi_types.UUID `json:"id"`
+	MemoryLimit      int32              `json:"memory_limit"`
+	OrganizationId   openapi_types.UUID `json:"organization_id"`
+	OrganizationName string             `json:"organization_name"`
+	TimeLimit        int32              `json:"time_limit"`
+	Title            string             `json:"title"`
+	UpdatedAt        time.Time          `json:"updated_at"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Error *string `json:"error,omitempty"`
@@ -268,6 +292,12 @@ type GetSubmissionResponseModel struct {
 // GetTeamResponseModel defines model for GetTeamResponseModel.
 type GetTeamResponseModel struct {
 	Team TeamModel `json:"team"`
+}
+
+// GetUserDashboardResponseModel defines model for GetUserDashboardResponseModel.
+type GetUserDashboardResponseModel struct {
+	MyProblems     []DashboardProblemModel `json:"my_problems"`
+	RecentContests []DashboardContestModel `json:"recent_contests"`
 }
 
 // GetUserResponseModel defines model for GetUserResponseModel.
@@ -1459,6 +1489,9 @@ type ClientInterface interface {
 
 	// GetMe request
 	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetMyDashboard request
+	GetMyDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUser request
 	GetUser(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2921,6 +2954,18 @@ func (c *Client) ListUsers(ctx context.Context, params *ListUsersParams, reqEdit
 
 func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetMeRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetMyDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetMyDashboardRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -8243,6 +8288,33 @@ func NewGetMeRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewGetMyDashboardRequest generates requests for GetMyDashboard
+func NewGetMyDashboardRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/users/me/dashboard")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetUserRequest generates requests for GetUser
 func NewGetUserRequest(server string, id openapi_types.UUID) (*http.Request, error) {
 	var err error
@@ -9033,6 +9105,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetMeWithResponse request
 	GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
+
+	// GetMyDashboardWithResponse request
+	GetMyDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMyDashboardResponse, error)
 
 	// GetUserWithResponse request
 	GetUserWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetUserResponse, error)
@@ -11345,6 +11420,28 @@ func (r GetMeResponse) StatusCode() int {
 	return 0
 }
 
+type GetMyDashboardResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetUserDashboardResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetMyDashboardResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetMyDashboardResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetUserResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -12549,6 +12646,15 @@ func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors 
 		return nil, err
 	}
 	return ParseGetMeResponse(rsp)
+}
+
+// GetMyDashboardWithResponse request returning *GetMyDashboardResponse
+func (c *ClientWithResponses) GetMyDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMyDashboardResponse, error) {
+	rsp, err := c.GetMyDashboard(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetMyDashboardResponse(rsp)
 }
 
 // GetUserWithResponse request returning *GetUserResponse
@@ -15169,6 +15275,32 @@ func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 	return response, nil
 }
 
+// ParseGetMyDashboardResponse parses an HTTP response from a GetMyDashboardWithResponse call
+func ParseGetMyDashboardResponse(rsp *http.Response) (*GetMyDashboardResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetMyDashboardResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetUserDashboardResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetUserResponse parses an HTTP response from a GetUserWithResponse call
 func ParseGetUserResponse(rsp *http.Response) (*GetUserResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -15638,6 +15770,9 @@ type ServerInterface interface {
 
 	// (GET /users/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
+
+	// (GET /users/me/dashboard)
+	GetMyDashboard(w http.ResponseWriter, r *http.Request)
 
 	// (GET /users/{id})
 	GetUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -19468,6 +19603,20 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 	handler.ServeHTTP(w, r)
 }
 
+// GetMyDashboard operation middleware
+func (siw *ServerInterfaceWrapper) GetMyDashboard(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyDashboard(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetUser operation middleware
 func (siw *ServerInterfaceWrapper) GetUser(w http.ResponseWriter, r *http.Request) {
 
@@ -19987,6 +20136,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/user/{id}/contests", wrapper.ListUserContests)
 	m.HandleFunc("GET "+options.BaseURL+"/users", wrapper.ListUsers)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetMe)
+	m.HandleFunc("GET "+options.BaseURL+"/users/me/dashboard", wrapper.GetMyDashboard)
 	m.HandleFunc("GET "+options.BaseURL+"/users/{id}", wrapper.GetUser)
 	m.HandleFunc("DELETE "+options.BaseURL+"/users/{id}/avatar", wrapper.DeleteAvatar)
 	m.HandleFunc("GET "+options.BaseURL+"/users/{id}/avatar", wrapper.GetUserAvatar)
@@ -22078,6 +22228,22 @@ func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) e
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetMyDashboardRequestObject struct {
+}
+
+type GetMyDashboardResponseObject interface {
+	VisitGetMyDashboardResponse(w http.ResponseWriter) error
+}
+
+type GetMyDashboard200JSONResponse GetUserDashboardResponseModel
+
+func (response GetMyDashboard200JSONResponse) VisitGetMyDashboardResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetUserRequestObject struct {
 	Id openapi_types.UUID `json:"id"`
 }
@@ -22546,6 +22712,9 @@ type StrictServerInterface interface {
 
 	// (GET /users/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+
+	// (GET /users/me/dashboard)
+	GetMyDashboard(ctx context.Context, request GetMyDashboardRequestObject) (GetMyDashboardResponseObject, error)
 
 	// (GET /users/{id})
 	GetUser(ctx context.Context, request GetUserRequestObject) (GetUserResponseObject, error)
@@ -25494,6 +25663,30 @@ func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMeResponseObject); ok {
 		if err := validResponse.VisitGetMeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMyDashboard operation middleware
+func (sh *strictHandler) GetMyDashboard(w http.ResponseWriter, r *http.Request) {
+	var request GetMyDashboardRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMyDashboard(ctx, request.(GetMyDashboardRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMyDashboard")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMyDashboardResponseObject); ok {
+		if err := validResponse.VisitGetMyDashboardResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

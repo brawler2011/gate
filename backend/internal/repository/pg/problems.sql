@@ -102,3 +102,20 @@ SELECT manifest FROM problems WHERE id = $1;
 
 -- name: UpdateProblemManifest :exec
 UPDATE problems SET manifest = $2 WHERE id = $1;
+
+-- name: ListDashboardProblems :many
+SELECT 
+    p.id as problem_id,
+    p.title as problem_title,
+    p.time_limit_ms,
+    p.memory_limit_mb,
+    p.updated_at,
+    o.id as org_id,
+    o.name as org_name
+FROM problems p
+JOIN organizations o ON p.organization_id = o.id
+LEFT JOIN problem_members pm ON p.id = pm.problem_id
+WHERE p.owner_id = $1 OR pm.user_id = $1
+GROUP BY p.id, o.id
+ORDER BY p.updated_at DESC
+LIMIT $2;
