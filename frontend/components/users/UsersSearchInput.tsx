@@ -49,7 +49,7 @@ export function UsersSearchInput() {
       }
 
       const query = params.toString();
-      router.push(`/admin${query ? `?${query}` : ""}`);
+      router.push(`/admin/users${query ? `?${query}` : ""}`);
     }, 300);
 
     return () => {

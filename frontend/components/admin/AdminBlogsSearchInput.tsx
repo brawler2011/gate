@@ -58,7 +58,7 @@ export function AdminBlogsSearchInput() {
       }
 
       const query = params.toString();
-      router.push(`/admin${query ? `?${query}` : ""}`);
+      router.push(`/admin/blogs${query ? `?${query}` : ""}`);
     }, 300);
   }, [search, searchParams, router]);
 

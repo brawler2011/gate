@@ -153,7 +153,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
   }
 
   const totalPages = pagination.total || 1;
-  const queryParams: Record<string, string | number | undefined> = { view: "blogs" };
+  const queryParams: Record<string, string | number | undefined> = {};
   if (search) queryParams.search = search;
 
   return (
@@ -211,7 +211,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
                     page: page,
                     total: totalPages,
                   }}
-                  baseUrl="/admin"
+                  baseUrl="/admin/blogs"
                   queryParams={queryParams}
                 />
               </Stack>

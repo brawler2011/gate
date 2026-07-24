@@ -49,7 +49,7 @@ export function AdminContestsSearchInput() {
       }
 
       const query = params.toString();
-      router.push(`/admin${query ? `?${query}` : ""}`);
+      router.push(`/admin/contests${query ? `?${query}` : ""}`);
     }, 300);
 
     return () => {

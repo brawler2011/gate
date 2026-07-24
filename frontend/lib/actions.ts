@@ -618,3 +618,21 @@ export async function setWorkshopInteractorMain(problemId: string, name: string)
 export async function setWorkshopValidatorMain(problemId: string, name: string) {
   return Call((client) => client.default.setProblemValidatorMain({ problemId, requestBody: { name } }));
 }
+
+export async function deleteProblem(id: string) {
+  return Call((client) => client.default.deleteProblem({ id }));
+}
+
+export async function listSubmissions(params: {
+  page: number;
+  pageSize: number;
+  contestId?: string;
+  userId?: string;
+  problemId?: string;
+  state?: number;
+  sortOrder?: "asc" | "desc";
+  language?: number;
+}): Promise<[ApiError | null, ListSubmissionsResponseModel | null]> {
+  return Call((client) => client.default.listSubmissions(params));
+}
+

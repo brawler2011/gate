@@ -17,7 +17,11 @@ export type HeaderSecondaryNavIcon =
   | "problems"
   | "teams"
   | "members"
-  | "settings";
+  | "settings"
+  | "users"
+  | "blogs"
+  | "orgs"
+  | "submissions";
 
 export type HeaderSecondaryNavItem = {
   key: string;

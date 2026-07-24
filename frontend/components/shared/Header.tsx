@@ -43,7 +43,10 @@ import {
   IconUser,
   IconUsers,
   IconUsersGroup,
+  IconNews,
+  IconFileText,
 } from "@tabler/icons-react";
+import { buildAdminHeaderNav } from "@/lib/admin-header-nav";
 import cx from "clsx";
 import NextImage from "next/image";
 import Link from "next/link";
@@ -74,6 +77,10 @@ const NAV_ICON_MAP: Record<
   teams: IconUsersGroup,
   members: IconUsers,
   settings: IconSettings,
+  users: IconUsers,
+  blogs: IconNews,
+  orgs: IconBuilding,
+  submissions: IconFileText,
 };
 
 const useIsomorphicLayoutEffect =
@@ -418,7 +425,9 @@ const Header = ({
   const computedColorScheme = useComputedColorScheme("dark", {
     getInitialValueInEffect: true,
   });
-  const hasSecondaryNav = Boolean(secondaryNavItems?.length);
+  const isAdminPath = pathname?.startsWith("/admin");
+  const finalSecondaryNavItems = secondaryNavItems || (isAdminPath ? buildAdminHeaderNav(pathname) : undefined);
+  const hasSecondaryNav = Boolean(finalSecondaryNavItems?.length);
 
   return (
     <>
@@ -521,8 +530,8 @@ const Header = ({
           </Group>
         </div>
 
-        {secondaryNavItems && secondaryNavItems.length > 0 && (
-          <SecondaryNav items={secondaryNavItems} />
+        {finalSecondaryNavItems && finalSecondaryNavItems.length > 0 && (
+          <SecondaryNav items={finalSecondaryNavItems} />
         )}
       </div>
 

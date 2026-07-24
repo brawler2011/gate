@@ -11,7 +11,6 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useState } from "react";
-import type { ContestModel } from "@contracts/core/v1";
 import { NextPagination } from '@/components/shared/Pagination';
 import { StatusMessage } from '@/components/shared/StatusMessage';
 import { AdminContestsSearchInput } from "./AdminContestsSearchInput";
@@ -79,7 +78,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
   }
 
   const totalPages = pagination.total || 1;
-  const queryParams: Record<string, string | number | undefined> = { view: "contests" };
+  const queryParams: Record<string, string | number | undefined> = {};
   if (search) queryParams.search = search;
 
   return (
@@ -119,7 +118,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
                     page: page,
                     total: totalPages,
                   }}
-                  baseUrl="/admin"
+                  baseUrl="/admin/contests"
                   queryParams={queryParams}
                 />
               </Stack>
