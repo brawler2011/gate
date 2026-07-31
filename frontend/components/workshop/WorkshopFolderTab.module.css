@@ -1,45 +1,126 @@
-/* File selector bar */
-.fileBar {
+.container {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  min-height: calc(100vh - 92px);
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+  display: flex;
+  flex-direction: column;
+  padding: var(--mantine-spacing-md);
+  gap: var(--mantine-spacing-md);
+}
+
+.fileList {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+/* File item button in sidebar */
+.fileItem {
+  width: 100%;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px 16px;
-  border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
-  overflow: visible;
-  flex-shrink: 0;
-}
-
-/* File pill button */
-.filePill {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12.5px;
-  font-weight: 500;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
   font-family: var(--mantine-font-family-monospace);
   cursor: pointer;
-  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
-  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7));
-  color: light-dark(var(--mantine-color-dark-5), var(--mantine-color-dark-1));
-  white-space: nowrap;
+  border: none;
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-6));
+  background: transparent;
+  color: light-dark(var(--mantine-color-dark-4), var(--mantine-color-gray-3));
+  text-align: left;
   transition: all 120ms ease;
-  flex-shrink: 0;
 }
 
-.filePill:hover {
-  border-color: light-dark(var(--mantine-color-blue-4), var(--mantine-color-blue-6));
-  color: light-dark(var(--mantine-color-blue-7), var(--mantine-color-blue-3));
-  background: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6));
+.fileItem:last-child {
+  border-bottom: none;
 }
 
-.filePillActive {
-  background: light-dark(var(--mantine-color-blue-6), var(--mantine-color-blue-8));
-  border-color: light-dark(var(--mantine-color-blue-6), var(--mantine-color-blue-7));
-  color: #fff;
+.fileItem:hover {
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7));
 }
 
-.filePillActive:hover {
-  background: light-dark(var(--mantine-color-blue-7), var(--mantine-color-blue-7));
-  border-color: light-dark(var(--mantine-color-blue-7), var(--mantine-color-blue-6));
-  color: #fff;
+.fileItemActive,
+.fileItem.fileItemActive {
+  background: light-dark(var(--mantine-color-blue-0), var(--mantine-color-blue-9));
+  color: light-dark(var(--mantine-color-blue-7), var(--mantine-color-blue-1));
+  font-weight: 600;
+}
+
+.fileItemActive:hover,
+.fileItem.fileItemActive:hover {
+  background: light-dark(var(--mantine-color-blue-1), var(--mantine-color-blue-8));
+}
+
+/* Gold/yellow highlighting for main file */
+.fileItemMain,
+.fileItem.fileItemMain {
+  background: light-dark(var(--mantine-color-yellow-0), var(--mantine-color-yellow-9));
+  color: light-dark(var(--mantine-color-yellow-9), var(--mantine-color-yellow-1));
+}
+
+.fileItemMain:hover,
+.fileItem.fileItemMain:hover {
+  background: light-dark(var(--mantine-color-yellow-1), var(--mantine-color-yellow-8));
+}
+
+.fileItemMainActive,
+.fileItem.fileItemMainActive {
+  background: light-dark(var(--mantine-color-yellow-2), var(--mantine-color-yellow-7));
+  color: light-dark(var(--mantine-color-yellow-9), var(--mantine-color-yellow-0));
+  font-weight: 600;
+}
+
+.fileItemMainActive:hover,
+.fileItem.fileItemMainActive:hover {
+  background: light-dark(var(--mantine-color-yellow-3), var(--mantine-color-yellow-6));
+}
+
+.editorArea {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: light-dark(#fff, var(--mantine-color-dark-7));
+}
+
+.editorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5));
+  background: light-dark(#fff, var(--mantine-color-dark-8));
+}
+
+.editorWrapper {
+  padding: var(--mantine-spacing-md);
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.emptyState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  flex-grow: 1;
+}
+
+.sidebarEmptyText {
+  font-size: 13px;
+  color: var(--mantine-color-dimmed);
+  text-align: center;
+  padding: var(--mantine-spacing-md) 0;
 }

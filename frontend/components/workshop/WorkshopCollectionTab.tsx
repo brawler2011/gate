@@ -10,6 +10,7 @@ import {
   Code,
   Group,
   Loader,
+  Modal,
   Stack,
   Text,
   TextInput,
@@ -184,39 +185,27 @@ export function WorkshopCollectionTab({
     });
   };
 
-  const fileBar = (
-    <div className={classes.fileBar}>
-      {leafFiles.map((file) => (
-        <button
-          key={file.path}
-          type="button"
-          className={`${classes.filePill} ${
-            selectedFile === file.path ? classes.filePillActive : ""
-          }`}
-          onClick={() => {
-            if (selectedFile !== file.path) onFileSelect(file.path!);
-          }}
-        >
-          <Group gap={4} wrap="nowrap" align="center" style={{ display: "inline-flex" }}>
-            {file.is_main && <IconStar size={12} fill="currentColor" color="var(--mantine-color-yellow-5)" />}
-            <span>{getFileName(file.path!)}</span>
-          </Group>
-        </button>
-      ))}
-
-      {isCreating ? (
-        <Group gap={4} style={{ flexShrink: 0 }}>
+  return (
+    <div className={classes.container}>
+      {/* Modal for creating files */}
+      <Modal
+        opened={isCreating}
+        onClose={cancelCreate}
+        title="Добавить файл"
+        centered
+        size="sm"
+      >
+        <Stack gap="md">
           <TextInput
             ref={newFileInputRef}
+            label="Имя файла"
             value={newFileName}
             onChange={(event) => setNewFileName(event.currentTarget.value)}
-            placeholder="имя файла"
-            size="xs"
-            style={{ width: 160 }}
+            placeholder="например: checker.cpp"
+            data-autofocus
             styles={{
               input: {
                 fontFamily: "var(--mantine-font-family-monospace)",
-                fontSize: 12,
               },
             }}
             onKeyDown={(event) => {
@@ -225,182 +214,182 @@ export function WorkshopCollectionTab({
             }}
             disabled={isCreatingFile}
           />
-          <ActionIcon
-            size="sm"
-            variant="filled"
-            loading={isCreatingFile}
-            disabled={!newFileName.trim()}
-            onClick={handleCreate}
-            title="Создать"
-          >
-            <IconPlus size={13} />
-          </ActionIcon>
-          <ActionIcon
-            size="sm"
-            variant="subtle"
-            onClick={cancelCreate}
-            disabled={isCreatingFile}
-            title="Отмена"
-          >
-            <IconX size={13} />
-          </ActionIcon>
-        </Group>
-      ) : (
-        <ActionIcon
+          <Group gap="xs" justify="flex-end">
+            <Button
+              variant="subtle"
+              color="gray"
+              onClick={cancelCreate}
+              disabled={isCreatingFile}
+            >
+              Отмена
+            </Button>
+            <Button
+              loading={isCreatingFile}
+              disabled={!newFileName.trim()}
+              onClick={handleCreate}
+              leftSection={<IconPlus size={16} />}
+            >
+              Создать
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Left Sidebar - Files list & Add button */}
+      <div className={classes.sidebar}>
+        <Button
           size="sm"
-          variant="subtle"
+          variant="light"
+          leftSection={<IconPlus size={16} />}
           onClick={openCreateInput}
-          title="Создать файл"
-          style={{ flexShrink: 0 }}
+          fullWidth
         >
-          <IconPlus size={14} />
-        </ActionIcon>
-      )}
-    </div>
-  );
+          Добавить
+        </Button>
 
-  if (isLoadingFiles) {
-    return (
-      <Stack gap={0}>
-        {fileBar}
-        <Center py="xl">
-          <Loader size="sm" />
-        </Center>
-      </Stack>
-    );
-  }
-
-  if (leafFiles.length === 0) {
-    return (
-      <Stack gap={0}>
-        {fileBar}
-        <Center py="xl">
-          <Stack align="center" gap="xs">
-            <IconFile size={40} color="var(--mantine-color-dimmed)" />
-            <Title order={5} c="dimmed">
-              Нет файлов
-            </Title>
-          </Stack>
-        </Center>
-      </Stack>
-    );
-  }
-
-  return (
-    <Stack gap={0}>
-      {fileBar}
-
-      <Group
-        px="md"
-        py="xs"
-        justify="space-between"
-        style={{
-          borderBottom: "1px solid var(--mantine-color-default-border)",
-          flexShrink: 0,
-        }}
-      >
-        <Group gap="xs">
-          {selectedFile ? (
-            <Code style={{ fontSize: 13 }}>{selectedFile}</Code>
+        <div className={classes.fileList}>
+          {isLoadingFiles ? (
+            <Center py="xl">
+              <Loader size="sm" />
+            </Center>
+          ) : leafFiles.length === 0 ? (
+            <div className={classes.sidebarEmptyText}>нет файлов</div>
           ) : (
-            <Text size="sm" c="dimmed">
-              Выберите файл
-            </Text>
-          )}
-          {isLoadingFile && <Loader size="xs" />}
-        </Group>
-        <Group gap="xs">
-          {selectedFile && setMain && (
-            (() => {
-              const selectedEntry = leafFiles.find(f => f.path === selectedFile);
-              const isMain = selectedEntry?.is_main === true;
+            leafFiles.map((file) => {
+              const isMain = file.is_main;
+              const isActive = selectedFile === file.path;
+
+              let itemClassName = classes.fileItem;
+              if (isMain && isActive) {
+                itemClassName = `${classes.fileItem} ${classes.fileItemMainActive}`;
+              } else if (isMain) {
+                itemClassName = `${classes.fileItem} ${classes.fileItemMain}`;
+              } else if (isActive) {
+                itemClassName = `${classes.fileItem} ${classes.fileItemActive}`;
+              }
+
               return (
-                <Button
-                  size="xs"
-                  variant={isMain ? "light" : "outline"}
-                  color={isMain ? "yellow" : "gray"}
-                  leftSection={<IconStar size={14} fill={isMain ? "currentColor" : "none"} />}
-                  disabled={isMain || isSaving || isLoadingFile}
-                  onClick={async () => {
-                    const fileName = getFileName(selectedFile);
-                    const [error] = await setMain(problemId, fileName);
-                    if (error) {
-                      notifications.show({
-                        title: "Ошибка",
-                        message: error.message ?? "Не удалось сделать файл основным",
-                        color: "red",
-                      });
-                      return;
-                    }
-                    notifications.show({
-                      title: "Успешно",
-                      message: `${fileName} теперь используется как основной`,
-                      color: "green",
-                    });
-                    mutateFiles();
+                <button
+                  key={file.path}
+                  type="button"
+                  className={itemClassName}
+                  onClick={() => {
+                    if (selectedFile !== file.path) onFileSelect(file.path!);
                   }}
                 >
-                  {isMain ? "Основной" : "Сделать основным"}
-                </Button>
+                  <span>{getFileName(file.path!)}</span>
+                </button>
               );
-            })()
+            })
           )}
-          {selectedFile && (
-            <ActionIcon
-              variant="subtle"
-              title="Перезагрузить"
-              disabled={isSaving || isLoadingFile}
-              onClick={() => mutateContent()}
-            >
-              <IconRefresh size={16} />
-            </ActionIcon>
-          )}
-          <Button
-            size="xs"
-            disabled={!selectedFile || !isDirty}
-            loading={isSaving}
-            onClick={handleSave}
-          >
-            Сохранить
-          </Button>
-        </Group>
-      </Group>
+        </div>
+      </div>
 
-      <Box
-        style={{
-          padding: "var(--mantine-spacing-xs)",
-        }}
-      >
-        {selectedFile ? (
-          <Textarea
-            value={content}
-            onChange={(event) => {
-              setContent(event.currentTarget.value);
-              setIsDirty(true);
-            }}
-            disabled={isLoadingFile || isSaving}
-            autosize
-            minRows={20}
-            styles={{
-              input: {
-                fontFamily: "var(--mantine-font-family-monospace)",
-                fontSize: 13,
-                resize: "none",
-                whiteSpace: "pre-wrap",
-              },
-            }}
-          />
-        ) : (
-          <Center py="xl">
-            <Stack align="center" gap="xs">
-              <IconFile size={40} color="var(--mantine-color-dimmed)" />
-              <Title order={5} c="dimmed">
-                Выберите файл для редактирования
-              </Title>
-            </Stack>
-          </Center>
-        )}
-      </Box>
-    </Stack>
+      {/* Right Column - Editor Area */}
+      <div className={classes.editorArea}>
+        {/* Editor Toolbar Header */}
+        <div className={classes.editorHeader}>
+          <Group gap="xs">
+            {selectedFile ? (
+              <Code style={{ fontSize: 13 }}>{selectedFile}</Code>
+            ) : (
+              <Text size="sm" c="dimmed">
+                Выберите файл
+              </Text>
+            )}
+            {isLoadingFile && <Loader size="xs" />}
+          </Group>
+
+          <Group gap="xs">
+            {selectedFile && setMain && (
+              (() => {
+                const selectedEntry = leafFiles.find(f => f.path === selectedFile);
+                const isMain = selectedEntry?.is_main === true;
+                return (
+                  <Button
+                    size="xs"
+                    variant={isMain ? "light" : "outline"}
+                    color={isMain ? "yellow" : "gray"}
+                    disabled={isMain || isSaving || isLoadingFile}
+                    onClick={async () => {
+                      const fileName = getFileName(selectedFile);
+                      const [error] = await setMain(problemId, fileName);
+                      if (error) {
+                        notifications.show({
+                          title: "Ошибка",
+                          message: error.message ?? "Не удалось сделать файл основным",
+                          color: "red",
+                        });
+                        return;
+                      }
+                      notifications.show({
+                        title: "Успешно",
+                        message: `${fileName} теперь используется как основной`,
+                        color: "green",
+                      });
+                      mutateFiles();
+                    }}
+                  >
+                    {isMain ? "Основной" : "Сделать основным"}
+                  </Button>
+                );
+              })()
+            )}
+            {selectedFile && (
+              <ActionIcon
+                variant="subtle"
+                title="Перезагрузить"
+                disabled={isSaving || isLoadingFile}
+                onClick={() => mutateContent()}
+              >
+                <IconRefresh size={16} />
+              </ActionIcon>
+            )}
+            <Button
+              size="xs"
+              disabled={!selectedFile || !isDirty}
+              loading={isSaving}
+              onClick={handleSave}
+            >
+              Сохранить
+            </Button>
+          </Group>
+        </div>
+
+        {/* Editor Content Box */}
+        <div className={classes.editorWrapper}>
+          {selectedFile ? (
+            <Textarea
+              value={content}
+              onChange={(event) => {
+                setContent(event.currentTarget.value);
+                setIsDirty(true);
+              }}
+              disabled={isLoadingFile || isSaving}
+              autosize
+              minRows={25}
+              styles={{
+                input: {
+                  fontFamily: "var(--mantine-font-family-monospace)",
+                  fontSize: 13,
+                  resize: "none",
+                  whiteSpace: "pre-wrap",
+                  flexGrow: 1,
+                },
+              }}
+            />
+          ) : (
+            <div className={classes.emptyState}>
+              <Stack align="center" gap="xs">
+                <IconFile size={40} color="var(--mantine-color-dimmed)" />
+                <Title order={5} c="dimmed">
+                  Выберите файл для редактирования
+                </Title>
+              </Stack>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

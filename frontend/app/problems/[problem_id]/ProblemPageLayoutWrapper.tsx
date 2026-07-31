@@ -131,8 +131,8 @@ export default async function ProblemPageLayoutWrapper({
           zIndex: "auto",
         },
         main: {
-          paddingTop: 0,
-          paddingBottom: 0,
+          padding: 0,
+          minHeight: "calc(100vh - 92px)",
         },
       }}
     >
