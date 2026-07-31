@@ -38,10 +38,6 @@ Thumbs.db
 coverage/
 __tests__/
 
-# Deployment
-deploy/
-server-deploy.sh
-
 # Markdown
 *.md
 !README.md

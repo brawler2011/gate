@@ -5,13 +5,13 @@ FROM oven/bun:1-alpine AS builder
 WORKDIR /app
 
 # Копируем файлы зависимостей и устанавливаем зависимости
-COPY frontend/package.json frontend/bun.lock ./
+COPY package.json bun.lock ./
 # Кешируем зависимости bun для ускорения установки
 RUN --mount=type=cache,id=bun-cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile
+    bun install
 
-# Копируем остальные файлы frontend/ (включает contracts/)
-COPY frontend/ .
+# Копируем остальные файлы
+COPY . .
 
 # Переменные окружения для сборки
 ENV NODE_ENV=production
