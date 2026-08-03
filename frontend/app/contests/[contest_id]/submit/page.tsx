@@ -77,6 +77,7 @@ const Page = async ({ params }: Props) => {
         <HeaderWithSession
           secondaryNavItems={contestHeaderNav}
           organizationId={response!.contest.organization_id}
+          contest={{ id: response!.contest.id, title: response!.contest.title }}
         />
       </AppShellHeader>
       <AppShellMain>

@@ -128,6 +128,14 @@ const Page = async ({ params, searchParams }: PageProps) => {
     <DefaultLayout
       headerSecondaryNavItems={contestHeaderNav}
       headerOrganizationId={contestData?.contest.organization_id}
+      headerContest={
+        contestData?.contest
+          ? {
+              id: contestData.contest.id,
+              title: contestData.contest.title,
+            }
+          : undefined
+      }
     >
       <Box className={classes.contestContainerWithLeftInfo}>
         {/* Left Sidebar - Contest Info Panel - hidden on mobile */}

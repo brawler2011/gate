@@ -120,6 +120,14 @@ export default async function ProblemPageLayoutWrapper({
     <DefaultLayout
       headerSecondaryNavItems={problemHeaderNav}
       headerOrganizationId={problemResponse?.problem.organization_id}
+      headerProblem={
+        problemResponse?.problem
+          ? {
+              id: problemResponse.problem.id,
+              title: problemResponse.problem.title,
+            }
+          : undefined
+      }
       stylesConfig={{
         header: {
           position: "static",

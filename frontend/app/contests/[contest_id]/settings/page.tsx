@@ -82,6 +82,7 @@ export default async function ContestManagePage({
     <DefaultLayout
       headerSecondaryNavItems={contestHeaderNav}
       headerOrganizationId={contest.organization_id}
+      headerContest={{ id: contest.id, title: contest.title }}
     >
       <Box className={layoutClasses.contestContainer}>
         {/* Main Content */}

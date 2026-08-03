@@ -71,7 +71,6 @@ const NAV_ICON_MAP: Record<
   mysubmissions: IconUser,
   allsubmissions: IconMail,
   monitor: IconDeviceDesktop,
-  manage: IconSettings,
   contests: IconTrophy,
   problems: IconPuzzle,
   teams: IconUsersGroup,
@@ -89,6 +88,16 @@ const useIsomorphicLayoutEffect =
 export type HeaderOrganization = {
   id: string;
   name: string;
+};
+
+export type HeaderContest = {
+  id: string;
+  title: string;
+};
+
+export type HeaderProblem = {
+  id: string;
+  title: string;
 };
 
 const Profile = ({ user }: { user?: SessionUser }) => {
@@ -399,10 +408,14 @@ const Header = ({
   user,
   secondaryNavItems,
   organization,
+  contest,
+  problem,
 }: {
   user?: SessionUser;
   secondaryNavItems?: HeaderSecondaryNavItem[];
   organization?: HeaderOrganization;
+  contest?: HeaderContest;
+  problem?: HeaderProblem;
 }) => {
   const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] =
     useDisclosure(false);
@@ -459,31 +472,59 @@ const Header = ({
               />
               <Group gap={6} wrap="nowrap" className={classes.brandingGroup}>
                 <Link href="/" className={classes.logoLink}>
-                  <Group gap="xs" wrap="nowrap">
-                    <Image
-                      component={NextImage}
-                      src="/gate_logo.svg"
-                      alt="Gate logo"
-                      width={40}
-                      height={40}
-                      priority
-                      className={classes.logoImage}
-                    />
-                    <Title order={1}>Gate</Title>
-                  </Group>
+                  <Image
+                    component={NextImage}
+                    src="/gate_logo.svg"
+                    alt="Gate logo"
+                    width={40}
+                    height={40}
+                    priority
+                    className={classes.logoImage}
+                  />
                 </Link>
 
-                {organization && (
-                  <div className={classes.organizationCrumb}>
-                    <span className={classes.organizationSlash}>/</span>
+                {organization ? (
+                  <>
                     <Link
                       href={`/orgs/${organization.id}`}
-                      className={classes.organizationLink}
+                      className={classes.brandTitleLink}
                       title={organization.name}
                     >
-                      {organization.name}
+                      <Title order={1} className={classes.brandTitleText}>
+                        {organization.name}
+                      </Title>
                     </Link>
-                  </div>
+
+                    {contest ? (
+                      <div className={classes.organizationCrumb}>
+                        <span className={classes.organizationSlash}>/</span>
+                        <Link
+                          href={`/contests/${contest.id}`}
+                          className={classes.organizationLink}
+                          title={contest.title}
+                        >
+                          {contest.title}
+                        </Link>
+                      </div>
+                    ) : problem ? (
+                      <div className={classes.organizationCrumb}>
+                        <span className={classes.organizationSlash}>/</span>
+                        <Link
+                          href={`/problems/${problem.id}`}
+                          className={classes.organizationLink}
+                          title={problem.title}
+                        >
+                          {problem.title}
+                        </Link>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <Link href="/" className={classes.brandTitleLink}>
+                    <Title order={1} className={classes.brandTitleText}>
+                      Gate
+                    </Title>
+                  </Link>
                 )}
               </Group>
             </Group>

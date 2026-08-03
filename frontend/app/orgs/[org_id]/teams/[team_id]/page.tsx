@@ -15,7 +15,7 @@ export default async function TeamPage({ params }: Props) {
   if (error) {
     if (error.status === 404) notFound();
     return (
-      <DefaultLayout>
+      <DefaultLayout headerOrganizationId={org_id}>
         <Container size="sm" py="lg"><ErrorDisplay error={error} /></Container>
       </DefaultLayout>
     );
@@ -23,7 +23,7 @@ export default async function TeamPage({ params }: Props) {
   const team = data!.team;
 
   return (
-    <DefaultLayout>
+    <DefaultLayout headerOrganizationId={org_id}>
       <Container size="sm" py="lg">
         <Stack gap="xl">
           <LinkAnchor href={`/orgs/${org_id}`} size="sm">

@@ -76,6 +76,7 @@ const Contest = ({
         <HeaderWithSession
           secondaryNavItems={contestHeaderNav}
           organizationId={contest.organization_id}
+          contest={{ id: contest.id, title: contest.title }}
         />
       </AppShellHeader>
       <AppShellMain>

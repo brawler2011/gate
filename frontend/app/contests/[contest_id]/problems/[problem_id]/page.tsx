@@ -126,6 +126,10 @@ const Page = async (props: Props) => {
         <HeaderWithSession
           secondaryNavItems={contestHeaderNav}
           organizationId={contestResponse.contest.organization_id}
+          contest={{
+            id: contestResponse.contest.id,
+            title: contestResponse.contest.title,
+          }}
         />
       }
       wsUrl={wsUrl}

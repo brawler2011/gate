@@ -22,7 +22,7 @@ export default async function OrgPage({ params, searchParams }: Props) {
   if (orgError) {
     if (orgError.status === 404) notFound();
     return (
-      <DefaultLayout>
+      <DefaultLayout headerOrganizationId={org_id}>
         <Container size="lg" py="lg">
           <ErrorDisplay error={orgError} />
         </Container>
@@ -44,7 +44,10 @@ export default async function OrgPage({ params, searchParams }: Props) {
   const isAuthenticated = currentUser !== null;
 
   return (
-    <DefaultLayout headerSecondaryNavItems={orgHeaderNav}>
+    <DefaultLayout
+      headerSecondaryNavItems={orgHeaderNav}
+      headerOrganization={{ id: org.id, name: org.name }}
+    >
       <Container size="lg" py="lg">
         <Stack gap="md">
           <div>

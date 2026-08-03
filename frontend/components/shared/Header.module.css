@@ -27,7 +27,28 @@
 
 .brandingGroup {
     min-width: 0;
-    max-width: min(46vw, 540px);
+    max-width: min(50vw, 640px);
+}
+
+.brandTitleLink {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--mantine-color-text);
+    min-width: 0;
+}
+
+.brandTitleLink:hover {
+    text-decoration: underline;
+}
+
+.brandTitleText {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--mantine-font-size-xl);
+    font-weight: 700;
+    max-width: min(24vw, 280px);
 }
 
 .organizationCrumb {
@@ -51,7 +72,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: min(28vw, 320px);
+    max-width: min(24vw, 280px);
 }
 
 .organizationLink:hover {

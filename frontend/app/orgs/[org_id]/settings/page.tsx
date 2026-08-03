@@ -33,7 +33,7 @@ export default async function OrgSettingsPage({ params, searchParams }: Props) {
   if (error) {
     if (error.status === 404) notFound();
     return (
-      <DefaultLayout>
+      <DefaultLayout headerOrganizationId={org_id}>
         <Container size="sm" py="lg">
           <ErrorDisplay error={error} />
         </Container>
@@ -52,7 +52,10 @@ export default async function OrgSettingsPage({ params, searchParams }: Props) {
   });
 
   return (
-    <DefaultLayout headerSecondaryNavItems={orgHeaderNav}>
+    <DefaultLayout
+      headerSecondaryNavItems={orgHeaderNav}
+      headerOrganization={{ id: org.id, name: org.name }}
+    >
       <Container size="lg" py="lg">
         <Stack gap="md">
           <Box className={classes.manageLayout}>
