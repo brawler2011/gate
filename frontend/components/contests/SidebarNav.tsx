@@ -34,7 +34,7 @@ export function SidebarNav({
           return (
             <Link
               key={section.key}
-              href={`/contests/${contestId}/manage?section=${section.key}`}
+              href={`/contests/${contestId}/settings?section=${section.key}`}
               style={{ textDecoration: "none" }}
             >
               <Button

@@ -9,7 +9,7 @@ export type ContestHeaderNavKey =
   | "mysubmissions"
   | "allsubmissions"
   | "monitor"
-  | "manage";
+  | "settings";
 
 export type HeaderSecondaryNavIcon =
   | ContestHeaderNavKey
@@ -95,10 +95,10 @@ export function buildContestHeaderNav({
 
   if (checker.canManageContest(contest)) {
     items.push({
-      key: "manage",
-      label: "Управление",
-      href: `/contests/${contest.id}/manage`,
-      icon: "manage",
+      key: "settings",
+      label: "Настройки",
+      href: `/contests/${contest.id}/settings`,
+      icon: "settings",
     });
   }
 

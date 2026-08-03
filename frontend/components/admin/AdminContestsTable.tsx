@@ -40,7 +40,7 @@ export function AdminContestsTable({ contests, onDeleteContest }: AdminContestsT
 
   const handleEditClick = (e: React.MouseEvent, contestId: string) => {
     e.stopPropagation();
-    router.push(`/contests/${contestId}/manage`);
+    router.push(`/contests/${contestId}/settings`);
   };
 
   const handleAuthorClick = (e: React.MouseEvent, authorId: string) => {

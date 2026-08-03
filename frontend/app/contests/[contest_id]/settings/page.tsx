@@ -75,7 +75,7 @@ export default async function ContestManagePage({
     contest,
     user,
     contestRole,
-    activeTab: "manage",
+    activeTab: "settings",
   });
 
   return (
