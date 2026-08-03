@@ -40,23 +40,12 @@ export default async function OrgTeamsPage({ params, searchParams }: Props) {
       headerOrganization={{ id: org.id, name: org.name }}
     >
       <Container size="lg" py="lg">
-        <Stack gap="md">
-          <div>
-            <Title order={2}>{org.name}</Title>
-            {org.description && (
-              <Text c="dimmed" size="sm">
-                {org.description}
-              </Text>
-            )}
-          </div>
-
-          {teamsError ? (
-            <ErrorDisplay error={teamsError} />
-          ) : (
-            <OrgTeamsTab teams={teams} orgId={org_id} />
-          )}
-        </Stack>
+        {teamsError ? (
+          <ErrorDisplay error={teamsError} />
+        ) : (
+          <OrgTeamsTab teams={teams} orgId={org_id} />
+        )}
       </Container>
-    </DefaultLayout>
+    </DefaultLayout >
   );
 }

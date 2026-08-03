@@ -3,7 +3,7 @@ import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { listOrganizationMembers, getOrganization } from "@/lib/actions";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
-import { Container, Stack, Text, Title } from "@mantine/core";
+import { Container } from "@mantine/core";
 import { notFound } from "next/navigation";
 
 type Props = {
@@ -40,22 +40,11 @@ export default async function OrgMembersPage({ params, searchParams }: Props) {
       headerOrganization={{ id: org.id, name: org.name }}
     >
       <Container size="lg" py="lg">
-        <Stack gap="md">
-          <div>
-            <Title order={2}>{org.name}</Title>
-            {org.description && (
-              <Text c="dimmed" size="sm">
-                {org.description}
-              </Text>
-            )}
-          </div>
-
-          {membersError ? (
-            <ErrorDisplay error={membersError} />
-          ) : (
-            <OrgMembersTab members={members} />
-          )}
-        </Stack>
+        {membersError ? (
+          <ErrorDisplay error={membersError} />
+        ) : (
+          <OrgMembersTab members={members} />
+        )}
       </Container>
     </DefaultLayout>
   );

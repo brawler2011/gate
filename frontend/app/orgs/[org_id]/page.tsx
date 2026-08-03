@@ -4,7 +4,7 @@ import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { getContests, getOrganization } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
-import { Container, Stack, Text, Title } from "@mantine/core";
+import { Container } from "@mantine/core";
 import { notFound } from "next/navigation";
 
 type Props = {
@@ -49,29 +49,18 @@ export default async function OrgPage({ params, searchParams }: Props) {
       headerOrganization={{ id: org.id, name: org.name }}
     >
       <Container size="lg" py="lg">
-        <Stack gap="md">
-          <div>
-            <Title order={2}>{org.name}</Title>
-            {org.description && (
-              <Text c="dimmed" size="sm">
-                {org.description}
-              </Text>
-            )}
-          </div>
-
-          {contestsError ? (
-            <ErrorDisplay error={contestsError} />
-          ) : (
-            <OrgContestsTab
-              contests={contests}
-              pagination={contestsPagination}
-              org={org}
-              isAuthenticated={isAuthenticated}
-              search={search}
-            />
-          )}
-        </Stack>
+        {contestsError ? (
+          <ErrorDisplay error={contestsError} />
+        ) : (
+          <OrgContestsTab
+            contests={contests}
+            pagination={contestsPagination}
+            org={org}
+            isAuthenticated={isAuthenticated}
+            search={search}
+          />
+        )}
       </Container>
-    </DefaultLayout>
+    </DefaultLayout >
   );
 }
