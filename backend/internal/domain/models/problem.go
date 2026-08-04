@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ProblemManifest соответствует формату manifest.json в корне папки задачи
 type ProblemManifest struct {
 	LastUpdated time.Time `json:"last_updated"`
 	ProblemType string    `json:"problem_type"` // "pass-fail", "scoring", etc
@@ -44,7 +43,6 @@ type FileMetadata struct {
 	Dependencies []Dependency `json:"dependencies"`
 }
 
-// TestsMetadata соответствует формату tests/tests.json
 type TestsMetadata struct {
 	Groups []TestGroup `json:"groups"`
 	Tests  []TestCase  `json:"tests"`
