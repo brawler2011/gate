@@ -584,6 +584,35 @@ export async function updateWorkshopValidatorFile(problemId: string, name: strin
   return Call((client) => client.default.updateProblemValidator({ problemId, name, requestBody: blob }));
 }
 
+export async function generateWorkshopTests(problemId: string, generatorName: string, testNumbers: number[], args?: string[][]) {
+  return Call((client) =>
+    client.default.generateTests({
+      problemId,
+      requestBody: {
+        generator_name: generatorName,
+        test_numbers: testNumbers,
+        arguments: args,
+      },
+    })
+  );
+}
+
+export async function validateWorkshopTests(problemId: string) {
+  return Call((client) => client.default.validateAllTests({ problemId }));
+}
+
+export async function testWorkshopSolution(problemId: string, solutionPath: string, testNumbers?: number[]) {
+  return Call((client) =>
+    client.default.testSolution({
+      problemId,
+      requestBody: {
+        solution_path: solutionPath,
+        test_numbers: testNumbers,
+      },
+    })
+  );
+}
+
 export async function publishProblem(problemId: string) {
   return Call((client) => client.default.publishProblem({ id: problemId }));
 }

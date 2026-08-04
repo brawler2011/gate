@@ -202,7 +202,7 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                         max_score: typeof value === "number" ? value : null,
                       })
                     }
-                    placeholder="Не задан"
+                    placeholder="100"
                   />
                 </Grid.Col>
 

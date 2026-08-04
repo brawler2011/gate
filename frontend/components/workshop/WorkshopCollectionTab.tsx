@@ -97,7 +97,7 @@ export function WorkshopCollectionTab({
     }
   );
 
-  const leafFiles = files.filter((file) => !file.is_directory);
+  const leafFiles = files.filter((file) => !file.is_directory && file.path !== "tests.json");
 
   useEffect(() => {
     if (fileContent !== undefined && selectedFile) {

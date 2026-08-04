@@ -1,23 +1,8 @@
 "use client";
 
-import {
-  createWorkshopTestFile,
-  getWorkshopTestFile,
-  listWorkshopTestFiles,
-  updateWorkshopTestFile,
-} from "@/lib/actions";
-import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
 import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
+import { WorkshopTestsManager } from "./tests/WorkshopTestsManager";
 
 export function WorkshopTestsTab(props: WorkshopFileTabProps) {
-  return (
-    <WorkshopCollectionTab
-      {...props}
-      folderName="tests"
-      listFiles={listWorkshopTestFiles}
-      getFile={getWorkshopTestFile}
-      createFile={createWorkshopTestFile}
-      updateFile={updateWorkshopTestFile}
-    />
-  );
+  return <WorkshopTestsManager problemId={props.problemId} />;
 }
