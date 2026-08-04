@@ -3,6 +3,7 @@ import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { listTeams, getOrganization } from "@/lib/actions";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
+import { canManageOrgMembers } from "@/lib/org-permissions";
 import { Container, Stack, Text, Title } from "@mantine/core";
 import { notFound } from "next/navigation";
 
@@ -14,7 +15,12 @@ type Props = {
 export default async function OrgTeamsPage({ params, searchParams }: Props) {
   const { org_id } = await params;
   const { page } = await searchParams;
-  const orgHeaderNav = buildOrgHeaderNav({ orgId: org_id, activeTab: "teams" });
+  const showMembersTab = await canManageOrgMembers(org_id);
+  const orgHeaderNav = buildOrgHeaderNav({
+    orgId: org_id,
+    activeTab: "teams",
+    showMembersTab,
+  });
   const currentPage = Number(page) > 0 ? Number(page) : 1;
 
   const [orgError, orgData] = await getOrganization(org_id);

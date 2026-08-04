@@ -1,5 +1,4 @@
 import { OrgDangerZone } from "@/components/orgs/OrgDangerZone";
-import { OrgMembersManagement } from "@/components/orgs/OrgMembersManagement";
 import { OrgSettingsForm } from "@/components/orgs/OrgSettingsForm";
 import { OrgSettingsMobileNav } from "@/components/orgs/OrgSettingsMobileNav";
 import { ORG_SETTINGS_NAV_SECTIONS } from "@/components/orgs/OrgSettingsNavShared";
@@ -8,13 +7,13 @@ import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { getOrganization } from "@/lib/actions";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
+import { canManageOrgMembers } from "@/lib/org-permissions";
 import { Box, Container, Stack } from "@mantine/core";
 import { notFound } from "next/navigation";
 import classes from "./styles.module.css";
 
 const SECTIONS = {
   SETTINGS: "settings",
-  MEMBERS: "members",
   DANGER: "danger",
 } as const;
 
@@ -42,6 +41,8 @@ export default async function OrgSettingsPage({ params, searchParams }: Props) {
   }
   const org = data!.organization;
 
+  const showMembersTab = await canManageOrgMembers(org_id);
+
   const validSections = Object.values(SECTIONS);
   const activeSection = (
     validSections.includes(section as Section) ? section : SECTIONS.SETTINGS
@@ -49,6 +50,7 @@ export default async function OrgSettingsPage({ params, searchParams }: Props) {
   const orgHeaderNav = buildOrgHeaderNav({
     orgId: org_id,
     activeTab: "settings",
+    showMembersTab,
   });
 
   return (
@@ -75,9 +77,6 @@ export default async function OrgSettingsPage({ params, searchParams }: Props) {
               <Box className={classes.contentPanel}>
                 {activeSection === SECTIONS.SETTINGS && (
                   <OrgSettingsForm org={org} />
-                )}
-                {activeSection === SECTIONS.MEMBERS && (
-                  <OrgMembersManagement orgId={org_id} />
                 )}
                 {activeSection === SECTIONS.DANGER && (
                   <OrgDangerZone orgId={org_id} orgName={org.name} />

@@ -1,21 +1,23 @@
-import { OrgMembersTab } from "@/components/orgs/OrgMembersTab";
+import { OrgMembersManagement } from "@/components/orgs/OrgMembersManagement";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { listOrganizationMembers, getOrganization } from "@/lib/actions";
+import { getOrganization } from "@/lib/actions";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
+import { canManageOrgMembers } from "@/lib/org-permissions";
 import { Container } from "@mantine/core";
 import { notFound } from "next/navigation";
 
 type Props = {
   params: Promise<{ org_id: string }>;
-  searchParams: Promise<{ page?: string }>;
 };
 
-export default async function OrgMembersPage({ params, searchParams }: Props) {
+export default async function OrgMembersPage({ params }: Props) {
   const { org_id } = await params;
-  const { page } = await searchParams;
-  const orgHeaderNav = buildOrgHeaderNav({ orgId: org_id, activeTab: "members" });
-  const currentPage = Number(page) > 0 ? Number(page) : 1;
+
+  const canManage = await canManageOrgMembers(org_id);
+  if (!canManage) {
+    notFound();
+  }
 
   const [orgError, orgData] = await getOrganization(org_id);
   if (orgError) {
@@ -29,10 +31,12 @@ export default async function OrgMembersPage({ params, searchParams }: Props) {
     );
   }
 
-  const [membersError, membersData] = await listOrganizationMembers(org_id, currentPage, 20);
-
+  const orgHeaderNav = buildOrgHeaderNav({
+    orgId: org_id,
+    activeTab: "members",
+    showMembersTab: true,
+  });
   const org = orgData!.organization;
-  const members = membersData?.members ?? [];
 
   return (
     <DefaultLayout
@@ -40,11 +44,7 @@ export default async function OrgMembersPage({ params, searchParams }: Props) {
       headerOrganization={{ id: org.id, name: org.name }}
     >
       <Container size="lg" py="lg">
-        {membersError ? (
-          <ErrorDisplay error={membersError} />
-        ) : (
-          <OrgMembersTab members={members} />
-        )}
+        <OrgMembersManagement orgId={org_id} />
       </Container>
     </DefaultLayout>
   );

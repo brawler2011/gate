@@ -3,7 +3,6 @@ export { OrgCard } from './OrgCard';
 export { OrgContestsTab } from './OrgContestsTab';
 export { OrgDangerZone } from './OrgDangerZone';
 export { OrgMembersManagement } from './OrgMembersManagement';
-export { OrgMembersTab } from './OrgMembersTab';
 export { OrgProblemsTab } from './OrgProblemsTab';
 export { OrgSettingsForm } from './OrgSettingsForm';
 export { OrgSettingsMobileNav } from './OrgSettingsMobileNav';

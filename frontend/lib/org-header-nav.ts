@@ -13,6 +13,7 @@ export type OrgHeaderNavKey = OrgOverviewTab | "settings";
 type BuildOrgHeaderNavParams = {
   orgId: string;
   activeTab: OrgHeaderNavKey;
+  showMembersTab?: boolean;
 };
 
 function buildOrgOverviewHref(
@@ -29,6 +30,7 @@ function buildOrgOverviewHref(
 export function buildOrgHeaderNav({
   orgId,
   activeTab,
+  showMembersTab = false,
 }: BuildOrgHeaderNavParams): HeaderSecondaryNavItem[] {
   const items: HeaderSecondaryNavItem[] = [
     {
@@ -49,19 +51,23 @@ export function buildOrgHeaderNav({
       href: buildOrgOverviewHref(orgId, "teams"),
       icon: "teams",
     },
-    {
+  ];
+
+  if (showMembersTab) {
+    items.push({
       key: "members",
       label: "Участники",
       href: buildOrgOverviewHref(orgId, "members"),
       icon: "members",
-    },
-    {
-      key: "settings",
-      label: "Настройки",
-      href: `/orgs/${orgId}/settings`,
-      icon: "settings",
-    },
-  ];
+    });
+  }
+
+  items.push({
+    key: "settings",
+    label: "Настройки",
+    href: `/orgs/${orgId}/settings`,
+    icon: "settings",
+  });
 
   return items.map((item) => ({
     ...item,

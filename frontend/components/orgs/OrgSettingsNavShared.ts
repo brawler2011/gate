@@ -2,13 +2,11 @@ import type { ButtonProps } from "@mantine/core";
 import {
     IconAlertTriangle,
     IconSettings,
-    IconUsers,
 } from "@tabler/icons-react";
 import type React from "react";
 
 const ORG_SETTINGS_NAV_CONFIG = {
   settings: { label: "Настройки", icon: IconSettings },
-  members: { label: "Участники", icon: IconUsers },
   danger: { label: "Опасная зона", icon: IconAlertTriangle },
 } as const;
 

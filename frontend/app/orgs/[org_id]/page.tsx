@@ -4,6 +4,7 @@ import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { getContests, getOrganization } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
+import { canManageOrgMembers } from "@/lib/org-permissions";
 import { Container } from "@mantine/core";
 import { notFound } from "next/navigation";
 
@@ -15,7 +16,12 @@ type Props = {
 export default async function OrgPage({ params, searchParams }: Props) {
   const { org_id } = await params;
   const { page, search } = await searchParams;
-  const orgHeaderNav = buildOrgHeaderNav({ orgId: org_id, activeTab: "contests" });
+  const showMembersTab = await canManageOrgMembers(org_id);
+  const orgHeaderNav = buildOrgHeaderNav({
+    orgId: org_id,
+    activeTab: "contests",
+    showMembersTab,
+  });
   const currentPage = Number(page) > 0 ? Number(page) : 1;
 
   const [orgError, orgData] = await getOrganization(org_id);
