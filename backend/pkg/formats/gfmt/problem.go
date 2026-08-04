@@ -31,6 +31,7 @@ type Subtask struct {
 type Test struct {
 	Manual   string `yaml:"manual,omitempty" json:"manual,omitempty"`
 	Generate string `yaml:"generate,omitempty" json:"generate,omitempty"`
+	Sample   bool   `yaml:"sample,omitempty" json:"sample,omitempty"`
 }
 
 // FileMapping maps a source file in the unpacked package directory to its target path in the gfmt layout.

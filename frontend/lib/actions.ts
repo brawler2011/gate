@@ -505,9 +505,23 @@ export async function createWorkshopMediaFile(problemId: string, name: string, c
   return Call((client) => client.default.createProblemMediaFile({ problemId, name, requestBody: blob }));
 }
 
+export async function uploadWorkshopMediaBinary(formData: FormData) {
+  const problemId = formData.get("problemId") as string;
+  const name = formData.get("name") as string;
+  const file = formData.get("file") as File | null;
+  if (!problemId || !name || !file) return [{ status: 400, message: "Файл не выбран" }, null] as const;
+  const arrayBuffer = await file.arrayBuffer();
+  const blob = new Blob([arrayBuffer], { type: file.type || 'application/octet-stream' });
+  return Call((client) => client.default.createProblemMediaFile({ problemId, name, requestBody: blob }));
+}
+
 export async function updateWorkshopMediaFile(problemId: string, name: string, content: string) {
   const blob = new Blob([content], { type: 'application/octet-stream' });
   return Call((client) => client.default.updateProblemMediaFile({ problemId, name, requestBody: blob }));
+}
+
+export async function deleteWorkshopMediaFile(problemId: string, name: string) {
+  return Call((client) => client.default.deleteProblemMediaFile({ problemId, name }));
 }
 
 export async function listWorkshopSolutionFiles(problemId: string): WorkshopFilesResponse {

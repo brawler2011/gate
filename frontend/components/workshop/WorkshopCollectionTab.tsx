@@ -80,7 +80,7 @@ export function WorkshopCollectionTab({
     ["workshop-files", problemId, folderName],
     async () => {
       const [err, res] = await listFiles(problemId);
-      if (err) throw err;
+      if (err) throw new Error(err.message || "Не удалось загрузить список файлов");
       return res;
     }
   );
@@ -92,7 +92,7 @@ export function WorkshopCollectionTab({
     fileName ? ["workshop-file-content", problemId, folderName, fileName] : null,
     async () => {
       const [err, res] = await getFile(problemId, fileName!);
-      if (err) throw err;
+      if (err) throw new Error(err.message || "Не удалось загрузить файл");
       return res;
     }
   );

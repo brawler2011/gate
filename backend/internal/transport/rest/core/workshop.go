@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -453,6 +455,56 @@ func (h *CoreServer) SetProblemValidatorMain(ctx context.Context, request corev1
 	return corev1.SetProblemValidatorMain200JSONResponse{Message: strPtr("Main validator selected successfully")}, nil
 }
 
+type mediaFileResponse struct {
+	content     []byte
+	contentType string
+}
+
+func (r mediaFileResponse) VisitGetProblemMediaFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", r.contentType)
+	w.Header().Set("Content-Length", fmt.Sprint(len(r.content)))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if strings.HasPrefix(r.contentType, "image/svg") {
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'")
+	}
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write(r.content)
+	return err
+}
+
+func getMediaContentType(filename string) string {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".gif":
+		return "image/gif"
+	case ".svg":
+		return "image/svg+xml"
+	case ".webp":
+		return "image/webp"
+	case ".ico":
+		return "image/x-icon"
+	case ".pdf":
+		return "application/pdf"
+	default:
+		return "application/octet-stream"
+	}
+}
+
+func sanitizeSVG(content []byte) []byte {
+	str := string(content)
+	reScript := regexp.MustCompile(`(?i)<script[\s\S]*?>[\s\S]*?</script>`)
+	str = reScript.ReplaceAllString(str, "")
+	reOnEvent := regexp.MustCompile(`(?i)\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)`)
+	str = reOnEvent.ReplaceAllString(str, "")
+	reJsHref := regexp.MustCompile(`(?i)href\s*=\s*["']?\s*javascript:[^"'>\s]*["']?`)
+	str = reJsHref.ReplaceAllString(str, `href="#"`)
+	return []byte(str)
+}
+
 // ListProblemMediaFiles handles GET /problems/{problemId}/media
 func (h *CoreServer) ListProblemMediaFiles(ctx context.Context, request corev1.ListProblemMediaFilesRequestObject) (corev1.ListProblemMediaFilesResponseObject, error) {
 	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, mediaDir)
@@ -464,7 +516,14 @@ func (h *CoreServer) ListProblemMediaFiles(ctx context.Context, request corev1.L
 
 // CreateProblemMediaFile handles POST /problems/{problemId}/media
 func (h *CoreServer) CreateProblemMediaFile(ctx context.Context, request corev1.CreateProblemMediaFileRequestObject) (corev1.CreateProblemMediaFileResponseObject, error) {
-	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Params.Name, request.Body); err != nil {
+	var bodyReader io.Reader = request.Body
+	if strings.HasSuffix(strings.ToLower(request.Params.Name), ".svg") {
+		if bodyBytes, err := io.ReadAll(request.Body); err == nil {
+			sanitized := sanitizeSVG(bodyBytes)
+			bodyReader = bytes.NewReader(sanitized)
+		}
+	}
+	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Params.Name, bodyReader); err != nil {
 		return nil, err
 	}
 	return corev1.CreateProblemMediaFile200JSONResponse{Message: strPtr("Media file created successfully")}, nil
@@ -476,12 +535,22 @@ func (h *CoreServer) GetProblemMediaFile(ctx context.Context, request corev1.Get
 	if err != nil {
 		return nil, err
 	}
-	return corev1.GetProblemMediaFile200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+	return mediaFileResponse{
+		content:     content,
+		contentType: getMediaContentType(request.Name),
+	}, nil
 }
 
 // UpdateProblemMediaFile handles PUT /problems/{problemId}/media/{name}
 func (h *CoreServer) UpdateProblemMediaFile(ctx context.Context, request corev1.UpdateProblemMediaFileRequestObject) (corev1.UpdateProblemMediaFileResponseObject, error) {
-	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Name, request.Body); err != nil {
+	var bodyReader io.Reader = request.Body
+	if strings.HasSuffix(strings.ToLower(request.Name), ".svg") {
+		if bodyBytes, err := io.ReadAll(request.Body); err == nil {
+			sanitized := sanitizeSVG(bodyBytes)
+			bodyReader = bytes.NewReader(sanitized)
+		}
+	}
+	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Name, bodyReader); err != nil {
 		return nil, err
 	}
 	return corev1.UpdateProblemMediaFile200JSONResponse{Message: strPtr("Media file updated successfully")}, nil

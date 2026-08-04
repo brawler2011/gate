@@ -78,16 +78,18 @@ export function WorkshopTestsManager({ problemId }: Props) {
     try {
       const [genErr, genRes] = await listWorkshopGeneratorFiles(problemId);
       if (genRes?.files) {
-        setGenerators(genRes.files.map((f: any) => f.path || f.name || ""));
+        setGenerators(genRes.files.map((f: any) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
       const [solErr, solRes] = await listWorkshopSolutionFiles(problemId);
       if (solRes?.files) {
-        setSolutions(solRes.files.map((f: any) => f.path || f.name || ""));
+        setSolutions(solRes.files.map((f: any) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
       const [filesErr, filesRes] = await listWorkshopTestFiles(problemId);
-      const existingFiles = filesRes?.files?.map((f: any) => f.path || f.name || "") || [];
+      const existingFiles = (filesRes?.files?.map((f: any) => f.path || f.name || "") || []).map(
+        (p: string) => p.split("/").pop() || p
+      );
 
       // Fetch tests config
       const [configErr, configText] = await getWorkshopTestFile(problemId, "tests.json");

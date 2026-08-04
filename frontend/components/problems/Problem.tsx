@@ -14,7 +14,7 @@ import "./Problem.css";
 
 type Props = {
   problem: {
-    // id: number,
+    id?: string;
     title: string;
     time_limit: number;
     memory_limit: number;
@@ -31,6 +31,7 @@ type Props = {
     }>;
   };
 
+  problemId?: string;
   letter?: string;
 };
 
@@ -87,12 +88,82 @@ const CopyableSection = ({ label, value }: { label: string; value: string }) => 
   );
 };
 
-const StatementContent = ({ value }: { value: string }) => {
+const renderSafeImage = (problemId?: string) => {
+  return function SafeImage({ node, src, alt, ...props }: any) {
+    if (!src) return null;
+
+    let width: string | undefined;
+    let height: string | undefined;
+    let isCentered = false;
+    let cleanSrc = src;
+
+    const hashIndex = src.indexOf("#");
+    if (hashIndex !== -1) {
+      cleanSrc = src.slice(0, hashIndex);
+      const hashParts = src.slice(hashIndex + 1).split("#");
+
+      for (const part of hashParts) {
+        if (part === "center" || part === "middle") {
+          isCentered = true;
+        } else if (/^\d+(x\d*)?$/.test(part)) {
+          if (part.includes("x")) {
+            const [w, h] = part.split("x");
+            if (w) width = `${w}px`;
+            if (h) height = `${h}px`;
+          } else {
+            width = `${part}px`;
+          }
+        } else if (/^(\d+(x\d*)?)-center$/.test(part) || /^center-(\d+(x\d*)?)$/.test(part)) {
+          isCentered = true;
+          const num = part.replace(/-?center-?/, "");
+          if (num.includes("x")) {
+            const [w, h] = num.split("x");
+            if (w) width = `${w}px`;
+            if (h) height = `${h}px`;
+          } else {
+            width = `${num}px`;
+          }
+        }
+      }
+    }
+
+    if (
+      problemId &&
+      !cleanSrc.startsWith("http://") &&
+      !cleanSrc.startsWith("https://") &&
+      !cleanSrc.startsWith("data:") &&
+      !cleanSrc.startsWith("/api/")
+    ) {
+      const filename = cleanSrc.replace(/^\.\//, "").replace(/^media\//, "");
+      cleanSrc = `/api/problems/${problemId}/media/${filename}`;
+    }
+
+    return (
+      <img
+        src={cleanSrc}
+        alt={alt || ""}
+        style={{
+          maxWidth: "100%",
+          width: width,
+          height: height || "auto",
+          display: isCentered ? "block" : undefined,
+          margin: isCentered ? "0 auto" : undefined,
+        }}
+        {...props}
+      />
+    );
+  };
+};
+
+const StatementContent = ({ value, problemId }: { value: string; problemId?: string }) => {
   return (
     <div className="content">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
+        components={{
+          img: renderSafeImage(problemId),
+        }}
       >
         {value}
       </ReactMarkdown>
@@ -100,8 +171,9 @@ const StatementContent = ({ value }: { value: string }) => {
   );
 };
 
-const Problem = ({ problem, letter }: Props) => {
+const Problem = ({ problem, letter, problemId }: Props) => {
   letter = letter || "A";
+  const activeProblemId = problemId || problem.id;
 
   const ref = useRef<HTMLDivElement>(null);
 
@@ -148,17 +220,17 @@ const Problem = ({ problem, letter }: Props) => {
           </Text>
         </Stack>
       </Stack>
-      {problem.legend_html && <StatementContent value={problem.legend_html} />}
+      {problem.legend_html && <StatementContent value={problem.legend_html} problemId={activeProblemId} />}
       {problem.input_format_html && (
         <Stack gap="xs">
           <Title order={3}>Входные данные</Title>
-          <StatementContent value={problem.input_format_html} />
+          <StatementContent value={problem.input_format_html} problemId={activeProblemId} />
         </Stack>
       )}
       {problem.output_format_html && (
         <Stack gap="xs">
           <Title order={3}>Выходные данные</Title>
-          <StatementContent value={problem.output_format_html} />
+          <StatementContent value={problem.output_format_html} problemId={activeProblemId} />
         </Stack>
       )}
       {problem.samples && problem.samples.length > 0 && (
@@ -187,16 +259,10 @@ const Problem = ({ problem, letter }: Props) => {
           </Stack>
         </Stack>
       )}
-      {problem.scoring_html && (
-        <Stack gap="xs">
-          <Title order={3}>Система оценки</Title>
-          <StatementContent value={problem.scoring_html} />
-        </Stack>
-      )}
       {problem.notes_html && (
         <Stack gap="xs">
           <Title order={3}>Примечание</Title>
-          <StatementContent value={problem.notes_html} />
+          <StatementContent value={problem.notes_html} problemId={activeProblemId} />
         </Stack>
       )}
     </Stack>

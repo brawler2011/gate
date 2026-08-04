@@ -210,6 +210,10 @@ func (m *problemImportMockProblemsRepo) ListProblems(_ context.Context, _ *model
 	return nil, 0, nil
 }
 
+func (m *problemImportMockProblemsRepo) ListDashboardProblems(_ context.Context, _ uuid.UUID, _ int32) ([]models.DashboardProblem, error) {
+	return nil, nil
+}
+
 func (m *problemImportMockProblemsRepo) UpdateProblem(_ context.Context, _ uuid.UUID, _ *models.ProblemUpdate) error {
 	return nil
 }

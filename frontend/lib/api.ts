@@ -47,7 +47,7 @@ export const Call = async <T>(
   }
 
   const client = new core({
-    BASE: process.env.BACKEND_API_URL,
+    BASE: process.env.BACKEND_API_URL || "http://localhost:8080",
     HEADERS: headers,
     CREDENTIALS: "include",
   });
@@ -81,7 +81,7 @@ export const CallPublic = async <T>(
   method: (client: core) => Promise<T>
 ): Promise<[ApiError | null, T | null]> => {
   const client = new core({
-    BASE: process.env.BACKEND_API_URL,
+    BASE: process.env.BACKEND_API_URL || "http://localhost:8080",
     CREDENTIALS: "omit",
   });
 

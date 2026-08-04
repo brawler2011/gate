@@ -53,38 +53,38 @@ func (h *CoreServer) loadProblemSamples(ctx context.Context, problemID uuid.UUID
 		return []corev1.ProblemSampleModel{}
 	}
 
-	samplesSubtask, exists := prob.Subtasks["samples"]
-	if !exists {
-		return []corev1.ProblemSampleModel{}
-	}
-
 	var samples []corev1.ProblemSampleModel
-	for _, t := range samplesSubtask.Tests {
-		if t.Manual == "" {
-			continue
-		}
+	for subName, subtask := range prob.Subtasks {
+		for _, t := range subtask.Tests {
+			if !t.Sample && subName != "samples" {
+				continue
+			}
+			if t.Manual == "" {
+				continue
+			}
 
-		inputBytes, err := h.workshopUC.ReadProblemFile(ctx, problemID, "tests/"+t.Manual)
-		if err != nil {
-			continue
-		}
+			inputBytes, err := h.workshopUC.ReadProblemFile(ctx, problemID, "tests/"+t.Manual)
+			if err != nil {
+				continue
+			}
 
-		// Try .out first, then .ans
-		ansFile := strings.TrimSuffix(t.Manual, ".in") + ".out"
-		outputBytes, err := h.workshopUC.ReadProblemFile(ctx, problemID, "tests/"+ansFile)
-		if err != nil {
-			ansFile = strings.TrimSuffix(t.Manual, ".in") + ".ans"
-			outputBytes, err = h.workshopUC.ReadProblemFile(ctx, problemID, "tests/"+ansFile)
-		}
+			// Try .out first, then .ans
+			ansFile := strings.TrimSuffix(t.Manual, ".in") + ".out"
+			outputBytes, err := h.workshopUC.ReadProblemFile(ctx, problemID, "tests/"+ansFile)
+			if err != nil {
+				ansFile = strings.TrimSuffix(t.Manual, ".in") + ".ans"
+				outputBytes, err = h.workshopUC.ReadProblemFile(ctx, problemID, "tests/"+ansFile)
+			}
 
-		if err != nil {
-			continue
-		}
+			if err != nil {
+				continue
+			}
 
-		samples = append(samples, corev1.ProblemSampleModel{
-			Input:  string(inputBytes),
-			Output: string(outputBytes),
-		})
+			samples = append(samples, corev1.ProblemSampleModel{
+				Input:  string(inputBytes),
+				Output: string(outputBytes),
+			})
+		}
 	}
 
 	return samples

@@ -214,5 +214,13 @@ func (s *IntegrationTestSuite) TestWorkshopTestsConfigEndpoint() {
 	group0, ok := groupsRaw[0].(map[string]interface{})
 	s.Require().True(ok)
 	s.Equal("Updated Samples", group0["name"])
+
+	testsRaw, ok := parsed["tests"].([]interface{})
+	s.Require().True(ok)
+	s.Require().NotEmpty(testsRaw)
+
+	test0, ok := testsRaw[0].(map[string]interface{})
+	s.Require().True(ok)
+	s.Equal(true, test0["is_sample"])
 }
 

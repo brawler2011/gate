@@ -51,7 +51,7 @@ export function WorkshopGeneralTab({ problemId }: Props) {
     ["problem", problemId],
     async () => {
       const [err, res] = await getProblem(problemId);
-      if (err) throw err;
+      if (err) throw new Error(err.message || "Не удалось загрузить задачу");
       return res;
     }
   );
@@ -60,7 +60,7 @@ export function WorkshopGeneralTab({ problemId }: Props) {
     ["problem-limits", problemId],
     async () => {
       const [err, res] = await getWorkshopProblemLimits(problemId);
-      if (err) throw err;
+      if (err) throw new Error(err.message || "Не удалось загрузить ограничения");
       return res;
     }
   );

@@ -706,7 +706,7 @@ func GfmtProblemToTestsMetadata(prob *gfmt.Problem) *models.TestsMetadata {
 		for _, t := range sub.Tests {
 			tc := models.TestCase{
 				Ordinal:  testOrdinal,
-				IsSample: subName == "samples",
+				IsSample: subName == "samples" || t.Sample,
 			}
 			if t.Generate != "" {
 				tc.Method = "generated"
@@ -795,6 +795,9 @@ func ManifestAndTestsToGfmtProblem(manifest *models.ProblemManifest, testsMeta *
 					t.Generate = *testCase.Generator
 				} else {
 					t.Manual = fmt.Sprintf("%02d.in", testNum)
+				}
+				if testCase != nil && testCase.IsSample {
+					t.Sample = true
 				}
 				tests = append(tests, t)
 			}

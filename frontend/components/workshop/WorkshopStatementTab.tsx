@@ -88,12 +88,82 @@ function hasPreviewMeta(meta: PreviewMeta | null): meta is LoadedPreviewMeta {
   );
 }
 
-function MarkdownBlock({ value }: { value: string }) {
+const renderSafeImage = (problemId?: string) => {
+  return function SafeImage({ node, src, alt, ...props }: any) {
+    if (!src) return null;
+
+    let width: string | undefined;
+    let height: string | undefined;
+    let isCentered = false;
+    let cleanSrc = src;
+
+    const hashIndex = src.indexOf("#");
+    if (hashIndex !== -1) {
+      cleanSrc = src.slice(0, hashIndex);
+      const hashParts = src.slice(hashIndex + 1).split("#");
+
+      for (const part of hashParts) {
+        if (part === "center" || part === "middle") {
+          isCentered = true;
+        } else if (/^\d+(x\d*)?$/.test(part)) {
+          if (part.includes("x")) {
+            const [w, h] = part.split("x");
+            if (w) width = `${w}px`;
+            if (h) height = `${h}px`;
+          } else {
+            width = `${part}px`;
+          }
+        } else if (/^(\d+(x\d*)?)-center$/.test(part) || /^center-(\d+(x\d*)?)$/.test(part)) {
+          isCentered = true;
+          const num = part.replace(/-?center-?/, "");
+          if (num.includes("x")) {
+            const [w, h] = num.split("x");
+            if (w) width = `${w}px`;
+            if (h) height = `${h}px`;
+          } else {
+            width = `${num}px`;
+          }
+        }
+      }
+    }
+
+    if (
+      problemId &&
+      !cleanSrc.startsWith("http://") &&
+      !cleanSrc.startsWith("https://") &&
+      !cleanSrc.startsWith("data:") &&
+      !cleanSrc.startsWith("/api/")
+    ) {
+      const filename = cleanSrc.replace(/^\.\//, "").replace(/^media\//, "");
+      cleanSrc = `/api/problems/${problemId}/media/${filename}`;
+    }
+
+    return (
+      <img
+        src={cleanSrc}
+        alt={alt || ""}
+        style={{
+          maxWidth: "100%",
+          width: width,
+          height: height || "auto",
+          display: isCentered ? "block" : undefined,
+          margin: isCentered ? "0 auto" : undefined,
+        }}
+        {...props}
+      />
+    );
+  };
+};
+
+function MarkdownBlock({ value, problemId }: { value: string; problemId?: string }) {
   return (
     <div className="content">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
+        components={{
+          img: renderSafeImage(problemId),
+        }}
       >
         {value}
       </ReactMarkdown>
@@ -101,7 +171,7 @@ function MarkdownBlock({ value }: { value: string }) {
   );
 }
 
-function PreviewSection({ title, value }: { title: string; value: string }) {
+function PreviewSection({ title, value, problemId }: { title: string; value: string; problemId?: string }) {
   if (!value.trim()) return null;
 
   return (
@@ -109,7 +179,7 @@ function PreviewSection({ title, value }: { title: string; value: string }) {
       <Title order={3} className={classes.sectionTitle}>
         {title}
       </Title>
-      <MarkdownBlock value={value} />
+      <MarkdownBlock value={value} problemId={problemId} />
     </Stack>
   );
 }
@@ -155,10 +225,12 @@ function WorkshopStatementPreview({
   statement,
   previewMeta,
   samples,
+  problemId,
 }: {
   statement: StatementData;
   previewMeta: LoadedPreviewMeta;
   samples: Array<{ input: string; output: string }>;
+  problemId?: string;
 }) {
   const hasContent = [
     statement.legend,
@@ -193,15 +265,17 @@ function WorkshopStatementPreview({
       {hasContent ? (
         <>
           {statement.legend.trim() ? (
-            <MarkdownBlock value={statement.legend} />
+            <MarkdownBlock value={statement.legend} problemId={problemId} />
           ) : null}
           <PreviewSection
             title="Входные данные"
             value={statement.input_format}
+            problemId={problemId}
           />
           <PreviewSection
             title="Выходные данные"
             value={statement.output_format}
+            problemId={problemId}
           />
           {samples && samples.length > 0 && (
             <Stack gap="xs">
@@ -231,8 +305,8 @@ function WorkshopStatementPreview({
               </Stack>
             </Stack>
           )}
-          <PreviewSection title="Система оценки" value={statement.scoring} />
-          <PreviewSection title="Примечание" value={statement.notes} />
+          <PreviewSection title="Система оценки" value={statement.scoring} problemId={problemId} />
+          <PreviewSection title="Примечание" value={statement.notes} problemId={problemId} />
         </>
       ) : (
         <Text c="dimmed" ta="center">
@@ -612,6 +686,7 @@ export function WorkshopStatementTab({ problemId }: Props) {
                 statement={deferredStatement}
                 previewMeta={previewMeta}
                 samples={samples}
+                problemId={problemId}
               />
             )}
           </Stack>
