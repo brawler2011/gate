@@ -41,7 +41,7 @@ services:
     labels:
       - "traefik.enable=true"
       # API router (/api)
-      - "traefik.http.routers.gate-backend-dev.rule=Host(`dev.gate149.ru`) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.gate-backend-dev.rule=(Host(`dev.gate149.ru`) || Host(`traefik`)) && PathPrefix(`/api/`)"
       - "traefik.http.routers.gate-backend-dev.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-dev.tls=true"
       - "traefik.http.routers.gate-backend-dev.tls.certresolver=letsencrypt"
