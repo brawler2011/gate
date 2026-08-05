@@ -21,7 +21,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
-import { registerAction } from "@lib/auth-actions";
+import { registerAction } from "@/lib/auth-actions";
 
 const RegistrationPage = () => {
   return (

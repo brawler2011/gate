@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { APP_COLORS } from "@/lib/theme/colors";
 
-import type { DashboardProblemModel } from "@contracts/core/v1";
+import type { DashboardProblemModel } from "@/contracts/core/v1";
 
 type DashboardProblemsListProps = {
   problems: DashboardProblemModel[];

@@ -25,19 +25,6 @@
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "@contracts/*": [
-        "./contracts/*"
-      ],
-
-      "@components/*": [
-        "./components/*"
-      ],
-      "@lib/*": [
-        "./lib/*"
-      ],
-      "@app/*": [
-        "./app/*"
       ]
     }
   },

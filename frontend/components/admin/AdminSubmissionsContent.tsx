@@ -21,7 +21,7 @@ import { LangString, StateColor, StateString, TimeBeautify } from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 
-import type { SubmissionModel } from "@contracts/core/v1";
+import type { SubmissionModel } from "@/contracts/core/v1";
 
 type AdminSubmissionsContentProps = {
   page: number;

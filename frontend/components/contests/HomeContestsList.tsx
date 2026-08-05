@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import classes from "./HomeContestsList.module.css";
 
-import type { ContestModel } from "@contracts/core/v1";
+import type { ContestModel } from "@/contracts/core/v1";
 
 type HomeContestsListProps = {
   contests: ContestModel[];

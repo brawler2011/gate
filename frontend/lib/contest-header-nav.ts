@@ -2,7 +2,7 @@ import { PermissionChecker } from "@/lib/permissions";
 
 import type { SessionUser } from "@/lib/auth";
 import type { ContestRoleResponse } from "@/lib/contest-role";
-import type { ContestModel } from "@contracts/core/v1";
+import type { ContestModel } from "@/contracts/core/v1";
 
 export type ContestHeaderNavKey =
   | "tasks"

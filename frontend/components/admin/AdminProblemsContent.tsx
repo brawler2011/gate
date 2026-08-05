@@ -28,7 +28,7 @@ import { formatDate } from "@/lib/formatDate";
 import classes from "./AdminPage.module.css";
 import { DeleteProblemModal } from "./DeleteProblemModal";
 
-import type { ProblemsListItemModel } from "@contracts/core/v1";
+import type { ProblemsListItemModel } from "@/contracts/core/v1";
 
 type AdminProblemsContentProps = {
   page: number;

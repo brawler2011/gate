@@ -31,7 +31,7 @@ import { ContestProblemsTable } from "./ContestProblemsTable";
 import type {
   ContestModel,
   ContestProblemListItemModel,
-} from "@contracts/core/v1";
+} from "@/contracts/core/v1";
 import type { Metadata } from "next";
 
 

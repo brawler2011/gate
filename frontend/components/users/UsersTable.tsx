@@ -10,7 +10,7 @@ import { getRoleColor } from "@/lib/lib";
 import type {
   PaginationModel as PaginationType,
   UserModel,
-} from "@contracts/core/v1";
+} from "@/contracts/core/v1";
 
 type Props = {
   users: UserModel[];

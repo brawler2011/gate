@@ -20,7 +20,7 @@ import { getMyContestRole } from "@/lib/contest-role";
 import layoutClasses from "../contestLayout.module.css";
 import classes from "./styles.module.css";
 
-import type { ContestProblemListItemModel } from "@contracts/core/v1";
+import type { ContestProblemListItemModel } from "@/contracts/core/v1";
 
 // Constants for sections
 const SECTIONS = {

@@ -9,7 +9,7 @@ import { numberToLetters } from "@/lib/lib";
 
 import classes from "./ContestProblemsTable.module.css";
 
-import type { ContestProblemListItemModel } from "@contracts/core/v1";
+import type { ContestProblemListItemModel } from "@/contracts/core/v1";
 
 type ContestProblemsTableProps = {
   contestId: string | number;

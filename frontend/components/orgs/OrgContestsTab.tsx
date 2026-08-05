@@ -13,7 +13,7 @@ import type {
   ContestModel,
   OrganizationModel,
   PaginationModel,
-} from "@contracts/core/v1";
+} from "@/contracts/core/v1";
 
 type Props = {
   contests: ContestModel[];

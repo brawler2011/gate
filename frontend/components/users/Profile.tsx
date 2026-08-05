@@ -21,7 +21,7 @@ import { NextPagination } from '@/components/shared/Pagination';
 import { getRoleColor, TimeBeautify } from "@/lib/lib";
 import { APP_COLORS } from "@/lib/theme/colors";
 
-import type { ContestModel } from "@contracts/core/v1";
+import type { ContestModel } from "@/contracts/core/v1";
 
 
 type ProfileProps = {

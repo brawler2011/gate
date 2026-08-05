@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 
 import classes from "./ContestsTable.module.css";
 
-import type { ContestModel } from "@contracts/core/v1";
+import type { ContestModel } from "@/contracts/core/v1";
 
 type ContestsTableProps = {
   contests: ContestModel[];

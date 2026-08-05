@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CONTEST_INFO_PANEL_WIDTH } from "@/lib/constants";
 
 import type { SessionUser } from "@/lib/auth";
-import type { ContestModel } from "@contracts/core/v1";
+import type { ContestModel } from "@/contracts/core/v1";
 
 
 type ContestInfoPanelProps = {

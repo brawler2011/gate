@@ -10,7 +10,7 @@ import {
 
 import styles from "./RecentSubmissionsTable.module.css";
 
-import type { SubmissionsListItemModel } from "@contracts/core/v1";
+import type { SubmissionsListItemModel } from "@/contracts/core/v1";
 
 const RECENT_SUBMISSIONS_LIMIT = 5;
 

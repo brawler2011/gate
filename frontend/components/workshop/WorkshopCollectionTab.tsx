@@ -22,7 +22,7 @@ import useSWR from "swr";
 import classes from "./WorkshopFolderTab.module.css";
 
 import type { ApiError } from "@/lib/api";
-import type { FileEntry } from "@contracts/core/v1";
+import type { FileEntry } from "@/contracts/core/v1";
 
 type ListFilesResult = Promise<
   [ApiError | null, { files?: FileEntry[] } | null]

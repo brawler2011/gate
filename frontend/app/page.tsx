@@ -17,7 +17,7 @@ import { DefaultLayout } from '@/components/shared';
 import { listPosts, getMyDashboard } from "@/lib/actions";
 import { isAuthenticated } from "@/lib/auth";
 
-import type { PaginationModel } from "@contracts/core/v1";
+import type { PaginationModel } from "@/contracts/core/v1";
 
 export const metadata = {
   title: "Главная",

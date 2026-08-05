@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 
 import { createProblem, getProblems } from "@/lib/actions";
 
-import type { OrganizationModel } from "@contracts/core/v1";
+import type { OrganizationModel } from "@/contracts/core/v1";
 
 type Props = {
   opened: boolean;

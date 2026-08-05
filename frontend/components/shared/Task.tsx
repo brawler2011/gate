@@ -32,7 +32,7 @@ import type {
   ContestProblemListItemModel,
   ContestProblemModel,
   SubmissionsListItemModel,
-} from "@contracts/core/v1";
+} from "@/contracts/core/v1";
 
 type PageProps = {
   tasks: ContestProblemListItemModel[];

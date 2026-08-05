@@ -30,7 +30,7 @@ import {
 
 import { ChangeRoleModal } from "./ChangeRoleModal";
 
-import type * as corev1 from "@contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1";
 
 const ROLE_OPTIONS = [
   { label: "Участник", value: "participant", color: "gray" },

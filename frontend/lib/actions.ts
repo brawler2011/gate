@@ -7,7 +7,7 @@ import type {
   ListSubmissionsResponseModel,
   UpdateProblemLimitsRequest,
   UpdateProblemStatementRequest
-} from '@contracts/core/v1';
+} from '@/contracts/core/v1';
 
 export async function getContests(page: number = 1, pageSize: number = 10, search?: string, organizationId?: string) {
   return Call((client) => client.default.listWorkshopContests({ page, pageSize, search, organizationId }));

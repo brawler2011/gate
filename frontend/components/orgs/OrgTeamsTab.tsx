@@ -2,7 +2,7 @@
 import { Table, Text, Anchor } from '@mantine/core';
 import Link from 'next/link';
 
-import type { TeamModel } from '@contracts/core/v1';
+import type { TeamModel } from '@/contracts/core/v1';
 
 type Props = { teams: TeamModel[]; orgId: string };
 

@@ -30,7 +30,7 @@ import { CreateOrgButton } from "../orgs/CreateOrgButton";
 
 
 
-import type { OrganizationModel } from "@contracts/core/v1";
+import type { OrganizationModel } from "@/contracts/core/v1";
 
 type AdminOrgsContentProps = {
   page: number;

@@ -6,7 +6,7 @@ import { useSubmissionsWebSocket } from '@/lib/useSubmissionsWebSocket';
 
 import { SubmissionsList } from './SubmissionsList';
 
-import type { SubmissionsListItemModel } from '@contracts/core/v1';
+import type { SubmissionsListItemModel } from '@/contracts/core/v1';
 
 interface SubmissionsListClientProps {
     initialSubmissions: SubmissionsListItemModel[];

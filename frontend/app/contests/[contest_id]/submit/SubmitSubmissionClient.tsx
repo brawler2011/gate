@@ -14,7 +14,7 @@ import type { SessionUser } from "@/lib/auth";
 import type {
   ContestModel,
   ContestProblemListItemModel,
-} from "@contracts/core/v1";
+} from "@/contracts/core/v1";
 
 type Props = {
   contest: ContestModel;

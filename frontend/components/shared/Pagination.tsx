@@ -7,7 +7,7 @@ import React from "react";
 
 import { useOptionalPageTransition } from "@/components/shared/PageTransitionContext";
 
-import type * as corev1 from "@contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1";
 
 interface NextPaginationProps {
   pagination: corev1.PaginationModel;

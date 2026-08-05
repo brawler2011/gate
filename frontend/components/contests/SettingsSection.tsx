@@ -21,7 +21,7 @@ import { StatusMessage } from '@/components/shared/StatusMessage';
 import { updateContest } from "@/lib/actions";
 import { APP_COLORS } from "@/lib/theme/colors";
 
-import type * as corev1 from "@contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1";
 
 interface SettingsSectionProps {
   contest: corev1.ContestModel;

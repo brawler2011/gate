@@ -19,7 +19,7 @@ import { formatDate } from "@/lib/formatDate";
 import classes from "./AdminPage.module.css";
 import { DeleteBlogPostModal } from "./DeleteBlogPostModal";
 
-import type { PostModel } from "@contracts/core/v1";
+import type { PostModel } from "@/contracts/core/v1";
 
 type AdminBlogsTableProps = {
   posts: PostModel[];

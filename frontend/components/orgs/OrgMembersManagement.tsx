@@ -26,7 +26,7 @@ import {
   searchUsers,
 } from "@/lib/actions";
 
-import type { OrganizationMemberModel } from "@contracts/core/v1";
+import type { OrganizationMemberModel } from "@/contracts/core/v1";
 
 const ROLE_OPTIONS = [
   { label: "Владелец", value: "owner", color: "red" },

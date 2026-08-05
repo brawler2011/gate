@@ -3,7 +3,7 @@
 import { Button } from "@mantine/core";
 import { useState } from "react";
 
-import { logoutAction } from "@lib/auth-actions";
+import { logoutAction } from "@/lib/auth-actions";
 
 import type { ButtonProps } from "@mantine/core";
 import type { ReactNode } from "react";

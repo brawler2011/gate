@@ -20,7 +20,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { StatusMessage } from '@/components/shared/StatusMessage';
 import { addTeamMember, listTeamMembers, removeTeamMember, searchUsers } from '@/lib/actions';
 
-import type { TeamMemberModel } from '@contracts/core/v1';
+import type { TeamMemberModel } from '@/contracts/core/v1';
 
 type Props = { teamId: string };
 

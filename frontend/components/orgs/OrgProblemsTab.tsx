@@ -20,7 +20,7 @@ import type {
   OrganizationModel,
   PaginationModel,
   ProblemsListItemModel,
-} from "@contracts/core/v1";
+} from "@/contracts/core/v1";
 
 type Props = {
   problems: ProblemsListItemModel[];

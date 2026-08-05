@@ -17,7 +17,7 @@ import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
 import classes from "./AdminPage.module.css";
 import { DeleteContestModal } from "./DeleteContestModal";
 
-import type { ContestModel } from "@contracts/core/v1";
+import type { ContestModel } from "@/contracts/core/v1";
 
 type AdminContestsTableProps = {
   contests: ContestModel[];

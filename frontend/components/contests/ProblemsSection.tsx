@@ -27,7 +27,7 @@ import {
 } from "@/lib/actions";
 import { numberToLetters } from "@/lib/lib";
 
-import type * as corev1 from "@contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1";
 
 interface ProblemsSectionProps {
   contestId: string;

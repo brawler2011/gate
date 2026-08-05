@@ -5,7 +5,7 @@ import { BlogList } from '@/components/blog/BlogList';
 import { DefaultLayout } from '@/components/shared';
 import { listPosts } from "@/lib/actions";
 
-import type { PaginationModel } from "@contracts/core/v1";
+import type { PaginationModel } from "@/contracts/core/v1";
 
 
 export const metadata = {

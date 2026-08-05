@@ -23,7 +23,7 @@ import { AdminBlogsSearchInput } from "./AdminBlogsSearchInput";
 import { AdminBlogsTable } from "./AdminBlogsTable";
 import { BlogPostForm } from "./BlogPostForm";
 
-import type { PostModel } from "@contracts/core/v1";
+import type { PostModel } from "@/contracts/core/v1";
 
 type AdminBlogsContentProps = {
   page: number;

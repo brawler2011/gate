@@ -1,6 +1,6 @@
 'use client';
 
-import { SubmissionsWsCloseCode } from '@contracts/observer/v1';
+import { SubmissionsWsCloseCode } from '@/contracts/observer/v1';
 
 type ListenerParams = {
   key: string;

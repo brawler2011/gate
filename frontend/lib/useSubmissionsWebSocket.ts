@@ -12,12 +12,12 @@ import {
   type MessageSubmissionTestingStarted,
   type MessageSubmissionTestStarted,
   type MessageSubmissionCompleted,
-} from '@contracts/observer/v1';
+} from '@/contracts/observer/v1';
 
 import { getSubmissions, getMySubmissions } from './actions';
 import { submissionsWsManager, type WsManagerStatus } from './submissionsWsManager';
 
-import type { SubmissionsListItemModel } from '@contracts/core/v1';
+import type { SubmissionsListItemModel } from '@/contracts/core/v1';
 
 // Progress info for a submission being tested
 export interface TestProgress {

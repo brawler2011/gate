@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 import { updateOrganization } from '@/lib/actions';
 
-import type { OrganizationModel } from '@contracts/core/v1';
+import type { OrganizationModel } from '@/contracts/core/v1';
 
 type Props = { org: OrganizationModel };
 

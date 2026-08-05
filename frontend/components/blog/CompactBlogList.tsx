@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { formatDate } from "@/lib/formatDate";
 
-import type { PostModel } from "@contracts/core/v1";
+import type { PostModel } from "@/contracts/core/v1";
 
 type CompactBlogListProps = {
   posts: PostModel[];
