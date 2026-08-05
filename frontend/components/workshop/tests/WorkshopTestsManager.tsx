@@ -4,12 +4,10 @@ import {
   Alert,
   Box,
   Button,
-  Card,
   Group,
   LoadingOverlay,
   Paper,
   Stack,
-  Text,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
@@ -20,11 +18,11 @@ import {
   IconShieldCheck,
 } from "@tabler/icons-react";
 import { useEffect, useState, useTransition } from "react";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
+
 import {
   createWorkshopTestFile,
   generateWorkshopTests,
-  getProblem,
   getWorkshopProblemLimits,
   getWorkshopTestFile,
   listWorkshopGeneratorFiles,
@@ -34,20 +32,23 @@ import {
   updateWorkshopTestFile,
   validateWorkshopTests,
 } from "@/lib/actions";
+
 import { SubtasksTable } from "./SubtasksTable";
 import { TestRenumberModal } from "./TestRenumberModal";
 import { TestsListTable } from "./TestsListTable";
 import {
-  formatPaddedOrdinal,
-  SubtaskItem,
-  TestItem,
+  formatPaddedOrdinal
 } from "./types";
+
+import type {
+  SubtaskItem,
+  TestItem} from "./types";
 
 type Props = {
   problemId: string;
 };
 
-export function WorkshopTestsManager({ problemId }: Props) {
+export const WorkshopTestsManager = ({ problemId }: Props) => {
   const [tests, setTests] = useState<TestItem[]>([]);
   const [subtasks, setSubtasks] = useState<SubtaskItem[]>([]);
   const [generators, setGenerators] = useState<string[]>([]);
@@ -60,12 +61,12 @@ export function WorkshopTestsManager({ problemId }: Props) {
   const [isRenumberModalOpen, setIsRenumberModalOpen] = useState(false);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
 
-  const { mutate: mutateGlobal } = useSWRConfig();
-
   // Load problem limits to know problem_type and max_score
   const { data: limitsData } = useSWR(["problem-limits", problemId], async () => {
     const [err, res] = await getWorkshopProblemLimits(problemId);
-    if (err) return null;
+    if (err) {
+      return null;
+    }
     return res;
   });
 
@@ -76,25 +77,25 @@ export function WorkshopTestsManager({ problemId }: Props) {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [genErr, genRes] = await listWorkshopGeneratorFiles(problemId);
+      const [_genErr, genRes] = await listWorkshopGeneratorFiles(problemId);
       if (genRes?.files) {
-        setGenerators(genRes.files.map((f: any) => (f.path || f.name || "").split("/").pop() || ""));
+        setGenerators(genRes.files.map((f: { path?: string; name?: string }) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
-      const [solErr, solRes] = await listWorkshopSolutionFiles(problemId);
+      const [_solErr, solRes] = await listWorkshopSolutionFiles(problemId);
       if (solRes?.files) {
-        setSolutions(solRes.files.map((f: any) => (f.path || f.name || "").split("/").pop() || ""));
+        setSolutions(solRes.files.map((f: { path?: string; name?: string }) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
-      const [filesErr, filesRes] = await listWorkshopTestFiles(problemId);
-      const existingFiles = (filesRes?.files?.map((f: any) => f.path || f.name || "") || []).map(
+      const [_filesErr, filesRes] = await listWorkshopTestFiles(problemId);
+      const existingFiles = (filesRes?.files?.map((f: { path?: string; name?: string }) => f.path || f.name || "") || []).map(
         (p: string) => p.split("/").pop() || p
       );
 
       // Fetch tests config
-      const [configErr, configText] = await getWorkshopTestFile(problemId, "tests.json");
-      let configData: { groups?: any[]; tests?: any[] } = {};
-      if (!configErr && configText) {
+      const [_configErr, configText] = await getWorkshopTestFile(problemId, "tests.json");
+      let configData: { groups?: Record<string, unknown>[]; tests?: Record<string, unknown>[] } = {};
+      if (!_configErr && configText) {
         try {
           configData = JSON.parse(configText);
         } catch {
@@ -115,26 +116,31 @@ export function WorkshopTestsManager({ problemId }: Props) {
       }
 
       for (const rt of rawTests) {
-        if (rt.ordinal) ordinalsSet.add(rt.ordinal);
+        if (typeof rt.ordinal === "number") {
+          ordinalsSet.add(rt.ordinal);
+        }
       }
 
       const sortedOrdinals = Array.from(ordinalsSet).sort((a, b) => a - b);
 
       // Build SubtaskItems
-      const loadedSubtasks: SubtaskItem[] = rawGroups.map((grp: any, idx: number) => {
-        const start = grp.tests?.[0] || 1;
-        const end = grp.tests?.[1] || 1;
+      const loadedSubtasks: SubtaskItem[] = rawGroups.map((grp: Record<string, unknown>, idx: number) => {
+        const testsArr = grp.tests as number[] | undefined;
+        const start = testsArr?.[0] || 1;
+        const end = testsArr?.[1] || 1;
         const testIds: string[] = [];
 
         for (let ord = start; ord <= end; ord++) {
           testIds.push(`test-id-${ord}`);
         }
 
+        const dependsArr = grp.depends_on as unknown[] | undefined;
+
         return {
-          name: grp.name || `subtask${idx + 1}`,
-          points: grp.points ?? 10,
+          name: (grp.name as string) || `subtask${idx + 1}`,
+          points: (grp.points as number) ?? 10,
           policy: grp.points_policy === "each-test" || grp.policy === "each" ? "each" : "complete",
-          dependencies: grp.depends_on ? grp.depends_on.map((d: any) => (typeof d === "string" ? d : `subtask${d}`)) : [],
+          dependencies: dependsArr ? dependsArr.map((d: unknown) => (typeof d === "string" ? d : `subtask${d}`)) : [],
           testIds,
         };
       });
@@ -142,7 +148,7 @@ export function WorkshopTestsManager({ problemId }: Props) {
       // Build TestItems
       const loadedTests: TestItem[] = sortedOrdinals.map((ord) => {
         const padded = formatPaddedOrdinal(ord);
-        const rawT = rawTests.find((t: any) => t.ordinal === ord);
+        const rawT = rawTests.find((t: Record<string, unknown>) => t.ordinal === ord);
 
         const hasIn = existingFiles.includes(`${padded}.in`);
         const hasOut = existingFiles.includes(`${padded}.out`);
@@ -160,7 +166,7 @@ export function WorkshopTestsManager({ problemId }: Props) {
           hasOut,
           isSample: !!rawT?.is_sample,
           method: rawT?.method === "generated" ? "generated" : "manual",
-          generatorCommand: rawT?.generator || "",
+          generatorCommand: (rawT?.generator as string) || "",
           subtaskNames,
         };
       });
@@ -168,10 +174,10 @@ export function WorkshopTestsManager({ problemId }: Props) {
       setSubtasks(loadedSubtasks);
       setTests(loadedTests);
       setIsDirty(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       notifications.show({
         title: "Ошибка загрузки тестов",
-        message: e.message || "Не удалось загрузить данные тестов",
+        message: (e as Error).message || "Не удалось загрузить данные тестов",
         color: "red",
       });
     } finally {
@@ -312,13 +318,24 @@ export function WorkshopTestsManager({ problemId }: Props) {
           }
         }
 
-        let payloadGroups: any[] = subtasks
-          .map((st, idx) => {
+        type PayloadGroup = {
+          ordinal: number;
+          name: string;
+          points: number;
+          points_policy: string;
+          depends_on: string[];
+          tests: number[];
+        };
+
+        let payloadGroups: PayloadGroup[] = subtasks
+          .map((st, idx): PayloadGroup | null => {
             const stTests = tests.filter(
               (t) => st.testIds.includes(t.id) || t.subtaskNames.includes(st.name)
             );
             const ordinals = stTests.map((t) => t.ordinal).sort((a, b) => a - b);
-            if (ordinals.length === 0) return null;
+            if (ordinals.length === 0) {
+              return null;
+            }
 
             return {
               ordinal: idx + 1,
@@ -329,7 +346,7 @@ export function WorkshopTestsManager({ problemId }: Props) {
               tests: [ordinals[0], ordinals[ordinals.length - 1]],
             };
           })
-          .filter(Boolean);
+          .filter((g): g is PayloadGroup => g !== null);
 
         // If subtasks is empty or no subtask covers tests, but tests exist, create a default subtask covering all tests
         if (payloadGroups.length === 0 && tests.length > 0) {
@@ -337,9 +354,9 @@ export function WorkshopTestsManager({ problemId }: Props) {
           payloadGroups = [
             {
               ordinal: 1,
-              name: subtasks[0]?.name || "subtask1",
+              name: "subtask1",
               points: maxScore ?? 100,
-              points_policy: "complete-group",
+              points_policy: problemType === "scoring" ? "each-test" : "complete-group",
               depends_on: [],
               tests: [sortedOrds[0], sortedOrds[sortedOrds.length - 1]],
             },
@@ -397,10 +414,10 @@ export function WorkshopTestsManager({ problemId }: Props) {
 
         setIsDirty(false);
         loadData();
-      } catch (e: any) {
+      } catch (e: unknown) {
         notifications.show({
           title: "Ошибка сохранения",
-          message: e.message || "Произошла ошибка при сохранении",
+          message: (e as Error).message || "Произошла ошибка при сохранении",
           color: "red",
         });
       }
@@ -442,10 +459,10 @@ export function WorkshopTestsManager({ problemId }: Props) {
         color: "green",
       });
       loadData();
-    } catch (e: any) {
+    } catch (e: unknown) {
       notifications.show({
         title: "Ошибка генерации",
-        message: e.message || "Ошибка при вызове генератора",
+        message: (e as Error).message || "Ошибка при вызове генератора",
         color: "red",
       });
     } finally {
@@ -482,15 +499,17 @@ export function WorkshopTestsManager({ problemId }: Props) {
       if (report?.results) {
         setTests((prev) =>
           prev.map((t) => {
-            const res = report.results?.find((r: any) => r.test_number === t.ordinal);
-            if (!res) return t;
+            const res = (report.results as Record<string, unknown>[])?.find((r) => r.test_number === t.ordinal);
+            if (!res) {
+              return t;
+            }
             return {
               ...t,
               solutionStatus: {
-                verdict: res.verdict,
-                time: res.time,
-                memory: res.memory,
-                message: res.message,
+                verdict: res.verdict as string,
+                time: res.time as number,
+                memory: res.memory as number,
+                message: res.message as string,
               },
             };
           })
@@ -502,10 +521,10 @@ export function WorkshopTestsManager({ problemId }: Props) {
         message: `Решение ${solutionPath} проверено. Пройдено тестов: ${report.passed_tests || 0} / ${report.total_tests || 0}`,
         color: "green",
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       notifications.show({
         title: "Ошибка решения",
-        message: e.message || "Не удалось запустить прогон решения",
+        message: (e as Error).message || "Не удалось запустить прогон решения",
         color: "red",
       });
     } finally {
@@ -530,14 +549,16 @@ export function WorkshopTestsManager({ problemId }: Props) {
       if (report?.results) {
         setTests((prev) =>
           prev.map((t) => {
-            const res = report.results?.find((r: any) => r.test_number === t.ordinal);
-            if (!res) return t;
+            const res = (report.results as Record<string, unknown>[])?.find((r) => r.test_number === t.ordinal);
+            if (!res) {
+              return t;
+            }
             return {
               ...t,
               validatorStatus: {
-                valid: res.valid,
-                message: res.message,
-                error: res.error,
+                valid: res.valid as boolean,
+                message: res.message as string,
+                error: res.error as string,
               },
             };
           })
@@ -549,10 +570,10 @@ export function WorkshopTestsManager({ problemId }: Props) {
         message: `Валидных тестов: ${report.valid_tests || 0} / ${report.total_tests || 0}`,
         color: report.invalid_tests === 0 ? "green" : "red",
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       notifications.show({
         title: "Ошибка валидации",
-        message: e.message || "Не удалось запустить валидатор",
+        message: (e as Error).message || "Не удалось запустить валидатор",
         color: "red",
       });
     } finally {
@@ -673,4 +694,4 @@ export function WorkshopTestsManager({ problemId }: Props) {
       />
     </Box>
   );
-}
+};

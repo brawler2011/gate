@@ -2,13 +2,15 @@
 
 import { Badge, Stack, Table, Text } from "@mantine/core";
 import { useRouter } from "next/navigation";
+
+import { NextPagination } from '@/components/shared/Pagination';
+import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
+import { getRoleColor } from "@/lib/lib";
+
 import type {
   PaginationModel as PaginationType,
   UserModel,
 } from "@contracts/core/v1";
-import { NextPagination } from '@/components/shared/Pagination';
-import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { getRoleColor } from "@/lib/lib";
 
 type Props = {
   users: UserModel[];
@@ -18,7 +20,7 @@ type Props = {
   role?: string;
 };
 
-export function UsersTable({ users, pagination, page, search, role }: Props) {
+export const UsersTable = ({ users, pagination, page, search, role }: Props) => {
   const router = useRouter();
 
   // Use page from URL props, not from API response state
@@ -36,8 +38,12 @@ export function UsersTable({ users, pagination, page, search, role }: Props) {
   }
 
   const queryParams: Record<string, string | number | undefined> = {};
-  if (search) queryParams.search = search;
-  if (role) queryParams.role = role;
+  if (search) {
+    queryParams.search = search;
+  }
+  if (role) {
+    queryParams.role = role;
+  }
 
   return (
     <>
@@ -92,4 +98,4 @@ export function UsersTable({ users, pagination, page, search, role }: Props) {
       )}
     </>
   );
-}
+};

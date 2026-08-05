@@ -1,15 +1,3 @@
-import { CodeBlock } from '@/components/shared/CodeBlock';
-import { DefaultLayout } from '@/components/shared';
-import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { getSubmission } from "@/lib/actions";
-import {
-  LangNameToString,
-  LangString,
-  ProblemTitle,
-  StateColor,
-  StateString,
-  TimeBeautify,
-} from "@/lib/lib";
 import {
   Stack,
   Table,
@@ -23,8 +11,23 @@ import {
   ScrollArea,
   Container,
 } from "@mantine/core";
-import { Metadata } from "next";
 import Link from "next/link";
+
+import { DefaultLayout } from '@/components/shared';
+import { CodeBlock } from '@/components/shared/CodeBlock';
+import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
+import { getSubmission } from "@/lib/actions";
+import {
+  LangNameToString,
+  LangString,
+  ProblemTitle,
+  StateColor,
+  StateString,
+  TimeBeautify,
+} from "@/lib/lib";
+
+import type { Metadata } from "next";
+
 
 type Props = {
   params: Promise<{ submission_id: string }>;
@@ -39,8 +42,12 @@ const Page = async (props: Props) => {
   const solutionId = (await props.params).submission_id;
   const [error, resp] = await getSubmission(solutionId);
 
-  if (error) return <ErrorDisplay error={error} />;
-  if (!resp) return <ErrorDisplay error={{ status: 404, message: "Посылка не найдена" }} />;
+  if (error) {
+    return <ErrorDisplay error={error} />;
+  }
+  if (!resp) {
+    return <ErrorDisplay error={{ status: 404, message: "Посылка не найдена" }} />;
+  }
 
   const { submission } = resp;
 

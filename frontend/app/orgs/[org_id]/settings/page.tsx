@@ -1,3 +1,6 @@
+import { Box, Container, Stack } from "@mantine/core";
+import { notFound } from "next/navigation";
+
 import { OrgDangerZone } from "@/components/orgs/OrgDangerZone";
 import { OrgSettingsForm } from "@/components/orgs/OrgSettingsForm";
 import { OrgSettingsMobileNav } from "@/components/orgs/OrgSettingsMobileNav";
@@ -8,8 +11,7 @@ import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { getOrganization } from "@/lib/actions";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
-import { Box, Container, Stack } from "@mantine/core";
-import { notFound } from "next/navigation";
+
 import classes from "./styles.module.css";
 
 const SECTIONS = {
@@ -24,13 +26,15 @@ type Props = {
   searchParams: Promise<{ section?: string }>;
 };
 
-export default async function OrgSettingsPage({ params, searchParams }: Props) {
+const OrgSettingsPage = async ({ params, searchParams }: Props) => {
   const { org_id } = await params;
   const { section = "settings" } = await searchParams;
 
   const [error, data] = await getOrganization(org_id);
   if (error) {
-    if (error.status === 404) notFound();
+    if (error.status === 404) {
+      notFound();
+    }
     return (
       <DefaultLayout headerOrganizationId={org_id}>
         <Container size="sm" py="lg">
@@ -88,4 +92,6 @@ export default async function OrgSettingsPage({ params, searchParams }: Props) {
       </Container>
     </DefaultLayout>
   );
-}
+};
+
+export default OrgSettingsPage;

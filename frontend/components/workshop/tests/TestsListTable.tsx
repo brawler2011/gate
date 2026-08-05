@@ -17,18 +17,17 @@ import {
   Tooltip,
 } from "@mantine/core";
 import {
-  IconCheck,
   IconChevronDown,
-  IconEye,
   IconPlus,
-  IconRefresh,
   IconTrash,
-  IconX,
 } from "@tabler/icons-react";
 import { useState } from "react";
+
 import { TestPreviewModal } from "./TestPreviewModal";
 import { TestVerdictModal } from "./TestVerdictModal";
-import { formatPaddedOrdinal, SubtaskItem, TestItem } from "./types";
+import { formatPaddedOrdinal } from "./types";
+
+import type { SubtaskItem, TestItem } from "./types";
 
 type Props = {
   problemId: string;
@@ -42,7 +41,7 @@ type Props = {
   onSavedPreviewFile?: () => void;
 };
 
-export function TestsListTable({
+export const TestsListTable = ({
   problemId,
   tests,
   subtasks,
@@ -52,7 +51,7 @@ export function TestsListTable({
   onAddTest,
   onDeleteSelectedTests,
   onSavedPreviewFile,
-}: Props) {
+}: Props) => {
   const [deletingTestId, setDeletingTestId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [previewFile, setPreviewFile] = useState<string | null>(null);
@@ -92,7 +91,9 @@ export function TestsListTable({
 
   const handleAssignSelectedToSubtask = (subtaskName: string) => {
     const targetSubtask = subtasks.find((s) => s.name === subtaskName);
-    if (!targetSubtask) return;
+    if (!targetSubtask) {
+      return;
+    }
 
     const newTestIds = Array.from(new Set([...targetSubtask.testIds, ...selectedIds]));
     const nextSubtasks = subtasks.map((s) =>
@@ -202,7 +203,7 @@ export function TestsListTable({
               <Table.Th>Детали генератора / Файлы</Table.Th>
               <Table.Th style={{ width: 140 }}>Сабтаски</Table.Th>
               <Table.Th style={{ width: 150, textAlign: "center" }}>Проверки</Table.Th>
-              <Table.Th style={{ width: 60, textAlign: "center" }}></Table.Th>
+              <Table.Th style={{ width: 60, textAlign: "center" }} />
             </Table.Tr>
           </Table.Thead>
 
@@ -358,9 +359,7 @@ export function TestsListTable({
                             color={
                               test.solutionStatus.verdict === "OK"
                                 ? "green"
-                                : test.solutionStatus.verdict === "WA"
-                                ? "red"
-                                : "yellow"
+                                : "red"
                             }
                             style={{ cursor: "pointer" }}
                             onClick={() =>
@@ -473,4 +472,4 @@ export function TestsListTable({
       )}
     </Stack>
   );
-}
+};

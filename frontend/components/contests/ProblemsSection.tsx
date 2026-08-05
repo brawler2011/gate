@@ -1,12 +1,6 @@
 "use client";
 
 import {
-  addContestProblem,
-  removeContestProblem,
-  searchProblems,
-} from "@/lib/actions";
-import { numberToLetters } from "@/lib/lib";
-import {
   ActionIcon,
   Autocomplete,
   Badge,
@@ -24,18 +18,26 @@ import { notifications } from "@mantine/notifications";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type * as corev1 from "@contracts/core/v1";
+
 import { StatusMessage } from '@/components/shared/StatusMessage';
+import {
+  addContestProblem,
+  removeContestProblem,
+  searchProblems,
+} from "@/lib/actions";
+import { numberToLetters } from "@/lib/lib";
+
+import type * as corev1 from "@contracts/core/v1";
 
 interface ProblemsSectionProps {
   contestId: string;
   initialProblems: Array<corev1.ContestProblemListItemModel>;
 }
 
-export function ProblemsSection({
+export const ProblemsSection = ({
   contestId,
   initialProblems,
-}: ProblemsSectionProps) {
+}: ProblemsSectionProps) => {
   const router = useRouter();
   const [problems, setProblems] = useState(initialProblems);
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,7 +83,9 @@ export function ProblemsSection({
   }, [debouncedQuery]);
 
   const handleAddProblem = async () => {
-    if (!selectedProblemId) return;
+    if (!selectedProblemId) {
+      return;
+    }
 
     setAdding(true);
     const [error] = await addContestProblem(contestId, selectedProblemId);
@@ -250,4 +254,4 @@ export function ProblemsSection({
       />
     </>
   );
-}
+};

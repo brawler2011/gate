@@ -1,6 +1,5 @@
 "use client";
 
-import { createPost, deletePost, patchPost } from "@/lib/actions";
 import {
   Button,
   Center,
@@ -14,20 +13,24 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
-import type { PostModel } from "@contracts/core/v1";
+import useSWR from "swr";
+
 import { NextPagination } from '@/components/shared/Pagination';
 import { StatusMessage } from '@/components/shared/StatusMessage';
+import { createPost, deletePost, patchPost } from "@/lib/actions";
+
 import { AdminBlogsSearchInput } from "./AdminBlogsSearchInput";
 import { AdminBlogsTable } from "./AdminBlogsTable";
 import { BlogPostForm } from "./BlogPostForm";
-import useSWR from "swr";
+
+import type { PostModel } from "@contracts/core/v1";
 
 type AdminBlogsContentProps = {
   page: number;
   search?: string;
 };
 
-export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
+export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;
@@ -154,7 +157,9 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
 
   const totalPages = pagination.total || 1;
   const queryParams: Record<string, string | number | undefined> = {};
-  if (search) queryParams.search = search;
+  if (search) {
+    queryParams.search = search;
+  }
 
   return (
     <Container size="xl" py="md">
@@ -171,7 +176,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
 
         <AdminBlogsSearchInput />
 
-        {isLoading ? (
+        {isLoading && (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
@@ -184,7 +189,8 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
           </Stack>
-        ) : posts.length === 0 ? (
+        )}
+        {!isLoading && posts.length === 0 && (
           <Center py="xl">
             <Stack align="center" gap="md">
               <Text c="dimmed">Посты не найдены</Text>
@@ -197,7 +203,8 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
               </Button>
             </Stack>
           </Center>
-        ) : (
+        )}
+        {!isLoading && posts.length > 0 && (
           <>
             <AdminBlogsTable
               posts={posts}
@@ -238,7 +245,7 @@ export function AdminBlogsContent({ page, search }: AdminBlogsContentProps) {
       />
     </Container>
   );
-}
+};
 
 
 

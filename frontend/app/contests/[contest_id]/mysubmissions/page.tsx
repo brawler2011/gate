@@ -1,3 +1,7 @@
+import { Alert, Box, Container, Group, Paper, Stack } from "@mantine/core";
+import { IconAlertCircle } from "@tabler/icons-react";
+import { redirect } from "next/navigation";
+
 import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
@@ -12,11 +16,11 @@ import {
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import { PermissionChecker } from "@/lib/permissions";
-import { redirect } from "next/navigation";
-import { Alert, Box, Container, Group, Paper, Stack } from "@mantine/core";
-import { IconAlertCircle } from "@tabler/icons-react";
-import { Metadata } from "next";
+
 import classes from "../contestLayout.module.css";
+
+import type { Metadata } from "next";
+
 
 export const metadata: Metadata = {
   title: "Мои посылки",
@@ -58,17 +62,27 @@ const Page = async ({ params, searchParams }: PageProps) => {
     contestId: contest_id,
   };
 
-  if (queryParams.userId) parsedParams.userId = queryParams.userId;
-  if (queryParams.problemId) parsedParams.problemId = queryParams.problemId;
-  if (queryParams.state) parsedParams.state = Number(queryParams.state);
-  if (queryParams.order === "asc" || queryParams.order === "desc")
+  if (queryParams.userId) {
+    parsedParams.userId = queryParams.userId;
+  }
+  if (queryParams.problemId) {
+    parsedParams.problemId = queryParams.problemId;
+  }
+  if (queryParams.state) {
+    parsedParams.state = Number(queryParams.state);
+  }
+  if (queryParams.order === "asc" || queryParams.order === "desc") {
     parsedParams.sortOrder = queryParams.order;
-  if (queryParams.language)
+  }
+  if (queryParams.language) {
     parsedParams.language = Number(queryParams.language);
+  }
 
   const [error, submissionsData] = await getSubmissions(parsedParams);
 
-  if (error) return <ErrorDisplay error={error} />;
+  if (error) {
+    return <ErrorDisplay error={error} />;
+  }
 
   if (!submissionsData) {
     return (
@@ -117,11 +131,11 @@ const Page = async ({ params, searchParams }: PageProps) => {
 
   const contestHeaderNav = contestData?.contest
     ? buildContestHeaderNav({
-        contest: contestData.contest,
-        user,
-        contestRole,
-        activeTab: "mysubmissions",
-      })
+      contest: contestData.contest,
+      user,
+      contestRole,
+      activeTab: "mysubmissions",
+    })
     : undefined;
 
   return (
@@ -131,9 +145,9 @@ const Page = async ({ params, searchParams }: PageProps) => {
       headerContest={
         contestData?.contest
           ? {
-              id: contestData.contest.id,
-              title: contestData.contest.title,
-            }
+            id: contestData.contest.id,
+            title: contestData.contest.title,
+          }
           : undefined
       }
     >

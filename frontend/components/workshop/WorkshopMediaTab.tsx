@@ -1,13 +1,5 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
-import useSWR from "swr";
-import {
-  listWorkshopMediaFiles,
-  uploadWorkshopMediaBinary,
-  deleteWorkshopMediaFile,
-} from "@/lib/actions";
-import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
 import {
   ActionIcon,
   Box,
@@ -32,14 +24,26 @@ import {
   IconTrash,
   IconUpload,
 } from "@tabler/icons-react";
+import { useState, useRef, useTransition } from "react";
+import useSWR from "swr";
+
+import {
+  listWorkshopMediaFiles,
+  uploadWorkshopMediaBinary,
+  deleteWorkshopMediaFile,
+} from "@/lib/actions";
+
 import classes from "./WorkshopFolderTab.module.css";
 
-export function WorkshopMediaTab({
+import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
+
+
+export const WorkshopMediaTab = ({
   problemId,
   selectedFile,
   onFileSelect,
   onFileCreated,
-}: WorkshopFileTabProps) {
+}: WorkshopFileTabProps) => {
   const [isUploading, startUploading] = useTransition();
   const [isDeleting, startDeleting] = useTransition();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -51,7 +55,9 @@ export function WorkshopMediaTab({
     mutate,
   } = useSWR(["workshop-files", problemId, "media"], async () => {
     const [err, res] = await listWorkshopMediaFiles(problemId);
-    if (err) throw new Error(err.message || "Не удалось загрузить список медиафайлов");
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить список медиафайлов");
+    }
     return res;
   });
 
@@ -66,7 +72,9 @@ export function WorkshopMediaTab({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = e.target.files;
-    if (!uploadedFiles || uploadedFiles.length === 0) return;
+    if (!uploadedFiles || uploadedFiles.length === 0) {
+      return;
+    }
 
     const file = uploadedFiles[0];
     const formData = new FormData();
@@ -101,7 +109,9 @@ export function WorkshopMediaTab({
   };
 
   const handleDelete = () => {
-    if (!currentFileName) return;
+    if (!currentFileName) {
+      return;
+    }
 
     startDeleting(async () => {
       const [err] = await deleteWorkshopMediaFile(problemId, currentFileName);
@@ -127,9 +137,15 @@ export function WorkshopMediaTab({
   };
 
   const formatFileSize = (bytes?: number) => {
-    if (!bytes) return null;
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (!bytes) {
+      return null;
+    }
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
@@ -197,13 +213,15 @@ export function WorkshopMediaTab({
         </Button>
 
         <div className={classes.fileList}>
-          {isLoading ? (
+          {isLoading && (
             <Center py="xl">
               <Loader size="sm" />
             </Center>
-          ) : files.length === 0 ? (
+          )}
+          {!isLoading && files.length === 0 && (
             <div className={classes.sidebarEmptyText}>нет файлов</div>
-          ) : (
+          )}
+          {!isLoading && files.length > 0 && (
             files.map((file) => {
               const isActive = selectedFile === file.path;
               const fileName = getFileName(file.path!);
@@ -218,7 +236,9 @@ export function WorkshopMediaTab({
                       : classes.fileItem
                   }
                   onClick={() => {
-                    if (selectedFile !== file.path) onFileSelect(file.path!);
+                    if (selectedFile !== file.path) {
+                      onFileSelect(file.path!);
+                    }
                   }}
                 >
                   <IconPhoto size={16} style={{ flexShrink: 0 }} />
@@ -395,4 +415,4 @@ export function WorkshopMediaTab({
       </div>
     </div>
   );
-}
+};

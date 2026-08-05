@@ -89,8 +89,15 @@ const CopyableSection = ({ label, value }: { label: string; value: string }) => 
 };
 
 const renderSafeImage = (problemId?: string) => {
-  return function SafeImage({ node, src, alt, ...props }: any) {
-    if (!src) return null;
+  const SafeImage = ({
+    node: _node,
+    src,
+    alt,
+    ...props
+  }: React.ImgHTMLAttributes<HTMLImageElement> & { node?: unknown }) => {
+    if (!src) {
+      return null;
+    }
 
     let width: string | undefined;
     let height: string | undefined;
@@ -108,8 +115,12 @@ const renderSafeImage = (problemId?: string) => {
         } else if (/^\d+(x\d*)?$/.test(part)) {
           if (part.includes("x")) {
             const [w, h] = part.split("x");
-            if (w) width = `${w}px`;
-            if (h) height = `${h}px`;
+            if (w) {
+              width = `${w}px`;
+            }
+            if (h) {
+              height = `${h}px`;
+            }
           } else {
             width = `${part}px`;
           }
@@ -118,8 +129,12 @@ const renderSafeImage = (problemId?: string) => {
           const num = part.replace(/-?center-?/, "");
           if (num.includes("x")) {
             const [w, h] = num.split("x");
-            if (w) width = `${w}px`;
-            if (h) height = `${h}px`;
+            if (w) {
+              width = `${w}px`;
+            }
+            if (h) {
+              height = `${h}px`;
+            }
           } else {
             width = `${num}px`;
           }
@@ -153,6 +168,7 @@ const renderSafeImage = (problemId?: string) => {
       />
     );
   };
+  return SafeImage;
 };
 
 const StatementContent = ({ value, problemId }: { value: string; problemId?: string }) => {

@@ -18,13 +18,16 @@ import {
 } from "@mantine/core";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+
 import { SubtaskDeleteModal } from "./SubtaskDeleteModal";
 import {
   formatOrdinalsToRanges,
-  parseOrdinalsFromRanges,
-  SubtaskItem,
-  TestItem,
+  parseOrdinalsFromRanges
 } from "./types";
+
+import type {
+  SubtaskItem,
+  TestItem} from "./types";
 
 type Props = {
   subtasks: SubtaskItem[];
@@ -45,7 +48,7 @@ type SubtaskItemRowProps = {
   onDeleteRequest: () => void;
 };
 
-function SubtaskItemRow({
+const SubtaskItemRow = ({
   st,
   idx,
   tests,
@@ -53,7 +56,7 @@ function SubtaskItemRow({
   availableSubtaskNames,
   onUpdateSubtask,
   onDeleteRequest,
-}: SubtaskItemRowProps) {
+}: SubtaskItemRowProps) => {
   const assignedOrdinals = tests
     .filter((t) => st.testIds.includes(t.id))
     .map((t) => t.ordinal);
@@ -184,16 +187,16 @@ function SubtaskItemRow({
       </Grid>
     </Card>
   );
-}
+};
 
-export function SubtasksTable({
+export const SubtasksTable = ({
   subtasks,
   tests,
   onChangeSubtasks,
   onDeleteSubtaskWithTests,
   maxScore,
   problemType,
-}: Props) {
+}: Props) => {
   const [deleteModalSubtask, setDeleteModalSubtask] = useState<SubtaskItem | null>(null);
 
   const totalPoints = subtasks.reduce((sum, s) => sum + s.points, 0);
@@ -305,4 +308,4 @@ export function SubtasksTable({
       )}
     </Stack>
   );
-}
+};

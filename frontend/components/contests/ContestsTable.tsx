@@ -6,15 +6,17 @@ import {
   Text,
 } from "@mantine/core";
 import { useRouter } from "next/navigation";
-import type { ContestModel } from "@contracts/core/v1";
+
 import classes from "./ContestsTable.module.css";
+
+import type { ContestModel } from "@contracts/core/v1";
 
 type ContestsTableProps = {
   contests: ContestModel[];
   showCreatedAt?: boolean;
 };
 
-export function ContestsTable({ contests, showCreatedAt = true }: ContestsTableProps) {
+export const ContestsTable = ({ contests, showCreatedAt = true }: ContestsTableProps) => {
   const router = useRouter();
 
   return (
@@ -58,5 +60,5 @@ export function ContestsTable({ contests, showCreatedAt = true }: ContestsTableP
       </Table>
     </Box>
   );
-}
+};
 

@@ -1,19 +1,24 @@
-import { DefaultLayout } from '@/components/shared';
+import { Container, Stack, Text, Title } from '@mantine/core';
+import { IconArrowLeft } from '@tabler/icons-react';
+import { notFound } from 'next/navigation';
+
 import { TeamMembersManagement } from '@/components/orgs/TeamMembersManagement';
+import { DefaultLayout } from '@/components/shared';
+import { LinkAnchor } from '@/components/shared';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { getTeam } from '@/lib/actions';
-import { Container, Stack, Text, Title } from '@mantine/core';
-import { notFound } from 'next/navigation';
-import { IconArrowLeft } from '@tabler/icons-react';
-import { LinkAnchor } from '@/components/shared';
+
+
 
 type Props = { params: Promise<{ org_id: string; team_id: string }> };
 
-export default async function TeamPage({ params }: Props) {
+const TeamPage = async ({ params }: Props) => {
   const { org_id, team_id } = await params;
   const [error, data] = await getTeam(team_id);
   if (error) {
-    if (error.status === 404) notFound();
+    if (error.status === 404) {
+      notFound();
+    }
     return (
       <DefaultLayout headerOrganizationId={org_id}>
         <Container size="sm" py="lg"><ErrorDisplay error={error} /></Container>
@@ -41,4 +46,6 @@ export default async function TeamPage({ params }: Props) {
       </Container>
     </DefaultLayout>
   );
-}
+};
+
+export default TeamPage;

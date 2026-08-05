@@ -1,17 +1,20 @@
 "use client";
 
+import { Box, Paper, Select, Stack } from "@mantine/core";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
 import { CreateSubmissionForm } from "@/components/submissions/CreateSubmissionForm";
-import type { SessionUser } from "@/lib/auth";
 import { numberToLetters } from "@/lib/lib";
+
+import { submitSubmission } from "./actions";
+import classes from "./SubmitSubmissionClient.module.css";
+
+import type { SessionUser } from "@/lib/auth";
 import type {
   ContestModel,
   ContestProblemListItemModel,
 } from "@contracts/core/v1";
-import { Box, Paper, Select, Stack } from "@mantine/core";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { submitSubmission } from "./actions";
-import classes from "./SubmitSubmissionClient.module.css";
 
 type Props = {
   contest: ContestModel;
@@ -19,7 +22,7 @@ type Props = {
   user: SessionUser;
 };
 
-export function SubmitSubmissionClient({ contest, problems, user }: Props) {
+export const SubmitSubmissionClient = ({ contest, problems, user }: Props) => {
   const router = useRouter();
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
     problems.length > 0 ? problems[0].problem_id : null,
@@ -81,7 +84,7 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
       >
         <CreateSubmissionForm
           onSubmit={handleSubmit}
-          large={true}
+          large
           disabled={isSubmitted}
           problemSelect={
             <Select
@@ -104,4 +107,4 @@ export function SubmitSubmissionClient({ contest, problems, user }: Props) {
       </Paper>
     </Box>
   );
-}
+};

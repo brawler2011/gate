@@ -1,4 +1,5 @@
 import ProblemPageLayoutWrapper, { generateMetadata as sharedGenerateMetadata } from "../ProblemPageLayoutWrapper";
+
 import type { Metadata } from "next";
 
 type SearchParams = Promise<{
@@ -16,7 +17,7 @@ export const generateMetadata = async (props: { params: Promise<{ problem_id: st
   return sharedGenerateMetadata(problem_id);
 };
 
-export default function Page({ params, searchParams }: Props) {
+const Page = ({ params, searchParams }: Props) => {
   return (
     <ProblemPageLayoutWrapper
       activeTab="packages"
@@ -24,4 +25,6 @@ export default function Page({ params, searchParams }: Props) {
       searchParams={searchParams}
     />
   );
-}
+};
+
+export default Page;

@@ -6,10 +6,12 @@ import {
   listWorkshopSolutionFiles,
   updateWorkshopSolutionFile,
 } from "@/lib/actions";
+
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
+
 import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
 
-export function WorkshopSolutionsTab(props: WorkshopFileTabProps) {
+export const WorkshopSolutionsTab = (props: WorkshopFileTabProps) => {
   return (
     <WorkshopCollectionTab
       {...props}
@@ -20,4 +22,4 @@ export function WorkshopSolutionsTab(props: WorkshopFileTabProps) {
       updateFile={updateWorkshopSolutionFile}
     />
   );
-}
+};

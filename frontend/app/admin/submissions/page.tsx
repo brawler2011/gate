@@ -1,6 +1,8 @@
-import { Suspense } from "react";
-import { AdminSubmissionsContent } from "@/components/admin";
 import { Container, Skeleton, Stack } from "@mantine/core";
+import { Suspense } from "react";
+
+import { AdminSubmissionsContent } from "@/components/admin";
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,7 +11,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-function AdminSubmissionsContentSkeleton() {
+const AdminSubmissionsContentSkeleton = () => {
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
@@ -25,7 +27,7 @@ function AdminSubmissionsContentSkeleton() {
       </Stack>
     </Container>
   );
-}
+};
 
 type PageProps = {
   searchParams: Promise<{
@@ -33,7 +35,7 @@ type PageProps = {
   }>;
 };
 
-export default async function AdminSubmissionsPage({ searchParams }: PageProps) {
+const AdminSubmissionsPage = async ({ searchParams }: PageProps) => {
   const resolvedSearchParams = await searchParams;
   const page = Number(resolvedSearchParams.page) || 1;
 
@@ -42,4 +44,6 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
       <AdminSubmissionsContent page={page} />
     </Suspense>
   );
-}
+};
+
+export default AdminSubmissionsPage;

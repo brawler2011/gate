@@ -1,12 +1,13 @@
 "use client";
-import type { OrganizationModel } from '@contracts/core/v1';
 import { Card, Text, Title, Group } from '@mantine/core';
 import { IconBuilding } from '@tabler/icons-react';
 import Link from 'next/link';
 
+import type { OrganizationModel } from '@contracts/core/v1';
+
 type Props = { org: OrganizationModel };
 
-export function OrgCard({ org }: Props) {
+export const OrgCard = ({ org }: Props) => {
   return (
     <Card component={Link} href={`/orgs/${org.id}`} withBorder radius="md" padding="md">
       <Group mb="xs" gap="xs">
@@ -21,4 +22,4 @@ export function OrgCard({ org }: Props) {
       </Text>
     </Card>
   );
-}
+};

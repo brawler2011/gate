@@ -1,13 +1,5 @@
 "use client";
 
-import { ProblemCard } from "@/components/problems/ProblemCard";
-import { NextPagination } from "@/components/shared/Pagination";
-import { CreateProblemModal } from "@/components/workshop/CreateProblemModal";
-import type {
-  OrganizationModel,
-  PaginationModel,
-  ProblemsListItemModel,
-} from "@contracts/core/v1";
 import {
   Button,
   Center,
@@ -20,6 +12,16 @@ import {
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 
+import { ProblemCard } from "@/components/problems/ProblemCard";
+import { NextPagination } from "@/components/shared/Pagination";
+import { CreateProblemModal } from "@/components/workshop/CreateProblemModal";
+
+import type {
+  OrganizationModel,
+  PaginationModel,
+  ProblemsListItemModel,
+} from "@contracts/core/v1";
+
 type Props = {
   problems: ProblemsListItemModel[];
   pagination: PaginationModel;
@@ -27,12 +29,12 @@ type Props = {
   isAuthenticated: boolean;
 };
 
-export function OrgProblemsTab({
+export const OrgProblemsTab = ({
   problems,
   pagination,
   org,
   isAuthenticated,
-}: Props) {
+}: Props) => {
   const [searchValue, setSearchValue] = useState("");
   const [createOpened, setCreateOpened] = useState(false);
 
@@ -106,4 +108,4 @@ export function OrgProblemsTab({
       />
     </Stack>
   );
-}
+};

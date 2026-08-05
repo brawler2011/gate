@@ -1,11 +1,14 @@
+
+import { notFound } from "next/navigation";
+
 import { DefaultLayout } from '@/components/shared';
-import { Profile } from '@/components/users/Profile';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
+import { Profile } from '@/components/users/Profile';
 import { getUser, getUserContests } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { isValidUUIDV4 } from "@/lib/lib";
-import { Metadata } from "next";
-import { notFound } from "next/navigation";
+
+import type { Metadata } from "next";
 
 type Props = {
   params: Promise<{ user_id: string }>;
@@ -43,7 +46,9 @@ const Page = async ({ params, searchParams }: Props) => {
     getUserContests(user_id, contestsPageNum, 10),
   ]);
 
-  if (userError) return <ErrorDisplay error={userError} />;
+  if (userError) {
+    return <ErrorDisplay error={userError} />;
+  }
 
   const user = userData!.user;
 

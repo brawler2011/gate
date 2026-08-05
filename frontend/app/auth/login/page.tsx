@@ -20,9 +20,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+
 import { loginAction } from "@lib/auth-actions";
 
-export default function LoginPage() {
+const LoginPage = () => {
   return (
     <Suspense
       fallback={
@@ -34,9 +35,9 @@ export default function LoginPage() {
       <LoginPageContent />
     </Suspense>
   );
-}
+};
 
-function LoginPageContent() {
+const LoginPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("return_to") || "/";
@@ -170,4 +171,6 @@ function LoginPageContent() {
       </Stack>
     </Box>
   );
-}
+};
+
+export default LoginPage;

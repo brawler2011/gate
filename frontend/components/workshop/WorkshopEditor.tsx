@@ -3,6 +3,7 @@
 import { Stack } from "@mantine/core";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
+
 import { WorkshopCheckersTab } from "./WorkshopCheckersTab";
 import classes from "./WorkshopEditor.module.css";
 import { WorkshopGeneralTab } from "./WorkshopGeneralTab";
@@ -26,7 +27,7 @@ const STATEMENT_TAB = "statement";
 const PACKAGES_TAB = "packages";
 const IMPORT_TAB = "import";
 
-export function WorkshopEditor({ problemId, activeTab }: Props) {
+export const WorkshopEditor = ({ problemId, activeTab }: Props) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -79,22 +80,28 @@ export function WorkshopEditor({ problemId, activeTab }: Props) {
     }
   };
 
+  const renderTabContent = () => {
+    if (activeTab === GENERAL_TAB) {
+      return <WorkshopGeneralTab problemId={problemId} />;
+    }
+    if (activeTab === STATEMENT_TAB) {
+      return <WorkshopStatementTab problemId={problemId} />;
+    }
+    if (activeTab === PACKAGES_TAB) {
+      return <WorkshopPackagesTab problemId={problemId} />;
+    }
+    if (activeTab === IMPORT_TAB) {
+      return <WorkshopImportTab problemId={problemId} />;
+    }
+    return renderFolderTab();
+  };
+
   return (
     <Stack gap={0} className={classes.root}>
       {/* Tab content */}
       <Stack gap={0} className={classes.content}>
-        {activeTab === GENERAL_TAB ? (
-          <WorkshopGeneralTab problemId={problemId} />
-        ) : activeTab === STATEMENT_TAB ? (
-          <WorkshopStatementTab problemId={problemId} />
-        ) : activeTab === PACKAGES_TAB ? (
-          <WorkshopPackagesTab problemId={problemId} />
-        ) : activeTab === IMPORT_TAB ? (
-          <WorkshopImportTab problemId={problemId} />
-        ) : (
-          renderFolderTab()
-        )}
+        {renderTabContent()}
       </Stack>
     </Stack>
   );
-}
+};

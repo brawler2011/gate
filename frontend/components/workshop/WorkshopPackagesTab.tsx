@@ -1,7 +1,5 @@
 "use client";
 
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { listProblemPackages, publishProblem } from "@/lib/actions";
 import {
   Badge,
   Box,
@@ -14,6 +12,9 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useCallback, useEffect, useState, useTransition } from "react";
+
+import { SectionPaper } from "@/components/workshop/SectionPaper";
+import { listProblemPackages, publishProblem } from "@/lib/actions";
 
 type PackageItem = {
   id?: string;
@@ -28,7 +29,7 @@ type Props = {
   problemId: string;
 };
 
-function StatusBadge({ status }: { status?: string }) {
+const StatusBadge = ({ status }: { status?: string }) => {
   const map: Record<string, { color: string; label: string }> = {
     ready: { color: "green", label: "Готов" },
     building: { color: "blue", label: "Сборка" },
@@ -41,13 +42,17 @@ function StatusBadge({ status }: { status?: string }) {
       {info.label}
     </Badge>
   );
-}
+};
 
 function formatDateTime(iso?: string) {
-  if (!iso) return "—";
+  if (!iso) {
+    return "—";
+  }
   try {
     const d = new Date(iso);
-    if (isNaN(d.getTime())) return "—";
+    if (isNaN(d.getTime())) {
+      return "—";
+    }
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   } catch {
@@ -55,7 +60,7 @@ function formatDateTime(iso?: string) {
   }
 }
 
-export function WorkshopPackagesTab({ problemId }: Props) {
+export const WorkshopPackagesTab = ({ problemId }: Props) => {
   const [isBuilding, startBuilding] = useTransition();
   const [packages, setPackages] = useState<PackageItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +92,7 @@ export function WorkshopPackagesTab({ problemId }: Props) {
       notifications.show({
         title: "Пакет собран",
         message:
-          data?.version != null
+          data?.version !== null && data?.version !== undefined
             ? `Версия пакета: v${data.version}`
             : "Пакет успешно собран",
         color: "green",
@@ -115,15 +120,17 @@ export function WorkshopPackagesTab({ problemId }: Props) {
         </SectionPaper>
 
         <SectionPaper title="История сборок">
-          {loading ? (
+          {loading && (
             <Group justify="center" py="md">
               <Loader size="sm" />
             </Group>
-          ) : packages.length === 0 ? (
+          )}
+          {!loading && packages.length === 0 && (
             <Text size="sm" c="dimmed">
               Пакеты ещё не собирались.
             </Text>
-          ) : (
+          )}
+          {!loading && packages.length > 0 && (
             <Table striped highlightOnHover withTableBorder withColumnBorders>
               <Table.Thead>
                 <Table.Tr>
@@ -161,4 +168,4 @@ export function WorkshopPackagesTab({ problemId }: Props) {
       </Stack>
     </Box>
   );
-}
+};

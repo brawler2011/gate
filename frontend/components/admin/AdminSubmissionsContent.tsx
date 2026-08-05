@@ -12,18 +12,22 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import type { SubmissionModel } from "@contracts/core/v1";
+import Link from "next/link";
+import useSWR from "swr";
+
 import { NextPagination } from '@/components/shared/Pagination';
 import { LangString, StateColor, StateString, TimeBeautify } from "@/lib/lib";
-import useSWR from "swr";
-import Link from "next/link";
+
+
 import classes from "./AdminPage.module.css";
+
+import type { SubmissionModel } from "@contracts/core/v1";
 
 type AdminSubmissionsContentProps = {
   page: number;
 };
 
-export function AdminSubmissionsContent({ page }: AdminSubmissionsContentProps) {
+export const AdminSubmissionsContent = ({ page }: AdminSubmissionsContentProps) => {
   const { data, error, isLoading } = useSWR(
     `/api/submissions?page=${page}&pageSize=10`,
     async (url) => {
@@ -61,7 +65,7 @@ export function AdminSubmissionsContent({ page }: AdminSubmissionsContentProps) 
           <Title order={3}>Посылки</Title>
         </Group>
 
-        {isLoading ? (
+        {isLoading && (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
@@ -69,11 +73,13 @@ export function AdminSubmissionsContent({ page }: AdminSubmissionsContentProps) 
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
           </Stack>
-        ) : submissions.length === 0 ? (
+        )}
+        {!isLoading && submissions.length === 0 && (
           <Center py="xl">
             <Text c="dimmed">Посылки не найдены</Text>
           </Center>
-        ) : (
+        )}
+        {!isLoading && submissions.length > 0 && (
           <>
             <Box className={classes.tableContainer}>
               <Table className={classes.table} verticalSpacing="xs">
@@ -160,4 +166,4 @@ export function AdminSubmissionsContent({ page }: AdminSubmissionsContentProps) 
       </Stack>
     </Container>
   );
-}
+};

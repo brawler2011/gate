@@ -1,11 +1,13 @@
 "use client";
 
-import { createContest } from "@/lib/actions";
-import type { OrganizationModel } from "@contracts/core/v1";
 import { Button, Modal, Select, Stack, TextInput } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+import { createContest } from "@/lib/actions";
+
+import type { OrganizationModel } from "@contracts/core/v1";
 
 type Props = {
   opened: boolean;
@@ -15,13 +17,13 @@ type Props = {
   lockOrganization?: boolean;
 };
 
-export function CreateContestModal({
+export const CreateContestModal = ({
   opened,
   onClose,
   orgs,
   defaultOrgId,
   lockOrganization = false,
-}: Props) {
+}: Props) => {
   const router = useRouter();
   const [title, setTitle] = useState("New Contest");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
@@ -40,7 +42,9 @@ export function CreateContestModal({
   const orgData = orgs.map((o) => ({ value: o.id, label: o.name }));
 
   const handleSubmit = async () => {
-    if (!orgId) return;
+    if (!orgId) {
+      return;
+    }
 
     setLoading(true);
     try {
@@ -48,8 +52,12 @@ export function CreateContestModal({
         title.trim() || "New Contest",
         orgId,
       );
-      if (error) throw new Error(error.message);
-      if (!response?.id) throw new Error("Не получен ID контеста");
+      if (error) {
+        throw new Error(error.message);
+      }
+      if (!response?.id) {
+        throw new Error("Не получен ID контеста");
+      }
       onClose();
       router.push(`/contests/${response.id}`);
     } catch (err) {
@@ -104,4 +112,4 @@ export function CreateContestModal({
       </Stack>
     </Modal>
   );
-}
+};

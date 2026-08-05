@@ -1,17 +1,19 @@
 "use client";
 
+import { Button, Center, Group, Input, Stack, Text } from "@mantine/core";
+import { IconPlus, IconSearch } from "@tabler/icons-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import { ContestsTable } from "@/components/contests/ContestsTable";
 import { NextPagination } from "@/components/shared/Pagination";
 import { CreateContestModal } from "@/components/workshop/CreateContestModal";
+
 import type {
   ContestModel,
   OrganizationModel,
   PaginationModel,
 } from "@contracts/core/v1";
-import { Button, Center, Group, Input, Stack, Text } from "@mantine/core";
-import { IconPlus, IconSearch } from "@tabler/icons-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
 
 type Props = {
   contests: ContestModel[];
@@ -21,13 +23,13 @@ type Props = {
   search?: string;
 };
 
-export function OrgContestsTab({
+export const OrgContestsTab = ({
   contests,
   pagination,
   org,
   isAuthenticated,
   search = "",
-}: Props) {
+}: Props) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
@@ -131,4 +133,4 @@ export function OrgContestsTab({
       />
     </Stack>
   );
-}
+};

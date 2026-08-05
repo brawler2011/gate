@@ -1,5 +1,6 @@
 import { Container, Title, Text, Button, Stack, Paper } from "@mantine/core";
 import Link from "next/link";
+
 import type { Metadata } from "next";
 
 // Next.js 15 автоматически кэширует not-found.tsx при билде
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
   robots: 'noindex, nofollow',
 };
 
-export default function NotFound() {
+const NotFound = () => {
   return (
     <Container size="sm" py="xl">
       <Paper p="xl" radius="md" withBorder>
@@ -31,5 +32,7 @@ export default function NotFound() {
       </Paper>
     </Container>
   );
-}
+};
 
+
+export default NotFound;

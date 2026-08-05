@@ -1,7 +1,7 @@
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://gate149.ru'
+  const baseUrl = 'https://gate149.ru';
   
   return [
     {
@@ -16,5 +16,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.3,
     }
-  ]
+  ];
 }

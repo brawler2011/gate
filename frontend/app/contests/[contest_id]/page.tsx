@@ -1,5 +1,16 @@
-import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
+import {
+  AppShellFooter,
+  AppShellHeader,
+  AppShellMain,
+  Box,
+  Center,
+  Container,
+  Stack,
+  Text,
+} from "@mantine/core";
+
 import { ContestCountdown } from "@/components/contests/ContestCountdown";
+import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
 import { Layout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { Footer } from "@/components/shared/Footer";
@@ -13,23 +24,16 @@ import {
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import { PermissionChecker } from "@/lib/permissions";
+
+import classes from "./contestLayout.module.css";
+import { ContestProblemsTable } from "./ContestProblemsTable";
+
 import type {
   ContestModel,
   ContestProblemListItemModel,
 } from "@contracts/core/v1";
-import {
-  AppShellFooter,
-  AppShellHeader,
-  AppShellMain,
-  Box,
-  Center,
-  Container,
-  Stack,
-  Text,
-} from "@mantine/core";
-import { Metadata } from "next";
-import classes from "./contestLayout.module.css";
-import { ContestProblemsTable } from "./ContestProblemsTable";
+import type { Metadata } from "next";
+
 
 type Props = {
   params: Promise<{ contest_id: string }>;
@@ -105,12 +109,13 @@ const Contest = ({
                 style={{ maxWidth: "100%" }}
               >
                 {/* Tasks Section */}
-                {showCountdown ? (
+                {showCountdown && (
                   <ContestCountdown
                     startTime={contest.start_time!}
                     title={contest.title}
                   />
-                ) : problems.length === 0 ? (
+                )}
+                {!showCountdown && problems.length === 0 && (
                   <Center py={{ base: "xl", md: "3xl" }}>
                     <Stack gap="md" align="center">
                       <Box component="div" style={{ fontSize: "2.5rem" }}>
@@ -121,7 +126,8 @@ const Contest = ({
                       </Text>
                     </Stack>
                   </Center>
-                ) : (
+                )}
+                {!showCountdown && problems.length > 0 && (
                   <ContestProblemsTable
                     contestId={contest.id}
                     problems={problems}
@@ -144,7 +150,9 @@ const Page = async ({ params }: Props) => {
   const { contest_id } = await params;
 
   const [error, response] = await getContest(contest_id);
-  if (error) return <ErrorDisplay error={error} />;
+  if (error) {
+    return <ErrorDisplay error={error} />;
+  }
 
   // Get user and contest role for permissions
   const user = await getCurrentUser();

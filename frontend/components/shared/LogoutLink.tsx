@@ -1,10 +1,12 @@
 "use client";
 
-import type { ButtonProps } from "@mantine/core";
 import { Button } from "@mantine/core";
-import type { ReactNode } from "react";
 import { useState } from "react";
+
 import { logoutAction } from "@lib/auth-actions";
+
+import type { ButtonProps } from "@mantine/core";
+import type { ReactNode } from "react";
 
 type LogoutLinkProps = ButtonProps & { children?: ReactNode };
 

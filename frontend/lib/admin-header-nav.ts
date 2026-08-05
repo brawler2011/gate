@@ -10,11 +10,21 @@ export type AdminHeaderNavKey =
 
 export function buildAdminHeaderNav(pathname: string): HeaderSecondaryNavItem[] {
   const getActiveTab = (path: string): AdminHeaderNavKey => {
-    if (path.includes("/admin/contests")) return "contests";
-    if (path.includes("/admin/blogs")) return "blogs";
-    if (path.includes("/admin/orgs")) return "orgs";
-    if (path.includes("/admin/problems")) return "problems";
-    if (path.includes("/admin/submissions")) return "submissions";
+    if (path.includes("/admin/contests")) {
+      return "contests";
+    }
+    if (path.includes("/admin/blogs")) {
+      return "blogs";
+    }
+    if (path.includes("/admin/orgs")) {
+      return "orgs";
+    }
+    if (path.includes("/admin/problems")) {
+      return "problems";
+    }
+    if (path.includes("/admin/submissions")) {
+      return "submissions";
+    }
     return "users";
   };
 

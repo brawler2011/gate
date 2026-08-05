@@ -5,7 +5,7 @@ import { IconSearch } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-export function AdminBlogsSearchInput() {
+export const AdminBlogsSearchInput = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
@@ -71,7 +71,7 @@ export function AdminBlogsSearchInput() {
       style={{ maxWidth: 400 }}
     />
   );
-}
+};
 
 
 

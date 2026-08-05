@@ -1,12 +1,13 @@
 import { Container, Title, Text, Button, Stack, Paper } from "@mantine/core";
-import { Metadata } from "next";
 import Link from "next/link";
+
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Доступ запрещен",
 };
 
-export default function ForbiddenPage() {
+const ForbiddenPage = () => {
   return (
     <Container size="sm" py="xl">
       <Paper p="xl" radius="md" withBorder>
@@ -27,4 +28,6 @@ export default function ForbiddenPage() {
       </Paper>
     </Container>
   );
-}
+};
+
+export default ForbiddenPage;

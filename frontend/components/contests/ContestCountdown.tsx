@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Paper, Text, Group, Stack, Title } from "@mantine/core";
+import { useEffect, useState } from "react";
+
 import { APP_COLORS } from "@/lib/theme/colors";
 
 interface ContestCountdownProps {
@@ -9,7 +10,7 @@ interface ContestCountdownProps {
   title: string;
 }
 
-export function ContestCountdown({ startTime, title }: ContestCountdownProps) {
+export const ContestCountdown = ({ startTime, title }: ContestCountdownProps) => {
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
     hours: number;
@@ -48,7 +49,9 @@ export function ContestCountdown({ startTime, title }: ContestCountdownProps) {
     return () => clearInterval(timer);
   }, [startTime]);
 
-  if (!timeLeft) return null;
+  if (!timeLeft) {
+    return null;
+  }
 
   const pad = (num: number) => num.toString().padStart(2, "0");
 
@@ -102,14 +105,14 @@ export function ContestCountdown({ startTime, title }: ContestCountdownProps) {
       </Stack>
     </Paper>
   );
-}
+};
 
 interface TimeBlockProps {
   value: string;
   label: string;
 }
 
-function TimeBlock({ value, label }: TimeBlockProps) {
+const TimeBlock = ({ value, label }: TimeBlockProps) => {
   return (
     <Stack gap={4} align="center" style={{ minWidth: "60px" }}>
       <Paper
@@ -134,12 +137,12 @@ function TimeBlock({ value, label }: TimeBlockProps) {
       </Text>
     </Stack>
   );
-}
+};
 
-function Colon() {
+const Colon = () => {
   return (
     <Text size="2rem" fw={700} c="dimmed" style={{ lineHeight: 1, marginTop: "-20px" }}>
       :
     </Text>
   );
-}
+};

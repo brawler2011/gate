@@ -1,12 +1,17 @@
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
+import { Inter } from "next/font/google";
+
+import { Providers } from "./providers";
+
+import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
+
+
+
 import "@mantine/core/styles.css";
 import "@mantine/dropzone/styles.css";
 import "@mantine/notifications/styles.css";
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import type { ReactNode } from "react";
 import "./globals.css";
-import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,7 +28,7 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+const RootLayout = ({ children }: { children: ReactNode }) => {
   return (
     <html lang="ru" className={inter.className} {...mantineHtmlProps}>
       <head>
@@ -34,4 +39,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </body>
     </html>
   );
-}
+};
+
+export default RootLayout;

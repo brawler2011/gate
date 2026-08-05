@@ -1,12 +1,13 @@
 "use client";
 
+import { Box, Button, Stack } from "@mantine/core";
+import Link from "next/link";
+
 import {
   getOrgSettingsIcon,
   getOrgSettingsNavTabStyles,
   type OrgSettingsNavSection,
 } from "@/components/orgs/OrgSettingsNavShared";
-import { Box, Button, Stack } from "@mantine/core";
-import Link from "next/link";
 
 interface OrgSettingsSidebarNavProps {
   orgId: string;
@@ -14,11 +15,11 @@ interface OrgSettingsSidebarNavProps {
   sections: readonly OrgSettingsNavSection[];
 }
 
-export function OrgSettingsSidebarNav({
+export const OrgSettingsSidebarNav = ({
   orgId,
   activeSection,
   sections,
-}: OrgSettingsSidebarNavProps) {
+}: OrgSettingsSidebarNavProps) => {
   return (
     <Box
       style={{
@@ -53,4 +54,4 @@ export function OrgSettingsSidebarNav({
       </Stack>
     </Box>
   );
-}
+};

@@ -1,6 +1,7 @@
 "use client";
 
 import { Paper, Stack, Text } from "@mantine/core";
+
 import type { ReactNode } from "react";
 
 type Props = {
@@ -8,7 +9,7 @@ type Props = {
   children: ReactNode;
 };
 
-export function SectionPaper({ title, children }: Props) {
+export const SectionPaper = ({ title, children }: Props) => {
   return (
     <Paper
       withBorder
@@ -26,4 +27,4 @@ export function SectionPaper({ title, children }: Props) {
       </Stack>
     </Paper>
   );
-}
+};

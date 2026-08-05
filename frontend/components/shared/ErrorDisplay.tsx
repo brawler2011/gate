@@ -3,8 +3,10 @@
 import { Container, Title, Text, Button, Stack, Paper, Code, Group } from "@mantine/core";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ApiError } from "@/lib/api";
+
 import { RefreshButton } from "./RefreshButton";
+
+import type { ApiError } from "@/lib/api";
 
 type Props = {
   error: ApiError;
@@ -40,13 +42,17 @@ function getErrorDisplay(status: number): { title: string; description: string }
   }
 }
 
-export function ErrorDisplay({ error }: Props) {
+export const ErrorDisplay = ({ error }: Props) => {
   const display = getErrorDisplay(error.status);
   const pathname = usePathname();
   const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const returnUrl = pathname && pathname !== '/' && !pathname.startsWith('/auth') 
-    ? (isLocalhost ? `${window.location.origin}${pathname}` : pathname) 
-    : null;
+  const getReturnUrl = () => {
+    if (!pathname || pathname === '/' || pathname.startsWith('/auth')) {
+      return null;
+    }
+    return isLocalhost ? `${window.location.origin}${pathname}` : pathname;
+  };
+  const returnUrl = getReturnUrl();
   const returnTo = returnUrl ? `?return_to=${encodeURIComponent(returnUrl)}` : '';
 
   return (
@@ -83,5 +89,5 @@ export function ErrorDisplay({ error }: Props) {
       </Paper>
     </Container>
   );
-}
+};
 

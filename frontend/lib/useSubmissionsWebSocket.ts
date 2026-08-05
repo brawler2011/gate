@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import type { SubmissionsListItemModel } from '@contracts/core/v1';
 import { notifications } from '@mantine/notifications';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+
 import {
   SubmissionsEventType,
   type SubmissionsMessage,
@@ -13,8 +13,11 @@ import {
   type MessageSubmissionTestStarted,
   type MessageSubmissionCompleted,
 } from '@contracts/observer/v1';
-import { submissionsWsManager, type WsManagerStatus } from './submissionsWsManager';
+
 import { getSubmissions, getMySubmissions } from './actions';
+import { submissionsWsManager, type WsManagerStatus } from './submissionsWsManager';
+
+import type { SubmissionsListItemModel } from '@contracts/core/v1';
 
 // Progress info for a submission being tested
 export interface TestProgress {
@@ -219,7 +222,12 @@ export function useSubmissionsWebSocket({
     const prevPhase = prevDisplayWsPhaseRef.current;
     const wsNotificationId = wsNotificationIdRef.current;
 
-    const showOrUpdateNotification = (params: { title: string; message: string; color: string; autoClose: number | false }) => {
+    const showOrUpdateNotification = (params: {
+      title: string;
+      message: string;
+      color: string;
+      autoClose: number | false;
+    }) => {
       if (wsNotificationVisibleRef.current) {
         notifications.update({
           id: wsNotificationId,
@@ -323,8 +331,12 @@ export function useSubmissionsWebSocket({
     const url = new URL(wsUrl);
     url.searchParams.set('since', String(sinceState ?? 0));
     url.searchParams.set('sortOrder', 'desc');
-    if (filter.contestId) url.searchParams.set('contestId', filter.contestId);
-    if (filter.userId) url.searchParams.set('userId', filter.userId);
+    if (filter.contestId) {
+      url.searchParams.set('contestId', filter.contestId);
+    }
+    if (filter.userId) {
+      url.searchParams.set('userId', filter.userId);
+    }
     return url.toString();
   }, [wsUrl, sinceState, filter.contestId, filter.userId]);
 
@@ -378,7 +390,10 @@ export function useSubmissionsWebSocket({
     const data = asMessage(event);
     if (!data) {
       const now = Date.now();
-      if (invalidPayloadWindowStartRef.current === 0 || now - invalidPayloadWindowStartRef.current > INVALID_PAYLOAD_WINDOW_MS) {
+      if (
+        invalidPayloadWindowStartRef.current === 0 ||
+        now - invalidPayloadWindowStartRef.current > INVALID_PAYLOAD_WINDOW_MS
+      ) {
         invalidPayloadWindowStartRef.current = now;
         invalidPayloadCountRef.current = 0;
       }
@@ -432,7 +447,11 @@ export function useSubmissionsWebSocket({
       case SubmissionsEventType.SUBMISSIONS_QUEUED:
       case SubmissionsEventType.SUBMISSIONS_COMPILING_STARTED:
       case SubmissionsEventType.SUBMISSIONS_TESTING_STARTED: {
-        const p = data.payload as MessageSubmissionQueued | MessageSubmissionCompilingStarted | MessageSubmissionTestingStarted;
+        type QueuedUnion =
+          | MessageSubmissionQueued
+          | MessageSubmissionCompilingStarted
+          | MessageSubmissionTestingStarted;
+        const p = data.payload as QueuedUnion;
         let phase: TestProgress['phase'];
         if (data.event_type === SubmissionsEventType.SUBMISSIONS_QUEUED) {
           phase = 'queued';

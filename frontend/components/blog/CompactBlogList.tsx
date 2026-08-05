@@ -3,7 +3,9 @@
 import { Stack, Text, Card, Title, Button, Group, Box } from "@mantine/core";
 import { IconChevronRight, IconNews } from "@tabler/icons-react";
 import Link from "next/link";
+
 import { formatDate } from "@/lib/formatDate";
+
 import type { PostModel } from "@contracts/core/v1";
 
 type CompactBlogListProps = {
@@ -11,7 +13,7 @@ type CompactBlogListProps = {
   error?: boolean;
 };
 
-export function CompactBlogList({ posts, error }: CompactBlogListProps) {
+export const CompactBlogList = ({ posts, error }: CompactBlogListProps) => {
   if (error) {
     return <Text size="sm" c="red">Не удалось загрузить посты</Text>;
   }
@@ -106,4 +108,4 @@ export function CompactBlogList({ posts, error }: CompactBlogListProps) {
       </Button>
     </Card>
   );
-}
+};

@@ -11,20 +11,20 @@ type Props = {
   onConfirm: (deleteTests: boolean) => void;
 };
 
-export function SubtaskDeleteModal({
+export const SubtaskDeleteModal = ({
   opened,
   onClose,
   subtaskName,
   testCount,
   onConfirm,
-}: Props) {
+}: Props) => {
   const [deleteTests, setDeleteTests] = useState<"keep" | "delete">("keep");
 
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title={<Text fw={600}>Удаление сабтаска "{subtaskName}"</Text>}
+      title={<Text fw={600}>Удаление сабтаска &quot;{subtaskName}&quot;</Text>}
       size="md"
     >
       <Stack gap="md">
@@ -74,4 +74,4 @@ export function SubtaskDeleteModal({
       </Stack>
     </Modal>
   );
-}
+};

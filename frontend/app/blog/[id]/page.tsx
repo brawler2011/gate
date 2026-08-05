@@ -1,15 +1,18 @@
+import { Avatar, Container, Group, Stack, Text, Title } from "@mantine/core";
+import { notFound } from "next/navigation";
+import ReactMarkdown from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+
 import { DefaultLayout } from '@/components/shared';
 import { getPostByIdPublic, listPostsPublic } from "@/lib/actions";
 import { formatDate } from "@/lib/formatDate";
-import { Avatar, Container, Group, Stack, Text, Title } from "@mantine/core";
-import { Metadata } from "next";
-import { notFound } from "next/navigation";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
+
 import 'katex/dist/katex.min.css';
 import classes from "./styles.module.css";
+
+import type { Metadata } from "next";
 
 // Revalidate cache every 10 minutes
 export const revalidate = 600;
@@ -21,7 +24,9 @@ type Props = {
 export async function generateStaticParams() {
   try {
     const [error, postsData] = await listPostsPublic(1, 50);
-    if (error || !postsData || !postsData.posts) return [];
+    if (error || !postsData || !postsData.posts) {
+      return [];
+    }
     return postsData.posts
       .filter((post) => post.id !== undefined && post.id !== null)
       .map((post) => ({
@@ -49,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function BlogPostPage({ params }: Props) {
+const BlogPostPage = async ({ params }: Props) => {
   const { id } = await params;
   const [error, post] = await getPostByIdPublic(id);
 
@@ -101,4 +106,6 @@ export default async function BlogPostPage({ params }: Props) {
       </Container>
     </DefaultLayout>
   );
-}
+};
+
+export default BlogPostPage;

@@ -1,6 +1,5 @@
 "use client";
 
-import { addTeamMember, listTeamMembers, removeTeamMember, searchUsers } from '@/lib/actions';
 import {
   ActionIcon,
   Autocomplete,
@@ -17,12 +16,15 @@ import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconPlus, IconTrash, IconUsers } from '@tabler/icons-react';
 import { useCallback, useEffect, useState } from 'react';
-import type { TeamMemberModel } from '@contracts/core/v1';
+
 import { StatusMessage } from '@/components/shared/StatusMessage';
+import { addTeamMember, listTeamMembers, removeTeamMember, searchUsers } from '@/lib/actions';
+
+import type { TeamMemberModel } from '@contracts/core/v1';
 
 type Props = { teamId: string };
 
-export function TeamMembersManagement({ teamId }: Props) {
+export const TeamMembersManagement = ({ teamId }: Props) => {
   const [members, setMembers] = useState<TeamMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,13 +40,19 @@ export function TeamMembersManagement({ teamId }: Props) {
     setLoading(true);
     const [, data] = await listTeamMembers(teamId, 1, 100);
     setLoading(false);
-    if (data) setMembers(data.members);
+    if (data) {
+      setMembers(data.members);
+    }
   }, [teamId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load(); 
+  }, [load]);
 
   useEffect(() => {
-    if (!debouncedQuery || debouncedQuery.length < 2) { setSearchResults([]); return; }
+    if (!debouncedQuery || debouncedQuery.length < 2) {
+      setSearchResults([]); return; 
+    }
     setSearching(true);
     searchUsers(debouncedQuery).then(([, data]) => {
       setSearching(false);
@@ -53,7 +61,9 @@ export function TeamMembersManagement({ teamId }: Props) {
   }, [debouncedQuery]);
 
   const handleAdd = async () => {
-    if (!selectedUserId) return;
+    if (!selectedUserId) {
+      return;
+    }
     setAdding(true);
     const [error] = await addTeamMember(teamId, selectedUserId);
     setAdding(false);
@@ -89,7 +99,9 @@ export function TeamMembersManagement({ teamId }: Props) {
             <Autocomplete
               placeholder="Поиск пользователя..."
               value={searchQuery}
-              onChange={(v) => { setSearchQuery(v); setSelectedUserId(null); }}
+              onChange={(v) => {
+                setSearchQuery(v); setSelectedUserId(null); 
+              }}
               onOptionSubmit={(v) => {
                 setSelectedUserId(v);
                 setSearchQuery(searchResults.find((r) => r.value === v)?.label ?? v);
@@ -109,16 +121,18 @@ export function TeamMembersManagement({ teamId }: Props) {
           </Group>
         </Card>
 
-        {loading ? (
+        {loading && (
           <Center py="xl"><Loader /></Center>
-        ) : members.length === 0 ? (
+        )}
+        {!loading && members.length === 0 && (
           <Center py="xl">
             <Stack align="center" gap="sm">
               <IconUsers size={32} color="var(--mantine-color-dimmed)" />
               <Text size="sm" c="dimmed">Нет участников</Text>
             </Stack>
           </Center>
-        ) : (
+        )}
+        {!loading && members.length > 0 && (
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
@@ -162,4 +176,4 @@ export function TeamMembersManagement({ teamId }: Props) {
       />
     </>
   );
-}
+};

@@ -1,13 +1,6 @@
 "use client";
 
 import {
-  addContestMember,
-  getContestMembers,
-  removeContestMember,
-  searchUsers,
-  updateContestMemberRole,
-} from "@/lib/actions";
-import {
   ActionIcon,
   Autocomplete,
   Badge,
@@ -25,9 +18,19 @@ import { useDebouncedValue } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import type * as corev1 from "@contracts/core/v1";
-import { ChangeRoleModal } from "./ChangeRoleModal";
+
 import { StatusMessage } from '@/components/shared/StatusMessage';
+import {
+  addContestMember,
+  getContestMembers,
+  removeContestMember,
+  searchUsers,
+  updateContestMemberRole,
+} from "@/lib/actions";
+
+import { ChangeRoleModal } from "./ChangeRoleModal";
+
+import type * as corev1 from "@contracts/core/v1";
 
 const ROLE_OPTIONS = [
   { label: "Участник", value: "participant", color: "gray" },
@@ -44,7 +47,7 @@ interface ParticipantsSectionProps {
   contestId: string;
 }
 
-export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
+export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => {
   const [participants, setParticipants] = useState<corev1.ContestMemberModel[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -116,7 +119,9 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
   }, [debouncedQuery]);
 
   const handleAddParticipant = async () => {
-    if (!selectedUserId) return;
+    if (!selectedUserId) {
+      return;
+    }
 
     setAdding(true);
     const [error] = await addContestMember(contestId, selectedUserId);
@@ -183,7 +188,9 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
   };
 
   const handleChangeRole = async (newRole: string) => {
-    if (!editingParticipant) return;
+    if (!editingParticipant) {
+      return;
+    }
 
     const [error] = await updateContestMemberRole(
       contestId,
@@ -257,12 +264,12 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
           </Stack>
         </Card>
 
-        {/* Participants List */}
-        {loading ? (
+        {loading && (
           <Center py="xl">
             <Loader size="md" />
           </Center>
-        ) : participants.length === 0 ? (
+        )}
+        {!loading && participants.length === 0 && (
           <Center py="xl">
             <Stack align="center" gap="sm">
               <Text size="lg" c="dimmed">
@@ -273,7 +280,8 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
               </Text>
             </Stack>
           </Center>
-        ) : (
+        )}
+        {!loading && participants.length > 0 && (
           <Stack gap="md">
             <Table highlightOnHover>
               <Table.Thead>
@@ -363,4 +371,4 @@ export function ParticipantsSection({ contestId }: ParticipantsSectionProps) {
       />
     </>
   );
-}
+};

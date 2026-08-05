@@ -1,12 +1,13 @@
 "use client";
 
+import { Box, Button, Group } from "@mantine/core";
+import Link from "next/link";
+
 import {
   getOrgSettingsIcon,
   getOrgSettingsNavTabStyles,
   type OrgSettingsNavSection,
 } from "@/components/orgs/OrgSettingsNavShared";
-import { Box, Button, Group } from "@mantine/core";
-import Link from "next/link";
 
 interface OrgSettingsMobileNavProps {
   orgId: string;
@@ -14,11 +15,11 @@ interface OrgSettingsMobileNavProps {
   sections: readonly OrgSettingsNavSection[];
 }
 
-export function OrgSettingsMobileNav({
+export const OrgSettingsMobileNav = ({
   orgId,
   activeSection,
   sections,
-}: OrgSettingsMobileNavProps) {
+}: OrgSettingsMobileNavProps) => {
   return (
     <Box hiddenFrom="sm" style={{ width: "100%" }}>
       <Group gap="xs" mb="md">
@@ -45,4 +46,4 @@ export function OrgSettingsMobileNav({
       </Group>
     </Box>
   );
-}
+};

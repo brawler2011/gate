@@ -1,4 +1,7 @@
 import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
+
+import { DefaultLayoutClient } from "./Layout";
+
 import type {
   HeaderContest,
   HeaderOrganization,
@@ -6,7 +9,6 @@ import type {
 } from "@/components/shared/Header";
 import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
 import type { AppShellProps } from "@mantine/core";
-import { DefaultLayoutClient } from "./Layout";
 
 type DefaultLayoutProps = {
   children: React.ReactNode;
@@ -23,7 +25,7 @@ type DefaultLayoutProps = {
   paddingConfig?: AppShellProps["padding"];
 };
 
-export async function DefaultLayout({
+export const DefaultLayout = ({
   children,
   headerSecondaryNavItems,
   headerOrganizationId,
@@ -31,7 +33,7 @@ export async function DefaultLayout({
   headerContest,
   headerProblem,
   ...props
-}: DefaultLayoutProps) {
+}: DefaultLayoutProps) => {
   return (
     <DefaultLayoutClient
       {...props}
@@ -48,4 +50,4 @@ export async function DefaultLayout({
       {children}
     </DefaultLayoutClient>
   );
-}
+};

@@ -1,9 +1,12 @@
-import { DefaultLayout } from '@/components/shared';
-import { listPosts } from "@/lib/actions";
-import type { PaginationModel } from "@contracts/core/v1";
 import { Container, Group, Stack, Title } from "@mantine/core";
 import { IconNews } from "@tabler/icons-react";
+
 import { BlogList } from '@/components/blog/BlogList';
+import { DefaultLayout } from '@/components/shared';
+import { listPosts } from "@/lib/actions";
+
+import type { PaginationModel } from "@contracts/core/v1";
+
 
 export const metadata = {
   title: "Блог",
@@ -13,7 +16,7 @@ type PageProps = {
   searchParams: Promise<{ page?: string }>;
 };
 
-export default async function BlogPage({ searchParams }: PageProps) {
+const BlogPage = async ({ searchParams }: PageProps) => {
   // Get current page from query params, default to 1
   const params = await searchParams;
   const currentPage = parseInt(params?.page || "1", 10) || 1;
@@ -44,4 +47,6 @@ export default async function BlogPage({ searchParams }: PageProps) {
       </Container>
     </DefaultLayout>
   );
-}
+};
+
+export default BlogPage;

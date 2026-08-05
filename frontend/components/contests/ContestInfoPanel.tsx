@@ -1,8 +1,11 @@
-import type { SessionUser } from "@/lib/auth";
-import { CONTEST_INFO_PANEL_WIDTH } from "@/lib/constants";
-import type { ContestModel } from "@contracts/core/v1";
 import { Paper, Stack, Title } from "@mantine/core";
 import Link from "next/link";
+
+import { CONTEST_INFO_PANEL_WIDTH } from "@/lib/constants";
+
+import type { SessionUser } from "@/lib/auth";
+import type { ContestModel } from "@contracts/core/v1";
+
 
 type ContestInfoPanelProps = {
   contest: ContestModel;
@@ -15,11 +18,11 @@ type ContestInfoPanelProps = {
  * Shows contest name
  * Only visible for authenticated users, hidden on mobile
  */
-export function ContestInfoPanel({
+export const ContestInfoPanel = ({
   contest,
   user,
   width,
-}: ContestInfoPanelProps) {
+}: ContestInfoPanelProps) => {
   // Don't render for unauthenticated users
   if (!user) {
     return null;
@@ -57,4 +60,4 @@ export function ContestInfoPanel({
       </Stack>
     </Paper>
   );
-}
+};

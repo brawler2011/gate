@@ -20,9 +20,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+
 import { registerAction } from "@lib/auth-actions";
 
-export default function RegistrationPage() {
+const RegistrationPage = () => {
   return (
     <Suspense
       fallback={
@@ -34,9 +35,9 @@ export default function RegistrationPage() {
       <RegistrationPageContent />
     </Suspense>
   );
-}
+};
 
-function RegistrationPageContent() {
+const RegistrationPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("return_to") || "/";
@@ -182,4 +183,6 @@ function RegistrationPageContent() {
       </Stack>
     </Box>
   );
-}
+};
+
+export default RegistrationPage;

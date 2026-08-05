@@ -1,10 +1,11 @@
 "use client";
-import { useState } from 'react';
 import { Alert, Button, Modal, TextInput, Stack } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useRouter } from 'next/navigation';
-import { createOrganization } from '@/lib/actions';
 import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { createOrganization } from '@/lib/actions';
 
 const translateApiError = (message: string): string => {
   if (message.includes('at least one latin letter or digit')) {
@@ -19,7 +20,7 @@ const translateApiError = (message: string): string => {
   return message;
 };
 
-export function CreateOrgButton() {
+export const CreateOrgButton = () => {
   const [opened, { open, close }] = useDisclosure(false);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,7 +37,9 @@ export function CreateOrgButton() {
 
   const handleCreate = async () => {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
 
     if (trimmed.length < 3) {
       setNameError('Название должно содержать не менее 3 символов');
@@ -97,4 +100,4 @@ export function CreateOrgButton() {
       </Modal>
     </>
   );
-}
+};

@@ -5,7 +5,7 @@ import { IconSearch } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-export function AdminContestsSearchInput() {
+export const AdminContestsSearchInput = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
@@ -68,5 +68,5 @@ export function AdminContestsSearchInput() {
       style={{ maxWidth: 400 }}
     />
   );
-}
+};
 

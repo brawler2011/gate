@@ -1,8 +1,9 @@
 import { Container, Group, Skeleton, Stack } from "@mantine/core";
+
 import { UsersRoleFilter } from '@/components/users/UsersRoleFilter';
 import { UsersSearchInput } from '@/components/users/UsersSearchInput';
 
-export function UsersContentSkeleton() {
+export const UsersContentSkeleton = () => {
   return (
     <Container size="xl" py="xl">
       <Stack gap="lg">
@@ -19,5 +20,5 @@ export function UsersContentSkeleton() {
       </Stack>
     </Container>
   );
-}
+};
 

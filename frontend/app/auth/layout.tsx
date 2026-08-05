@@ -1,7 +1,8 @@
-import { PropsWithChildren } from "react"
-import { Stack } from "@mantine/core"
+import { Stack } from "@mantine/core";
 
-export default function AuthLayout({ children }: PropsWithChildren) {
+import type { PropsWithChildren } from "react";
+
+const AuthLayout = ({ children }: PropsWithChildren) => {
   return (
     <main style={{ 
       padding: 'var(--mantine-spacing-md)', 
@@ -18,5 +19,7 @@ export default function AuthLayout({ children }: PropsWithChildren) {
         {children}
       </Stack>
     </main>
-  )
-}
+  );
+};
+
+export default AuthLayout;

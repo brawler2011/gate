@@ -43,10 +43,14 @@ export function parseOrdinalsFromRanges(input: string): number[] {
         const from = Math.min(start, end);
         const to = Math.max(start, end);
         for (let i = from; i <= to; i++) {
-          if (i > 0) result.add(i);
+          if (i > 0) {
+            result.add(i);
+          }
         }
       } else if (!isNaN(start) && (endStr === "" || isNaN(end))) {
-        if (start > 0) result.add(start);
+        if (start > 0) {
+          result.add(start);
+        }
       }
     } else {
       const val = parseInt(part, 10);
@@ -60,7 +64,9 @@ export function parseOrdinalsFromRanges(input: string): number[] {
 }
 
 export function formatOrdinalsToRanges(ordinals: number[]): string {
-  if (!ordinals || ordinals.length === 0) return "";
+  if (!ordinals || ordinals.length === 0) {
+    return "";
+  }
   const sorted = Array.from(new Set(ordinals)).sort((a, b) => a - b);
   const ranges: string[] = [];
 

@@ -1,23 +1,5 @@
 "use client";
 
-import { submitSubmission } from "@/app/contests/[contest_id]/problems/[problem_id]/actions";
-import { Problem } from "@/components/problems/Problem";
-import { Layout } from "@/components/shared";
-import { Footer } from "@/components/shared/Footer";
-import { CreateSubmissionForm } from "@/components/submissions/CreateSubmissionForm";
-import { RecentSubmissionsTable } from "@/components/submissions/RecentSubmissionsTable";
-import type { SessionUser } from "@/lib/auth";
-import {
-  CONTEST_SIDEBAR_LEFT_WIDTH,
-  CONTEST_SIDEBAR_RIGHT_WIDTH,
-} from "@/lib/constants";
-import { numberToLetters } from "@/lib/lib";
-import type {
-  ContestModel,
-  ContestProblemListItemModel,
-  ContestProblemModel,
-  SubmissionsListItemModel,
-} from "@contracts/core/v1";
 import {
   AppShellFooter,
   AppShellHeader,
@@ -31,6 +13,26 @@ import {
 } from "@mantine/core";
 import Link from "next/link";
 import React from "react";
+
+import { submitSubmission } from "@/app/contests/[contest_id]/problems/[problem_id]/actions";
+import { Problem } from "@/components/problems/Problem";
+import { Layout } from "@/components/shared";
+import { Footer } from "@/components/shared/Footer";
+import { CreateSubmissionForm } from "@/components/submissions/CreateSubmissionForm";
+import { RecentSubmissionsTable } from "@/components/submissions/RecentSubmissionsTable";
+import {
+  CONTEST_SIDEBAR_LEFT_WIDTH,
+  CONTEST_SIDEBAR_RIGHT_WIDTH,
+} from "@/lib/constants";
+import { numberToLetters } from "@/lib/lib";
+
+import type { SessionUser } from "@/lib/auth";
+import type {
+  ContestModel,
+  ContestProblemListItemModel,
+  ContestProblemModel,
+  SubmissionsListItemModel,
+} from "@contracts/core/v1";
 
 type PageProps = {
   tasks: ContestProblemListItemModel[];

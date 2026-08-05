@@ -1,22 +1,26 @@
 "use client";
 
 import {
-    Loader,
-    Table,
-    TableTbody,
-    TableTd,
-    TableTh,
-    TableThead,
-    TableTr,
-    Text,
-    Transition,
-    TableScrollContainer,
+  Loader,
+  Table,
+  TableTbody,
+  TableTd,
+  TableTh,
+  TableThead,
+  TableTr,
+  Text,
+  Transition,
+  TableScrollContainer,
 } from "@mantine/core";
-import { LangString, ProblemTitle, StateColor, StateString, TimeBeautify } from "@/lib/lib";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import type { SubmissionWithProgress } from "@/lib/useSubmissionsWebSocket";
+
+import { LangString, ProblemTitle, StateColor, StateString, TimeBeautify } from "@/lib/lib";
+
 import styles from "./SubmissionsList.module.css";
+
+import type { SubmissionWithProgress } from "@/lib/useSubmissionsWebSocket";
+
 
 interface SubmissionsListProps {
     submissions: SubmissionWithProgress[];
@@ -28,40 +32,40 @@ interface VerdictCellProps {
 }
 
 const VerdictCell = ({ submission }: VerdictCellProps) => {
-    const { state, progress } = submission;
+  const { state, progress } = submission;
 
-    // State 1 = Saved (in queue, not yet testing)
-    if (state === 1 && !progress) {
-        return (
-            <div className={styles.queueText}>
-                <Loader size="xs" />
-                <span>В очереди...</span>
-            </div>
-        );
-    }
-
-    // Currently testing (has progress)
-    if (progress) {
-        const phaseLabels = {
-            queued: 'В очереди',
-            compiling: 'Компиляция',
-            testing: `Тест ${progress.testNumber}`
-        }
-        return (
-            <div className={styles.progressText}>
-                <Loader size="xs" />
-                <span>{phaseLabels[progress.phase]}</span>
-            </div>
-        );
-    }
-
-    // Final verdict
-    const stateString = StateString(state);
+  // State 1 = Saved (in queue, not yet testing)
+  if (state === 1 && !progress) {
     return (
-        <Text c={StateColor(state)} fw={500}>
-            {stateString === "UK" ? state : stateString}
-        </Text>
+      <div className={styles.queueText}>
+        <Loader size="xs" />
+        <span>В очереди...</span>
+      </div>
     );
+  }
+
+  // Currently testing (has progress)
+  if (progress) {
+    const phaseLabels = {
+      queued: 'В очереди',
+      compiling: 'Компиляция',
+      testing: `Тест ${progress.testNumber}`
+    };
+    return (
+      <div className={styles.progressText}>
+        <Loader size="xs" />
+        <span>{phaseLabels[progress.phase]}</span>
+      </div>
+    );
+  }
+
+  // Final verdict
+  const stateString = StateString(state);
+  return (
+    <Text c={StateColor(state)} fw={500}>
+      {stateString === "UK" ? state : stateString}
+    </Text>
+  );
 };
 
 interface SubmissionRowProps {
@@ -71,102 +75,102 @@ interface SubmissionRowProps {
 }
 
 const SubmissionRow = ({ submission, isHighlighted, isNew }: SubmissionRowProps) => {
-    const [mounted, setMounted] = useState(!isNew);
+  const [mounted, setMounted] = useState(!isNew);
 
-    useEffect(() => {
-        if (isNew) {
-            // Trigger animation after mount
-            const timer = setTimeout(() => setMounted(true), 10);
-            return () => clearTimeout(timer);
-        }
-    }, [isNew]);
+  useEffect(() => {
+    if (isNew) {
+      // Trigger animation after mount
+      const timer = setTimeout(() => setMounted(true), 10);
+      return () => clearTimeout(timer);
+    }
+  }, [isNew]);
 
-    const rowClasses = [
-        isHighlighted ? styles.rowHighlight : '',
-        isNew && mounted ? styles.rowNew : '',
-    ].filter(Boolean).join(' ');
+  const rowClasses = [
+    isHighlighted ? styles.rowHighlight : '',
+    isNew && mounted ? styles.rowNew : '',
+  ].filter(Boolean).join(' ');
 
-    return (
-        <Transition
-            mounted={mounted}
-            transition="slide-down"
-            duration={isNew ? 300 : 0}
-            timingFunction="ease-out"
+  return (
+    <Transition
+      mounted={mounted}
+      transition="slide-down"
+      duration={isNew ? 300 : 0}
+      timingFunction="ease-out"
+    >
+      {(transitionStyles) => (
+        <TableTr
+          className={rowClasses}
+          style={isNew ? transitionStyles : undefined}
         >
-            {(transitionStyles) => (
-                <TableTr
-                    className={rowClasses}
-                    style={isNew ? transitionStyles : undefined}
-                >
-                    <TableTd ta="center">
-                        <Text>{TimeBeautify(submission.created_at)}</Text>
-                    </TableTd>
-                    <TableTd ta="center">
-                        <Link href={`/users/${submission.user_id}`} style={{ color: 'inherit' }}>
-                            <Text span td="underline">
-                                {submission.username}
-                            </Text>
-                        </Link>
-                    </TableTd>
-                    <TableTd ta="center">
-                        <Link href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`} style={{ color: 'inherit' }}>
-                            <Text span td="underline">
-                                {ProblemTitle(submission.position, submission.problem_title)}
-                            </Text>
-                        </Link>
-                    </TableTd>
-                    <TableTd ta="center">
-                        <Text>{LangString(submission.language)}</Text>
-                    </TableTd>
-                    <TableTd ta="center" className={styles.colVerdict}>
-                        <VerdictCell submission={submission} />
-                    </TableTd>
-                    <TableTd ta="center">
-                        <Text>{submission.time_stat} ms</Text>
-                    </TableTd>
-                    <TableTd ta="center">
-                        <Text>{submission.memory_stat} КБ</Text>
-                    </TableTd>
-                    <TableTd ta="center">
-                        <Link href={`/submissions/${submission.id}`} style={{ color: 'inherit' }}>
-                            <Text span td="underline">Посмотреть</Text>
-                        </Link>
-                    </TableTd>
-                </TableTr>
-            )}
-        </Transition>
-    );
+          <TableTd ta="center">
+            <Text>{TimeBeautify(submission.created_at)}</Text>
+          </TableTd>
+          <TableTd ta="center">
+            <Link href={`/users/${submission.user_id}`} style={{ color: 'inherit' }}>
+              <Text span td="underline">
+                {submission.username}
+              </Text>
+            </Link>
+          </TableTd>
+          <TableTd ta="center">
+            <Link href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`} style={{ color: 'inherit' }}>
+              <Text span td="underline">
+                {ProblemTitle(submission.position, submission.problem_title)}
+              </Text>
+            </Link>
+          </TableTd>
+          <TableTd ta="center">
+            <Text>{LangString(submission.language)}</Text>
+          </TableTd>
+          <TableTd ta="center" className={styles.colVerdict}>
+            <VerdictCell submission={submission} />
+          </TableTd>
+          <TableTd ta="center">
+            <Text>{submission.time_stat} ms</Text>
+          </TableTd>
+          <TableTd ta="center">
+            <Text>{submission.memory_stat} КБ</Text>
+          </TableTd>
+          <TableTd ta="center">
+            <Link href={`/submissions/${submission.id}`} style={{ color: 'inherit' }}>
+              <Text span td="underline">Посмотреть</Text>
+            </Link>
+          </TableTd>
+        </TableTr>
+      )}
+    </Transition>
+  );
 };
 
 const SubmissionsList = ({ submissions, highlightedIds = new Set() }: SubmissionsListProps) => {
-    return (
-        <TableScrollContainer minWidth={800}>
-            <Table className={styles.table}>
-                <TableThead>
-                    <TableTr>
-                        <TableTh ta="center">Когда</TableTh>
-                        <TableTh ta="center">Кто</TableTh>
-                        <TableTh ta="center">Задача</TableTh>
-                        <TableTh ta="center">Язык</TableTh>
-                        <TableTh ta="center" className={styles.colVerdict}>Вердикт</TableTh>
-                        <TableTh ta="center">Время</TableTh>
-                        <TableTh ta="center">Память</TableTh>
-                        <TableTh ta="center">Просмотр</TableTh>
-                    </TableTr>
-                </TableThead>
-                <TableTbody>
-                    {submissions.map((submission) => (
-                        <SubmissionRow
-                            key={submission.id}
-                            submission={submission}
-                            isHighlighted={highlightedIds.has(submission.id)}
-                            isNew={submission.isNew ?? false}
-                        />
-                    ))}
-                </TableTbody>
-            </Table>
-        </TableScrollContainer>
-    );
+  return (
+    <TableScrollContainer minWidth={800}>
+      <Table className={styles.table}>
+        <TableThead>
+          <TableTr>
+            <TableTh ta="center">Когда</TableTh>
+            <TableTh ta="center">Кто</TableTh>
+            <TableTh ta="center">Задача</TableTh>
+            <TableTh ta="center">Язык</TableTh>
+            <TableTh ta="center" className={styles.colVerdict}>Вердикт</TableTh>
+            <TableTh ta="center">Время</TableTh>
+            <TableTh ta="center">Память</TableTh>
+            <TableTh ta="center">Просмотр</TableTh>
+          </TableTr>
+        </TableThead>
+        <TableTbody>
+          {submissions.map((submission) => (
+            <SubmissionRow
+              key={submission.id}
+              submission={submission}
+              isHighlighted={highlightedIds.has(submission.id)}
+              isNew={submission.isNew ?? false}
+            />
+          ))}
+        </TableTbody>
+      </Table>
+    </TableScrollContainer>
+  );
 };
 
 export { SubmissionsList };

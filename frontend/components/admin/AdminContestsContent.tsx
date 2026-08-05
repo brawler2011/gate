@@ -1,6 +1,5 @@
 "use client";
 
-import { deleteContest } from "@/lib/actions";
 import {
   Center,
   Container,
@@ -11,18 +10,21 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useState } from "react";
+import useSWR from "swr";
+
 import { NextPagination } from '@/components/shared/Pagination';
 import { StatusMessage } from '@/components/shared/StatusMessage';
+import { deleteContest } from "@/lib/actions";
+
 import { AdminContestsSearchInput } from "./AdminContestsSearchInput";
 import { AdminContestsTable } from "./AdminContestsTable";
-import useSWR from "swr";
 
 type AdminContestsContentProps = {
   page: number;
   search?: string;
 };
 
-export function AdminContestsContent({ page, search }: AdminContestsContentProps) {
+export const AdminContestsContent = ({ page, search }: AdminContestsContentProps) => {
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;
@@ -79,7 +81,9 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
 
   const totalPages = pagination.total || 1;
   const queryParams: Record<string, string | number | undefined> = {};
-  if (search) queryParams.search = search;
+  if (search) {
+    queryParams.search = search;
+  }
 
   return (
     <Container size="xl" py="md">
@@ -88,7 +92,7 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
 
         <AdminContestsSearchInput />
 
-        {isLoading ? (
+        {isLoading && (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
@@ -101,11 +105,13 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
           </Stack>
-        ) : contests.length === 0 ? (
+        )}
+        {!isLoading && contests.length === 0 && (
           <Center py="xl">
             <Text c="dimmed">Контесты не найдены</Text>
           </Center>
-        ) : (
+        )}
+        {!isLoading && contests.length > 0 && (
           <>
             <AdminContestsTable
               contests={contests}
@@ -135,4 +141,4 @@ export function AdminContestsContent({ page, search }: AdminContestsContentProps
       />
     </Container>
   );
-}
+};

@@ -1,3 +1,6 @@
+import { Box, Container } from "@mantine/core";
+import { IconPuzzle, IconSettings, IconUsers } from "@tabler/icons-react";
+
 import { MobileNav, SidebarNav } from "@/components/contests";
 import { ParticipantsSection } from "@/components/contests/ParticipantsSection";
 import { ProblemsSection } from "@/components/contests/ProblemsSection";
@@ -12,11 +15,12 @@ import {
 } from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
-import type { ContestProblemListItemModel } from "@contracts/core/v1";
-import { Box, Container } from "@mantine/core";
-import { IconPuzzle, IconSettings, IconUsers } from "@tabler/icons-react";
+
+
 import layoutClasses from "../contestLayout.module.css";
 import classes from "./styles.module.css";
+
+import type { ContestProblemListItemModel } from "@contracts/core/v1";
 
 // Constants for sections
 const SECTIONS = {
@@ -51,15 +55,17 @@ type Props = {
   searchParams: Promise<{ section?: string }>;
 };
 
-export default async function ContestManagePage({
+const ContestManagePage = async ({
   params,
   searchParams,
-}: Props) {
+}: Props) => {
   const { contest_id: contestId } = await params;
   const { section = "settings" } = await searchParams;
 
   const [error, response] = await getContest(contestId);
-  if (error) return <ErrorDisplay error={error} />;
+  if (error) {
+    return <ErrorDisplay error={error} />;
+  }
 
   const contest = response!.contest;
   const problems: Array<ContestProblemListItemModel> = response!.problems || [];
@@ -133,4 +139,6 @@ export default async function ContestManagePage({
       </Box>
     </DefaultLayout>
   );
-}
+};
+
+export default ContestManagePage;

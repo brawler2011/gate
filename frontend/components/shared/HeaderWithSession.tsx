@@ -1,12 +1,14 @@
 import { getOrganization } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
-import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
+
 import {
   Header,
   type HeaderContest,
   type HeaderOrganization,
   type HeaderProblem,
 } from "./Header";
+
+import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
 
 type HeaderWithSessionProps = {
   secondaryNavItems?: HeaderSecondaryNavItem[];
@@ -16,13 +18,13 @@ type HeaderWithSessionProps = {
   problem?: HeaderProblem;
 };
 
-export async function HeaderWithSession({
+export const HeaderWithSession = async ({
   secondaryNavItems,
   organizationId,
   organization: passedOrganization,
   contest,
   problem,
-}: HeaderWithSessionProps = {}) {
+}: HeaderWithSessionProps = {}) => {
   const targetOrgId = passedOrganization?.id || organizationId;
 
   const [user, organizationResult] = await Promise.all([
@@ -32,14 +34,18 @@ export async function HeaderWithSession({
       : Promise.resolve([null, null] as const),
   ]);
 
-  const organization = passedOrganization
-    ? passedOrganization
-    : organizationResult[1]?.organization
-      ? {
-          id: organizationResult[1].organization.id,
-          name: organizationResult[1].organization.name,
-        }
-      : undefined;
+  const getOrganizationObj = () => {
+    if (passedOrganization) {
+      return passedOrganization;
+    }
+    const org = organizationResult[1]?.organization;
+    if (org) {
+      return { id: org.id, name: org.name };
+    }
+    return undefined;
+  };
+
+  const organization = getOrganizationObj();
 
   return (
     <Header
@@ -50,4 +56,4 @@ export async function HeaderWithSession({
       problem={problem}
     />
   );
-}
+};

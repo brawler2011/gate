@@ -1,12 +1,5 @@
 "use client";
 
-import type { SessionUser } from "@/lib/auth";
-import { logoutAction } from "@/lib/auth-actions";
-import type {
-  HeaderSecondaryNavIcon,
-  HeaderSecondaryNavItem,
-} from "@/lib/contest-header-nav";
-import { APP_COLORS } from "@/lib/theme/colors";
 import {
   ActionIcon,
   Anchor,
@@ -46,7 +39,6 @@ import {
   IconNews,
   IconFileText,
 } from "@tabler/icons-react";
-import { buildAdminHeaderNav } from "@/lib/admin-header-nav";
 import cx from "clsx";
 import NextImage from "next/image";
 import Link from "next/link";
@@ -59,8 +51,19 @@ import {
   useRef,
   useState,
 } from "react";
+
+import { buildAdminHeaderNav } from "@/lib/admin-header-nav";
+import { logoutAction } from "@/lib/auth-actions";
+import { APP_COLORS } from "@/lib/theme/colors";
+
 import classes from "./Header.module.css";
 import { LogoutLink } from "./LogoutLink";
+
+import type { SessionUser } from "@/lib/auth";
+import type {
+  HeaderSecondaryNavIcon,
+  HeaderSecondaryNavItem,
+} from "@/lib/contest-header-nav";
 
 const NAV_ICON_MAP: Record<
   HeaderSecondaryNavIcon,
@@ -108,12 +111,13 @@ const Profile = ({ user }: { user?: SessionUser }) => {
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1");
-  const returnUrl =
-    pathname && pathname !== "/" && !pathname.startsWith("/auth")
-      ? isLocalhost
-        ? `${window.location.origin}${pathname}`
-        : pathname
-      : null;
+  const getReturnUrl = () => {
+    if (!pathname || pathname === "/" || pathname.startsWith("/auth")) {
+      return null;
+    }
+    return isLocalhost ? `${window.location.origin}${pathname}` : pathname;
+  };
+  const returnUrl = getReturnUrl();
   const returnTo = returnUrl
     ? `?return_to=${encodeURIComponent(returnUrl)}`
     : "";
@@ -424,12 +428,13 @@ const Header = ({
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1");
-  const returnUrl =
-    pathname && pathname !== "/" && !pathname.startsWith("/auth")
-      ? isLocalhost
-        ? `${window.location.origin}${pathname}`
-        : pathname
-      : null;
+  const getReturnUrlDrawer = () => {
+    if (!pathname || pathname === "/" || pathname.startsWith("/auth")) {
+      return null;
+    }
+    return isLocalhost ? `${window.location.origin}${pathname}` : pathname;
+  };
+  const returnUrl = getReturnUrlDrawer();
   const returnTo = returnUrl
     ? `?return_to=${encodeURIComponent(returnUrl)}`
     : "";
@@ -495,7 +500,7 @@ const Header = ({
                       </Title>
                     </Link>
 
-                    {contest ? (
+                    {contest && (
                       <div className={classes.organizationCrumb}>
                         <span className={classes.organizationSlash}>/</span>
                         <Link
@@ -506,7 +511,8 @@ const Header = ({
                           {contest.title}
                         </Link>
                       </div>
-                    ) : problem ? (
+                    )}
+                    {!contest && problem && (
                       <div className={classes.organizationCrumb}>
                         <span className={classes.organizationSlash}>/</span>
                         <Link
@@ -517,7 +523,7 @@ const Header = ({
                           {problem.title}
                         </Link>
                       </div>
-                    ) : null}
+                    )}
                   </>
                 ) : (
                   <Link href="/" className={classes.brandTitleLink}>

@@ -7,10 +7,12 @@ import {
   updateWorkshopValidatorFile,
   setWorkshopValidatorMain,
 } from "@/lib/actions";
+
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
+
 import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
 
-export function WorkshopValidatorsTab(props: WorkshopFileTabProps) {
+export const WorkshopValidatorsTab = (props: WorkshopFileTabProps) => {
   return (
     <WorkshopCollectionTab
       {...props}
@@ -22,4 +24,4 @@ export function WorkshopValidatorsTab(props: WorkshopFileTabProps) {
       setMain={setWorkshopValidatorMain}
     />
   );
-}
+};

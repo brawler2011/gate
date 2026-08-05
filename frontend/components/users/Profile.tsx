@@ -14,12 +14,15 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { NextPagination } from '@/components/shared/Pagination';
 import { IconCalendar, IconTrophy } from "@tabler/icons-react";
+import Link from "next/link";
+
+import { NextPagination } from '@/components/shared/Pagination';
 import { getRoleColor, TimeBeautify } from "@/lib/lib";
 import { APP_COLORS } from "@/lib/theme/colors";
+
 import type { ContestModel } from "@contracts/core/v1";
-import Link from "next/link";
+
 
 type ProfileProps = {
   username: string;

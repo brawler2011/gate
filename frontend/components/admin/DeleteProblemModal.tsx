@@ -13,12 +13,12 @@ interface DeleteProblemModalProps {
   onSubmit: () => Promise<void>;
 }
 
-export function DeleteProblemModal({
+export const DeleteProblemModal = ({
   opened,
   onClose,
   problem,
   onSubmit,
-}: DeleteProblemModalProps) {
+}: DeleteProblemModalProps) => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -54,7 +54,8 @@ export function DeleteProblemModal({
         </div>
 
         <Text size="sm" c="dimmed">
-          Это действие нельзя отменить. Все данные задачи, включая тесты, решения и генераторы, будут безвозвратно удалены.
+          Это действие нельзя отменить. Все данные задачи, включая тесты,
+          решения и генераторы, будут безвозвратно удалены.
         </Text>
 
         <Group justify="flex-end" gap="sm">
@@ -68,4 +69,4 @@ export function DeleteProblemModal({
       </Stack>
     </Modal>
   );
-}
+};

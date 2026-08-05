@@ -13,12 +13,12 @@ interface DeleteOrgModalProps {
   onSubmit: () => Promise<void>;
 }
 
-export function DeleteOrgModal({
+export const DeleteOrgModal = ({
   opened,
   onClose,
   org,
   onSubmit,
-}: DeleteOrgModalProps) {
+}: DeleteOrgModalProps) => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -54,7 +54,8 @@ export function DeleteOrgModal({
         </div>
 
         <Text size="sm" c="dimmed">
-          Это действие нельзя отменить. Все данные организации, включая команды, контесты и участников, будут безвозвратно удалены.
+          Это действие нельзя отменить. Все данные организации, включая команды,
+          контесты и участников, будут безвозвратно удалены.
         </Text>
 
         <Group justify="flex-end" gap="sm">
@@ -68,4 +69,4 @@ export function DeleteOrgModal({
       </Stack>
     </Modal>
   );
-}
+};

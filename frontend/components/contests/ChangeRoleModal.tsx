@@ -19,13 +19,13 @@ interface ChangeRoleModalProps {
   onSubmit: (newRole: string) => Promise<void>;
 }
 
-export function ChangeRoleModal({
+export const ChangeRoleModal = ({
   opened,
   onClose,
   participant,
   currentRole,
   onSubmit,
-}: ChangeRoleModalProps) {
+}: ChangeRoleModalProps) => {
   const [selectedRole, setSelectedRole] = useState<string>(currentRole);
   const [loading, setLoading] = useState(false);
 
@@ -88,5 +88,5 @@ export function ChangeRoleModal({
       </Stack>
     </Modal>
   );
-}
+};
 

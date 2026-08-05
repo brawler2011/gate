@@ -1,6 +1,5 @@
 "use client";
 
-import { deleteProblem } from "@/lib/actions";
 import {
   ActionIcon,
   Badge,
@@ -17,21 +16,26 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconSearch, IconTrash } from "@tabler/icons-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { ProblemsListItemModel } from "@contracts/core/v1";
+import useSWR from "swr";
+
 import { NextPagination } from '@/components/shared/Pagination';
 import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { DeleteProblemModal } from "./DeleteProblemModal";
-import useSWR from "swr";
-import { useRouter, useSearchParams } from "next/navigation";
+import { deleteProblem } from "@/lib/actions";
+import { formatDate } from "@/lib/formatDate";
+
 import classes from "./AdminPage.module.css";
+import { DeleteProblemModal } from "./DeleteProblemModal";
+
+import type { ProblemsListItemModel } from "@contracts/core/v1";
 
 type AdminProblemsContentProps = {
   page: number;
   search?: string;
 };
 
-export function AdminProblemsContent({ page, search }: AdminProblemsContentProps) {
+export const AdminProblemsContent = ({ page, search }: AdminProblemsContentProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -102,7 +106,9 @@ export function AdminProblemsContent({ page, search }: AdminProblemsContentProps
   };
 
   const handleDeleteConfirm = async () => {
-    if (!problemToDelete) return;
+    if (!problemToDelete) {
+      return;
+    }
 
     setDeletingId(problemToDelete.id);
     try {
@@ -143,7 +149,9 @@ export function AdminProblemsContent({ page, search }: AdminProblemsContentProps
 
   const totalPages = pagination.total || 1;
   const queryParams: Record<string, string | number | undefined> = {};
-  if (search) queryParams.search = search;
+  if (search) {
+    queryParams.search = search;
+  }
 
   return (
     <Container size="xl" py="md">
@@ -160,7 +168,7 @@ export function AdminProblemsContent({ page, search }: AdminProblemsContentProps
           style={{ maxWidth: 400 }}
         />
 
-        {isLoading ? (
+        {isLoading && (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
@@ -168,11 +176,13 @@ export function AdminProblemsContent({ page, search }: AdminProblemsContentProps
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
           </Stack>
-        ) : problems.length === 0 ? (
+        )}
+        {!isLoading && problems.length === 0 && (
           <Center py="xl">
             <Text c="dimmed">Задачи не найдены</Text>
           </Center>
-        ) : (
+        )}
+        {!isLoading && problems.length > 0 && (
           <>
             <Box className={classes.tableContainer}>
               <Table className={classes.table} verticalSpacing="xs">
@@ -208,19 +218,19 @@ export function AdminProblemsContent({ page, search }: AdminProblemsContentProps
                         <Text className={classes.metaCell}>{problem.memory_limit} МБ</Text>
                       </Table.Td>
                       <Table.Td>
-                        {problem.is_template ? (
-                          <Badge color="blue" variant="light">Да</Badge>
-                        ) : (
-                          <Badge color="gray" variant="light">Нет</Badge>
-                        )}
+                        <Badge
+                          color={problem.is_template ? "blue" : "gray"}
+                          variant="light"
+                          size="sm"
+                        >
+                          {problem.is_template ? "Да" : "Нет"}
+                        </Badge>
                       </Table.Td>
                       <Table.Td>
-                        <Text className={classes.dateCell}>
-                          {new Date(problem.created_at).toLocaleDateString("ru-RU")}
-                        </Text>
+                        <Text className={classes.metaCell}>{formatDate(problem.created_at)}</Text>
                       </Table.Td>
-                      <Table.Td className={classes.actionsCell}>
-                        <Group gap="xs" wrap="nowrap">
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        <Group gap="xs">
                           <ActionIcon
                             color="red"
                             variant="subtle"
@@ -269,4 +279,4 @@ export function AdminProblemsContent({ page, search }: AdminProblemsContentProps
       )}
     </Container>
   );
-}
+};

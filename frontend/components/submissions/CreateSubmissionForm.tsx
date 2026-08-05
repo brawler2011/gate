@@ -1,7 +1,5 @@
 "use client";
 
-import { highlightCode } from "@/lib/highlightCode";
-import { APP_COLORS } from "@/lib/theme/colors";
 import {
   ActionIcon,
   Button,
@@ -15,8 +13,14 @@ import { useForm } from "@mantine/form";
 import { IconPaperclip, IconTrash } from "@tabler/icons-react";
 import dynamic from "next/dynamic";
 import React, { useRef, useState, useTransition } from "react";
-import type CodeEditor from "react-simple-code-editor";
+
+import { highlightCode } from "@/lib/highlightCode";
+import { APP_COLORS } from "@/lib/theme/colors";
+
 import classes from "./CreateSubmissionForm.module.css";
+
+import type CodeEditor from "react-simple-code-editor";
+
 import "./vsc-dark-plus.css";
 
 // Dynamic import to avoid hydration mismatch (autoCapitalize="off" vs "none")
@@ -100,7 +104,9 @@ const CreateSubmissionForm = ({
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
@@ -142,7 +148,9 @@ const CreateSubmissionForm = ({
   };
 
   const removeFile = () => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
     setFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -238,7 +246,7 @@ const CreateSubmissionForm = ({
         </Group>
 
         <div className={classes.dropZone}>
-          {isDragging ? (
+          {isDragging && (
             <Center className={classes.dragOverlay}>
               <Stack align="center" gap="xs">
                 <Text c="blue" size="lg" ta="center">
@@ -249,7 +257,8 @@ const CreateSubmissionForm = ({
                 </Text>
               </Stack>
             </Center>
-          ) : file ? (
+          )}
+          {!isDragging && file && (
             <div className={classes.fileAttached}>
               <Group className={classes.fileInfo}>
                 <Text>Прикреплен файл: {file.name}</Text>
@@ -264,7 +273,8 @@ const CreateSubmissionForm = ({
                 <IconTrash size={20} />
               </ActionIcon>
             </div>
-          ) : (
+          )}
+          {!isDragging && !file && (
             <div className={classes.editorContainer}>
               {mounted && (
                 <TypedEditor

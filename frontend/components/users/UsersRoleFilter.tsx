@@ -2,9 +2,10 @@
 
 import { Badge, Select, Text } from "@mantine/core";
 import { useRouter, useSearchParams } from "next/navigation";
+
 import { getRoleColor } from "@/lib/lib";
 
-export function UsersRoleFilter() {
+export const UsersRoleFilter = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentRole = searchParams.get("role") || "";
@@ -28,7 +29,9 @@ export function UsersRoleFilter() {
   };
 
   const getSelectedBadge = () => {
-    if (!currentRole) return null;
+    if (!currentRole) {
+      return null;
+    }
     if (currentRole === "admin") {
       return (
         <Badge color="red" variant="filled">
@@ -80,5 +83,5 @@ export function UsersRoleFilter() {
       }}
     />
   );
-}
+};
 

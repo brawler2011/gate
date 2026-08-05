@@ -1,6 +1,6 @@
-import type { ContestModel, ProblemModel } from "@contracts/core/v1";
-import type { ContestRole } from "./contest-role";
 import type { SessionUser } from "./auth";
+import type { ContestRole } from "./contest-role";
+import type { ContestModel, ProblemModel } from "@contracts/core/v1";
 
 /**
  * Permission checker utilities for frontend
@@ -178,7 +178,7 @@ export class PermissionChecker {
     return hasRequiredRole(this.contestRole, contest.monitor_scope as ContestScope);
   }
 
-  canManageContest(contest: ContestModel): boolean {
+  canManageContest(_contest: ContestModel): boolean {
     // Global admin всегда может управлять
     if (this.isGlobalAdmin()) {
       return true;
@@ -192,7 +192,7 @@ export class PermissionChecker {
     return this.contestRole === "owner" || this.contestRole === "moderator";
   }
 
-  canDeleteContest(contest: ContestModel): boolean {
+  canDeleteContest(_contest: ContestModel): boolean {
     // Global admin can delete
     if (this.isGlobalAdmin()) {
       return true;
@@ -228,7 +228,7 @@ export class PermissionChecker {
     return this.isGlobalAdmin();
   }
 
-  canEditProblem(problem: ProblemModel): boolean {
+  canEditProblem(_problem: ProblemModel): boolean {
     if (!this.isAuthenticated()) {
       return false;
     }
@@ -242,7 +242,7 @@ export class PermissionChecker {
     return false;
   }
 
-  canDeleteProblem(problem: ProblemModel): boolean {
+  canDeleteProblem(_problem: ProblemModel): boolean {
     if (!this.isAuthenticated()) {
       return false;
     }
@@ -267,7 +267,7 @@ export class PermissionChecker {
     return this.isGlobalAdmin();
   }
 
-  canDeleteUser(userId: string): boolean {
+  canDeleteUser(_userId: string): boolean {
     if (!this.isAuthenticated()) {
       return false;
     }
@@ -279,8 +279,12 @@ export class PermissionChecker {
   // Org permissions
 
   canManageOrgMembers(): boolean {
-    if (this.isGlobalAdmin()) return true;
-    if (!this.orgRole) return false;
+    if (this.isGlobalAdmin()) {
+      return true;
+    }
+    if (!this.orgRole) {
+      return false;
+    }
     return ORG_ROLE_HIERARCHY[this.orgRole] >= ORG_ROLE_HIERARCHY['admin'];
   }
 
@@ -289,7 +293,9 @@ export class PermissionChecker {
   }
 
   canDeleteOrg(): boolean {
-    if (this.isGlobalAdmin()) return true;
+    if (this.isGlobalAdmin()) {
+      return true;
+    }
     return this.orgRole === 'owner';
   }
 

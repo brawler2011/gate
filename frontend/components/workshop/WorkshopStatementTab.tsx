@@ -1,12 +1,3 @@
-"use client";
-
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import {
-  getProblem,
-  getWorkshopProblemLimits,
-  getWorkshopProblemStatement,
-  updateWorkshopProblemStatement,
-} from "@/lib/actions";
 import {
   ActionIcon,
   Box,
@@ -24,14 +15,23 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useClipboard } from "@mantine/hooks";
-import { IconCheck, IconCopy } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
+import { IconCheck, IconCopy } from "@tabler/icons-react";
 import "katex/dist/katex.min.css";
 import { useDeferredValue, useEffect, useState, useTransition } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+
+import { SectionPaper } from "@/components/workshop/SectionPaper";
+import {
+  getProblem,
+  getWorkshopProblemLimits,
+  getWorkshopProblemStatement,
+  updateWorkshopProblemStatement,
+} from "@/lib/actions";
+
 import "../problems/Problem.css";
 import classes from "./WorkshopStatementTab.module.css";
 
@@ -63,34 +63,41 @@ type Props = {
   problemId: string;
 };
 
-function prettifyTimeLimit(timeLimit: number) {
+const prettifyTimeLimit = (timeLimit: number) => {
   if (timeLimit % 1000 === 0) {
     return `${timeLimit / 1000} сек`;
   }
 
   return `${timeLimit} мс`;
-}
+};
 
-function prettifyMemoryLimit(memoryLimit: number) {
+const prettifyMemoryLimit = (memoryLimit: number) => {
   if (memoryLimit % 1000 === 0) {
     return `${memoryLimit / 1000} ГБ`;
   }
 
   return `${memoryLimit} МБ`;
-}
+};
 
-function hasPreviewMeta(meta: PreviewMeta | null): meta is LoadedPreviewMeta {
+const hasPreviewMeta = (meta: PreviewMeta | null): meta is LoadedPreviewMeta => {
   return (
     meta?.problem_type !== undefined &&
     meta.max_score !== undefined &&
     meta.time_limit_ms !== undefined &&
     meta.memory_limit_mb !== undefined
   );
-}
+};
 
 const renderSafeImage = (problemId?: string) => {
-  return function SafeImage({ node, src, alt, ...props }: any) {
-    if (!src) return null;
+  const SafeImage = ({
+    node: _node,
+    src,
+    alt,
+    ...props
+  }: React.ImgHTMLAttributes<HTMLImageElement> & { node?: unknown }) => {
+    if (!src) {
+      return null;
+    }
 
     let width: string | undefined;
     let height: string | undefined;
@@ -108,8 +115,12 @@ const renderSafeImage = (problemId?: string) => {
         } else if (/^\d+(x\d*)?$/.test(part)) {
           if (part.includes("x")) {
             const [w, h] = part.split("x");
-            if (w) width = `${w}px`;
-            if (h) height = `${h}px`;
+            if (w) {
+              width = `${w}px`;
+            }
+            if (h) {
+              height = `${h}px`;
+            }
           } else {
             width = `${part}px`;
           }
@@ -118,8 +129,12 @@ const renderSafeImage = (problemId?: string) => {
           const num = part.replace(/-?center-?/, "");
           if (num.includes("x")) {
             const [w, h] = num.split("x");
-            if (w) width = `${w}px`;
-            if (h) height = `${h}px`;
+            if (w) {
+              width = `${w}px`;
+            }
+            if (h) {
+              height = `${h}px`;
+            }
           } else {
             width = `${num}px`;
           }
@@ -153,9 +168,10 @@ const renderSafeImage = (problemId?: string) => {
       />
     );
   };
+  return SafeImage;
 };
 
-function MarkdownBlock({ value, problemId }: { value: string; problemId?: string }) {
+const MarkdownBlock = ({ value, problemId }: { value: string; problemId?: string }) => {
   return (
     <div className="content">
       <ReactMarkdown
@@ -169,10 +185,12 @@ function MarkdownBlock({ value, problemId }: { value: string; problemId?: string
       </ReactMarkdown>
     </div>
   );
-}
+};
 
-function PreviewSection({ title, value, problemId }: { title: string; value: string; problemId?: string }) {
-  if (!value.trim()) return null;
+const PreviewSection = ({ title, value, problemId }: { title: string; value: string; problemId?: string }) => {
+  if (!value.trim()) {
+    return null;
+  }
 
   return (
     <Stack gap="xs">
@@ -182,7 +200,7 @@ function PreviewSection({ title, value, problemId }: { title: string; value: str
       <MarkdownBlock value={value} problemId={problemId} />
     </Stack>
   );
-}
+};
 
 const CopyableSection = ({ label, value }: { label: string; value: string }) => {
   const clipboard = useClipboard({ timeout: 2000 });
@@ -221,7 +239,7 @@ const CopyableSection = ({ label, value }: { label: string; value: string }) => 
   );
 };
 
-function WorkshopStatementPreview({
+const WorkshopStatementPreview = ({
   statement,
   previewMeta,
   samples,
@@ -231,7 +249,7 @@ function WorkshopStatementPreview({
   previewMeta: LoadedPreviewMeta;
   samples: Array<{ input: string; output: string }>;
   problemId?: string;
-}) {
+}) => {
   const hasContent = [
     statement.legend,
     statement.input_format,
@@ -257,8 +275,8 @@ function WorkshopStatementPreview({
           </Text>
           {previewMeta.problem_type === "scoring" &&
           previewMeta.max_score !== null ? (
-            <Text>максимальный балл: {previewMeta.max_score}</Text>
-          ) : null}
+              <Text>максимальный балл: {previewMeta.max_score}</Text>
+            ) : null}
         </Stack>
       </Stack>
 
@@ -315,9 +333,9 @@ function WorkshopStatementPreview({
       )}
     </Stack>
   );
-}
+};
 
-export function WorkshopStatementTab({ problemId }: Props) {
+export const WorkshopStatementTab = ({ problemId }: Props) => {
   const [statement, setStatement] = useState<StatementData | null>(null);
   const [previewMeta, setPreviewMeta] = useState<PreviewMeta | null>(null);
   const [samples, setSamples] = useState<Array<{ input: string; output: string }>>([]);
@@ -411,7 +429,9 @@ export function WorkshopStatementTab({ problemId }: Props) {
   }, [isDirty]);
 
   const handleLangChange = (newValue: string | null) => {
-    if (!newValue) return;
+    if (!newValue) {
+      return;
+    }
     if (newValue === "add_new_lang") {
       if (isDirty) {
         setPendingAction("add");
@@ -508,7 +528,9 @@ export function WorkshopStatementTab({ problemId }: Props) {
 
   const handleSave = () => {
     startSaving(async () => {
-      if (!statement) return;
+      if (!statement) {
+        return;
+      }
 
       const [saveError] = await updateWorkshopProblemStatement(problemId, {
         title: statement.title,
@@ -593,106 +615,106 @@ export function WorkshopStatementTab({ problemId }: Props) {
                   <Stack gap="md">
                     {!statement ? null : (
                       <>
-                      <TextInput
-                        label="Заголовок"
-                        value={statement.title}
-                        onChange={(e) =>
-                          patchStatement({ title: e.currentTarget.value })
-                        }
-                      />
+                        <TextInput
+                          label="Заголовок"
+                          value={statement.title}
+                          onChange={(e) =>
+                            patchStatement({ title: e.currentTarget.value })
+                          }
+                        />
 
-                      <Textarea
-                        label="Легенда"
-                        value={statement.legend}
-                        onChange={(e) =>
-                          patchStatement({ legend: e.currentTarget.value })
-                        }
-                        minRows={6}
-                        autosize
-                      />
+                        <Textarea
+                          label="Легенда"
+                          value={statement.legend}
+                          onChange={(e) =>
+                            patchStatement({ legend: e.currentTarget.value })
+                          }
+                          minRows={6}
+                          autosize
+                        />
 
-                      <Textarea
-                        label="Формат входных данных"
-                        value={statement.input_format}
-                        onChange={(e) =>
-                          patchStatement({
-                            input_format: e.currentTarget.value,
-                          })
-                        }
-                        minRows={4}
-                        autosize
-                      />
+                        <Textarea
+                          label="Формат входных данных"
+                          value={statement.input_format}
+                          onChange={(e) =>
+                            patchStatement({
+                              input_format: e.currentTarget.value,
+                            })
+                          }
+                          minRows={4}
+                          autosize
+                        />
 
-                      <Textarea
-                        label="Формат выходных данных"
-                        value={statement.output_format}
-                        onChange={(e) =>
-                          patchStatement({
-                            output_format: e.currentTarget.value,
-                          })
-                        }
-                        minRows={4}
-                        autosize
-                      />
+                        <Textarea
+                          label="Формат выходных данных"
+                          value={statement.output_format}
+                          onChange={(e) =>
+                            patchStatement({
+                              output_format: e.currentTarget.value,
+                            })
+                          }
+                          minRows={4}
+                          autosize
+                        />
 
-                      <Textarea
-                        label="Примечания"
-                        value={statement.notes}
-                        onChange={(e) =>
-                          patchStatement({ notes: e.currentTarget.value })
-                        }
-                        minRows={3}
-                        autosize
-                      />
+                        <Textarea
+                          label="Примечания"
+                          value={statement.notes}
+                          onChange={(e) =>
+                            patchStatement({ notes: e.currentTarget.value })
+                          }
+                          minRows={3}
+                          autosize
+                        />
 
-                      <Textarea
-                        label="Интерактивное взаимодействие"
-                        value={statement.interaction}
-                        onChange={(e) =>
-                          patchStatement({ interaction: e.currentTarget.value })
-                        }
-                        minRows={3}
-                        autosize
-                      />
+                        <Textarea
+                          label="Интерактивное взаимодействие"
+                          value={statement.interaction}
+                          onChange={(e) =>
+                            patchStatement({ interaction: e.currentTarget.value })
+                          }
+                          minRows={3}
+                          autosize
+                        />
 
-                      <Textarea
-                        label="Система оценки"
-                        value={statement.scoring}
-                        onChange={(e) =>
-                          patchStatement({ scoring: e.currentTarget.value })
-                        }
-                        minRows={3}
-                        autosize
-                      />
+                        <Textarea
+                          label="Система оценки"
+                          value={statement.scoring}
+                          onChange={(e) =>
+                            patchStatement({ scoring: e.currentTarget.value })
+                          }
+                          minRows={3}
+                          autosize
+                        />
 
-                    </>
-                  )}
-                </Stack>
-              )}
-            </SectionPaper>
-          </Stack>
+                      </>
+                    )}
+                  </Stack>
+                )}
+              </SectionPaper>
+            </Stack>
+          </Box>
         </Box>
-      </Box>
 
-      <Box className={classes.previewPane} visibleFrom="md">
-        <Box p="lg">
-          <Stack gap="lg" maw={900} mx="auto">
-            {isLoading || !deferredStatement || !hasPreviewMeta(previewMeta) ? (
-              <Text c="dimmed" size="sm">
+        <Box className={classes.previewPane} visibleFrom="md">
+          <Box p="lg">
+            <Stack gap="lg" maw={900} mx="auto">
+              {isLoading || !deferredStatement || !hasPreviewMeta(previewMeta) ? (
+                <Text c="dimmed" size="sm">
                 Загрузка...
-              </Text>
-            ) : (
-              <WorkshopStatementPreview
-                statement={deferredStatement}
-                previewMeta={previewMeta}
-                samples={samples}
-                problemId={problemId}
-              />
-            )}
-          </Stack>
+                </Text>
+              ) : (
+                <WorkshopStatementPreview
+                  statement={deferredStatement}
+                  previewMeta={previewMeta}
+                  samples={samples}
+                  problemId={problemId}
+                />
+              )}
+            </Stack>
+          </Box>
         </Box>
       </Box>
-    </Box>
 
       {/* Confirmation Modal for Unsaved Changes */}
       <Modal
@@ -703,7 +725,9 @@ export function WorkshopStatementTab({ problemId }: Props) {
       >
         <Stack gap="md">
           <Text size="sm">
-            У вас есть несохраненные изменения. При переходе на другой язык или добавлении нового все несохраненные изменения будут потеряны. Вы уверены, что хотите продолжить?
+            У вас есть несохраненные изменения. При переходе на другой язык
+            или добавлении нового все несохраненные изменения будут потеряны.
+            Вы уверены, что хотите продолжить?
           </Text>
           <Group justify="flex-end" gap="xs">
             <Button variant="subtle" color="gray" onClick={() => setIsConfirmOpen(false)}>
@@ -725,7 +749,8 @@ export function WorkshopStatementTab({ problemId }: Props) {
       >
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            Введите двухсимвольный ISO-код языка на английском (например, ru, en, de) или выберите из быстрых вариантов ниже.
+            Введите двухсимвольный ISO-код языка на английском (например, ru, en, de)
+            или выберите из быстрых вариантов ниже.
           </Text>
           
           <TextInput
@@ -779,4 +804,4 @@ export function WorkshopStatementTab({ problemId }: Props) {
       </Modal>
     </Box>
   );
-}
+};

@@ -1,8 +1,10 @@
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { getProblem, getWorkshopProblemLimits } from "@/lib/actions";
-import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
+
 import ProblemPage from "./ProblemPage";
+
+import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
 import type { Metadata } from "next";
 
 const GENERAL_TAB = "general";
@@ -93,11 +95,11 @@ export async function generateMetadata(problemId: string): Promise<Metadata> {
   return { title: `Файлы — ${response.problem.title}` };
 }
 
-export default async function ProblemPageLayoutWrapper({
+const ProblemPageLayoutWrapper = async ({
   activeTab,
   params,
   searchParams,
-}: Props) {
+}: Props) => {
   const { problem_id } = await params;
   const resolvedSearchParams = await searchParams;
 
@@ -123,9 +125,9 @@ export default async function ProblemPageLayoutWrapper({
       headerProblem={
         problemResponse?.problem
           ? {
-              id: problemResponse.problem.id,
-              title: problemResponse.problem.title,
-            }
+            id: problemResponse.problem.id,
+            title: problemResponse.problem.title,
+          }
           : undefined
       }
       stylesConfig={{
@@ -151,4 +153,6 @@ export default async function ProblemPageLayoutWrapper({
       )}
     </DefaultLayout>
   );
-}
+};
+
+export default ProblemPageLayoutWrapper;

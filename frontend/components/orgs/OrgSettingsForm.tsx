@@ -1,16 +1,18 @@
 "use client";
 
-import { updateOrganization } from '@/lib/actions';
 import { Button, Stack, TextInput, Textarea } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
+import { updateOrganization } from '@/lib/actions';
+
 import type { OrganizationModel } from '@contracts/core/v1';
 
 type Props = { org: OrganizationModel };
 
-export function OrgSettingsForm({ org }: Props) {
+export const OrgSettingsForm = ({ org }: Props) => {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 
@@ -43,4 +45,4 @@ export function OrgSettingsForm({ org }: Props) {
       </Stack>
     </form>
   );
-}
+};

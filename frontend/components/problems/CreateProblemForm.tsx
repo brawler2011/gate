@@ -1,11 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
-import { createProblem } from "@/lib/actions";
 import { Button } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+
+import { createProblem } from "@/lib/actions";
 
 const CreateProblemForm = () => {
   const router = useRouter();

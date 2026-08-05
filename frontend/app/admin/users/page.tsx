@@ -1,5 +1,7 @@
 import { Suspense } from "react";
+
 import { UsersContent, UsersContentSkeleton } from "@/components/users";
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -16,7 +18,7 @@ type PageProps = {
   }>;
 };
 
-export default async function AdminUsersPage({ searchParams }: PageProps) {
+const AdminUsersPage = async ({ searchParams }: PageProps) => {
   const resolvedSearchParams = await searchParams;
   const page = Number(resolvedSearchParams.page) || 1;
   const search = resolvedSearchParams.search || undefined;
@@ -27,4 +29,6 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
       <UsersContent page={page} search={search} role={role} />
     </Suspense>
   );
-}
+};
+
+export default AdminUsersPage;

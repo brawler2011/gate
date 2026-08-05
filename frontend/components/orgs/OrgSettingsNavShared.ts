@@ -1,8 +1,9 @@
-import type { ButtonProps } from "@mantine/core";
 import {
-    IconAlertTriangle,
-    IconSettings,
+  IconAlertTriangle,
+  IconSettings,
 } from "@tabler/icons-react";
+
+import type { ButtonProps } from "@mantine/core";
 import type React from "react";
 
 const ORG_SETTINGS_NAV_CONFIG = {

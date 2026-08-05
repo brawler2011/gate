@@ -1,11 +1,13 @@
 "use client";
 
-import { useOptionalPageTransition } from "@/components/shared/PageTransitionContext";
-import * as corev1 from "@contracts/core/v1";
 import { Pagination } from "@mantine/core";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React from "react";
+
+import { useOptionalPageTransition } from "@/components/shared/PageTransitionContext";
+
+import type * as corev1 from "@contracts/core/v1";
 
 interface NextPaginationProps {
   pagination: corev1.PaginationModel;
@@ -27,7 +29,7 @@ const NextPagination = ({
     params: Record<string, string | number | undefined>,
   ) => {
     const validParams = Object.entries(params)
-      .filter(([key, value]) => value !== undefined && value !== "")
+      .filter(([_key, value]) => value !== undefined && value !== "")
       .map(([key, _value]) => `${key}=${encodeURIComponent(_value!)}`);
     return validParams.length > 0 ? `?${validParams.join("&")}` : "";
   };

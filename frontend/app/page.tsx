@@ -1,7 +1,3 @@
-import { DefaultLayout } from '@/components/shared';
-import { isAuthenticated } from "@/lib/auth";
-import { listPosts, getMyDashboard } from "@/lib/actions";
-import type { PaginationModel } from "@contracts/core/v1";
 import {
   Container,
   Group,
@@ -12,10 +8,16 @@ import {
   Text,
 } from "@mantine/core";
 import { IconNews } from "@tabler/icons-react";
+
 import { BlogList } from '@/components/blog/BlogList';
 import { CompactBlogList } from '@/components/blog/CompactBlogList';
 import { DashboardContestsList } from '@/components/contests/DashboardContestsList';
 import { DashboardProblemsList } from '@/components/problems/DashboardProblemsList';
+import { DefaultLayout } from '@/components/shared';
+import { listPosts, getMyDashboard } from "@/lib/actions";
+import { isAuthenticated } from "@/lib/auth";
+
+import type { PaginationModel } from "@contracts/core/v1";
 
 export const metadata = {
   title: "Главная",
@@ -25,7 +27,7 @@ type PageProps = {
   searchParams: Promise<{ page?: string }>;
 };
 
-export default async function Page({ searchParams }: PageProps) {
+const Page = async ({ searchParams }: PageProps) => {
   const authenticated = await isAuthenticated();
   const params = await searchParams;
   const currentPage = parseInt(params?.page || "1", 10) || 1;
@@ -112,4 +114,6 @@ export default async function Page({ searchParams }: PageProps) {
       </Container>
     </DefaultLayout>
   );
-}
+};
+
+export default Page;

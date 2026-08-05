@@ -1,14 +1,15 @@
 "use client";
 
-import { WorkshopEditor } from "@/components/workshop";
-import { Suspense } from "react";
 import { useParams } from "next/navigation";
+import { Suspense } from "react";
+
+import { WorkshopEditor } from "@/components/workshop";
 
 type ProblemPageProps = {
   activeTab: string;
 };
 
-export default function ProblemPage({ activeTab }: ProblemPageProps) {
+const ProblemPage = ({ activeTab }: ProblemPageProps) => {
   const params = useParams();
   const problem_id = params.problem_id as string;
 
@@ -17,4 +18,6 @@ export default function ProblemPage({ activeTab }: ProblemPageProps) {
       <WorkshopEditor problemId={problem_id} activeTab={activeTab} />
     </Suspense>
   );
-}
+};
+
+export default ProblemPage;

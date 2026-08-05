@@ -7,10 +7,12 @@ import {
   updateWorkshopCheckerFile,
   setWorkshopCheckerMain,
 } from "@/lib/actions";
+
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
+
 import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
 
-export function WorkshopCheckersTab(props: WorkshopFileTabProps) {
+export const WorkshopCheckersTab = (props: WorkshopFileTabProps) => {
   return (
     <WorkshopCollectionTab
       {...props}
@@ -22,4 +24,4 @@ export function WorkshopCheckersTab(props: WorkshopFileTabProps) {
       setMain={setWorkshopCheckerMain}
     />
   );
-}
+};

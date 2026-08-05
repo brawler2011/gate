@@ -1,18 +1,19 @@
+import { Container } from "@mantine/core";
+import { notFound } from "next/navigation";
+
 import { OrgTeamsTab } from "@/components/orgs/OrgTeamsTab";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { listTeams, getOrganization } from "@/lib/actions";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
-import { Container, Stack, Text, Title } from "@mantine/core";
-import { notFound } from "next/navigation";
 
 type Props = {
   params: Promise<{ org_id: string }>;
   searchParams: Promise<{ page?: string }>;
 };
 
-export default async function OrgTeamsPage({ params, searchParams }: Props) {
+const OrgTeamsPage = async ({ params, searchParams }: Props) => {
   const { org_id } = await params;
   const { page } = await searchParams;
   const showMembersTab = await canManageOrgMembers(org_id);
@@ -25,7 +26,9 @@ export default async function OrgTeamsPage({ params, searchParams }: Props) {
 
   const [orgError, orgData] = await getOrganization(org_id);
   if (orgError) {
-    if (orgError.status === 404) notFound();
+    if (orgError.status === 404) {
+      notFound();
+    }
     return (
       <DefaultLayout headerOrganizationId={org_id}>
         <Container size="lg" py="lg">
@@ -54,4 +57,6 @@ export default async function OrgTeamsPage({ params, searchParams }: Props) {
       </Container>
     </DefaultLayout >
   );
-}
+};
+
+export default OrgTeamsPage;

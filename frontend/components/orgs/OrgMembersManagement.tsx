@@ -1,13 +1,5 @@
 "use client";
 
-import { StatusMessage } from "@/components/shared/StatusMessage";
-import {
-  addOrganizationMember,
-  listOrganizationMembers,
-  removeOrganizationMember,
-  searchUsers,
-} from "@/lib/actions";
-import type { OrganizationMemberModel } from "@contracts/core/v1";
 import {
   ActionIcon,
   Badge,
@@ -26,6 +18,16 @@ import { notifications } from "@mantine/notifications";
 import { IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { StatusMessage } from "@/components/shared/StatusMessage";
+import {
+  addOrganizationMember,
+  listOrganizationMembers,
+  removeOrganizationMember,
+  searchUsers,
+} from "@/lib/actions";
+
+import type { OrganizationMemberModel } from "@contracts/core/v1";
+
 const ROLE_OPTIONS = [
   { label: "Владелец", value: "owner", color: "red" },
   { label: "Администратор", value: "admin", color: "orange" },
@@ -40,7 +42,7 @@ function getRoleDisplay(role: string) {
 
 type Props = { orgId: string };
 
-export function OrgMembersManagement({ orgId }: Props) {
+export const OrgMembersManagement = ({ orgId }: Props) => {
   const [members, setMembers] = useState<OrganizationMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,7 +64,9 @@ export function OrgMembersManagement({ orgId }: Props) {
     setLoading(true);
     const [, data] = await listOrganizationMembers(orgId, 1, 100);
     setLoading(false);
-    if (data) setMembers(data.members);
+    if (data) {
+      setMembers(data.members);
+    }
   }, [orgId]);
 
   useEffect(() => {
@@ -84,7 +88,9 @@ export function OrgMembersManagement({ orgId }: Props) {
   }, [debouncedQuery]);
 
   const handleAdd = async () => {
-    if (!selectedUserId) return;
+    if (!selectedUserId) {
+      return;
+    }
     setAdding(true);
     const [error] = await addOrganizationMember(
       orgId,
@@ -166,11 +172,12 @@ export function OrgMembersManagement({ orgId }: Props) {
           </Group>
         </Card>
 
-        {loading ? (
+        {loading && (
           <Center py="xl">
             <Loader />
           </Center>
-        ) : members.length === 0 ? (
+        )}
+        {!loading && members.length === 0 && (
           <Center py="xl">
             <Stack align="center" gap="sm">
               <IconUsers size={32} color="var(--mantine-color-dimmed)" />
@@ -179,7 +186,8 @@ export function OrgMembersManagement({ orgId }: Props) {
               </Text>
             </Stack>
           </Center>
-        ) : (
+        )}
+        {!loading && members.length > 0 && (
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
@@ -241,4 +249,4 @@ export function OrgMembersManagement({ orgId }: Props) {
       />
     </>
   );
-}
+};

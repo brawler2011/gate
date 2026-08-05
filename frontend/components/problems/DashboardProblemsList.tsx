@@ -3,14 +3,16 @@
 import { Group, Stack, Text, Title, Card, ThemeIcon, ActionIcon } from "@mantine/core";
 import { IconPencil, IconCode } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import type { DashboardProblemModel } from "@contracts/core/v1";
+
 import { APP_COLORS } from "@/lib/theme/colors";
+
+import type { DashboardProblemModel } from "@contracts/core/v1";
 
 type DashboardProblemsListProps = {
   problems: DashboardProblemModel[];
 };
 
-export function DashboardProblemsList({ problems }: DashboardProblemsListProps) {
+export const DashboardProblemsList = ({ problems }: DashboardProblemsListProps) => {
   const router = useRouter();
 
   if (problems.length === 0) {
@@ -106,4 +108,4 @@ export function DashboardProblemsList({ problems }: DashboardProblemsListProps) 
       ))}
     </Stack>
   );
-}
+};

@@ -13,12 +13,12 @@ interface DeleteBlogPostModalProps {
   onSubmit: () => Promise<void>;
 }
 
-export function DeleteBlogPostModal({
+export const DeleteBlogPostModal = ({
   opened,
   onClose,
   post,
   onSubmit,
-}: DeleteBlogPostModalProps) {
+}: DeleteBlogPostModalProps) => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -68,7 +68,7 @@ export function DeleteBlogPostModal({
       </Stack>
     </Modal>
   );
-}
+};
 
 
 

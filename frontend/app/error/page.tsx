@@ -5,7 +5,7 @@ type PageProps = {
   searchParams: Promise<{ id?: string }>;
 };
 
-export default async function ErrorPage({ searchParams }: PageProps) {
+const ErrorPage = async ({ searchParams }: PageProps) => {
   const params = await searchParams;
   const errorId = params.id;
 
@@ -36,5 +36,7 @@ export default async function ErrorPage({ searchParams }: PageProps) {
       </Paper>
     </Container>
   );
-}
+};
 
+
+export default ErrorPage;

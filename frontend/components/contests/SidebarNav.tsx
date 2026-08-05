@@ -1,12 +1,13 @@
 import { Box, Button, Stack } from "@mantine/core";
 import Link from "next/link";
 import React from "react";
+
 import { getTabStyles } from "./get-tab-styles";
 
 type NavSection = {
   key: string;
   label: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ size?: string | number; color?: string }>;
 };
 
 interface SidebarNavProps {
@@ -15,11 +16,11 @@ interface SidebarNavProps {
   sections: readonly NavSection[];
 }
 
-export function SidebarNav({
+export const SidebarNav = ({
   contestId,
   activeSection,
   sections,
-}: SidebarNavProps) {
+}: SidebarNavProps) => {
   return (
     <Box
       style={{
@@ -54,4 +55,4 @@ export function SidebarNav({
       </Stack>
     </Box>
   );
-}
+};

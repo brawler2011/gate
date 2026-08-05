@@ -10,13 +10,13 @@ type Props = {
   gapNumbers: number[];
 };
 
-export function TestRenumberModal({
+export const TestRenumberModal = ({
   opened,
   onClose,
   onConfirm,
   isLoading,
   gapNumbers,
-}: Props) {
+}: Props) => {
   return (
     <Modal
       opened={opened}
@@ -47,4 +47,4 @@ export function TestRenumberModal({
       </Stack>
     </Modal>
   );
-}
+};

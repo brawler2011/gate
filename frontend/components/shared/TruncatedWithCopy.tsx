@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { IconCopy, IconCheck } from "@tabler/icons-react";
+import { useState, useEffect } from "react";
+
 import classes from "./TruncatedWithCopy.module.css";
 
 type Props = {
@@ -10,11 +11,11 @@ type Props = {
   maxLength?: number;
 };
 
-export function TruncatedWithCopy({ 
+export const TruncatedWithCopy = ({ 
   value, 
   showOnHover = false,
   maxLength = 9 
-}: Props) {
+}: Props) => {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -67,5 +68,5 @@ export function TruncatedWithCopy({
       </button>
     </div>
   );
-}
+};
 

@@ -7,10 +7,12 @@ import {
   updateWorkshopInteractorFile,
   setWorkshopInteractorMain,
 } from "@/lib/actions";
+
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
+
 import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
 
-export function WorkshopInteractorsTab(props: WorkshopFileTabProps) {
+export const WorkshopInteractorsTab = (props: WorkshopFileTabProps) => {
   return (
     <WorkshopCollectionTab
       {...props}
@@ -22,4 +24,4 @@ export function WorkshopInteractorsTab(props: WorkshopFileTabProps) {
       setMain={setWorkshopInteractorMain}
     />
   );
-}
+};

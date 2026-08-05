@@ -13,6 +13,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useEffect, useState, useTransition } from "react";
+
 import { getWorkshopTestFile, updateWorkshopTestFile } from "@/lib/actions";
 
 type Props = {
@@ -25,13 +26,13 @@ type Props = {
 
 const MAX_PREVIEW_BYTES = 50 * 1024; // 50 KB
 
-export function TestPreviewModal({
+export const TestPreviewModal = ({
   opened,
   onClose,
   problemId,
   filename,
   onSaved,
-}: Props) {
+}: Props) => {
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, startSaving] = useTransition();
@@ -61,7 +62,9 @@ export function TestPreviewModal({
   }, [opened, filename, problemId]);
 
   const handleSave = () => {
-    if (!filename) return;
+    if (!filename) {
+      return;
+    }
 
     startSaving(async () => {
       const [err] = await updateWorkshopTestFile(problemId, filename, content);
@@ -85,7 +88,9 @@ export function TestPreviewModal({
   };
 
   const handleDownload = () => {
-    if (!filename) return;
+    if (!filename) {
+      return;
+    }
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -118,7 +123,8 @@ export function TestPreviewModal({
 
           {isTruncated && (
             <Alert color="yellow" title="Большой размер файла">
-              Отображаются первые 50 КБ файла. Редактирование большого файла сбросит данные после превью. Воспользуйтесь кнопкой скачивания оригинала.
+              Отображаются первые 50 КБ файла. Редактирование большого файла сбросит
+              данные после превью. Воспользуйтесь кнопкой скачивания оригинала.
             </Alert>
           )}
 
@@ -150,4 +156,4 @@ export function TestPreviewModal({
       </Box>
     </Modal>
   );
-}
+};

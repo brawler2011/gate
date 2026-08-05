@@ -1,3 +1,6 @@
+import { Box, Container, Text, Title } from "@mantine/core";
+import { redirect } from "next/navigation";
+
 import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
 import { DefaultLayout } from "@/components/shared";
 import { getContest } from "@/lib/actions";
@@ -9,10 +12,11 @@ import {
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import { PermissionChecker } from "@/lib/permissions";
-import { redirect } from "next/navigation";
-import { Box, Container, Text, Title } from "@mantine/core";
-import { Metadata } from "next";
+
 import classes from "../contestLayout.module.css";
+
+import type { Metadata } from "next";
+
 
 const metadata: Metadata = {
   title: "Положение",
@@ -33,7 +37,9 @@ const Page = async ({ params }: PageProps) => {
   if (contestResponse?.contest) {
     const checker = new PermissionChecker(user, contestRole?.role ?? null);
     const isManager = checker.canManageContest(contestResponse.contest);
-    const hasStarted = !contestResponse.contest.start_time || new Date(contestResponse.contest.start_time) <= new Date();
+    const hasStarted =
+      !contestResponse.contest.start_time ||
+      new Date(contestResponse.contest.start_time) <= new Date();
 
     if (!isManager && !hasStarted) {
       redirect(`/contests/${contest_id}`);
@@ -42,11 +48,11 @@ const Page = async ({ params }: PageProps) => {
 
   const contestHeaderNav = contestResponse?.contest
     ? buildContestHeaderNav({
-        contest: contestResponse.contest,
-        user,
-        contestRole,
-        activeTab: "monitor",
-      })
+      contest: contestResponse.contest,
+      user,
+      contestRole,
+      activeTab: "monitor",
+    })
     : undefined;
 
   return (
@@ -56,9 +62,9 @@ const Page = async ({ params }: PageProps) => {
       headerContest={
         contestResponse?.contest
           ? {
-              id: contestResponse.contest.id,
-              title: contestResponse.contest.title,
-            }
+            id: contestResponse.contest.id,
+            title: contestResponse.contest.title,
+          }
           : undefined
       }
     >

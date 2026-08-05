@@ -1,11 +1,15 @@
 "use client";
 
-import { numberToLetters } from "@/lib/lib";
-import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
 import { Box, Table, Text } from "@mantine/core";
 import { useRouter } from "next/navigation";
-import type { ContestProblemListItemModel } from "@contracts/core/v1";
+
+import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
+import { numberToLetters } from "@/lib/lib";
+
+
 import classes from "./ContestProblemsTable.module.css";
+
+import type { ContestProblemListItemModel } from "@contracts/core/v1";
 
 type ContestProblemsTableProps = {
   contestId: string | number;
@@ -23,10 +27,10 @@ const formatMemoryLimit = (memoryKb: number) => {
   return `${memoryKb}MB`;
 };
 
-export function ContestProblemsTable({
+export const ContestProblemsTable = ({
   contestId,
   problems,
-}: ContestProblemsTableProps) {
+}: ContestProblemsTableProps) => {
   const router = useRouter();
 
   return (
@@ -73,4 +77,4 @@ export function ContestProblemsTable({
       </Box>
     </Box>
   );
-}
+};

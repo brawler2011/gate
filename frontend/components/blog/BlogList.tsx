@@ -1,8 +1,10 @@
 "use client";
 
 import { Stack, Text } from "@mantine/core";
+
 import { BlogPost } from '@/components/blog/BlogPost';
 import { NextPagination } from '@/components/shared/Pagination';
+
 import type { PostModel, PaginationModel } from "@contracts/core/v1";
 
 type BlogListProps = {
@@ -11,7 +13,7 @@ type BlogListProps = {
   error?: boolean;
 };
 
-export function BlogList({ posts, pagination, error }: BlogListProps) {
+export const BlogList = ({ posts, pagination, error }: BlogListProps) => {
   if (error) {
     return <Text c="dimmed">Не удалось загрузить посты</Text>;
   }
@@ -47,4 +49,4 @@ export function BlogList({ posts, pagination, error }: BlogListProps) {
       )}
     </Stack>
   );
-}
+};

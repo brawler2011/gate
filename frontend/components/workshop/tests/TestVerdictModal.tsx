@@ -22,7 +22,7 @@ type Props = {
   error?: string;
 };
 
-export function TestVerdictModal({
+export const TestVerdictModal = ({
   opened,
   onClose,
   title,
@@ -31,7 +31,7 @@ export function TestVerdictModal({
   memory,
   message,
   error,
-}: Props) {
+}: Props) => {
   return (
     <Modal opened={opened} onClose={onClose} title={<Text fw={600}>{title}</Text>} size="md">
       <Stack gap="md">
@@ -89,4 +89,4 @@ export function TestVerdictModal({
       </Stack>
     </Modal>
   );
-}
+};

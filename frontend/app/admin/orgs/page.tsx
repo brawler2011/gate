@@ -1,6 +1,8 @@
-import { Suspense } from "react";
-import { AdminOrgsContent } from "@/components/admin";
 import { Container, Skeleton, Stack } from "@mantine/core";
+import { Suspense } from "react";
+
+import { AdminOrgsContent } from "@/components/admin";
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,7 +11,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-function AdminOrgsContentSkeleton() {
+const AdminOrgsContentSkeleton = () => {
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
@@ -25,7 +27,7 @@ function AdminOrgsContentSkeleton() {
       </Stack>
     </Container>
   );
-}
+};
 
 type PageProps = {
   searchParams: Promise<{
@@ -34,7 +36,7 @@ type PageProps = {
   }>;
 };
 
-export default async function AdminOrgsPage({ searchParams }: PageProps) {
+const AdminOrgsPage = async ({ searchParams }: PageProps) => {
   const resolvedSearchParams = await searchParams;
   const page = Number(resolvedSearchParams.page) || 1;
   const search = resolvedSearchParams.search || undefined;
@@ -44,4 +46,6 @@ export default async function AdminOrgsPage({ searchParams }: PageProps) {
       <AdminOrgsContent page={page} search={search} />
     </Suspense>
   );
-}
+};
+
+export default AdminOrgsPage;

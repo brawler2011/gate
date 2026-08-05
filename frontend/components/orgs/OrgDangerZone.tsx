@@ -1,16 +1,17 @@
 "use client";
 
-import { deleteOrganization } from '@/lib/actions';
 import { Alert, Button, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
+import { IconAlertTriangle } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { IconAlertTriangle } from '@tabler/icons-react';
+
+import { deleteOrganization } from '@/lib/actions';
 
 type Props = { orgId: string; orgName: string };
 
-export function OrgDangerZone({ orgId, orgName }: Props) {
+export const OrgDangerZone = ({ orgId, orgName }: Props) => {
   const [opened, { open, close }] = useDisclosure(false);
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -63,4 +64,4 @@ export function OrgDangerZone({ orgId, orgName }: Props) {
       </Modal>
     </>
   );
-}
+};

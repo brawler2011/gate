@@ -1,3 +1,12 @@
+import {
+  AppShellFooter,
+  AppShellHeader,
+  AppShellMain,
+  Box,
+  Container,
+} from "@mantine/core";
+import { redirect } from "next/navigation";
+
 import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
 import { Layout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
@@ -12,17 +21,12 @@ import {
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import { PermissionChecker } from "@/lib/permissions";
-import { redirect } from "next/navigation";
-import {
-  AppShellFooter,
-  AppShellHeader,
-  AppShellMain,
-  Box,
-  Container,
-} from "@mantine/core";
-import { Metadata } from "next";
+
+
 import classes from "../contestLayout.module.css";
 import { SubmitSubmissionClient } from "./SubmitSubmissionClient";
+
+import type { Metadata } from "next";
 
 type Props = {
   params: Promise<{ contest_id: string }>;
@@ -50,7 +54,9 @@ const Page = async ({ params }: Props) => {
   const { contest_id } = await params;
 
   const [error, response] = await getContest(contest_id);
-  if (error) return <ErrorDisplay error={error} />;
+  if (error) {
+    return <ErrorDisplay error={error} />;
+  }
 
   // Get user and contest role for permissions
   const user = await getCurrentUser();

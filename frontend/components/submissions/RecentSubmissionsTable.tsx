@@ -1,13 +1,16 @@
 "use client";
 
+import { Loader, Paper, Table, Text } from "@mantine/core";
+
 import { StateColor, StateString, TimeBeautify } from "@/lib/lib";
 import {
   useSubmissionsWebSocket,
   type SubmissionWithProgress,
 } from "@/lib/useSubmissionsWebSocket";
-import type { SubmissionsListItemModel } from "@contracts/core/v1";
-import { Loader, Paper, Table, Text } from "@mantine/core";
+
 import styles from "./RecentSubmissionsTable.module.css";
+
+import type { SubmissionsListItemModel } from "@contracts/core/v1";
 
 const RECENT_SUBMISSIONS_LIMIT = 5;
 
@@ -61,14 +64,14 @@ const StatusCell = ({ submission }: StatusCellProps) => {
   );
 };
 
-export function RecentSubmissionsTable({
+export const RecentSubmissionsTable = ({
   submissions: initialSubmissions,
   contestId,
   userId,
   problemId,
   wsUrl,
   since,
-}: RecentSubmissionsTableProps) {
+}: RecentSubmissionsTableProps) => {
   // Enable WS only if wsUrl is provided and we have userId and problemId for filtering
   const enabled = Boolean(wsUrl && userId && problemId);
 
@@ -137,4 +140,4 @@ export function RecentSubmissionsTable({
       </Table>
     </Paper>
   );
-}
+};

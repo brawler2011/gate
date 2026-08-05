@@ -1,11 +1,13 @@
 "use client";
 
-import { theme } from "@/lib/theme/theme";
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
+
+import { theme } from "@/lib/theme/theme";
+
 import type { ReactNode } from "react";
 
-export function Providers({ children }: { children: ReactNode }) {
+export const Providers = ({ children }: { children: ReactNode }) => {
   return (
     <MantineProvider
       theme={theme}
@@ -16,4 +18,4 @@ export function Providers({ children }: { children: ReactNode }) {
       {children}
     </MantineProvider>
   );
-}
+};

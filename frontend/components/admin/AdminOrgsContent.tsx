@@ -1,6 +1,5 @@
 "use client";
 
-import { deleteOrganization } from "@/lib/actions";
 import {
   ActionIcon,
   Box,
@@ -16,22 +15,29 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconSearch, IconTrash } from "@tabler/icons-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { OrganizationModel } from "@contracts/core/v1";
+import useSWR from "swr";
+
 import { NextPagination } from '@/components/shared/Pagination';
 import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
+import { deleteOrganization } from "@/lib/actions";
+import { formatDate } from "@/lib/formatDate";
+
+import classes from "./AdminPage.module.css";
 import { DeleteOrgModal } from "./DeleteOrgModal";
 import { CreateOrgButton } from "../orgs/CreateOrgButton";
-import useSWR from "swr";
-import { useRouter, useSearchParams } from "next/navigation";
-import classes from "./AdminPage.module.css";
+
+
+
+import type { OrganizationModel } from "@contracts/core/v1";
 
 type AdminOrgsContentProps = {
   page: number;
   search?: string;
 };
 
-export function AdminOrgsContent({ page, search }: AdminOrgsContentProps) {
+export const AdminOrgsContent = ({ page, search }: AdminOrgsContentProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -102,7 +108,9 @@ export function AdminOrgsContent({ page, search }: AdminOrgsContentProps) {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!orgToDelete) return;
+    if (!orgToDelete) {
+      return;
+    }
 
     setDeletingId(orgToDelete.id);
     try {
@@ -143,7 +151,9 @@ export function AdminOrgsContent({ page, search }: AdminOrgsContentProps) {
 
   const totalPages = pagination.total || 1;
   const queryParams: Record<string, string | number | undefined> = {};
-  if (search) queryParams.search = search;
+  if (search) {
+    queryParams.search = search;
+  }
 
   return (
     <Container size="xl" py="md">
@@ -161,7 +171,7 @@ export function AdminOrgsContent({ page, search }: AdminOrgsContentProps) {
           style={{ maxWidth: 400 }}
         />
 
-        {isLoading ? (
+        {isLoading && (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
@@ -169,11 +179,15 @@ export function AdminOrgsContent({ page, search }: AdminOrgsContentProps) {
             <Skeleton height={35} radius="sm" />
             <Skeleton height={35} radius="sm" />
           </Stack>
-        ) : orgs.length === 0 ? (
+        )}
+
+        {!isLoading && orgs.length === 0 && (
           <Center py="xl">
             <Text c="dimmed">Организации не найдены</Text>
           </Center>
-        ) : (
+        )}
+
+        {!isLoading && orgs.length > 0 && (
           <>
             <Box className={classes.tableContainer}>
               <Table className={classes.table} verticalSpacing="xs">
@@ -206,11 +220,9 @@ export function AdminOrgsContent({ page, search }: AdminOrgsContentProps) {
                         </Text>
                       </Table.Td>
                       <Table.Td>
-                        <Text className={classes.dateCell}>
-                          {new Date(org.created_at).toLocaleDateString("ru-RU")}
-                        </Text>
+                        <Text className={classes.metaCell}>{formatDate(org.created_at)}</Text>
                       </Table.Td>
-                      <Table.Td className={classes.actionsCell}>
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
                         <Group gap="xs" wrap="nowrap">
                           <ActionIcon
                             color="red"
@@ -260,4 +272,4 @@ export function AdminOrgsContent({ page, search }: AdminOrgsContentProps) {
       )}
     </Container>
   );
-}
+};

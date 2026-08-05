@@ -1,7 +1,5 @@
 "use client";
 
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { importProblemPackage } from "@/lib/actions";
 import {
   Alert,
   Box,
@@ -16,17 +14,22 @@ import { IconInfoCircle, IconUpload } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { SectionPaper } from "@/components/workshop/SectionPaper";
+import { importProblemPackage } from "@/lib/actions";
+
 type Props = {
   problemId: string;
 };
 
-export function WorkshopImportTab({ problemId }: Props) {
+export const WorkshopImportTab = ({ problemId }: Props) => {
   const router = useRouter();
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const [isImporting, startImport] = useTransition();
 
   const handleImport = () => {
-    if (!packageFile) return;
+    if (!packageFile) {
+      return;
+    }
 
     startImport(async () => {
       const [error] = await importProblemPackage(problemId, packageFile);
@@ -90,4 +93,4 @@ export function WorkshopImportTab({ problemId }: Props) {
       </Stack>
     </Box>
   );
-}
+};

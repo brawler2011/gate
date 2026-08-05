@@ -2,7 +2,9 @@
  * Converts a number to alphabetic letters (1 -> A, 2 -> B, etc.)
  */
 export function numberToLetters(num?: number | null): string {
-  if (!num || num <= 0) return "?";
+  if (!num || num <= 0) {
+    return "?";
+  }
   
   let result = "";
   let n = num;
@@ -80,7 +82,7 @@ export function StateString(state?: number | string, failedTest?: number | null)
   }
   
   // Add test number if available (for error states that happen on specific tests)
-  if (failedTest != null && failedTest > 0) {
+  if (failedTest !== null && failedTest !== undefined && failedTest > 0) {
     return `${baseString} на тесте ${failedTest}`;
   }
   
@@ -88,15 +90,17 @@ export function StateString(state?: number | string, failedTest?: number | null)
 }
 
 export const isValidUUIDV4 = (str: string): boolean => {
-    const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidV4Regex.test(str);
-}
+  const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidV4Regex.test(str);
+};
 
 /**
  * Format ISO timestamp to readable format
  */
 export function TimeBeautify(timestamp?: string): string {
-  if (!timestamp) return "—";
+  if (!timestamp) {
+    return "—";
+  }
   
   try {
     const date = new Date(timestamp);

@@ -7,7 +7,7 @@ type GlobalErrorProps = {
   reset: () => void;
 };
 
-export default function GlobalError({ error, reset }: GlobalErrorProps) {
+const GlobalError = ({ error, reset }: GlobalErrorProps) => {
   return (
     <html lang="ru">
       <body>
@@ -68,4 +68,6 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
       </body>
     </html>
   );
-}
+};
+
+export default GlobalError;

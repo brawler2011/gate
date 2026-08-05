@@ -1,18 +1,23 @@
-import { DefaultLayout } from '@/components/shared';
-import { OrgCard } from '@/components/orgs/OrgCard';
+import { Container, Group, SimpleGrid, Stack, Text, Title, Center } from '@mantine/core';
+
 import { CreateOrgButton } from '@/components/orgs/CreateOrgButton';
+import { OrgCard } from '@/components/orgs/OrgCard';
+import { DefaultLayout } from '@/components/shared';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { listOrganizations } from '@/lib/actions';
 import { getCurrentUser } from '@/lib/auth';
-import { Container, Group, SimpleGrid, Stack, Text, Title, Center } from '@mantine/core';
+
+
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Организации' };
 
-export default async function OrgsPage() {
+const OrgsPage = async () => {
   const user = await getCurrentUser();
   const [error, data] = await listOrganizations(1, 50);
-  if (error) return <DefaultLayout><Container size="lg" py="lg"><ErrorDisplay error={error} /></Container></DefaultLayout>;
+  if (error) {
+    return <DefaultLayout><Container size="lg" py="lg"><ErrorDisplay error={error} /></Container></DefaultLayout>;
+  }
 
   const orgs = data!.organizations;
 
@@ -37,4 +42,6 @@ export default async function OrgsPage() {
       </Container>
     </DefaultLayout>
   );
-}
+};
+
+export default OrgsPage;

@@ -1,5 +1,4 @@
 "use client";
-import { formatDate } from "@/lib/formatDate";
 import {
   Avatar,
   Card,
@@ -12,6 +11,9 @@ import {
 } from "@mantine/core";
 import NextImage from "next/image";
 import Link from "next/link";
+
+import { formatDate } from "@/lib/formatDate";
+
 import classes from "./BlogPost.module.css";
 
 export interface BlogPostProps {
@@ -24,7 +26,7 @@ export interface BlogPostProps {
   date?: string;
 }
 
-export function BlogPost({
+export const BlogPost = ({
   id,
   title,
   author,
@@ -32,7 +34,7 @@ export function BlogPost({
   previewImageUrl,
   description,
   date,
-}: BlogPostProps) {
+}: BlogPostProps) => {
   const imageUrl = previewImageUrl ? `/api/posts/${id}/image` : null;
 
   return (
@@ -82,9 +84,9 @@ export function BlogPost({
       </Card>
     </Link>
   );
-}
+};
 
-export function BlogPostSkeleton() {
+export const BlogPostSkeleton = () => {
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
       <Stack gap="md">
@@ -108,4 +110,4 @@ export function BlogPostSkeleton() {
       </Stack>
     </Card>
   );
-}
+};

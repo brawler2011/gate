@@ -1,12 +1,13 @@
 import { Box, Button, Group } from "@mantine/core";
 import Link from "next/link";
 import React from "react";
+
 import { getTabStyles } from "./get-tab-styles";
 
 type NavSection = {
   key: string;
   label: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ size?: string | number; color?: string }>;
 };
 
 interface MobileNavProps {
@@ -15,11 +16,11 @@ interface MobileNavProps {
   sections: readonly NavSection[];
 }
 
-export function MobileNav({
+export const MobileNav = ({
   contestId,
   activeSection,
   sections,
-}: MobileNavProps) {
+}: MobileNavProps) => {
   return (
     <Box hiddenFrom="sm" style={{ width: "100%" }}>
       <Group gap="xs" mb="md">
@@ -46,4 +47,4 @@ export function MobileNav({
       </Group>
     </Box>
   );
-}
+};

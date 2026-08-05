@@ -5,7 +5,7 @@ import { IconSearch } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-export function UsersSearchInput() {
+export const UsersSearchInput = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
@@ -67,5 +67,5 @@ export function UsersSearchInput() {
       onChange={(e) => setSearch(e.currentTarget.value)}
     />
   );
-}
+};
 

@@ -4,13 +4,17 @@
  * @returns Formatted date string (e.g., "18.01.2025")
  */
 export function formatDate(isoDate: string | undefined): string {
-  if (!isoDate) return "—";
+  if (!isoDate) {
+    return "—";
+  }
   
   try {
     const date = new Date(isoDate);
     
     // Check for Invalid Date
-    if (isNaN(date.getTime())) return "—";
+    if (isNaN(date.getTime())) {
+      return "—";
+    }
     
     // Use UTC methods to avoid timezone issues
     const day = String(date.getUTCDate()).padStart(2, '0');

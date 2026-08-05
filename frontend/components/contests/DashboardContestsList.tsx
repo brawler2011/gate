@@ -3,13 +3,14 @@
 import { Group, Stack, Text, Title, Badge, Card, ThemeIcon } from "@mantine/core";
 import { IconTrophy, IconChevronRight } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+
 import type { DashboardContestModel } from "@contracts/core/v1";
 
 type DashboardContestsListProps = {
   contests: DashboardContestModel[];
 };
 
-export function DashboardContestsList({ contests }: DashboardContestsListProps) {
+export const DashboardContestsList = ({ contests }: DashboardContestsListProps) => {
   const router = useRouter();
 
   if (contests.length === 0) {
@@ -23,7 +24,9 @@ export function DashboardContestsList({ contests }: DashboardContestsListProps) 
   }
 
   const getContestStatus = (start?: string | null, end?: string | null) => {
-    if (!start) return { label: "Идет", color: "green" };
+    if (!start) {
+      return { label: "Идет", color: "green" };
+    }
     const now = new Date();
     const startTime = new Date(start);
     const endTime = end ? new Date(end) : null;
@@ -114,4 +117,4 @@ export function DashboardContestsList({ contests }: DashboardContestsListProps) 
       })}
     </Stack>
   );
-}
+};

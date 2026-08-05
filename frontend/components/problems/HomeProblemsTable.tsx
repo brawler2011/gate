@@ -1,9 +1,11 @@
 "use client";
 
-import { numberToLetters } from "@/lib/lib";
 import { Text, Group, Table, Box } from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+
+import { numberToLetters } from "@/lib/lib";
+
 import classes from "./HomeProblemsTable.module.css";
 
 type HomeProblemItem = {
@@ -31,7 +33,7 @@ const formatMemoryLimit = (memoryKb: number) => {
   return `${memoryKb}MB`;
 };
 
-export function HomeProblemsTable({ problems }: HomeProblemsTableProps) {
+export const HomeProblemsTable = ({ problems }: HomeProblemsTableProps) => {
   const router = useRouter();
 
   if (problems.length === 0) {
@@ -47,7 +49,7 @@ export function HomeProblemsTable({ problems }: HomeProblemsTableProps) {
       <Table 
         className={classes.table} 
         verticalSpacing="sm"
-        withRowBorders={true}
+        withRowBorders
       >
         <Table.Tbody>
           {problems.map((problem) => {
@@ -89,4 +91,4 @@ export function HomeProblemsTable({ problems }: HomeProblemsTableProps) {
       </Table>
     </Box>
   );
-}
+};

@@ -1,13 +1,12 @@
 'use client';
 
-import React, {useEffect, useState} from 'react';
-import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light';
-import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import {useComputedColorScheme} from '@mantine/core';
-
+import React, {useEffect, useState} from 'react';
 import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp';
 import go from 'react-syntax-highlighter/dist/esm/languages/prism/go';
 import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
+import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light';
+import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 SyntaxHighlighter.registerLanguage('cpp', cpp);
 SyntaxHighlighter.registerLanguage('go', go);
@@ -19,24 +18,24 @@ interface CodeBlockProps {
 }
 
 const CodeBlock: React.FC<CodeBlockProps> = ({code, language}) => {
-    const [theme, setTheme] = useState(oneDark);
-    const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
+  const [theme, setTheme] = useState(oneDark);
+  const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
 
-    useEffect(() => {
-        setTheme(colorScheme === 'dark' ? oneDark : oneLight);
-    }, [colorScheme]);
+  useEffect(() => {
+    setTheme(colorScheme === 'dark' ? oneDark : oneLight);
+  }, [colorScheme]);
 
-    return (
-        <SyntaxHighlighter
-            language={language}
-            style={theme}
-            customStyle={{width: "100%"}}
-            showLineNumbers={true}
-            wrapLines={true}
-        >
-            {code.trim()}
-        </SyntaxHighlighter>
-    );
+  return (
+    <SyntaxHighlighter
+      language={language}
+      style={theme}
+      customStyle={{width: "100%"}}
+      showLineNumbers
+      wrapLines
+    >
+      {code.trim()}
+    </SyntaxHighlighter>
+  );
 };
 
 export {CodeBlock};

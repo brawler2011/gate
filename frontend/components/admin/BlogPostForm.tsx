@@ -11,6 +11,7 @@ import {
 } from "@mantine/core";
 import { IconPhoto, IconUpload } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+
 import type { PostModel } from "@contracts/core/v1";
 
 interface BlogPostFormProps {
@@ -25,12 +26,12 @@ interface BlogPostFormProps {
   }) => Promise<void>;
 }
 
-export function BlogPostForm({
+export const BlogPostForm = ({
   opened,
   onClose,
   post,
   onSubmit,
-}: BlogPostFormProps) {
+}: BlogPostFormProps) => {
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState(post?.title || "");
   const [description, setDescription] = useState(post?.description || "");
@@ -104,7 +105,9 @@ export function BlogPostForm({
           value={title}
           onChange={(e) => {
             setTitle(e.currentTarget.value);
-            if (errors.title) setErrors({});
+            if (errors.title) {
+              setErrors({});
+            }
           }}
           error={errors.title}
           required
@@ -160,7 +163,7 @@ export function BlogPostForm({
       </Stack>
     </Modal>
   );
-}
+};
 
 
 

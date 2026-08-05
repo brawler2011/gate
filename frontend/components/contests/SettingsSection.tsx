@@ -1,6 +1,5 @@
 "use client";
 
-import { updateContest } from "@/lib/actions";
 import {
   Button,
   Stack,
@@ -17,9 +16,12 @@ import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type * as corev1 from "@contracts/core/v1";
-import { APP_COLORS } from "@/lib/theme/colors";
+
 import { StatusMessage } from '@/components/shared/StatusMessage';
+import { updateContest } from "@/lib/actions";
+import { APP_COLORS } from "@/lib/theme/colors";
+
+import type * as corev1 from "@contracts/core/v1";
 
 interface SettingsSectionProps {
   contest: corev1.ContestModel;
@@ -44,7 +46,7 @@ interface CustomSelectProps {
   description?: string;
 }
 
-function CustomSelect({ label, value, onChange, options, description }: CustomSelectProps) {
+const CustomSelect = ({ label, value, onChange, options, description }: CustomSelectProps) => {
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
   });
@@ -53,7 +55,9 @@ function CustomSelect({ label, value, onChange, options, description }: CustomSe
 
   return (
     <Input.Wrapper label={label} description={description}>
-      <Combobox store={combobox} onOptionSubmit={(val) => { onChange(val); combobox.closeDropdown(); }}>
+      <Combobox store={combobox} onOptionSubmit={(val) => {
+        onChange(val); combobox.closeDropdown(); 
+      }}>
         <Combobox.Target>
           <InputBase
             component="button"
@@ -78,12 +82,16 @@ function CustomSelect({ label, value, onChange, options, description }: CustomSe
       </Combobox>
     </Input.Wrapper>
   );
-}
+};
 
 function toLocalDatetimeString(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
+  if (!dateStr) {
+    return "";
+  }
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "";
+  if (isNaN(date.getTime())) {
+    return "";
+  }
   const pad = (n: number) => n.toString().padStart(2, '0');
   const y = date.getFullYear();
   const m = pad(date.getMonth() + 1);
@@ -93,7 +101,7 @@ function toLocalDatetimeString(dateStr: string | null | undefined): string {
   return `${y}-${m}-${d}T${h}:${min}`;
 }
 
-export function SettingsSection({ contest }: SettingsSectionProps) {
+export const SettingsSection = ({ contest }: SettingsSectionProps) => {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
@@ -223,4 +231,4 @@ export function SettingsSection({ contest }: SettingsSectionProps) {
       />
     </>
   );
-}
+};

@@ -11,10 +11,13 @@ import {
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { ContestModel } from "@contracts/core/v1";
+
 import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { DeleteContestModal } from "./DeleteContestModal";
+
 import classes from "./AdminPage.module.css";
+import { DeleteContestModal } from "./DeleteContestModal";
+
+import type { ContestModel } from "@contracts/core/v1";
 
 type AdminContestsTableProps = {
   contests: ContestModel[];
@@ -28,7 +31,7 @@ function getVisibilityDisplay(visibility: string) {
   return { label: "Приватный", color: "gray" };
 }
 
-export function AdminContestsTable({ contests, onDeleteContest }: AdminContestsTableProps) {
+export const AdminContestsTable = ({ contests, onDeleteContest }: AdminContestsTableProps) => {
   const router = useRouter();
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [contestToDelete, setContestToDelete] = useState<ContestModel | null>(null);
@@ -55,7 +58,9 @@ export function AdminContestsTable({ contests, onDeleteContest }: AdminContestsT
   };
 
   const handleDeleteConfirm = async () => {
-    if (!contestToDelete) return;
+    if (!contestToDelete) {
+      return;
+    }
     
     setDeletingId(contestToDelete.id);
     try {
@@ -165,5 +170,5 @@ export function AdminContestsTable({ contests, onDeleteContest }: AdminContestsT
       )}
     </>
   );
-}
+};
 

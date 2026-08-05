@@ -1,7 +1,5 @@
 "use client";
 
-import { createProblem, getProblems } from "@/lib/actions";
-import type { OrganizationModel } from "@contracts/core/v1";
 import {
   Button,
   Modal,
@@ -13,6 +11,10 @@ import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { createProblem, getProblems } from "@/lib/actions";
+
+import type { OrganizationModel } from "@contracts/core/v1";
+
 type Props = {
   opened: boolean;
   onClose: () => void;
@@ -21,13 +23,13 @@ type Props = {
   lockOrganization?: boolean;
 };
 
-export function CreateProblemModal({
+export const CreateProblemModal = ({
   opened,
   onClose,
   orgs,
   defaultOrgId,
   lockOrganization = false,
-}: Props) {
+}: Props) => {
   const router = useRouter();
   const [title, setTitle] = useState("New Problem");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
@@ -78,7 +80,9 @@ export function CreateProblemModal({
   const orgData = orgs.map((o) => ({ value: o.id, label: o.name }));
 
   const handleSubmit = async () => {
-    if (!orgId) return;
+    if (!orgId) {
+      return;
+    }
 
     setLoading(true);
     try {
@@ -87,8 +91,12 @@ export function CreateProblemModal({
         orgId,
         templateId ?? undefined,
       );
-      if (createError) throw new Error(createError.message);
-      if (!createResponse?.id) throw new Error("Не получен ID задачи");
+      if (createError) {
+        throw new Error(createError.message);
+      }
+      if (!createResponse?.id) {
+        throw new Error("Не получен ID задачи");
+      }
 
       const problemId = createResponse.id;
 
@@ -157,4 +165,4 @@ export function CreateProblemModal({
       </Stack>
     </Modal>
   );
-}
+};

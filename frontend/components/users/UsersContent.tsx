@@ -1,11 +1,14 @@
 "use client";
 
+import { Center, Container, Group, Skeleton, Stack, Text, Title } from "@mantine/core";
+import useSWR from "swr";
+
 import { UsersRoleFilter } from '@/components/users/UsersRoleFilter';
 import { UsersSearchInput } from '@/components/users/UsersSearchInput';
 import { UsersTable } from '@/components/users/UsersTable';
-import { Center, Container, Group, Skeleton, Stack, Text, Title } from "@mantine/core";
-import type { UserModel } from "@contracts/core/v1";
-import useSWR from "swr";
+
+
+
 
 type UsersContentProps = {
   page: number;
@@ -13,7 +16,7 @@ type UsersContentProps = {
   role?: string;
 };
 
-export function UsersContent({ page, search, role }: UsersContentProps) {
+export const UsersContent = ({ page, search, role }: UsersContentProps) => {
   const { data, error, isLoading } = useSWR(
     `/api/users?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}${role ? `&role=${role}` : ""}`,
     async (url) => {
@@ -76,4 +79,4 @@ export function UsersContent({ page, search, role }: UsersContentProps) {
       </Stack>
     </Container>
   );
-}
+};

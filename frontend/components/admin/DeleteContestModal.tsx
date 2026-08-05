@@ -13,12 +13,12 @@ interface DeleteContestModalProps {
   onSubmit: () => Promise<void>;
 }
 
-export function DeleteContestModal({
+export const DeleteContestModal = ({
   opened,
   onClose,
   contest,
   onSubmit,
-}: DeleteContestModalProps) {
+}: DeleteContestModalProps) => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -68,5 +68,5 @@ export function DeleteContestModal({
       </Stack>
     </Modal>
   );
-}
+};
 

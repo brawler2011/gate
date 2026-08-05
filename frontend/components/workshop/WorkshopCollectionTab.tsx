@@ -1,10 +1,7 @@
 "use client";
 
-import type { ApiError } from "@/lib/api";
-import type { FileEntry } from "@contracts/core/v1";
 import {
   ActionIcon,
-  Box,
   Button,
   Center,
   Code,
@@ -18,10 +15,14 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconFile, IconPlus, IconRefresh, IconX, IconStar } from "@tabler/icons-react";
+import { IconFile, IconPlus, IconRefresh } from "@tabler/icons-react";
 import { useEffect, useRef, useState, useTransition } from "react";
-import classes from "./WorkshopFolderTab.module.css";
 import useSWR from "swr";
+
+import classes from "./WorkshopFolderTab.module.css";
+
+import type { ApiError } from "@/lib/api";
+import type { FileEntry } from "@contracts/core/v1";
 
 type ListFilesResult = Promise<
   [ApiError | null, { files?: FileEntry[] } | null]
@@ -53,7 +54,7 @@ type Props = {
   ) => SaveFileResult;
 };
 
-export function WorkshopCollectionTab({
+export const WorkshopCollectionTab = ({
   problemId,
   folderName,
   selectedFile,
@@ -64,7 +65,7 @@ export function WorkshopCollectionTab({
   createFile,
   updateFile,
   setMain,
-}: Props) {
+}: Props) => {
   const [content, setContent] = useState<string>("");
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, startSaving] = useTransition();
@@ -80,7 +81,9 @@ export function WorkshopCollectionTab({
     ["workshop-files", problemId, folderName],
     async () => {
       const [err, res] = await listFiles(problemId);
-      if (err) throw new Error(err.message || "Не удалось загрузить список файлов");
+      if (err) {
+        throw new Error(err.message || "Не удалось загрузить список файлов");
+      }
       return res;
     }
   );
@@ -92,7 +95,9 @@ export function WorkshopCollectionTab({
     fileName ? ["workshop-file-content", problemId, folderName, fileName] : null,
     async () => {
       const [err, res] = await getFile(problemId, fileName!);
-      if (err) throw new Error(err.message || "Не удалось загрузить файл");
+      if (err) {
+        throw new Error(err.message || "Не удалось загрузить файл");
+      }
       return res;
     }
   );
@@ -120,7 +125,9 @@ export function WorkshopCollectionTab({
   }, [leafFiles, onFileSelect, selectedFile]);
 
   const handleSave = () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      return;
+    }
 
     startSaving(async () => {
       const fileName = getFileName(selectedFile);
@@ -163,7 +170,9 @@ export function WorkshopCollectionTab({
 
   const handleCreate = () => {
     const trimmed = newFileName.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
 
     const fullPath = `${folderName}/${trimmed}`;
 
@@ -209,8 +218,12 @@ export function WorkshopCollectionTab({
               },
             }}
             onKeyDown={(event) => {
-              if (event.key === "Enter") handleCreate();
-              if (event.key === "Escape") cancelCreate();
+              if (event.key === "Enter") {
+                handleCreate();
+              }
+              if (event.key === "Escape") {
+                cancelCreate();
+              }
             }}
             disabled={isCreatingFile}
           />
@@ -248,13 +261,15 @@ export function WorkshopCollectionTab({
         </Button>
 
         <div className={classes.fileList}>
-          {isLoadingFiles ? (
+          {isLoadingFiles && (
             <Center py="xl">
               <Loader size="sm" />
             </Center>
-          ) : leafFiles.length === 0 ? (
+          )}
+          {!isLoadingFiles && leafFiles.length === 0 && (
             <div className={classes.sidebarEmptyText}>нет файлов</div>
-          ) : (
+          )}
+          {!isLoadingFiles && leafFiles.length > 0 && (
             leafFiles.map((file) => {
               const isMain = file.is_main;
               const isActive = selectedFile === file.path;
@@ -274,7 +289,9 @@ export function WorkshopCollectionTab({
                   type="button"
                   className={itemClassName}
                   onClick={() => {
-                    if (selectedFile !== file.path) onFileSelect(file.path!);
+                    if (selectedFile !== file.path) {
+                      onFileSelect(file.path!);
+                    }
                   }}
                 >
                   <span>{getFileName(file.path!)}</span>
@@ -392,4 +409,4 @@ export function WorkshopCollectionTab({
       </div>
     </div>
   );
-}
+};

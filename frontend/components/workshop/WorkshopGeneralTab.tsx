@@ -1,12 +1,5 @@
 "use client";
 
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import {
-  getProblem,
-  getWorkshopProblemLimits,
-  updateProblem,
-  updateWorkshopProblemLimits,
-} from "@/lib/actions";
 import {
   Box,
   Button,
@@ -22,6 +15,14 @@ import {
 import { notifications } from "@mantine/notifications";
 import { useEffect, useState, useTransition } from "react";
 import useSWR, { useSWRConfig } from "swr";
+
+import { SectionPaper } from "@/components/workshop/SectionPaper";
+import {
+  getProblem,
+  getWorkshopProblemLimits,
+  updateProblem,
+  updateWorkshopProblemLimits,
+} from "@/lib/actions";
 
 type LimitsData = {
   problem_type: string;
@@ -40,7 +41,7 @@ const PROBLEM_TYPE_OPTIONS = [
   { value: "interactive", label: "Interactive" },
 ];
 
-export function WorkshopGeneralTab({ problemId }: Props) {
+export const WorkshopGeneralTab = ({ problemId }: Props) => {
   const [limits, setLimits] = useState<LimitsData | null>(null);
   const [isTemplate, setIsTemplate] = useState<boolean>(false);
   const [isSaving, startSaving] = useTransition();
@@ -51,7 +52,9 @@ export function WorkshopGeneralTab({ problemId }: Props) {
     ["problem", problemId],
     async () => {
       const [err, res] = await getProblem(problemId);
-      if (err) throw new Error(err.message || "Не удалось загрузить задачу");
+      if (err) {
+        throw new Error(err.message || "Не удалось загрузить задачу");
+      }
       return res;
     }
   );
@@ -60,7 +63,9 @@ export function WorkshopGeneralTab({ problemId }: Props) {
     ["problem-limits", problemId],
     async () => {
       const [err, res] = await getWorkshopProblemLimits(problemId);
-      if (err) throw new Error(err.message || "Не удалось загрузить ограничения");
+      if (err) {
+        throw new Error(err.message || "Не удалось загрузить ограничения");
+      }
       return res;
     }
   );
@@ -90,7 +95,9 @@ export function WorkshopGeneralTab({ problemId }: Props) {
   };
 
   const handleSave = () => {
-    if (!limits) return;
+    if (!limits) {
+      return;
+    }
 
     startSaving(async () => {
       const [limitsError] = await updateWorkshopProblemLimits(problemId, {
@@ -152,7 +159,9 @@ export function WorkshopGeneralTab({ problemId }: Props) {
                     data={PROBLEM_TYPE_OPTIONS}
                     value={limits.problem_type}
                     onChange={(value) => {
-                      if (!value) return;
+                      if (!value) {
+                        return;
+                      }
                       patchLimits({
                         problem_type: value,
                         max_score:
@@ -239,4 +248,4 @@ export function WorkshopGeneralTab({ problemId }: Props) {
       </Stack>
     </Box>
   );
-}
+};

@@ -3,6 +3,7 @@
 import { Card, Group, Text } from "@mantine/core";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+
 import classes from "./StatusMessage.module.css";
 
 interface StatusMessageProps {
@@ -12,12 +13,12 @@ interface StatusMessageProps {
   onClose: () => void;
 }
 
-export function StatusMessage({
+export const StatusMessage = ({
   type,
   message,
   opened,
   onClose,
-}: StatusMessageProps) {
+}: StatusMessageProps) => {
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
@@ -34,7 +35,9 @@ export function StatusMessage({
     }
   }, [opened, onClose]);
 
-  if (!opened) return null;
+  if (!opened) {
+    return null;
+  }
 
   const Icon = type === "success" ? IconCheck : IconX;
   const iconColor = type === "success" ? "var(--mantine-color-green-6)" : "var(--mantine-color-red-6)";
@@ -62,5 +65,5 @@ export function StatusMessage({
       </Group>
     </Card>
   );
-}
+};
 

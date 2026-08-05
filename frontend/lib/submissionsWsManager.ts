@@ -116,7 +116,9 @@ class SubmissionsWsManager {
   }
 
   private canRetargetWithoutReconnect(desired: { key: string; url: string }): boolean {
-    const wsAlive = Boolean(this.ws) && (this.ws!.readyState === WebSocket.OPEN || this.ws!.readyState === WebSocket.CONNECTING);
+    const wsAlive =
+      Boolean(this.ws) &&
+      (this.ws!.readyState === WebSocket.OPEN || this.ws!.readyState === WebSocket.CONNECTING);
     return wsAlive && this.isSameStreamUrl(this.activeUrl, desired.url);
   }
 
@@ -129,7 +131,9 @@ class SubmissionsWsManager {
   private getDesiredConnection(): { key: string; url: string } | null {
     let selected: Listener | null = null;
     for (const listener of this.listeners.values()) {
-      if (!listener.enabled) continue;
+      if (!listener.enabled) {
+        continue;
+      }
       if (!selected || listener.id > selected.id) {
         selected = listener;
       }
@@ -218,7 +222,7 @@ class SubmissionsWsManager {
     }
   }
 
-  private closeSocket(reason: string) {
+  private closeSocket(_reason: string) {
     const key = this.activeKey;
     this.clearTimers();
     if (this.ws) {
@@ -261,7 +265,9 @@ class SubmissionsWsManager {
       this.ws = ws;
 
       this.connectionTimeout = setTimeout(() => {
-        if (token !== this.connectToken) return;
+        if (token !== this.connectToken) {
+          return;
+        }
         if (ws.readyState !== WebSocket.OPEN) {
           log('Connection timeout', { token });
           ws.close();
@@ -269,7 +275,9 @@ class SubmissionsWsManager {
       }, CONNECTION_TIMEOUT);
 
       ws.onopen = () => {
-        if (token !== this.connectToken) return;
+        if (token !== this.connectToken) {
+          return;
+        }
         this.state = 'open';
         if (this.connectionTimeout) {
           clearTimeout(this.connectionTimeout);
@@ -285,17 +293,23 @@ class SubmissionsWsManager {
       };
 
       ws.onmessage = (event) => {
-        if (token !== this.connectToken) return;
+        if (token !== this.connectToken) {
+          return;
+        }
         this.routeMessage(event);
       };
 
       ws.onerror = (error) => {
-        if (token !== this.connectToken) return;
+        if (token !== this.connectToken) {
+          return;
+        }
         log('Socket error', { token, error });
       };
 
       ws.onclose = (event) => {
-        if (token !== this.connectToken) return;
+        if (token !== this.connectToken) {
+          return;
+        }
 
         this.state = 'idle';
         if (this.ws === ws) {
@@ -320,7 +334,13 @@ class SubmissionsWsManager {
         }
 
         const desired = this.getDesiredConnection();
-        if (!desired || !this.activeKey || !this.activeUrl || desired.key !== this.activeKey || desired.url !== this.activeUrl) {
+        if (
+          !desired ||
+          !this.activeKey ||
+          !this.activeUrl ||
+          desired.key !== this.activeKey ||
+          desired.url !== this.activeUrl
+        ) {
           return;
         }
 

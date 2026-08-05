@@ -4,16 +4,19 @@ import { ActionIcon, Card, Group, Stack, Text, Title } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ProblemsListItemModel } from "@contracts/core/v1";
+
 import { APP_COLORS } from "@/lib/theme/colors";
+
 import classes from "./ProblemCard.module.css";
+
+import type { ProblemsListItemModel } from "@contracts/core/v1";
 
 type Props = {
   problem: ProblemsListItemModel;
   showEditButton: boolean;
 };
 
-export function ProblemCard({ problem, showEditButton }: Props) {
+export const ProblemCard = ({ problem, showEditButton }: Props) => {
   const router = useRouter();
 
   return (
@@ -82,4 +85,4 @@ export function ProblemCard({ problem, showEditButton }: Props) {
       </Card>
     </Link>
   );
-}
+};

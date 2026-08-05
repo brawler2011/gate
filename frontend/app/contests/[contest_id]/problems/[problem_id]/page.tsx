@@ -1,3 +1,7 @@
+
+import { redirect } from "next/navigation";
+import { cache } from "react";
+
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
 import { Task } from "@/components/shared/Task";
@@ -5,11 +9,10 @@ import { getContest, getContestProblem, getMySubmissions } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
-import { PermissionChecker } from "@/lib/permissions";
 import { numberToLetters } from "@/lib/lib";
-import { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { cache } from "react";
+import { PermissionChecker } from "@/lib/permissions";
+
+import type { Metadata } from "next";
 
 type Props = {
   params: Promise<{
@@ -62,21 +65,25 @@ const Page = async (props: Props) => {
     // Only fetch user's own submissions if authenticated
     user
       ? getMySubmissions({
-          userId: user.id,
-          contestId: params.contest_id,
-          problemId: params.problem_id,
-          page: 1,
-          pageSize: 5,
-          sortOrder: "desc",
-        })
+        userId: user.id,
+        contestId: params.contest_id,
+        problemId: params.problem_id,
+        page: 1,
+        pageSize: 5,
+        sortOrder: "desc",
+      })
       : Promise.resolve([
-          null,
-          { submissions: [], pagination: { page: 1, total: 0 }, since: 0 },
-        ] as const),
+        null,
+        { submissions: [], pagination: { page: 1, total: 0 }, since: 0 },
+      ] as const),
   ]);
 
-  if (problemError) return <ErrorDisplay error={problemError} />;
-  if (contestError) return <ErrorDisplay error={contestError} />;
+  if (problemError) {
+    return <ErrorDisplay error={problemError} />;
+  }
+  if (contestError) {
+    return <ErrorDisplay error={contestError} />;
+  }
 
   if (!problemResponse?.problem || !contestResponse?.contest) {
     return (

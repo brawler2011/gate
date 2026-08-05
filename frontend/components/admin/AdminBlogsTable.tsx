@@ -12,11 +12,14 @@ import {
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { PostModel } from "@contracts/core/v1";
+
 import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { DeleteBlogPostModal } from "./DeleteBlogPostModal";
 import { formatDate } from "@/lib/formatDate";
+
 import classes from "./AdminPage.module.css";
+import { DeleteBlogPostModal } from "./DeleteBlogPostModal";
+
+import type { PostModel } from "@contracts/core/v1";
 
 type AdminBlogsTableProps = {
   posts: PostModel[];
@@ -24,7 +27,7 @@ type AdminBlogsTableProps = {
   onEditPost: (post: PostModel) => void;
 };
 
-export function AdminBlogsTable({ posts, onDeletePost, onEditPost }: AdminBlogsTableProps) {
+export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsTableProps) => {
   const router = useRouter();
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [postToDelete, setPostToDelete] = useState<PostModel | null>(null);
@@ -53,7 +56,9 @@ export function AdminBlogsTable({ posts, onDeletePost, onEditPost }: AdminBlogsT
   };
 
   const handleDeleteConfirm = async () => {
-    if (!postToDelete) return;
+    if (!postToDelete) {
+      return;
+    }
     
     setDeletingId(postToDelete.id || "");
     try {
@@ -70,7 +75,7 @@ export function AdminBlogsTable({ posts, onDeletePost, onEditPost }: AdminBlogsT
         <Table className={classes.table} verticalSpacing="xs">
           <Table.Thead className={classes.thead}>
             <Table.Tr>
-              <Table.Th style={{ width: "5%" }}></Table.Th>
+              <Table.Th style={{ width: "5%" }} />
               <Table.Th style={{ width: "30%" }}>Название</Table.Th>
               <Table.Th style={{ width: "12%" }}>ID</Table.Th>
               <Table.Th style={{ width: "15%" }}>Автор</Table.Th>
@@ -165,7 +170,7 @@ export function AdminBlogsTable({ posts, onDeletePost, onEditPost }: AdminBlogsT
       )}
     </>
   );
-}
+};
 
 
 

@@ -1,5 +1,6 @@
-import { CreateContestForm } from '@/components/contests/CreateContestForm';
 import { Paper, Stack, Title } from "@mantine/core";
+
+import { CreateContestForm } from '@/components/contests/CreateContestForm';
 
 export const ContestManagementSidebar = () => {
   return (
