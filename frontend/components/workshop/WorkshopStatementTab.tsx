@@ -25,12 +25,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
 import { SectionPaper } from "@/components/workshop/SectionPaper";
-import {
-  getProblem,
-  getWorkshopProblemLimits,
-  getWorkshopProblemStatement,
-  updateWorkshopProblemStatement,
-} from "@/lib/actions";
+import { api } from "@/lib/api";
 
 import "../problems/Problem.css";
 import classes from "./WorkshopStatementTab.module.css";
@@ -359,9 +354,9 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
     startLoading(async () => {
       const [[limitsError, limits], [statementError, statementData], [problemError, problemData]] =
         await Promise.all([
-          getWorkshopProblemLimits(problemId),
-          getWorkshopProblemStatement(problemId, lang),
-          getProblem(problemId),
+          api.getProblemLimits({ problemId }),
+          api.getProblemStatement({ problemId, lang }),
+          api.getProblem({ id: problemId }),
         ]);
 
       if (limitsError || !limits) {
@@ -483,15 +478,19 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
     }
 
     setIsAddingServerLang(true);
-    const [saveError] = await updateWorkshopProblemStatement(problemId, {
-      title: statement?.title ?? "",
-      legend: "",
-      input_format: "",
-      output_format: "",
-      notes: "",
-      interaction: "",
-      scoring: "",
-    }, cleanLang);
+    const [saveError] = await api.updateProblemStatement({
+      problemId,
+      requestBody: {
+        title: statement?.title ?? "",
+        legend: "",
+        input_format: "",
+        output_format: "",
+        notes: "",
+        interaction: "",
+        scoring: "",
+      },
+      lang: cleanLang,
+    });
 
     if (saveError) {
       setNewLangError(saveError.message ?? "Не удалось создать файл на сервере");
@@ -532,15 +531,19 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
         return;
       }
 
-      const [saveError] = await updateWorkshopProblemStatement(problemId, {
-        title: statement.title,
-        legend: statement.legend,
-        input_format: statement.input_format,
-        output_format: statement.output_format,
-        notes: statement.notes,
-        interaction: statement.interaction,
-        scoring: statement.scoring,
-      }, activeLang);
+      const [saveError] = await api.updateProblemStatement({
+        problemId,
+        requestBody: {
+          title: statement.title,
+          legend: statement.legend,
+          input_format: statement.input_format,
+          output_format: statement.output_format,
+          notes: statement.notes,
+          interaction: statement.interaction,
+          scoring: statement.scoring,
+        },
+        lang: activeLang,
+      });
 
       if (saveError) {
         notifications.show({

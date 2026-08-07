@@ -12,7 +12,7 @@ import { Layout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { Footer } from "@/components/shared/Footer";
 import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
-import { getContest } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import {
   CONTEST_CONTENT_MAX_WIDTH,
@@ -37,7 +37,7 @@ export const generateMetadata = async ({
 }: Props): Promise<Metadata> => {
   const { contest_id } = await params;
 
-  const [error, response] = await getContest(contest_id);
+  const [error, response] = await api.getContest({ contestId: contest_id });
   if (error || !response) {
     return {
       title: "Ошибка загрузки контеста",
@@ -53,7 +53,7 @@ export const generateMetadata = async ({
 const Page = async ({ params }: Props) => {
   const { contest_id } = await params;
 
-  const [error, response] = await getContest(contest_id);
+  const [error, response] = await api.getContest({ contestId: contest_id });
   if (error) {
     return <ErrorDisplay error={error} />;
   }

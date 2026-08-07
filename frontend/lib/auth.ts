@@ -2,7 +2,7 @@
 
 import { cache } from "react";
 
-import { Call } from "./api";
+import { api } from "./api";
 
 /**
  * User data from GetMe API
@@ -19,7 +19,7 @@ export type SessionUser = {
  * Returns null if user is not authenticated (403) or any error occurs
  */
 export const getCurrentUser = cache(async (): Promise<SessionUser> => {
-  const [error, response] = await Call((client) => client.default.getMe());
+  const [error, response] = await api.getMe();
 
   if (error || !response) {
     // 401 means not authenticated - this is expected, don't log

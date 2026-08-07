@@ -16,7 +16,7 @@ import Link from "next/link";
 import { DefaultLayout } from '@/components/shared';
 import { CodeBlock } from '@/components/shared/CodeBlock';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { getSubmission } from "@/lib/actions";
+import { api } from "@/lib/api";
 import {
   LangNameToString,
   LangString,
@@ -40,7 +40,7 @@ const metadata: Metadata = {
 
 const Page = async (props: Props) => {
   const solutionId = (await props.params).submission_id;
-  const [error, resp] = await getSubmission(solutionId);
+  const [error, resp] = await api.getSubmission({ submissionId: solutionId });
 
   if (error) {
     return <ErrorDisplay error={error} />;

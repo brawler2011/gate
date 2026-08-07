@@ -7,7 +7,7 @@ import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { NextPagination } from "@/components/shared/Pagination";
 import { SubmissionsListClient } from "@/components/submissions";
-import { getContest, getSubmissions } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import {
   CONTEST_CONTENT_MAX_WIDTH,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
+import { env } from "@/lib/env";
 import { PermissionChecker } from "@/lib/permissions";
 
 import classes from "../contestLayout.module.css";
@@ -78,7 +79,7 @@ const Page = async ({ params, searchParams }: PageProps) => {
     parsedParams.language = Number(queryParams.language);
   }
 
-  const [error, submissionsData] = await getSubmissions(parsedParams);
+  const [error, submissionsData] = await api.listContestSubmissions(parsedParams);
 
   if (error) {
     return <ErrorDisplay error={error} />;
@@ -110,10 +111,9 @@ const Page = async ({ params, searchParams }: PageProps) => {
     language: parsedParams.language,
   };
 
-  // Remove trailing slash if present to avoid double slashes
-  const wsBaseUrl = (process.env.WEBSOCKET_URL || "").replace(/\/+$/, "");
+  const wsBaseUrl = env.getWebSocketUrl() ?? "";
 
-  const [contestError, contestResponse] = await getContest(contest_id);
+  const [contestError, contestResponse] = await api.getContest({ contestId: contest_id });
   const contestData = contestResponse;
 
   const user = await getCurrentUser();

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { OrgMembersManagement } from "@/components/orgs/OrgMembersManagement";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { getOrganization } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
 
@@ -20,7 +20,7 @@ const OrgMembersPage = async ({ params }: Props) => {
     notFound();
   }
 
-  const [orgError, orgData] = await getOrganization(org_id);
+  const [orgError, orgData] = await api.getOrganization({ id: org_id });
   if (orgError) {
     if (orgError.status === 404) {
       notFound();

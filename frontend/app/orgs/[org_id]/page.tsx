@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { OrgContestsTab } from "@/components/orgs/OrgContestsTab";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { getContests, getOrganization } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
@@ -25,7 +25,7 @@ const OrgPage = async ({ params, searchParams }: Props) => {
   });
   const currentPage = Number(page) > 0 ? Number(page) : 1;
 
-  const [orgError, orgData] = await getOrganization(org_id);
+  const [orgError, orgData] = await api.getOrganization({ id: org_id });
   if (orgError) {
     if (orgError.status === 404) {
       notFound();
@@ -43,7 +43,7 @@ const OrgPage = async ({ params, searchParams }: Props) => {
     [contestsError, contestsData],
     currentUser,
   ] = await Promise.all([
-    getContests(currentPage, 10, search, org_id),
+    api.listWorkshopContests({ page: currentPage, pageSize: 10, search, organizationId: org_id }),
     getCurrentUser(),
   ]);
 

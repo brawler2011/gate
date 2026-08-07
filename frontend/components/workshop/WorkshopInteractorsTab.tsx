@@ -1,12 +1,12 @@
 "use client";
 
+import { api } from "@/lib/api";
 import {
   createWorkshopInteractorFile,
   getWorkshopInteractorFile,
-  listWorkshopInteractorFiles,
   updateWorkshopInteractorFile,
   setWorkshopInteractorMain,
-} from "@/lib/actions";
+} from "@/lib/workshop";
 
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
 
@@ -17,7 +17,7 @@ export const WorkshopInteractorsTab = (props: WorkshopFileTabProps) => {
     <WorkshopCollectionTab
       {...props}
       folderName="interactors"
-      listFiles={listWorkshopInteractorFiles}
+      listFiles={(problemId) => api.listProblemInteractors({ problemId })}
       getFile={getWorkshopInteractorFile}
       createFile={createWorkshopInteractorFile}
       updateFile={updateWorkshopInteractorFile}

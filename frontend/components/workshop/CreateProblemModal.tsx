@@ -11,9 +11,9 @@ import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { createProblem, getProblems } from "@/lib/actions";
+import { api } from "@/lib/api";
 
-import type { OrganizationModel } from "@/contracts/core/v1";
+import type { OrganizationModel, ProblemsListItemModel } from "@/contracts/core/v1";
 
 type Props = {
   opened: boolean;
@@ -52,11 +52,11 @@ export const CreateProblemModal = ({
   useEffect(() => {
     if (opened && orgId) {
       setLoadingTemplates(true);
-      getProblems(1, 100, undefined, undefined, undefined, orgId, true)
+      api.listProblems({ page: 1, pageSize: 100, organizationId: orgId, isTemplate: true })
         .then(([err, res]) => {
           if (!err && res?.problems) {
             setTemplates(
-              res.problems.map((p) => ({
+              res.problems.map((p: ProblemsListItemModel) => ({
                 value: p.id,
                 label: p.title,
               }))
@@ -86,11 +86,11 @@ export const CreateProblemModal = ({
 
     setLoading(true);
     try {
-      const [createError, createResponse] = await createProblem(
-        title.trim() || "New Problem",
-        orgId,
-        templateId ?? undefined,
-      );
+      const [createError, createResponse] = await api.createProblem({
+        title: title.trim() || "New Problem",
+        organizationId: orgId,
+        templateId: templateId ?? undefined,
+      });
       if (createError) {
         throw new Error(createError.message);
       }

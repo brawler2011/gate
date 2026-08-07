@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { OrgTeamsTab } from "@/components/orgs/OrgTeamsTab";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { listTeams, getOrganization } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
 
@@ -24,7 +24,7 @@ const OrgTeamsPage = async ({ params, searchParams }: Props) => {
   });
   const currentPage = Number(page) > 0 ? Number(page) : 1;
 
-  const [orgError, orgData] = await getOrganization(org_id);
+  const [orgError, orgData] = await api.getOrganization({ id: org_id });
   if (orgError) {
     if (orgError.status === 404) {
       notFound();
@@ -38,7 +38,7 @@ const OrgTeamsPage = async ({ params, searchParams }: Props) => {
     );
   }
 
-  const [teamsError, teamsData] = await listTeams(org_id, currentPage, 20);
+  const [teamsError, teamsData] = await api.listTeams({ organizationId: org_id, page: currentPage, pageSize: 20 });
 
   const org = orgData!.organization;
   const teams = teamsData?.teams ?? [];

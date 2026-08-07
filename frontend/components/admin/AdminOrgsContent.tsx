@@ -21,14 +21,12 @@ import useSWR from "swr";
 
 import { NextPagination } from '@/components/shared/Pagination';
 import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { deleteOrganization } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { formatDate } from "@/lib/formatDate";
 
 import classes from "./AdminPage.module.css";
 import { DeleteOrgModal } from "./DeleteOrgModal";
 import { CreateOrgButton } from "../orgs/CreateOrgButton";
-
-
 
 import type { OrganizationModel } from "@/contracts/core/v1";
 
@@ -87,14 +85,11 @@ export const AdminOrgsContent = ({ page, search }: AdminOrgsContentProps) => {
 
   // Fetch organizations
   const { data, error, isLoading, mutate } = useSWR(
-    `/api/organizations?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}`,
-    async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Не удалось загрузить организации");
-      }
-      return res.json();
+    ["admin-orgs", page, search],
+    async () => {
+      const [err, res] = await api.listOrganizations({ page, pageSize: 10, search });
+      if (err) throw new Error(err.message);
+      return res;
     }
   );
 
@@ -114,7 +109,7 @@ export const AdminOrgsContent = ({ page, search }: AdminOrgsContentProps) => {
 
     setDeletingId(orgToDelete.id);
     try {
-      const [err] = await deleteOrganization(orgToDelete.id);
+      const [err] = await api.deleteOrganization({ id: orgToDelete.id });
       if (err) {
         notifications.show({
           title: "Ошибка",

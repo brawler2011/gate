@@ -6,7 +6,7 @@ import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { updateOrganization } from '@/lib/actions';
+import { api } from '@/lib/api';
 
 import type { OrganizationModel } from '@/contracts/core/v1';
 
@@ -23,7 +23,7 @@ export const OrgSettingsForm = ({ org }: Props) => {
 
   const handleSave = async (values: typeof form.values) => {
     setSaving(true);
-    const [error] = await updateOrganization(org.id, values);
+    const [error] = await api.updateOrganization({ id: org.id, requestBody: values });
     setSaving(false);
     if (error) {
       notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });

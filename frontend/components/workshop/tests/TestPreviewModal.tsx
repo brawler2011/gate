@@ -14,7 +14,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import { useEffect, useState, useTransition } from "react";
 
-import { getWorkshopTestFile, updateWorkshopTestFile } from "@/lib/actions";
+import { getWorkshopTestFile, updateWorkshopTestFile } from "@/lib/workshop";
 
 type Props = {
   opened: boolean;

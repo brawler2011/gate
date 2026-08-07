@@ -1,12 +1,7 @@
-.cursor*
-.claude/
-.vscode/
-.idea/
-.github/
+.*
 !.github/
 .github/*
 !.github/workflows/
 !.github/workflows/**
-.VSCodeCounter/
 *.log
 poc

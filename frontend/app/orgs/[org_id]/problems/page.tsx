@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { OrgProblemsTab } from "@/components/orgs/OrgProblemsTab";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { getProblems, getOrganization } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
@@ -25,7 +25,7 @@ const OrgProblemsPage = async ({ params, searchParams }: Props) => {
   });
   const currentPage = Number(page) > 0 ? Number(page) : 1;
 
-  const [orgError, orgData] = await getOrganization(org_id);
+  const [orgError, orgData] = await api.getOrganization({ id: org_id });
   if (orgError) {
     if (orgError.status === 404) {
       notFound();
@@ -43,7 +43,7 @@ const OrgProblemsPage = async ({ params, searchParams }: Props) => {
     [problemsError, problemsData],
     currentUser,
   ] = await Promise.all([
-    getProblems(currentPage, 20, undefined, undefined, undefined, org_id),
+    api.listProblems({ page: currentPage, pageSize: 20, organizationId: org_id }),
     getCurrentUser(),
   ]);
 

@@ -27,11 +27,10 @@ import {
 import { useState, useRef, useTransition } from "react";
 import useSWR from "swr";
 
+import { api } from "@/lib/api";
 import {
-  listWorkshopMediaFiles,
   uploadWorkshopMediaBinary,
-  deleteWorkshopMediaFile,
-} from "@/lib/actions";
+} from "@/lib/workshop";
 
 import classes from "./WorkshopFolderTab.module.css";
 
@@ -54,7 +53,7 @@ export const WorkshopMediaTab = ({
     isLoading,
     mutate,
   } = useSWR(["workshop-files", problemId, "media"], async () => {
-    const [err, res] = await listWorkshopMediaFiles(problemId);
+    const [err, res] = await api.listProblemMediaFiles({ problemId });
     if (err) {
       throw new Error(err.message || "Не удалось загрузить список медиафайлов");
     }
@@ -114,7 +113,7 @@ export const WorkshopMediaTab = ({
     }
 
     startDeleting(async () => {
-      const [err] = await deleteWorkshopMediaFile(problemId, currentFileName);
+      const [err] = await api.deleteProblemMediaFile({ problemId, name: currentFileName });
       if (err) {
         notifications.show({
           title: "Ошибка удаления",

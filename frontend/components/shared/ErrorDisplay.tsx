@@ -45,12 +45,11 @@ function getErrorDisplay(status: number): { title: string; description: string }
 export const ErrorDisplay = ({ error }: Props) => {
   const display = getErrorDisplay(error.status);
   const pathname = usePathname();
-  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const getReturnUrl = () => {
     if (!pathname || pathname === '/' || pathname.startsWith('/auth')) {
       return null;
     }
-    return isLocalhost ? `${window.location.origin}${pathname}` : pathname;
+    return pathname;
   };
   const returnUrl = getReturnUrl();
   const returnTo = returnUrl ? `?return_to=${encodeURIComponent(returnUrl)}` : '';

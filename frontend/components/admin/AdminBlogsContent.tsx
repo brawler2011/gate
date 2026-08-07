@@ -17,7 +17,7 @@ import useSWR from "swr";
 
 import { NextPagination } from '@/components/shared/Pagination';
 import { StatusMessage } from '@/components/shared/StatusMessage';
-import { createPost, deletePost, patchPost } from "@/lib/actions";
+import { api } from "@/lib/api";
 
 import { AdminBlogsSearchInput } from "./AdminBlogsSearchInput";
 import { AdminBlogsTable } from "./AdminBlogsTable";
@@ -39,16 +39,18 @@ export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
   // Form modal state
   const [formOpened, setFormOpened] = useState(false);
   const [editingPost, setEditingPost] = useState<PostModel | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const { data, error, isLoading, mutate } = useSWR(
-    `/api/posts?page=${page}`,
-    async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Не удалось загрузить посты");
-      }
-      return res.json();
+  // SWR for data fetching
+  const { data, error, mutate, isLoading } = useSWR(
+    ["admin-blogs", page, search],
+    async () => {
+      const [err, res] = await api.listPosts({
+        page,
+        pageSize: 10,
+      });
+      if (err) throw new Error(err.message);
+      return res;
     }
   );
 
@@ -71,58 +73,56 @@ export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
     text: string;
     preview_image?: File | null;
   }) => {
-    const formData: {
-      title?: string;
-      description?: string;
-      text?: string;
-      preview_image?: Blob;
-    } = {
-      title: data.title,
-      description: data.description,
-      text: data.text,
-    };
-
-    if (data.preview_image) {
-      formData.preview_image = data.preview_image;
-    }
-
-    if (editingPost) {
-      // Update existing post
-      const [err] = await patchPost(editingPost.id || "", formData);
-      if (err) {
+    setSubmitting(true);
+    const formData = data as any;
+    try {
+      if (editingPost) {
+        const [err] = await api.patchPostById({ id: editingPost.id || "", formData });
+        if (err) {
+          notifications.show({
+            title: "Ошибка",
+            message: err.message || "Не удалось обновить пост",
+            color: "red",
+          });
+          return;
+        }
         notifications.show({
-          title: "Ошибка",
-          message: err.message || "Не удалось обновить пост",
-          color: "red",
+          title: "Успех",
+          message: "Пост успешно обновлён",
+          color: "green",
         });
-        throw new Error(err.message);
-      }
-      setStatusMessage({
-        type: "success",
-        message: "Пост успешно обновлён",
-      });
-    } else {
-      // Create new post
-      const [err] = await createPost(formData);
-      if (err) {
+      } else {
+        const [err] = await api.createPost({ formData });
+        if (err) {
+          notifications.show({
+            title: "Ошибка",
+            message: err.message || "Не удалось создать пост",
+            color: "red",
+          });
+          return;
+        }
         notifications.show({
-          title: "Ошибка",
-          message: err.message || "Не удалось создать пост",
-          color: "red",
+          title: "Успех",
+          message: "Пост успешно создан",
+          color: "green",
         });
-        throw new Error(err.message);
       }
-      setStatusMessage({
-        type: "success",
-        message: "Пост успешно создан",
+      setFormOpened(false);
+      setEditingPost(null);
+      mutate();
+    } catch {
+      notifications.show({
+        title: "Ошибка",
+        message: "Произошла непредвиденная ошибка",
+        color: "red",
       });
+    } finally {
+      setSubmitting(false);
     }
-
-    mutate();
   };
 
   const handleDeletePost = async (postId: string) => {
-    const [err] = await deletePost(postId);
+    const [err] = await api.deletePostById({ id: postId });
     
     if (err) {
       console.error("Error deleting post:", err);

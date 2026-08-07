@@ -14,7 +14,7 @@ import { notifications } from "@mantine/notifications";
 import { useCallback, useEffect, useState, useTransition } from "react";
 
 import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { listProblemPackages, publishProblem } from "@/lib/actions";
+import { api } from "@/lib/api";
 
 type PackageItem = {
   id?: string;
@@ -67,7 +67,7 @@ export const WorkshopPackagesTab = ({ problemId }: Props) => {
 
   const fetchPackages = useCallback(async () => {
     setLoading(true);
-    const [error, data] = await listProblemPackages(problemId);
+    const [error, data] = await api.listProblemPackages({ id: problemId });
     if (!error && data?.packages) {
       setPackages(data.packages as PackageItem[]);
     }
@@ -80,7 +80,7 @@ export const WorkshopPackagesTab = ({ problemId }: Props) => {
 
   const handleBuild = () => {
     startBuilding(async () => {
-      const [error, data] = await publishProblem(problemId);
+      const [error, data] = await api.publishProblem({ id: problemId });
       if (error) {
         notifications.show({
           title: "Ошибка сборки пакета",

@@ -18,7 +18,7 @@ import { IconPlus, IconTrash, IconUsers } from '@tabler/icons-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { StatusMessage } from '@/components/shared/StatusMessage';
-import { addTeamMember, listTeamMembers, removeTeamMember, searchUsers } from '@/lib/actions';
+import { api } from '@/lib/api';
 
 import type { TeamMemberModel } from '@/contracts/core/v1';
 
@@ -38,7 +38,7 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [, data] = await listTeamMembers(teamId, 1, 100);
+    const [, data] = await api.listTeamMembers({ id: teamId, page: 1, pageSize: 100 });
     setLoading(false);
     if (data) {
       setMembers(data.members);
@@ -54,7 +54,7 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
       setSearchResults([]); return; 
     }
     setSearching(true);
-    searchUsers(debouncedQuery).then(([, data]) => {
+    api.listUsers({ page: 1, pageSize: 10, search: debouncedQuery }).then(([, data]) => {
       setSearching(false);
       setSearchResults((data?.users ?? []).map((u) => ({ value: u.id, label: u.username })));
     });
@@ -65,7 +65,7 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
       return;
     }
     setAdding(true);
-    const [error] = await addTeamMember(teamId, selectedUserId);
+    const [error] = await api.addTeamMember({ id: teamId, userId: selectedUserId });
     setAdding(false);
     if (error) {
       notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });
@@ -80,7 +80,7 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
 
   const handleRemove = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await removeTeamMember(teamId, userId);
+    const [error] = await api.removeTeamMember({ id: teamId, userId });
     setDeletingId(null);
     if (error) {
       notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });

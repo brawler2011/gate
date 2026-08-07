@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 
-import { Call } from "./api";
+import { api } from "./api";
+import { env } from "./env";
 
 export type AuthActionResult = {
   success: boolean;
@@ -10,11 +11,9 @@ export type AuthActionResult = {
 };
 
 export async function loginAction(identifier: string, password: string): Promise<AuthActionResult> {
-  const [error, response] = await Call((client) =>
-    client.auth.login({
-      requestBody: { identifier, password },
-    })
-  );
+  const [error, response] = await api.login({
+    requestBody: { identifier, password },
+  });
 
   if (error || !response) {
     return {
@@ -28,7 +27,7 @@ export async function loginAction(identifier: string, password: string): Promise
     path: "/",
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: env.isProduction,
     maxAge: 7 * 24 * 60 * 60, // 7 days (sliding expiry is handled on backend, but we match cookie)
   });
 
@@ -36,11 +35,9 @@ export async function loginAction(identifier: string, password: string): Promise
 }
 
 export async function registerAction(username: string, email: string, password: string): Promise<AuthActionResult> {
-  const [error, response] = await Call((client) =>
-    client.auth.register({
-      requestBody: { username, email, password },
-    })
-  );
+  const [error, response] = await api.register({
+    requestBody: { username, email, password },
+  });
 
   if (error || !response) {
     return {
@@ -54,7 +51,7 @@ export async function registerAction(username: string, email: string, password: 
     path: "/",
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: env.isProduction,
     maxAge: 7 * 24 * 60 * 60,
   });
 
@@ -63,7 +60,7 @@ export async function registerAction(username: string, email: string, password: 
 
 export async function logoutAction(): Promise<AuthActionResult> {
   // Let the backend delete the session first
-  const [error] = await Call((client) => client.auth.logout());
+  const [error] = await api.logout();
 
   // Clear cookie regardless of whether backend call succeeded
   const cookieStore = await cookies();
@@ -78,3 +75,5 @@ export async function logoutAction(): Promise<AuthActionResult> {
 
   return { success: true };
 }
+
+

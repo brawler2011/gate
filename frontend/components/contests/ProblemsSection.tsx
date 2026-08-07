@@ -20,11 +20,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { StatusMessage } from '@/components/shared/StatusMessage';
-import {
-  addContestProblem,
-  removeContestProblem,
-  searchProblems,
-} from "@/lib/actions";
+import { api } from "@/lib/api";
 import { numberToLetters } from "@/lib/lib";
 
 import type * as corev1 from "@/contracts/core/v1";
@@ -68,7 +64,7 @@ export const ProblemsSection = ({
       }
 
       setSearching(true);
-      const [error, response] = await searchProblems(debouncedQuery, true);
+      const [error, response] = await api.listProblems({ page: 1, pageSize: 10, search: debouncedQuery, owner: true });
       setSearching(false);
 
       if (error) {
@@ -88,7 +84,7 @@ export const ProblemsSection = ({
     }
 
     setAdding(true);
-    const [error] = await addContestProblem(contestId, selectedProblemId);
+    const [error] = await api.createContestProblem({ contestId, problemId: selectedProblemId });
     setAdding(false);
 
     if (error) {
@@ -117,7 +113,7 @@ export const ProblemsSection = ({
 
   const handleDeleteProblem = async (problemId: string) => {
     setDeletingId(problemId);
-    const [error] = await removeContestProblem(contestId, problemId);
+    const [error] = await api.deleteContestProblem({ contestId, problemId });
     setDeletingId(null);
 
     if (error) {

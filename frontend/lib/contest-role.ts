@@ -1,6 +1,6 @@
 "use server";
 
-import { Call } from "./api";
+import { api } from "./api";
 
 /**
  * Contest role types
@@ -43,9 +43,7 @@ const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
  * @returns The user's role in the contest, or null if not a participant
  */
 export async function getMyContestRole(contestId: string): Promise<ContestRoleResponse> {
-  const [error, response] = await Call((client) =>
-    client.default.getMyContestRole({ contestId })
-  );
+  const [error, response] = await api.getMyContestRole({ contestId });
   if (error || !response) {
     // User is not a participant or not authenticated
     return null;
@@ -53,3 +51,4 @@ export async function getMyContestRole(contestId: string): Promise<ContestRoleRe
   
   return parseContestRoleResponse(response);
 }
+

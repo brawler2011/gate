@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { StatusMessage } from '@/components/shared/StatusMessage';
-import { updateContest } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { APP_COLORS } from "@/lib/theme/colors";
 
 import type * as corev1 from "@/contracts/core/v1";
@@ -129,7 +129,7 @@ export const SettingsSection = ({ contest }: SettingsSectionProps) => {
       start_time: values.start_time ? new Date(values.start_time).toISOString() : null,
       end_time: values.end_time ? new Date(values.end_time).toISOString() : null,
     };
-    const [error] = await updateContest(contest.id, payload);
+    const [error] = await api.updateContest({ contestId: contest.id, requestBody: payload });
     setSaving(false);
 
     if (error) {

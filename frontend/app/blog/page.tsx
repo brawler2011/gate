@@ -1,32 +1,38 @@
 import { Container, Group, Stack, Title } from "@mantine/core";
 import { IconNews } from "@tabler/icons-react";
 
+
 import { BlogList } from '@/components/blog/BlogList';
 import { DefaultLayout } from '@/components/shared';
-import { listPosts } from "@/lib/actions";
+import { api } from "@/lib/api";
 
 import type { PaginationModel } from "@/contracts/core/v1";
+import { parsePage } from "@/lib/lib2";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Блог",
 };
 
-type PageProps = {
+type Props = {
   searchParams: Promise<{ page?: string }>;
 };
 
-const BlogPage = async ({ searchParams }: PageProps) => {
-  // Get current page from query params, default to 1
+const Page = async ({ searchParams }: Props) => {
   const params = await searchParams;
-  const currentPage = parseInt(params?.page || "1", 10) || 1;
-  
-  // Fetch blog posts from API with pagination (5 posts per page)
-  const [error, postsData] = await listPosts(currentPage, 5);
+  const page = parsePage(params.page);
+
+  if (!page) {
+    redirect("/blog")
+  }
+
+  const [error, postsData] = await api.listPosts({ page, pageSize: 5 });
   const blogPosts = postsData?.posts || [];
   const pagination: PaginationModel = {
     total: postsData?.pagination?.total ?? 0,
-    page: postsData?.pagination?.page ?? currentPage,
+    page: postsData?.pagination?.page ?? page,
   };
 
   return (
@@ -37,8 +43,8 @@ const BlogPage = async ({ searchParams }: PageProps) => {
             <IconNews size={32} color="var(--mantine-color-orange-6)" />
             <Title order={1}>Блог</Title>
           </Group>
-          
-          <BlogList 
+
+          <BlogList
             posts={blogPosts}
             pagination={pagination}
             error={!!error}
@@ -49,4 +55,4 @@ const BlogPage = async ({ searchParams }: PageProps) => {
   );
 };
 
-export default BlogPage;
+export default Page;

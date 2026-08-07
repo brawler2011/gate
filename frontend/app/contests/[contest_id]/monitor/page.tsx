@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
 import { DefaultLayout } from "@/components/shared";
-import { getContest } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import {
   CONTEST_CONTENT_MAX_WIDTH,
@@ -30,7 +30,7 @@ const Page = async ({ params }: PageProps) => {
   const { contest_id } = await params;
 
   // Fetch contest data for the info panel
-  const [, contestResponse] = await getContest(contest_id);
+  const [, contestResponse] = await api.getContest({ contestId: contest_id });
   const user = await getCurrentUser();
   const contestRole = user ? await getMyContestRole(contest_id) : null;
 

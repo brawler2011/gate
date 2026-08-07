@@ -17,12 +17,7 @@ import { useEffect, useState, useTransition } from "react";
 import useSWR, { useSWRConfig } from "swr";
 
 import { SectionPaper } from "@/components/workshop/SectionPaper";
-import {
-  getProblem,
-  getWorkshopProblemLimits,
-  updateProblem,
-  updateWorkshopProblemLimits,
-} from "@/lib/actions";
+import { api } from "@/lib/api";
 
 type LimitsData = {
   problem_type: string;
@@ -42,16 +37,21 @@ const PROBLEM_TYPE_OPTIONS = [
 ];
 
 export const WorkshopGeneralTab = ({ problemId }: Props) => {
-  const [limits, setLimits] = useState<LimitsData | null>(null);
-  const [isTemplate, setIsTemplate] = useState<boolean>(false);
-  const [isSaving, startSaving] = useTransition();
+  const { mutate } = useSWRConfig();
+  const [limits, setLimits] = useState<LimitsData>({
+    problem_type: "pass-fail",
+    max_score: null,
+    time_limit_ms: 2000,
+    memory_limit_mb: 256,
+  });
+  const [isTemplate, setIsTemplate] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [isDirty, setIsDirty] = useState(false);
-  const { mutate: mutateGlobal } = useSWRConfig();
 
   const { data: problemData, isLoading: isLoadingProblem } = useSWR(
     ["problem", problemId],
     async () => {
-      const [err, res] = await getProblem(problemId);
+      const [err, res] = await api.getProblem({ id: problemId });
       if (err) {
         throw new Error(err.message || "Не удалось загрузить задачу");
       }
@@ -62,7 +62,7 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
   const { data: limitsData, isLoading: isLoadingLimits } = useSWR(
     ["problem-limits", problemId],
     async () => {
-      const [err, res] = await getWorkshopProblemLimits(problemId);
+      const [err, res] = await api.getProblemLimits({ problemId });
       if (err) {
         throw new Error(err.message || "Не удалось загрузить ограничения");
       }
@@ -75,36 +75,35 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
   useEffect(() => {
     if (limitsData) {
       setLimits({
-        problem_type: limitsData.problem_type,
+        problem_type: limitsData.problem_type ?? "pass-fail",
         max_score: limitsData.max_score ?? null,
-        time_limit_ms: limitsData.time_limit_ms,
-        memory_limit_mb: limitsData.memory_limit_mb,
+        time_limit_ms: limitsData.time_limit_ms ?? 2000,
+        memory_limit_mb: limitsData.memory_limit_mb ?? 256,
       });
     }
   }, [limitsData]);
 
   useEffect(() => {
-    if (problemData) {
-      setIsTemplate(!!problemData.problem.is_template);
+    if (problemData?.problem) {
+      setIsTemplate(problemData.problem.is_template ?? false);
     }
   }, [problemData]);
 
   const patchLimits = (patch: Partial<LimitsData>) => {
-    setLimits((prev) => (prev ? { ...prev, ...patch } : prev));
+    setLimits((prev) => ({ ...prev, ...patch }));
     setIsDirty(true);
   };
 
   const handleSave = () => {
-    if (!limits) {
-      return;
-    }
-
-    startSaving(async () => {
-      const [limitsError] = await updateWorkshopProblemLimits(problemId, {
-        problem_type: limits.problem_type,
-        max_score: limits.problem_type === "scoring" ? limits.max_score : null,
-        time_limit_ms: limits.time_limit_ms,
-        memory_limit_mb: limits.memory_limit_mb,
+    startTransition(async () => {
+      const [limitsError] = await api.updateProblemLimits({
+        problemId,
+        requestBody: {
+          problem_type: limits.problem_type,
+          max_score: limits.problem_type === "scoring" ? limits.max_score : null,
+          time_limit_ms: limits.time_limit_ms,
+          memory_limit_mb: limits.memory_limit_mb,
+        },
       });
 
       if (limitsError) {
@@ -116,8 +115,11 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
         return;
       }
 
-      const [problemError] = await updateProblem(problemId, {
-        is_template: isTemplate,
+      const [problemError] = await api.updateProblem({
+        id: problemId,
+        requestBody: {
+          is_template: isTemplate,
+        },
       });
 
       if (problemError) {
@@ -136,8 +138,8 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
         color: "green",
       });
 
-      mutateGlobal(["problem", problemId]);
-      mutateGlobal(["problem-limits", problemId]);
+      mutate(["problem", problemId]);
+      mutate(["problem-limits", problemId]);
     });
   };
 
@@ -146,83 +148,69 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
       <Stack gap="lg" maw={900} mx="auto">
         <SectionPaper title="Настройки задачи">
           {isLoading || !limits ? (
-            <Text c="dimmed" size="sm">
-              Загрузка...
+            <Text size="sm" c="dimmed">
+              Загрузка настроек...
             </Text>
           ) : (
             <Stack gap="md">
               <Grid gutter="md">
-                <Grid.Col span={{ base: 12, sm: 4 }}>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
                   <Select
                     label="Тип задачи"
-                    description="Схема оценивания"
                     data={PROBLEM_TYPE_OPTIONS}
                     value={limits.problem_type}
-                    onChange={(value) => {
-                      if (!value) {
-                        return;
+                    onChange={(val) =>
+                      patchLimits({ problem_type: val || "pass-fail" })
+                    }
+                  />
+                </Grid.Col>
+                {limits.problem_type === "scoring" && (
+                  <Grid.Col span={{ base: 12, sm: 6 }}>
+                    <NumberInput
+                      label="Максимальный балл"
+                      value={limits.max_score ?? 100}
+                      onChange={(val) =>
+                        patchLimits({
+                          max_score: typeof val === "number" ? val : null,
+                        })
                       }
-                      patchLimits({
-                        problem_type: value,
-                        max_score:
-                          value === "scoring" ? limits.max_score : null,
-                      });
-                    }}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 4 }}>
+                      min={0}
+                    />
+                  </Grid.Col>
+                )}
+                <Grid.Col span={{ base: 12, sm: 6 }}>
                   <NumberInput
-                    label="Лимит времени"
-                    description="В миллисекундах"
-                    suffix=" мс"
-                    min={0}
+                    label="Ограничение по времени (мс)"
                     value={limits.time_limit_ms}
-                    onChange={(value) =>
+                    onChange={(val) =>
                       patchLimits({
-                        time_limit_ms: typeof value === "number" ? value : 0,
+                        time_limit_ms: typeof val === "number" ? val : 2000,
                       })
                     }
+                    min={100}
+                    max={60000}
+                    step={100}
                   />
                 </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 4 }}>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
                   <NumberInput
-                    label="Лимит памяти"
-                    description="В мегабайтах"
-                    suffix=" МБ"
-                    min={0}
+                    label="Ограничение по памяти (МБ)"
                     value={limits.memory_limit_mb}
-                    onChange={(value) =>
+                    onChange={(val) =>
                       patchLimits({
-                        memory_limit_mb: typeof value === "number" ? value : 0,
+                        memory_limit_mb: typeof val === "number" ? val : 256,
                       })
                     }
-                  />
-                </Grid.Col>
-
-                <Grid.Col span={{ base: 12, sm: 4 }}>
-                  <NumberInput
-                    label="Максимальный балл"
-                    description="Только для scoring-задач"
-                    min={0}
-                    disabled={limits.problem_type !== "scoring"}
-                    value={limits.max_score ?? ""}
-                    onChange={(value) =>
-                      patchLimits({
-                        max_score: typeof value === "number" ? value : null,
-                      })
-                    }
-                    placeholder="100"
+                    min={16}
+                    max={2048}
+                    step={16}
                   />
                 </Grid.Col>
 
                 <Grid.Col span={12}>
-                  <Divider my="sm" />
-                </Grid.Col>
-
-                <Grid.Col span={12}>
+                  <Divider my="xs" />
                   <Switch
-                    label="Использовать как шаблон"
-                    description="При создании новых задач в текущей организации эту задачу можно будет выбрать в качестве шаблона. Для включения необходим хотя бы один успешно собранный (ready) пакет."
+                    label="Шаблонная задача (доступна при создании других задач)"
                     checked={isTemplate}
                     onChange={(event) => {
                       setIsTemplate(event.currentTarget.checked);
@@ -236,7 +224,7 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
                 <Button
                   size="sm"
                   disabled={!isDirty}
-                  loading={isSaving}
+                  loading={isPending}
                   onClick={handleSave}
                 >
                   Сохранить настройки

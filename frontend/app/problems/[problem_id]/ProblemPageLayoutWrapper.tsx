@@ -1,6 +1,6 @@
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { getProblem, getWorkshopProblemLimits } from "@/lib/actions";
+import { api } from "@/lib/api";
 
 import ProblemPage from "./ProblemPage";
 
@@ -88,7 +88,7 @@ type Props = {
 };
 
 export async function generateMetadata(problemId: string): Promise<Metadata> {
-  const [error, response] = await getProblem(problemId);
+  const [error, response] = await api.getProblem({ id: problemId });
   if (error || !response) {
     return { title: "Редактор файлов" };
   }
@@ -103,7 +103,7 @@ const ProblemPageLayoutWrapper = async ({
   const { problem_id } = await params;
   const resolvedSearchParams = await searchParams;
 
-  const [problemError, problemResponse] = await getProblem(problem_id);
+  const [problemError, problemResponse] = await api.getProblem({ id: problem_id });
   if (problemError) {
     return (
       <DefaultLayout>
@@ -112,7 +112,7 @@ const ProblemPageLayoutWrapper = async ({
     );
   }
 
-  const [limitsError] = await getWorkshopProblemLimits(problem_id);
+  const [limitsError] = await api.getProblemLimits({ problemId: problem_id });
   const shouldRenderEditor = !limitsError;
   const problemHeaderNav = shouldRenderEditor
     ? buildProblemHeaderNav(problem_id, activeTab, resolvedSearchParams)

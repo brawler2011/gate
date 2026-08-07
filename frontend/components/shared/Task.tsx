@@ -14,7 +14,6 @@ import {
 import Link from "next/link";
 import React from "react";
 
-import { submitSubmission } from "@/app/contests/[contest_id]/problems/[problem_id]/actions";
 import { Problem } from "@/components/problems/Problem";
 import { Layout } from "@/components/shared";
 import { Footer } from "@/components/shared/Footer";
@@ -23,16 +22,18 @@ import { RecentSubmissionsTable } from "@/components/submissions/RecentSubmissio
 import {
   CONTEST_SIDEBAR_LEFT_WIDTH,
   CONTEST_SIDEBAR_RIGHT_WIDTH,
+  LANGUAGE_MAP,
 } from "@/lib/constants";
 import { numberToLetters } from "@/lib/lib";
+import { createSolution } from "@/lib/workshop";
 
-import type { SessionUser } from "@/lib/auth";
 import type {
   ContestModel,
   ContestProblemListItemModel,
   ContestProblemModel,
   SubmissionsListItemModel,
 } from "@/contracts/core/v1";
+import type { SessionUser } from "@/lib/auth";
 
 type PageProps = {
   tasks: ContestProblemListItemModel[];
@@ -63,8 +64,25 @@ const Task = ({
     submission: FormData,
     language: string,
   ): Promise<number | null> => {
-    // WebSocket will automatically update the submissions list
-    return await submitSubmission(problemId, contestId, submission, language);
+    const languageCode = LANGUAGE_MAP[language];
+    if (!languageCode) {
+      console.error("Invalid language:", language);
+      return null;
+    }
+
+    const [error, response] = await createSolution(
+      problemId,
+      contestId,
+      languageCode,
+      submission,
+    );
+
+    if (error) {
+      console.error("Failed to create submission:", error);
+      return null;
+    }
+
+    return response?.id ? 1 : null;
   };
 
   return (

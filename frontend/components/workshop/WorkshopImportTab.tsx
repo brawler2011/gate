@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { importProblemPackage } from "@/lib/actions";
+import { api } from "@/lib/api";
 
 type Props = {
   problemId: string;
@@ -32,7 +32,7 @@ export const WorkshopImportTab = ({ problemId }: Props) => {
     }
 
     startImport(async () => {
-      const [error] = await importProblemPackage(problemId, packageFile);
+      const [error] = await api.importProblem({ id: problemId, formData: { package: packageFile } });
       if (error) {
         notifications.show({
           title: "Ошибка импорта",

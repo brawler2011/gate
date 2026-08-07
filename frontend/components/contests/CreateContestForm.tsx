@@ -6,7 +6,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
-import { createContest } from "@/lib/actions";
+import { api } from "@/lib/api";
 
 const CreateContestForm = () => {
   const router = useRouter();
@@ -15,7 +15,7 @@ const CreateContestForm = () => {
   const handleCreate = () => {
     startTransition(async () => {
       try {
-        const [error, response] = await createContest("New Contest");
+        const [error, response] = await api.createContest({ title: "New Contest" });
         if (error) {
           notifications.show({
             title: "Ошибка",

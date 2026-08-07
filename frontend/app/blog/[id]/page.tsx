@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
 import { DefaultLayout } from '@/components/shared';
-import { getPostByIdPublic, listPostsPublic } from "@/lib/actions";
+import { publicApi } from "@/lib/api";
 import { formatDate } from "@/lib/formatDate";
 
 import 'katex/dist/katex.min.css';
@@ -23,7 +23,7 @@ type Props = {
 
 export async function generateStaticParams() {
   try {
-    const [error, postsData] = await listPostsPublic(1, 50);
+    const [error, postsData] = await publicApi.listPosts({ page: 1, pageSize: 50 });
     if (error || !postsData || !postsData.posts) {
       return [];
     }
@@ -40,7 +40,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const [error, post] = await getPostByIdPublic(id);
+  const [error, post] = await publicApi.getPostById({ id });
 
   if (error || !post) {
     return {
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const BlogPostPage = async ({ params }: Props) => {
   const { id } = await params;
-  const [error, post] = await getPostByIdPublic(id);
+  const [error, post] = await publicApi.getPostById({ id });
 
   if (error || !post) {
     notFound();

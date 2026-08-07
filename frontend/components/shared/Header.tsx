@@ -107,15 +107,11 @@ const Profile = ({ user }: { user?: SessionUser }) => {
   const pathname = usePathname();
   const [logoutLoading, setLogoutLoading] = useState(false);
 
-  const isLocalhost =
-    typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1");
   const getReturnUrl = () => {
     if (!pathname || pathname === "/" || pathname.startsWith("/auth")) {
       return null;
     }
-    return isLocalhost ? `${window.location.origin}${pathname}` : pathname;
+    return pathname;
   };
   const returnUrl = getReturnUrl();
   const returnTo = returnUrl
@@ -424,15 +420,11 @@ const Header = ({
   const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] =
     useDisclosure(false);
   const pathname = usePathname();
-  const isLocalhost =
-    typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1");
   const getReturnUrlDrawer = () => {
     if (!pathname || pathname === "/" || pathname.startsWith("/auth")) {
       return null;
     }
-    return isLocalhost ? `${window.location.origin}${pathname}` : pathname;
+    return pathname;
   };
   const returnUrl = getReturnUrlDrawer();
   const returnTo = returnUrl

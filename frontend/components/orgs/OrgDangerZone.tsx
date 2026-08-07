@@ -7,7 +7,7 @@ import { IconAlertTriangle } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { deleteOrganization } from '@/lib/actions';
+import { api } from '@/lib/api';
 
 type Props = { orgId: string; orgName: string };
 
@@ -19,7 +19,7 @@ export const OrgDangerZone = ({ orgId, orgName }: Props) => {
 
   const handleDelete = async () => {
     setLoading(true);
-    const [error] = await deleteOrganization(orgId);
+    const [error] = await api.deleteOrganization({ id: orgId });
     setLoading(false);
     if (error) {
       notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });

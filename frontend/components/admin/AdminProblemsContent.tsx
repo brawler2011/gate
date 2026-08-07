@@ -22,7 +22,7 @@ import useSWR from "swr";
 
 import { NextPagination } from '@/components/shared/Pagination';
 import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { deleteProblem } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { formatDate } from "@/lib/formatDate";
 
 import classes from "./AdminPage.module.css";
@@ -85,14 +85,11 @@ export const AdminProblemsContent = ({ page, search }: AdminProblemsContentProps
 
   // Fetch problems
   const { data, error, isLoading, mutate } = useSWR(
-    `/api/problems?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}`,
-    async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Не удалось загрузить задачи");
-      }
-      return res.json();
+    ["admin-problems", page, search],
+    async () => {
+      const [err, res] = await api.listProblems({ page, pageSize: 10, search });
+      if (err) throw new Error(err.message);
+      return res;
     }
   );
 
@@ -112,7 +109,7 @@ export const AdminProblemsContent = ({ page, search }: AdminProblemsContentProps
 
     setDeletingId(problemToDelete.id);
     try {
-      const [err] = await deleteProblem(problemToDelete.id);
+      const [err] = await api.deleteProblem({ id: problemToDelete.id });
       if (err) {
         notifications.show({
           title: "Ошибка",

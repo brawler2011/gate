@@ -4,7 +4,7 @@ import { CreateOrgButton } from '@/components/orgs/CreateOrgButton';
 import { OrgCard } from '@/components/orgs/OrgCard';
 import { DefaultLayout } from '@/components/shared';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { listOrganizations } from '@/lib/actions';
+import { api } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: 'Организации' };
 
 const OrgsPage = async () => {
   const user = await getCurrentUser();
-  const [error, data] = await listOrganizations(1, 50);
+  const [error, data] = await api.listOrganizations({ page: 1, pageSize: 50 });
   if (error) {
     return <DefaultLayout><Container size="lg" py="lg"><ErrorDisplay error={error} /></Container></DefaultLayout>;
   }

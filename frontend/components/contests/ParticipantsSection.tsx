@@ -20,13 +20,7 @@ import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { StatusMessage } from '@/components/shared/StatusMessage';
-import {
-  addContestMember,
-  getContestMembers,
-  removeContestMember,
-  searchUsers,
-  updateContestMemberRole,
-} from "@/lib/actions";
+import { api } from "@/lib/api";
 
 import { ChangeRoleModal } from "./ChangeRoleModal";
 
@@ -77,7 +71,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
   // Load participants
   const loadParticipants = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await getContestMembers(contestId, page, pageSize);
+    const [error, response] = await api.listContestMembers({ contestId, page, pageSize });
     setLoading(false);
 
     if (error || !response) {
@@ -104,7 +98,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
       }
 
       setSearching(true);
-      const [error, response] = await searchUsers(debouncedQuery);
+      const [error, response] = await api.listUsers({ page: 1, pageSize: 10, search: debouncedQuery });
       setSearching(false);
 
       if (error || !response) {
@@ -124,7 +118,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
     }
 
     setAdding(true);
-    const [error] = await addContestMember(contestId, selectedUserId);
+    const [error] = await api.createContestMember({ contestId, userId: selectedUserId });
     setAdding(false);
 
     if (error) {
@@ -153,7 +147,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
 
   const handleDeleteParticipant = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await removeContestMember(contestId, userId);
+    const [error] = await api.deleteContestMember({ contestId, userId });
     setDeletingId(null);
 
     if (error) {
@@ -192,11 +186,11 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
       return;
     }
 
-    const [error] = await updateContestMemberRole(
+    const [error] = await api.updateContestMember({
       contestId,
-      editingParticipant.userId,
-      newRole
-    );
+      userId: editingParticipant.userId,
+      role: newRole,
+    });
 
     setModalOpened(false);
 

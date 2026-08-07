@@ -14,10 +14,11 @@ import {
   type MessageSubmissionCompleted,
 } from '@/contracts/observer/v1';
 
-import { getSubmissions, getMySubmissions } from './actions';
+import { api, type ApiError } from './api';
+import { env } from './env';
 import { submissionsWsManager, type WsManagerStatus } from './submissionsWsManager';
 
-import type { SubmissionsListItemModel } from '@/contracts/core/v1';
+import type { ListSubmissionsResponseModel, SubmissionsListItemModel } from '@/contracts/core/v1';
 
 // Progress info for a submission being tested
 export interface TestProgress {
@@ -46,9 +47,18 @@ export interface UseSubmissionsWebSocketOptions {
   enabled: boolean;
 }
 
-type SnapshotParams = Parameters<typeof getSubmissions>[0];
+type SnapshotParams = {
+  contestId: string;
+  page: number;
+  pageSize: number;
+  userId?: string;
+  problemId?: string;
+  state?: number;
+  sortOrder?: "asc" | "desc";
+  language?: number;
+};
 
-type MySubmissionsData = Awaited<ReturnType<typeof getMySubmissions>>[1];
+type MySubmissionsData = ListSubmissionsResponseModel | null;
 
 function hasSince(data: MySubmissionsData): data is NonNullable<MySubmissionsData> & { since?: number } {
   return typeof data === 'object' && data !== null;
@@ -86,7 +96,7 @@ export const WS_STATUS_DEBOUNCE_MS = 400;
 const WS_DEBUG = false;
 const WS_RESTORED_TOAST_AUTO_CLOSE_MS = 2500;
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = env.isDevelopment;
 
 function log(...args: unknown[]) {
   if (isDev && WS_DEBUG) {
@@ -359,11 +369,11 @@ export function useSubmissionsWebSocket({
       throw new Error('snapshot scope "mine" requires userId');
     }
 
-    let error;
-    let data;
+    let error: ApiError | null = null;
+    let data: ListSubmissionsResponseModel | null = null;
 
     if (snapshotScope === 'mine') {
-      [error, data] = await getMySubmissions({
+      [error, data] = await api.listContestSubmissions({
         userId: userId!,
         contestId: params.contestId!,
         problemId: params.problemId,
@@ -372,14 +382,14 @@ export function useSubmissionsWebSocket({
         sortOrder: 'desc',
       });
     } else {
-      [error, data] = await getSubmissions(params);
+      [error, data] = await api.listContestSubmissions(params);
     }
 
-    if (error || !data) {
+    if (error || !data || !data.submissions) {
       throw new Error(error?.message || 'snapshot refetch failed');
     }
 
-    setSubmissions(data.submissions.map((s) => ({ ...s })));
+    setSubmissions(data.submissions.map((s: SubmissionsListItemModel) => ({ ...s })));
     setSinceState(hasSince(data) ? data.since ?? 0 : 0);
     setFatalConnectionError(false);
     setConnectionError(false);

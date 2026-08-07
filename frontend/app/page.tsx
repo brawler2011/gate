@@ -14,7 +14,7 @@ import { CompactBlogList } from '@/components/blog/CompactBlogList';
 import { DashboardContestsList } from '@/components/contests/DashboardContestsList';
 import { DashboardProblemsList } from '@/components/problems/DashboardProblemsList';
 import { DefaultLayout } from '@/components/shared';
-import { listPosts, getMyDashboard } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { isAuthenticated } from "@/lib/auth";
 
 import type { PaginationModel } from "@/contracts/core/v1";
@@ -38,8 +38,8 @@ const Page = async ({ searchParams }: PageProps) => {
       [dashboardError, dashboardData],
       [blogError, blogData]
     ] = await Promise.all([
-      getMyDashboard(),
-      listPosts(1, 5) // Fetch top 5 blog posts for the sidebar
+      api.getMyDashboard(),
+      api.listPosts({ page: 1, pageSize: 5 }) // Fetch top 5 blog posts for the sidebar
     ]);
 
     const recentContests = dashboardData?.recent_contests || [];
@@ -88,7 +88,7 @@ const Page = async ({ searchParams }: PageProps) => {
   }
 
   // Guest view: Welcome banner & full blog feed
-  const [blogError, blogData] = await listPosts(currentPage, 5);
+  const [blogError, blogData] = await api.listPosts({ page: currentPage, pageSize: 5 });
   const blogPosts = blogData?.posts || [];
   const pagination: PaginationModel = {
     total: blogData?.pagination?.total ?? 0,

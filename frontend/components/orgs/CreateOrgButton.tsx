@@ -5,7 +5,7 @@ import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { createOrganization } from '@/lib/actions';
+import { api } from '@/lib/api';
 
 const translateApiError = (message: string): string => {
   if (message.includes('at least one latin letter or digit')) {
@@ -51,7 +51,7 @@ export const CreateOrgButton = () => {
     }
 
     setLoading(true);
-    const [error, response] = await createOrganization(trimmed);
+    const [error, response] = await api.createOrganization({ name: trimmed });
     setLoading(false);
 
     if (error) {

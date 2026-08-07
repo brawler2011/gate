@@ -7,7 +7,7 @@ import { ProblemsSection } from "@/components/contests/ProblemsSection";
 import { SettingsSection } from "@/components/contests/SettingsSection";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { getContest } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import {
   CONTEST_CONTENT_MAX_WIDTH,
@@ -62,7 +62,7 @@ const ContestManagePage = async ({
   const { contest_id: contestId } = await params;
   const { section = "settings" } = await searchParams;
 
-  const [error, response] = await getContest(contestId);
+  const [error, response] = await api.getContest({ contestId });
   if (error) {
     return <ErrorDisplay error={error} />;
   }

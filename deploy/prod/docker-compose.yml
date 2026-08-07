@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG}
+    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-prod}
     container_name: gate-backend-prod
     hostname: backend
     restart: unless-stopped
@@ -41,7 +41,7 @@ services:
     labels:
       - "traefik.enable=true"
       # API router (/api)
-      - "traefik.http.routers.gate-backend-prod.rule=(Host(`steins.ru`) || Host(`traefik`)) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.gate-backend-prod.rule=(Host(`${DOMAIN_NAME}`) || Host(`traefik`)) && PathPrefix(`/api/`)"
       - "traefik.http.routers.gate-backend-prod.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-prod.tls=true"
       - "traefik.http.routers.gate-backend-prod.tls.certresolver=letsencrypt"
@@ -49,13 +49,13 @@ services:
       # StripPrefix middleware
       - "traefik.http.middlewares.gate-backend-prod-strip.stripprefix.prefixes=/api"
       # WS router (/ws)
-      - "traefik.http.routers.gate-backend-prod-ws.rule=Host(`steins.ru`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.gate-backend-prod-ws.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/ws`)"
       - "traefik.http.routers.gate-backend-prod-ws.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-prod-ws.tls=true"
       - "traefik.http.routers.gate-backend-prod-ws.tls.certresolver=letsencrypt"
       - "traefik.http.routers.gate-backend-prod-ws.middlewares=gate-backend-prod-headers@docker"
       # Health router (/health)
-      - "traefik.http.routers.gate-backend-prod-health.rule=Host(`steins.ru`) && Path(`/health`)"
+      - "traefik.http.routers.gate-backend-prod-health.rule=Host(`${DOMAIN_NAME}`) && Path(`/health`)"
       - "traefik.http.routers.gate-backend-prod-health.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-prod-health.tls=true"
       - "traefik.http.routers.gate-backend-prod-health.tls.certresolver=letsencrypt"
@@ -73,7 +73,7 @@ services:
       - "traefik.http.middlewares.gate-api-ratelimit.ratelimit.burst=20"
 
   backend-migrate:
-    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG}
+    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-prod}
     container_name: gate-backend-migrate-prod
     depends_on:
       postgres:
@@ -96,12 +96,13 @@ services:
           memory: 64M
 
   frontend:
-    image: ghcr.io/brawler2011/gate-frontend:${IMAGE_TAG}
+    image: ghcr.io/brawler2011/gate-frontend:${IMAGE_TAG:-prod}
     container_name: gate-frontend-prod
     hostname: frontend
     restart: unless-stopped
     environment:
       - BACKEND_API_URL=${BACKEND_API_URL}
+      - NEXT_PUBLIC_BACKEND_API_URL=${NEXT_PUBLIC_BACKEND_API_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - WEBSOCKET_URL=${WEBSOCKET_URL}
     networks:
@@ -123,7 +124,7 @@ services:
           memory: 256M
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.gate-frontend-prod.rule=Host(`steins.ru`)"
+      - "traefik.http.routers.gate-frontend-prod.rule=Host(`${DOMAIN_NAME}`)"
       - "traefik.http.routers.gate-frontend-prod.entrypoints=websecure"
       - "traefik.http.routers.gate-frontend-prod.tls=true"
       - "traefik.http.routers.gate-frontend-prod.tls.certresolver=letsencrypt"
@@ -137,7 +138,7 @@ services:
       # IP Allow List middleware to return 403 Forbidden (localhost allowed, rest blocked)
       - "traefik.http.middlewares.gate-block-ip.ipallowlist.sourcerange=127.0.0.1/32"
       # Malicious requests block router
-      - "traefik.http.routers.gate-malicious-block.rule=Host(`steins.ru`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\\.env|\\.git)`) || PathRegexp(`.*\\.php$$`) || PathRegexp(`^/_next/(rsc|app-build-manifest|prerender-manifest|middleware-manifest|flight-manifest|module-fetch|dev|entrypoints|turbopack|redirect|refresh|route-loader|script|font|inline)/`) || PathRegexp(`^/_next/.*\\.(json|map)$$`))"
+      - "traefik.http.routers.gate-malicious-block.rule=Host(`${DOMAIN_NAME}`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\\.env|\\.git)`) || PathRegexp(`.*\\.php$$`) || PathRegexp(`^/_next/(rsc|app-build-manifest|prerender-manifest|middleware-manifest|flight-manifest|module-fetch|dev|entrypoints|turbopack|redirect|refresh|route-loader|script|font|inline)/`) || PathRegexp(`^/_next/.*\\.(json|map)$$`))"
       - "traefik.http.routers.gate-malicious-block.entrypoints=websecure"
       - "traefik.http.routers.gate-malicious-block.tls=true"
       - "traefik.http.routers.gate-malicious-block.middlewares=gate-block-ip@docker"

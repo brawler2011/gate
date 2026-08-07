@@ -19,12 +19,7 @@ import { IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { StatusMessage } from "@/components/shared/StatusMessage";
-import {
-  addOrganizationMember,
-  listOrganizationMembers,
-  removeOrganizationMember,
-  searchUsers,
-} from "@/lib/actions";
+import { api } from "@/lib/api";
 
 import type { OrganizationMemberModel } from "@/contracts/core/v1";
 
@@ -45,6 +40,7 @@ type Props = { orgId: string };
 export const OrgMembersManagement = ({ orgId }: Props) => {
   const [members, setMembers] = useState<OrganizationMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<
@@ -62,7 +58,7 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
-    const [, data] = await listOrganizationMembers(orgId, 1, 100);
+    const [, data] = await api.listOrganizationMembers({ id: orgId, page: 1, pageSize: 100 });
     setLoading(false);
     if (data) {
       setMembers(data.members);
@@ -79,7 +75,7 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
       return;
     }
     setSearching(true);
-    searchUsers(debouncedQuery).then(([, data]) => {
+    api.listUsers({ page: 1, pageSize: 10, search: debouncedQuery }).then(([, data]) => {
       setSearching(false);
       setSearchResults(
         (data?.users ?? []).map((u) => ({ value: u.id, label: u.username })),
@@ -92,11 +88,11 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
       return;
     }
     setAdding(true);
-    const [error] = await addOrganizationMember(
-      orgId,
-      selectedUserId,
-      selectedRole as "owner" | "admin" | "member",
-    );
+    const [error] = await api.addOrganizationMember({
+      id: orgId,
+      userId: selectedUserId,
+      role: selectedRole as "owner" | "admin" | "member",
+    });
     setAdding(false);
     if (error) {
       notifications.show({
@@ -115,7 +111,7 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
 
   const handleRemove = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await removeOrganizationMember(orgId, userId);
+    const [error] = await api.removeOrganizationMember({ id: orgId, userId });
     setDeletingId(null);
     if (error) {
       notifications.show({

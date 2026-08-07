@@ -8,7 +8,7 @@ import { ORG_SETTINGS_NAV_SECTIONS } from "@/components/orgs/OrgSettingsNavShare
 import { OrgSettingsSidebarNav } from "@/components/orgs/OrgSettingsSidebarNav";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { getOrganization } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
 
@@ -30,7 +30,7 @@ const OrgSettingsPage = async ({ params, searchParams }: Props) => {
   const { org_id } = await params;
   const { section = "settings" } = await searchParams;
 
-  const [error, data] = await getOrganization(org_id);
+  const [error, data] = await api.getOrganization({ id: org_id });
   if (error) {
     if (error.status === 404) {
       notFound();

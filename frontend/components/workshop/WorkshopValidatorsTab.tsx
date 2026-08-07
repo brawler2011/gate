@@ -1,12 +1,12 @@
 "use client";
 
+import { api } from "@/lib/api";
 import {
   createWorkshopValidatorFile,
   getWorkshopValidatorFile,
-  listWorkshopValidatorFiles,
   updateWorkshopValidatorFile,
   setWorkshopValidatorMain,
-} from "@/lib/actions";
+} from "@/lib/workshop";
 
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
 
@@ -17,7 +17,7 @@ export const WorkshopValidatorsTab = (props: WorkshopFileTabProps) => {
     <WorkshopCollectionTab
       {...props}
       folderName="validators"
-      listFiles={listWorkshopValidatorFiles}
+      listFiles={(problemId) => api.listProblemValidators({ problemId })}
       getFile={getWorkshopValidatorFile}
       createFile={createWorkshopValidatorFile}
       updateFile={updateWorkshopValidatorFile}

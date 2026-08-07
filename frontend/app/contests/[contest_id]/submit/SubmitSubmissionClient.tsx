@@ -5,16 +5,16 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { CreateSubmissionForm } from "@/components/submissions/CreateSubmissionForm";
+import { LANGUAGE_MAP } from "@/lib/constants";
 import { numberToLetters } from "@/lib/lib";
-
-import { submitSubmission } from "./actions";
+import { createSolution } from "@/lib/workshop";
 import classes from "./SubmitSubmissionClient.module.css";
 
-import type { SessionUser } from "@/lib/auth";
 import type {
   ContestModel,
   ContestProblemListItemModel,
 } from "@/contracts/core/v1";
+import type { SessionUser } from "@/lib/auth";
 
 type Props = {
   contest: ContestModel;
@@ -40,12 +40,25 @@ export const SubmitSubmissionClient = ({ contest, problems, user }: Props) => {
       return null;
     }
 
-    const result = await submitSubmission(
+    const languageCode = LANGUAGE_MAP[language];
+    if (!languageCode) {
+      console.error("Invalid language:", language);
+      return null;
+    }
+
+    const [error, response] = await createSolution(
       selectedProblemId,
       contest.id,
+      languageCode,
       submission,
-      language,
     );
+
+    if (error) {
+      console.error("Failed to create submission:", error);
+      return null;
+    }
+
+    const result = response?.id ? 1 : null;
 
     if (result) {
       // Mark as submitted to disable form

@@ -6,7 +6,7 @@ import { TeamMembersManagement } from '@/components/orgs/TeamMembersManagement';
 import { DefaultLayout } from '@/components/shared';
 import { LinkAnchor } from '@/components/shared';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { getTeam } from '@/lib/actions';
+import { api } from '@/lib/api';
 
 
 
@@ -14,7 +14,7 @@ type Props = { params: Promise<{ org_id: string; team_id: string }> };
 
 const TeamPage = async ({ params }: Props) => {
   const { org_id, team_id } = await params;
-  const [error, data] = await getTeam(team_id);
+  const [error, data] = await api.getTeam({ id: team_id });
   if (error) {
     if (error.status === 404) {
       notFound();

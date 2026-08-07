@@ -6,7 +6,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
-import { createProblem } from "@/lib/actions";
+import { api } from "@/lib/api";
 
 const CreateProblemForm = () => {
   const router = useRouter();
@@ -15,7 +15,7 @@ const CreateProblemForm = () => {
   const handleCreate = () => {
     startTransition(async () => {
       try {
-        const [error, response] = await createProblem("New Problem");
+        const [error, response] = await api.createProblem({ title: "New Problem" });
         if (error) {
           notifications.show({
             title: "Ошибка",

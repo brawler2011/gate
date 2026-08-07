@@ -5,10 +5,11 @@ import { cache } from "react";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
 import { Task } from "@/components/shared/Task";
-import { getContest, getContestProblem, getMySubmissions } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
+import { env } from "@/lib/env";
 import { numberToLetters } from "@/lib/lib";
 import { PermissionChecker } from "@/lib/permissions";
 
@@ -25,7 +26,7 @@ type Props = {
 
 // Cache getContestProblem to avoid duplicate calls in generateMetadata and Page
 const getCachedContestProblem = cache((problemId: string, contestId: string) =>
-  getContestProblem(problemId, contestId),
+  api.getContestProblem({ problemId, contestId }),
 );
 
 const generateMetadata = async (props: Props): Promise<Metadata> => {
@@ -61,10 +62,10 @@ const Page = async (props: Props) => {
     [, submissionsResponse],
   ] = await Promise.all([
     getCachedContestProblem(params.problem_id, params.contest_id),
-    getContest(params.contest_id),
+    api.getContest({ contestId: params.contest_id }),
     // Only fetch user's own submissions if authenticated
     user
-      ? getMySubmissions({
+      ? api.listContestSubmissions({
         userId: user.id,
         contestId: params.contest_id,
         problemId: params.problem_id,
@@ -116,8 +117,7 @@ const Page = async (props: Props) => {
   const submissions = [...(submissionsResponse?.submissions || [])];
 
   // Build WebSocket URL for real-time updates
-  // Remove trailing slash if present to avoid double slashes
-  const wsBaseUrl = (process.env.WEBSOCKET_URL || "").replace(/\/+$/, "");
+  const wsBaseUrl = env.getWebSocketUrl();
   const wsUrl = wsBaseUrl ? `${wsBaseUrl}/submissions` : undefined;
 
   return (

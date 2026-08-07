@@ -1,11 +1,11 @@
 "use client";
 
+import { api } from "@/lib/api";
 import {
   createWorkshopGeneratorFile,
   getWorkshopGeneratorFile,
-  listWorkshopGeneratorFiles,
   updateWorkshopGeneratorFile,
-} from "@/lib/actions";
+} from "@/lib/workshop";
 
 import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
 
@@ -16,7 +16,7 @@ export const WorkshopGeneratorsTab = (props: WorkshopFileTabProps) => {
     <WorkshopCollectionTab
       {...props}
       folderName="generators"
-      listFiles={listWorkshopGeneratorFiles}
+      listFiles={(problemId) => api.listProblemGenerators({ problemId })}
       getFile={getWorkshopGeneratorFile}
       createFile={createWorkshopGeneratorFile}
       updateFile={updateWorkshopGeneratorFile}

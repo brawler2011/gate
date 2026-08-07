@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/brawler2011/gate-backend:dev
+    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-dev}
     container_name: gate-backend-dev
     hostname: backend
     restart: unless-stopped
@@ -41,7 +41,7 @@ services:
     labels:
       - "traefik.enable=true"
       # API router (/api)
-      - "traefik.http.routers.gate-backend-dev.rule=(Host(`dev.gate149.ru`) || Host(`traefik`)) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.gate-backend-dev.rule=(Host(`${DOMAIN_NAME}`) || Host(`traefik`)) && PathPrefix(`/api/`)"
       - "traefik.http.routers.gate-backend-dev.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-dev.tls=true"
       - "traefik.http.routers.gate-backend-dev.tls.certresolver=letsencrypt"
@@ -49,13 +49,13 @@ services:
       # StripPrefix middleware
       - "traefik.http.middlewares.gate-backend-dev-strip.stripprefix.prefixes=/api"
       # WS router (/ws)
-      - "traefik.http.routers.gate-backend-dev-ws.rule=Host(`dev.gate149.ru`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.gate-backend-dev-ws.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/ws`)"
       - "traefik.http.routers.gate-backend-dev-ws.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-dev-ws.tls=true"
       - "traefik.http.routers.gate-backend-dev-ws.tls.certresolver=letsencrypt"
       - "traefik.http.routers.gate-backend-dev-ws.middlewares=gate-backend-dev-headers@docker"
       # Health router (/health)
-      - "traefik.http.routers.gate-backend-dev-health.rule=Host(`dev.gate149.ru`) && Path(`/health`)"
+      - "traefik.http.routers.gate-backend-dev-health.rule=Host(`${DOMAIN_NAME}`) && Path(`/health`)"
       - "traefik.http.routers.gate-backend-dev-health.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-dev-health.tls=true"
       - "traefik.http.routers.gate-backend-dev-health.tls.certresolver=letsencrypt"
@@ -69,7 +69,7 @@ services:
       - "traefik.http.middlewares.gate-backend-dev-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
 
   backend-migrate:
-    image: ghcr.io/brawler2011/gate-backend:dev
+    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-dev}
     container_name: gate-backend-migrate-dev
     depends_on:
       postgres:
@@ -84,12 +84,13 @@ services:
     restart: "no"
 
   frontend:
-    image: ghcr.io/brawler2011/gate-frontend:dev
+    image: ghcr.io/brawler2011/gate-frontend:${IMAGE_TAG:-dev}
     container_name: gate-frontend-dev
     hostname: frontend
     restart: unless-stopped
     environment:
       - BACKEND_API_URL=${BACKEND_API_URL}
+      - NEXT_PUBLIC_BACKEND_API_URL=${NEXT_PUBLIC_BACKEND_API_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - WEBSOCKET_URL=${WEBSOCKET_URL}
     networks:
@@ -103,7 +104,7 @@ services:
       start_period: 40s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.gate-frontend-dev.rule=Host(`dev.gate149.ru`)"
+      - "traefik.http.routers.gate-frontend-dev.rule=Host(`${DOMAIN_NAME}`)"
       - "traefik.http.routers.gate-frontend-dev.entrypoints=websecure"
       - "traefik.http.routers.gate-frontend-dev.tls=true"
       - "traefik.http.routers.gate-frontend-dev.tls.certresolver=letsencrypt"

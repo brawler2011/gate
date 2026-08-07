@@ -5,7 +5,7 @@ import { notifications } from "@mantine/notifications";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { createContest } from "@/lib/actions";
+import { api } from "@/lib/api";
 
 import type { OrganizationModel } from "@/contracts/core/v1";
 
@@ -48,10 +48,10 @@ export const CreateContestModal = ({
 
     setLoading(true);
     try {
-      const [error, response] = await createContest(
-        title.trim() || "New Contest",
-        orgId,
-      );
+      const [error, response] = await api.createContest({
+        title: title.trim() || "New Contest",
+        organizationId: orgId,
+      });
       if (error) {
         throw new Error(error.message);
       }

@@ -1,4 +1,4 @@
-import { getOrganization } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 
 import {
@@ -30,7 +30,7 @@ export const HeaderWithSession = async ({
   const [user, organizationResult] = await Promise.all([
     getCurrentUser(),
     !passedOrganization && targetOrgId
-      ? getOrganization(targetOrgId)
+      ? api.getOrganization({ id: targetOrgId })
       : Promise.resolve([null, null] as const),
   ]);
 

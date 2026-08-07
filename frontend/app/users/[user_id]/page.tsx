@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { DefaultLayout } from '@/components/shared';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { Profile } from '@/components/users/Profile';
-import { getUser, getUserContests } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { isValidUUIDV4 } from "@/lib/lib";
 
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Профиль пользователя - Gate149" };
   }
 
-  const [error, userData] = await getUser(user_id);
+  const [error, userData] = await api.getUser({ id: user_id });
   if (error || !userData) {
     return { title: "Ошибка загрузки профиля - Gate149" };
   }
@@ -42,8 +42,8 @@ const Page = async ({ params, searchParams }: Props) => {
 
   const [currentUser, [userError, userData], [, contestsData]] = await Promise.all([
     getCurrentUser(),
-    getUser(user_id),
-    getUserContests(user_id, contestsPageNum, 10),
+    api.getUser({ id: user_id }),
+    api.listUserContests({ id: user_id, page: contestsPageNum, pageSize: 10 }),
   ]);
 
   if (userError) {

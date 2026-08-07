@@ -21,8 +21,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState, useTransition } from "react";
 
-import type { ApiError } from "@/lib/api";
 import type { ProblemModel } from "@/contracts/core/v1";
+import type { ApiError } from "@/lib/api";
 
 type ProblemFormData = {
   title?: string;

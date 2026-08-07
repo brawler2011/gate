@@ -14,7 +14,7 @@ import useSWR from "swr";
 
 import { NextPagination } from '@/components/shared/Pagination';
 import { StatusMessage } from '@/components/shared/StatusMessage';
-import { deleteContest } from "@/lib/actions";
+import { api } from "@/lib/api";
 
 import { AdminContestsSearchInput } from "./AdminContestsSearchInput";
 import { AdminContestsTable } from "./AdminContestsTable";
@@ -31,14 +31,11 @@ export const AdminContestsContent = ({ page, search }: AdminContestsContentProps
   } | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR(
-    `/api/admin/contests?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}`,
-    async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Не удалось загрузить контесты");
-      }
-      return res.json();
+    ["admin-contests", page, search],
+    async () => {
+      const [err, res] = await api.listAdminContests({ page, pageSize: 10, search });
+      if (err) throw new Error(err.message);
+      return res;
     }
   );
 
@@ -46,7 +43,7 @@ export const AdminContestsContent = ({ page, search }: AdminContestsContentProps
   const pagination = data?.pagination || { total: 0, page: page };
 
   const handleDeleteContest = async (contestId: string) => {
-    const [err] = await deleteContest(contestId);
+    const [err] = await api.deleteContest({ contestId });
     
     if (err) {
       console.error("Error deleting contest:", err);

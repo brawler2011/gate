@@ -2,6 +2,8 @@
 
 import { SubmissionsWsCloseCode } from '@/contracts/observer/v1';
 
+import { env } from './env';
+
 type ListenerParams = {
   key: string;
   url: string;
@@ -30,7 +32,7 @@ const RESYNC_CLOSE_CODES = new Set<number>([
   SubmissionsWsCloseCode.invalid_range,
 ]);
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = env.isDevelopment;
 
 function log(...args: unknown[]) {
   if (isDev) {

@@ -1,4 +1,4 @@
-import { listOrganizationMembers } from "@/lib/actions";
+import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function canManageOrgMembers(orgId: string): Promise<boolean> {
@@ -10,8 +10,8 @@ export async function canManageOrgMembers(orgId: string): Promise<boolean> {
     return true;
   }
 
-  const [error, data] = await listOrganizationMembers(orgId, 1, 100);
-  if (error || !data) {
+  const [error, data] = await api.listOrganizationMembers({ id: orgId, page: 1, pageSize: 100 });
+  if (error || !data || !data.members) {
     return false;
   }
 

@@ -20,18 +20,14 @@ import {
 import { useEffect, useState, useTransition } from "react";
 import useSWR from "swr";
 
+import { api } from "@/lib/api";
 import {
   createWorkshopTestFile,
   generateWorkshopTests,
-  getWorkshopProblemLimits,
   getWorkshopTestFile,
-  listWorkshopGeneratorFiles,
-  listWorkshopSolutionFiles,
-  listWorkshopTestFiles,
   testWorkshopSolution,
   updateWorkshopTestFile,
-  validateWorkshopTests,
-} from "@/lib/actions";
+} from "@/lib/workshop";
 
 import { SubtasksTable } from "./SubtasksTable";
 import { TestRenumberModal } from "./TestRenumberModal";
@@ -63,7 +59,7 @@ export const WorkshopTestsManager = ({ problemId }: Props) => {
 
   // Load problem limits to know problem_type and max_score
   const { data: limitsData } = useSWR(["problem-limits", problemId], async () => {
-    const [err, res] = await getWorkshopProblemLimits(problemId);
+    const [err, res] = await api.getProblemLimits({ problemId });
     if (err) {
       return null;
     }
@@ -77,17 +73,17 @@ export const WorkshopTestsManager = ({ problemId }: Props) => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [_genErr, genRes] = await listWorkshopGeneratorFiles(problemId);
+      const [_genErr, genRes] = await api.listProblemGenerators({ problemId });
       if (genRes?.files) {
         setGenerators(genRes.files.map((f: { path?: string; name?: string }) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
-      const [_solErr, solRes] = await listWorkshopSolutionFiles(problemId);
+      const [_solErr, solRes] = await api.listProblemWorkshopSubmissions({ problemId });
       if (solRes?.files) {
         setSolutions(solRes.files.map((f: { path?: string; name?: string }) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
-      const [_filesErr, filesRes] = await listWorkshopTestFiles(problemId);
+      const [_filesErr, filesRes] = await api.listProblemTests({ problemId });
       const existingFiles = (filesRes?.files?.map((f: { path?: string; name?: string }) => f.path || f.name || "") || []).map(
         (p: string) => p.split("/").pop() || p
       );
@@ -536,7 +532,7 @@ export const WorkshopTestsManager = ({ problemId }: Props) => {
   const handleRunValidatorBatch = async () => {
     setIsBatchRunning(true);
     try {
-      const [err, report] = await validateWorkshopTests(problemId);
+      const [err, report] = await api.validateAllTests({ problemId });
       if (err || !report) {
         notifications.show({
           title: "Ошибка валидации",
