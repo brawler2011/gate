@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 
-export async function canManageOrgMembers(orgId: string): Promise<boolean> {
+export const canManageOrgMembers = async (orgId: string): Promise<boolean> => {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     return false;
@@ -17,4 +17,5 @@ export async function canManageOrgMembers(orgId: string): Promise<boolean> {
 
   const member = data.members.find((m) => m.user_id === currentUser.id);
   return member?.role === "owner" || member?.role === "admin";
-}
+};
+

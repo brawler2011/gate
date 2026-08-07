@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AuthResponseModel } from '../models/AuthResponseModel';
 import type { CompileResult } from '../models/CompileResult';
 import type { CreatedPost } from '../models/CreatedPost';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
@@ -27,11 +28,13 @@ import type { ListTeamMembersResponseModel } from '../models/ListTeamMembersResp
 import type { ListTeamsResponseModel } from '../models/ListTeamsResponseModel';
 import type { ListUserContestsResponseModel } from '../models/ListUserContestsResponseModel';
 import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
+import type { LoginRequestModel } from '../models/LoginRequestModel';
 import type { MainComponentSelectionRequest } from '../models/MainComponentSelectionRequest';
 import type { MessageResponse } from '../models/MessageResponse';
 import type { PostModel } from '../models/PostModel';
 import type { ProblemLimits } from '../models/ProblemLimits';
 import type { ProblemStatement } from '../models/ProblemStatement';
+import type { RegisterRequestModel } from '../models/RegisterRequestModel';
 import type { TestReport } from '../models/TestReport';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
 import type { UpdateOrganizationRequestModel } from '../models/UpdateOrganizationRequestModel';
@@ -2531,6 +2534,48 @@ export class DefaultService {
                 400: `bad request`,
                 404: `not found`,
             },
+        });
+    }
+    /**
+     * @returns AuthResponseModel Successfully registered
+     * @throws ApiError
+     */
+    public register({
+        requestBody,
+    }: {
+        requestBody: RegisterRequestModel,
+    }): CancelablePromise<AuthResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/auth/register',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns AuthResponseModel Successfully logged in
+     * @throws ApiError
+     */
+    public login({
+        requestBody,
+    }: {
+        requestBody: LoginRequestModel,
+    }): CancelablePromise<AuthResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/auth/login',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns any Successfully logged out
+     * @throws ApiError
+     */
+    public logout(): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/auth/logout',
         });
     }
 }

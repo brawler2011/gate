@@ -21,6 +21,6 @@ const parsePage = (value: unknown): number | null => {
   }
 
   return null;
-}
+};
 
 export { parsePage };

@@ -1,4 +1,4 @@
-import { core, type AuthService, type DefaultService } from "@/contracts/core/v1";
+import { core, type DefaultService } from "@/contracts/core/v1";
 import { ApiError as CoreApiError } from "@/contracts/core/v1/core/ApiError";
 import { env } from "@/lib/env";
 
@@ -17,31 +17,29 @@ export type ApiError = {
   requestId?: string;
 };
 
-// Merged type of all services, converting CancelablePromise<T> to Promise<[ApiError | null, T | null]>
-type MergedServices = DefaultService & AuthService;
+export type ApiResult<R> = [error: ApiError, data: null] | [error: null, data: R];
 
 export type ApiFacade = {
-  [K in keyof MergedServices]: MergedServices[K] extends (...args: infer A) => Promise<infer R>
-    ? (...args: A) => Promise<[ApiError | null, R | null]>
-    : MergedServices[K];
+  [K in keyof DefaultService]: DefaultService[K] extends (...args: infer A) => Promise<infer R>
+  ? (...args: A) => Promise<ApiResult<R>>
+  : DefaultService[K];
 };
 
-function createApiFacade(client: core): ApiFacade {
+const createApiFacade = (client: core): ApiFacade => {
   return new Proxy(client, {
     get(target, prop: string) {
-      // Find matching method on auth or default service
-      const service = [target.auth, target.default].find(
-        (s) => typeof (s as any)[prop] === "function"
-      );
-      const fn = service ? (service as any)[prop] : (target as any)[prop];
+      const service = target.default as unknown as Record<string, unknown>;
+      const targetObj = target as unknown as Record<string, unknown>;
+      const fn = typeof service[prop] === "function" ? service[prop] : targetObj[prop];
 
       if (typeof fn === "function") {
-        return async (...args: any[]) => {
+        return async (...args: unknown[]) => {
           try {
-            const data = await fn.apply(service || target, args);
+            const data = await (fn as (...a: unknown[]) => unknown).apply(service || target, args);
             return [null, data];
           } catch (error) {
             if (error instanceof CoreApiError) {
+              // FIXME: think of better logging approach
               if (error.status !== 401) {
                 console.log("API Error:", error);
               }
@@ -60,7 +58,7 @@ function createApiFacade(client: core): ApiFacade {
       return fn;
     },
   }) as unknown as ApiFacade;
-}
+};
 
 const rawAuthClient = new core({
   BASE: getBaseUrl(),

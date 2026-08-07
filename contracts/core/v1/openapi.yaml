@@ -2883,8 +2883,6 @@ paths:
   /auth/register:
     post:
       operationId: Register
-      tags:
-        - auth
       requestBody:
         required: true
         content:
@@ -2901,8 +2899,6 @@ paths:
   /auth/login:
     post:
       operationId: Login
-      tags:
-        - auth
       requestBody:
         required: true
         content:
@@ -2919,8 +2915,6 @@ paths:
   /auth/logout:
     post:
       operationId: Logout
-      tags:
-        - auth
       responses:
         '200':
           description: Successfully logged out

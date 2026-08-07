@@ -9,6 +9,7 @@ import {
 } from "@mantine/core";
 import { IconNews } from "@tabler/icons-react";
 
+
 import { BlogList } from '@/components/blog/BlogList';
 import { CompactBlogList } from '@/components/blog/CompactBlogList';
 import { DashboardContestsList } from '@/components/contests/DashboardContestsList';
@@ -18,8 +19,9 @@ import { api } from "@/lib/api";
 import { isAuthenticated } from "@/lib/auth";
 
 import type { PaginationModel } from "@/contracts/core/v1";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Главная",
 };
 

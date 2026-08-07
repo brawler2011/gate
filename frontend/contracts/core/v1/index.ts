@@ -83,5 +83,4 @@ export type { ValidationReport } from './models/ValidationReport';
 export { WebSocketMessageType } from './models/WebSocketMessageType';
 export type { WorkshopFileListResponse } from './models/WorkshopFileListResponse';
 
-export { AuthService } from './services/AuthService';
 export { DefaultService } from './services/DefaultService';
