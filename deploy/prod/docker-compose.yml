@@ -155,8 +155,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "127.0.0.1:5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -208,9 +206,6 @@ services:
     hostname: nats
     restart: unless-stopped
     command: ["--js", "--store_dir=/data"]
-    ports:
-      - "127.0.0.1:4222:4222"
-      - "127.0.0.1:8222:8222"
     volumes:
       - nats-data:/data
     networks:
@@ -236,8 +231,6 @@ services:
     command:
       - "-enable-grpc"
       - "-grpc-addr=0.0.0.0:5051"
-    ports:
-      - "5051:5051"
     privileged: true
     volumes:
       - ./go-judge-data:/data
