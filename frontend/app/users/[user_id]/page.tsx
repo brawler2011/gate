@@ -1,11 +1,10 @@
-
 import { notFound } from "next/navigation";
 
 import { DefaultLayout } from '@/components/shared';
-import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { Profile } from '@/components/users/Profile';
 import { api } from "@/lib/api";
-import { isValidUUIDV4 } from "@/lib/lib";
+import { unwrapAndCache } from "@/lib/api2";
+import { parseId, parsePage } from "@/lib/lib2";
 
 import type { Metadata } from "next";
 
@@ -14,41 +13,37 @@ type Props = {
   searchParams: Promise<{ contestsPage?: string }>;
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const resolvedParams = await params;
-  const user_id = resolvedParams.user_id;
+const getUser = unwrapAndCache(api.getUser);
 
-  if (!user_id || !isValidUUIDV4(user_id)) {
-    return { title: "Профиль пользователя - Gate149" };
+export const generateMetadata = async ({ params }: Props): Promise<Metadata> => {
+  const {user_id} = await params;
+
+  const userId = parseId(user_id);
+  if (!userId) {
+    notFound();
   }
 
-  const [error, userData] = await api.getUser({ id: user_id });
-  if (error || !userData) {
-    return { title: "Ошибка загрузки профиля - Gate149" };
-  }
+  const data = await getUser({id: userId});
 
-  return { title: `${userData.user.username} - Gate149` };
-}
+  return { title: `${data.user.username}` };
+};
 
 const Page = async ({ params, searchParams }: Props) => {
   const { user_id } = await params;
   const { contestsPage } = await searchParams;
-  const contestsPageNum = Number(contestsPage) || 1;
+  const page = parsePage(contestsPage);
 
-  if (!user_id || !isValidUUIDV4(user_id)) {
+  const userId = parseId(user_id);
+  if (!userId || !page) {
     notFound();
   }
 
-  const [[, me], [userError, userData], [, contestsData]] = await Promise.all([
+  const [[, me], userData, [, contestsData]] = await Promise.all([
     api.getMe(),
-    api.getUser({ id: user_id }),
-    api.listUserContests({ id: user_id, page: contestsPageNum, pageSize: 10 }),
+    getUser({id: userId}),
+    api.listUserContests({ id: userId, page: page, pageSize: 10 }),
   ]);
   const currentUser = me?.user ?? null;
-
-  if (userError) {
-    return <ErrorDisplay error={userError} />;
-  }
 
   const user = userData!.user;
 
@@ -61,7 +56,7 @@ const Page = async ({ params, searchParams }: Props) => {
         userId={user_id}
         contests={contestsData?.contests ?? []}
         contestsPagination={contestsData?.pagination}
-        contestsPage={contestsPageNum}
+        contestsPage={page}
         isOwnProfile={currentUser?.id === user_id}
       />
     </DefaultLayout>
