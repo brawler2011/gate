@@ -59,7 +59,7 @@ import { APP_COLORS } from "@/lib/theme/colors";
 import classes from "./Header.module.css";
 import { LogoutLink } from "./LogoutLink";
 
-import type { SessionUser } from "@/lib/auth";
+import type { UserModel } from "@/contracts/core/v1";
 import type {
   HeaderSecondaryNavIcon,
   HeaderSecondaryNavItem,
@@ -103,7 +103,7 @@ export type HeaderProblem = {
   title: string;
 };
 
-const Profile = ({ user }: { user?: SessionUser }) => {
+const Profile = ({ user }: { user?: UserModel | null }) => {
   const pathname = usePathname();
   const [logoutLoading, setLogoutLoading] = useState(false);
 
@@ -411,7 +411,7 @@ const Header = ({
   contest,
   problem,
 }: {
-  user?: SessionUser;
+  user?: UserModel | null;
   secondaryNavItems?: HeaderSecondaryNavItem[];
   organization?: HeaderOrganization;
   contest?: HeaderContest;

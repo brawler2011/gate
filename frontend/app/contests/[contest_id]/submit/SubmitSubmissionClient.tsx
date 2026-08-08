@@ -13,13 +13,13 @@ import classes from "./SubmitSubmissionClient.module.css";
 import type {
   ContestModel,
   ContestProblemListItemModel,
+  UserModel,
 } from "@/contracts/core/v1";
-import type { SessionUser } from "@/lib/auth";
 
 type Props = {
   contest: ContestModel;
   problems: ContestProblemListItemModel[];
-  user: SessionUser;
+  user: UserModel | null;
 };
 
 export const SubmitSubmissionClient = ({ contest, problems, user }: Props) => {

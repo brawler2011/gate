@@ -3,13 +3,11 @@ import Link from "next/link";
 
 import { CONTEST_INFO_PANEL_WIDTH } from "@/lib/constants";
 
-import type { ContestModel } from "@/contracts/core/v1";
-import type { SessionUser } from "@/lib/auth";
-
+import type { ContestModel, UserModel } from "@/contracts/core/v1";
 
 type ContestInfoPanelProps = {
   contest: ContestModel;
-  user: SessionUser;
+  user: UserModel | null;
   width?: string | number;
 };
 

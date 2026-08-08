@@ -1,8 +1,8 @@
 import { api } from "@/lib/api";
-import { getCurrentUser } from "@/lib/auth";
 
 export const canManageOrgMembers = async (orgId: string): Promise<boolean> => {
-  const currentUser = await getCurrentUser();
+  const [, me] = await api.getMe();
+  const currentUser = me?.user ?? null;
   if (!currentUser) {
     return false;
   }

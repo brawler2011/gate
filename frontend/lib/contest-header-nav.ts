@@ -1,7 +1,6 @@
 import { PermissionChecker } from "@/lib/permissions";
 
-import type { ContestModel } from "@/contracts/core/v1";
-import type { SessionUser } from "@/lib/auth";
+import type { ContestModel, UserModel } from "@/contracts/core/v1";
 import type { ContestRoleResponse } from "@/lib/contest-role";
 
 export type ContestHeaderNavKey =
@@ -34,7 +33,7 @@ export type HeaderSecondaryNavItem = {
 
 type BuildContestHeaderNavParams = {
   contest: ContestModel;
-  user: SessionUser;
+  user: UserModel | null;
   contestRole: ContestRoleResponse;
   activeTab: ContestHeaderNavKey;
 };

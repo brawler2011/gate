@@ -10,18 +10,9 @@ import type { PostModel, PaginationModel } from "@/contracts/core/v1";
 type Props = {
   posts: PostModel[];
   pagination: PaginationModel;
-  error?: boolean;
 };
 
-export const BlogList = ({ posts, pagination, error }: Props) => {
-  if (error) {
-    return (
-      <Text c="red" ta="center" py="xl">
-        Не удалось загрузить публикации
-      </Text>
-    );
-  }
-
+export const BlogList = ({ posts, pagination }: Props) => {
   if (posts.length === 0) { 
     return (
       <Text c="dimmed" ta="center" py="xl">

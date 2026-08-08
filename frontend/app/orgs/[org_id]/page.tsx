@@ -5,7 +5,7 @@ import { OrgContestsTab } from "@/components/orgs/OrgContestsTab";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { api } from "@/lib/api";
-import { getCurrentUser } from "@/lib/auth";
+import { unwrapAndCache } from "@/lib/api2";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
 
@@ -25,29 +25,18 @@ const OrgPage = async ({ params, searchParams }: Props) => {
   });
   const currentPage = Number(page) > 0 ? Number(page) : 1;
 
-  const [orgError, orgData] = await api.getOrganization({ id: org_id });
-  if (orgError) {
-    if (orgError.status === 404) {
-      notFound();
-    }
-    return (
-      <DefaultLayout headerOrganizationId={org_id}>
-        <Container size="lg" py="lg">
-          <ErrorDisplay error={orgError} />
-        </Container>
-      </DefaultLayout>
-    );
-  }
+  const orgData = await unwrapAndCache(api.getOrganization)({ id: org_id });
 
   const [
     [contestsError, contestsData],
-    currentUser,
+    [, me],
   ] = await Promise.all([
     api.listWorkshopContests({ page: currentPage, pageSize: 10, search, organizationId: org_id }),
-    getCurrentUser(),
+    api.getMe(),
   ]);
 
-  const org = orgData!.organization;
+  const currentUser = me?.user ?? null;
+  const org = orgData.organization;
   const contests = contestsData?.contests ?? [];
   const contestsPagination = contestsData?.pagination ?? { page: 1, total: 1 };
   const isAuthenticated = currentUser !== null;

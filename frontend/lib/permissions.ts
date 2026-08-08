@@ -1,6 +1,5 @@
-import type { SessionUser } from "./auth";
 import type { ContestRole } from "./contest-role";
-import type { ContestModel, ProblemModel } from "@/contracts/core/v1";
+import type { ContestModel, ProblemModel, UserModel } from "@/contracts/core/v1";
 
 /**
  * Permission checker utilities for frontend
@@ -36,12 +35,12 @@ function hasRequiredRole(userRole: ContestRole, requiredScope: ContestScope): bo
 }
 
 export class PermissionChecker {
-  private user: SessionUser;
+  private user: UserModel | null;
   private contestRole: ContestRole | null;
   private orgRole: OrgRole | null;
 
   constructor(
-    user: SessionUser,
+    user: UserModel | null = null,
     contestRole: ContestRole | null = null,
     orgRole: OrgRole | null = null
   ) {
@@ -308,7 +307,7 @@ export class PermissionChecker {
  * Create permission checker instance from user data
  */
 export function createPermissionChecker(
-  user: SessionUser,
+  user: UserModel | null = null,
   contestRole: ContestRole | null = null,
   orgRole: OrgRole | null = null
 ): PermissionChecker {

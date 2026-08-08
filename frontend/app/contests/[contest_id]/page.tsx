@@ -16,7 +16,7 @@ import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { Footer } from "@/components/shared/Footer";
 import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
 import { api } from "@/lib/api";
-import { getCurrentUser } from "@/lib/auth";
+import { unwrapAndCache } from "@/lib/api2";
 import {
   CONTEST_CONTENT_MAX_WIDTH,
   CONTEST_INFO_PANEL_COMPACT_WIDTH,
@@ -31,6 +31,7 @@ import { ContestProblemsTable } from "./ContestProblemsTable";
 import type {
   ContestModel,
   ContestProblemListItemModel,
+  UserModel,
 } from "@/contracts/core/v1";
 import type { Metadata } from "next";
 
@@ -60,7 +61,7 @@ export const generateMetadata = async ({
 type ContestProps = {
   contest: ContestModel;
   problems: Array<ContestProblemListItemModel>;
-  user: Awaited<ReturnType<typeof getCurrentUser>>;
+  user: UserModel | null;
   contestHeaderNav: ReturnType<typeof buildContestHeaderNav>;
   isManager: boolean;
 };
@@ -148,29 +149,26 @@ const Contest = ({
 
 const Page = async ({ params }: Props) => {
   const { contest_id } = await params;
-
-  const [error, response] = await api.getContest({ contestId: contest_id });
-  if (error) {
-    return <ErrorDisplay error={error} />;
-  }
+  const response = await unwrapAndCache(api.getContest)({ contestId: contest_id });
 
   // Get user and contest role for permissions
-  const user = await getCurrentUser();
+  const [, me] = await api.getMe();
+  const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(contest_id) : null;
   const contestHeaderNav = buildContestHeaderNav({
-    contest: response!.contest,
+    contest: response.contest,
     user,
     contestRole,
     activeTab: "tasks",
   });
 
   const checker = new PermissionChecker(user, contestRole?.role ?? null);
-  const isManager = checker.canManageContest(response!.contest);
+  const isManager = checker.canManageContest(response.contest);
 
   return (
     <Contest
-      contest={response!.contest}
-      problems={response!.problems || []}
+      contest={response.contest}
+      problems={response.problems || []}
       user={user}
       contestHeaderNav={contestHeaderNav}
       isManager={isManager}

@@ -8,7 +8,7 @@ import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { NextPagination } from "@/components/shared/Pagination";
 import { SubmissionsListClient } from "@/components/submissions";
 import { api } from "@/lib/api";
-import { getCurrentUser } from "@/lib/auth";
+import { unwrapAndCache } from "@/lib/api2";
 import {
   CONTEST_CONTENT_MAX_WIDTH,
   CONTEST_INFO_PANEL_COMPACT_WIDTH,
@@ -113,10 +113,10 @@ const Page = async ({ params, searchParams }: PageProps) => {
 
   const wsBaseUrl = env.getWebSocketUrl() ?? "";
 
-  const [contestError, contestResponse] = await api.getContest({ contestId: contest_id });
-  const contestData = contestResponse;
+  const contestData = await unwrapAndCache(api.getContest)({ contestId: contest_id });
 
-  const user = await getCurrentUser();
+  const [, me] = await api.getMe();
+  const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(contest_id) : null;
 
   if (contestData?.contest) {
@@ -222,9 +222,7 @@ const Page = async ({ params, searchParams }: PageProps) => {
               </Paper>
             ) : (
               <ErrorDisplay
-                error={
-                  contestError || { status: 404, message: "Contest not found" }
-                }
+                error={{ status: 404, message: "Contest not found" }}
               />
             )}
           </Container>

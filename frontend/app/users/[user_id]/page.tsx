@@ -5,7 +5,6 @@ import { DefaultLayout } from '@/components/shared';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { Profile } from '@/components/users/Profile';
 import { api } from "@/lib/api";
-import { getCurrentUser } from "@/lib/auth";
 import { isValidUUIDV4 } from "@/lib/lib";
 
 import type { Metadata } from "next";
@@ -40,11 +39,12 @@ const Page = async ({ params, searchParams }: Props) => {
     notFound();
   }
 
-  const [currentUser, [userError, userData], [, contestsData]] = await Promise.all([
-    getCurrentUser(),
+  const [[, me], [userError, userData], [, contestsData]] = await Promise.all([
+    api.getMe(),
     api.getUser({ id: user_id }),
     api.listUserContests({ id: user_id, page: contestsPageNum, pageSize: 10 }),
   ]);
+  const currentUser = me?.user ?? null;
 
   if (userError) {
     return <ErrorDisplay error={userError} />;

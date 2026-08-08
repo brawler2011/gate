@@ -32,8 +32,8 @@ import type {
   ContestProblemListItemModel,
   ContestProblemModel,
   SubmissionsListItemModel,
+  UserModel,
 } from "@/contracts/core/v1";
-import type { SessionUser } from "@/lib/auth";
 
 type PageProps = {
   tasks: ContestProblemListItemModel[];
@@ -42,7 +42,7 @@ type PageProps = {
   submissions: SubmissionsListItemModel[];
   problemId: string;
   contestId: string;
-  user: SessionUser;
+  user: UserModel | null;
   header: React.ReactNode;
   wsUrl?: string;
   since?: number;

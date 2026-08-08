@@ -8,7 +8,7 @@ import { SettingsSection } from "@/components/contests/SettingsSection";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { api } from "@/lib/api";
-import { getCurrentUser } from "@/lib/auth";
+import { unwrapAndCache } from "@/lib/api2";
 import {
   CONTEST_CONTENT_MAX_WIDTH,
   CONTEST_INFO_PANEL_WIDTH,
@@ -62,20 +62,18 @@ const ContestManagePage = async ({
   const { contest_id: contestId } = await params;
   const { section = "settings" } = await searchParams;
 
-  const [error, response] = await api.getContest({ contestId });
-  if (error) {
-    return <ErrorDisplay error={error} />;
-  }
+  const response = await unwrapAndCache(api.getContest)({ contestId });
 
-  const contest = response!.contest;
-  const problems: Array<ContestProblemListItemModel> = response!.problems || [];
+  const contest = response.contest;
+  const problems: Array<ContestProblemListItemModel> = response.problems || [];
 
   const validSections = Object.values(SECTIONS);
   const activeSection = (
     validSections.includes(section as Section) ? section : SECTIONS.SETTINGS
   ) as Section;
 
-  const user = await getCurrentUser();
+  const [, me] = await api.getMe();
+  const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(contestId) : null;
   const contestHeaderNav = buildContestHeaderNav({
     contest,

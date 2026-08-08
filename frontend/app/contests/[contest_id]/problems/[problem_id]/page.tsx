@@ -6,7 +6,7 @@ import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
 import { Task } from "@/components/shared/Task";
 import { api } from "@/lib/api";
-import { getCurrentUser } from "@/lib/auth";
+import { unwrapAndCache } from "@/lib/api2";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import { env } from "@/lib/env";
@@ -15,38 +15,39 @@ import { PermissionChecker } from "@/lib/permissions";
 
 import type { Metadata } from "next";
 
+const getCachedContestProblem = cache(
+  async (problemId: string, contestId: string) => {
+    return api.getContestProblem({ problemId, contestId });
+  }
+);
+
 type Props = {
   params: Promise<{
     contest_id: string;
     problem_id: string;
-    userId: string;
-    sortOrder: string;
   }>;
 };
 
-// Cache getContestProblem to avoid duplicate calls in generateMetadata and Page
-const getCachedContestProblem = cache((problemId: string, contestId: string) =>
-  api.getContestProblem({ problemId, contestId }),
-);
-
-const generateMetadata = async (props: Props): Promise<Metadata> => {
+export const generateMetadata = async (props: Props): Promise<Metadata> => {
   const params = await props.params;
-  const [error, problem] = await getCachedContestProblem(
+
+  const [error, response] = await getCachedContestProblem(
     params.problem_id,
-    params.contest_id,
+    params.contest_id
   );
 
-  if (error || !problem?.problem) {
+  if (error || !response) {
     return {
-      title: "Что-то пошло не так!",
+      title: "Ошибка загрузки задачи",
     };
   }
 
+  const problemIndex = response.problem.position ?? 0;
+  const problemLetter = numberToLetters(problemIndex);
+
   return {
-    title: `${numberToLetters(problem.problem.position)}. ${
-      problem.problem.title
-    }`,
-    description: problem.problem.legend_html,
+    title: `${problemLetter}. ${response.problem.title}`,
+    description: `${problemLetter}. ${response.problem.title}`,
   };
 };
 
@@ -54,15 +55,16 @@ const Page = async (props: Props) => {
   const params = await props.params;
 
   // First get the user to filter submissions by their ID
-  const user = await getCurrentUser();
+  const [, me] = await api.getMe();
+  const user = me?.user ?? null;
 
   const [
     [problemError, problemResponse],
-    [contestError, contestResponse],
+    contestResponse,
     [, submissionsResponse],
   ] = await Promise.all([
     getCachedContestProblem(params.problem_id, params.contest_id),
-    api.getContest({ contestId: params.contest_id }),
+    unwrapAndCache(api.getContest)({ contestId: params.contest_id }),
     // Only fetch user's own submissions if authenticated
     user
       ? api.listContestSubmissions({
@@ -81,9 +83,6 @@ const Page = async (props: Props) => {
 
   if (problemError) {
     return <ErrorDisplay error={problemError} />;
-  }
-  if (contestError) {
-    return <ErrorDisplay error={contestError} />;
   }
 
   if (!problemResponse?.problem || !contestResponse?.contest) {
@@ -145,4 +144,4 @@ const Page = async (props: Props) => {
   );
 };
 
-export { Page as default, generateMetadata };
+export default Page;

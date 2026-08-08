@@ -9,30 +9,23 @@ import {
 } from "@mantine/core";
 import { IconNews } from "@tabler/icons-react";
 
-
 import { BlogList } from '@/components/blog/BlogList';
 import { CompactBlogList } from '@/components/blog/CompactBlogList';
 import { DashboardContestsList } from '@/components/contests/DashboardContestsList';
 import { DashboardProblemsList } from '@/components/problems/DashboardProblemsList';
 import { DefaultLayout } from '@/components/shared';
 import { api } from "@/lib/api";
-import { isAuthenticated } from "@/lib/auth";
 
-import type { PaginationModel } from "@/contracts/core/v1";
 import type { Metadata } from "next";
+
 
 export const metadata: Metadata = {
   title: "Главная",
 };
 
-type PageProps = {
-  searchParams: Promise<{ page?: string }>;
-};
-
-const Page = async ({ searchParams }: PageProps) => {
-  const authenticated = await isAuthenticated();
-  const params = await searchParams;
-  const currentPage = parseInt(params?.page || "1", 10) || 1;
+const Page = async () => {
+  const [, me] = await api.getMe();
+  const authenticated = Boolean(me?.user);
 
   if (authenticated) {
     // Authenticated user view: Dashboard with personal quick navigation & compact sidebar blog
@@ -54,8 +47,6 @@ const Page = async ({ searchParams }: PageProps) => {
           <Grid gutter="xl">
             <GridCol span={{ base: 12, md: 8 }}>
               <Stack gap="xl">
-
-
                 <Stack gap="sm">
                   <Title order={2} size="h4" fw={700}>
                     Недавние контесты
@@ -89,14 +80,9 @@ const Page = async ({ searchParams }: PageProps) => {
     );
   }
 
-  // Guest view: Welcome banner & full blog feed
-  const [blogError, blogData] = await api.listPosts({ page: currentPage, pageSize: 5 });
+  const [, blogData] = await api.listPosts({ page: 1, pageSize: 5 });
   const blogPosts = blogData?.posts || [];
-  const pagination: PaginationModel = {
-    total: blogData?.pagination?.total ?? 0,
-    page: blogData?.pagination?.page ?? currentPage,
-  };
-
+  
   return (
     <DefaultLayout>
       <Container size="md" py="xl">
@@ -108,8 +94,7 @@ const Page = async ({ searchParams }: PageProps) => {
             </Group>
             <BlogList 
               posts={blogPosts}
-              pagination={pagination}
-              error={!!blogError}
+              pagination={{total: 1, page: 1}}
             />
           </Stack>
         </Stack>
