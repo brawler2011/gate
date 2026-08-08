@@ -42,7 +42,7 @@ export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsT
     onEditPost(post);
   };
 
-  const handleAuthorClick = (e: React.MouseEvent, authorId: string | undefined) => {
+  const handleAuthorClick = (e: React.MouseEvent, authorId: string) => {
     e.stopPropagation();
     if (authorId) {
       router.push(`/users/${authorId}`);
@@ -60,9 +60,9 @@ export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsT
       return;
     }
     
-    setDeletingId(postToDelete.id || "");
+    setDeletingId(postToDelete.id);
     try {
-      await onDeletePost(postToDelete.id || "");
+      await onDeletePost(postToDelete.id);
     } finally {
       setDeletingId(null);
       setPostToDelete(null);
@@ -89,7 +89,7 @@ export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsT
               return (
                 <Table.Tr
                   key={post.id}
-                  onClick={() => handleRowClick(post.id || "")}
+                  onClick={() => handleRowClick(post.id)}
                 >
                   <Table.Td>
                     <Avatar
@@ -104,7 +104,7 @@ export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsT
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    <TruncatedWithCopy value={post.id || ""} />
+                    <TruncatedWithCopy value={post.id} />
                   </Table.Td>
                   <Table.Td>
                     <Badge
@@ -115,7 +115,7 @@ export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsT
                       className={classes.authorBadge}
                       onClick={(e) => handleAuthorClick(e, post.author_id)}
                     >
-                      {post.author_username || post.author_id?.slice(0, 8) || "—"}
+                      {post.author_username}
                     </Badge>
                   </Table.Td>
                   <Table.Td>
@@ -162,8 +162,8 @@ export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsT
             setPostToDelete(null);
           }}
           post={{
-            id: postToDelete.id || "",
-            title: postToDelete.title || "Без названия",
+            id: postToDelete.id,
+            title: postToDelete.title,
           }}
           onSubmit={handleDeleteConfirm}
         />

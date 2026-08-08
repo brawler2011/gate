@@ -7,19 +7,27 @@ import { NextPagination } from '@/components/shared/Pagination';
 
 import type { PostModel, PaginationModel } from "@/contracts/core/v1";
 
-type BlogListProps = {
+type Props = {
   posts: PostModel[];
   pagination: PaginationModel;
   error?: boolean;
 };
 
-export const BlogList = ({ posts, pagination, error }: BlogListProps) => {
+export const BlogList = ({ posts, pagination, error }: Props) => {
   if (error) {
-    return <Text c="dimmed">Не удалось загрузить посты</Text>;
+    return (
+      <Text c="red" ta="center" py="xl">
+        Не удалось загрузить публикации
+      </Text>
+    );
   }
 
-  if (posts.length === 0) {
-    return null;
+  if (posts.length === 0) { 
+    return (
+      <Text c="dimmed" ta="center" py="xl">
+        Пока постов нет
+      </Text>
+    );
   }
 
   return (
@@ -27,23 +35,19 @@ export const BlogList = ({ posts, pagination, error }: BlogListProps) => {
       {posts.map((post) => (
         <BlogPost
           key={post.id}
-          id={post.id || ""}
-          title={post.title || "Без названия"}
-          author={post.author_username || "Аноним"}
+          id={post.id}
+          title={post.title}
+          author={post.author_username}
           date={post.created_at}
-          description={post.description || ""}
+          description={post.description}
           previewImageUrl={post.preview_image_id}
         />
       ))}
       {pagination.total > 1 && (
         <Stack align="center" gap="md">
           <NextPagination
-            pagination={{
-              page: pagination.page,
-              total: pagination.total,
-            }}
+            pagination={pagination}
             baseUrl="/"
-            queryParams={{}}
           />
         </Stack>
       )}

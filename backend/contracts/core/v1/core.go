@@ -123,15 +123,6 @@ type AuthResponseModel struct {
 	User      UserModel          `json:"user"`
 }
 
-// BlogPaginationModel defines model for BlogPaginationModel.
-type BlogPaginationModel struct {
-	// Page Current page number
-	Page *int `json:"page,omitempty"`
-
-	// Total Total number of posts
-	Total *int `json:"total,omitempty"`
-}
-
 // CompileResult defines model for CompileResult.
 type CompileResult struct {
 	CompileError *string `json:"compile_error,omitempty"`
@@ -331,8 +322,8 @@ type ListOrganizationsResponseModel struct {
 
 // ListPostsResponseModel defines model for ListPostsResponseModel.
 type ListPostsResponseModel struct {
-	Pagination *BlogPaginationModel `json:"pagination,omitempty"`
-	Posts      *[]PostModel         `json:"posts,omitempty"`
+	Pagination PaginationModel `json:"pagination"`
+	Posts      []PostModel     `json:"posts"`
 }
 
 // ListProblemsResponseModel defines model for ListProblemsResponseModel.
@@ -414,15 +405,15 @@ type PaginationModel struct {
 
 // PostModel defines model for PostModel.
 type PostModel struct {
-	AuthorId       *openapi_types.UUID `json:"author_id,omitempty"`
-	AuthorUsername *string             `json:"author_username,omitempty"`
-	CreatedAt      *time.Time          `json:"created_at,omitempty"`
-	Description    *string             `json:"description,omitempty"`
-	Id             *openapi_types.UUID `json:"id,omitempty"`
-	PreviewImageId *string             `json:"preview_image_id,omitempty"`
-	Text           *string             `json:"text,omitempty"`
-	Title          *string             `json:"title,omitempty"`
-	UpdatedAt      *time.Time          `json:"updated_at,omitempty"`
+	AuthorId       openapi_types.UUID `json:"author_id"`
+	AuthorUsername string             `json:"author_username"`
+	CreatedAt      time.Time          `json:"created_at"`
+	Description    string             `json:"description"`
+	Id             openapi_types.UUID `json:"id"`
+	PreviewImageId string             `json:"preview_image_id"`
+	Text           string             `json:"text"`
+	Title          string             `json:"title"`
+	UpdatedAt      time.Time          `json:"updated_at"`
 }
 
 // ProblemLimits defines model for ProblemLimits.

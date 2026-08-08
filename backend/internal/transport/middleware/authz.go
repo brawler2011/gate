@@ -53,6 +53,7 @@ func buildStrictAuthzPolicies() map[string]strictAuthzPolicy {
 		"Logout":              {public: true},
 
 		"GetMe":            {requireAuth: true},
+		"GetMyDashboard":   {requireAuth: true},
 		"CreateContest":    {requireAuth: true},
 		"GetMyContestRole": {requireAuth: true},
 

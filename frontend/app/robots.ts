@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 
+// FIXME: hardcoded domain
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [

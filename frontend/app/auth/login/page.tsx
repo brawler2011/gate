@@ -21,7 +21,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
-import { loginAction } from "@/lib/auth-actions";
+import { api } from "@/lib/api";
 
 const LoginPage = () => {
   return (
@@ -53,12 +53,14 @@ const LoginPageContent = () => {
     setLoading(true);
 
     try {
-      const result = await loginAction(identifier, password);
-      if (result.success) {
+      const [err] = await api.login({
+        requestBody: { identifier, password },
+      });
+      if (!err) {
         router.push(returnTo);
         router.refresh();
       } else {
-        setError(result.error || "Неверный логин или пароль");
+        setError(err.message || "Неверный логин или пароль");
       }
     } catch {
       setError("Не удалось подключиться к серверу");

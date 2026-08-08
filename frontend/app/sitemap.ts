@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 
+// FIXME: hardcoded domain
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://gate149.ru';
   

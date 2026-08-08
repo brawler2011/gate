@@ -21,7 +21,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
-import { registerAction } from "@/lib/auth-actions";
+import { api } from "@/lib/api";
 
 const RegistrationPage = () => {
   return (
@@ -54,12 +54,14 @@ const RegistrationPageContent = () => {
     setLoading(true);
 
     try {
-      const result = await registerAction(username, email, password);
-      if (result.success) {
+      const [err] = await api.register({
+        requestBody: { username, email, password },
+      });
+      if (!err) {
         router.push(returnTo);
         router.refresh();
       } else {
-        setError(result.error || "Ошибка при регистрации");
+        setError(err.message || "Ошибка при регистрации");
       }
     } catch {
       setError("Не удалось подключиться к серверу");

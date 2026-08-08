@@ -3,7 +3,7 @@
 import { Button } from "@mantine/core";
 import { useState } from "react";
 
-import { logoutAction } from "@/lib/auth-actions";
+import { api } from "@/lib/api";
 
 import type { ButtonProps } from "@mantine/core";
 import type { ReactNode } from "react";
@@ -16,7 +16,7 @@ const LogoutLink = (props: LogoutLinkProps) => {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await logoutAction();
+      await api.logout();
       window.location.href = "/auth/login";
     } catch {
       window.location.href = "/auth/login";

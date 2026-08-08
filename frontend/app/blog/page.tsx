@@ -5,9 +5,9 @@ import { redirect } from "next/navigation";
 import { BlogList } from '@/components/blog/BlogList';
 import { DefaultLayout } from '@/components/shared';
 import { api } from "@/lib/api";
+import { unwrap } from "@/lib/api2";
 import { parsePage } from "@/lib/lib2";
 
-import type { PaginationModel } from "@/contracts/core/v1";
 import type { Metadata } from "next";
 
 
@@ -26,16 +26,8 @@ const Page = async ({ searchParams }: Props) => {
     redirect("/blog");
   }
 
-  const [error, data] = await api.listPosts({ page, pageSize: 5 });
-  if (error) {
-    throw error;
-  }
-
-  const blogPosts = data.posts || [];
-  const pagination: PaginationModel = {
-    total: data.pagination?.total ?? 0,
-    page: data.pagination?.page ?? page,
-  };
+  // FIXME: page=109348 => error=null, posts=[]
+  const data = await unwrap(api.listPosts)({ page, pageSize: 5 });
 
   return (
     <DefaultLayout>
@@ -45,11 +37,9 @@ const Page = async ({ searchParams }: Props) => {
             <IconNews size={32} color="var(--mantine-color-orange-6)" />
             <Title order={1}>Блог</Title>
           </Group>
-
           <BlogList
-            posts={blogPosts}
-            pagination={pagination}
-            error={!!error}
+            posts={data.posts}
+            pagination={data.pagination}
           />
         </Stack>
       </Container>

@@ -39,27 +39,24 @@ func (s *CoreServer) ListPosts(ctx context.Context, request corev1.ListPostsRequ
 	posts := make([]corev1.PostModel, len(result.Posts))
 	for i, post := range result.Posts {
 		posts[i] = corev1.PostModel{
-			Id:             &post.ID,
-			CreatedAt:      &post.CreatedAt,
-			UpdatedAt:      &post.UpdatedAt,
-			Title:          &post.Title,
-			Text:           &post.Text,
-			Description:    &post.Description,
-			PreviewImageId: &post.ImageKey,
-			AuthorId:       &post.AuthorUUID,
-			AuthorUsername: &post.AuthorName,
+			Id:             post.ID,
+			CreatedAt:      post.CreatedAt,
+			UpdatedAt:      post.UpdatedAt,
+			Title:          post.Title,
+			Text:           post.Text,
+			Description:    post.Description,
+			PreviewImageId: post.ImageKey,
+			AuthorId:       post.AuthorUUID,
+			AuthorUsername: post.AuthorName,
 		}
 	}
 
-	totalPages := result.TotalPages
-	currentPage := result.Page
-
 	return corev1.ListPosts200JSONResponse{
-		Pagination: &corev1.BlogPaginationModel{
-			Total: &totalPages,
-			Page:  &currentPage,
+		Pagination: corev1.PaginationModel{
+			Total: int32(result.TotalPages),
+			Page:  int32(result.Page),
 		},
-		Posts: &posts,
+		Posts: posts,
 	}, nil
 }
 
@@ -107,15 +104,15 @@ func (s *CoreServer) GetPostById(ctx context.Context, request corev1.GetPostById
 	}
 
 	return corev1.GetPostById200JSONResponse{
-		Id:             &post.ID,
-		CreatedAt:      &post.CreatedAt,
-		UpdatedAt:      &post.UpdatedAt,
-		Title:          &post.Title,
-		Text:           &post.Text,
-		Description:    &post.Description,
-		PreviewImageId: &post.ImageKey,
-		AuthorId:       &post.AuthorUUID,
-		AuthorUsername: &post.AuthorName,
+		Id:             post.ID,
+		CreatedAt:      post.CreatedAt,
+		UpdatedAt:      post.UpdatedAt,
+		Title:          post.Title,
+		Text:           post.Text,
+		Description:    post.Description,
+		PreviewImageId: post.ImageKey,
+		AuthorId:       post.AuthorUUID,
+		AuthorUsername: post.AuthorName,
 	}, nil
 }
 

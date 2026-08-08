@@ -11,7 +11,6 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AuthResponseModel } from './models/AuthResponseModel';
-export type { BlogPaginationModel } from './models/BlogPaginationModel';
 export type { CompileResult } from './models/CompileResult';
 export type { ContestMemberModel } from './models/ContestMemberModel';
 export type { ContestModel } from './models/ContestModel';

@@ -53,7 +53,7 @@ import {
 } from "react";
 
 import { buildAdminHeaderNav } from "@/lib/admin-header-nav";
-import { logoutAction } from "@/lib/auth-actions";
+import { api } from "@/lib/api";
 import { APP_COLORS } from "@/lib/theme/colors";
 
 import classes from "./Header.module.css";
@@ -121,7 +121,7 @@ const Profile = ({ user }: { user?: SessionUser }) => {
   const handleLogout = async () => {
     setLogoutLoading(true);
     try {
-      await logoutAction();
+      await api.logout();
       window.location.href = "/auth/login";
     } catch {
       window.location.href = "/auth/login";

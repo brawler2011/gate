@@ -71,15 +71,15 @@ export const CompactBlogList = ({ posts, error }: CompactBlogListProps) => {
                     (e.target as HTMLElement).style.color = "";
                   }}
                 >
-                  {post.title || "Без названия"}
+                  {post.title}
                 </Title>
                 <Group gap="xs">
                   <Text size="xs" c="dimmed" fw={500}>
-                    {post.author_username || "Аноним"}
+                    {post.author_username}
                   </Text>
                   <Text size="xs" c="dimmed">•</Text>
                   <Text size="xs" c="dimmed">
-                    {post.created_at ? formatDate(post.created_at) : ""}
+                    {formatDate(post.created_at)}
                   </Text>
                 </Group>
                 {post.description && (
