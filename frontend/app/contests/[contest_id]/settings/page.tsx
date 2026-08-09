@@ -21,6 +21,12 @@ import layoutClasses from "../contestLayout.module.css";
 import classes from "./styles.module.css";
 
 import type { ContestProblemListItemModel } from "@/contracts/core/v1";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Настройки",
+};
+
 
 // Constants for sections
 const SECTIONS = {
