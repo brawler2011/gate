@@ -9,9 +9,15 @@ import { parsePage } from "@/lib/lib2";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
 
+import type { Metadata } from "next";
+
 type Props = {
   params: Promise<{ org_id: string }>;
   searchParams: Promise<{ page?: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Команды",
 };
 
 const OrgTeamsPage = async ({ params, searchParams }: Props) => {

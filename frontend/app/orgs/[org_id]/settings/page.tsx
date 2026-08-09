@@ -21,9 +21,15 @@ const SECTIONS = {
 
 type Section = (typeof SECTIONS)[keyof typeof SECTIONS];
 
+import type { Metadata } from "next";
+
 type Props = {
   params: Promise<{ org_id: string }>;
   searchParams: Promise<{ section?: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Настройки",
 };
 
 const OrgSettingsPage = async ({ params, searchParams }: Props) => {

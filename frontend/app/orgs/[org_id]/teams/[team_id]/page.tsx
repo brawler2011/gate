@@ -3,14 +3,21 @@ import { IconArrowLeft } from '@tabler/icons-react';
 import { notFound } from 'next/navigation';
 
 import { TeamMembersManagement } from '@/components/orgs/TeamMembersManagement';
-import { DefaultLayout } from '@/components/shared';
-import { LinkAnchor } from '@/components/shared';
+import { DefaultLayout, LinkAnchor } from '@/components/shared';
 import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 import { api } from '@/lib/api';
-
-
+import type { Metadata } from 'next';
 
 type Props = { params: Promise<{ org_id: string; team_id: string }> };
+
+export const generateMetadata = async ({ params }: Props): Promise<Metadata> => {
+  const { team_id } = await params;
+  const [error, data] = await api.getTeam({ id: team_id });
+  if (error || !data) {
+    return { title: 'Команда' };
+  }
+  return { title: data.team.name };
+};
 
 const TeamPage = async ({ params }: Props) => {
   const { org_id, team_id } = await params;

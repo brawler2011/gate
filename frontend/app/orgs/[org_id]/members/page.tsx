@@ -8,8 +8,14 @@ import { api } from "@/lib/api";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
 
+import type { Metadata } from "next";
+
 type Props = {
   params: Promise<{ org_id: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Участники",
 };
 
 const OrgMembersPage = async ({ params }: Props) => {
