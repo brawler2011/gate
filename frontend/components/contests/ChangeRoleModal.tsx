@@ -1,11 +1,11 @@
 "use client";
 
-import { Button, Modal, Select, Stack, Text } from "@mantine/core";
-import { useEffect, useState } from "react";
+import {Button, Modal, Select, Stack, Text} from "@mantine/core";
+import {useEffect, useState} from "react";
 
 const ROLE_OPTIONS = [
-  { label: "Участник", value: "participant" },
-  { label: "Модератор", value: "moderator" },
+  {label: "Участник", value: "participant"},
+  {label: "Модератор", value: "moderator"},
 ];
 
 interface ChangeRoleModalProps {
@@ -56,7 +56,7 @@ export const ChangeRoleModal = ({
       centered
       size="md"
       radius="md"
-      overlayProps={{ backgroundOpacity: 0.4 }}
+      overlayProps={{backgroundOpacity: 0.4}}
     >
       <Stack gap="md">
         <div>
@@ -89,4 +89,3 @@ export const ChangeRoleModal = ({
     </Modal>
   );
 };
-

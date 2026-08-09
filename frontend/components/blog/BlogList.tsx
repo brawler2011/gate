@@ -1,18 +1,18 @@
 "use client";
 
-import { Stack, Text } from "@mantine/core";
+import {Stack, Text} from "@mantine/core";
 
-import { BlogPost } from '@/components/blog/BlogPost';
-import { NextPagination } from '@/components/shared/Pagination';
+import {BlogPost} from '@/components/blog/BlogPost';
+import {NextPagination} from '@/components/shared/Pagination';
 
-import type { PostModel, PaginationModel } from "@/contracts/core/v1";
+import type {PostModel, PaginationModel} from "@/contracts/core/v1";
 
 type Props = {
   posts: PostModel[];
   pagination: PaginationModel;
 };
 
-export const BlogList = ({ posts, pagination }: Props) => {
+export const BlogList = ({posts, pagination}: Props) => {
   if (posts.length === 0) { 
     return (
       <Text c="dimmed" ta="center" py="xl">

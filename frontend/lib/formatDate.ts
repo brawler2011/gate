@@ -3,7 +3,7 @@
  * @param isoDate - ISO date string (e.g., "2025-01-18")
  * @returns Formatted date string (e.g., "18.01.2025")
  */
-export function formatDate(isoDate: string | undefined): string {
+export const formatDate = (isoDate: string | undefined): string => {
   if (!isoDate) {
     return "—";
   }
@@ -24,5 +24,4 @@ export function formatDate(isoDate: string | undefined): string {
   } catch {
     return "—";
   }
-}
-
+};

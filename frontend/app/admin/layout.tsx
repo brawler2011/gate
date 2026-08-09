@@ -1,6 +1,6 @@
-import { DefaultLayout } from "@/components/shared";
+import {DefaultLayout} from "@/components/shared";
 
-const AdminLayout = ({ children }: { children: React.ReactNode }) => {
+const AdminLayout = ({children}: { children: React.ReactNode }) => {
   return (
     <DefaultLayout>
       {children}

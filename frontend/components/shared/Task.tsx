@@ -14,18 +14,18 @@ import {
 import Link from "next/link";
 import React from "react";
 
-import { Problem } from "@/components/problems/Problem";
-import { Layout } from "@/components/shared";
-import { Footer } from "@/components/shared/Footer";
-import { CreateSubmissionForm } from "@/components/submissions/CreateSubmissionForm";
-import { RecentSubmissionsTable } from "@/components/submissions/RecentSubmissionsTable";
+import {Problem} from "@/components/problems/Problem";
+import {Layout} from "@/components/shared";
+import {Footer} from "@/components/shared/Footer";
+import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
+import {RecentSubmissionsTable} from "@/components/submissions/RecentSubmissionsTable";
 import {
   CONTEST_SIDEBAR_LEFT_WIDTH,
   CONTEST_SIDEBAR_RIGHT_WIDTH,
   LANGUAGE_MAP,
 } from "@/lib/constants";
-import { numberToLetters } from "@/lib/lib";
-import { createSolution } from "@/lib/workshop";
+import {numberToLetters} from "@/lib/lib";
+import {createSolution} from "@/lib/workshop";
 
 import type {
   ContestModel,
@@ -102,25 +102,25 @@ const Task = ({
             }}
           >
             {/* Left Sidebar - скрыт на мобилках */}
-            <Box style={{ width: CONTEST_SIDEBAR_LEFT_WIDTH }} visibleFrom="sm">
+            <Box style={{width: CONTEST_SIDEBAR_LEFT_WIDTH}} visibleFrom="sm">
               <Paper
                 shadow="sm"
                 radius="md"
                 p="md"
                 withBorder
                 bg="var(--mantine-color-gray-light)"
-                style={{ width: "100%" }}
+                style={{width: "100%"}}
               >
                 <Stack w="100%" gap="xs">
                   <Link
                     href={`/contests/${contest.id}`}
-                    style={{ textDecoration: "none" }}
+                    style={{textDecoration: "none"}}
                   >
                     <Title
                       c="var(--mantine-color-text)"
                       order={4}
                       ta="center"
-                      style={{ cursor: "pointer" }}
+                      style={{cursor: "pointer"}}
                     >
                       {contest.title}
                     </Title>
@@ -151,7 +151,7 @@ const Task = ({
                                   : "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))",
                               },
                             },
-                            label: { fontSize: "0.875rem" },
+                            label: {fontSize: "0.875rem"},
                           }}
                         />
                       );
@@ -162,8 +162,8 @@ const Task = ({
             </Box>
 
             {/* Main Content */}
-            <Box style={{ flex: 1 }}>
-              <Container size="lg" px={0} mx={0} style={{ maxWidth: "100%" }}>
+            <Box style={{flex: 1}}>
+              <Container size="lg" px={0} mx={0} style={{maxWidth: "100%"}}>
                 <Box pt="md">
                   <Problem
                     problem={task}
@@ -177,7 +177,7 @@ const Task = ({
             {/* Right Sidebar - скрыт на мобилках */}
             <Box
               visibleFrom="sm"
-              style={{ width: CONTEST_SIDEBAR_RIGHT_WIDTH }}
+              style={{width: CONTEST_SIDEBAR_RIGHT_WIDTH}}
             >
               <Stack gap="md">
                 <Paper
@@ -186,7 +186,7 @@ const Task = ({
                   p="md"
                   withBorder
                   bg="var(--mantine-color-gray-light)"
-                  style={{ width: "100%" }}
+                  style={{width: "100%"}}
                 >
                   <CreateSubmissionForm onSubmit={onSubmit} />
                 </Paper>
@@ -211,4 +211,4 @@ const Task = ({
   );
 };
 
-export { Task };
+export {Task};

@@ -48,5 +48,4 @@ const parseId = (value: unknown): string | null => {
   return null;
 };
 
-export { parsePage, parseId };
-
+export {parsePage, parseId};

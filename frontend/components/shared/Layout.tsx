@@ -5,7 +5,7 @@ import React from "react";
 
 import {Footer} from '@/components/shared/Footer';
 
-import type { AppShellProps} from "@mantine/core";
+import type {AppShellProps} from "@mantine/core";
 
 type LayoutProps = {
     children: React.ReactNode;

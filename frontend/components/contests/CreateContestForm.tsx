@@ -1,12 +1,12 @@
 "use client";
 
-import { Button } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { IconPlus } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import {Button} from "@mantine/core";
+import {notifications} from "@mantine/notifications";
+import {IconPlus} from "@tabler/icons-react";
+import {useRouter} from "next/navigation";
+import {useTransition} from "react";
 
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 
 const CreateContestForm = () => {
   const router = useRouter();
@@ -15,7 +15,7 @@ const CreateContestForm = () => {
   const handleCreate = () => {
     startTransition(async () => {
       try {
-        const [error, response] = await api.createContest({ title: "New Contest" });
+        const [error, response] = await api.createContest({title: "New Contest"});
         if (error) {
           notifications.show({
             title: "Ошибка",
@@ -60,4 +60,4 @@ const CreateContestForm = () => {
   );
 };
 
-export { CreateContestForm };
+export {CreateContestForm};

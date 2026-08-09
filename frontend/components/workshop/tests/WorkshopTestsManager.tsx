@@ -9,7 +9,7 @@ import {
   Paper,
   Stack,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
+import {notifications} from "@mantine/notifications";
 import {
   IconCheck,
   IconDeviceFloppy,
@@ -17,10 +17,10 @@ import {
   IconRefresh,
   IconShieldCheck,
 } from "@tabler/icons-react";
-import { useEffect, useState, useTransition } from "react";
+import {useEffect, useState, useTransition} from "react";
 import useSWR from "swr";
 
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 import {
   createWorkshopTestFile,
   generateWorkshopTests,
@@ -29,9 +29,9 @@ import {
   updateWorkshopTestFile,
 } from "@/lib/workshop";
 
-import { SubtasksTable } from "./SubtasksTable";
-import { TestRenumberModal } from "./TestRenumberModal";
-import { TestsListTable } from "./TestsListTable";
+import {SubtasksTable} from "./SubtasksTable";
+import {TestRenumberModal} from "./TestRenumberModal";
+import {TestsListTable} from "./TestsListTable";
 import {
   formatPaddedOrdinal
 } from "./types";
@@ -44,7 +44,7 @@ type Props = {
   problemId: string;
 };
 
-export const WorkshopTestsManager = ({ problemId }: Props) => {
+export const WorkshopTestsManager = ({problemId}: Props) => {
   const [tests, setTests] = useState<TestItem[]>([]);
   const [subtasks, setSubtasks] = useState<SubtaskItem[]>([]);
   const [generators, setGenerators] = useState<string[]>([]);
@@ -58,8 +58,8 @@ export const WorkshopTestsManager = ({ problemId }: Props) => {
   const [isBatchRunning, setIsBatchRunning] = useState(false);
 
   // Load problem limits to know problem_type and max_score
-  const { data: limitsData } = useSWR(["problem-limits", problemId], async () => {
-    const [err, res] = await api.getProblemLimits({ problemId });
+  const {data: limitsData} = useSWR(["problem-limits", problemId], async () => {
+    const [err, res] = await api.getProblemLimits({problemId});
     if (err) {
       return null;
     }
@@ -73,17 +73,17 @@ export const WorkshopTestsManager = ({ problemId }: Props) => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [_genErr, genRes] = await api.listProblemGenerators({ problemId });
+      const [_genErr, genRes] = await api.listProblemGenerators({problemId});
       if (genRes?.files) {
         setGenerators(genRes.files.map((f: { path?: string; name?: string }) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
-      const [_solErr, solRes] = await api.listProblemWorkshopSubmissions({ problemId });
+      const [_solErr, solRes] = await api.listProblemWorkshopSubmissions({problemId});
       if (solRes?.files) {
         setSolutions(solRes.files.map((f: { path?: string; name?: string }) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
-      const [_filesErr, filesRes] = await api.listProblemTests({ problemId });
+      const [_filesErr, filesRes] = await api.listProblemTests({problemId});
       const existingFiles = (filesRes?.files?.map((f: { path?: string; name?: string }) => f.path || f.name || "") || []).map(
         (p: string) => p.split("/").pop() || p
       );
@@ -532,7 +532,7 @@ export const WorkshopTestsManager = ({ problemId }: Props) => {
   const handleRunValidatorBatch = async () => {
     setIsBatchRunning(true);
     try {
-      const [err, report] = await api.validateAllTests({ problemId });
+      const [err, report] = await api.validateAllTests({problemId});
       if (err || !report) {
         notifications.show({
           title: "Ошибка валидации",

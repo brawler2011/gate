@@ -1,7 +1,7 @@
 "use client";
 
-import { Button, Group, Modal, Stack, Text } from "@mantine/core";
-import { useState } from "react";
+import {Button, Group, Modal, Stack, Text} from "@mantine/core";
+import {useState} from "react";
 
 interface DeleteContestModalProps {
   opened: boolean;
@@ -41,7 +41,7 @@ export const DeleteContestModal = ({
       centered
       size="md"
       radius="md"
-      overlayProps={{ backgroundOpacity: 0.4 }}
+      overlayProps={{backgroundOpacity: 0.4}}
     >
       <Stack gap="md">
         <div>
@@ -69,4 +69,3 @@ export const DeleteContestModal = ({
     </Modal>
   );
 };
-

@@ -15,7 +15,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
+import {notifications} from "@mantine/notifications";
 import {
   IconCheck,
   IconCopy,
@@ -24,18 +24,17 @@ import {
   IconTrash,
   IconUpload,
 } from "@tabler/icons-react";
-import { useState, useRef, useTransition } from "react";
+import {useState, useRef, useTransition} from "react";
 import useSWR from "swr";
 
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 import {
   uploadWorkshopMediaBinary,
 } from "@/lib/workshop";
 
 import classes from "./WorkshopFolderTab.module.css";
 
-import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
-
+import type {WorkshopFileTabProps} from "./WorkshopFileTabProps";
 
 export const WorkshopMediaTab = ({
   problemId,
@@ -53,7 +52,7 @@ export const WorkshopMediaTab = ({
     isLoading,
     mutate,
   } = useSWR(["workshop-files", problemId, "media"], async () => {
-    const [err, res] = await api.listProblemMediaFiles({ problemId });
+    const [err, res] = await api.listProblemMediaFiles({problemId});
     if (err) {
       throw new Error(err.message || "Не удалось загрузить список медиафайлов");
     }
@@ -113,7 +112,7 @@ export const WorkshopMediaTab = ({
     }
 
     startDeleting(async () => {
-      const [err] = await api.deleteProblemMediaFile({ problemId, name: currentFileName });
+      const [err] = await api.deleteProblemMediaFile({problemId, name: currentFileName});
       if (err) {
         notifications.show({
           title: "Ошибка удаления",
@@ -161,7 +160,7 @@ export const WorkshopMediaTab = ({
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        style={{ display: "none" }}
+        style={{display: "none"}}
         accept="image/*,.pdf,.svg"
       />
 
@@ -240,8 +239,8 @@ export const WorkshopMediaTab = ({
                     }
                   }}
                 >
-                  <IconPhoto size={16} style={{ flexShrink: 0 }} />
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <IconPhoto size={16} style={{flexShrink: 0}} />
+                  <span style={{overflow: "hidden", textOverflow: "ellipsis"}}>
                     {fileName}
                   </span>
                 </button>
@@ -256,7 +255,7 @@ export const WorkshopMediaTab = ({
         <div className={classes.editorHeader}>
           <Group gap="xs">
             {selectedFile ? (
-              <Code style={{ fontSize: 13 }}>{selectedFile}</Code>
+              <Code style={{fontSize: 13}}>{selectedFile}</Code>
             ) : (
               <Text size="sm" c="dimmed">
                 Выберите файл из списка слева
@@ -288,7 +287,7 @@ export const WorkshopMediaTab = ({
 
         <div className={classes.editorWrapper}>
           {selectedFile && currentFileName ? (
-            <Stack gap="md" align="center" style={{ width: "100%", maxWidth: 800, margin: "0 auto" }}>
+            <Stack gap="md" align="center" style={{width: "100%", maxWidth: 800, margin: "0 auto"}}>
               {/* Image Preview Box */}
               <Paper
                 withBorder
@@ -305,6 +304,7 @@ export const WorkshopMediaTab = ({
                   overflow: "hidden",
                 }}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mediaUrl}
                   alt={currentFileName}
@@ -318,7 +318,7 @@ export const WorkshopMediaTab = ({
               </Paper>
 
               {/* Controls and Copy Buttons */}
-              <Paper withBorder p="md" radius="md" style={{ width: "100%" }}>
+              <Paper withBorder p="md" radius="md" style={{width: "100%"}}>
                 <Stack gap="sm">
                   <Group justify="space-between">
                     <div>
@@ -331,7 +331,7 @@ export const WorkshopMediaTab = ({
                     <Group gap="xs">
                       {/* Copy Markdown Button */}
                       <CopyButton value={markdownSnippet} timeout={2000}>
-                        {({ copied, copy }) => (
+                        {({copied, copy}) => (
                           <Button
                             size="xs"
                             variant={copied ? "filled" : "light"}
@@ -353,7 +353,7 @@ export const WorkshopMediaTab = ({
 
                       {/* Copy Link Button */}
                       <CopyButton value={mediaUrl} timeout={2000}>
-                        {({ copied, copy }) => (
+                        {({copied, copy}) => (
                           <Button
                             size="xs"
                             variant="outline"

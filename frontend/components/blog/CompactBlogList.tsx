@@ -1,19 +1,19 @@
 "use client";
 
-import { Stack, Text, Card, Title, Button, Group, Box } from "@mantine/core";
-import { IconChevronRight, IconNews } from "@tabler/icons-react";
+import {Stack, Text, Card, Title, Button, Group, Box} from "@mantine/core";
+import {IconChevronRight, IconNews} from "@tabler/icons-react";
 import Link from "next/link";
 
-import { formatDate } from "@/lib/formatDate";
+import {formatDate} from "@/lib/formatDate";
 
-import type { PostModel } from "@/contracts/core/v1";
+import type {PostModel} from "@/contracts/core/v1";
 
 type CompactBlogListProps = {
   posts: PostModel[];
   error?: boolean;
 };
 
-export const CompactBlogList = ({ posts, error }: CompactBlogListProps) => {
+export const CompactBlogList = ({posts, error}: CompactBlogListProps) => {
   if (error) {
     return <Text size="sm" c="red">Не удалось загрузить посты</Text>;
   }
@@ -35,10 +35,10 @@ export const CompactBlogList = ({ posts, error }: CompactBlogListProps) => {
         height: "100%",
       }}
     >
-      <Stack gap="sm" style={{ flex: 1 }}>
+      <Stack gap="sm" style={{flex: 1}}>
         <Group gap="xs" mb="xs">
           <IconNews size={20} color="var(--mantine-color-blue-filled)" />
-          <Title order={3} size="h4" style={{ fontWeight: 700 }}>
+          <Title order={3} size="h4" style={{fontWeight: 700}}>
             Блог
           </Title>
         </Group>
@@ -55,7 +55,7 @@ export const CompactBlogList = ({ posts, error }: CompactBlogListProps) => {
                 display: "block",
               }}
             >
-              <Stack gap={4} style={{ borderBottom: "1px solid var(--mantine-color-default-border)", paddingBottom: "12px" }}>
+              <Stack gap={4} style={{borderBottom: "1px solid var(--mantine-color-default-border)", paddingBottom: "12px"}}>
                 <Title 
                   order={4} 
                   size="sm" 

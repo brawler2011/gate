@@ -1,11 +1,11 @@
 "use client";
 
-import { ActionIcon, Box, Flex, Group, Paper, Stack, Text, Title, Tooltip } from "@mantine/core";
-import { useClipboard } from "@mantine/hooks";
-import { IconCheck, IconCopy } from "@tabler/icons-react";
+import {ActionIcon, Box, Flex, Group, Paper, Stack, Text, Title, Tooltip} from "@mantine/core";
+import {useClipboard} from "@mantine/hooks";
+import {IconCheck, IconCopy} from "@tabler/icons-react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import { useEffect, useRef } from "react";
+import {useEffect, useRef} from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
@@ -52,10 +52,10 @@ const prettifyMemoryLimit = (memory_limit: number) => {
   return `${memory_limit} МБ`;
 };
 
-const CopyableSection = ({ label, value }: { label: string; value: string }) => {
-  const clipboard = useClipboard({ timeout: 2000 });
+const CopyableSection = ({label, value}: { label: string; value: string }) => {
+  const clipboard = useClipboard({timeout: 2000});
   return (
-    <Stack gap="xs" style={{ flex: "1 1 200px", minWidth: 0 }}>
+    <Stack gap="xs" style={{flex: "1 1 200px", minWidth: 0}}>
       <Group justify="space-between" align="center" h={28}>
         <Text fw={600} size="sm">{label}</Text>
         <Tooltip label={clipboard.copied ? "Скопировано!" : "Скопировать"} position="top" withArrow>
@@ -155,6 +155,7 @@ const renderSafeImage = (problemId?: string) => {
     }
 
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={cleanSrc}
         alt={alt || ""}
@@ -172,7 +173,7 @@ const renderSafeImage = (problemId?: string) => {
   return SafeImage;
 };
 
-const StatementContent = ({ value, problemId }: { value: string; problemId?: string }) => {
+const StatementContent = ({value, problemId}: { value: string; problemId?: string }) => {
   return (
     <div className="content">
       <ReactMarkdown
@@ -188,7 +189,7 @@ const StatementContent = ({ value, problemId }: { value: string; problemId?: str
   );
 };
 
-const Problem = ({ problem, letter, problemId }: Props) => {
+const Problem = ({problem, letter, problemId}: Props) => {
   letter = letter || "A";
   const activeProblemId = problemId || problem.id || problem.problem_id;
 
@@ -286,4 +287,4 @@ const Problem = ({ problem, letter, problemId }: Props) => {
   );
 };
 
-export { Problem };
+export {Problem};

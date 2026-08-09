@@ -64,7 +64,7 @@ export const TestVerdictModal = ({
             <Text fw={500} size="sm" mb={4}>
               Сообщение / Вывод:
             </Text>
-            <Code block style={{ whiteSpace: "pre-wrap" }}>
+            <Code block style={{whiteSpace: "pre-wrap"}}>
               {message}
             </Code>
           </Box>
@@ -75,7 +75,7 @@ export const TestVerdictModal = ({
             <Text fw={500} size="sm" c="red" mb={4}>
               Детали ошибки:
             </Text>
-            <Code block color="red" style={{ whiteSpace: "pre-wrap" }}>
+            <Code block color="red" style={{whiteSpace: "pre-wrap"}}>
               {error}
             </Code>
           </Box>

@@ -5,18 +5,18 @@ import {
   Table,
   Text,
 } from "@mantine/core";
-import { useRouter } from "next/navigation";
+import {useRouter} from "next/navigation";
 
 import classes from "./ContestsTable.module.css";
 
-import type { ContestModel } from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1";
 
 type ContestsTableProps = {
   contests: ContestModel[];
   showCreatedAt?: boolean;
 };
 
-export const ContestsTable = ({ contests, showCreatedAt = true }: ContestsTableProps) => {
+export const ContestsTable = ({contests, showCreatedAt = true}: ContestsTableProps) => {
   const router = useRouter();
 
   return (
@@ -24,10 +24,10 @@ export const ContestsTable = ({ contests, showCreatedAt = true }: ContestsTableP
       <Table className={classes.table} verticalSpacing="sm">
         <Table.Thead className={classes.thead}>
           <Table.Tr>
-            <Table.Th style={{ width: "40%" }}>Название</Table.Th>
-            <Table.Th style={{ width: "20%" }}>Участники</Table.Th>
-            <Table.Th style={{ width: "20%" }}>Задачи</Table.Th>
-            {showCreatedAt && <Table.Th style={{ width: "20%" }}>Дата создания</Table.Th>}
+            <Table.Th style={{width: "40%"}}>Название</Table.Th>
+            <Table.Th style={{width: "20%"}}>Участники</Table.Th>
+            <Table.Th style={{width: "20%"}}>Задачи</Table.Th>
+            {showCreatedAt && <Table.Th style={{width: "20%"}}>Дата создания</Table.Th>}
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody className={classes.tbody}>
@@ -61,4 +61,3 @@ export const ContestsTable = ({ contests, showCreatedAt = true }: ContestsTableP
     </Box>
   );
 };
-

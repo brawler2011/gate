@@ -12,7 +12,7 @@ import {
 import NextImage from "next/image";
 import Link from "next/link";
 
-import { formatDate } from "@/lib/formatDate";
+import {formatDate} from "@/lib/formatDate";
 
 import classes from "./BlogPost.module.css";
 
@@ -40,7 +40,7 @@ export const BlogPost = ({
   return (
     <Link
       href={`/blog/${id}`}
-      style={{ textDecoration: "none", color: "inherit", display: "block" }}
+      style={{textDecoration: "none", color: "inherit", display: "block"}}
     >
       <Card shadow="sm" padding={0} radius="lg" className={classes.card}>
         <Stack gap={0}>
@@ -65,11 +65,11 @@ export const BlogPost = ({
             <Group gap="xs">
               <Avatar src={avatarUrl} name={author} size={32} radius="xl" />
               <Stack gap={2}>
-                <Text size="sm" fw={600} style={{ lineHeight: 1.2 }}>
+                <Text size="sm" fw={600} style={{lineHeight: 1.2}}>
                   {author}
                 </Text>
                 {date && (
-                  <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>
+                  <Text size="xs" c="dimmed" style={{lineHeight: 1.2}}>
                     {formatDate(date)}
                   </Text>
                 )}

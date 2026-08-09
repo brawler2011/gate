@@ -1,12 +1,13 @@
 "use client";
 
-import { Anchor, Badge, Center, Stack, Table, Tabs, Text } from "@mantine/core";
-import { IconTrophy } from "@tabler/icons-react";
+import {Anchor, Badge, Center, Stack, Table, Tabs, Text} from "@mantine/core";
+import {IconTrophy} from "@tabler/icons-react";
 import Link from "next/link";
 
-import { NextPagination } from "@/components/shared/Pagination";
-import type { ContestModel } from "@/contracts/core/v1";
-import { TimeBeautify } from "@/lib/lib";
+import {NextPagination} from "@/components/shared/Pagination";
+import {TimeBeautify} from "@/lib/lib";
+
+import type {ContestModel} from "@/contracts/core/v1";
 
 type ProfileContestsProps = {
   userId: string;
@@ -69,9 +70,9 @@ export const ProfileContests = ({
             {contestsPagination && contestsPagination.total > 1 && (
               <Stack align="center" mt="md">
                 <NextPagination
-                  pagination={{ page: contestsPage, total: contestsPagination.total }}
+                  pagination={{page: contestsPage, total: contestsPagination.total}}
                   baseUrl={`/users/${userId}`}
-                  queryParams={{ contestsPage }}
+                  queryParams={{contestsPage}}
                 />
               </Stack>
             )}
@@ -79,7 +80,7 @@ export const ProfileContests = ({
         ) : (
           <Center py="xl">
             <Stack align="center" gap="sm">
-              <IconTrophy size={40} style={{ opacity: 0.3 }} />
+              <IconTrophy size={40} style={{opacity: 0.3}} />
               <Text c="dimmed">Нет публичных контестов</Text>
             </Stack>
           </Center>

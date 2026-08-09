@@ -1,13 +1,13 @@
 "use client";
 
-import { Button, Center, Group, Input, Stack, Text } from "@mantine/core";
-import { IconPlus, IconSearch } from "@tabler/icons-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {Button, Center, Group, Input, Stack, Text} from "@mantine/core";
+import {IconPlus, IconSearch} from "@tabler/icons-react";
+import {useRouter, useSearchParams} from "next/navigation";
+import {useCallback, useEffect, useRef, useState} from "react";
 
-import { ContestsTable } from "@/components/contests/ContestsTable";
-import { NextPagination } from "@/components/shared/Pagination";
-import { CreateContestModal } from "@/components/workshop/CreateContestModal";
+import {ContestsTable} from "@/components/contests/ContestsTable";
+import {NextPagination} from "@/components/shared/Pagination";
+import {CreateContestModal} from "@/components/workshop/CreateContestModal";
 
 import type {
   ContestModel,
@@ -87,7 +87,7 @@ export const OrgContestsTab = ({
           onChange={(event) => setSearchValue(event.currentTarget.value)}
           radius="md"
           size="md"
-          style={{ flex: 1 }}
+          style={{flex: 1}}
         />
         {isAuthenticated && (
           <Button
@@ -119,7 +119,7 @@ export const OrgContestsTab = ({
           <NextPagination
             pagination={pagination}
             baseUrl={`/orgs/${org.id}`}
-            queryParams={{ search }}
+            queryParams={{search}}
           />
         </Center>
       )}

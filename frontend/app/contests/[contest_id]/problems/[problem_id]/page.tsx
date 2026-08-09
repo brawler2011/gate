@@ -1,23 +1,22 @@
+import {redirect} from "next/navigation";
+import {cache} from "react";
 
-import { redirect } from "next/navigation";
-import { cache } from "react";
+import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
+import {HeaderWithSession} from "@/components/shared/HeaderWithSession";
+import {Task} from "@/components/shared/Task";
+import {api} from "@/lib/api";
+import {unwrapAndCache} from "@/lib/api2";
+import {buildContestHeaderNav} from "@/lib/contest-header-nav";
+import {getMyContestRole} from "@/lib/contest-role";
+import {env} from "@/lib/env";
+import {numberToLetters} from "@/lib/lib";
+import {PermissionChecker} from "@/lib/permissions";
 
-import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
-import { Task } from "@/components/shared/Task";
-import { api } from "@/lib/api";
-import { unwrapAndCache } from "@/lib/api2";
-import { buildContestHeaderNav } from "@/lib/contest-header-nav";
-import { getMyContestRole } from "@/lib/contest-role";
-import { env } from "@/lib/env";
-import { numberToLetters } from "@/lib/lib";
-import { PermissionChecker } from "@/lib/permissions";
-
-import type { Metadata } from "next";
+import type {Metadata} from "next";
 
 const getCachedContestProblem = cache(
   async (problemId: string, contestId: string) => {
-    return api.getContestProblem({ problemId, contestId });
+    return api.getContestProblem({problemId, contestId});
   }
 );
 
@@ -64,7 +63,7 @@ const Page = async (props: Props) => {
     [, submissionsResponse],
   ] = await Promise.all([
     getCachedContestProblem(params.problem_id, params.contest_id),
-    unwrapAndCache(api.getContest)({ contestId: params.contest_id }),
+    unwrapAndCache(api.getContest)({contestId: params.contest_id}),
     // Only fetch user's own submissions if authenticated
     user
       ? api.listContestSubmissions({
@@ -77,7 +76,7 @@ const Page = async (props: Props) => {
       })
       : Promise.resolve([
         null,
-        { submissions: [], pagination: { page: 1, total: 0 }, since: 0 },
+        {submissions: [], pagination: {page: 1, total: 0}, since: 0},
       ] as const),
   ]);
 
@@ -88,7 +87,7 @@ const Page = async (props: Props) => {
   if (!problemResponse?.problem || !contestResponse?.contest) {
     return (
       <ErrorDisplay
-        error={{ status: 404, message: "Задача или контест не найдены" }}
+        error={{status: 404, message: "Задача или контест не найдены"}}
       />
     );
   }

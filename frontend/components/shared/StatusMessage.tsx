@@ -1,8 +1,8 @@
 "use client";
 
-import { Card, Group, Text } from "@mantine/core";
-import { IconCheck, IconX } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import {Card, Group, Text} from "@mantine/core";
+import {IconCheck, IconX} from "@tabler/icons-react";
+import {useEffect, useState} from "react";
 
 import classes from "./StatusMessage.module.css";
 
@@ -66,4 +66,3 @@ export const StatusMessage = ({
     </Card>
   );
 };
-

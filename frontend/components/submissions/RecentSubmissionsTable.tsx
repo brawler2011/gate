@@ -1,8 +1,8 @@
 "use client";
 
-import { Loader, Paper, Table, Text } from "@mantine/core";
+import {Loader, Paper, Table, Text} from "@mantine/core";
 
-import { StateColor, StateString, TimeBeautify } from "@/lib/lib";
+import {StateColor, StateString, TimeBeautify} from "@/lib/lib";
 import {
   useSubmissionsWebSocket,
   type SubmissionWithProgress,
@@ -10,7 +10,7 @@ import {
 
 import styles from "./RecentSubmissionsTable.module.css";
 
-import type { SubmissionsListItemModel } from "@/contracts/core/v1";
+import type {SubmissionsListItemModel} from "@/contracts/core/v1";
 
 const RECENT_SUBMISSIONS_LIMIT = 5;
 
@@ -27,8 +27,8 @@ interface StatusCellProps {
   submission: SubmissionWithProgress;
 }
 
-const StatusCell = ({ submission }: StatusCellProps) => {
-  const { state, progress } = submission;
+const StatusCell = ({submission}: StatusCellProps) => {
+  const {state, progress} = submission;
 
   // State 1 = Saved (in queue, not yet testing)
   if (state === 1 && !progress) {
@@ -75,7 +75,7 @@ export const RecentSubmissionsTable = ({
   // Enable WS only if wsUrl is provided and we have userId and problemId for filtering
   const enabled = Boolean(wsUrl && userId && problemId);
 
-  const { submissions, highlightedIds } = useSubmissionsWebSocket({
+  const {submissions, highlightedIds} = useSubmissionsWebSocket({
     wsUrl,
     since,
     initialSubmissions,
@@ -105,7 +105,7 @@ export const RecentSubmissionsTable = ({
       p="md"
       withBorder
       bg="var(--mantine-color-gray-light)"
-      style={{ width: "100%" }}
+      style={{width: "100%"}}
     >
       <Table verticalSpacing="xs" horizontalSpacing="sm">
         <Table.Thead>

@@ -10,27 +10,27 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { IconPlus } from "@tabler/icons-react";
-import { useState } from "react";
+import {notifications} from "@mantine/notifications";
+import {IconPlus} from "@tabler/icons-react";
+import {useState} from "react";
 import useSWR from "swr";
 
-import { NextPagination } from '@/components/shared/Pagination';
-import { StatusMessage } from '@/components/shared/StatusMessage';
-import { api } from "@/lib/api";
+import {NextPagination} from '@/components/shared/Pagination';
+import {StatusMessage} from '@/components/shared/StatusMessage';
+import {api} from "@/lib/api";
 
-import { AdminBlogsSearchInput } from "./AdminBlogsSearchInput";
-import { AdminBlogsTable } from "./AdminBlogsTable";
-import { BlogPostForm } from "./BlogPostForm";
+import {AdminBlogsSearchInput} from "./AdminBlogsSearchInput";
+import {AdminBlogsTable} from "./AdminBlogsTable";
+import {BlogPostForm} from "./BlogPostForm";
 
-import type { PostModel } from "@/contracts/core/v1";
+import type {PostModel} from "@/contracts/core/v1";
 
 type AdminBlogsContentProps = {
   page: number;
   search?: string;
 };
 
-export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
+export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps) => {
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;
@@ -39,23 +39,25 @@ export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
   // Form modal state
   const [formOpened, setFormOpened] = useState(false);
   const [editingPost, setEditingPost] = useState<PostModel | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [_submitting, setSubmitting] = useState(false);
 
   // SWR for data fetching
-  const { data, error, mutate, isLoading } = useSWR(
+  const {data, error, mutate, isLoading} = useSWR(
     ["admin-blogs", page, search],
     async () => {
       const [err, res] = await api.listPosts({
         page,
         pageSize: 10,
       });
-      if (err) throw new Error(err.message);
+      if (err) {
+        throw new Error(err.message);
+      }
       return res;
     }
   );
 
   const posts = data?.posts || [];
-  const pagination = data?.pagination || { total: 0, page: page };
+  const pagination = data?.pagination || {total: 0, page: page};
 
   const handleCreatePost = () => {
     setEditingPost(null);
@@ -74,10 +76,10 @@ export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
     preview_image?: File | null;
   }) => {
     setSubmitting(true);
-    const formData = data as any;
+    const formData = data as unknown as Record<string, unknown>;
     try {
       if (editingPost) {
-        const [err] = await api.patchPostById({ id: editingPost.id || "", formData });
+        const [err] = await api.patchPostById({id: editingPost.id || "", formData});
         if (err) {
           notifications.show({
             title: "Ошибка",
@@ -92,7 +94,7 @@ export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
           color: "green",
         });
       } else {
-        const [err] = await api.createPost({ formData });
+        const [err] = await api.createPost({formData});
         if (err) {
           notifications.show({
             title: "Ошибка",
@@ -122,7 +124,7 @@ export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
   };
 
   const handleDeletePost = async (postId: string) => {
-    const [err] = await api.deletePostById({ id: postId });
+    const [err] = await api.deletePostById({id: postId});
     
     if (err) {
       console.error("Error deleting post:", err);
@@ -245,6 +247,3 @@ export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
     </Container>
   );
 };
-
-
-

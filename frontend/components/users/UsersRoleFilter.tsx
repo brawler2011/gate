@@ -1,9 +1,9 @@
 "use client";
 
-import { Badge, Select, Text } from "@mantine/core";
-import { useRouter, useSearchParams } from "next/navigation";
+import {Badge, Select, Text} from "@mantine/core";
+import {useRouter, useSearchParams} from "next/navigation";
 
-import { getRoleColor } from "@/lib/lib";
+import {getRoleColor} from "@/lib/lib";
 
 export const UsersRoleFilter = () => {
   const router = useRouter();
@@ -55,17 +55,17 @@ export const UsersRoleFilter = () => {
       value={currentRole}
       onChange={handleChange}
       data={[
-        { value: "", label: "Все роли" },
-        { value: "admin", label: "Admin" },
-        { value: "user", label: "User" },
+        {value: "", label: "Все роли"},
+        {value: "admin", label: "Admin"},
+        {value: "user", label: "User"},
       ]}
-      renderOption={({ option }) =>
+      renderOption={({option}) =>
         option.value === "" ? (
-          <Text style={{ cursor: "pointer" }}>Все роли</Text>
+          <Text style={{cursor: "pointer"}}>Все роли</Text>
         ) : (
           <Badge
             color={getRoleColor(option.value)}
-            style={{ cursor: "pointer" }}
+            style={{cursor: "pointer"}}
           >
             {option.label}
           </Badge>
@@ -84,4 +84,3 @@ export const UsersRoleFilter = () => {
     />
   );
 };
-

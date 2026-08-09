@@ -16,10 +16,10 @@ import {
   TextInput,
   Tooltip,
 } from "@mantine/core";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import {IconPlus, IconTrash} from "@tabler/icons-react";
+import {useEffect, useState} from "react";
 
-import { SubtaskDeleteModal } from "./SubtaskDeleteModal";
+import {SubtaskDeleteModal} from "./SubtaskDeleteModal";
 import {
   formatOrdinalsToRanges,
   parseOrdinalsFromRanges
@@ -79,7 +79,7 @@ const SubtaskItemRow = ({
       .filter((t) => ordinals.includes(t.ordinal))
       .map((t) => t.id);
 
-    onUpdateSubtask({ testIds: matchedIds });
+    onUpdateSubtask({testIds: matchedIds});
   };
 
   const handleRangeBlur = () => {
@@ -99,33 +99,33 @@ const SubtaskItemRow = ({
   const missingOrdinals = parsedOrdinals.filter((ord) => !allOrdinalsInSystem.has(ord));
 
   return (
-    <Card key={st.name || idx} withBorder px="sm" py={6} radius="md" style={{ position: "relative" }}>
+    <Card key={st.name || idx} withBorder px="sm" py={6} radius="md" style={{position: "relative"}}>
       <Tooltip label="Удалить сабтаск">
         <ActionIcon
           color="red"
           variant="subtle"
           size="md"
           onClick={onDeleteRequest}
-          style={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}
+          style={{position: "absolute", top: 8, right: 8, zIndex: 2}}
         >
           <IconTrash size={18} />
         </ActionIcon>
       </Tooltip>
 
       <Grid gutter="xs" align="flex-start">
-        <Grid.Col span={{ base: 12, sm: 3 }}>
+        <Grid.Col span={{base: 12, sm: 3}}>
           <TextInput
             label="Имя сабтаска"
             size="xs"
             value={st.name}
             onChange={(e) =>
-              onUpdateSubtask({ name: e.currentTarget.value.trim() })
+              onUpdateSubtask({name: e.currentTarget.value.trim()})
             }
           />
         </Grid.Col>
 
         {problemType === "scoring" && (
-          <Grid.Col span={{ base: 6, sm: 2 }}>
+          <Grid.Col span={{base: 6, sm: 2}}>
             <NumberInput
               label="Баллы"
               size="xs"
@@ -140,13 +140,13 @@ const SubtaskItemRow = ({
           </Grid.Col>
         )}
 
-        <Grid.Col span={{ base: 6, sm: 3 }}>
+        <Grid.Col span={{base: 6, sm: 3}}>
           <Select
             label="Политика"
             size="xs"
             data={[
-              { value: "complete", label: "За весь сабтаск (complete)" },
-              { value: "each", label: "За каждый тест (each)" },
+              {value: "complete", label: "За весь сабтаск (complete)"},
+              {value: "each", label: "За каждый тест (each)"},
             ]}
             value={st.policy}
             onChange={(v) =>
@@ -157,13 +157,13 @@ const SubtaskItemRow = ({
           />
         </Grid.Col>
 
-        <Grid.Col span={{ base: 12, sm: problemType === "scoring" ? 4 : 6 }} style={{ paddingRight: 32 }}>
+        <Grid.Col span={{base: 12, sm: problemType === "scoring" ? 4 : 6}} style={{paddingRight: 32}}>
           <MultiSelect
             label="Зависимости"
             size="xs"
             data={availableSubtaskNames.filter((n) => n !== st.name)}
             value={st.dependencies}
-            onChange={(deps) => onUpdateSubtask({ dependencies: deps })}
+            onChange={(deps) => onUpdateSubtask({dependencies: deps})}
             placeholder="Выберите сабтаски"
           />
         </Grid.Col>
@@ -226,7 +226,7 @@ export const SubtasksTable = ({
 
   const handleUpdateSubtask = (index: number, patch: Partial<SubtaskItem>) => {
     const next = [...subtasks];
-    next[index] = { ...next[index], ...patch };
+    next[index] = {...next[index], ...patch};
     onChangeSubtasks(next);
   };
 

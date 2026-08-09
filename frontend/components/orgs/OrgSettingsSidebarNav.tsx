@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Button, Stack } from "@mantine/core";
+import {Box, Button, Stack} from "@mantine/core";
 import Link from "next/link";
 
 import {
@@ -38,7 +38,7 @@ export const OrgSettingsSidebarNav = ({
               key={section.key}
               component={Link}
               href={`/orgs/${orgId}/settings?section=${section.key}`}
-              style={{ textDecoration: "none" }}
+              style={{textDecoration: "none"}}
               variant="transparent"
               size="sm"
               leftSection={<Icon size={20} color="currentColor" />}

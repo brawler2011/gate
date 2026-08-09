@@ -1,14 +1,14 @@
-import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
+import {HeaderWithSession} from "@/components/shared/HeaderWithSession";
 
-import { DefaultLayoutClient } from "./Layout";
+import {DefaultLayoutClient} from "./Layout";
 
 import type {
   HeaderContest,
   HeaderOrganization,
   HeaderProblem,
 } from "@/components/shared/Header";
-import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
-import type { AppShellProps } from "@mantine/core";
+import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
+import type {AppShellProps} from "@mantine/core";
 
 type DefaultLayoutProps = {
   children: React.ReactNode;

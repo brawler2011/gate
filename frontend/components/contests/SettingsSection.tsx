@@ -12,14 +12,14 @@ import {
   Text,
   Divider,
 } from "@mantine/core";
-import { useForm } from "@mantine/form";
-import { notifications } from "@mantine/notifications";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import {useForm} from "@mantine/form";
+import {notifications} from "@mantine/notifications";
+import {useRouter} from "next/navigation";
+import {useState} from "react";
 
-import { StatusMessage } from '@/components/shared/StatusMessage';
-import { api } from "@/lib/api";
-import { APP_COLORS } from "@/lib/theme/colors";
+import {StatusMessage} from '@/components/shared/StatusMessage';
+import {api} from "@/lib/api";
+import {APP_COLORS} from "@/lib/theme/colors";
 
 import type * as corev1 from "@/contracts/core/v1";
 
@@ -28,14 +28,14 @@ interface SettingsSectionProps {
 }
 
 const SCOPE_OPTIONS = [
-  { label: "Участник", value: "participant", color: "gray" },
-  { label: "Модератор", value: "moderator", color: "yellow" },
-  { label: "Создатель", value: "owner", color: "red" },
+  {label: "Участник", value: "participant", color: "gray"},
+  {label: "Модератор", value: "moderator", color: "yellow"},
+  {label: "Создатель", value: "owner", color: "red"},
 ];
 
 const VISIBILITY_OPTIONS = [
-  { label: "Публичный", value: "public", color: "green" },
-  { label: "Приватный", value: "private", color: "red" },
+  {label: "Публичный", value: "public", color: "green"},
+  {label: "Приватный", value: "private", color: "red"},
 ];
 
 interface CustomSelectProps {
@@ -46,7 +46,7 @@ interface CustomSelectProps {
   description?: string;
 }
 
-const CustomSelect = ({ label, value, onChange, options, description }: CustomSelectProps) => {
+const CustomSelect = ({label, value, onChange, options, description}: CustomSelectProps) => {
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
   });
@@ -84,7 +84,7 @@ const CustomSelect = ({ label, value, onChange, options, description }: CustomSe
   );
 };
 
-function toLocalDatetimeString(dateStr: string | null | undefined): string {
+const toLocalDatetimeString = (dateStr: string | null | undefined): string => {
   if (!dateStr) {
     return "";
   }
@@ -92,16 +92,13 @@ function toLocalDatetimeString(dateStr: string | null | undefined): string {
   if (isNaN(date.getTime())) {
     return "";
   }
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const y = date.getFullYear();
-  const m = pad(date.getMonth() + 1);
-  const d = pad(date.getDate());
-  const h = pad(date.getHours());
-  const min = pad(date.getMinutes());
-  return `${y}-${m}-${d}T${h}:${min}`;
-}
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours()
+  )}:${pad(date.getMinutes())}`;
+};
 
-export const SettingsSection = ({ contest }: SettingsSectionProps) => {
+export const SettingsSection = ({contest}: SettingsSectionProps) => {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
@@ -129,7 +126,7 @@ export const SettingsSection = ({ contest }: SettingsSectionProps) => {
       start_time: values.start_time ? new Date(values.start_time).toISOString() : null,
       end_time: values.end_time ? new Date(values.end_time).toISOString() : null,
     };
-    const [error] = await api.updateContest({ contestId: contest.id, requestBody: payload });
+    const [error] = await api.updateContest({contestId: contest.id, requestBody: payload});
     setSaving(false);
 
     if (error) {

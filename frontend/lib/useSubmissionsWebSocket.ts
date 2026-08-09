@@ -1,7 +1,7 @@
 'use client';
 
-import { notifications } from '@mantine/notifications';
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import {notifications} from '@mantine/notifications';
+import {useEffect, useRef, useState, useCallback, useMemo} from 'react';
 
 import {
   SubmissionsEventType,
@@ -14,11 +14,11 @@ import {
   type MessageSubmissionCompleted,
 } from '@/contracts/observer/v1';
 
-import { api, type ApiError } from './api';
-import { env } from './env';
-import { submissionsWsManager, type WsManagerStatus } from './submissionsWsManager';
+import {api, type ApiError} from './api';
+import {env} from './env';
+import {submissionsWsManager, type WsManagerStatus} from './submissionsWsManager';
 
-import type { ListSubmissionsResponseModel, SubmissionsListItemModel } from '@/contracts/core/v1';
+import type {ListSubmissionsResponseModel, SubmissionsListItemModel} from '@/contracts/core/v1';
 
 // Progress info for a submission being tested
 export interface TestProgress {
@@ -60,11 +60,11 @@ type SnapshotParams = {
 
 type MySubmissionsData = ListSubmissionsResponseModel | null;
 
-function hasSince(data: MySubmissionsData): data is NonNullable<MySubmissionsData> & { since?: number } {
+const hasSince = (data: MySubmissionsData): data is NonNullable<MySubmissionsData> & { since?: number } => {
   return typeof data === 'object' && data !== null;
-}
+};
 
-function toSnapshotParams(filter: UseSubmissionsWebSocketOptions['filter'], pageSize: number): SnapshotParams | null {
+const toSnapshotParams = (filter: UseSubmissionsWebSocketOptions['filter'], pageSize: number): SnapshotParams | null => {
   if (!filter.contestId) {
     return null;
   }
@@ -76,7 +76,7 @@ function toSnapshotParams(filter: UseSubmissionsWebSocketOptions['filter'], page
     problemId: filter.problemId,
     sortOrder: 'desc',
   };
-}
+};
 
 export interface UseSubmissionsWebSocketReturn {
   submissions: SubmissionWithProgress[];
@@ -96,22 +96,23 @@ export const WS_STATUS_DEBOUNCE_MS = 400;
 const WS_DEBUG = false;
 const WS_RESTORED_TOAST_AUTO_CLOSE_MS = 2500;
 
-const isDev = env.isDevelopment;
+const isDev = env.isDevelopment();
 
-function log(...args: unknown[]) {
+const log = (...args: unknown[]) => {
   if (isDev && WS_DEBUG) {
+    // eslint-disable-next-line no-console
     console.log('[WS]', ...args);
   }
-}
+};
 
-function makeWsNotificationId(): string {
+const makeWsNotificationId = (): string => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return `submissions-ws-status:${crypto.randomUUID()}`;
   }
   return `submissions-ws-status:${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
+};
 
-function asMessage(event: MessageEvent): SubmissionsMessage | null {
+const asMessage = (event: MessageEvent): SubmissionsMessage | null => {
   try {
     const data = JSON.parse(event.data) as SubmissionsMessage;
     if (!data || typeof data !== 'object') {
@@ -124,9 +125,9 @@ function asMessage(event: MessageEvent): SubmissionsMessage | null {
   } catch {
     return null;
   }
-}
+};
 
-function buildSubmissionFromCreated(payload: MessageSubmissionCreated): SubmissionWithProgress {
+const buildSubmissionFromCreated = (payload: MessageSubmissionCreated): SubmissionWithProgress => {
   return {
     id: payload.id,
     user_id: payload.user_id ?? '',
@@ -146,9 +147,9 @@ function buildSubmissionFromCreated(payload: MessageSubmissionCreated): Submissi
     created_at: payload.created_at ?? new Date().toISOString(),
     isNew: true,
   };
-}
+};
 
-function buildSubmissionFromCompleted(payload: MessageSubmissionCompleted): SubmissionWithProgress {
+const buildSubmissionFromCompleted = (payload: MessageSubmissionCompleted): SubmissionWithProgress => {
   const now = new Date().toISOString();
   return {
     id: payload.id,
@@ -169,9 +170,9 @@ function buildSubmissionFromCompleted(payload: MessageSubmissionCompleted): Subm
     created_at: payload.created_at ?? now,
     isUpdated: true,
   };
-}
+};
 
-export function useSubmissionsWebSocket({
+export const useSubmissionsWebSocket = ({
   wsUrl,
   since,
   initialSubmissions,
@@ -179,12 +180,12 @@ export function useSubmissionsWebSocket({
   filter,
   pageSize,
   enabled,
-}: UseSubmissionsWebSocketOptions): UseSubmissionsWebSocketReturn {
+}: UseSubmissionsWebSocketOptions): UseSubmissionsWebSocketReturn => {
   // Calculate filterKey first - used for initialization and change detection
   const filterKey = `${filter.contestId}-${filter.userId}-${filter.problemId}`;
   
   const [submissions, setSubmissions] = useState<SubmissionWithProgress[]>(
-    () => initialSubmissions.map(s => ({ ...s }))
+    () => initialSubmissions.map(s => ({...s}))
   );
   const [connectionError, setConnectionError] = useState(false);
   const [fatalConnectionError, setFatalConnectionError] = useState(false);
@@ -312,7 +313,7 @@ export function useSubmissionsWebSocket({
       initializedFilterRef.current = filterKey;
       setSubmissions(initialSubmissions.map(s => {
         const existingProgress = progressMapRef.current.get(s.id);
-        return existingProgress ? { ...s, progress: existingProgress } : { ...s };
+        return existingProgress ? {...s, progress: existingProgress} : {...s};
       }));
       progressMapRef.current.clear();
     }
@@ -360,7 +361,7 @@ export function useSubmissionsWebSocket({
   const problemId = filter.problemId;
 
   const resyncSnapshot = useCallback(async () => {
-    const params = toSnapshotParams({ contestId, userId, problemId }, pageSize);
+    const params = toSnapshotParams({contestId, userId, problemId}, pageSize);
     if (!params) {
       return;
     }
@@ -389,7 +390,7 @@ export function useSubmissionsWebSocket({
       throw new Error(error?.message || 'snapshot refetch failed');
     }
 
-    setSubmissions(data.submissions.map((s: SubmissionsListItemModel) => ({ ...s })));
+    setSubmissions(data.submissions.map((s: SubmissionsListItemModel) => ({...s})));
     setSinceState(hasSince(data) ? data.since ?? 0 : 0);
     setFatalConnectionError(false);
     setConnectionError(false);
@@ -470,7 +471,7 @@ export function useSubmissionsWebSocket({
         } else {
           phase = 'testing';
         }
-        const progress: TestProgress = { phase };
+        const progress: TestProgress = {phase};
         progressMapRef.current.set(p.id, progress);
 
         setSubmissions(prev => {
@@ -490,7 +491,7 @@ export function useSubmissionsWebSocket({
             return updated;
           }
           const updated = [...prev];
-          updated[index] = { ...updated[index], progress, isUpdated: true };
+          updated[index] = {...updated[index], progress, isUpdated: true};
           return updated;
         });
         addHighlight(p.id);
@@ -522,7 +523,7 @@ export function useSubmissionsWebSocket({
             return updated;
           }
           const updated = [...prev];
-          updated[index] = { ...updated[index], progress, isUpdated: true };
+          updated[index] = {...updated[index], progress, isUpdated: true};
           return updated;
         });
         addHighlight(p.id);
@@ -544,7 +545,7 @@ export function useSubmissionsWebSocket({
             return updated;
           }
           const updated = [...prev];
-          updated[index] = { ...updated[index], ...completed, progress: undefined, isUpdated: true };
+          updated[index] = {...updated[index], ...completed, progress: undefined, isUpdated: true};
           return updated;
         });
         addHighlight(p.id);
@@ -649,4 +650,4 @@ export function useSubmissionsWebSocket({
     reconnectMaxAttempts,
     highlightedIds,
   };
-}
+};

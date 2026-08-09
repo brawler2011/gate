@@ -1,14 +1,11 @@
 "use client";
 
-import { Center, Container, Group, Skeleton, Stack, Text, Title } from "@mantine/core";
+import {Center, Container, Group, Skeleton, Stack, Text, Title} from "@mantine/core";
 import useSWR from "swr";
 
-import { UsersRoleFilter } from '@/components/users/UsersRoleFilter';
-import { UsersSearchInput } from '@/components/users/UsersSearchInput';
-import { UsersTable } from '@/components/users/UsersTable';
-
-
-
+import {UsersRoleFilter} from '@/components/users/UsersRoleFilter';
+import {UsersSearchInput} from '@/components/users/UsersSearchInput';
+import {UsersTable} from '@/components/users/UsersTable';
 
 type UsersContentProps = {
   page: number;
@@ -16,8 +13,8 @@ type UsersContentProps = {
   role?: string;
 };
 
-export const UsersContent = ({ page, search, role }: UsersContentProps) => {
-  const { data, error, isLoading } = useSWR(
+export const UsersContent = ({page, search, role}: UsersContentProps) => {
+  const {data, error, isLoading} = useSWR(
     `/api/users?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}${role ? `&role=${role}` : ""}`,
     async (url) => {
       const res = await fetch(url);
@@ -30,7 +27,7 @@ export const UsersContent = ({ page, search, role }: UsersContentProps) => {
   );
 
   const users = data?.users || [];
-  const pagination = data?.pagination || { total: 0, page: page };
+  const pagination = data?.pagination || {total: 0, page: page};
 
   if (error) {
     return (

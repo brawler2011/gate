@@ -1,15 +1,14 @@
-import { Container, Text, Title } from "@mantine/core";
-import { redirect } from "next/navigation";
+import {Container, Text, Title} from "@mantine/core";
+import {redirect} from "next/navigation";
 
-import { DefaultLayout } from "@/components/shared";
-import { api } from "@/lib/api";
-import { unwrapAndCache } from "@/lib/api2";
-import { buildContestHeaderNav } from "@/lib/contest-header-nav";
-import { getMyContestRole } from "@/lib/contest-role";
-import { PermissionChecker } from "@/lib/permissions";
+import {DefaultLayout} from "@/components/shared";
+import {api} from "@/lib/api";
+import {unwrapAndCache} from "@/lib/api2";
+import {buildContestHeaderNav} from "@/lib/contest-header-nav";
+import {getMyContestRole} from "@/lib/contest-role";
+import {PermissionChecker} from "@/lib/permissions";
 
-import type { Metadata } from "next";
-
+import type {Metadata} from "next";
 
 const metadata: Metadata = {
   title: "Положение",
@@ -19,11 +18,11 @@ type PageProps = {
   params: Promise<{ contest_id: string }>;
 };
 
-const Page = async ({ params }: PageProps) => {
-  const { contest_id } = await params;
+const Page = async ({params}: PageProps) => {
+  const {contest_id} = await params;
 
   // Fetch contest data for the info panel
-  const contestResponse = await unwrapAndCache(api.getContest)({ contestId: contest_id });
+  const contestResponse = await unwrapAndCache(api.getContest)({contestId: contest_id});
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(contest_id) : null;
@@ -72,4 +71,4 @@ const Page = async ({ params }: PageProps) => {
   );
 };
 
-export { Page as default, metadata };
+export {Page as default, metadata};

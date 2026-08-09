@@ -1,13 +1,14 @@
 "use client";
 
-import { Box, Paper, Select, Stack } from "@mantine/core";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import {Box, Paper, Select, Stack} from "@mantine/core";
+import {useRouter} from "next/navigation";
+import {useState} from "react";
 
-import { CreateSubmissionForm } from "@/components/submissions/CreateSubmissionForm";
-import { LANGUAGE_MAP } from "@/lib/constants";
-import { numberToLetters } from "@/lib/lib";
-import { createSolution } from "@/lib/workshop";
+import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
+import {LANGUAGE_MAP} from "@/lib/constants";
+import {numberToLetters} from "@/lib/lib";
+import {createSolution} from "@/lib/workshop";
+
 import classes from "./SubmitSubmissionClient.module.css";
 
 import type {
@@ -22,7 +23,7 @@ type Props = {
   user: UserModel | null;
 };
 
-export const SubmitSubmissionClient = ({ contest, problems, user }: Props) => {
+export const SubmitSubmissionClient = ({contest, problems, user}: Props) => {
   const router = useRouter();
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
     problems.length > 0 ? problems[0].problem_id : null,
@@ -74,7 +75,7 @@ export const SubmitSubmissionClient = ({ contest, problems, user }: Props) => {
 
   if (problems.length === 0) {
     return (
-      <Box style={{ maxWidth: 740, margin: "0 auto" }}>
+      <Box style={{maxWidth: 740, margin: "0 auto"}}>
         <Stack gap="lg">
           <p>В этом контесте пока нет задач</p>
         </Stack>
@@ -83,7 +84,7 @@ export const SubmitSubmissionClient = ({ contest, problems, user }: Props) => {
   }
 
   return (
-    <Box style={{ maxWidth: "100%", margin: "0 auto" }}>
+    <Box style={{maxWidth: "100%", margin: "0 auto"}}>
       <Paper
         shadow="sm"
         p="md"
@@ -108,12 +109,12 @@ export const SubmitSubmissionClient = ({ contest, problems, user }: Props) => {
               onChange={setSelectedProblemId}
               allowDeselect={false}
               disabled={isSubmitted}
-              classNames={{ input: classes.problemSelectInput }}
+              classNames={{input: classes.problemSelectInput}}
               style={{
                 width: `${(problemOptions.find((o) => o.value === selectedProblemId)?.label.length || 10) + 3}ch`,
               }}
-              comboboxProps={{ position: "bottom-start" }}
-              styles={{ dropdown: { minWidth: "max-content" } }}
+              comboboxProps={{position: "bottom-start"}}
+              styles={{dropdown: {minWidth: "max-content"}}}
             />
           }
         />

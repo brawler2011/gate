@@ -1,21 +1,21 @@
 "use client";
 
-import { Stack } from "@mantine/core";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
+import {Stack} from "@mantine/core";
+import {useRouter, useSearchParams, usePathname} from "next/navigation";
+import {useCallback} from "react";
 
-import { WorkshopCheckersTab } from "./WorkshopCheckersTab";
+import {WorkshopCheckersTab} from "./WorkshopCheckersTab";
 import classes from "./WorkshopEditor.module.css";
-import { WorkshopGeneralTab } from "./WorkshopGeneralTab";
-import { WorkshopGeneratorsTab } from "./WorkshopGeneratorsTab";
-import { WorkshopImportTab } from "./WorkshopImportTab";
-import { WorkshopInteractorsTab } from "./WorkshopInteractorsTab";
-import { WorkshopMediaTab } from "./WorkshopMediaTab";
-import { WorkshopPackagesTab } from "./WorkshopPackagesTab";
-import { WorkshopSolutionsTab } from "./WorkshopSolutionsTab";
-import { WorkshopStatementTab } from "./WorkshopStatementTab";
-import { WorkshopTestsTab } from "./WorkshopTestsTab";
-import { WorkshopValidatorsTab } from "./WorkshopValidatorsTab";
+import {WorkshopGeneralTab} from "./WorkshopGeneralTab";
+import {WorkshopGeneratorsTab} from "./WorkshopGeneratorsTab";
+import {WorkshopImportTab} from "./WorkshopImportTab";
+import {WorkshopInteractorsTab} from "./WorkshopInteractorsTab";
+import {WorkshopMediaTab} from "./WorkshopMediaTab";
+import {WorkshopPackagesTab} from "./WorkshopPackagesTab";
+import {WorkshopSolutionsTab} from "./WorkshopSolutionsTab";
+import {WorkshopStatementTab} from "./WorkshopStatementTab";
+import {WorkshopTestsTab} from "./WorkshopTestsTab";
+import {WorkshopValidatorsTab} from "./WorkshopValidatorsTab";
 
 type Props = {
   problemId: string;
@@ -27,7 +27,7 @@ const STATEMENT_TAB = "statement";
 const PACKAGES_TAB = "packages";
 const IMPORT_TAB = "import";
 
-export const WorkshopEditor = ({ problemId, activeTab }: Props) => {
+export const WorkshopEditor = ({problemId, activeTab}: Props) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -38,7 +38,7 @@ export const WorkshopEditor = ({ problemId, activeTab }: Props) => {
     (filePath: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("file", filePath);
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      router.push(`${pathname}?${params.toString()}`, {scroll: false});
     },
     [router, searchParams, pathname],
   );
@@ -47,7 +47,7 @@ export const WorkshopEditor = ({ problemId, activeTab }: Props) => {
     (filePath: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("file", filePath);
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      router.push(`${pathname}?${params.toString()}`, {scroll: false});
     },
     [router, searchParams, pathname],
   );

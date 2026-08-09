@@ -1,9 +1,9 @@
 "use client";
 
-import { Input } from "@mantine/core";
-import { IconSearch } from "@tabler/icons-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import {Input} from "@mantine/core";
+import {IconSearch} from "@tabler/icons-react";
+import {useRouter, useSearchParams} from "next/navigation";
+import {useEffect, useRef, useState} from "react";
 
 export const UsersSearchInput = () => {
   const router = useRouter();
@@ -68,4 +68,3 @@ export const UsersSearchInput = () => {
     />
   );
 };
-

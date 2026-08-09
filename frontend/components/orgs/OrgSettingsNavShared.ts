@@ -3,12 +3,12 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 
-import type { ButtonProps } from "@mantine/core";
+import type {ButtonProps} from "@mantine/core";
 import type React from "react";
 
 const ORG_SETTINGS_NAV_CONFIG = {
-  settings: { label: "Настройки", icon: IconSettings },
-  danger: { label: "Опасная зона", icon: IconAlertTriangle },
+  settings: {label: "Настройки", icon: IconSettings},
+  danger: {label: "Опасная зона", icon: IconAlertTriangle},
 } as const;
 
 export type OrgSettingsNavSectionKey = keyof typeof ORG_SETTINGS_NAV_CONFIG;
@@ -34,7 +34,7 @@ export const getOrgSettingsIcon = (
   sectionKey: OrgSettingsNavSectionKey,
 ): OrgSettingsIconComponent => ORG_SETTINGS_NAV_CONFIG[sectionKey].icon;
 
-export function getOrgSettingsNavTabStyles(isActive: boolean): ButtonProps["styles"] {
+export const getOrgSettingsNavTabStyles = (isActive: boolean): ButtonProps["styles"] => {
   return {
     root: {
       backgroundColor: isActive
@@ -56,4 +56,4 @@ export function getOrgSettingsNavTabStyles(isActive: boolean): ButtonProps["styl
       color: "inherit",
     },
   };
-}
+};

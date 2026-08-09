@@ -1,17 +1,17 @@
-import { Container, Skeleton, Stack } from "@mantine/core";
-import { redirect } from "next/navigation";
-import { Suspense } from "react";
+import {Container, Skeleton, Stack} from "@mantine/core";
+import {redirect} from "next/navigation";
+import {Suspense} from "react";
 
-import { AdminSubmissionsContent } from "@/components/admin";
-import { parsePage } from "@/lib/lib2";
+import {AdminSubmissionsContent} from "@/components/admin";
+import {parsePage} from "@/lib/lib2";
 
-import type { Metadata } from "next";
+import type {Metadata} from "next";
 
 export const metadata: Metadata = {
   title: "Админ | Посылки",
 };
 
-export const dynamic = "force-dynamic";
+export const dynamic: string = "force-dynamic";
 
 const AdminSubmissionsContentSkeleton = () => {
   return (
@@ -36,7 +36,7 @@ type PageProps = {
   }>;
 };
 
-const AdminSubmissionsPage = async ({ searchParams }: PageProps) => {
+const AdminSubmissionsPage = async ({searchParams}: PageProps) => {
   const resolvedSearchParams = await searchParams;
   const page = parsePage(resolvedSearchParams.page);
   if (!page) {

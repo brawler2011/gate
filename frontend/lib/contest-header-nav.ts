@@ -1,7 +1,7 @@
-import { PermissionChecker } from "@/lib/permissions";
+import {PermissionChecker} from "@/lib/permissions";
 
-import type { ContestModel, UserModel } from "@/contracts/core/v1";
-import type { ContestRoleResponse } from "@/lib/contest-role";
+import type {ContestModel, UserModel} from "@/contracts/core/v1";
+import type {ContestRoleResponse} from "@/lib/contest-role";
 
 export type ContestHeaderNavKey =
   | "tasks"
@@ -38,12 +38,12 @@ type BuildContestHeaderNavParams = {
   activeTab: ContestHeaderNavKey;
 };
 
-export function buildContestHeaderNav({
+export const buildContestHeaderNav = ({
   contest,
   user,
   contestRole,
   activeTab,
-}: BuildContestHeaderNavParams): HeaderSecondaryNavItem[] {
+}: BuildContestHeaderNavParams): HeaderSecondaryNavItem[] => {
   const checker = new PermissionChecker(user, contestRole?.role ?? null);
 
   const items: HeaderSecondaryNavItem[] = [];
@@ -106,4 +106,4 @@ export function buildContestHeaderNav({
     ...item,
     active: item.key === activeTab,
   }));
-}
+};

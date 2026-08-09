@@ -1,5 +1,5 @@
-import type { ContestRole } from "./contest-role";
-import type { ContestModel, ProblemModel, UserModel } from "@/contracts/core/v1";
+import type {ContestRole} from "./contest-role";
+import type {ContestModel, ProblemModel, UserModel} from "@/contracts/core/v1";
 
 /**
  * Permission checker utilities for frontend
@@ -30,9 +30,9 @@ const ORG_ROLE_HIERARCHY: Record<OrgRole, number> = {
  * @param requiredScope - Required scope/permission level
  * @returns true if user has required role or higher
  */
-function hasRequiredRole(userRole: ContestRole, requiredScope: ContestScope): boolean {
+const hasRequiredRole = (userRole: ContestRole, requiredScope: ContestScope): boolean => {
   return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredScope];
-}
+};
 
 export class PermissionChecker {
   private user: UserModel | null;
@@ -306,10 +306,10 @@ export class PermissionChecker {
 /**
  * Create permission checker instance from user data
  */
-export function createPermissionChecker(
+export const createPermissionChecker = (
   user: UserModel | null = null,
   contestRole: ContestRole | null = null,
   orgRole: OrgRole | null = null
-): PermissionChecker {
+): PermissionChecker => {
   return new PermissionChecker(user, contestRole, orgRole);
-}
+};

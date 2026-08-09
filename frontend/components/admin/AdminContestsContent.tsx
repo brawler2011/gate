@@ -8,42 +8,44 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { useState } from "react";
+import {notifications} from "@mantine/notifications";
+import {useState} from "react";
 import useSWR from "swr";
 
-import { NextPagination } from '@/components/shared/Pagination';
-import { StatusMessage } from '@/components/shared/StatusMessage';
-import { api } from "@/lib/api";
+import {NextPagination} from '@/components/shared/Pagination';
+import {StatusMessage} from '@/components/shared/StatusMessage';
+import {api} from "@/lib/api";
 
-import { AdminContestsSearchInput } from "./AdminContestsSearchInput";
-import { AdminContestsTable } from "./AdminContestsTable";
+import {AdminContestsSearchInput} from "./AdminContestsSearchInput";
+import {AdminContestsTable} from "./AdminContestsTable";
 
 type AdminContestsContentProps = {
   page: number;
   search?: string;
 };
 
-export const AdminContestsContent = ({ page, search }: AdminContestsContentProps) => {
+export const AdminContestsContent = ({page, search}: AdminContestsContentProps) => {
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  const { data, error, isLoading, mutate } = useSWR(
+  const {data, error, isLoading, mutate} = useSWR(
     ["admin-contests", page, search],
     async () => {
-      const [err, res] = await api.listAdminContests({ page, pageSize: 10, search });
-      if (err) throw new Error(err.message);
+      const [err, res] = await api.listAdminContests({page, pageSize: 10, search});
+      if (err) {
+        throw new Error(err.message);
+      }
       return res;
     }
   );
 
   const contests = data?.contests || [];
-  const pagination = data?.pagination || { total: 0, page: page };
+  const pagination = data?.pagination || {total: 0, page: page};
 
   const handleDeleteContest = async (contestId: string) => {
-    const [err] = await api.deleteContest({ contestId });
+    const [err] = await api.deleteContest({contestId});
     
     if (err) {
       console.error("Error deleting contest:", err);

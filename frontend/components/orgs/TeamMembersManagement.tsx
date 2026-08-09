@@ -12,19 +12,19 @@ import {
   Table,
   Text,
 } from '@mantine/core';
-import { useDebouncedValue } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
-import { IconPlus, IconTrash, IconUsers } from '@tabler/icons-react';
-import { useCallback, useEffect, useState } from 'react';
+import {useDebouncedValue} from '@mantine/hooks';
+import {notifications} from '@mantine/notifications';
+import {IconPlus, IconTrash, IconUsers} from '@tabler/icons-react';
+import {useCallback, useEffect, useState} from 'react';
 
-import { StatusMessage } from '@/components/shared/StatusMessage';
-import { api } from '@/lib/api';
+import {StatusMessage} from '@/components/shared/StatusMessage';
+import {api} from '@/lib/api';
 
-import type { TeamMemberModel } from '@/contracts/core/v1';
+import type {TeamMemberModel} from '@/contracts/core/v1';
 
 type Props = { teamId: string };
 
-export const TeamMembersManagement = ({ teamId }: Props) => {
+export const TeamMembersManagement = ({teamId}: Props) => {
   const [members, setMembers] = useState<TeamMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,7 +38,7 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [, data] = await api.listTeamMembers({ id: teamId, page: 1, pageSize: 100 });
+    const [, data] = await api.listTeamMembers({id: teamId, page: 1, pageSize: 100});
     setLoading(false);
     if (data) {
       setMembers(data.members);
@@ -54,9 +54,9 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
       setSearchResults([]); return; 
     }
     setSearching(true);
-    api.listUsers({ page: 1, pageSize: 10, search: debouncedQuery }).then(([, data]) => {
+    api.listUsers({page: 1, pageSize: 10, search: debouncedQuery}).then(([, data]) => {
       setSearching(false);
-      setSearchResults((data?.users ?? []).map((u) => ({ value: u.id, label: u.username })));
+      setSearchResults((data?.users ?? []).map((u) => ({value: u.id, label: u.username})));
     });
   }, [debouncedQuery]);
 
@@ -65,14 +65,14 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
       return;
     }
     setAdding(true);
-    const [error] = await api.addTeamMember({ id: teamId, userId: selectedUserId });
+    const [error] = await api.addTeamMember({id: teamId, userId: selectedUserId});
     setAdding(false);
     if (error) {
-      notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });
-      setStatus({ type: 'error', message: error.message });
+      notifications.show({title: 'Ошибка', message: error.message, color: 'red'});
+      setStatus({type: 'error', message: error.message});
       return;
     }
-    setStatus({ type: 'success', message: 'Участник добавлен' });
+    setStatus({type: 'success', message: 'Участник добавлен'});
     setSearchQuery('');
     setSelectedUserId(null);
     await load();
@@ -80,14 +80,14 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
 
   const handleRemove = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await api.removeTeamMember({ id: teamId, userId });
+    const [error] = await api.removeTeamMember({id: teamId, userId});
     setDeletingId(null);
     if (error) {
-      notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });
-      setStatus({ type: 'error', message: error.message });
+      notifications.show({title: 'Ошибка', message: error.message, color: 'red'});
+      setStatus({type: 'error', message: error.message});
       return;
     }
-    setStatus({ type: 'success', message: 'Участник удалён' });
+    setStatus({type: 'success', message: 'Участник удалён'});
     await load();
   };
 
@@ -108,7 +108,7 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
               }}
               data={searchResults}
               rightSection={searching ? <Loader size="xs" /> : null}
-              style={{ flex: 1 }}
+              style={{flex: 1}}
             />
             <Button
               onClick={handleAdd}
@@ -138,7 +138,7 @@ export const TeamMembersManagement = ({ teamId }: Props) => {
               <Table.Tr>
                 <Table.Th>Пользователь</Table.Th>
                 <Table.Th>Добавлен</Table.Th>
-                <Table.Th style={{ width: 60 }}>Действия</Table.Th>
+                <Table.Th style={{width: 60}}>Действия</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>

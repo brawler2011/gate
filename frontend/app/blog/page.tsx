@@ -1,15 +1,14 @@
-import { Container, Group, Stack, Title } from "@mantine/core";
-import { IconNews } from "@tabler/icons-react";
-import { redirect } from "next/navigation";
+import {Container, Group, Stack, Title} from "@mantine/core";
+import {IconNews} from "@tabler/icons-react";
+import {redirect} from "next/navigation";
 
-import { BlogList } from '@/components/blog/BlogList';
-import { DefaultLayout } from '@/components/shared';
-import { api } from "@/lib/api";
-import { unwrap } from "@/lib/api2";
-import { parsePage } from "@/lib/lib2";
+import {BlogList} from '@/components/blog/BlogList';
+import {DefaultLayout} from '@/components/shared';
+import {api} from "@/lib/api";
+import {unwrap} from "@/lib/api2";
+import {parsePage} from "@/lib/lib2";
 
-import type { Metadata } from "next";
-
+import type {Metadata} from "next";
 
 export const metadata: Metadata = {
   title: "Блог",
@@ -19,7 +18,7 @@ type Props = {
   searchParams: Promise<{ page?: string }>;
 };
 
-const Page = async ({ searchParams }: Props) => {
+const Page = async ({searchParams}: Props) => {
   const params = await searchParams;
   const page = parsePage(params.page);
   if (!page) {
@@ -27,7 +26,7 @@ const Page = async ({ searchParams }: Props) => {
   }
 
   // FIXME: page=109348 => error=null, posts=[]
-  const data = await unwrap(api.listPosts)({ page, pageSize: 5 });
+  const data = await unwrap(api.listPosts)({page, pageSize: 5});
 
   return (
     <DefaultLayout>

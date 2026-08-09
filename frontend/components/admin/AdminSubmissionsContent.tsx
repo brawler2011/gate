@@ -14,20 +14,19 @@ import {
 import Link from "next/link";
 import useSWR from "swr";
 
-import { NextPagination } from '@/components/shared/Pagination';
-import { LangString, StateColor, StateString, TimeBeautify } from "@/lib/lib";
-
+import {NextPagination} from '@/components/shared/Pagination';
+import {LangString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 
-import type { SubmissionModel } from "@/contracts/core/v1";
+import type {SubmissionModel} from "@/contracts/core/v1";
 
 type AdminSubmissionsContentProps = {
   page: number;
 };
 
-export const AdminSubmissionsContent = ({ page }: AdminSubmissionsContentProps) => {
-  const { data, error, isLoading } = useSWR(
+export const AdminSubmissionsContent = ({page}: AdminSubmissionsContentProps) => {
+  const {data, error, isLoading} = useSWR(
     `/api/submissions?page=${page}&pageSize=10`,
     async (url) => {
       const res = await fetch(url);
@@ -40,7 +39,7 @@ export const AdminSubmissionsContent = ({ page }: AdminSubmissionsContentProps) 
   );
 
   const submissions = data?.submissions || [];
-  const pagination = data?.pagination || { total: 0, page: page };
+  const pagination = data?.pagination || {total: 0, page: page};
 
   if (error) {
     return (
@@ -80,27 +79,27 @@ export const AdminSubmissionsContent = ({ page }: AdminSubmissionsContentProps) 
               <Table className={classes.table} verticalSpacing="xs">
                 <Table.Thead className={classes.thead}>
                   <Table.Tr>
-                    <Table.Th style={{ width: "15%" }}>ID</Table.Th>
-                    <Table.Th style={{ width: "20%" }}>Задача</Table.Th>
-                    <Table.Th style={{ width: "15%" }}>Контест</Table.Th>
-                    <Table.Th style={{ width: "15%" }}>Отправитель</Table.Th>
-                    <Table.Th style={{ width: "10%" }}>Язык</Table.Th>
-                    <Table.Th style={{ width: "15%" }}>Вердикт</Table.Th>
-                    <Table.Th style={{ width: "10%" }}>Когда</Table.Th>
+                    <Table.Th style={{width: "15%"}}>ID</Table.Th>
+                    <Table.Th style={{width: "20%"}}>Задача</Table.Th>
+                    <Table.Th style={{width: "15%"}}>Контест</Table.Th>
+                    <Table.Th style={{width: "15%"}}>Отправитель</Table.Th>
+                    <Table.Th style={{width: "10%"}}>Язык</Table.Th>
+                    <Table.Th style={{width: "15%"}}>Вердикт</Table.Th>
+                    <Table.Th style={{width: "10%"}}>Когда</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody className={classes.tbody}>
                   {submissions.map((submission: SubmissionModel) => (
                     <Table.Tr key={submission.id}>
                       <Table.Td>
-                        <Link href={`/submissions/${submission.id}`} style={{ textDecoration: "none" }}>
+                        <Link href={`/submissions/${submission.id}`} style={{textDecoration: "none"}}>
                           <Text c="blue" fw={500}>
                             {submission.id.slice(0, 8)}...
                           </Text>
                         </Link>
                       </Table.Td>
                       <Table.Td>
-                        <Link href={`/problems/${submission.problem_id}`} style={{ textDecoration: "none" }}>
+                        <Link href={`/problems/${submission.problem_id}`} style={{textDecoration: "none"}}>
                           <Text c="blue" lineClamp={1}>
                             {submission.problem_title || submission.problem_id.slice(0, 8)}
                           </Text>
@@ -108,7 +107,7 @@ export const AdminSubmissionsContent = ({ page }: AdminSubmissionsContentProps) 
                       </Table.Td>
                       <Table.Td>
                         {submission.contest_id ? (
-                          <Link href={`/contests/${submission.contest_id}`} style={{ textDecoration: "none" }}>
+                          <Link href={`/contests/${submission.contest_id}`} style={{textDecoration: "none"}}>
                             <Text c="blue" lineClamp={1}>
                               {submission.contest_title || submission.contest_id.slice(0, 8)}
                             </Text>
@@ -118,7 +117,7 @@ export const AdminSubmissionsContent = ({ page }: AdminSubmissionsContentProps) 
                         )}
                       </Table.Td>
                       <Table.Td>
-                        <Link href={`/users/${submission.user_id}`} style={{ textDecoration: "none" }}>
+                        <Link href={`/users/${submission.user_id}`} style={{textDecoration: "none"}}>
                           <Text c="blue" lineClamp={1}>
                             {submission.username || submission.user_id.slice(0, 8)}
                           </Text>

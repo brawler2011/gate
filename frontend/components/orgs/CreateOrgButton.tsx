@@ -1,11 +1,11 @@
 "use client";
-import { Alert, Button, Modal, TextInput, Stack } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import {Alert, Button, Modal, TextInput, Stack} from '@mantine/core';
+import {useDisclosure} from '@mantine/hooks';
+import {IconAlertCircle, IconPlus} from '@tabler/icons-react';
+import {useRouter} from 'next/navigation';
+import {useState} from 'react';
 
-import { api } from '@/lib/api';
+import {api} from '@/lib/api';
 
 const translateApiError = (message: string): string => {
   if (message.includes('at least one latin letter or digit')) {
@@ -21,7 +21,7 @@ const translateApiError = (message: string): string => {
 };
 
 export const CreateOrgButton = () => {
-  const [opened, { open, close }] = useDisclosure(false);
+  const [opened, {open, close}] = useDisclosure(false);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export const CreateOrgButton = () => {
     }
 
     setLoading(true);
-    const [error, response] = await api.createOrganization({ name: trimmed });
+    const [error, response] = await api.createOrganization({name: trimmed});
     setLoading(false);
 
     if (error) {

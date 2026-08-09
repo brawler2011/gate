@@ -14,34 +14,34 @@ import {
   Table,
   Text,
 } from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
-import { notifications } from "@mantine/notifications";
-import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
+import {useDebouncedValue} from "@mantine/hooks";
+import {notifications} from "@mantine/notifications";
+import {IconEdit, IconPlus, IconTrash} from "@tabler/icons-react";
+import {useCallback, useEffect, useState} from "react";
 
-import { StatusMessage } from '@/components/shared/StatusMessage';
-import { api } from "@/lib/api";
+import {StatusMessage} from '@/components/shared/StatusMessage';
+import {api} from "@/lib/api";
 
-import { ChangeRoleModal } from "./ChangeRoleModal";
+import {ChangeRoleModal} from "./ChangeRoleModal";
 
 import type * as corev1 from "@/contracts/core/v1";
 
 const ROLE_OPTIONS = [
-  { label: "Участник", value: "participant", color: "gray" },
-  { label: "Модератор", value: "moderator", color: "yellow" },
-  { label: "Создатель", value: "owner", color: "red" },
+  {label: "Участник", value: "participant", color: "gray"},
+  {label: "Модератор", value: "moderator", color: "yellow"},
+  {label: "Создатель", value: "owner", color: "red"},
 ];
 
-function getRoleDisplay(role: string) {
+const getRoleDisplay = (role: string) => {
   const roleOption = ROLE_OPTIONS.find(r => r.value === role);
-  return roleOption || { label: role, color: "gray" };
-}
+  return roleOption || {label: role, color: "gray"};
+};
 
 interface ParticipantsSectionProps {
   contestId: string;
 }
 
-export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => {
+export const ParticipantsSection = ({contestId}: ParticipantsSectionProps) => {
   const [participants, setParticipants] = useState<corev1.ContestMemberModel[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -71,7 +71,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
   // Load participants
   const loadParticipants = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listContestMembers({ contestId, page, pageSize });
+    const [error, response] = await api.listContestMembers({contestId, page, pageSize});
     setLoading(false);
 
     if (error || !response) {
@@ -98,7 +98,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
       }
 
       setSearching(true);
-      const [error, response] = await api.listUsers({ page: 1, pageSize: 10, search: debouncedQuery });
+      const [error, response] = await api.listUsers({page: 1, pageSize: 10, search: debouncedQuery});
       setSearching(false);
 
       if (error || !response) {
@@ -118,7 +118,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
     }
 
     setAdding(true);
-    const [error] = await api.createContestMember({ contestId, userId: selectedUserId });
+    const [error] = await api.createContestMember({contestId, userId: selectedUserId});
     setAdding(false);
 
     if (error) {
@@ -147,7 +147,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
 
   const handleDeleteParticipant = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await api.deleteContestMember({ contestId, userId });
+    const [error] = await api.deleteContestMember({contestId, userId});
     setDeletingId(null);
 
     if (error) {
@@ -244,7 +244,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
                 }}
                 data={autocompleteData}
                 rightSection={searching && <Loader size="xs" />}
-                style={{ flex: 1 }}
+                style={{flex: 1}}
               />
               <Button
                 onClick={handleAddParticipant}
@@ -280,9 +280,9 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
             <Table highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th style={{ width: 140 }}>Пользователь</Table.Th>
-                  <Table.Th style={{ textAlign: 'center' }}>Роль</Table.Th>
-                  <Table.Th style={{ width: 80 }}>Действия</Table.Th>
+                  <Table.Th style={{width: 140}}>Пользователь</Table.Th>
+                  <Table.Th style={{textAlign: 'center'}}>Роль</Table.Th>
+                  <Table.Th style={{width: 80}}>Действия</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -293,7 +293,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
                         {user.username}
                       </Text>
                     </Table.Td>
-                    <Table.Td style={{ textAlign: 'center' }}>
+                    <Table.Td style={{textAlign: 'center'}}>
                       <Badge
                         variant="filled"
                         color={getRoleDisplay(user.contest_role).color}
@@ -314,7 +314,7 @@ export const ParticipantsSection = ({ contestId }: ParticipantsSectionProps) => 
                             <IconEdit size={16} />
                           </ActionIcon>
                         ) : (
-                          <div style={{ width: 28 }} />
+                          <div style={{width: 28}} />
                         )}
                         <ActionIcon
                           color="red"

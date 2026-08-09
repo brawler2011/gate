@@ -1,12 +1,12 @@
 "use client";
 
-import { Button } from "@mantine/core";
-import { useState } from "react";
+import {Button} from "@mantine/core";
+import {useState} from "react";
 
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 
-import type { ButtonProps } from "@mantine/core";
-import type { ReactNode } from "react";
+import type {ButtonProps} from "@mantine/core";
+import type {ReactNode} from "react";
 
 type LogoutLinkProps = ButtonProps & { children?: ReactNode };
 
@@ -32,4 +32,4 @@ const LogoutLink = (props: LogoutLinkProps) => {
   );
 };
 
-export { LogoutLink };
+export {LogoutLink};

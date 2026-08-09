@@ -13,29 +13,29 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { IconSearch, IconTrash } from "@tabler/icons-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import {notifications} from "@mantine/notifications";
+import {IconSearch, IconTrash} from "@tabler/icons-react";
+import {useRouter, useSearchParams} from "next/navigation";
+import {useEffect, useRef, useState} from "react";
 import useSWR from "swr";
 
-import { NextPagination } from '@/components/shared/Pagination';
-import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { api } from "@/lib/api";
-import { formatDate } from "@/lib/formatDate";
+import {NextPagination} from '@/components/shared/Pagination';
+import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
+import {api} from "@/lib/api";
+import {formatDate} from "@/lib/formatDate";
 
 import classes from "./AdminPage.module.css";
-import { DeleteOrgModal } from "./DeleteOrgModal";
-import { CreateOrgButton } from "../orgs/CreateOrgButton";
+import {DeleteOrgModal} from "./DeleteOrgModal";
+import {CreateOrgButton} from "../orgs/CreateOrgButton";
 
-import type { OrganizationModel } from "@/contracts/core/v1";
+import type {OrganizationModel} from "@/contracts/core/v1";
 
 type AdminOrgsContentProps = {
   page: number;
   search?: string;
 };
 
-export const AdminOrgsContent = ({ page, search }: AdminOrgsContentProps) => {
+export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -84,17 +84,19 @@ export const AdminOrgsContent = ({ page, search }: AdminOrgsContentProps) => {
   }, [searchInput, router, searchParams]);
 
   // Fetch organizations
-  const { data, error, isLoading, mutate } = useSWR(
+  const {data, error, isLoading, mutate} = useSWR(
     ["admin-orgs", page, search],
     async () => {
-      const [err, res] = await api.listOrganizations({ page, pageSize: 10, search });
-      if (err) throw new Error(err.message);
+      const [err, res] = await api.listOrganizations({page, pageSize: 10, search});
+      if (err) {
+        throw new Error(err.message);
+      }
       return res;
     }
   );
 
   const orgs = data?.organizations || [];
-  const pagination = data?.pagination || { total: 0, page: page };
+  const pagination = data?.pagination || {total: 0, page: page};
 
   const handleDeleteClick = (e: React.MouseEvent, org: OrganizationModel) => {
     e.stopPropagation();
@@ -109,7 +111,7 @@ export const AdminOrgsContent = ({ page, search }: AdminOrgsContentProps) => {
 
     setDeletingId(orgToDelete.id);
     try {
-      const [err] = await api.deleteOrganization({ id: orgToDelete.id });
+      const [err] = await api.deleteOrganization({id: orgToDelete.id});
       if (err) {
         notifications.show({
           title: "Ошибка",
@@ -162,7 +164,7 @@ export const AdminOrgsContent = ({ page, search }: AdminOrgsContentProps) => {
           leftSection={<IconSearch size={16} />}
           value={searchInput}
           onChange={(e) => setSearchInput(e.currentTarget.value)}
-          style={{ maxWidth: 400 }}
+          style={{maxWidth: 400}}
         />
 
         {isLoading && (
@@ -187,11 +189,11 @@ export const AdminOrgsContent = ({ page, search }: AdminOrgsContentProps) => {
               <Table className={classes.table} verticalSpacing="xs">
                 <Table.Thead className={classes.thead}>
                   <Table.Tr>
-                    <Table.Th style={{ width: "30%" }}>Название</Table.Th>
-                    <Table.Th style={{ width: "25%" }}>ID</Table.Th>
-                    <Table.Th style={{ width: "25%" }}>Описание</Table.Th>
-                    <Table.Th style={{ width: "10%" }}>Создана</Table.Th>
-                    <Table.Th style={{ width: "10%" }}>Действия</Table.Th>
+                    <Table.Th style={{width: "30%"}}>Название</Table.Th>
+                    <Table.Th style={{width: "25%"}}>ID</Table.Th>
+                    <Table.Th style={{width: "25%"}}>Описание</Table.Th>
+                    <Table.Th style={{width: "10%"}}>Создана</Table.Th>
+                    <Table.Th style={{width: "10%"}}>Действия</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody className={classes.tbody}>

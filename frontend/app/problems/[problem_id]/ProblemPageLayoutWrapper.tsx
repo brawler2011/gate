@@ -1,11 +1,11 @@
-import { DefaultLayout } from "@/components/shared";
-import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { api } from "@/lib/api";
+import {DefaultLayout} from "@/components/shared";
+import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
+import {api} from "@/lib/api";
 
 import ProblemPage from "./ProblemPage";
 
-import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
-import type { Metadata } from "next";
+import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
+import type {Metadata} from "next";
 
 const GENERAL_TAB = "general";
 const WORKSHOP_FOLDER_TABS = [
@@ -28,11 +28,11 @@ const TAB_LABELS: Record<string, string> = {
   validators: "Валидаторы",
 };
 
-function buildProblemTabHref(
+const buildProblemTabHref = (
   problemId: string,
   tab: string,
   searchParams: Record<string, string | string[] | undefined>,
-): string {
+): string => {
   const params = new URLSearchParams();
 
   for (const [key, value] of Object.entries(searchParams)) {
@@ -55,18 +55,18 @@ function buildProblemTabHref(
   const path = tab === GENERAL_TAB ? `/problems/${problemId}` : `/problems/${problemId}/${tab}`;
   const queryString = params.toString();
   return queryString ? `${path}?${queryString}` : path;
-}
+};
 
-function buildProblemHeaderNav(
+const buildProblemHeaderNav = (
   problemId: string,
   activeTab: string,
   searchParams: Record<string, string | string[] | undefined>,
-): HeaderSecondaryNavItem[] {
+): HeaderSecondaryNavItem[] => {
   const tabs: Array<{ key: string; label: string }> = [
-    { key: GENERAL_TAB, label: "Общее" },
-    { key: "statement", label: "Условие" },
-    { key: "packages", label: "Пакеты" },
-    { key: "import", label: "Импорт" },
+    {key: GENERAL_TAB, label: "Общее"},
+    {key: "statement", label: "Условие"},
+    {key: "packages", label: "Пакеты"},
+    {key: "import", label: "Импорт"},
     ...WORKSHOP_FOLDER_TABS.map((tab) => ({
       key: tab,
       label: TAB_LABELS[tab],
@@ -79,7 +79,7 @@ function buildProblemHeaderNav(
     href: buildProblemTabHref(problemId, tab.key, searchParams),
     active: tab.key === activeTab,
   }));
-}
+};
 
 type Props = {
   activeTab: string;
@@ -87,23 +87,23 @@ type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export async function generateMetadata(problemId: string): Promise<Metadata> {
-  const [error, response] = await api.getProblem({ id: problemId });
+export const generateMetadata = async (problemId: string): Promise<Metadata> => {
+  const [error, response] = await api.getProblem({id: problemId});
   if (error || !response) {
-    return { title: "Редактор файлов" };
+    return {title: "Редактор файлов"};
   }
-  return { title: `Файлы — ${response.problem.title}` };
-}
+  return {title: `Файлы — ${response.problem.title}`};
+};
 
 const ProblemPageLayoutWrapper = async ({
   activeTab,
   params,
   searchParams,
 }: Props) => {
-  const { problem_id } = await params;
+  const {problem_id} = await params;
   const resolvedSearchParams = await searchParams;
 
-  const [problemError, problemResponse] = await api.getProblem({ id: problem_id });
+  const [problemError, problemResponse] = await api.getProblem({id: problem_id});
   if (problemError) {
     return (
       <DefaultLayout>
@@ -112,7 +112,7 @@ const ProblemPageLayoutWrapper = async ({
     );
   }
 
-  const [limitsError] = await api.getProblemLimits({ problemId: problem_id });
+  const [limitsError] = await api.getProblemLimits({problemId: problem_id});
   const shouldRenderEditor = !limitsError;
   const problemHeaderNav = shouldRenderEditor
     ? buildProblemHeaderNav(problem_id, activeTab, resolvedSearchParams)

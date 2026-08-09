@@ -9,13 +9,13 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { useForm } from "@mantine/form";
-import { IconPaperclip, IconTrash } from "@tabler/icons-react";
+import {useForm} from "@mantine/form";
+import {IconPaperclip, IconTrash} from "@tabler/icons-react";
 import dynamic from "next/dynamic";
-import React, { useRef, useState, useTransition } from "react";
+import React, {useRef, useState, useTransition} from "react";
 
-import { highlightCode } from "@/lib/highlightCode";
-import { APP_COLORS } from "@/lib/theme/colors";
+import {highlightCode} from "@/lib/highlightCode";
+import {APP_COLORS} from "@/lib/theme/colors";
 
 import classes from "./CreateSubmissionForm.module.css";
 
@@ -28,7 +28,7 @@ type CodeEditorProps = React.ComponentProps<typeof CodeEditor>;
 
 const Editor = dynamic(
   () => import("react-simple-code-editor").then((mod) => mod.default),
-  { ssr: false },
+  {ssr: false},
 );
 
 const TypedEditor = Editor as React.ComponentType<CodeEditorProps>;
@@ -190,13 +190,13 @@ const CreateSubmissionForm = ({
         data-dragging={isDragging}
       >
         <Group justify="space-between" gap="md" wrap="nowrap">
-          <div style={{ flex: 1 }}>
+          <div style={{flex: 1}}>
             {problemSelect || (
               <Select
                 data={languages}
                 allowDeselect={false}
                 variant="subtle"
-                classNames={{ input: classes.languageSelectInput }}
+                classNames={{input: classes.languageSelectInput}}
                 {...form.getInputProps("language")}
                 style={{
                   width: `${(form.values.language?.length || 6) + 6}ch`,
@@ -205,13 +205,13 @@ const CreateSubmissionForm = ({
               />
             )}
           </div>
-          <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+          <div style={{flex: 1, display: "flex", justifyContent: "center"}}>
             {problemSelect && (
               <Select
                 data={languages}
                 allowDeselect={false}
                 variant="subtle"
-                classNames={{ input: classes.languageSelectInput }}
+                classNames={{input: classes.languageSelectInput}}
                 {...form.getInputProps("language")}
                 style={{
                   width: `${(form.values.language?.length || 6) + 6}ch`,
@@ -220,7 +220,7 @@ const CreateSubmissionForm = ({
               />
             )}
           </div>
-          <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
+          <div style={{flex: 1, display: "flex", justifyContent: "flex-end"}}>
             <Button
               component="label"
               variant="subtle"
@@ -310,4 +310,4 @@ const CreateSubmissionForm = ({
   );
 };
 
-export { CreateSubmissionForm };
+export {CreateSubmissionForm};

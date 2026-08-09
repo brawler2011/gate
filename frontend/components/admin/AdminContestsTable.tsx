@@ -8,30 +8,30 @@ import {
   Table,
   Text,
 } from "@mantine/core";
-import { IconEdit, IconTrash } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import {IconEdit, IconTrash} from "@tabler/icons-react";
+import {useRouter} from "next/navigation";
+import {useState} from "react";
 
-import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
+import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 
 import classes from "./AdminPage.module.css";
-import { DeleteContestModal } from "./DeleteContestModal";
+import {DeleteContestModal} from "./DeleteContestModal";
 
-import type { ContestModel } from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1";
 
 type AdminContestsTableProps = {
   contests: ContestModel[];
   onDeleteContest: (contestId: string) => Promise<void>;
 };
 
-function getVisibilityDisplay(visibility: string) {
+const getVisibilityDisplay = (visibility: string) => {
   if (visibility === "public") {
-    return { label: "Публичный", color: "green" };
+    return {label: "Публичный", color: "green"};
   }
-  return { label: "Приватный", color: "gray" };
-}
+  return {label: "Приватный", color: "gray"};
+};
 
-export const AdminContestsTable = ({ contests, onDeleteContest }: AdminContestsTableProps) => {
+export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTableProps) => {
   const router = useRouter();
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [contestToDelete, setContestToDelete] = useState<ContestModel | null>(null);
@@ -77,12 +77,12 @@ export const AdminContestsTable = ({ contests, onDeleteContest }: AdminContestsT
         <Table className={classes.table} verticalSpacing="xs">
           <Table.Thead className={classes.thead}>
             <Table.Tr>
-              <Table.Th style={{ width: "30%" }}>Название</Table.Th>
-              <Table.Th style={{ width: "12%" }}>ID</Table.Th>
-              <Table.Th style={{ width: "12%" }}>Видимость</Table.Th>
-              <Table.Th style={{ width: "15%" }}>Автор</Table.Th>
-              <Table.Th style={{ width: "15%" }}>Дата создания</Table.Th>
-              <Table.Th style={{ width: "10%" }}>Действия</Table.Th>
+              <Table.Th style={{width: "30%"}}>Название</Table.Th>
+              <Table.Th style={{width: "12%"}}>ID</Table.Th>
+              <Table.Th style={{width: "12%"}}>Видимость</Table.Th>
+              <Table.Th style={{width: "15%"}}>Автор</Table.Th>
+              <Table.Th style={{width: "15%"}}>Дата создания</Table.Th>
+              <Table.Th style={{width: "10%"}}>Действия</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody className={classes.tbody}>
@@ -171,4 +171,3 @@ export const AdminContestsTable = ({ contests, onDeleteContest }: AdminContestsT
     </>
   );
 };
-

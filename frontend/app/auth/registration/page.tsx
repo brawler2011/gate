@@ -15,13 +15,13 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { IconAlertCircle } from "@tabler/icons-react";
+import {IconAlertCircle} from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import {useRouter, useSearchParams} from "next/navigation";
+import {Suspense, useState} from "react";
 
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 
 const RegistrationPage = () => {
   return (
@@ -55,7 +55,7 @@ const RegistrationPageContent = () => {
 
     try {
       const [err] = await api.register({
-        requestBody: { username, email, password },
+        requestBody: {username, email, password},
       });
       if (!err) {
         router.push(returnTo);
@@ -83,9 +83,9 @@ const RegistrationPageContent = () => {
       <Stack
         align="center"
         gap={32}
-        style={{ width: "min(550px, calc(100vw - 2rem))" }}
+        style={{width: "min(550px, calc(100vw - 2rem))"}}
       >
-        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+        <Link href="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
             <Image
               src="/gate_logo.svg"
@@ -105,7 +105,7 @@ const RegistrationPageContent = () => {
           p={32}
           withBorder
           shadow="sm"
-          style={{ width: "100%" }}
+          style={{width: "100%"}}
         >
           <Title order={2} ta="center" mb={24} fz={22}>
             Регистрация аккаунта

@@ -1,6 +1,6 @@
-import { cache } from "react";
+import {cache} from "react";
 
-import { api } from "./api";
+import {api} from "./api";
 
 /**
  * Contest role types
@@ -28,7 +28,7 @@ const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
     return null;
   }
 
-  const parsed: Exclude<ContestRoleResponse, null> = { role: data.role };
+  const parsed: Exclude<ContestRoleResponse, null> = {role: data.role};
   if (typeof data.permissions_mask === "number") {
     parsed.permissionsMask = data.permissions_mask;
   }
@@ -43,7 +43,7 @@ const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
  * @returns The user's role in the contest, or null if not a participant
  */
 export const getMyContestRole = cache(async (contestId: string): Promise<ContestRoleResponse> => {
-  const [error, response] = await api.getMyContestRole({ contestId });
+  const [error, response] = await api.getMyContestRole({contestId});
   if (error || !response) {
     // User is not a participant or not authenticated
     return null;
@@ -51,4 +51,3 @@ export const getMyContestRole = cache(async (contestId: string): Promise<Contest
   
   return parseContestRoleResponse(response);
 });
-

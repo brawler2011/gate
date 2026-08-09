@@ -7,13 +7,13 @@ import {
   Stack,
   TextInput,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {notifications} from "@mantine/notifications";
+import {useRouter} from "next/navigation";
+import {useEffect, useState} from "react";
 
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 
-import type { OrganizationModel, ProblemsListItemModel } from "@/contracts/core/v1";
+import type {OrganizationModel, ProblemsListItemModel} from "@/contracts/core/v1";
 
 type Props = {
   opened: boolean;
@@ -52,7 +52,7 @@ export const CreateProblemModal = ({
   useEffect(() => {
     if (opened && orgId) {
       setLoadingTemplates(true);
-      api.listProblems({ page: 1, pageSize: 100, organizationId: orgId, isTemplate: true })
+      api.listProblems({page: 1, pageSize: 100, organizationId: orgId, isTemplate: true})
         .then(([err, res]) => {
           if (!err && res?.problems) {
             setTemplates(
@@ -77,7 +77,7 @@ export const CreateProblemModal = ({
     }
   }, [opened, orgId]);
 
-  const orgData = orgs.map((o) => ({ value: o.id, label: o.name }));
+  const orgData = orgs.map((o) => ({value: o.id, label: o.name}));
 
   const handleSubmit = async () => {
     if (!orgId) {
@@ -124,7 +124,7 @@ export const CreateProblemModal = ({
       centered
       size="md"
       radius="md"
-      overlayProps={{ backgroundOpacity: 0.4 }}
+      overlayProps={{backgroundOpacity: 0.4}}
     >
       <Stack gap="md">
         <TextInput

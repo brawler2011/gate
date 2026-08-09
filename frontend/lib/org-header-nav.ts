@@ -1,4 +1,4 @@
-import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
+import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
 
 export const ORG_OVERVIEW_TABS = [
   "contests",
@@ -16,22 +16,22 @@ type BuildOrgHeaderNavParams = {
   showMembersTab?: boolean;
 };
 
-function buildOrgOverviewHref(
+const buildOrgOverviewHref = (
   orgId: string,
   tab: OrgOverviewTab,
-): string {
+): string => {
   if (tab === "contests") {
     return `/orgs/${orgId}`;
   }
 
   return `/orgs/${orgId}/${tab}`;
-}
+};
 
-export function buildOrgHeaderNav({
+export const buildOrgHeaderNav = ({
   orgId,
   activeTab,
   showMembersTab = false,
-}: BuildOrgHeaderNavParams): HeaderSecondaryNavItem[] {
+}: BuildOrgHeaderNavParams): HeaderSecondaryNavItem[] => {
   const items: HeaderSecondaryNavItem[] = [
     {
       key: "contests",
@@ -73,4 +73,4 @@ export function buildOrgHeaderNav({
     ...item,
     active: item.key === activeTab,
   }));
-}
+};

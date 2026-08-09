@@ -13,10 +13,10 @@ import {
 } from "@mantine/core";
 import Link from "next/link";
 
-import { DefaultLayout } from '@/components/shared';
-import { CodeBlock } from '@/components/shared/CodeBlock';
-import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { api } from "@/lib/api";
+import {DefaultLayout} from '@/components/shared';
+import {CodeBlock} from '@/components/shared/CodeBlock';
+import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
+import {api} from "@/lib/api";
 import {
   LangNameToString,
   LangString,
@@ -26,8 +26,7 @@ import {
   TimeBeautify,
 } from "@/lib/lib";
 
-import type { Metadata } from "next";
-
+import type {Metadata} from "next";
 
 type Props = {
   params: Promise<{ submission_id: string }>;
@@ -40,16 +39,16 @@ const metadata: Metadata = {
 
 const Page = async (props: Props) => {
   const solutionId = (await props.params).submission_id;
-  const [error, resp] = await api.getSubmission({ submissionId: solutionId });
+  const [error, resp] = await api.getSubmission({submissionId: solutionId});
 
   if (error) {
     return <ErrorDisplay error={error} />;
   }
   if (!resp) {
-    return <ErrorDisplay error={{ status: 404, message: "Посылка не найдена" }} />;
+    return <ErrorDisplay error={{status: 404, message: "Посылка не найдена"}} />;
   }
 
-  const { submission } = resp;
+  const {submission} = resp;
 
   // TODO: submission.failed_test
   const rows = [submission].map((submission) => (
@@ -58,14 +57,14 @@ const Page = async (props: Props) => {
         <Text>{TimeBeautify(submission.created_at)}</Text>
       </TableTd>
       <TableTd ta="center">
-        <Link href={`/users/${submission.user_id}`} style={{ color: 'inherit' }}>
+        <Link href={`/users/${submission.user_id}`} style={{color: 'inherit'}}>
           <Text span td="underline">
             {submission.username}
           </Text>
         </Link>
       </TableTd>
       <TableTd ta="center">
-        <Link href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`} style={{ color: 'inherit' }}>
+        <Link href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`} style={{color: 'inherit'}}>
           <Text span td="underline">
             {ProblemTitle(submission.position, submission.problem_title)}
           </Text>
@@ -90,10 +89,10 @@ const Page = async (props: Props) => {
 
   return (
     <DefaultLayout>
-      <Container size="lg" pt="md" pb="xl" px={{ base: 'xs', sm: 'md' }}>
+      <Container size="lg" pt="md" pb="xl" px={{base: 'xs', sm: 'md'}}>
         <Stack align="center" gap="md">
           <ScrollArea w="100%" type="auto">
-            <Table horizontalSpacing="sm" style={{ minWidth: 700 }}>
+            <Table horizontalSpacing="sm" style={{minWidth: 700}}>
               <TableThead>
                 <TableTr>
                   <TableTh ta="center">Когда</TableTh>
@@ -121,4 +120,4 @@ const Page = async (props: Props) => {
   );
 };
 
-export { Page as default, metadata };
+export {Page as default, metadata};

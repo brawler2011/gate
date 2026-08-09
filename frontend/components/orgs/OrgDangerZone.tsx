@@ -1,28 +1,28 @@
 "use client";
 
-import { Alert, Button, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
-import { IconAlertTriangle } from '@tabler/icons-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import {Alert, Button, Group, Modal, Stack, Text, TextInput} from '@mantine/core';
+import {useDisclosure} from '@mantine/hooks';
+import {notifications} from '@mantine/notifications';
+import {IconAlertTriangle} from '@tabler/icons-react';
+import {useRouter} from 'next/navigation';
+import {useState} from 'react';
 
-import { api } from '@/lib/api';
+import {api} from '@/lib/api';
 
 type Props = { orgId: string; orgName: string };
 
-export const OrgDangerZone = ({ orgId, orgName }: Props) => {
-  const [opened, { open, close }] = useDisclosure(false);
+export const OrgDangerZone = ({orgId, orgName}: Props) => {
+  const [opened, {open, close}] = useDisclosure(false);
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleDelete = async () => {
     setLoading(true);
-    const [error] = await api.deleteOrganization({ id: orgId });
+    const [error] = await api.deleteOrganization({id: orgId});
     setLoading(false);
     if (error) {
-      notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });
+      notifications.show({title: 'Ошибка', message: error.message, color: 'red'});
       return;
     }
     router.push('/orgs');

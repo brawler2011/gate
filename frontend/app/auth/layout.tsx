@@ -1,8 +1,8 @@
-import { Stack } from "@mantine/core";
+import {Stack} from "@mantine/core";
 
-import type { PropsWithChildren } from "react";
+import type {PropsWithChildren} from "react";
 
-const AuthLayout = ({ children }: PropsWithChildren) => {
+const AuthLayout = ({children}: PropsWithChildren) => {
   return (
     <main style={{ 
       padding: 'var(--mantine-spacing-md)', 

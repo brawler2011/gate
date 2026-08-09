@@ -1,23 +1,23 @@
 "use client";
 
-import { Group, Stack, Text, Title, Card, ThemeIcon, ActionIcon } from "@mantine/core";
-import { IconPencil, IconCode } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
+import {Group, Stack, Text, Title, Card, ThemeIcon, ActionIcon} from "@mantine/core";
+import {IconPencil, IconCode} from "@tabler/icons-react";
+import {useRouter} from "next/navigation";
 
-import { APP_COLORS } from "@/lib/theme/colors";
+import {APP_COLORS} from "@/lib/theme/colors";
 
-import type { DashboardProblemModel } from "@/contracts/core/v1";
+import type {DashboardProblemModel} from "@/contracts/core/v1";
 
 type DashboardProblemsListProps = {
   problems: DashboardProblemModel[];
 };
 
-export const DashboardProblemsList = ({ problems }: DashboardProblemsListProps) => {
+export const DashboardProblemsList = ({problems}: DashboardProblemsListProps) => {
   const router = useRouter();
 
   if (problems.length === 0) {
     return (
-      <Card withBorder radius="md" p="xl" style={{ textAlign: "center" }}>
+      <Card withBorder radius="md" p="xl" style={{textAlign: "center"}}>
         <Text c="dimmed" size="sm">
           У вас пока нет созданных или редактируемых задач
         </Text>
@@ -59,7 +59,7 @@ export const DashboardProblemsList = ({ problems }: DashboardProblemsListProps) 
           }}
         >
           <Group justify="space-between" align="center" wrap="nowrap">
-            <Group gap="md" style={{ flex: 1, minWidth: 0 }}>
+            <Group gap="md" style={{flex: 1, minWidth: 0}}>
               <ThemeIcon
                 variant="light"
                 size="xl"
@@ -69,7 +69,7 @@ export const DashboardProblemsList = ({ problems }: DashboardProblemsListProps) 
                 <IconCode size={20} />
               </ThemeIcon>
 
-              <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
+              <Stack gap={2} style={{flex: 1, minWidth: 0}}>
                 <Text size="xs" c="dimmed" fw={500} lineClamp={1}>
                   {problem.organization_name}
                 </Text>
@@ -99,7 +99,7 @@ export const DashboardProblemsList = ({ problems }: DashboardProblemsListProps) 
                 e.stopPropagation();
                 router.push(`/problems/${problem.id}`);
               }}
-              style={{ flexShrink: 0 }}
+              style={{flexShrink: 0}}
             >
               <IconPencil size={20} />
             </ActionIcon>

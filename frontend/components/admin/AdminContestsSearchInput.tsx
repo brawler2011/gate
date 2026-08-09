@@ -1,9 +1,9 @@
 "use client";
 
-import { TextInput } from "@mantine/core";
-import { IconSearch } from "@tabler/icons-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import {TextInput} from "@mantine/core";
+import {IconSearch} from "@tabler/icons-react";
+import {useRouter, useSearchParams} from "next/navigation";
+import {useEffect, useRef, useState} from "react";
 
 export const AdminContestsSearchInput = () => {
   const router = useRouter();
@@ -65,8 +65,7 @@ export const AdminContestsSearchInput = () => {
       leftSection={<IconSearch size={16} />}
       value={search}
       onChange={(e) => setSearch(e.currentTarget.value)}
-      style={{ maxWidth: 400 }}
+      style={{maxWidth: 400}}
     />
   );
 };
-

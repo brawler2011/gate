@@ -1,7 +1,7 @@
 /**
  * Converts a number to alphabetic letters (1 -> A, 2 -> B, etc.)
  */
-export function numberToLetters(num?: number | null): string {
+export const numberToLetters = (num?: number | null): string => {
   if (!num || num <= 0) {
     return "?";
   }
@@ -16,12 +16,12 @@ export function numberToLetters(num?: number | null): string {
   }
   
   return result;
-}
+};
 
 /**
  * Get color for submission state
  */
-export function StateColor(state?: number | string): string {
+export const StateColor = (state?: number | string): string => {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   
   switch (stateNum) {
@@ -44,14 +44,14 @@ export function StateColor(state?: number | string): string {
     default:
       return "gray";
   }
-}
+};
 
 /**
  * Get string representation of submission state
  * @param state - submission state code
  * @param failedTest - optional test number where submission failed (1-indexed)
  */
-export function StateString(state?: number | string, failedTest?: number | null): string {
+export const StateString = (state?: number | string, failedTest?: number | null): string => {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   
   let baseString: string;
@@ -87,12 +87,12 @@ export function StateString(state?: number | string, failedTest?: number | null)
   }
   
   return baseString;
-}
+};
 
 /**
  * Format ISO timestamp to readable format
  */
-export function TimeBeautify(timestamp?: string): string {
+export const TimeBeautify = (timestamp?: string): string => {
   if (!timestamp) {
     return "—";
   }
@@ -109,13 +109,13 @@ export function TimeBeautify(timestamp?: string): string {
   } catch {
     return timestamp;
   }
-}
+};
 
 /**
  * Convert language code to display string
  * Language mapping: golang = 10, cpp = 20, python = 30
  */
-export function LangString(language?: number): string {
+export const LangString = (language?: number): string => {
   switch (language) {
     case 10:
       return "Go";
@@ -126,13 +126,13 @@ export function LangString(language?: number): string {
     default:
       return "Unknown";
   }
-}
+};
 
 /**
  * Convert language code to syntax highlighter language name
  * Language mapping: golang = 10, cpp = 20, python = 30
  */
-export function LangNameToString(language?: number): string {
+export const LangNameToString = (language?: number): string => {
   switch (language) {
     case 10:
       return "go";
@@ -143,20 +143,20 @@ export function LangNameToString(language?: number): string {
     default:
       return "text";
   }
-}
+};
 
 /**
  * Format problem title with position letter
  */
-export function ProblemTitle(position?: number, title?: string): string {
+export const ProblemTitle = (position?: number, title?: string): string => {
   const letter = numberToLetters(position);
   return title ? `${letter}. ${title}` : letter;
-}
+};
 
 /**
  * Get color for user role badge
  */
-export function getRoleColor(role: string): string {
+export const getRoleColor = (role: string): string => {
   switch (role?.toLowerCase()) {
     case "admin":
       return "red";
@@ -167,4 +167,4 @@ export function getRoleColor(role: string): string {
     default:
       return "gray";
   }
-}
+};

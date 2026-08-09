@@ -1,16 +1,16 @@
-import { redirect } from "next/navigation";
-import { Suspense } from "react";
+import {redirect} from "next/navigation";
+import {Suspense} from "react";
 
-import { UsersContent, UsersContentSkeleton } from "@/components/users";
-import { parsePage } from "@/lib/lib2";
+import {UsersContent, UsersContentSkeleton} from "@/components/users";
+import {parsePage} from "@/lib/lib2";
 
-import type { Metadata } from "next";
+import type {Metadata} from "next";
 
 export const metadata: Metadata = {
   title: "Админ | Пользователи",
 };
 
-export const dynamic = "force-dynamic";
+export const dynamic: string = "force-dynamic";
 
 type PageProps = {
   searchParams: Promise<{
@@ -20,7 +20,7 @@ type PageProps = {
   }>;
 };
 
-const AdminUsersPage = async ({ searchParams }: PageProps) => {
+const AdminUsersPage = async ({searchParams}: PageProps) => {
   const resolvedSearchParams = await searchParams;
   const page = parsePage(resolvedSearchParams.page);
   if (!page) {

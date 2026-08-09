@@ -1,35 +1,35 @@
 "use client";
 
-import { Button, Stack, TextInput, Textarea } from '@mantine/core';
-import { useForm } from '@mantine/form';
-import { notifications } from '@mantine/notifications';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import {Button, Stack, TextInput, Textarea} from '@mantine/core';
+import {useForm} from '@mantine/form';
+import {notifications} from '@mantine/notifications';
+import {useRouter} from 'next/navigation';
+import {useState} from 'react';
 
-import { api } from '@/lib/api';
+import {api} from '@/lib/api';
 
-import type { OrganizationModel } from '@/contracts/core/v1';
+import type {OrganizationModel} from '@/contracts/core/v1';
 
 type Props = { org: OrganizationModel };
 
-export const OrgSettingsForm = ({ org }: Props) => {
+export const OrgSettingsForm = ({org}: Props) => {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 
   const form = useForm({
-    initialValues: { name: org.name, description: org.description ?? '' },
-    validate: { name: (v) => v.trim().length === 0 ? 'Название обязательно' : null },
+    initialValues: {name: org.name, description: org.description ?? ''},
+    validate: {name: (v) => v.trim().length === 0 ? 'Название обязательно' : null},
   });
 
   const handleSave = async (values: typeof form.values) => {
     setSaving(true);
-    const [error] = await api.updateOrganization({ id: org.id, requestBody: values });
+    const [error] = await api.updateOrganization({id: org.id, requestBody: values});
     setSaving(false);
     if (error) {
-      notifications.show({ title: 'Ошибка', message: error.message, color: 'red' });
+      notifications.show({title: 'Ошибка', message: error.message, color: 'red'});
       return;
     }
-    notifications.show({ title: 'Готово', message: 'Настройки обновлены', color: 'green' });
+    notifications.show({title: 'Готово', message: 'Настройки обновлены', color: 'green'});
     form.resetDirty(values);
     router.refresh();
   };

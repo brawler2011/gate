@@ -1,28 +1,27 @@
-import { Avatar, Container, Group, Stack, Text, Title } from "@mantine/core";
+import {Avatar, Container, Group, Stack, Text, Title} from "@mantine/core";
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
-import { DefaultLayout } from '@/components/shared';
-import { publicApi } from "@/lib/api";
-import { unwrapAndCache } from "@/lib/api2";
-import { formatDate } from "@/lib/formatDate";
+import {DefaultLayout} from '@/components/shared';
+import {publicApi} from "@/lib/api";
+import {unwrapAndCache} from "@/lib/api2";
+import {formatDate} from "@/lib/formatDate";
 
 import 'katex/dist/katex.min.css';
 import classes from "./styles.module.css";
 
-import type { Metadata } from "next";
+import type {Metadata} from "next";
 
-
-export const revalidate = 600; // 10 minutes
+export const revalidate: number = 600; // 10 minutes
 
 type Params = {
   id: string
 };
 
 export const generateStaticParams = async (): Promise<Params[]> => {
-  const [error, data] = await publicApi.listPosts({ page: 1, pageSize: 50 });
+  const [error, data] = await publicApi.listPosts({page: 1, pageSize: 50});
   if (error) {
     return [];
   }
@@ -36,8 +35,8 @@ type Props = {
 
 const getPost = unwrapAndCache(publicApi.getPostById);
 
-export const generateMetadata = async ({ params }: Props): Promise<Metadata> => {
-  const { id } = await params;
+export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
+  const {id} = await params;
   const post = await getPost({id});
 
   // TODO: SEO: opengraph, twitter, etc
@@ -47,8 +46,8 @@ export const generateMetadata = async ({ params }: Props): Promise<Metadata> => 
   };
 };
 
-const Page = async ({ params }: Props) => {
-  const { id } = await params;
+const Page = async ({params}: Props) => {
+  const {id} = await params;
   const post = await getPost({id});
 
   // TODO: refactor jsx+css

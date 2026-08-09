@@ -34,21 +34,21 @@ export const env = {
   /**
    * Flag indicating production environment.
    */
-  get isProduction(): boolean {
+  isProduction: (): boolean => {
     return process.env.NODE_ENV === "production";
   },
 
   /**
    * Flag indicating development environment.
    */
-  get isDevelopment(): boolean {
+  isDevelopment: (): boolean => {
     return process.env.NODE_ENV === "development";
   },
 
   /**
    * Returns backend API URL based on client/server runtime context.
    */
-  getBackendApiUrl(): string {
+  getBackendApiUrl: (): string => {
     if (typeof window !== "undefined") {
       return requireEnv("NEXT_PUBLIC_BACKEND_API_URL", process.env.NEXT_PUBLIC_BACKEND_API_URL);
     }
@@ -58,14 +58,14 @@ export const env = {
   /**
    * Returns WebSocket URL without trailing slashes.
    */
-  getWebSocketUrl(): string {
+  getWebSocketUrl: (): string => {
     return requireEnv("WEBSOCKET_URL", process.env.WEBSOCKET_URL).replace(/\/+$/, "");
   },
 
   /**
    * Returns public App URL without trailing slashes.
    */
-  getAppUrl(): string {
+  getAppUrl: (): string => {
     return requireEnv("NEXT_PUBLIC_APP_URL", process.env.NEXT_PUBLIC_APP_URL).replace(/\/+$/, "");
   },
 } as const;

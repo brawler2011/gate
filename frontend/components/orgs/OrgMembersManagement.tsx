@@ -13,31 +13,31 @@ import {
   Table,
   Text,
 } from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
-import { notifications } from "@mantine/notifications";
-import { IconPlus, IconTrash, IconUsers } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
+import {useDebouncedValue} from "@mantine/hooks";
+import {notifications} from "@mantine/notifications";
+import {IconPlus, IconTrash, IconUsers} from "@tabler/icons-react";
+import {useCallback, useEffect, useState} from "react";
 
-import { StatusMessage } from "@/components/shared/StatusMessage";
-import { api } from "@/lib/api";
+import {StatusMessage} from "@/components/shared/StatusMessage";
+import {api} from "@/lib/api";
 
-import type { OrganizationMemberModel } from "@/contracts/core/v1";
+import type {OrganizationMemberModel} from "@/contracts/core/v1";
 
 const ROLE_OPTIONS = [
-  { label: "Владелец", value: "owner", color: "red" },
-  { label: "Администратор", value: "admin", color: "orange" },
-  { label: "Участник", value: "member", color: "blue" },
+  {label: "Владелец", value: "owner", color: "red"},
+  {label: "Администратор", value: "admin", color: "orange"},
+  {label: "Участник", value: "member", color: "blue"},
 ];
 
-function getRoleDisplay(role: string) {
+const getRoleDisplay = (role: string) => {
   return (
-    ROLE_OPTIONS.find((r) => r.value === role) ?? { label: role, color: "gray" }
+    ROLE_OPTIONS.find((r) => r.value === role) ?? {label: role, color: "gray"}
   );
-}
+};
 
 type Props = { orgId: string };
 
-export const OrgMembersManagement = ({ orgId }: Props) => {
+export const OrgMembersManagement = ({orgId}: Props) => {
   const [members, setMembers] = useState<OrganizationMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,7 +58,7 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
-    const [, data] = await api.listOrganizationMembers({ id: orgId, page: 1, pageSize: 100 });
+    const [, data] = await api.listOrganizationMembers({id: orgId, page: 1, pageSize: 100});
     setLoading(false);
     if (data) {
       setMembers(data.members);
@@ -75,10 +75,10 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
       return;
     }
     setSearching(true);
-    api.listUsers({ page: 1, pageSize: 10, search: debouncedQuery }).then(([, data]) => {
+    api.listUsers({page: 1, pageSize: 10, search: debouncedQuery}).then(([, data]) => {
       setSearching(false);
       setSearchResults(
-        (data?.users ?? []).map((u) => ({ value: u.id, label: u.username })),
+        (data?.users ?? []).map((u) => ({value: u.id, label: u.username})),
       );
     });
   }, [debouncedQuery]);
@@ -100,10 +100,10 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
         message: error.message,
         color: "red",
       });
-      setStatus({ type: "error", message: error.message });
+      setStatus({type: "error", message: error.message});
       return;
     }
-    setStatus({ type: "success", message: "Участник добавлен" });
+    setStatus({type: "success", message: "Участник добавлен"});
     setSearchQuery("");
     setSelectedUserId(null);
     await loadMembers();
@@ -111,7 +111,7 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
 
   const handleRemove = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await api.removeOrganizationMember({ id: orgId, userId });
+    const [error] = await api.removeOrganizationMember({id: orgId, userId});
     setDeletingId(null);
     if (error) {
       notifications.show({
@@ -119,10 +119,10 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
         message: error.message,
         color: "red",
       });
-      setStatus({ type: "error", message: error.message });
+      setStatus({type: "error", message: error.message});
       return;
     }
-    setStatus({ type: "success", message: "Участник удалён" });
+    setStatus({type: "success", message: "Участник удалён"});
     await loadMembers();
   };
 
@@ -147,7 +147,7 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
                   : "Пользователь не найден"
               }
               rightSection={searching ? <Loader size="xs" /> : null}
-              style={{ flex: 1 }}
+              style={{flex: 1}}
             />
             <Select
               size="md"
@@ -190,7 +190,7 @@ export const OrgMembersManagement = ({ orgId }: Props) => {
                 <Table.Th>Пользователь</Table.Th>
                 <Table.Th>Роль</Table.Th>
                 <Table.Th>Добавлен</Table.Th>
-                <Table.Th style={{ width: 60 }}>Действия</Table.Th>
+                <Table.Th style={{width: 60}}>Действия</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>

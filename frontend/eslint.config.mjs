@@ -41,8 +41,9 @@ const eslintConfig = [
       // Форматирование и отступы (2 пробела)
       "indent": ["error", 2, { SwitchCase: 1 }],
       "no-mixed-spaces-and-tabs": "error",
+      "no-multiple-empty-lines": ["error", { max: 1, maxEOF: 0, maxBOF: 0 }],
 
-      // Сортировка импортов
+      // Сортировка и отступы импортов
       "import/order": [
         "error",
         {
@@ -51,6 +52,14 @@ const eslintConfig = [
           alphabetize: { order: "asc", caseInsensitive: true },
         },
       ],
+      "import/newline-after-import": ["error", { count: 1 }],
+
+      // Пробелы вокруг фигурных скобок {}
+      "object-curly-spacing": ["error", "never"],
+
+      // Стрелочные функции вместо function (разрешены генераторы function*)
+      "func-style": ["error", "expression", { allowArrowFunctions: true }],
+      "prefer-arrow-callback": "error",
 
       // Компоненты React & JSX
       "react/function-component-definition": [
@@ -73,6 +82,31 @@ const eslintConfig = [
       ],
       "react-hooks/exhaustive-deps": "warn",
       "react-hooks/set-state-in-effect": "off",
+
+      // Запрет использования function (за исключением генераторов function*) и принудительная типизация Next.js
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "FunctionDeclaration[generator=false]",
+          message: "Use arrow functions instead of function declarations.",
+        },
+        {
+          selector: "FunctionExpression[generator=false]:not(MethodDefinition > FunctionExpression)",
+          message: "Use arrow functions instead of function expressions.",
+        },
+        {
+          selector:
+            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator[id.name=/^(revalidate|dynamic|dynamicParams|fetchCache|runtime|preferredRegion|maxDuration|metadata|viewport)$/][id.typeAnnotation=undefined]",
+          message:
+            "Next.js page/route constant must have an explicit type annotation (e.g. export const revalidate: number = 60;).",
+        },
+        {
+          selector:
+            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator[id.name=/^(generateMetadata|generateStaticParams|generateViewport|generateSitemaps)$/][id.typeAnnotation=undefined][init.returnType=undefined]",
+          message:
+            "Next.js special function must have an explicit type annotation or return type.",
+        },
+      ],
     },
   },
 ];

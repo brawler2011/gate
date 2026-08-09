@@ -1,8 +1,8 @@
-import { Box, Button, Stack } from "@mantine/core";
+import {Box, Button, Stack} from "@mantine/core";
 import Link from "next/link";
 import React from "react";
 
-import { getTabStyles } from "./get-tab-styles";
+import {getTabStyles} from "./get-tab-styles";
 
 type NavSection = {
   key: string;
@@ -36,7 +36,7 @@ export const SidebarNav = ({
             <Link
               key={section.key}
               href={`/contests/${contestId}/settings?section=${section.key}`}
-              style={{ textDecoration: "none" }}
+              style={{textDecoration: "none"}}
             >
               <Button
                 variant="transparent"

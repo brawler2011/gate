@@ -1,6 +1,6 @@
 "use client";
 
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 import {
   createWorkshopCheckerFile,
   getWorkshopCheckerFile,
@@ -8,16 +8,16 @@ import {
   setWorkshopCheckerMain,
 } from "@/lib/workshop";
 
-import { WorkshopCollectionTab } from "./WorkshopCollectionTab";
+import {WorkshopCollectionTab} from "./WorkshopCollectionTab";
 
-import type { WorkshopFileTabProps } from "./WorkshopFileTabProps";
+import type {WorkshopFileTabProps} from "./WorkshopFileTabProps";
 
 export const WorkshopCheckersTab = (props: WorkshopFileTabProps) => {
   return (
     <WorkshopCollectionTab
       {...props}
       folderName="checkers"
-      listFiles={(problemId) => api.listProblemCheckers({ problemId })}
+      listFiles={(problemId) => api.listProblemCheckers({problemId})}
       getFile={getWorkshopCheckerFile}
       createFile={createWorkshopCheckerFile}
       updateFile={updateWorkshopCheckerFile}

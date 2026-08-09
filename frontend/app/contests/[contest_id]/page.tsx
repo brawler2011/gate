@@ -9,26 +9,24 @@ import {
   Text,
 } from "@mantine/core";
 
-import { ContestCountdown } from "@/components/contests/ContestCountdown";
-import { Layout } from "@/components/shared";
-import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { Footer } from "@/components/shared/Footer";
-import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
-import { api } from "@/lib/api";
-import { unwrapAndCache } from "@/lib/api2";
-import { buildContestHeaderNav } from "@/lib/contest-header-nav";
-import { getMyContestRole } from "@/lib/contest-role";
-import { PermissionChecker } from "@/lib/permissions";
+import {ContestCountdown} from "@/components/contests/ContestCountdown";
+import {Layout} from "@/components/shared";
+import {Footer} from "@/components/shared/Footer";
+import {HeaderWithSession} from "@/components/shared/HeaderWithSession";
+import {api} from "@/lib/api";
+import {unwrapAndCache} from "@/lib/api2";
+import {buildContestHeaderNav} from "@/lib/contest-header-nav";
+import {getMyContestRole} from "@/lib/contest-role";
+import {PermissionChecker} from "@/lib/permissions";
 
-import { ContestProblemsTable } from "./ContestProblemsTable";
+import {ContestProblemsTable} from "./ContestProblemsTable";
 
 import type {
   ContestModel,
   ContestProblemListItemModel,
   UserModel,
 } from "@/contracts/core/v1";
-import type { Metadata } from "next";
-
+import type {Metadata} from "next";
 
 type Props = {
   params: Promise<{ contest_id: string }>;
@@ -37,9 +35,9 @@ type Props = {
 export const generateMetadata = async ({
   params,
 }: Props): Promise<Metadata> => {
-  const { contest_id } = await params;
+  const {contest_id} = await params;
 
-  const [error, response] = await api.getContest({ contestId: contest_id });
+  const [error, response] = await api.getContest({contestId: contest_id});
   if (error || !response) {
     return {
       title: "Ошибка загрузки контеста",
@@ -63,7 +61,7 @@ type ContestProps = {
 const Contest = ({
   contest,
   problems,
-  user,
+  user: _user,
   contestHeaderNav,
   isManager,
 }: ContestProps) => {
@@ -75,14 +73,14 @@ const Contest = ({
         <HeaderWithSession
           secondaryNavItems={contestHeaderNav}
           organizationId={contest.organization_id}
-          contest={{ id: contest.id, title: contest.title }}
+          contest={{id: contest.id, title: contest.title}}
         />
       </AppShellHeader>
       <AppShellMain>
         <Container
           size="lg"
           pt={0}
-          pb={{ base: "md", sm: "lg", md: "xl" }}
+          pb={{base: "md", sm: "lg", md: "xl"}}
         >
           {/* Tasks Section */}
           {showCountdown && (
@@ -92,9 +90,9 @@ const Contest = ({
             />
           )}
           {!showCountdown && problems.length === 0 && (
-            <Center py={{ base: "xl", md: "3xl" }}>
+            <Center py={{base: "xl", md: "3xl"}}>
               <Stack gap="md" align="center">
-                <Box component="div" style={{ fontSize: "2.5rem" }}>
+                <Box component="div" style={{fontSize: "2.5rem"}}>
                   📝
                 </Box>
                 <Text c="dimmed" size="md" fw={500}>
@@ -119,9 +117,9 @@ const Contest = ({
   );
 };
 
-const Page = async ({ params }: Props) => {
-  const { contest_id } = await params;
-  const response = await unwrapAndCache(api.getContest)({ contestId: contest_id });
+const Page = async ({params}: Props) => {
+  const {contest_id} = await params;
+  const response = await unwrapAndCache(api.getContest)({contestId: contest_id});
 
   // Get user and contest role for permissions
   const [, me] = await api.getMe();

@@ -1,10 +1,10 @@
 "use client";
 
-import { Text, Group, Table, Box } from "@mantine/core";
-import { IconChevronRight } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
+import {Text, Group, Table, Box} from "@mantine/core";
+import {IconChevronRight} from "@tabler/icons-react";
+import {useRouter} from "next/navigation";
 
-import { numberToLetters } from "@/lib/lib";
+import {numberToLetters} from "@/lib/lib";
 
 import classes from "./HomeProblemsTable.module.css";
 
@@ -33,7 +33,7 @@ const formatMemoryLimit = (memoryKb: number) => {
   return `${memoryKb}MB`;
 };
 
-export const HomeProblemsTable = ({ problems }: HomeProblemsTableProps) => {
+export const HomeProblemsTable = ({problems}: HomeProblemsTableProps) => {
   const router = useRouter();
 
   if (problems.length === 0) {
@@ -45,7 +45,7 @@ export const HomeProblemsTable = ({ problems }: HomeProblemsTableProps) => {
   }
 
   return (
-    <Box style={{ overflowX: "auto" }}>
+    <Box style={{overflowX: "auto"}}>
       <Table 
         className={classes.table} 
         verticalSpacing="sm"
@@ -82,7 +82,7 @@ export const HomeProblemsTable = ({ problems }: HomeProblemsTableProps) => {
                   </Group>
                 </Table.Td>
                 <Table.Td className={classes.iconCell}>
-                  <IconChevronRight size={16} style={{ opacity: 0.5 }} />
+                  <IconChevronRight size={16} style={{opacity: 0.5}} />
                 </Table.Td>
               </Table.Tr>
             );

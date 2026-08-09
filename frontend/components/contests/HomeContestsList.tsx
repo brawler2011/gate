@@ -1,18 +1,18 @@
 "use client";
 
-import { Text, Table, Box } from "@mantine/core";
-import { IconTrophy, IconChevronRight } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
+import {Text, Table, Box} from "@mantine/core";
+import {IconTrophy, IconChevronRight} from "@tabler/icons-react";
+import {useRouter} from "next/navigation";
 
 import classes from "./HomeContestsList.module.css";
 
-import type { ContestModel } from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1";
 
 type HomeContestsListProps = {
   contests: ContestModel[];
 };
 
-export const HomeContestsList = ({ contests }: HomeContestsListProps) => {
+export const HomeContestsList = ({contests}: HomeContestsListProps) => {
   const router = useRouter();
 
   if (contests.length === 0) {
@@ -24,7 +24,7 @@ export const HomeContestsList = ({ contests }: HomeContestsListProps) => {
   }
 
   return (
-    <Box style={{ overflowX: "auto" }}>
+    <Box style={{overflowX: "auto"}}>
       <Table 
         className={classes.table} 
         verticalSpacing="sm"
@@ -51,7 +51,7 @@ export const HomeContestsList = ({ contests }: HomeContestsListProps) => {
               </Table.Td>
               
               <Table.Td className={classes.arrowCell}>
-                <IconChevronRight size={16} style={{ opacity: 0.5 }} />
+                <IconChevronRight size={16} style={{opacity: 0.5}} />
               </Table.Td>
             </Table.Tr>
           ))}

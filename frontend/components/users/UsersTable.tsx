@@ -1,11 +1,11 @@
 "use client";
 
-import { Badge, Stack, Table, Text } from "@mantine/core";
-import { useRouter } from "next/navigation";
+import {Badge, Stack, Table, Text} from "@mantine/core";
+import {useRouter} from "next/navigation";
 
-import { NextPagination } from '@/components/shared/Pagination';
-import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { getRoleColor } from "@/lib/lib";
+import {NextPagination} from '@/components/shared/Pagination';
+import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
+import {getRoleColor} from "@/lib/lib";
 
 import type {
   PaginationModel as PaginationType,
@@ -20,7 +20,7 @@ type Props = {
   role?: string;
 };
 
-export const UsersTable = ({ users, pagination, page, search, role }: Props) => {
+export const UsersTable = ({users, pagination, page, search, role}: Props) => {
   const router = useRouter();
 
   // Use page from URL props, not from API response state
@@ -47,13 +47,13 @@ export const UsersTable = ({ users, pagination, page, search, role }: Props) => 
 
   return (
     <>
-      <Table striped highlightOnHover style={{ tableLayout: "fixed" }}>
+      <Table striped highlightOnHover style={{tableLayout: "fixed"}}>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th style={{ width: "30%" }}>Имя пользователя</Table.Th>
-            <Table.Th style={{ width: "15%" }}>ID</Table.Th>
-            <Table.Th style={{ width: "10%" }}>Роль</Table.Th>
-            <Table.Th style={{ width: "10%" }}>Дата создания</Table.Th>
+            <Table.Th style={{width: "30%"}}>Имя пользователя</Table.Th>
+            <Table.Th style={{width: "15%"}}>ID</Table.Th>
+            <Table.Th style={{width: "10%"}}>Роль</Table.Th>
+            <Table.Th style={{width: "10%"}}>Дата создания</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -67,16 +67,16 @@ export const UsersTable = ({ users, pagination, page, search, role }: Props) => 
                 }
                 router.push(`/users/${user.id}`);
               }}
-              style={{ cursor: "pointer" }}
+              style={{cursor: "pointer"}}
             >
-              <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>{user.username}</Table.Td>
-              <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>
+              <Table.Td style={{maxWidth: 0, overflow: "hidden"}}>{user.username}</Table.Td>
+              <Table.Td style={{maxWidth: 0, overflow: "hidden"}}>
                 <TruncatedWithCopy value={user.id} />
               </Table.Td>
-              <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>
+              <Table.Td style={{maxWidth: 0, overflow: "hidden"}}>
                 <Badge color={getRoleColor(user.role)}>{user.role}</Badge>
               </Table.Td>
-              <Table.Td style={{ maxWidth: 0, overflow: "hidden" }}>
+              <Table.Td style={{maxWidth: 0, overflow: "hidden"}}>
                 {new Date(user.createdAt).toLocaleDateString("ru-RU")}
               </Table.Td>
             </Table.Tr>

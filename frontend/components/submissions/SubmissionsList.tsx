@@ -13,14 +13,13 @@ import {
   TableScrollContainer,
 } from "@mantine/core";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, {useEffect, useState} from "react";
 
-import { LangString, ProblemTitle, StateColor, StateString, TimeBeautify } from "@/lib/lib";
+import {LangString, ProblemTitle, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import styles from "./SubmissionsList.module.css";
 
-import type { SubmissionWithProgress } from "@/lib/useSubmissionsWebSocket";
-
+import type {SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";
 
 interface SubmissionsListProps {
     submissions: SubmissionWithProgress[];
@@ -31,8 +30,8 @@ interface VerdictCellProps {
     submission: SubmissionWithProgress;
 }
 
-const VerdictCell = ({ submission }: VerdictCellProps) => {
-  const { state, progress } = submission;
+const VerdictCell = ({submission}: VerdictCellProps) => {
+  const {state, progress} = submission;
 
   // State 1 = Saved (in queue, not yet testing)
   if (state === 1 && !progress) {
@@ -74,7 +73,7 @@ interface SubmissionRowProps {
     isNew: boolean;
 }
 
-const SubmissionRow = ({ submission, isHighlighted, isNew }: SubmissionRowProps) => {
+const SubmissionRow = ({submission, isHighlighted, isNew}: SubmissionRowProps) => {
   const [mounted, setMounted] = useState(!isNew);
 
   useEffect(() => {
@@ -106,14 +105,14 @@ const SubmissionRow = ({ submission, isHighlighted, isNew }: SubmissionRowProps)
             <Text>{TimeBeautify(submission.created_at)}</Text>
           </TableTd>
           <TableTd ta="center">
-            <Link href={`/users/${submission.user_id}`} style={{ color: 'inherit' }}>
+            <Link href={`/users/${submission.user_id}`} style={{color: 'inherit'}}>
               <Text span td="underline">
                 {submission.username}
               </Text>
             </Link>
           </TableTd>
           <TableTd ta="center">
-            <Link href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`} style={{ color: 'inherit' }}>
+            <Link href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`} style={{color: 'inherit'}}>
               <Text span td="underline">
                 {ProblemTitle(submission.position, submission.problem_title)}
               </Text>
@@ -132,7 +131,7 @@ const SubmissionRow = ({ submission, isHighlighted, isNew }: SubmissionRowProps)
             <Text>{submission.memory_stat} КБ</Text>
           </TableTd>
           <TableTd ta="center">
-            <Link href={`/submissions/${submission.id}`} style={{ color: 'inherit' }}>
+            <Link href={`/submissions/${submission.id}`} style={{color: 'inherit'}}>
               <Text span td="underline">Посмотреть</Text>
             </Link>
           </TableTd>
@@ -142,7 +141,7 @@ const SubmissionRow = ({ submission, isHighlighted, isNew }: SubmissionRowProps)
   );
 };
 
-const SubmissionsList = ({ submissions, highlightedIds = new Set() }: SubmissionsListProps) => {
+const SubmissionsList = ({submissions, highlightedIds = new Set()}: SubmissionsListProps) => {
   return (
     <>
       <TableScrollContainer minWidth={800}>
@@ -180,5 +179,5 @@ const SubmissionsList = ({ submissions, highlightedIds = new Set() }: Submission
   );
 };
 
-export { SubmissionsList };
-export type { SubmissionsListProps };
+export {SubmissionsList};
+export type {SubmissionsListProps};

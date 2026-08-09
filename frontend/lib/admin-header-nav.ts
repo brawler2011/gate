@@ -1,4 +1,4 @@
-import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
+import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
 
 export type AdminHeaderNavKey =
   | "users"
@@ -8,7 +8,7 @@ export type AdminHeaderNavKey =
   | "problems"
   | "submissions";
 
-export function buildAdminHeaderNav(pathname: string): HeaderSecondaryNavItem[] {
+export const buildAdminHeaderNav = (pathname: string): HeaderSecondaryNavItem[] => {
   const getActiveTab = (path: string): AdminHeaderNavKey => {
     if (path.includes("/admin/contests")) {
       return "contests";
@@ -74,4 +74,4 @@ export function buildAdminHeaderNav(pathname: string): HeaderSecondaryNavItem[] 
       active: activeTab === "submissions",
     },
   ];
-}
+};

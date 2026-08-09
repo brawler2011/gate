@@ -1,8 +1,8 @@
 'use client';
 
-import { SubmissionsWsCloseCode } from '@/contracts/observer/v1';
+import {SubmissionsWsCloseCode} from '@/contracts/observer/v1';
 
-import { env } from './env';
+import {env} from './env';
 
 type ListenerParams = {
   key: string;
@@ -32,13 +32,14 @@ const RESYNC_CLOSE_CODES = new Set<number>([
   SubmissionsWsCloseCode.invalid_range,
 ]);
 
-const isDev = env.isDevelopment;
+const isDev = env.isDevelopment();
 
-function log(...args: unknown[]) {
+const log = (...args: unknown[]) => {
   if (isDev) {
+    // eslint-disable-next-line no-console
     console.log('[WSM]', ...args);
   }
-}
+};
 
 type SocketState = 'idle' | 'connecting' | 'open' | 'closing';
 
@@ -60,12 +61,12 @@ class SubmissionsWsManager {
   private reconnectCount = 0;
   private resyncCount = 0;
   private inReconnectCycle = false;
-  private currentStatus: WsManagerStatus = { phase: 'idle' };
+  private currentStatus: WsManagerStatus = {phase: 'idle'};
   private statusKey: string | null = null;
 
   addListener(params: ListenerParams): number {
     const id = this.nextListenerId++;
-    this.listeners.set(id, { id, ...params });
+    this.listeners.set(id, {id, ...params});
     this.syncListenerStatus(id);
     this.reconcile('addListener');
     return id;
@@ -76,7 +77,7 @@ class SubmissionsWsManager {
     if (!existing) {
       return;
     }
-    this.listeners.set(id, { id, ...params });
+    this.listeners.set(id, {id, ...params});
     this.syncListenerStatus(id);
     this.reconcile('updateListener');
   }
@@ -145,7 +146,7 @@ class SubmissionsWsManager {
       return null;
     }
 
-    return { key: selected.key, url: selected.url };
+    return {key: selected.key, url: selected.url};
   }
 
   private getActiveListeners(): Listener[] {
@@ -169,7 +170,7 @@ class SubmissionsWsManager {
       listener.onStatusChange(this.currentStatus);
       return;
     }
-    listener.onStatusChange({ phase: 'idle' });
+    listener.onStatusChange({phase: 'idle'});
   }
 
   private notifyConnectionError(hasError: boolean) {
@@ -216,7 +217,7 @@ class SubmissionsWsManager {
       await Promise.all(targets.map((listener) => listener.onResyncRequired()));
       return true;
     } catch (error) {
-      log('Resync failed', { key, error });
+      log('Resync failed', {key, error});
       this.notifyConnectionError(true);
       return false;
     } finally {
@@ -237,19 +238,19 @@ class SubmissionsWsManager {
     this.reconnectAttempt = 0;
     this.inReconnectCycle = false;
     this.notifyFatalConnectionError(false);
-    this.notifyStatusForKey(key, { phase: 'idle' });
+    this.notifyStatusForKey(key, {phase: 'idle'});
   }
 
   private connect(url: string, key: string, reason: string) {
     this.clearTimers();
 
     if (this.state === 'connecting' || this.state === 'open') {
-      log('Skip connect: state busy', { state: this.state, reason });
+      log('Skip connect: state busy', {state: this.state, reason});
       return;
     }
 
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      log('Skip connect: socket already alive', { reason });
+      log('Skip connect: socket already alive', {reason});
       return;
     }
 
@@ -257,10 +258,10 @@ class SubmissionsWsManager {
     this.manualClose = false;
     this.state = 'connecting';
     if (!this.inReconnectCycle) {
-      this.notifyStatusForKey(key, { phase: 'connecting' });
+      this.notifyStatusForKey(key, {phase: 'connecting'});
     }
 
-    log('Connecting', { token, reason, url });
+    log('Connecting', {token, reason, url});
 
     try {
       const ws = new WebSocket(url);
@@ -271,7 +272,7 @@ class SubmissionsWsManager {
           return;
         }
         if (ws.readyState !== WebSocket.OPEN) {
-          log('Connection timeout', { token });
+          log('Connection timeout', {token});
           ws.close();
         }
       }, CONNECTION_TIMEOUT);
@@ -290,8 +291,8 @@ class SubmissionsWsManager {
         this.notifyFatalConnectionError(false);
         this.notifyConnectionError(false);
         const openKey = this.activeKey ?? key;
-        this.notifyStatusForKey(openKey, { phase: 'connected' });
-        log('Connected', { token, key: openKey });
+        this.notifyStatusForKey(openKey, {phase: 'connected'});
+        log('Connected', {token, key: openKey});
       };
 
       ws.onmessage = (event) => {
@@ -305,7 +306,7 @@ class SubmissionsWsManager {
         if (token !== this.connectToken) {
           return;
         }
-        log('Socket error', { token, error });
+        log('Socket error', {token, error});
       };
 
       ws.onclose = (event) => {
@@ -360,7 +361,7 @@ class SubmissionsWsManager {
       };
     } catch (error) {
       this.state = 'idle';
-      log('Connect failed', { reason, error });
+      log('Connect failed', {reason, error});
       this.notifyConnectionError(true);
       void this.reconnectWithoutResync('connect_failure');
     }
@@ -373,7 +374,7 @@ class SubmissionsWsManager {
     }
 
     if (this.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
-      log('Max reconnect attempts reached', { reason });
+      log('Max reconnect attempts reached', {reason});
       this.notifyConnectionError(true);
       this.notifyFatalConnectionError(true);
       this.inReconnectCycle = false;
@@ -390,9 +391,9 @@ class SubmissionsWsManager {
     this.reconnectAttempt++;
     this.reconnectCount++;
     this.inReconnectCycle = true;
-    this.notifyStatusForKey(desired.key, { phase: 'reconnecting', attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS });
+    this.notifyStatusForKey(desired.key, {phase: 'reconnecting', attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS});
 
-    log('Schedule reconnect (no resync)', { reason, attempt, delay, reconnectCount: this.reconnectCount });
+    log('Schedule reconnect (no resync)', {reason, attempt, delay, reconnectCount: this.reconnectCount});
     this.reconnectTimeout = setTimeout(() => {
       const currentDesired = this.getDesiredConnection();
       if (!currentDesired) {
@@ -412,7 +413,7 @@ class SubmissionsWsManager {
     }
 
     if (this.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
-      log('Max reconnect attempts reached', { reason });
+      log('Max reconnect attempts reached', {reason});
       this.notifyConnectionError(true);
       this.notifyFatalConnectionError(true);
       this.inReconnectCycle = false;
@@ -429,9 +430,9 @@ class SubmissionsWsManager {
     this.reconnectAttempt++;
     this.reconnectCount++;
     this.inReconnectCycle = true;
-    this.notifyStatusForKey(desired.key, { phase: 'reconnecting', attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS });
+    this.notifyStatusForKey(desired.key, {phase: 'reconnecting', attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS});
 
-    log('Schedule reconnect', { reason, attempt, delay });
+    log('Schedule reconnect', {reason, attempt, delay});
     this.reconnectTimeout = setTimeout(async () => {
       const currentDesired = this.getDesiredConnection();
       if (!currentDesired) {
@@ -440,7 +441,7 @@ class SubmissionsWsManager {
 
       const ok = await this.resyncForKey(currentDesired.key);
       this.resyncCount++;
-      log('Resync attempt done', { ok, reason, resyncCount: this.resyncCount });
+      log('Resync attempt done', {ok, reason, resyncCount: this.resyncCount});
       if (!ok) {
         return;
       }
@@ -487,7 +488,7 @@ class SubmissionsWsManager {
 
     if (this.ws && this.ws.readyState === WebSocket.OPEN && this.activeKey === desired.key) {
       if (this.currentStatus.phase !== 'connected') {
-        this.notifyStatusForKey(desired.key, { phase: 'connected' });
+        this.notifyStatusForKey(desired.key, {phase: 'connected'});
       }
       return;
     }

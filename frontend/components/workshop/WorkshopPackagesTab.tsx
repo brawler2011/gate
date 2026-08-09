@@ -10,11 +10,11 @@ import {
   Table,
   Text,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import {notifications} from "@mantine/notifications";
+import {useCallback, useEffect, useState, useTransition} from "react";
 
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { api } from "@/lib/api";
+import {SectionPaper} from "@/components/workshop/SectionPaper";
+import {api} from "@/lib/api";
 
 type PackageItem = {
   id?: string;
@@ -29,14 +29,14 @@ type Props = {
   problemId: string;
 };
 
-const StatusBadge = ({ status }: { status?: string }) => {
+const StatusBadge = ({status}: { status?: string }) => {
   const map: Record<string, { color: string; label: string }> = {
-    ready: { color: "green", label: "Готов" },
-    building: { color: "blue", label: "Сборка" },
-    pending: { color: "gray", label: "Ожидание" },
-    failed: { color: "red", label: "Ошибка" },
+    ready: {color: "green", label: "Готов"},
+    building: {color: "blue", label: "Сборка"},
+    pending: {color: "gray", label: "Ожидание"},
+    failed: {color: "red", label: "Ошибка"},
   };
-  const info = map[status ?? ""] ?? { color: "gray", label: status ?? "—" };
+  const info = map[status ?? ""] ?? {color: "gray", label: status ?? "—"};
   return (
     <Badge color={info.color} variant="light">
       {info.label}
@@ -44,7 +44,7 @@ const StatusBadge = ({ status }: { status?: string }) => {
   );
 };
 
-function formatDateTime(iso?: string) {
+const formatDateTime = (iso?: string) => {
   if (!iso) {
     return "—";
   }
@@ -53,21 +53,26 @@ function formatDateTime(iso?: string) {
     if (isNaN(d.getTime())) {
       return "—";
     }
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return d.toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   } catch {
     return "—";
   }
-}
+};
 
-export const WorkshopPackagesTab = ({ problemId }: Props) => {
+export const WorkshopPackagesTab = ({problemId}: Props) => {
   const [isBuilding, startBuilding] = useTransition();
   const [packages, setPackages] = useState<PackageItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPackages = useCallback(async () => {
     setLoading(true);
-    const [error, data] = await api.listProblemPackages({ id: problemId });
+    const [error, data] = await api.listProblemPackages({id: problemId});
     if (!error && data?.packages) {
       setPackages(data.packages as PackageItem[]);
     }
@@ -80,7 +85,7 @@ export const WorkshopPackagesTab = ({ problemId }: Props) => {
 
   const handleBuild = () => {
     startBuilding(async () => {
-      const [error, data] = await api.publishProblem({ id: problemId });
+      const [error, data] = await api.publishProblem({id: problemId});
       if (error) {
         notifications.show({
           title: "Ошибка сборки пакета",

@@ -1,15 +1,15 @@
 "use client";
 
-import { Button, Code, Container, Paper, Stack, Text, Title } from "@mantine/core";
+import {Button, Code, Container, Paper, Stack, Text, Title} from "@mantine/core";
 import Link from "next/link";
-import { useEffect } from "react";
+import {useEffect} from "react";
 
 type ErrorProps = {
   error: Error & { digest?: string };
   reset: () => void;
 };
 
-const Error = ({ error, reset }: ErrorProps) => {
+const Error = ({error, reset}: ErrorProps) => {
   useEffect(() => {
     console.error("Unhandled page error:", error);
   }, [error]);
@@ -37,7 +37,7 @@ const Error = ({ error, reset }: ErrorProps) => {
             <Button variant="light" onClick={() => reset()}>
               Попробовать снова
             </Button>
-            <Link href="/" style={{ textDecoration: "none" }}>
+            <Link href="/" style={{textDecoration: "none"}}>
               <Button variant="subtle" color="gray">
                 На главную
               </Button>

@@ -4,22 +4,20 @@ import {
   AppShellMain,
   Container,
 } from "@mantine/core";
-import { redirect } from "next/navigation";
+import {redirect} from "next/navigation";
 
-import { Layout } from "@/components/shared";
-import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { Footer } from "@/components/shared/Footer";
-import { HeaderWithSession } from "@/components/shared/HeaderWithSession";
-import { api } from "@/lib/api";
-import { unwrapAndCache } from "@/lib/api2";
-import { buildContestHeaderNav } from "@/lib/contest-header-nav";
-import { getMyContestRole } from "@/lib/contest-role";
-import { PermissionChecker } from "@/lib/permissions";
+import {Layout} from "@/components/shared";
+import {Footer} from "@/components/shared/Footer";
+import {HeaderWithSession} from "@/components/shared/HeaderWithSession";
+import {api} from "@/lib/api";
+import {unwrapAndCache} from "@/lib/api2";
+import {buildContestHeaderNav} from "@/lib/contest-header-nav";
+import {getMyContestRole} from "@/lib/contest-role";
+import {PermissionChecker} from "@/lib/permissions";
 
-import { SubmitSubmissionClient } from "./SubmitSubmissionClient";
+import {SubmitSubmissionClient} from "./SubmitSubmissionClient";
 
-import type { Metadata } from "next";
-
+import type {Metadata} from "next";
 
 export const metadata: Metadata = {
   title: "Послать решение",
@@ -29,10 +27,10 @@ type PageProps = {
   params: Promise<{ contest_id: string }>;
 };
 
-const Page = async ({ params }: PageProps) => {
-  const { contest_id } = await params;
+const Page = async ({params}: PageProps) => {
+  const {contest_id} = await params;
 
-  const response = await unwrapAndCache(api.getContest)({ contestId: contest_id });
+  const response = await unwrapAndCache(api.getContest)({contestId: contest_id});
 
   // Get user and contest role for permissions
   const [, me] = await api.getMe();
@@ -60,11 +58,11 @@ const Page = async ({ params }: PageProps) => {
         <HeaderWithSession
           secondaryNavItems={contestHeaderNav}
           organizationId={response!.contest.organization_id}
-          contest={{ id: response!.contest.id, title: response!.contest.title }}
+          contest={{id: response!.contest.id, title: response!.contest.title}}
         />
       </AppShellHeader>
       <AppShellMain>
-        <Container size="lg" pb={{ base: "md", sm: "lg", md: "xl" }}>
+        <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}}>
           <SubmitSubmissionClient
             contest={response.contest}
             problems={response.problems || []}

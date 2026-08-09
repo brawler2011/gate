@@ -9,19 +9,19 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { IconInfoCircle, IconUpload } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import {notifications} from "@mantine/notifications";
+import {IconInfoCircle, IconUpload} from "@tabler/icons-react";
+import {useRouter} from "next/navigation";
+import {useState, useTransition} from "react";
 
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { api } from "@/lib/api";
+import {SectionPaper} from "@/components/workshop/SectionPaper";
+import {api} from "@/lib/api";
 
 type Props = {
   problemId: string;
 };
 
-export const WorkshopImportTab = ({ problemId }: Props) => {
+export const WorkshopImportTab = ({problemId}: Props) => {
   const router = useRouter();
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const [isImporting, startImport] = useTransition();
@@ -32,7 +32,7 @@ export const WorkshopImportTab = ({ problemId }: Props) => {
     }
 
     startImport(async () => {
-      const [error] = await api.importProblem({ id: problemId, formData: { package: packageFile } });
+      const [error] = await api.importProblem({id: problemId, formData: {package: packageFile}});
       if (error) {
         notifications.show({
           title: "Ошибка импорта",
@@ -77,7 +77,7 @@ export const WorkshopImportTab = ({ problemId }: Props) => {
                 accept=".zip,application/zip"
                 value={packageFile}
                 onChange={setPackageFile}
-                style={{ minWidth: 320, flex: 1 }}
+                style={{minWidth: 320, flex: 1}}
               />
               <Button
                 leftSection={<IconUpload size={16} />}

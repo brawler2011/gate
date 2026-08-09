@@ -12,12 +12,12 @@ import {
   Switch,
   Text,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { useEffect, useState, useTransition } from "react";
-import useSWR, { useSWRConfig } from "swr";
+import {notifications} from "@mantine/notifications";
+import {useEffect, useState, useTransition} from "react";
+import useSWR, {useSWRConfig} from "swr";
 
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { api } from "@/lib/api";
+import {SectionPaper} from "@/components/workshop/SectionPaper";
+import {api} from "@/lib/api";
 
 type LimitsData = {
   problem_type: string;
@@ -31,13 +31,13 @@ type Props = {
 };
 
 const PROBLEM_TYPE_OPTIONS = [
-  { value: "pass-fail", label: "Pass-Fail" },
-  { value: "scoring", label: "Scoring" },
-  { value: "interactive", label: "Interactive" },
+  {value: "pass-fail", label: "Pass-Fail"},
+  {value: "scoring", label: "Scoring"},
+  {value: "interactive", label: "Interactive"},
 ];
 
-export const WorkshopGeneralTab = ({ problemId }: Props) => {
-  const { mutate } = useSWRConfig();
+export const WorkshopGeneralTab = ({problemId}: Props) => {
+  const {mutate} = useSWRConfig();
   const [limits, setLimits] = useState<LimitsData>({
     problem_type: "pass-fail",
     max_score: null,
@@ -48,10 +48,10 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [isDirty, setIsDirty] = useState(false);
 
-  const { data: problemData, isLoading: isLoadingProblem } = useSWR(
+  const {data: problemData, isLoading: isLoadingProblem} = useSWR(
     ["problem", problemId],
     async () => {
-      const [err, res] = await api.getProblem({ id: problemId });
+      const [err, res] = await api.getProblem({id: problemId});
       if (err) {
         throw new Error(err.message || "Не удалось загрузить задачу");
       }
@@ -59,10 +59,10 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
     }
   );
 
-  const { data: limitsData, isLoading: isLoadingLimits } = useSWR(
+  const {data: limitsData, isLoading: isLoadingLimits} = useSWR(
     ["problem-limits", problemId],
     async () => {
-      const [err, res] = await api.getProblemLimits({ problemId });
+      const [err, res] = await api.getProblemLimits({problemId});
       if (err) {
         throw new Error(err.message || "Не удалось загрузить ограничения");
       }
@@ -90,7 +90,7 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
   }, [problemData]);
 
   const patchLimits = (patch: Partial<LimitsData>) => {
-    setLimits((prev) => ({ ...prev, ...patch }));
+    setLimits((prev) => ({...prev, ...patch}));
     setIsDirty(true);
   };
 
@@ -154,18 +154,18 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
           ) : (
             <Stack gap="md">
               <Grid gutter="md">
-                <Grid.Col span={{ base: 12, sm: 6 }}>
+                <Grid.Col span={{base: 12, sm: 6}}>
                   <Select
                     label="Тип задачи"
                     data={PROBLEM_TYPE_OPTIONS}
                     value={limits.problem_type}
                     onChange={(val) =>
-                      patchLimits({ problem_type: val || "pass-fail" })
+                      patchLimits({problem_type: val || "pass-fail"})
                     }
                   />
                 </Grid.Col>
                 {limits.problem_type === "scoring" && (
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <Grid.Col span={{base: 12, sm: 6}}>
                     <NumberInput
                       label="Максимальный балл"
                       value={limits.max_score ?? 100}
@@ -178,7 +178,7 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
                     />
                   </Grid.Col>
                 )}
-                <Grid.Col span={{ base: 12, sm: 6 }}>
+                <Grid.Col span={{base: 12, sm: 6}}>
                   <NumberInput
                     label="Ограничение по времени (мс)"
                     value={limits.time_limit_ms}
@@ -192,7 +192,7 @@ export const WorkshopGeneralTab = ({ problemId }: Props) => {
                     step={100}
                   />
                 </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6 }}>
+                <Grid.Col span={{base: 12, sm: 6}}>
                   <NumberInput
                     label="Ограничение по памяти (МБ)"
                     value={limits.memory_limit_mb}

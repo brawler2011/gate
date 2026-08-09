@@ -7,7 +7,7 @@ type GlobalErrorProps = {
   reset: () => void;
 };
 
-const GlobalError = ({ error, reset }: GlobalErrorProps) => {
+const GlobalError = ({error, reset}: GlobalErrorProps) => {
   return (
     <html lang="ru">
       <body>
@@ -33,18 +33,18 @@ const GlobalError = ({ error, reset }: GlobalErrorProps) => {
               background: "#262626",
             }}
           >
-            <h1 style={{ margin: 0, marginBottom: "12px", fontSize: "1.5rem" }}>
+            <h1 style={{margin: 0, marginBottom: "12px", fontSize: "1.5rem"}}>
               Произошла непредвиденная ошибка
             </h1>
-            <p style={{ marginTop: 0, color: "#c6c6c6" }}>
+            <p style={{marginTop: 0, color: "#c6c6c6"}}>
               Попробуйте обновить страницу или вернуться на главную.
             </p>
             {error.digest ? (
-              <p style={{ color: "#9c9c9c", fontSize: "0.9rem" }}>
+              <p style={{color: "#9c9c9c", fontSize: "0.9rem"}}>
                 ID ошибки: {error.digest}
               </p>
             ) : null}
-            <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+            <div style={{display: "flex", gap: "12px", marginTop: "16px"}}>
               <button
                 type="button"
                 onClick={() => reset()}
@@ -59,7 +59,7 @@ const GlobalError = ({ error, reset }: GlobalErrorProps) => {
               >
                 Попробовать снова
               </button>
-              <Link href="/" style={{ color: "#d7d7d7", alignSelf: "center" }}>
+              <Link href="/" style={{color: "#d7d7d7", alignSelf: "center"}}>
                 На главную
               </Link>
             </div>

@@ -1,13 +1,13 @@
 "use client";
 
-import { Button, Modal, Select, Stack, TextInput } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {Button, Modal, Select, Stack, TextInput} from "@mantine/core";
+import {notifications} from "@mantine/notifications";
+import {useRouter} from "next/navigation";
+import {useEffect, useState} from "react";
 
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 
-import type { OrganizationModel } from "@/contracts/core/v1";
+import type {OrganizationModel} from "@/contracts/core/v1";
 
 type Props = {
   opened: boolean;
@@ -39,7 +39,7 @@ export const CreateContestModal = ({
     }
   }, [opened, defaultOrgId, orgs]);
 
-  const orgData = orgs.map((o) => ({ value: o.id, label: o.name }));
+  const orgData = orgs.map((o) => ({value: o.id, label: o.name}));
 
   const handleSubmit = async () => {
     if (!orgId) {
@@ -80,7 +80,7 @@ export const CreateContestModal = ({
       centered
       size="md"
       radius="md"
-      overlayProps={{ backgroundOpacity: 0.4 }}
+      overlayProps={{backgroundOpacity: 0.4}}
     >
       <Stack gap="md">
         <TextInput

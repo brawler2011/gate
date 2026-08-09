@@ -14,18 +14,18 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
-import { useClipboard } from "@mantine/hooks";
-import { notifications } from "@mantine/notifications";
-import { IconCheck, IconCopy } from "@tabler/icons-react";
+import {useClipboard} from "@mantine/hooks";
+import {notifications} from "@mantine/notifications";
+import {IconCheck, IconCopy} from "@tabler/icons-react";
 import "katex/dist/katex.min.css";
-import { useDeferredValue, useEffect, useState, useTransition } from "react";
+import {useDeferredValue, useEffect, useState, useTransition} from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
-import { SectionPaper } from "@/components/workshop/SectionPaper";
-import { api } from "@/lib/api";
+import {SectionPaper} from "@/components/workshop/SectionPaper";
+import {api} from "@/lib/api";
 
 import "../problems/Problem.css";
 import classes from "./WorkshopStatementTab.module.css";
@@ -149,6 +149,7 @@ const renderSafeImage = (problemId?: string) => {
     }
 
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={cleanSrc}
         alt={alt || ""}
@@ -166,7 +167,7 @@ const renderSafeImage = (problemId?: string) => {
   return SafeImage;
 };
 
-const MarkdownBlock = ({ value, problemId }: { value: string; problemId?: string }) => {
+const MarkdownBlock = ({value, problemId}: { value: string; problemId?: string }) => {
   return (
     <div className="content">
       <ReactMarkdown
@@ -182,7 +183,7 @@ const MarkdownBlock = ({ value, problemId }: { value: string; problemId?: string
   );
 };
 
-const PreviewSection = ({ title, value, problemId }: { title: string; value: string; problemId?: string }) => {
+const PreviewSection = ({title, value, problemId}: { title: string; value: string; problemId?: string }) => {
   if (!value.trim()) {
     return null;
   }
@@ -197,10 +198,10 @@ const PreviewSection = ({ title, value, problemId }: { title: string; value: str
   );
 };
 
-const CopyableSection = ({ label, value }: { label: string; value: string }) => {
-  const clipboard = useClipboard({ timeout: 2000 });
+const CopyableSection = ({label, value}: { label: string; value: string }) => {
+  const clipboard = useClipboard({timeout: 2000});
   return (
-    <Stack gap="xs" style={{ flex: "1 1 300px", minWidth: 0 }}>
+    <Stack gap="xs" style={{flex: "1 1 300px", minWidth: 0}}>
       <Group justify="space-between" align="center" h={28}>
         <Text fw={600} size="sm">{label}</Text>
         <Tooltip label={clipboard.copied ? "Скопировано!" : "Скопировать"} position="top" withArrow>
@@ -330,7 +331,7 @@ const WorkshopStatementPreview = ({
   );
 };
 
-export const WorkshopStatementTab = ({ problemId }: Props) => {
+export const WorkshopStatementTab = ({problemId}: Props) => {
   const [statement, setStatement] = useState<StatementData | null>(null);
   const [previewMeta, setPreviewMeta] = useState<PreviewMeta | null>(null);
   const [samples, setSamples] = useState<Array<{ input: string; output: string }>>([]);
@@ -354,9 +355,9 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
     startLoading(async () => {
       const [[limitsError, limits], [statementError, statementData], [problemError, problemData]] =
         await Promise.all([
-          api.getProblemLimits({ problemId }),
-          api.getProblemStatement({ problemId, lang }),
-          api.getProblem({ id: problemId }),
+          api.getProblemLimits({problemId}),
+          api.getProblemStatement({problemId, lang}),
+          api.getProblem({id: problemId}),
         ]);
 
       if (limitsError || !limits) {
@@ -595,7 +596,7 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
                   label: l.toUpperCase(),
                   value: l,
                 })),
-                { label: "+ Добавить язык...", value: "add_new_lang" },
+                {label: "+ Добавить язык...", value: "add_new_lang"},
               ]}
               allowDeselect={false}
               w={180}
@@ -622,7 +623,7 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
                           label="Заголовок"
                           value={statement.title}
                           onChange={(e) =>
-                            patchStatement({ title: e.currentTarget.value })
+                            patchStatement({title: e.currentTarget.value})
                           }
                         />
 
@@ -630,7 +631,7 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
                           label="Легенда"
                           value={statement.legend}
                           onChange={(e) =>
-                            patchStatement({ legend: e.currentTarget.value })
+                            patchStatement({legend: e.currentTarget.value})
                           }
                           minRows={6}
                           autosize
@@ -664,7 +665,7 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
                           label="Примечания"
                           value={statement.notes}
                           onChange={(e) =>
-                            patchStatement({ notes: e.currentTarget.value })
+                            patchStatement({notes: e.currentTarget.value})
                           }
                           minRows={3}
                           autosize
@@ -674,7 +675,7 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
                           label="Интерактивное взаимодействие"
                           value={statement.interaction}
                           onChange={(e) =>
-                            patchStatement({ interaction: e.currentTarget.value })
+                            patchStatement({interaction: e.currentTarget.value})
                           }
                           minRows={3}
                           autosize
@@ -684,7 +685,7 @@ export const WorkshopStatementTab = ({ problemId }: Props) => {
                           label="Система оценки"
                           value={statement.scoring}
                           onChange={(e) =>
-                            patchStatement({ scoring: e.currentTarget.value })
+                            patchStatement({scoring: e.currentTarget.value})
                           }
                           minRows={3}
                           autosize

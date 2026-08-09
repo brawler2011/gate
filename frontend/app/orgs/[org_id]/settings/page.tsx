@@ -1,16 +1,16 @@
-import { Box, Container, Stack } from "@mantine/core";
-import { notFound } from "next/navigation";
+import {Box, Container, Stack} from "@mantine/core";
+import {notFound} from "next/navigation";
 
-import { OrgDangerZone } from "@/components/orgs/OrgDangerZone";
-import { OrgSettingsForm } from "@/components/orgs/OrgSettingsForm";
-import { OrgSettingsMobileNav } from "@/components/orgs/OrgSettingsMobileNav";
-import { ORG_SETTINGS_NAV_SECTIONS } from "@/components/orgs/OrgSettingsNavShared";
-import { OrgSettingsSidebarNav } from "@/components/orgs/OrgSettingsSidebarNav";
-import { DefaultLayout } from "@/components/shared";
-import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { api } from "@/lib/api";
-import { buildOrgHeaderNav } from "@/lib/org-header-nav";
-import { canManageOrgMembers } from "@/lib/org-permissions";
+import {OrgDangerZone} from "@/components/orgs/OrgDangerZone";
+import {OrgSettingsForm} from "@/components/orgs/OrgSettingsForm";
+import {OrgSettingsMobileNav} from "@/components/orgs/OrgSettingsMobileNav";
+import {ORG_SETTINGS_NAV_SECTIONS} from "@/components/orgs/OrgSettingsNavShared";
+import {OrgSettingsSidebarNav} from "@/components/orgs/OrgSettingsSidebarNav";
+import {DefaultLayout} from "@/components/shared";
+import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
+import {api} from "@/lib/api";
+import {buildOrgHeaderNav} from "@/lib/org-header-nav";
+import {canManageOrgMembers} from "@/lib/org-permissions";
 
 import classes from "./styles.module.css";
 
@@ -21,7 +21,7 @@ const SECTIONS = {
 
 type Section = (typeof SECTIONS)[keyof typeof SECTIONS];
 
-import type { Metadata } from "next";
+import type {Metadata} from "next";
 
 type Props = {
   params: Promise<{ org_id: string }>;
@@ -32,11 +32,11 @@ export const metadata: Metadata = {
   title: "Настройки",
 };
 
-const OrgSettingsPage = async ({ params, searchParams }: Props) => {
-  const { org_id } = await params;
-  const { section = "settings" } = await searchParams;
+const OrgSettingsPage = async ({params, searchParams}: Props) => {
+  const {org_id} = await params;
+  const {section = "settings"} = await searchParams;
 
-  const [error, data] = await api.getOrganization({ id: org_id });
+  const [error, data] = await api.getOrganization({id: org_id});
   if (error) {
     if (error.status === 404) {
       notFound();
@@ -66,7 +66,7 @@ const OrgSettingsPage = async ({ params, searchParams }: Props) => {
   return (
     <DefaultLayout
       headerSecondaryNavItems={orgHeaderNav}
-      headerOrganization={{ id: org.id, name: org.name }}
+      headerOrganization={{id: org.id, name: org.name}}
     >
       <Container size="lg" py="lg">
         <Stack gap="md">

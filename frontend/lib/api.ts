@@ -1,6 +1,6 @@
-import { core, type DefaultService } from "@/contracts/core/v1";
-import { ApiError as CoreApiError } from "@/contracts/core/v1/core/ApiError";
-import { env } from "@/lib/env";
+import {core, type DefaultService} from "@/contracts/core/v1";
+import {ApiError as CoreApiError} from "@/contracts/core/v1/core/ApiError";
+import {env} from "@/lib/env";
 
 const sessionCookieName = "session_id";
 
@@ -27,7 +27,7 @@ export type ApiFacade = {
 
 const createApiFacade = (client: core): ApiFacade => {
   return new Proxy(client, {
-    get(target, prop: string) {
+    get: (target, prop: string) => {
       const service = target.default as unknown as Record<string, unknown>;
       const targetObj = target as unknown as Record<string, unknown>;
       const fn = typeof service[prop] === "function" ? service[prop] : targetObj[prop];
@@ -41,7 +41,7 @@ const createApiFacade = (client: core): ApiFacade => {
             if (error instanceof CoreApiError) {
               // FIXME: think of better logging approach
               if (error.status !== 401) {
-                console.log("API Error:", error);
+                console.error("API Error:", error);
               }
               const body = error.body as { message?: string; request_id?: string } | undefined;
               return [{
@@ -51,7 +51,7 @@ const createApiFacade = (client: core): ApiFacade => {
               }, null];
             }
             console.error("Unknown API Error:", error);
-            return [{ status: 500, message: "Неизвестная ошибка" }, null];
+            return [{status: 500, message: "Неизвестная ошибка"}, null];
           }
         };
       }
@@ -66,12 +66,12 @@ const rawAuthClient = new core({
   HEADERS: async (): Promise<Record<string, string>> => {
     if (typeof window === "undefined") {
       try {
-        const { cookies } = await import("next/headers");
+        const {cookies} = await import("next/headers");
         const requestCookies = await cookies();
         if (requestCookies.has(sessionCookieName)) {
           const cookie = requestCookies.get(sessionCookieName);
           if (cookie?.name && cookie?.value) {
-            return { Cookie: `${sessionCookieName}=${cookie.value}` };
+            return {Cookie: `${sessionCookieName}=${cookie.value}`};
           }
         }
       } catch {

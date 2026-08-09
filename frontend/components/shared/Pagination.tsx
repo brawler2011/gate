@@ -1,11 +1,11 @@
 "use client";
 
-import { Pagination } from "@mantine/core";
+import {Pagination} from "@mantine/core";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import {useRouter} from "next/navigation";
 import React from "react";
 
-import { useOptionalPageTransition } from "@/components/shared/PageTransitionContext";
+import {useOptionalPageTransition} from "@/components/shared/PageTransitionContext";
 
 import type * as corev1 from "@/contracts/core/v1";
 
@@ -36,11 +36,11 @@ const NextPagination = ({
 
   const navigateToPage = (page: number, e: React.MouseEvent) => {
     e.preventDefault();
-    const url = `${baseUrl}${buildQueryString({ ...queryParams, page })}`;
+    const url = `${baseUrl}${buildQueryString({...queryParams, page})}`;
 
     // Use context if available, otherwise use React.useTransition directly
     if (transitionContext) {
-      const { startTransition, setIsPaginationTransition } = transitionContext;
+      const {startTransition, setIsPaginationTransition} = transitionContext;
       setIsPaginationTransition(true);
       startTransition(() => {
         router.push(url);
@@ -54,7 +54,7 @@ const NextPagination = ({
 
   const getItemProps = (page: number) => ({
     component: Link,
-    href: `${baseUrl}${buildQueryString({ ...queryParams, page })}`,
+    href: `${baseUrl}${buildQueryString({...queryParams, page})}`,
     onClick: (e: React.MouseEvent) => navigateToPage(page, e),
   });
 
@@ -66,7 +66,7 @@ const NextPagination = ({
           : pagination.page + 1;
       return {
         component: Link,
-        href: `${baseUrl}${buildQueryString({ ...queryParams, page: nextPage })}`,
+        href: `${baseUrl}${buildQueryString({...queryParams, page: nextPage})}`,
         onClick: (e: React.MouseEvent) => navigateToPage(nextPage, e),
       };
     }
@@ -76,7 +76,7 @@ const NextPagination = ({
         pagination.page === 1 ? pagination.page : pagination.page - 1;
       return {
         component: Link,
-        href: `${baseUrl}${buildQueryString({ ...queryParams, page: prevPage })}`,
+        href: `${baseUrl}${buildQueryString({...queryParams, page: prevPage})}`,
         onClick: (e: React.MouseEvent) => navigateToPage(prevPage, e),
       };
     }
@@ -94,4 +94,4 @@ const NextPagination = ({
   );
 };
 
-export { NextPagination };
+export {NextPagination};

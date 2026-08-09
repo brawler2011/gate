@@ -7,17 +7,16 @@ import {
   GridCol,
   Text,
 } from "@mantine/core";
-import { IconNews } from "@tabler/icons-react";
+import {IconNews} from "@tabler/icons-react";
 
-import { BlogList } from '@/components/blog/BlogList';
-import { CompactBlogList } from '@/components/blog/CompactBlogList';
-import { DashboardContestsList } from '@/components/contests/DashboardContestsList';
-import { DashboardProblemsList } from '@/components/problems/DashboardProblemsList';
-import { DefaultLayout } from '@/components/shared';
-import { api } from "@/lib/api";
+import {BlogList} from '@/components/blog/BlogList';
+import {CompactBlogList} from '@/components/blog/CompactBlogList';
+import {DashboardContestsList} from '@/components/contests/DashboardContestsList';
+import {DashboardProblemsList} from '@/components/problems/DashboardProblemsList';
+import {DefaultLayout} from '@/components/shared';
+import {api} from "@/lib/api";
 
-import type { Metadata } from "next";
-
+import type {Metadata} from "next";
 
 export const metadata: Metadata = {
   title: "Главная",
@@ -34,7 +33,7 @@ const Page = async () => {
       [blogError, blogData]
     ] = await Promise.all([
       api.getMyDashboard(),
-      api.listPosts({ page: 1, pageSize: 5 }) // Fetch top 5 blog posts for the sidebar
+      api.listPosts({page: 1, pageSize: 5}) // Fetch top 5 blog posts for the sidebar
     ]);
 
     const recentContests = dashboardData?.recent_contests || [];
@@ -45,7 +44,7 @@ const Page = async () => {
       <DefaultLayout>
         <Container size="lg" py="xl">
           <Grid gutter="xl">
-            <GridCol span={{ base: 12, md: 8 }}>
+            <GridCol span={{base: 12, md: 8}}>
               <Stack gap="xl">
                 <Stack gap="sm">
                   <Title order={2} size="h4" fw={700}>
@@ -71,7 +70,7 @@ const Page = async () => {
               </Stack>
             </GridCol>
 
-            <GridCol span={{ base: 12, md: 4 }}>
+            <GridCol span={{base: 12, md: 4}}>
               <CompactBlogList posts={blogPosts} error={!!blogError} />
             </GridCol>
           </Grid>
@@ -80,7 +79,7 @@ const Page = async () => {
     );
   }
 
-  const [, blogData] = await api.listPosts({ page: 1, pageSize: 5 });
+  const [, blogData] = await api.listPosts({page: 1, pageSize: 5});
   const blogPosts = blogData?.posts || [];
   
   return (
@@ -90,7 +89,7 @@ const Page = async () => {
           <Stack gap="md">
             <Group gap="xs">
               <IconNews size={28} color="var(--mantine-color-orange-6)" />
-              <Title order={2} size="h3" style={{ fontWeight: 700 }}>Блог</Title>
+              <Title order={2} size="h3" style={{fontWeight: 700}}>Блог</Title>
             </Group>
             <BlogList 
               posts={blogPosts}

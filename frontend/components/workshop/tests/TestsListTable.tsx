@@ -21,13 +21,13 @@ import {
   IconPlus,
   IconTrash,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import {useState} from "react";
 
-import { TestPreviewModal } from "./TestPreviewModal";
-import { TestVerdictModal } from "./TestVerdictModal";
-import { formatPaddedOrdinal } from "./types";
+import {TestPreviewModal} from "./TestPreviewModal";
+import {TestVerdictModal} from "./TestVerdictModal";
+import {formatPaddedOrdinal} from "./types";
 
-import type { SubtaskItem, TestItem } from "./types";
+import type {SubtaskItem, TestItem} from "./types";
 
 type Props = {
   problemId: string;
@@ -85,7 +85,7 @@ export const TestsListTable = ({
 
   const handleUpdateTest = (index: number, patch: Partial<TestItem>) => {
     const next = [...tests];
-    next[index] = { ...next[index], ...patch };
+    next[index] = {...next[index], ...patch};
     onChangeTests(next);
   };
 
@@ -97,13 +97,13 @@ export const TestsListTable = ({
 
     const newTestIds = Array.from(new Set([...targetSubtask.testIds, ...selectedIds]));
     const nextSubtasks = subtasks.map((s) =>
-      s.name === subtaskName ? { ...s, testIds: newTestIds } : s
+      s.name === subtaskName ? {...s, testIds: newTestIds} : s
     );
     onChangeSubtasks(nextSubtasks);
     setSelectedIds([]);
   };
 
-  const generatorOptions = generators.map((g) => ({ value: g, label: g }));
+  const generatorOptions = generators.map((g) => ({value: g, label: g}));
 
   return (
     <Stack gap="xs">
@@ -172,7 +172,7 @@ export const TestsListTable = ({
       </Group>
 
       {tests.length === 0 ? (
-        <Card withBorder p="xl" radius="md" style={{ textAlign: "center" }}>
+        <Card withBorder p="xl" radius="md" style={{textAlign: "center"}}>
           <Text c="dimmed" size="sm" mb="md">
             Тесты еще не созданы. Добавьте ручной тест или настройте генератор.
           </Text>
@@ -190,20 +190,20 @@ export const TestsListTable = ({
         <Table highlightOnHover withTableBorder withColumnBorders verticalSpacing={3}>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th style={{ width: 40, textAlign: "center" }}>
+              <Table.Th style={{width: 40, textAlign: "center"}}>
                 <Checkbox
                   checked={allSelected}
                   indeterminate={indeterminate}
                   onChange={toggleSelectAll}
                 />
               </Table.Th>
-              <Table.Th style={{ width: 60 }}>#</Table.Th>
-              <Table.Th style={{ width: 80, textAlign: "center" }}>Сэмпл</Table.Th>
-              <Table.Th style={{ width: 140 }}>Метод</Table.Th>
+              <Table.Th style={{width: 60}}>#</Table.Th>
+              <Table.Th style={{width: 80, textAlign: "center"}}>Сэмпл</Table.Th>
+              <Table.Th style={{width: 140}}>Метод</Table.Th>
               <Table.Th>Детали генератора / Файлы</Table.Th>
-              <Table.Th style={{ width: 140 }}>Сабтаски</Table.Th>
-              <Table.Th style={{ width: 150, textAlign: "center" }}>Проверки</Table.Th>
-              <Table.Th style={{ width: 60, textAlign: "center" }} />
+              <Table.Th style={{width: 140}}>Сабтаски</Table.Th>
+              <Table.Th style={{width: 150, textAlign: "center"}}>Проверки</Table.Th>
+              <Table.Th style={{width: 60, textAlign: "center"}} />
             </Table.Tr>
           </Table.Thead>
 
@@ -223,7 +223,7 @@ export const TestsListTable = ({
 
               return (
                 <Table.Tr key={test.id} bg={isSelected ? "var(--mantine-color-blue-light)" : undefined}>
-                  <Table.Td style={{ textAlign: "center" }}>
+                  <Table.Td style={{textAlign: "center"}}>
                     <Checkbox
                       checked={isSelected}
                       onChange={() => toggleSelect(test.id)}
@@ -236,11 +236,11 @@ export const TestsListTable = ({
                     </Text>
                   </Table.Td>
 
-                  <Table.Td style={{ textAlign: "center" }}>
+                  <Table.Td style={{textAlign: "center"}}>
                     <Checkbox
                       checked={test.isSample}
                       onChange={(e) =>
-                        handleUpdateTest(index, { isSample: e.currentTarget.checked })
+                        handleUpdateTest(index, {isSample: e.currentTarget.checked})
                       }
                     />
                   </Table.Td>
@@ -249,8 +249,8 @@ export const TestsListTable = ({
                     <Select
                       size="xs"
                       data={[
-                        { value: "manual", label: "Ручной" },
-                        { value: "generated", label: "Генератор" },
+                        {value: "manual", label: "Ручной"},
+                        {value: "generated", label: "Генератор"},
                       ]}
                       value={test.method}
                       onChange={(v) =>
@@ -271,9 +271,9 @@ export const TestsListTable = ({
                           value={genName}
                           onChange={(val) => {
                             const newCmd = val ? `${val} ${genArgs}`.trim() : "";
-                            handleUpdateTest(index, { generatorCommand: newCmd });
+                            handleUpdateTest(index, {generatorCommand: newCmd});
                           }}
-                          style={{ width: 140 }}
+                          style={{width: 140}}
                         />
                         <TextInput
                           size="xs"
@@ -282,9 +282,9 @@ export const TestsListTable = ({
                           onChange={(e) => {
                             const newArgs = e.currentTarget.value;
                             const newCmd = genName ? `${genName} ${newArgs}`.trim() : newArgs;
-                            handleUpdateTest(index, { generatorCommand: newCmd });
+                            handleUpdateTest(index, {generatorCommand: newCmd});
                           }}
-                          style={{ flex: 1 }}
+                          style={{flex: 1}}
                         />
                       </Group>
                     ) : (
@@ -293,7 +293,7 @@ export const TestsListTable = ({
                           variant={test.hasIn ? "light" : "outline"}
                           color={test.hasIn ? "blue" : "gray"}
                           size="xs"
-                          style={{ cursor: "pointer" }}
+                          style={{cursor: "pointer"}}
                           onClick={() => setPreviewFile(`${paddedOrd}.in`)}
                         >
                           {paddedOrd}.in {test.hasIn ? "✓" : "✗"}
@@ -303,7 +303,7 @@ export const TestsListTable = ({
                           variant={test.hasOut ? "light" : "outline"}
                           color={test.hasOut ? "green" : "gray"}
                           size="xs"
-                          style={{ cursor: "pointer" }}
+                          style={{cursor: "pointer"}}
                           onClick={() => setPreviewFile(`${paddedOrd}.out`)}
                         >
                           {paddedOrd}.out {test.hasOut ? "✓" : "✗"}
@@ -328,20 +328,20 @@ export const TestsListTable = ({
                     </Group>
                   </Table.Td>
 
-                  <Table.Td style={{ textAlign: "center" }}>
+                  <Table.Td style={{textAlign: "center"}}>
                     <Group gap={4} justify="center">
                       {test.validatorStatus && (
                         <Tooltip label="Результат проверки валидатором">
                           <Badge
                             size="xs"
                             color={test.validatorStatus.valid ? "green" : "red"}
-                            style={{ cursor: "pointer" }}
+                            style={{cursor: "pointer"}}
                             onClick={() =>
                               setVerdictModalData({
                                 title: `Валидация теста №${paddedOrd}`,
                                 verdictBadge: test.validatorStatus?.valid
-                                  ? { label: "VALID", color: "green" }
-                                  : { label: "INVALID", color: "red" },
+                                  ? {label: "VALID", color: "green"}
+                                  : {label: "INVALID", color: "red"},
                                 message: test.validatorStatus?.message,
                                 error: test.validatorStatus?.error,
                               })
@@ -361,7 +361,7 @@ export const TestsListTable = ({
                                 ? "green"
                                 : "red"
                             }
-                            style={{ cursor: "pointer" }}
+                            style={{cursor: "pointer"}}
                             onClick={() =>
                               setVerdictModalData({
                                 title: `Решение на тесте №${paddedOrd}`,
@@ -389,7 +389,7 @@ export const TestsListTable = ({
                     </Group>
                   </Table.Td>
 
-                  <Table.Td style={{ textAlign: "center" }}>
+                  <Table.Td style={{textAlign: "center"}}>
                     <Popover
                       opened={deletingTestId === test.id}
                       onChange={(opened) => setDeletingTestId(opened ? test.id : null)}
@@ -425,7 +425,7 @@ export const TestsListTable = ({
                             <Button
                               size="xs"
                               variant="default"
-                              style={{ height: 24, fontSize: 11 }}
+                              style={{height: 24, fontSize: 11}}
                               onClick={() => setDeletingTestId(null)}
                             >
                               Отмена
@@ -433,7 +433,7 @@ export const TestsListTable = ({
                             <Button
                               size="xs"
                               color="red"
-                              style={{ height: 24, fontSize: 11 }}
+                              style={{height: 24, fontSize: 11}}
                               onClick={() => {
                                 setDeletingTestId(null);
                                 onDeleteSelectedTests([test.id]);

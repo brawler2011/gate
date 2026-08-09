@@ -1,7 +1,7 @@
-import { notFound, redirect } from "next/navigation";
+import {notFound, redirect} from "next/navigation";
 import {cache} from "react";
 
-import type { ApiResult } from "./api";
+import type {ApiResult} from "./api";
 
 export const unwrap = <A extends unknown[], R>(
   fn: (...args: A) => Promise<ApiResult<R>>

@@ -14,15 +14,15 @@ import {
   Textarea,
   Title,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { IconFile, IconPlus, IconRefresh } from "@tabler/icons-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import {notifications} from "@mantine/notifications";
+import {IconFile, IconPlus, IconRefresh} from "@tabler/icons-react";
+import {useEffect, useRef, useState, useTransition} from "react";
 import useSWR from "swr";
 
 import classes from "./WorkshopFolderTab.module.css";
 
-import type { FileEntry } from "@/contracts/core/v1";
-import type { ApiError } from "@/lib/api";
+import type {FileEntry} from "@/contracts/core/v1";
+import type {ApiError} from "@/lib/api";
 
 type ListFilesResult = Promise<
   [ApiError | null, { files?: FileEntry[] } | null]
@@ -77,7 +77,7 @@ export const WorkshopCollectionTab = ({
 
   const getFileName = (path: string) => path.split("/").pop() ?? path;
 
-  const { data: filesData, isLoading: isLoadingFiles, mutate: mutateFiles } = useSWR(
+  const {data: filesData, isLoading: isLoadingFiles, mutate: mutateFiles} = useSWR(
     ["workshop-files", problemId, folderName],
     async () => {
       const [err, res] = await listFiles(problemId);
@@ -91,7 +91,7 @@ export const WorkshopCollectionTab = ({
   const files = filesData?.files || [];
 
   const fileName = selectedFile ? getFileName(selectedFile) : null;
-  const { data: fileContent, isLoading: isLoadingFile, mutate: mutateContent } = useSWR(
+  const {data: fileContent, isLoading: isLoadingFile, mutate: mutateContent} = useSWR(
     fileName ? ["workshop-file-content", problemId, folderName, fileName] : null,
     async () => {
       const [err, res] = await getFile(problemId, fileName!);
@@ -308,7 +308,7 @@ export const WorkshopCollectionTab = ({
         <div className={classes.editorHeader}>
           <Group gap="xs">
             {selectedFile ? (
-              <Code style={{ fontSize: 13 }}>{selectedFile}</Code>
+              <Code style={{fontSize: 13}}>{selectedFile}</Code>
             ) : (
               <Text size="sm" c="dimmed">
                 Выберите файл

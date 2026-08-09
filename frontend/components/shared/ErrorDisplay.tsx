@@ -1,18 +1,18 @@
 "use client";
 
-import { Container, Title, Text, Button, Stack, Paper, Code, Group } from "@mantine/core";
+import {Container, Title, Text, Button, Stack, Paper, Code, Group} from "@mantine/core";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import {usePathname} from "next/navigation";
 
-import { RefreshButton } from "./RefreshButton";
+import {RefreshButton} from "./RefreshButton";
 
-import type { ApiError } from "@/lib/api";
+import type {ApiError} from "@/lib/api";
 
 type Props = {
   error: ApiError;
 };
 
-function getErrorDisplay(status: number): { title: string; description: string } {
+const getErrorDisplay = (status: number): { title: string; description: string } => {
   switch (status) {
     case 401:
       return {
@@ -40,9 +40,9 @@ function getErrorDisplay(status: number): { title: string; description: string }
         description: "При обработке запроса произошла ошибка",
       };
   }
-}
+};
 
-export const ErrorDisplay = ({ error }: Props) => {
+export const ErrorDisplay = ({error}: Props) => {
   const display = getErrorDisplay(error.status);
   const pathname = usePathname();
   const getReturnUrl = () => {
@@ -65,12 +65,12 @@ export const ErrorDisplay = ({ error }: Props) => {
           </Text>
 
           {error.requestId && (
-            <Code style={{ fontSize: "0.75rem" }}>{error.requestId}</Code>
+            <Code style={{fontSize: "0.75rem"}}>{error.requestId}</Code>
           )}
 
           <Group>
             {error.status === 401 ? (
-              <Link href={`/auth/login${returnTo}`} style={{ textDecoration: 'none' }}>
+              <Link href={`/auth/login${returnTo}`} style={{textDecoration: 'none'}}>
                 <Button variant="filled">
                   Войти
                 </Button>
@@ -78,7 +78,7 @@ export const ErrorDisplay = ({ error }: Props) => {
             ) : (
               <RefreshButton />
             )}
-            <Link href="/" style={{ textDecoration: 'none' }}>
+            <Link href="/" style={{textDecoration: 'none'}}>
               <Button variant="light">
                 На главную
               </Button>
@@ -89,4 +89,3 @@ export const ErrorDisplay = ({ error }: Props) => {
     </Container>
   );
 };
-

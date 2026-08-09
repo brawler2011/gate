@@ -11,10 +11,10 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { useEffect, useState, useTransition } from "react";
+import {notifications} from "@mantine/notifications";
+import {useEffect, useState, useTransition} from "react";
 
-import { getWorkshopTestFile, updateWorkshopTestFile } from "@/lib/workshop";
+import {getWorkshopTestFile, updateWorkshopTestFile} from "@/lib/workshop";
 
 type Props = {
   opened: boolean;
@@ -91,7 +91,7 @@ export const TestPreviewModal = ({
     if (!filename) {
       return;
     }
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([content], {type: "text/plain;charset=utf-8"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -135,7 +135,7 @@ export const TestPreviewModal = ({
             maxRows={20}
             value={content}
             onChange={(e) => setContent(e.currentTarget.value)}
-            style={{ fontFamily: "monospace" }}
+            style={{fontFamily: "monospace"}}
           />
 
           <Group justify="space-between">

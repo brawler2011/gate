@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Button, Group } from "@mantine/core";
+import {Box, Button, Group} from "@mantine/core";
 import Link from "next/link";
 
 import {
@@ -21,7 +21,7 @@ export const OrgSettingsMobileNav = ({
   sections,
 }: OrgSettingsMobileNavProps) => {
   return (
-    <Box hiddenFrom="sm" style={{ width: "100%" }}>
+    <Box hiddenFrom="sm" style={{width: "100%"}}>
       <Group gap="xs" mb="md">
         {sections.map((section) => {
           const Icon = getOrgSettingsIcon(section.key);
@@ -32,7 +32,7 @@ export const OrgSettingsMobileNav = ({
               key={section.key}
               component={Link}
               href={`/orgs/${orgId}/settings?section=${section.key}`}
-              style={{ textDecoration: "none" }}
+              style={{textDecoration: "none"}}
               variant="transparent"
               size="xs"
               leftSection={<Icon size={16} color="currentColor" />}

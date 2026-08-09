@@ -1,7 +1,7 @@
-import { Container, Title, Text, Button, Stack, Paper } from "@mantine/core";
+import {Container, Title, Text, Button, Stack, Paper} from "@mantine/core";
 import Link from "next/link";
 
-import type { Metadata } from "next";
+import type {Metadata} from "next";
 
 // Next.js 15 автоматически кэширует not-found.tsx при билде
 // Эта страница статическая и будет отдаваться из кеша
@@ -23,7 +23,7 @@ const NotFound = () => {
             Запрашиваемая страница не существует или была удалена.
           </Text>
 
-          <Link href="/" style={{ textDecoration: 'none' }}>
+          <Link href="/" style={{textDecoration: 'none'}}>
             <Button variant="filled">
               Вернуться на главную
             </Button>
@@ -33,6 +33,5 @@ const NotFound = () => {
     </Container>
   );
 };
-
 
 export default NotFound;

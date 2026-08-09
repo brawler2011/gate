@@ -6,7 +6,7 @@ import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp';
 import go from 'react-syntax-highlighter/dist/esm/languages/prism/go';
 import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light';
-import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import {oneDark, oneLight} from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 SyntaxHighlighter.registerLanguage('cpp', cpp);
 SyntaxHighlighter.registerLanguage('go', go);
@@ -19,7 +19,7 @@ interface CodeBlockProps {
 
 const CodeBlock: React.FC<CodeBlockProps> = ({code, language}) => {
   const [theme, setTheme] = useState(oneDark);
-  const colorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
+  const colorScheme = useComputedColorScheme('dark', {getInitialValueInEffect: true});
 
   useEffect(() => {
     setTheme(colorScheme === 'dark' ? oneDark : oneLight);

@@ -1,27 +1,24 @@
-import { Box, Container } from "@mantine/core";
-import { IconPuzzle, IconSettings, IconUsers } from "@tabler/icons-react";
+import {Box, Container} from "@mantine/core";
+import {IconPuzzle, IconSettings, IconUsers} from "@tabler/icons-react";
 
-import { MobileNav, SidebarNav } from "@/components/contests";
-import { ParticipantsSection } from "@/components/contests/ParticipantsSection";
-import { ProblemsSection } from "@/components/contests/ProblemsSection";
-import { SettingsSection } from "@/components/contests/SettingsSection";
-import { DefaultLayout } from "@/components/shared";
-import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { api } from "@/lib/api";
-import { unwrapAndCache } from "@/lib/api2";
-import { buildContestHeaderNav } from "@/lib/contest-header-nav";
-import { getMyContestRole } from "@/lib/contest-role";
-
+import {MobileNav, SidebarNav} from "@/components/contests";
+import {ParticipantsSection} from "@/components/contests/ParticipantsSection";
+import {ProblemsSection} from "@/components/contests/ProblemsSection";
+import {SettingsSection} from "@/components/contests/SettingsSection";
+import {DefaultLayout} from "@/components/shared";
+import {api} from "@/lib/api";
+import {unwrapAndCache} from "@/lib/api2";
+import {buildContestHeaderNav} from "@/lib/contest-header-nav";
+import {getMyContestRole} from "@/lib/contest-role";
 
 import classes from "./styles.module.css";
 
-import type { ContestProblemListItemModel } from "@/contracts/core/v1";
-import type { Metadata } from "next";
+import type {ContestProblemListItemModel} from "@/contracts/core/v1";
+import type {Metadata} from "next";
 
 export const metadata: Metadata = {
   title: "Настройки",
 };
-
 
 // Constants for sections
 const SECTIONS = {
@@ -60,10 +57,10 @@ const ContestManagePage = async ({
   params,
   searchParams,
 }: Props) => {
-  const { contest_id: contestId } = await params;
-  const { section = "settings" } = await searchParams;
+  const {contest_id: contestId} = await params;
+  const {section = "settings"} = await searchParams;
 
-  const response = await unwrapAndCache(api.getContest)({ contestId });
+  const response = await unwrapAndCache(api.getContest)({contestId});
 
   const contest = response.contest;
   const problems: Array<ContestProblemListItemModel> = response.problems || [];
@@ -87,9 +84,9 @@ const ContestManagePage = async ({
     <DefaultLayout
       headerSecondaryNavItems={contestHeaderNav}
       headerOrganizationId={contest.organization_id}
-      headerContest={{ id: contest.id, title: contest.title }}
+      headerContest={{id: contest.id, title: contest.title}}
     >
-      <Container size="lg" pb={{ base: "md", sm: "lg", md: "xl" }}>
+      <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}}>
         <Box className={classes.manageLayout}>
           <SidebarNav
             contestId={contestId}

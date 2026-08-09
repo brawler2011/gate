@@ -2,4 +2,4 @@ const Footer = () => {
   return <></>;
 };
 
-export { Footer };
+export {Footer};

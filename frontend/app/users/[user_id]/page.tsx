@@ -1,18 +1,18 @@
-import { notFound, redirect } from "next/navigation";
-import { Suspense } from "react";
+import {notFound, redirect} from "next/navigation";
+import {Suspense} from "react";
 
-import { DefaultLayout } from '@/components/shared';
+import {DefaultLayout} from '@/components/shared';
 import {
   ProfileContainer,
   ProfileHeader,
   UserContestsSection,
   UserContestsSkeleton,
 } from '@/components/users';
-import { api } from "@/lib/api";
-import { unwrapAndCache } from "@/lib/api2";
-import { parseId, parsePage } from "@/lib/lib2";
+import {api} from "@/lib/api";
+import {unwrapAndCache} from "@/lib/api2";
+import {parseId, parsePage} from "@/lib/lib2";
 
-import type { Metadata } from "next";
+import type {Metadata} from "next";
 
 type Props = {
   params: Promise<{ user_id: string }>;
@@ -21,22 +21,22 @@ type Props = {
 
 const getUser = unwrapAndCache(api.getUser);
 
-export const generateMetadata = async ({ params }: Props): Promise<Metadata> => {
-  const { user_id } = await params;
+export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
+  const {user_id} = await params;
 
   const userId = parseId(user_id);
   if (!userId) {
     notFound();
   }
 
-  const data = await getUser({ id: userId });
+  const data = await getUser({id: userId});
 
-  return { title: `${data.user.username}` };
+  return {title: `${data.user.username}`};
 };
 
-const Page = async ({ params, searchParams }: Props) => {
-  const { user_id } = await params;
-  const { contestsPage } = await searchParams;
+const Page = async ({params, searchParams}: Props) => {
+  const {user_id} = await params;
+  const {contestsPage} = await searchParams;
 
   const userId = parseId(user_id);
   if (!userId) {
@@ -50,7 +50,7 @@ const Page = async ({ params, searchParams }: Props) => {
 
   const [[, me], userData] = await Promise.all([
     api.getMe(),
-    getUser({ id: userId }),
+    getUser({id: userId}),
   ]);
   const currentUser = me?.user ?? null;
   const user = userData!.user;

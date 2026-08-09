@@ -9,17 +9,17 @@ import {
   Table,
   Text,
 } from "@mantine/core";
-import { IconEdit, IconTrash } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import {IconEdit, IconTrash} from "@tabler/icons-react";
+import {useRouter} from "next/navigation";
+import {useState} from "react";
 
-import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { formatDate } from "@/lib/formatDate";
+import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
+import {formatDate} from "@/lib/formatDate";
 
 import classes from "./AdminPage.module.css";
-import { DeleteBlogPostModal } from "./DeleteBlogPostModal";
+import {DeleteBlogPostModal} from "./DeleteBlogPostModal";
 
-import type { PostModel } from "@/contracts/core/v1";
+import type {PostModel} from "@/contracts/core/v1";
 
 type AdminBlogsTableProps = {
   posts: PostModel[];
@@ -27,7 +27,7 @@ type AdminBlogsTableProps = {
   onEditPost: (post: PostModel) => void;
 };
 
-export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsTableProps) => {
+export const AdminBlogsTable = ({posts, onDeletePost, onEditPost}: AdminBlogsTableProps) => {
   const router = useRouter();
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [postToDelete, setPostToDelete] = useState<PostModel | null>(null);
@@ -75,13 +75,13 @@ export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsT
         <Table className={classes.table} verticalSpacing="xs">
           <Table.Thead className={classes.thead}>
             <Table.Tr>
-              <Table.Th style={{ width: "5%" }} />
-              <Table.Th style={{ width: "30%" }}>Название</Table.Th>
-              <Table.Th style={{ width: "12%" }}>ID</Table.Th>
-              <Table.Th style={{ width: "15%" }}>Автор</Table.Th>
-              <Table.Th style={{ width: "12%" }}>Создан</Table.Th>
-              <Table.Th style={{ width: "12%" }}>Обновлён</Table.Th>
-              <Table.Th style={{ width: "10%" }}>Действия</Table.Th>
+              <Table.Th style={{width: "5%"}} />
+              <Table.Th style={{width: "30%"}}>Название</Table.Th>
+              <Table.Th style={{width: "12%"}}>ID</Table.Th>
+              <Table.Th style={{width: "15%"}}>Автор</Table.Th>
+              <Table.Th style={{width: "12%"}}>Создан</Table.Th>
+              <Table.Th style={{width: "12%"}}>Обновлён</Table.Th>
+              <Table.Th style={{width: "10%"}}>Действия</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody className={classes.tbody}>
@@ -171,7 +171,3 @@ export const AdminBlogsTable = ({ posts, onDeletePost, onEditPost }: AdminBlogsT
     </>
   );
 };
-
-
-
-

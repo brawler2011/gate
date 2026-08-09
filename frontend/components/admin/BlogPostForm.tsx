@@ -9,10 +9,10 @@ import {
   Textarea,
   TextInput,
 } from "@mantine/core";
-import { IconPhoto, IconUpload } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import {IconPhoto, IconUpload} from "@tabler/icons-react";
+import {useEffect, useState} from "react";
 
-import type { PostModel } from "@/contracts/core/v1";
+import type {PostModel} from "@/contracts/core/v1";
 
 interface BlogPostFormProps {
   opened: boolean;
@@ -96,7 +96,7 @@ export const BlogPostForm = ({
       centered
       size="lg"
       radius="md"
-      overlayProps={{ backgroundOpacity: 0.4 }}
+      overlayProps={{backgroundOpacity: 0.4}}
     >
       <Stack gap="md">
         <TextInput
@@ -164,6 +164,3 @@ export const BlogPostForm = ({
     </Modal>
   );
 };
-
-
-

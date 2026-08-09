@@ -21,7 +21,7 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import {useDisclosure} from "@mantine/hooks";
 import {
   IconBuilding,
   IconDeviceDesktop,
@@ -42,7 +42,7 @@ import {
 import cx from "clsx";
 import NextImage from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import {usePathname} from "next/navigation";
 import {
   type ComponentType,
   useCallback,
@@ -52,14 +52,14 @@ import {
   useState,
 } from "react";
 
-import { buildAdminHeaderNav } from "@/lib/admin-header-nav";
-import { api } from "@/lib/api";
-import { APP_COLORS } from "@/lib/theme/colors";
+import {buildAdminHeaderNav} from "@/lib/admin-header-nav";
+import {api} from "@/lib/api";
+import {APP_COLORS} from "@/lib/theme/colors";
 
 import classes from "./Header.module.css";
-import { LogoutLink } from "./LogoutLink";
+import {LogoutLink} from "./LogoutLink";
 
-import type { UserModel } from "@/contracts/core/v1";
+import type {UserModel} from "@/contracts/core/v1";
 import type {
   HeaderSecondaryNavIcon,
   HeaderSecondaryNavItem,
@@ -103,7 +103,7 @@ export type HeaderProblem = {
   title: string;
 };
 
-const Profile = ({ user }: { user?: UserModel | null }) => {
+const Profile = ({user}: { user?: UserModel | null }) => {
   const pathname = usePathname();
   const [logoutLoading, setLogoutLoading] = useState(false);
 
@@ -147,13 +147,13 @@ const Profile = ({ user }: { user?: UserModel | null }) => {
           shadow="md"
           width={200}
           position="bottom-end"
-          transitionProps={{ transition: "pop-top-right" }}
+          transitionProps={{transition: "pop-top-right"}}
         >
           <Menu.Target>
             <Avatar
               color={APP_COLORS.users}
               size={36}
-              style={{ cursor: "pointer" }}
+              style={{cursor: "pointer"}}
             >
               <IconUser size={20} />
             </Avatar>
@@ -206,7 +206,7 @@ const Profile = ({ user }: { user?: UserModel | null }) => {
   );
 };
 
-const SecondaryNav = ({ items }: { items: HeaderSecondaryNavItem[] }) => {
+const SecondaryNav = ({items}: { items: HeaderSecondaryNavItem[] }) => {
   const pathname = usePathname();
   const [visibleCount, setVisibleCount] = useState(items.length);
   const [moreOpened, setMoreOpened] = useState(false);
@@ -417,7 +417,7 @@ const Header = ({
   contest?: HeaderContest;
   problem?: HeaderProblem;
 }) => {
-  const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] =
+  const [drawerOpened, {toggle: toggleDrawer, close: closeDrawer}] =
     useDisclosure(false);
   const pathname = usePathname();
   const getReturnUrlDrawer = () => {
@@ -431,7 +431,7 @@ const Header = ({
     ? `?return_to=${encodeURIComponent(returnUrl)}`
     : "";
 
-  const { setColorScheme } = useMantineColorScheme();
+  const {setColorScheme} = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme("dark", {
     getInitialValueInEffect: true,
   });
@@ -454,7 +454,7 @@ const Header = ({
             mx="auto"
             wrap="nowrap"
             justify="space-between"
-            style={{ flex: 1, position: "relative" }}
+            style={{flex: 1, position: "relative"}}
           >
             <Group
               justify="flex-start"
@@ -527,7 +527,7 @@ const Header = ({
               </Group>
             </Group>
 
-            <Box hiddenFrom="sm" style={{ flex: 1 }} />
+            <Box hiddenFrom="sm" style={{flex: 1}} />
             <Group
               justify="flex-end"
               h="100%"
@@ -598,7 +598,7 @@ const Header = ({
             <Divider my="sm" />
 
             <Group justify="space-between" align="center">
-              <span style={{ fontWeight: 600 }}>Тема оформления</span>
+              <span style={{fontWeight: 600}}>Тема оформления</span>
               <ActionIcon
                 onClick={() =>
                   setColorScheme(
@@ -669,4 +669,4 @@ const Header = ({
   );
 };
 
-export { Header };
+export {Header};

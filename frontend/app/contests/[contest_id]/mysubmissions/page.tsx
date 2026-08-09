@@ -1,21 +1,20 @@
-import { Alert, Container, Group, Paper, Stack } from "@mantine/core";
-import { IconAlertCircle } from "@tabler/icons-react";
-import { redirect } from "next/navigation";
+import {Alert, Container, Group, Paper, Stack} from "@mantine/core";
+import {IconAlertCircle} from "@tabler/icons-react";
+import {redirect} from "next/navigation";
 
-import { DefaultLayout } from "@/components/shared";
-import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
-import { NextPagination } from "@/components/shared/Pagination";
-import { SubmissionsListClient } from "@/components/submissions";
-import { api } from "@/lib/api";
-import { unwrapAndCache } from "@/lib/api2";
-import { buildContestHeaderNav } from "@/lib/contest-header-nav";
-import { getMyContestRole } from "@/lib/contest-role";
-import { env } from "@/lib/env";
-import { parsePage } from "@/lib/lib2";
-import { PermissionChecker } from "@/lib/permissions";
+import {DefaultLayout} from "@/components/shared";
+import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
+import {NextPagination} from "@/components/shared/Pagination";
+import {SubmissionsListClient} from "@/components/submissions";
+import {api} from "@/lib/api";
+import {unwrapAndCache} from "@/lib/api2";
+import {buildContestHeaderNav} from "@/lib/contest-header-nav";
+import {getMyContestRole} from "@/lib/contest-role";
+import {env} from "@/lib/env";
+import {parsePage} from "@/lib/lib2";
+import {PermissionChecker} from "@/lib/permissions";
 
-import type { Metadata } from "next";
-
+import type {Metadata} from "next";
 
 export const metadata: Metadata = {
   title: "Мои посылки",
@@ -38,8 +37,8 @@ interface PageProps {
 
 const PAGE_SIZE = 20;
 
-const Page = async ({ params, searchParams }: PageProps) => {
-  const { contest_id } = await params;
+const Page = async ({params, searchParams}: PageProps) => {
+  const {contest_id} = await params;
   const queryParams = await searchParams;
 
   const page = parsePage(queryParams.page);
@@ -112,7 +111,7 @@ const Page = async ({ params, searchParams }: PageProps) => {
 
   const wsBaseUrl = env.getWebSocketUrl();
 
-  const contestData = await unwrapAndCache(api.getContest)({ contestId: contest_id });
+  const contestData = await unwrapAndCache(api.getContest)({contestId: contest_id});
 
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
@@ -191,7 +190,7 @@ const Page = async ({ params, searchParams }: PageProps) => {
           </Paper>
         ) : (
           <ErrorDisplay
-            error={{ status: 404, message: "Contest not found" }}
+            error={{status: 404, message: "Contest not found"}}
           />
         )}
       </Container>

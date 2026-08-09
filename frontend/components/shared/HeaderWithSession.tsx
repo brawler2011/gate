@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 
 import {
   Header,
@@ -7,7 +7,7 @@ import {
   type HeaderProblem,
 } from "./Header";
 
-import type { HeaderSecondaryNavItem } from "@/lib/contest-header-nav";
+import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
 
 type HeaderWithSessionProps = {
   secondaryNavItems?: HeaderSecondaryNavItem[];
@@ -29,7 +29,7 @@ export const HeaderWithSession = async ({
   const [meResult, organizationResult] = await Promise.all([
     api.getMe(),
     !passedOrganization && targetOrgId
-      ? api.getOrganization({ id: targetOrgId })
+      ? api.getOrganization({id: targetOrgId})
       : Promise.resolve([null, null] as const),
   ]);
 
@@ -41,7 +41,7 @@ export const HeaderWithSession = async ({
     }
     const org = organizationResult[1]?.organization;
     if (org) {
-      return { id: org.id, name: org.name };
+      return {id: org.id, name: org.name};
     }
     return undefined;
   };

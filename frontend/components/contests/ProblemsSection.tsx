@@ -13,15 +13,15 @@ import {
   Table,
   Text,
 } from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
-import { notifications } from "@mantine/notifications";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {useDebouncedValue} from "@mantine/hooks";
+import {notifications} from "@mantine/notifications";
+import {IconPlus, IconTrash} from "@tabler/icons-react";
+import {useRouter} from "next/navigation";
+import {useEffect, useState} from "react";
 
-import { StatusMessage } from '@/components/shared/StatusMessage';
-import { api } from "@/lib/api";
-import { numberToLetters } from "@/lib/lib";
+import {StatusMessage} from '@/components/shared/StatusMessage';
+import {api} from "@/lib/api";
+import {numberToLetters} from "@/lib/lib";
 
 import type * as corev1 from "@/contracts/core/v1";
 
@@ -64,7 +64,7 @@ export const ProblemsSection = ({
       }
 
       setSearching(true);
-      const [error, response] = await api.listProblems({ page: 1, pageSize: 10, search: debouncedQuery, owner: true });
+      const [error, response] = await api.listProblems({page: 1, pageSize: 10, search: debouncedQuery, owner: true});
       setSearching(false);
 
       if (error) {
@@ -84,7 +84,7 @@ export const ProblemsSection = ({
     }
 
     setAdding(true);
-    const [error] = await api.createContestProblem({ contestId, problemId: selectedProblemId });
+    const [error] = await api.createContestProblem({contestId, problemId: selectedProblemId});
     setAdding(false);
 
     if (error) {
@@ -113,7 +113,7 @@ export const ProblemsSection = ({
 
   const handleDeleteProblem = async (problemId: string) => {
     setDeletingId(problemId);
-    const [error] = await api.deleteContestProblem({ contestId, problemId });
+    const [error] = await api.deleteContestProblem({contestId, problemId});
     setDeletingId(null);
 
     if (error) {
@@ -166,7 +166,7 @@ export const ProblemsSection = ({
                 }}
                 data={autocompleteData}
                 rightSection={searching && <Loader size="xs" />}
-                style={{ flex: 1 }}
+                style={{flex: 1}}
               />
               <Button
                 onClick={handleAddProblem}
@@ -196,11 +196,11 @@ export const ProblemsSection = ({
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th style={{ width: 60 }}>№</Table.Th>
+                <Table.Th style={{width: 60}}>№</Table.Th>
                 <Table.Th>Название</Table.Th>
-                <Table.Th style={{ width: 120 }}>Время</Table.Th>
-                <Table.Th style={{ width: 120 }}>Память</Table.Th>
-                <Table.Th style={{ width: 80 }}>Действия</Table.Th>
+                <Table.Th style={{width: 120}}>Время</Table.Th>
+                <Table.Th style={{width: 120}}>Память</Table.Th>
+                <Table.Th style={{width: 80}}>Действия</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>

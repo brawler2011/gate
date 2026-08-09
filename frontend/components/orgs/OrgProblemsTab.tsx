@@ -9,12 +9,12 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { IconPlus, IconSearch } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import {IconPlus, IconSearch} from "@tabler/icons-react";
+import {useMemo, useState} from "react";
 
-import { ProblemCard } from "@/components/problems/ProblemCard";
-import { NextPagination } from "@/components/shared/Pagination";
-import { CreateProblemModal } from "@/components/workshop/CreateProblemModal";
+import {ProblemCard} from "@/components/problems/ProblemCard";
+import {NextPagination} from "@/components/shared/Pagination";
+import {CreateProblemModal} from "@/components/workshop/CreateProblemModal";
 
 import type {
   OrganizationModel,
@@ -56,7 +56,7 @@ export const OrgProblemsTab = ({
           onChange={(event) => setSearchValue(event.currentTarget.value)}
           radius="md"
           size="md"
-          style={{ flex: 1 }}
+          style={{flex: 1}}
         />
         {isAuthenticated && (
           <Button
@@ -77,8 +77,8 @@ export const OrgProblemsTab = ({
         </Center>
       ) : (
         <SimpleGrid
-          cols={{ base: 1, xs: 2, sm: 2, md: 3, lg: 4, xl: 4 }}
-          spacing={{ base: "xs", sm: "sm", md: "md" }}
+          cols={{base: 1, xs: 2, sm: 2, md: 3, lg: 4, xl: 4}}
+          spacing={{base: "xs", sm: "sm", md: "md"}}
         >
           {filteredProblems.map((problem) => (
             <ProblemCard

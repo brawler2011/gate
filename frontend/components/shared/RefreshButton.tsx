@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@mantine/core";
+import {Button} from "@mantine/core";
 
 export const RefreshButton = () => {
   return (
@@ -9,4 +9,3 @@ export const RefreshButton = () => {
     </Button>
   );
 };
-

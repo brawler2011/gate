@@ -1,7 +1,7 @@
 "use client";
 
-import { Alert, Button, Group, Modal, Radio, Stack, Text } from "@mantine/core";
-import { useState } from "react";
+import {Alert, Button, Group, Modal, Radio, Stack, Text} from "@mantine/core";
+import {useState} from "react";
 
 type Props = {
   opened: boolean;

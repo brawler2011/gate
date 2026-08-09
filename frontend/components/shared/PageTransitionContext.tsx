@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useTransition } from "react";
+import {createContext, useContext, useState, useTransition} from "react";
 
 export type PageTransitionContextType = {
   isPending: boolean;

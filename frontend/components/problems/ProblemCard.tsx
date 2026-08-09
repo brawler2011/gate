@@ -1,22 +1,22 @@
 "use client";
 
-import { ActionIcon, Card, Group, Stack, Text, Title } from "@mantine/core";
-import { IconPencil } from "@tabler/icons-react";
+import {ActionIcon, Card, Group, Stack, Text, Title} from "@mantine/core";
+import {IconPencil} from "@tabler/icons-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import {useRouter} from "next/navigation";
 
-import { APP_COLORS } from "@/lib/theme/colors";
+import {APP_COLORS} from "@/lib/theme/colors";
 
 import classes from "./ProblemCard.module.css";
 
-import type { ProblemsListItemModel } from "@/contracts/core/v1";
+import type {ProblemsListItemModel} from "@/contracts/core/v1";
 
 type Props = {
   problem: ProblemsListItemModel;
   showEditButton: boolean;
 };
 
-export const ProblemCard = ({ problem, showEditButton }: Props) => {
+export const ProblemCard = ({problem, showEditButton}: Props) => {
   const router = useRouter();
 
   return (
@@ -30,7 +30,7 @@ export const ProblemCard = ({ problem, showEditButton }: Props) => {
     >
       <Card
         shadow="xs"
-        p={{ base: "sm", sm: "md" }}
+        p={{base: "sm", sm: "md"}}
         radius="md"
         withBorder
         className={classes.problemCard}
@@ -38,7 +38,7 @@ export const ProblemCard = ({ problem, showEditButton }: Props) => {
         <Stack gap="xs" h="100%" justify="space-between">
           {/* Problem Header */}
           <Group justify="space-between" wrap="nowrap" gap="xs">
-            <Stack gap="0" style={{ flex: 1, minWidth: 0 }}>
+            <Stack gap="0" style={{flex: 1, minWidth: 0}}>
               <Title
                 order={4}
                 fz="md"
@@ -60,7 +60,7 @@ export const ProblemCard = ({ problem, showEditButton }: Props) => {
                   e.stopPropagation();
                   router.push(`/problems/${problem.id}`);
                 }}
-                style={{ flexShrink: 0 }}
+                style={{flexShrink: 0}}
               >
                 <IconPencil size={20} />
               </ActionIcon>
@@ -72,7 +72,7 @@ export const ProblemCard = ({ problem, showEditButton }: Props) => {
             <Text
               size="xs"
               c="dimmed"
-              style={{ flex: 1 }}
+              style={{flex: 1}}
               lineClamp={1}
             >
               ⏱️ {problem.time_limit || "—"}ms

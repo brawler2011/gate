@@ -1,12 +1,12 @@
 "use client";
 
-import { Button } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { IconPlus } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import {Button} from "@mantine/core";
+import {notifications} from "@mantine/notifications";
+import {IconPlus} from "@tabler/icons-react";
+import {useRouter} from "next/navigation";
+import {useTransition} from "react";
 
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 
 const CreateProblemForm = () => {
   const router = useRouter();
@@ -15,7 +15,7 @@ const CreateProblemForm = () => {
   const handleCreate = () => {
     startTransition(async () => {
       try {
-        const [error, response] = await api.createProblem({ title: "New Problem" });
+        const [error, response] = await api.createProblem({title: "New Problem"});
         if (error) {
           notifications.show({
             title: "Ошибка",
@@ -60,4 +60,4 @@ const CreateProblemForm = () => {
   );
 };
 
-export { CreateProblemForm };
+export {CreateProblemForm};

@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import {api} from "@/lib/api";
 
 export const canManageOrgMembers = async (orgId: string): Promise<boolean> => {
   const [, me] = await api.getMe();
@@ -10,7 +10,7 @@ export const canManageOrgMembers = async (orgId: string): Promise<boolean> => {
     return true;
   }
 
-  const [error, data] = await api.listOrganizationMembers({ id: orgId, page: 1, pageSize: 100 });
+  const [error, data] = await api.listOrganizationMembers({id: orgId, page: 1, pageSize: 100});
   if (error || !data || !data.members) {
     return false;
   }
@@ -18,4 +18,3 @@ export const canManageOrgMembers = async (orgId: string): Promise<boolean> => {
   const member = data.members.find((m) => m.user_id === currentUser.id);
   return member?.role === "owner" || member?.role === "admin";
 };
-

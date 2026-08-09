@@ -1,8 +1,8 @@
-import { env } from '@/lib/env';
+import {env} from '@/lib/env';
 
-import type { MetadataRoute } from 'next';
+import type {MetadataRoute} from 'next';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+const sitemap = (): MetadataRoute.Sitemap => {
   const baseUrl = env.getAppUrl();
 
   const routes = [
@@ -39,5 +39,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   return routes;
-}
+};
 
+export default sitemap;

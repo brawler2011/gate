@@ -1,7 +1,7 @@
 "use client";
 
-import { Skeleton, Stack, Tabs } from "@mantine/core";
-import { IconTrophy } from "@tabler/icons-react";
+import {Skeleton, Stack, Tabs} from "@mantine/core";
+import {IconTrophy} from "@tabler/icons-react";
 
 export const UserContestsSkeleton = () => {
   return (

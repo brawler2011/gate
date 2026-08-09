@@ -1,6 +1,6 @@
-import ProblemPageLayoutWrapper, { generateMetadata as sharedGenerateMetadata } from "../ProblemPageLayoutWrapper";
+import ProblemPageLayoutWrapper, {generateMetadata as sharedGenerateMetadata} from "../ProblemPageLayoutWrapper";
 
-import type { Metadata } from "next";
+import type {Metadata} from "next";
 
 type SearchParams = Promise<{
   file?: string;
@@ -13,11 +13,11 @@ type Props = {
 };
 
 export const generateMetadata = async (props: { params: Promise<{ problem_id: string }> }): Promise<Metadata> => {
-  const { problem_id } = await props.params;
+  const {problem_id} = await props.params;
   return sharedGenerateMetadata(problem_id);
 };
 
-const Page = ({ params, searchParams }: Props) => {
+const Page = ({params, searchParams}: Props) => {
   return (
     <ProblemPageLayoutWrapper
       activeTab="validators"

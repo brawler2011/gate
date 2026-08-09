@@ -14,28 +14,28 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { IconSearch, IconTrash } from "@tabler/icons-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import {notifications} from "@mantine/notifications";
+import {IconSearch, IconTrash} from "@tabler/icons-react";
+import {useRouter, useSearchParams} from "next/navigation";
+import {useEffect, useRef, useState} from "react";
 import useSWR from "swr";
 
-import { NextPagination } from '@/components/shared/Pagination';
-import { TruncatedWithCopy } from '@/components/shared/TruncatedWithCopy';
-import { api } from "@/lib/api";
-import { formatDate } from "@/lib/formatDate";
+import {NextPagination} from '@/components/shared/Pagination';
+import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
+import {api} from "@/lib/api";
+import {formatDate} from "@/lib/formatDate";
 
 import classes from "./AdminPage.module.css";
-import { DeleteProblemModal } from "./DeleteProblemModal";
+import {DeleteProblemModal} from "./DeleteProblemModal";
 
-import type { ProblemsListItemModel } from "@/contracts/core/v1";
+import type {ProblemsListItemModel} from "@/contracts/core/v1";
 
 type AdminProblemsContentProps = {
   page: number;
   search?: string;
 };
 
-export const AdminProblemsContent = ({ page, search }: AdminProblemsContentProps) => {
+export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -84,17 +84,19 @@ export const AdminProblemsContent = ({ page, search }: AdminProblemsContentProps
   }, [searchInput, router, searchParams]);
 
   // Fetch problems
-  const { data, error, isLoading, mutate } = useSWR(
+  const {data, error, isLoading, mutate} = useSWR(
     ["admin-problems", page, search],
     async () => {
-      const [err, res] = await api.listProblems({ page, pageSize: 10, search });
-      if (err) throw new Error(err.message);
+      const [err, res] = await api.listProblems({page, pageSize: 10, search});
+      if (err) {
+        throw new Error(err.message);
+      }
       return res;
     }
   );
 
   const problems = data?.problems || [];
-  const pagination = data?.pagination || { total: 0, page: page };
+  const pagination = data?.pagination || {total: 0, page: page};
 
   const handleDeleteClick = (e: React.MouseEvent, problem: ProblemsListItemModel) => {
     e.stopPropagation();
@@ -109,7 +111,7 @@ export const AdminProblemsContent = ({ page, search }: AdminProblemsContentProps
 
     setDeletingId(problemToDelete.id);
     try {
-      const [err] = await api.deleteProblem({ id: problemToDelete.id });
+      const [err] = await api.deleteProblem({id: problemToDelete.id});
       if (err) {
         notifications.show({
           title: "Ошибка",
@@ -158,7 +160,7 @@ export const AdminProblemsContent = ({ page, search }: AdminProblemsContentProps
           leftSection={<IconSearch size={16} />}
           value={searchInput}
           onChange={(e) => setSearchInput(e.currentTarget.value)}
-          style={{ maxWidth: 400 }}
+          style={{maxWidth: 400}}
         />
 
         {isLoading && (
@@ -181,13 +183,13 @@ export const AdminProblemsContent = ({ page, search }: AdminProblemsContentProps
               <Table className={classes.table} verticalSpacing="xs">
                 <Table.Thead className={classes.thead}>
                   <Table.Tr>
-                    <Table.Th style={{ width: "30%" }}>Название</Table.Th>
-                    <Table.Th style={{ width: "20%" }}>ID</Table.Th>
-                    <Table.Th style={{ width: "10%" }}>Время</Table.Th>
-                    <Table.Th style={{ width: "10%" }}>Память</Table.Th>
-                    <Table.Th style={{ width: "10%" }}>Шаблон</Table.Th>
-                    <Table.Th style={{ width: "10%" }}>Создана</Table.Th>
-                    <Table.Th style={{ width: "10%" }}>Действия</Table.Th>
+                    <Table.Th style={{width: "30%"}}>Название</Table.Th>
+                    <Table.Th style={{width: "20%"}}>ID</Table.Th>
+                    <Table.Th style={{width: "10%"}}>Время</Table.Th>
+                    <Table.Th style={{width: "10%"}}>Память</Table.Th>
+                    <Table.Th style={{width: "10%"}}>Шаблон</Table.Th>
+                    <Table.Th style={{width: "10%"}}>Создана</Table.Th>
+                    <Table.Th style={{width: "10%"}}>Действия</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody className={classes.tbody}>

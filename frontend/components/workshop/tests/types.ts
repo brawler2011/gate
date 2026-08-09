@@ -30,7 +30,7 @@ export type SubtaskItem = {
   testIds: string[];
 };
 
-export function parseOrdinalsFromRanges(input: string): number[] {
+export const parseOrdinalsFromRanges = (input: string): number[] => {
   const result = new Set<number>();
   const parts = input.split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -61,9 +61,9 @@ export function parseOrdinalsFromRanges(input: string): number[] {
   }
 
   return Array.from(result).sort((a, b) => a - b);
-}
+};
 
-export function formatOrdinalsToRanges(ordinals: number[]): string {
+export const formatOrdinalsToRanges = (ordinals: number[]): string => {
   if (!ordinals || ordinals.length === 0) {
     return "";
   }
@@ -95,8 +95,8 @@ export function formatOrdinalsToRanges(ordinals: number[]): string {
   }
 
   return ranges.join(", ");
-}
+};
 
-export function formatPaddedOrdinal(n: number): string {
+export const formatPaddedOrdinal = (n: number): string => {
   return n < 10 ? `0${n}` : `${n}`;
-}
+};

@@ -1,16 +1,16 @@
 "use client";
 
-import { Paper, Text, Group, Stack, Title } from "@mantine/core";
-import { useEffect, useState } from "react";
+import {Paper, Text, Group, Stack, Title} from "@mantine/core";
+import {useEffect, useState} from "react";
 
-import { APP_COLORS } from "@/lib/theme/colors";
+import {APP_COLORS} from "@/lib/theme/colors";
 
 interface ContestCountdownProps {
   startTime: string;
   title: string;
 }
 
-export const ContestCountdown = ({ startTime, title }: ContestCountdownProps) => {
+export const ContestCountdown = ({startTime, title}: ContestCountdownProps) => {
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
     hours: number;
@@ -23,7 +23,7 @@ export const ContestCountdown = ({ startTime, title }: ContestCountdownProps) =>
     const calculateTimeLeft = () => {
       const difference = new Date(startTime).getTime() - new Date().getTime();
       if (difference <= 0) {
-        return { days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 };
+        return {days: 0, hours: 0, minutes: 0, seconds: 0, total: 0};
       }
 
       return {
@@ -77,7 +77,7 @@ export const ContestCountdown = ({ startTime, title }: ContestCountdownProps) =>
         minHeight: "300px",
       }}
     >
-      <Stack gap="lg" align="center" style={{ width: "100%" }}>
+      <Stack gap="lg" align="center" style={{width: "100%"}}>
         <Title order={2} c="dimmed" size="h3" fw={600} ta="center">
           {title}
         </Title>
@@ -112,9 +112,9 @@ interface TimeBlockProps {
   label: string;
 }
 
-const TimeBlock = ({ value, label }: TimeBlockProps) => {
+const TimeBlock = ({value, label}: TimeBlockProps) => {
   return (
-    <Stack gap={4} align="center" style={{ minWidth: "60px" }}>
+    <Stack gap={4} align="center" style={{minWidth: "60px"}}>
       <Paper
         shadow="xs"
         radius="md"
@@ -128,7 +128,7 @@ const TimeBlock = ({ value, label }: TimeBlockProps) => {
           background: "var(--mantine-color-body)",
         }}
       >
-        <Text size="2rem" fw={700} style={{ fontFamily: "monospace", lineHeight: 1 }}>
+        <Text size="2rem" fw={700} style={{fontFamily: "monospace", lineHeight: 1}}>
           {value}
         </Text>
       </Paper>
@@ -141,7 +141,7 @@ const TimeBlock = ({ value, label }: TimeBlockProps) => {
 
 const Colon = () => {
   return (
-    <Text size="2rem" fw={700} c="dimmed" style={{ lineHeight: 1, marginTop: "-20px" }}>
+    <Text size="2rem" fw={700} c="dimmed" style={{lineHeight: 1, marginTop: "-20px"}}>
       :
     </Text>
   );

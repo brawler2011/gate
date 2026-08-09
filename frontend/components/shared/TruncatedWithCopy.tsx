@@ -1,7 +1,7 @@
 "use client";
 
-import { IconCopy, IconCheck } from "@tabler/icons-react";
-import { useState, useEffect } from "react";
+import {IconCopy, IconCheck} from "@tabler/icons-react";
+import {useState, useEffect} from "react";
 
 import classes from "./TruncatedWithCopy.module.css";
 
@@ -50,7 +50,7 @@ export const TruncatedWithCopy = ({
     <div className={classes.container}>
       <div 
         className={classes.textWrapper}
-        style={{ width: `${maxLength * 0.55}em` }}
+        style={{width: `${maxLength * 0.55}em`}}
       >
         <span className={classes.text}>{displayText}</span>
       </div>
@@ -69,4 +69,3 @@ export const TruncatedWithCopy = ({
     </div>
   );
 };
-

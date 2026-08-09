@@ -1,13 +1,13 @@
 "use client";
 
-import { MantineProvider } from "@mantine/core";
-import { Notifications } from "@mantine/notifications";
+import {MantineProvider} from "@mantine/core";
+import {Notifications} from "@mantine/notifications";
 
-import { theme } from "@/lib/theme/theme";
+import {theme} from "@/lib/theme/theme";
 
-import type { ReactNode } from "react";
+import type {ReactNode} from "react";
 
-export const Providers = ({ children }: { children: ReactNode }) => {
+export const Providers = ({children}: { children: ReactNode }) => {
   return (
     <MantineProvider
       theme={theme}

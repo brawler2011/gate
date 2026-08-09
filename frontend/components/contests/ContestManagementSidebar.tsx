@@ -1,6 +1,6 @@
-import { Paper, Stack, Title } from "@mantine/core";
+import {Paper, Stack, Title} from "@mantine/core";
 
-import { CreateContestForm } from '@/components/contests/CreateContestForm';
+import {CreateContestForm} from '@/components/contests/CreateContestForm';
 
 export const ContestManagementSidebar = () => {
   return (
@@ -20,4 +20,3 @@ export const ContestManagementSidebar = () => {
     </Paper>
   );
 };
-

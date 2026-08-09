@@ -1,27 +1,28 @@
-import { Container, Stack, Text, Title } from '@mantine/core';
-import { IconArrowLeft } from '@tabler/icons-react';
-import { notFound } from 'next/navigation';
+import {Container, Stack, Text, Title} from '@mantine/core';
+import {IconArrowLeft} from '@tabler/icons-react';
+import {notFound} from 'next/navigation';
 
-import { TeamMembersManagement } from '@/components/orgs/TeamMembersManagement';
-import { DefaultLayout, LinkAnchor } from '@/components/shared';
-import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
-import { api } from '@/lib/api';
-import type { Metadata } from 'next';
+import {TeamMembersManagement} from '@/components/orgs/TeamMembersManagement';
+import {DefaultLayout, LinkAnchor} from '@/components/shared';
+import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
+import {api} from '@/lib/api';
+
+import type {Metadata} from 'next';
 
 type Props = { params: Promise<{ org_id: string; team_id: string }> };
 
-export const generateMetadata = async ({ params }: Props): Promise<Metadata> => {
-  const { team_id } = await params;
-  const [error, data] = await api.getTeam({ id: team_id });
+export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
+  const {team_id} = await params;
+  const [error, data] = await api.getTeam({id: team_id});
   if (error || !data) {
-    return { title: 'Команда' };
+    return {title: 'Команда'};
   }
-  return { title: data.team.name };
+  return {title: data.team.name};
 };
 
-const TeamPage = async ({ params }: Props) => {
-  const { org_id, team_id } = await params;
-  const [error, data] = await api.getTeam({ id: team_id });
+const TeamPage = async ({params}: Props) => {
+  const {org_id, team_id} = await params;
+  const [error, data] = await api.getTeam({id: team_id});
   if (error) {
     if (error.status === 404) {
       notFound();
@@ -39,7 +40,7 @@ const TeamPage = async ({ params }: Props) => {
       <Container size="sm" py="lg">
         <Stack gap="xl">
           <LinkAnchor href={`/orgs/${org_id}`} size="sm">
-            <IconArrowLeft size={14} style={{ marginRight: 4 }} />
+            <IconArrowLeft size={14} style={{marginRight: 4}} />
             Назад к организации
           </LinkAnchor>
 

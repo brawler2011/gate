@@ -14,15 +14,15 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { useForm } from "@mantine/form";
-import { notifications } from "@mantine/notifications";
-import { IconArrowLeft, IconUpload } from "@tabler/icons-react";
+import {useForm} from "@mantine/form";
+import {notifications} from "@mantine/notifications";
+import {IconArrowLeft, IconUpload} from "@tabler/icons-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React, { useState, useTransition } from "react";
+import {useRouter} from "next/navigation";
+import React, {useState, useTransition} from "react";
 
-import type { ProblemModel } from "@/contracts/core/v1";
-import type { ApiError } from "@/lib/api";
+import type {ProblemModel} from "@/contracts/core/v1";
+import type {ApiError} from "@/lib/api";
 
 type ProblemFormData = {
   title?: string;
@@ -47,7 +47,7 @@ type Props = {
   ) => Promise<readonly [ApiError | null, unknown]>;
 };
 
-const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
+const ProblemForm = ({problem, onSubmitFn, onUploadFn}: Props) => {
   const router = useRouter();
   const [opened, setOpened] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -70,7 +70,6 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const values = form.getValues();
-    console.log("📝 ProblemForm - submitting values:", values);
     
     startUpdateTransition(async () => {
       try {
@@ -84,7 +83,6 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
           form.clearErrors();
           return;
         }
-        console.log("✅ Problem updated successfully");
         form.resetDirty();
         router.refresh();
       } catch (error) {
@@ -145,7 +143,7 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
                   ? `/orgs/${problem.organization_id}/problems`
                   : "/orgs"
               }
-              style={{ textDecoration: "none" }}
+              style={{textDecoration: "none"}}
             >
               <Button
                 variant="default"
@@ -352,4 +350,4 @@ const ProblemForm = ({ problem, onSubmitFn, onUploadFn }: Props) => {
   );
 };
 
-export { ProblemForm };
+export {ProblemForm};

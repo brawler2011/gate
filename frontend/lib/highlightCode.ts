@@ -1,10 +1,10 @@
 import c from 'refractor/c';
-import { refractor } from 'refractor/core';
+import {refractor} from 'refractor/core';
 import cpp from 'refractor/cpp';
 import go from 'refractor/go';
 import python from 'refractor/python';
 
-import type { Root, Element, Text } from 'hast';
+import type {Root, Element, Text} from 'hast';
 
 // Register languages
 refractor.register(python);
@@ -17,7 +17,7 @@ type HastNode = Element | Text;
 /**
  * Wrap identifiers in text with variable span
  */
-function wrapIdentifiers(text: string): string {
+const wrapIdentifiers = (text: string): string => {
   // Match identifiers that are not Python keywords
   const pythonKeywords = new Set([
     'False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await',
@@ -33,13 +33,13 @@ function wrapIdentifiers(text: string): string {
     }
     return `<span class="token variable">${match}</span>`;
   });
-}
+};
 
 /**
  * Convert hast AST to HTML string
  * @param isTopLevel - whether this is a top-level text node (not inside a token span)
  */
-function hastToHtml(node: HastNode | Root, isTopLevel: boolean = true): string {
+const hastToHtml = (node: HastNode | Root, isTopLevel: boolean = true): string => {
   if (node.type === 'text') {
     const escaped = escapeHtml((node as Text).value);
     // Only wrap identifiers in top-level text nodes
@@ -72,24 +72,24 @@ function hastToHtml(node: HastNode | Root, isTopLevel: boolean = true): string {
   }
 
   return '';
-}
+};
 
 /**
  * Escape HTML special characters
  */
-function escapeHtml(str: string): string {
+const escapeHtml = (str: string): string => {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
+};
 
 /**
  * Map language names to refractor language identifiers
  */
-function mapLanguage(language: string): string {
+const mapLanguage = (language: string): string => {
   const languageMap: Record<string, string> = {
     'python': 'python',
     'cpp': 'cpp',
@@ -99,12 +99,12 @@ function mapLanguage(language: string): string {
     'c': 'c',
   };
   return languageMap[language.toLowerCase()] || 'c';
-}
+};
 
 /**
  * Highlight code using refractor and return HTML string
  */
-export function highlightCode(code: string, language: string): string {
+export const highlightCode = (code: string, language: string): string => {
   try {
     const lang = mapLanguage(language);
     const tree = refractor.highlight(code, lang);
@@ -113,5 +113,4 @@ export function highlightCode(code: string, language: string): string {
     // Fallback: return escaped code if highlighting fails
     return escapeHtml(code);
   }
-}
-
+};

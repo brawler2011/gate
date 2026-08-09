@@ -1,15 +1,14 @@
 "use client";
 
-import { Box, Table, Text } from "@mantine/core";
-import { useRouter } from "next/navigation";
+import {Box, Table, Text} from "@mantine/core";
+import {useRouter} from "next/navigation";
 
-import { CONTEST_CONTENT_MAX_WIDTH } from "@/lib/constants";
-import { numberToLetters } from "@/lib/lib";
-
+import {CONTEST_CONTENT_MAX_WIDTH} from "@/lib/constants";
+import {numberToLetters} from "@/lib/lib";
 
 import classes from "./ContestProblemsTable.module.css";
 
-import type { ContestProblemListItemModel } from "@/contracts/core/v1";
+import type {ContestProblemListItemModel} from "@/contracts/core/v1";
 
 type ContestProblemsTableProps = {
   contestId: string | number;
@@ -34,14 +33,14 @@ export const ContestProblemsTable = ({
   const router = useRouter();
 
   return (
-    <Box style={{ width: "100%", maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto" }}>
+    <Box style={{width: "100%", maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto"}}>
       <Box className={classes.tableContainer}>
         <Table className={classes.table} verticalSpacing="md">
           <Table.Thead className={classes.thead}>
             <Table.Tr>
-              <Table.Th style={{ textAlign: "center" }}>#</Table.Th>
+              <Table.Th style={{textAlign: "center"}}>#</Table.Th>
               <Table.Th>Задача</Table.Th>
-              <Table.Th style={{ textAlign: "center" }}>Статус</Table.Th>
+              <Table.Th style={{textAlign: "center"}}>Статус</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody className={classes.tbody}>
