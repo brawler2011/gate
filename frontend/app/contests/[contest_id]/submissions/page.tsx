@@ -1,8 +1,7 @@
-import { Alert, Box, Container, Group, Paper, Stack } from "@mantine/core";
+import { Alert, Container, Group, Paper, Stack } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { redirect } from "next/navigation";
 
-import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { NextPagination } from "@/components/shared/Pagination";
@@ -10,16 +9,10 @@ import { SubmissionsListClient } from "@/components/submissions";
 import { api } from "@/lib/api";
 import { unwrapAndCache } from "@/lib/api2";
 import { parsePage } from "@/lib/lib2";
-import {
-  CONTEST_CONTENT_MAX_WIDTH,
-  CONTEST_INFO_PANEL_COMPACT_WIDTH,
-} from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import { env } from "@/lib/env";
 import { PermissionChecker } from "@/lib/permissions";
-
-import classes from "../contestLayout.module.css";
 
 import type { Metadata } from "next";
 
@@ -157,83 +150,51 @@ const Page = async ({ params, searchParams }: PageProps) => {
           : undefined
       }
     >
-      <Box className={classes.contestContainerWithLeftInfo}>
-        {/* Left Sidebar - Contest Info Panel - hidden on mobile */}
-        {contestData?.contest && (
-          <Box
-            style={{ width: CONTEST_INFO_PANEL_COMPACT_WIDTH }}
-            visibleFrom="sm"
+      <Container size="lg" pb="xl">
+        {contestData?.contest ? (
+          <Paper
+            withBorder
+            p="md"
+            w="100%"
+            shadow="sm"
+            radius="md"
+            style={{
+              backgroundColor:
+                "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))",
+              borderColor:
+                "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))",
+            }}
           >
-            <ContestInfoPanel
-              contest={contestData.contest}
-              user={user}
-              width={CONTEST_INFO_PANEL_COMPACT_WIDTH}
-            />
-          </Box>
-        )}
-
-        {/* Main Content */}
-        <Box
-          style={{
-            width: CONTEST_CONTENT_MAX_WIDTH,
-            minWidth: 0,
-            overflow: "hidden",
-          }}
-        >
-          <Container
-            size="xl"
-            pt={0}
-            pb="xl"
-            px={0}
-            mx={0}
-            style={{ maxWidth: "100%" }}
-          >
-            {contestData?.contest ? (
-              <Paper
-                withBorder
-                p="md"
-                w="100%"
-                shadow="sm"
-                radius="md"
-                style={{
-                  backgroundColor:
-                    "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))",
-                  borderColor:
-                    "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))",
+            <Stack gap="md">
+              <SubmissionsListClient
+                initialSubmissions={submissionsData.submissions}
+                wsUrl={wsBaseUrl + "/submissions"}
+                since={submissionsData.since}
+                snapshotScope="all"
+                filter={{
+                  contestId: contest_id,
+                  userId: parsedParams.userId,
+                  problemId: parsedParams.problemId,
                 }}
-              >
-                <Stack gap="md">
-                  <SubmissionsListClient
-                    initialSubmissions={submissionsData.submissions}
-                    wsUrl={wsBaseUrl + "/submissions"}
-                    since={submissionsData.since}
-                    snapshotScope="all"
-                    filter={{
-                      contestId: contest_id,
-                      userId: parsedParams.userId,
-                      problemId: parsedParams.problemId,
-                    }}
-                    pageSize={PAGE_SIZE}
-                    page={parsedParams.page}
-                    sortOrder={parsedParams.sortOrder}
-                  />
-                  <Group justify="center">
-                    <NextPagination
-                      pagination={submissionsData.pagination}
-                      baseUrl={`/contests/${contest_id}/submissions`}
-                      queryParams={nextQueryParams}
-                    />
-                  </Group>
-                </Stack>
-              </Paper>
-            ) : (
-              <ErrorDisplay
-                error={{ status: 404, message: "Contest not found" }}
+                pageSize={PAGE_SIZE}
+                page={parsedParams.page}
+                sortOrder={parsedParams.sortOrder}
               />
-            )}
-          </Container>
-        </Box>
-      </Box>
+              <Group justify="center">
+                <NextPagination
+                  pagination={submissionsData.pagination}
+                  baseUrl={`/contests/${contest_id}/submissions`}
+                  queryParams={nextQueryParams}
+                />
+              </Group>
+            </Stack>
+          </Paper>
+        ) : (
+          <ErrorDisplay
+            error={{ status: 404, message: "Contest not found" }}
+          />
+        )}
+      </Container>
     </DefaultLayout>
   );
 };

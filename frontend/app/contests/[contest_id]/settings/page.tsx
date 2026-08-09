@@ -9,15 +9,10 @@ import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { api } from "@/lib/api";
 import { unwrapAndCache } from "@/lib/api2";
-import {
-  CONTEST_CONTENT_MAX_WIDTH,
-  CONTEST_INFO_PANEL_WIDTH,
-} from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 
 
-import layoutClasses from "../contestLayout.module.css";
 import classes from "./styles.module.css";
 
 import type { ContestProblemListItemModel } from "@/contracts/core/v1";
@@ -94,53 +89,38 @@ const ContestManagePage = async ({
       headerOrganizationId={contest.organization_id}
       headerContest={{ id: contest.id, title: contest.title }}
     >
-      <Box className={layoutClasses.contestContainer}>
-        {/* Main Content */}
-        <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
-          <Container
-            size="lg"
-            pt={0}
-            pb={{ base: "md", sm: "lg", md: "xl" }}
-            px={0}
-            mx={0}
-            style={{ maxWidth: "100%" }}
-          >
-            <Box className={classes.manageLayout}>
-              <SidebarNav
-                contestId={contestId}
-                activeSection={activeSection}
-                sections={NAV_SECTIONS}
-              />
+      <Container size="lg" pb={{ base: "md", sm: "lg", md: "xl" }}>
+        <Box className={classes.manageLayout}>
+          <SidebarNav
+            contestId={contestId}
+            activeSection={activeSection}
+            sections={NAV_SECTIONS}
+          />
 
-              <Box className={classes.manageContent}>
-                <MobileNav
+          <Box className={classes.manageContent}>
+            <MobileNav
+              contestId={contestId}
+              activeSection={activeSection}
+              sections={NAV_SECTIONS}
+            />
+
+            <Box className={classes.contentPanel}>
+              {activeSection === SECTIONS.SETTINGS && (
+                <SettingsSection contest={contest} />
+              )}
+              {activeSection === SECTIONS.PROBLEMS && (
+                <ProblemsSection
                   contestId={contestId}
-                  activeSection={activeSection}
-                  sections={NAV_SECTIONS}
+                  initialProblems={problems}
                 />
-
-                <Box className={classes.contentPanel}>
-                  {activeSection === SECTIONS.SETTINGS && (
-                    <SettingsSection contest={contest} />
-                  )}
-                  {activeSection === SECTIONS.PROBLEMS && (
-                    <ProblemsSection
-                      contestId={contestId}
-                      initialProblems={problems}
-                    />
-                  )}
-                  {activeSection === SECTIONS.PARTICIPANTS && (
-                    <ParticipantsSection contestId={contestId} />
-                  )}
-                </Box>
-              </Box>
+              )}
+              {activeSection === SECTIONS.PARTICIPANTS && (
+                <ParticipantsSection contestId={contestId} />
+              )}
             </Box>
-          </Container>
+          </Box>
         </Box>
-
-        {/* Right Sidebar - Placeholder to maintain alignment with main contest page */}
-        <Box style={{ width: CONTEST_INFO_PANEL_WIDTH }} visibleFrom="sm" />
-      </Box>
+      </Container>
     </DefaultLayout>
   );
 };

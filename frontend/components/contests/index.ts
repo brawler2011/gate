@@ -1,5 +1,4 @@
 export * from './ChangeRoleModal';
-export * from './ContestInfoPanel';
 export * from './ContestManagementSidebar';
 export * from './ContestsTable';
 export * from './CreateContestForm';

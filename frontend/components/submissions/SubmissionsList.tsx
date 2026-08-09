@@ -144,32 +144,39 @@ const SubmissionRow = ({ submission, isHighlighted, isNew }: SubmissionRowProps)
 
 const SubmissionsList = ({ submissions, highlightedIds = new Set() }: SubmissionsListProps) => {
   return (
-    <TableScrollContainer minWidth={800}>
-      <Table className={styles.table}>
-        <TableThead>
-          <TableTr>
-            <TableTh ta="center">Когда</TableTh>
-            <TableTh ta="center">Кто</TableTh>
-            <TableTh ta="center">Задача</TableTh>
-            <TableTh ta="center">Язык</TableTh>
-            <TableTh ta="center" className={styles.colVerdict}>Вердикт</TableTh>
-            <TableTh ta="center">Время</TableTh>
-            <TableTh ta="center">Память</TableTh>
-            <TableTh ta="center">Просмотр</TableTh>
-          </TableTr>
-        </TableThead>
-        <TableTbody>
-          {submissions.map((submission) => (
-            <SubmissionRow
-              key={submission.id}
-              submission={submission}
-              isHighlighted={highlightedIds.has(submission.id)}
-              isNew={submission.isNew ?? false}
-            />
-          ))}
-        </TableTbody>
-      </Table>
-    </TableScrollContainer>
+    <>
+      <TableScrollContainer minWidth={800}>
+        <Table className={styles.table}>
+          <TableThead>
+            <TableTr>
+              <TableTh ta="center">Когда</TableTh>
+              <TableTh ta="center">Кто</TableTh>
+              <TableTh ta="center">Задача</TableTh>
+              <TableTh ta="center">Язык</TableTh>
+              <TableTh ta="center" className={styles.colVerdict}>Вердикт</TableTh>
+              <TableTh ta="center">Время</TableTh>
+              <TableTh ta="center">Память</TableTh>
+              <TableTh ta="center">Просмотр</TableTh>
+            </TableTr>
+          </TableThead>
+          <TableTbody>
+            {submissions.map((submission) => (
+              <SubmissionRow
+                key={submission.id}
+                submission={submission}
+                isHighlighted={highlightedIds.has(submission.id)}
+                isNew={submission.isNew ?? false}
+              />
+            ))}
+          </TableTbody>
+        </Table>
+      </TableScrollContainer>
+      {submissions.length === 0 && (
+        <Text c="dimmed" ta="center" py="md">
+          Посылок нет
+        </Text>
+      )}
+    </>
   );
 };
 

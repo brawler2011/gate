@@ -1,19 +1,12 @@
-import { Box, Container, Text, Title } from "@mantine/core";
+import { Container, Text, Title } from "@mantine/core";
 import { redirect } from "next/navigation";
 
-import { ContestInfoPanel } from "@/components/contests/ContestInfoPanel";
 import { DefaultLayout } from "@/components/shared";
 import { api } from "@/lib/api";
 import { unwrapAndCache } from "@/lib/api2";
-import {
-  CONTEST_CONTENT_MAX_WIDTH,
-  CONTEST_INFO_PANEL_COMPACT_WIDTH,
-} from "@/lib/constants";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import { PermissionChecker } from "@/lib/permissions";
-
-import classes from "../contestLayout.module.css";
 
 import type { Metadata } from "next";
 
@@ -69,37 +62,12 @@ const Page = async ({ params }: PageProps) => {
           : undefined
       }
     >
-      <Box className={classes.contestContainerWithLeftInfo}>
-        {/* Left Sidebar - Contest Info Panel - hidden on mobile */}
-        {contestResponse?.contest && (
-          <Box
-            style={{ width: CONTEST_INFO_PANEL_COMPACT_WIDTH }}
-            visibleFrom="sm"
-          >
-            <ContestInfoPanel
-              contest={contestResponse.contest}
-              user={user}
-              width={CONTEST_INFO_PANEL_COMPACT_WIDTH}
-            />
-          </Box>
-        )}
-
-        {/* Main Content */}
-        <Box style={{ width: CONTEST_CONTENT_MAX_WIDTH }}>
-          <Container
-            size="xl"
-            py="md"
-            px={0}
-            mx={0}
-            style={{ maxWidth: "100%" }}
-          >
-            <Title order={2}>Монитор</Title>
-            <Text c="dimmed" mt="md">
-              Монитор скоро будет здесь!
-            </Text>
-          </Container>
-        </Box>
-      </Box>
+      <Container size="lg" py="md">
+        <Title order={2}>Монитор</Title>
+        <Text c="dimmed" mt="md">
+          Монитор скоро будет здесь!
+        </Text>
+      </Container>
     </DefaultLayout>
   );
 };
