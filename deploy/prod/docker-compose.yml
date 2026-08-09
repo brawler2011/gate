@@ -138,7 +138,7 @@ services:
       # IP Allow List middleware to return 403 Forbidden (localhost allowed, rest blocked)
       - "traefik.http.middlewares.gate-block-ip.ipallowlist.sourcerange=127.0.0.1/32"
       # Malicious requests block router
-      - "traefik.http.routers.gate-malicious-block.rule=Host(`${DOMAIN_NAME}`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\\.env|\\.git)`) || PathRegexp(`.*\\.php$$`) || PathRegexp(`^/_next/(rsc|app-build-manifest|prerender-manifest|middleware-manifest|flight-manifest|module-fetch|dev|entrypoints|turbopack|redirect|refresh|route-loader|script|font|inline)/`) || PathRegexp(`^/_next/.*\\.(json|map)$$`))"
+      - "traefik.http.routers.gate-malicious-block.rule=Host(`${DOMAIN_NAME}`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\\.env|\\.git)`) || PathRegexp(`.*\\.php$$`))"
       - "traefik.http.routers.gate-malicious-block.entrypoints=websecure"
       - "traefik.http.routers.gate-malicious-block.tls=true"
       - "traefik.http.routers.gate-malicious-block.middlewares=gate-block-ip@docker"

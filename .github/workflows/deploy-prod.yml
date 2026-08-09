@@ -117,6 +117,6 @@ jobs:
           script: |
             cd ~/gate/deploy/prod
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-            IMAGE_TAG=prod docker compose pull --ignore-buildable
-            IMAGE_TAG=prod docker compose up -d
+            DOMAIN_NAME=steins.ru IMAGE_TAG=prod docker compose pull --ignore-buildable
+            DOMAIN_NAME=steins.ru IMAGE_TAG=prod docker compose up -d
             docker image prune -f

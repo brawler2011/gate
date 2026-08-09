@@ -117,6 +117,6 @@ jobs:
           script: |
             cd ~/gate/deploy/dev
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-            IMAGE_TAG=dev docker compose pull
-            IMAGE_TAG=dev docker compose up -d
+            DOMAIN_NAME=dev.steins.ru IMAGE_TAG=dev docker compose pull
+            DOMAIN_NAME=dev.steins.ru IMAGE_TAG=dev docker compose up -d
             docker image prune -f
