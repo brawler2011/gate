@@ -164,6 +164,7 @@ const Task = ({
                   <Problem
                     problem={task}
                     letter={numberToLetters(task.position)}
+                    problemId={task.problem_id}
                   />
                 </Box>
               </Container>

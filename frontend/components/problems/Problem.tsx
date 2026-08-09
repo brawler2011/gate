@@ -15,6 +15,7 @@ import "./Problem.css";
 type Props = {
   problem: {
     id?: string;
+    problem_id?: string;
     title: string;
     time_limit: number;
     memory_limit: number;
@@ -54,7 +55,7 @@ const prettifyMemoryLimit = (memory_limit: number) => {
 const CopyableSection = ({ label, value }: { label: string; value: string }) => {
   const clipboard = useClipboard({ timeout: 2000 });
   return (
-    <Stack gap="xs" style={{ flex: "1 1 300px", minWidth: 0 }}>
+    <Stack gap="xs" style={{ flex: "1 1 200px", minWidth: 0 }}>
       <Group justify="space-between" align="center" h={28}>
         <Text fw={600} size="sm">{label}</Text>
         <Tooltip label={clipboard.copied ? "Скопировано!" : "Скопировать"} position="top" withArrow>
@@ -189,7 +190,7 @@ const StatementContent = ({ value, problemId }: { value: string; problemId?: str
 
 const Problem = ({ problem, letter, problemId }: Props) => {
   letter = letter || "A";
-  const activeProblemId = problemId || problem.id;
+  const activeProblemId = problemId || problem.id || problem.problem_id;
 
   const ref = useRef<HTMLDivElement>(null);
 
