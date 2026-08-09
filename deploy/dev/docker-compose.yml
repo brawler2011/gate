@@ -153,6 +153,7 @@ services:
     container_name: gate-nats-dev
     hostname: nats
     restart: unless-stopped
+    command: ["--js", "--store_dir=/data"]
     volumes:
       - nats-data:/data
     networks:
