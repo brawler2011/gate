@@ -9,6 +9,7 @@ import { NextPagination } from "@/components/shared/Pagination";
 import { SubmissionsListClient } from "@/components/submissions";
 import { api } from "@/lib/api";
 import { unwrapAndCache } from "@/lib/api2";
+import { parsePage } from "@/lib/lib2";
 import {
   CONTEST_CONTENT_MAX_WIDTH,
   CONTEST_INFO_PANEL_COMPACT_WIDTH,
@@ -48,6 +49,11 @@ const Page = async ({ params, searchParams }: PageProps) => {
   const { contest_id } = await params;
   const queryParams = await searchParams;
 
+  const page = parsePage(queryParams.page);
+  if (!page) {
+    redirect(`/contests/${contest_id}/mysubmissions`);
+  }
+
   const parsedParams: {
     page: number;
     pageSize: number;
@@ -58,7 +64,7 @@ const Page = async ({ params, searchParams }: PageProps) => {
     sortOrder?: "asc" | "desc";
     language?: number;
   } = {
-    page: Number(queryParams.page) || 1,
+    page,
     pageSize: PAGE_SIZE,
     contestId: contest_id,
   };

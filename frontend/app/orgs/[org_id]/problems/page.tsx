@@ -1,11 +1,12 @@
 import { Container } from "@mantine/core";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { OrgProblemsTab } from "@/components/orgs/OrgProblemsTab";
 import { DefaultLayout } from "@/components/shared";
 import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
 import { api } from "@/lib/api";
 import { unwrapAndCache } from "@/lib/api2";
+import { parsePage } from "@/lib/lib2";
 import { buildOrgHeaderNav } from "@/lib/org-header-nav";
 import { canManageOrgMembers } from "@/lib/org-permissions";
 
@@ -17,13 +18,16 @@ type Props = {
 const OrgProblemsPage = async ({ params, searchParams }: Props) => {
   const { org_id } = await params;
   const { page } = await searchParams;
+  const currentPage = parsePage(page);
+  if (!currentPage) {
+    redirect(`/orgs/${org_id}/problems`);
+  }
   const showMembersTab = await canManageOrgMembers(org_id);
   const orgHeaderNav = buildOrgHeaderNav({
     orgId: org_id,
     activeTab: "problems",
     showMembersTab,
   });
-  const currentPage = Number(page) > 0 ? Number(page) : 1;
 
   const orgData = await unwrapAndCache(api.getOrganization)({ id: org_id });
 

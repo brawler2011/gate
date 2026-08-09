@@ -1,6 +1,8 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { UsersContent, UsersContentSkeleton } from "@/components/users";
+import { parsePage } from "@/lib/lib2";
 
 import type { Metadata } from "next";
 
@@ -20,7 +22,10 @@ type PageProps = {
 
 const AdminUsersPage = async ({ searchParams }: PageProps) => {
   const resolvedSearchParams = await searchParams;
-  const page = Number(resolvedSearchParams.page) || 1;
+  const page = parsePage(resolvedSearchParams.page);
+  if (!page) {
+    redirect("/admin/users");
+  }
   const search = resolvedSearchParams.search || undefined;
   const role = resolvedSearchParams.role || undefined;
 

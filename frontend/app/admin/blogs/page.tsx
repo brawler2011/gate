@@ -1,7 +1,9 @@
 import { Container, Skeleton, Stack } from "@mantine/core";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { AdminBlogsContent } from "@/components/admin";
+import { parsePage } from "@/lib/lib2";
 
 import type { Metadata } from "next";
 
@@ -38,7 +40,10 @@ type PageProps = {
 
 const AdminBlogsPage = async ({ searchParams }: PageProps) => {
   const resolvedSearchParams = await searchParams;
-  const page = Number(resolvedSearchParams.page) || 1;
+  const page = parsePage(resolvedSearchParams.page);
+  if (!page) {
+    redirect("/admin/blogs");
+  }
   const search = resolvedSearchParams.search || undefined;
 
   return (

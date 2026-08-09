@@ -1,7 +1,9 @@
 import { Container, Skeleton, Stack } from "@mantine/core";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { AdminSubmissionsContent } from "@/components/admin";
+import { parsePage } from "@/lib/lib2";
 
 import type { Metadata } from "next";
 
@@ -37,7 +39,10 @@ type PageProps = {
 
 const AdminSubmissionsPage = async ({ searchParams }: PageProps) => {
   const resolvedSearchParams = await searchParams;
-  const page = Number(resolvedSearchParams.page) || 1;
+  const page = parsePage(resolvedSearchParams.page);
+  if (!page) {
+    redirect("/admin/submissions");
+  }
 
   return (
     <Suspense fallback={<AdminSubmissionsContentSkeleton />}>

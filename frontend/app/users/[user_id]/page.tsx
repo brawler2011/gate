@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { DefaultLayout } from '@/components/shared';
@@ -37,11 +37,15 @@ export const generateMetadata = async ({ params }: Props): Promise<Metadata> => 
 const Page = async ({ params, searchParams }: Props) => {
   const { user_id } = await params;
   const { contestsPage } = await searchParams;
-  const page = parsePage(contestsPage);
 
   const userId = parseId(user_id);
-  if (!userId || !page) {
+  if (!userId) {
     notFound();
+  }
+
+  const page = parsePage(contestsPage);
+  if (!page) {
+    redirect(`/users/${user_id}`);
   }
 
   const [[, me], userData] = await Promise.all([
