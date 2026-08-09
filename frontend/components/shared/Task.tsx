@@ -143,7 +143,7 @@ const Task = ({
                               borderRadius: "var(--mantine-radius-sm)",
                               fontWeight: isActive ? 600 : 400,
                               backgroundColor: isActive
-                                ? "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))"
+                                ? "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))"
                                 : "transparent",
                               "&:hover": {
                                 backgroundColor: isActive
