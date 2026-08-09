@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 const sessionCookieName = "session_id";
 
 const getBaseUrl = () => {
-  return env.getBackendApiUrl() ?? "";
+  return env.getBackendApiUrl();
 };
 
 /**

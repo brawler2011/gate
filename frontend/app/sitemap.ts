@@ -1,21 +1,43 @@
+import { env } from '@/lib/env';
+
 import type { MetadataRoute } from 'next';
 
-// FIXME: hardcoded domain
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://gate149.ru';
-  
-  return [
+  const baseUrl = env.getAppUrl();
+
+  const routes = [
     {
       url: baseUrl,
       lastModified: new Date(),
-      changeFrequency: 'daily',
+      changeFrequency: 'daily' as const,
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/privacy`,
+      url: `${baseUrl}/problems`,
       lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.3,
-    }
+      changeFrequency: 'daily' as const,
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/contests`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/orgs`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    },
   ];
+
+  return routes;
 }
+

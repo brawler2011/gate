@@ -8,10 +8,10 @@ import { NextPagination } from "@/components/shared/Pagination";
 import { SubmissionsListClient } from "@/components/submissions";
 import { api } from "@/lib/api";
 import { unwrapAndCache } from "@/lib/api2";
-import { parsePage } from "@/lib/lib2";
 import { buildContestHeaderNav } from "@/lib/contest-header-nav";
 import { getMyContestRole } from "@/lib/contest-role";
 import { env } from "@/lib/env";
+import { parsePage } from "@/lib/lib2";
 import { PermissionChecker } from "@/lib/permissions";
 
 import type { Metadata } from "next";
@@ -110,7 +110,7 @@ const Page = async ({ params, searchParams }: PageProps) => {
     language: parsedParams.language,
   };
 
-  const wsBaseUrl = env.getWebSocketUrl() ?? "";
+  const wsBaseUrl = env.getWebSocketUrl();
 
   const contestData = await unwrapAndCache(api.getContest)({ contestId: contest_id });
 

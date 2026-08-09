@@ -1,15 +1,19 @@
+import { env } from '@/lib/env';
+
 import type { MetadataRoute } from 'next';
 
-// FIXME: hardcoded domain
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = env.getAppUrl();
+
   return {
     rules: [
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/auth/', '/admin/']
-      }
+        disallow: ['/auth/', '/admin/'],
+      },
     ],
-    sitemap: 'https://gate149.ru/sitemap.xml'
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }
+
