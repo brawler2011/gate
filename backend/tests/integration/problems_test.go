@@ -7,8 +7,8 @@ import (
 	"context"
 	"net/http"
 
-	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/internal/domain/models"
+	corev1 "github.com/brawler2011/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )

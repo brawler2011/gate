@@ -1,4 +1,4 @@
-module github.com/gate149/contracts
+module github.com/brawler2011/contracts
 
 go 1.24.6
 

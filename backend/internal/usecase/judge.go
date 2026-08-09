@@ -10,12 +10,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gate149/gate/backend/internal/domain/interfaces"
-	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/internal/worker/judge"
-	"github.com/gate149/gate/backend/pkg/formats/gfmt"
-	"github.com/gate149/gate/backend/pkg/sandbox"
-	"github.com/gate149/gate/backend/pkg/storage"
+	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/worker/judge"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 

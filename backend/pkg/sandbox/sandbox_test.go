@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gate149/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"

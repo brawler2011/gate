@@ -6,9 +6,9 @@ import (
 	"errors"
 	"io"
 
-	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/pkg"
-	"github.com/gate149/gate/backend/pkg/storage"
+	corev1 "github.com/brawler2011/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 

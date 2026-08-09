@@ -8,9 +8,9 @@ import (
 	"mime/multipart"
 
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
-	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/internal/transport/middleware"
-	"github.com/gate149/gate/backend/pkg/storage"
+	corev1 "github.com/brawler2011/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	"github.com/brawler2011/gate/backend/pkg/storage"
 )
 
 // ListPosts implements the ListPosts operation

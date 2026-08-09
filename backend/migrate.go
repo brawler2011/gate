@@ -4,7 +4,7 @@ import (
 	"embed"
 	"fmt"
 
-	"github.com/gate149/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/pressly/goose/v3"
 )
 

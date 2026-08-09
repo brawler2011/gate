@@ -1,4 +1,4 @@
-module github.com/gate149/gate/backend
+module github.com/brawler2011/gate/backend
 
 go 1.24.6
 
@@ -7,8 +7,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.47
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.68.0
 	github.com/aws/smithy-go v1.22.1
+	github.com/brawler2011/contracts v0.0.0-20251129232402-ed6cfa914a98
 	github.com/criyle/go-judge/pb v1.3.2
-	github.com/gate149/contracts v0.0.0-20251129232402-ed6cfa914a98
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/ilyakaznacheev/cleanenv v1.5.0
@@ -104,4 +104,4 @@ require (
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect
 )
 
-replace github.com/gate149/contracts => ./contracts
+replace github.com/brawler2011/contracts => ./contracts

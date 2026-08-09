@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	observerv1 "github.com/gate149/contracts/observer/v1"
-	"github.com/gate149/gate/backend/config"
-	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/internal/transport/middleware"
+	observerv1 "github.com/brawler2011/contracts/observer/v1"
+	"github.com/brawler2011/gate/backend/config"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )

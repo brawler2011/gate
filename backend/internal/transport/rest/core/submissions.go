@@ -3,10 +3,10 @@ package core
 import (
 	"context"
 
-	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/internal/transport/middleware"
-	"github.com/gate149/gate/backend/pkg"
+	corev1 "github.com/brawler2011/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	"github.com/brawler2011/gate/backend/pkg"
 )
 
 func (h *CoreServer) CreateSubmission(ctx context.Context, request corev1.CreateSubmissionRequestObject) (corev1.CreateSubmissionResponseObject, error) {

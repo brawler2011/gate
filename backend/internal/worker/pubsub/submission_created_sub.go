@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gate149/gate/backend/internal/domain/interfaces"
+	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/nats-io/nats.go/jetstream"
 )
 

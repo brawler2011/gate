@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/gate149/gate/backend/internal/domain/interfaces"
-	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 

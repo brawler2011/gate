@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gate149/gate/backend/internal/domain/interfaces"
-	"github.com/gate149/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )

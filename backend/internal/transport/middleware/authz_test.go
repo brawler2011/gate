@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	corev1 "github.com/gate149/contracts/core/v1"
+	corev1 "github.com/brawler2011/contracts/core/v1"
 )
 
 func TestStrictAuthzPoliciesCoverStrictOperations(t *testing.T) {

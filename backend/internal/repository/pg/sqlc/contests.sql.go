@@ -9,7 +9,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gate149/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )

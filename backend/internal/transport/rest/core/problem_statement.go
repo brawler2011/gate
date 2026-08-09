@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg/formats/gfmt"
+	corev1 "github.com/brawler2011/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )

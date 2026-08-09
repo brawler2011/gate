@@ -3,7 +3,7 @@ package usecase
 import (
 	"testing"
 
-	"github.com/gate149/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 )
 
 func TestDefaultTestsMetadata_IsValid(t *testing.T) {

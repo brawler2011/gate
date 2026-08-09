@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gate149/gate/backend/internal/domain/interfaces"
-	"github.com/gate149/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/nats-io/nats.go/jetstream"
 )
 

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"reflect"
 
-	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/internal/domain/interfaces"
-	"github.com/gate149/gate/backend/internal/domain/models"
-	"github.com/gate149/gate/backend/pkg"
+	corev1 "github.com/brawler2011/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 

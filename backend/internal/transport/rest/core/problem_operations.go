@@ -6,8 +6,8 @@ import (
 	"io"
 	"time"
 
-	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/pkg"
+	corev1 "github.com/brawler2011/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/pkg"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 

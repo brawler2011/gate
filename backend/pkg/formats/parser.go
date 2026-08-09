@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gate149/gate/backend/pkg/formats/gfmt"
-	"github.com/gate149/gate/backend/pkg/formats/icpc"
-	"github.com/gate149/gate/backend/pkg/formats/pcms2"
-	"github.com/gate149/gate/backend/pkg/formats/polygon"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/formats/icpc"
+	"github.com/brawler2011/gate/backend/pkg/formats/pcms2"
+	"github.com/brawler2011/gate/backend/pkg/formats/polygon"
 )
 
 // Parser is the interface that all format parsers must implement.

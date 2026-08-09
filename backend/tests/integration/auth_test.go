@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	corev1 "github.com/gate149/contracts/core/v1"
-	"github.com/gate149/gate/backend/internal/repository/pg"
-	"github.com/gate149/gate/backend/internal/usecase"
+	corev1 "github.com/brawler2011/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/google/uuid"
 	"github.com/oapi-codegen/runtime/types"
 )
