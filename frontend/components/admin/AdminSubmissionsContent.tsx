@@ -5,7 +5,6 @@ import {
   Box,
   Center,
   Container,
-  Group,
   Skeleton,
   Stack,
   Table,
@@ -61,10 +60,6 @@ export const AdminSubmissionsContent = ({ page }: AdminSubmissionsContentProps) 
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
-        <Group justify="space-between" align="center">
-          <Title order={3}>Посылки</Title>
-        </Group>
-
         {isLoading && (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />

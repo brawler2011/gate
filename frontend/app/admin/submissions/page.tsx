@@ -17,7 +17,6 @@ const AdminSubmissionsContentSkeleton = () => {
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
-        <Skeleton height={30} width={150} radius="sm" />
         <Skeleton height={36} width={400} radius="sm" />
         <Stack gap="sm">
           <Skeleton height={35} radius="sm" />

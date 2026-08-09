@@ -85,8 +85,6 @@ export const AdminContestsContent = ({ page, search }: AdminContestsContentProps
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
-        <Title order={3}>Контесты</Title>
-
         <AdminContestsSearchInput />
 
         {isLoading && (

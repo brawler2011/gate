@@ -153,10 +153,6 @@ export const AdminProblemsContent = ({ page, search }: AdminProblemsContentProps
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
-        <Group justify="space-between" align="center">
-          <Title order={3}>Задачи</Title>
-        </Group>
-
         <TextInput
           placeholder="Поиск задач..."
           leftSection={<IconSearch size={16} />}

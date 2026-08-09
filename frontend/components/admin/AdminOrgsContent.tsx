@@ -153,8 +153,7 @@ export const AdminOrgsContent = ({ page, search }: AdminOrgsContentProps) => {
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
-        <Group justify="space-between" align="center">
-          <Title order={3}>Организации</Title>
+        <Group justify="flex-end" align="center">
           <CreateOrgButton />
         </Group>
 

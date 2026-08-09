@@ -164,8 +164,7 @@ export const AdminBlogsContent = ({ page, search }: AdminBlogsContentProps) => {
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
-        <Group justify="space-between" align="center">
-          <Title order={3}>Блоги</Title>
+        <Group justify="flex-end" align="center">
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={handleCreatePost}
