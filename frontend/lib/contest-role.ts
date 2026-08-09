@@ -1,4 +1,4 @@
-"use server";
+import { cache } from "react";
 
 import { api } from "./api";
 
@@ -42,7 +42,7 @@ const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
  * @param contestId - The UUID of the contest
  * @returns The user's role in the contest, or null if not a participant
  */
-export async function getMyContestRole(contestId: string): Promise<ContestRoleResponse> {
+export const getMyContestRole = cache(async (contestId: string): Promise<ContestRoleResponse> => {
   const [error, response] = await api.getMyContestRole({ contestId });
   if (error || !response) {
     // User is not a participant or not authenticated
@@ -50,5 +50,5 @@ export async function getMyContestRole(contestId: string): Promise<ContestRoleRe
   }
   
   return parseContestRoleResponse(response);
-}
+});
 
