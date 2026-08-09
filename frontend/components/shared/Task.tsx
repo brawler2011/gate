@@ -104,16 +104,12 @@ const Task = ({
             {/* Left Sidebar - скрыт на мобилках */}
             <Box style={{ width: CONTEST_SIDEBAR_LEFT_WIDTH }} visibleFrom="sm">
               <Paper
-                shadow="none"
+                shadow="sm"
                 radius="md"
-                px={0}
-                py="md"
+                p="md"
                 withBorder
-                bg="transparent"
-                style={{
-                  borderColor: "var(--mantine-color-dark-5)",
-                  overflow: "hidden",
-                }}
+                bg="var(--mantine-color-gray-light)"
+                style={{ width: "100%" }}
               >
                 <Stack w="100%" gap="xs">
                   <Link
@@ -129,29 +125,37 @@ const Task = ({
                       {contest.title}
                     </Title>
                   </Link>
-                  <Stack gap={0}>
-                    {tasks.map((item) => (
-                      <NavLink
-                        key={item.problem_id}
-                        component={Link}
-                        href={`/contests/${contest.id}/problems/${item.problem_id}`}
-                        label={`${numberToLetters(item.position)}. ${item.title}`}
-                        active={item.problem_id === task.problem_id}
-                        color="gray"
-                        variant="light"
-                        c="var(--mantine-color-text)"
-                        styles={{
-                          root: {
-                            paddingLeft: 8,
-                            paddingRight: 8,
-                            "&:hover": {
-                              backgroundColor: "var(--mantine-color-dark-5)",
+                  <Stack gap={2}>
+                    {tasks.map((item) => {
+                      const isActive = item.problem_id === task.problem_id;
+                      return (
+                        <NavLink
+                          key={item.problem_id}
+                          component={Link}
+                          href={`/contests/${contest.id}/problems/${item.problem_id}`}
+                          label={`${numberToLetters(item.position)}. ${item.title}`}
+                          active={isActive}
+                          c="var(--mantine-color-text)"
+                          styles={{
+                            root: {
+                              paddingLeft: 8,
+                              paddingRight: 8,
+                              borderRadius: "var(--mantine-radius-sm)",
+                              fontWeight: isActive ? 600 : 400,
+                              backgroundColor: isActive
+                                ? "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))"
+                                : "transparent",
+                              "&:hover": {
+                                backgroundColor: isActive
+                                  ? "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))"
+                                  : "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))",
+                              },
                             },
-                          },
-                          label: { fontSize: "0.875rem" },
-                        }}
-                      />
-                    ))}
+                            label: { fontSize: "0.875rem" },
+                          }}
+                        />
+                      );
+                    })}
                   </Stack>
                 </Stack>
               </Paper>
