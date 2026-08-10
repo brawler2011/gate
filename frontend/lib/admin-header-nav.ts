@@ -1,6 +1,6 @@
 import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
 
-export type AdminHeaderNavKey =
+type AdminHeaderNavKey =
   | "users"
   | "contests"
   | "blogs"

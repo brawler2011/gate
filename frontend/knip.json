@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schemas/knip.json",
+  "ignore": [
+    "contracts/**"
+  ],
+  "ignoreDependencies": [
+    "sharp",
+    "hast",
+    "refractor"
+  ],
+  "rules": {
+    "exports": "error",
+    "types": "error"
+  }
+}

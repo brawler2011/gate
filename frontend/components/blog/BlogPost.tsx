@@ -4,7 +4,6 @@ import {
   Card,
   Group,
   Image,
-  Skeleton,
   Stack,
   Text,
   Title,
@@ -83,31 +82,5 @@ export const BlogPost = ({
         </Stack>
       </Card>
     </Link>
-  );
-};
-
-export const BlogPostSkeleton = () => {
-  return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Stack gap="md">
-        <Stack gap="xs">
-          <Group justify="space-between" align="start">
-            <Skeleton height={28} width="70%" radius="sm" />
-            <Skeleton height={24} width={100} radius="sm" />
-          </Group>
-
-          <Group gap="xs">
-            <Skeleton height={26} width={26} circle />
-            <Skeleton height={20} width={120} radius="sm" />
-          </Group>
-        </Stack>
-
-        <Stack gap="xs">
-          <Skeleton height={16} radius="sm" />
-          <Skeleton height={16} radius="sm" />
-          <Skeleton height={16} radius="sm" width="80%" />
-        </Stack>
-      </Stack>
-    </Card>
   );
 };

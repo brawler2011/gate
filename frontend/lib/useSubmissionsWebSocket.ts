@@ -21,7 +21,7 @@ import {submissionsWsManager, type WsManagerStatus} from './submissionsWsManager
 import type {ListSubmissionsResponseModel, SubmissionsListItemModel} from '@/contracts/core/v1';
 
 // Progress info for a submission being tested
-export interface TestProgress {
+interface TestProgress {
   phase: 'queued' | 'compiling' | 'testing';
   testNumber?: number;
 }
@@ -92,7 +92,7 @@ export interface UseSubmissionsWebSocketReturn {
 const HIGHLIGHT_DURATION = 2000; // 2s
 const INVALID_PAYLOAD_LOG_INTERVAL_MS = 3000;
 const INVALID_PAYLOAD_WINDOW_MS = 30000;
-export const WS_STATUS_DEBOUNCE_MS = 400;
+const WS_STATUS_DEBOUNCE_MS = 400;
 const WS_DEBUG = false;
 const WS_RESTORED_TOAST_AUTO_CLOSE_MS = 2500;
 

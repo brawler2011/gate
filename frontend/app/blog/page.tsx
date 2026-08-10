@@ -2,7 +2,7 @@ import {Container, Group, Stack, Title} from "@mantine/core";
 import {IconNews} from "@tabler/icons-react";
 import {redirect} from "next/navigation";
 
-import {BlogList} from '@/components/blog/BlogList';
+import {BlogList} from '@/components/blog';
 import {DefaultLayout} from '@/components/shared';
 import {api} from "@/lib/api";
 import {unwrap} from "@/lib/api2";

@@ -70,10 +70,6 @@ export const updateWorkshopGeneratorFile = async (problemId: string, name: strin
   return api.updateProblemGenerator({problemId, name, requestBody: blob});
 };
 
-export const setWorkshopGeneratorMain = async (problemId: string, name: string) => {
-  return api.setProblemGeneratorMain({problemId, requestBody: {name}});
-};
-
 export const getWorkshopInteractorFile = async (
   problemId: string,
   name: string
@@ -97,27 +93,6 @@ export const updateWorkshopInteractorFile = async (problemId: string, name: stri
 
 export const setWorkshopInteractorMain = async (problemId: string, name: string) => {
   return api.setProblemInteractorMain({problemId, requestBody: {name}});
-};
-
-export const getWorkshopMediaFile = async (
-  problemId: string,
-  name: string
-): Promise<[ApiError | null, string | null]> => {
-  const [error, data] = await api.getProblemMediaFile({problemId, name});
-  if (error || !data) {
-    return [error, null];
-  }
-  return [null, await toText(data)];
-};
-
-export const createWorkshopMediaFile = async (problemId: string, name: string, content: string) => {
-  const blob = new Blob([content], {type: 'application/octet-stream'});
-  return api.createProblemMediaFile({problemId, name, requestBody: blob});
-};
-
-export const updateWorkshopMediaFile = async (problemId: string, name: string, content: string) => {
-  const blob = new Blob([content], {type: 'application/octet-stream'});
-  return api.updateProblemMediaFile({problemId, name, requestBody: blob});
 };
 
 export const uploadWorkshopMediaBinary = async (formData: FormData) => {

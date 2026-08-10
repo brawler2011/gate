@@ -1,7 +1,6 @@
 import {Container, Group, SimpleGrid, Stack, Text, Title, Center} from '@mantine/core';
 
-import {CreateOrgButton} from '@/components/orgs/CreateOrgButton';
-import {OrgCard} from '@/components/orgs/OrgCard';
+import {CreateOrgButton, OrgCard} from '@/components/orgs';
 import {DefaultLayout} from '@/components/shared';
 import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
 import {api} from '@/lib/api';

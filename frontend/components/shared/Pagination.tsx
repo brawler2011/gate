@@ -5,8 +5,6 @@ import Link from "next/link";
 import {useRouter} from "next/navigation";
 import React from "react";
 
-import {useOptionalPageTransition} from "@/components/shared/PageTransitionContext";
-
 import type * as corev1 from "@/contracts/core/v1";
 
 interface NextPaginationProps {
@@ -21,8 +19,7 @@ const NextPagination = ({
   queryParams = {},
 }: NextPaginationProps) => {
   const router = useRouter();
-  const transitionContext = useOptionalPageTransition();
-  const [, reactStartTransition] = React.useTransition();
+  const [, startTransition] = React.useTransition();
 
   // Helper function to build query string
   const buildQueryString = (
@@ -38,18 +35,9 @@ const NextPagination = ({
     e.preventDefault();
     const url = `${baseUrl}${buildQueryString({...queryParams, page})}`;
 
-    // Use context if available, otherwise use React.useTransition directly
-    if (transitionContext) {
-      const {startTransition, setIsPaginationTransition} = transitionContext;
-      setIsPaginationTransition(true);
-      startTransition(() => {
-        router.push(url);
-      });
-    } else {
-      reactStartTransition(() => {
-        router.push(url);
-      });
-    }
+    startTransition(() => {
+      router.push(url);
+    });
   };
 
   const getItemProps = (page: number) => ({

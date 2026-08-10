@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "knip": "knip"
   },
   "dependencies": {
     "@mantine/core": "^8.3.10",
@@ -19,6 +20,7 @@
     "@mantine/hooks": "^8.3.10",
     "@mantine/notifications": "^8.3.10",
     "@tabler/icons-react": "^3.36.0",
+    "clsx": "^2.1.1",
     "katex": "^0.16.27",
     "next": "^16.1.1",
     "react": "^18.3.1",
@@ -40,6 +42,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "eslint": "9.39.1",
     "eslint-config-next": "^16.1.1",
+    "knip": "^6.32.1",
     "postcss": "^8.5.6",
     "postcss-preset-mantine": "^1.18.0",
     "typescript": "^5.9.3"

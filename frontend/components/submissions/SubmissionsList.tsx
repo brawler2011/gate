@@ -180,4 +180,3 @@ const SubmissionsList = ({submissions, highlightedIds = new Set()}: SubmissionsL
 };
 
 export {SubmissionsList};
-export type {SubmissionsListProps};

@@ -1,14 +1,7 @@
 import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
 
-export const ORG_OVERVIEW_TABS = [
-  "contests",
-  "problems",
-  "teams",
-  "members",
-] as const;
-
-export type OrgOverviewTab = (typeof ORG_OVERVIEW_TABS)[number];
-export type OrgHeaderNavKey = OrgOverviewTab | "settings";
+type OrgOverviewTab = "contests" | "problems" | "teams" | "members";
+type OrgHeaderNavKey = OrgOverviewTab | "settings";
 
 type BuildOrgHeaderNavParams = {
   orgId: string;

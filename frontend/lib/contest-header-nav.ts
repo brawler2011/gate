@@ -3,7 +3,7 @@ import {PermissionChecker} from "@/lib/permissions";
 import type {ContestModel, UserModel} from "@/contracts/core/v1";
 import type {ContestRoleResponse} from "@/lib/contest-role";
 
-export type ContestHeaderNavKey =
+type ContestHeaderNavKey =
   | "tasks"
   | "submit"
   | "mysubmissions"

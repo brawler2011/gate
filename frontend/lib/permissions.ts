@@ -7,7 +7,7 @@ import type {ContestModel, ProblemModel, UserModel} from "@/contracts/core/v1";
  * Backend always performs authoritative permission checks
  */
 
-export type ContestScope = "owner" | "moderator" | "participant";
+type ContestScope = "owner" | "moderator" | "participant";
 
 // Иерархия ролей: owner > moderator > participant
 const ROLE_HIERARCHY: Record<ContestRole, number> = {
@@ -302,14 +302,3 @@ export class PermissionChecker {
     return this.canManageOrgMembers();
   }
 }
-
-/**
- * Create permission checker instance from user data
- */
-export const createPermissionChecker = (
-  user: UserModel | null = null,
-  contestRole: ContestRole | null = null,
-  orgRole: OrgRole | null = null
-): PermissionChecker => {
-  return new PermissionChecker(user, contestRole, orgRole);
-};

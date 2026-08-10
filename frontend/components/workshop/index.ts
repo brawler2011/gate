@@ -5,7 +5,6 @@ export * from './WorkshopCollectionTab';
 export * from './WorkshopEditor';
 export * from './WorkshopGeneralTab';
 export * from './WorkshopGeneratorsTab';
-export * from './WorkshopHotbar';
 export * from './WorkshopImportTab';
 export * from './WorkshopInteractorsTab';
 export * from './WorkshopMediaTab';
