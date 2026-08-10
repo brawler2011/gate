@@ -85,5 +85,9 @@ When working with the backend codebase, adhere strictly to the following rules:
 1. **Use `slog` exclusively for logging**
    - Use ONLY `slog`. No other loggers are allowed.
 
+---
 
+## Task Guidelines
 
+1. **Use `task` instead of `go-task`**
+   - Always invoke Task commands as `task` (e.g., `task build`, `task test`). Do not use `go-task`.
