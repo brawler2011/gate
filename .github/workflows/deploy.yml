@@ -111,7 +111,7 @@ jobs:
       - name: Build and push Frontend image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./frontend
           file: frontend/Dockerfile
           build-args: |
             NEXT_PUBLIC_APP_URL=https://${{ inputs.domain_name }}
