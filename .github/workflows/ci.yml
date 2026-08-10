@@ -1,40 +1,26 @@
 name: CI
 
 on:
+  push:
+    branches: [ main, dev ]
   pull_request:
     branches: [ main, dev ]
   workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  ci:
-    name: ${{ matrix.job.name }}
+  codegen-check:
+    name: Codegen Verification
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        job:
-          - id: codegen-check
-            name: Codegen Verification
-            type: full
-          - id: backend-lint
-            name: Backend Lint
-            type: go
-          - id: backend-unit-tests
-            name: Backend Unit Tests
-            type: go
-          - id: backend-integration-tests
-            name: Backend Integration Tests
-            type: go
-          - id: frontend-checks
-            name: Frontend Typecheck & Lint
-            type: bun
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Task
         uses: arduino/setup-task@v3
@@ -42,54 +28,107 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Go
-        if: matrix.job.type == 'go' || matrix.job.type == 'full'
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
           go-version-file: backend/go.mod
           cache: true
           cache-dependency-path: backend/go.sum
 
       - name: Set up Bun
-        if: matrix.job.type == 'bun' || matrix.job.type == 'full'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.2.4
 
       - name: Install dependencies
-        if: matrix.job.type == 'bun' || matrix.job.type == 'full'
         working-directory: frontend
         run: bun install --frozen-lockfile
 
       - name: Verify Codegen Freshness
-        if: matrix.job.id == 'codegen-check'
         run: task verify-codegen
 
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Run backend linter
-        if: matrix.job.id == 'backend-lint'
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64.6
           working-directory: backend
 
+  backend-unit-tests:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Task
+        uses: arduino/setup-task@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
       - name: Run unit tests
-        if: matrix.job.id == 'backend-unit-tests'
         run: task be:test
 
+  backend-integration-tests:
+    name: Backend Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Task
+        uses: arduino/setup-task@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
       - name: Run integration tests
-        if: matrix.job.id == 'backend-integration-tests'
         run: task be:test-integration
 
+  frontend-checks:
+    name: Frontend Typecheck & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Task
+        uses: arduino/setup-task@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.4
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: bun install --frozen-lockfile
+
       - name: Run typecheck
-        if: matrix.job.id == 'frontend-checks'
         run: task fe:typecheck
 
       - name: Run linter
-        if: matrix.job.id == 'frontend-checks'
         run: task fe:lint
 
       - name: Run dead code check (Knip)
-        if: matrix.job.id == 'frontend-checks'
         run: task fe:knip
-
-
-

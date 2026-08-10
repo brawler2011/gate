@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -82,7 +82,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -111,7 +111,7 @@ jobs:
       - name: Build and push Frontend image
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
+          context: .
           file: frontend/Dockerfile
           build-args: |
             NEXT_PUBLIC_APP_URL=https://${{ inputs.domain_name }}
@@ -127,17 +127,23 @@ jobs:
   deploy:
     needs: [build-backend, build-frontend]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
+          envs: GITHUB_TOKEN
           script: |
             cd ${{ inputs.deploy_dir }}
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+            echo "$GITHUB_TOKEN" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
             DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose pull --ignore-buildable
             DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose up -d
             docker image prune -f
