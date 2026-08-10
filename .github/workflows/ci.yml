@@ -7,17 +7,34 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 jobs:
-  backend-lint:
-    name: Backend Lint
+  ci:
+    name: ${{ matrix.job.name }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        job:
+          - id: backend-lint
+            name: Backend Lint
+            type: go
+          - id: backend-unit-tests
+            name: Backend Unit Tests
+            type: go
+          - id: backend-integration-tests
+            name: Backend Integration Tests
+            type: go
+          - id: frontend-checks
+            name: Frontend Typecheck & Lint
+            type: bun
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
       - name: Set up Go
+        if: matrix.job.type == 'go'
         uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
@@ -25,91 +42,40 @@ jobs:
           cache-dependency-path: backend/go.sum
 
       - name: Run golangci-lint
+        if: matrix.job.id == 'backend-lint'
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64.6
           working-directory: backend
 
-      - name: Cancel workflow on failure
-        if: failure()
-        run: gh run cancel ${{ github.run_id }} || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  backend-unit-tests:
-    name: Backend Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: backend/go.sum
-
       - name: Run unit tests
+        if: matrix.job.id == 'backend-unit-tests'
         working-directory: backend
         run: go test -v ./...
 
-      - name: Cancel workflow on failure
-        if: failure()
-        run: gh run cancel ${{ github.run_id }} || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  backend-integration-tests:
-    name: Backend Integration Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: backend/go.sum
-
       - name: Run integration tests
+        if: matrix.job.id == 'backend-integration-tests'
         working-directory: backend
         run: go test -v -tags=integration ./tests/integration/...
 
-      - name: Cancel workflow on failure
-        if: failure()
-        run: gh run cancel ${{ github.run_id }} || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  frontend-checks:
-    name: Frontend Typecheck & Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
       - name: Set up Bun
+        if: matrix.job.type == 'bun'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - name: Install dependencies
+        if: matrix.job.type == 'bun'
         working-directory: frontend
         run: bun install --frozen-lockfile
 
       - name: Run typecheck
+        if: matrix.job.id == 'frontend-checks'
         working-directory: frontend
         run: bun run typecheck
 
       - name: Run linter
+        if: matrix.job.id == 'frontend-checks'
         working-directory: frontend
         run: bun run lint
 
-      - name: Cancel workflow on failure
-        if: failure()
-        run: gh run cancel ${{ github.run_id }} || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
