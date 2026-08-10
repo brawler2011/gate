@@ -9,6 +9,35 @@ permissions:
   contents: read
 
 jobs:
+  codegen-check:
+    name: Codegen Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: bun install --frozen-lockfile
+
+      - name: Set up Task
+        uses: arduino/setup-task-action@v2
+
+      - name: Verify Codegen Freshness
+        run: task verify-codegen
+
   ci:
     name: ${{ matrix.job.name }}
     runs-on: ubuntu-latest
@@ -33,6 +62,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Set up Task
+        uses: arduino/setup-task-action@v2
+
       - name: Set up Go
         if: matrix.job.type == 'go'
         uses: actions/setup-go@v6
@@ -41,22 +73,24 @@ jobs:
           cache: true
           cache-dependency-path: backend/go.sum
 
-      - name: Run golangci-lint
+      - name: Install golangci-lint
         if: matrix.job.id == 'backend-lint'
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64.6
-          working-directory: backend
+          install-only: true
+
+      - name: Run backend linter
+        if: matrix.job.id == 'backend-lint'
+        run: task be:lint
 
       - name: Run unit tests
         if: matrix.job.id == 'backend-unit-tests'
-        working-directory: backend
-        run: go test -v ./...
+        run: task be:test
 
       - name: Run integration tests
         if: matrix.job.id == 'backend-integration-tests'
-        working-directory: backend
-        run: go test -v -tags=integration ./tests/integration/...
+        run: task be:test-integration
 
       - name: Set up Bun
         if: matrix.job.type == 'bun'
@@ -71,17 +105,15 @@ jobs:
 
       - name: Run typecheck
         if: matrix.job.id == 'frontend-checks'
-        working-directory: frontend
-        run: bun run typecheck
+        run: task fe:typecheck
 
       - name: Run linter
         if: matrix.job.id == 'frontend-checks'
-        working-directory: frontend
-        run: bun run lint
+        run: task fe:lint
 
       - name: Run dead code check (Knip)
         if: matrix.job.id == 'frontend-checks'
-        working-directory: frontend
-        run: bun run knip
+        run: task fe:knip
+
 
 

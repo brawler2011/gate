@@ -47,7 +47,7 @@ type IntegrationTestSuite struct {
 
 	ctrl *gomock.Controller
 
-	mockNats *mocks.MockNatsPublisher
+	mockNats *mocks.MockPublisher
 
 	// Repositories (for direct DB access in tests)
 	usersRepo         *pg.UsersRepo
@@ -111,7 +111,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 
 func (s *IntegrationTestSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
-	s.mockNats = mocks.NewMockNatsPublisher(s.ctrl)
+	s.mockNats = mocks.NewMockPublisher(s.ctrl)
 
 	s.initApp()
 }

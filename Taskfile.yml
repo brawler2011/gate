@@ -1,0 +1,41 @@
+version: '3'
+
+includes:
+  be:
+    taskfile: ./backend/Taskfile.yml
+    dir: ./backend
+  fe:
+    taskfile: ./frontend/Taskfile.yml
+    dir: ./frontend
+  contracts:
+    taskfile: ./contracts/Taskfile.yml
+    dir: ./contracts
+
+tasks:
+  default:
+    cmds:
+      - task -a
+
+  gen:
+    desc: "Generate all code (OpenAPI, SQLC, Mocks)"
+    cmds:
+      - task: contracts:gen-openapi
+      - task: be:gen-sqlc
+      - task: be:gen-mocks
+
+  verify-codegen:
+    desc: "Verify codegen freshness for CI"
+    cmds:
+      - task: gen
+      - cmd: |
+          if [ -n "$(git status --porcelain backend/contracts frontend/contracts backend/internal/repository/pg/sqlc backend/tests/mocks)" ]; then
+            echo "ERROR: Generated code is out of date.";
+            exit 1;
+          fi
+
+  clean:
+    desc: "Remove generated contract files"
+    cmds:
+      - rm -rf backend/contracts/core/v1 backend/contracts/observer/v1
+      - rm -rf frontend/contracts/core/v1 frontend/contracts/observer/v1
+

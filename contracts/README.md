@@ -4,17 +4,17 @@ OpenAPI specifications and code generation for TypeScript client and Go server.
 
 ## Quick Start
 
-### Linux/macOS (Using Make)
+### Using Task (go-task)
 
 ```bash
-# Generate all code
-make all
+# Generate OpenAPI contracts (Go & TS)
+task contracts:gen-openapi
 
-# Or use specific targets
-make ts-gen          # TypeScript client only
-make go-gen          # Go server only
-make merge-gateway   # Merge gateway specifications
-make deps            # Check dependencies
-make clean           # Remove generated files
+# Or from repository root generate everything
+task gen
+
+# Clean generated files
+task clean
 ```
+
 

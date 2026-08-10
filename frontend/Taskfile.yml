@@ -1,0 +1,27 @@
+version: '3'
+
+tasks:
+  dev:
+    desc: "Run Next.js dev server"
+    cmds:
+      - bun dev
+
+  build:
+    desc: "Build production bundle"
+    cmds:
+      - bun run build:local
+
+  typecheck:
+    desc: "Run TypeScript type check"
+    cmds:
+      - bun run typecheck
+
+  lint:
+    desc: "Run ESLint"
+    cmds:
+      - bun run lint
+
+  knip:
+    desc: "Run Knip unused code check"
+    cmds:
+      - bun run knip

@@ -1,0 +1,37 @@
+version: '3'
+
+tasks:
+  dev:
+    desc: "Run Go backend server"
+    cmds:
+      - go run main.go
+
+  test:
+    desc: "Run backend unit tests"
+    cmds:
+      - go test -v ./...
+
+  test-integration:
+    desc: "Run backend integration tests"
+    cmds:
+      - go test -v -tags=integration ./tests/integration/...
+
+  lint:
+    desc: "Run golangci-lint"
+    cmds:
+      - golangci-lint run ./...
+
+  gen-sqlc:
+    desc: "Generate SQLC queries"
+    sources:
+      - sqlc.yaml
+      - internal/repository/pg/queries/*.sql
+    generates:
+      - internal/repository/pg/sqlc/*.go
+    cmds:
+      - go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.27.0 generate
+
+  gen-mocks:
+    desc: "Generate Go mocks"
+    cmds:
+      - go generate ./...

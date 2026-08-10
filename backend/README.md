@@ -113,10 +113,10 @@ go run . --env .env
 
 ```bash
 # Regenerate SQLC queries
-sqlc generate
+task be:gen-sqlc
 
-# Regenerate OpenAPI handlers (from contracts module)
-make gen
+# Regenerate all code (OpenAPI, SQLC, Mocks)
+task gen
 ```
 
 ### Tests

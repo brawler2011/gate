@@ -1,0 +1,23 @@
+version: '3'
+
+tasks:
+  gen-openapi:
+    desc: "Generate OpenAPI Go handlers and TS clients"
+    sources:
+      - core/v1/openapi.yaml
+      - observer/v1/openapi.yaml
+    generates:
+      - ../backend/contracts/core/v1/core.go
+      - ../backend/contracts/observer/v1/observer.go
+      - ../frontend/contracts/core/v1/**/*
+      - ../frontend/contracts/observer/v1/**/*
+    cmds:
+      - mkdir -p ../backend/contracts/core/v1
+      - cd ../backend && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.0 -generate std-http-server,models,strict-server,client -package corev1 -o contracts/core/v1/core.go ../contracts/core/v1/openapi.yaml
+      - sed -i 's|/workshop/files/{path}"|/workshop/files/{path...}"|g' ../backend/contracts/core/v1/core.go
+      - mkdir -p ../backend/contracts/observer/v1
+      - cd ../backend && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.0 -generate std-http-server,models,strict-server,skip-prune -package observerv1 -o contracts/observer/v1/observer.go ../contracts/observer/v1/openapi.yaml
+      - rm -rf ../frontend/contracts/core/v1 ../frontend/contracts/observer/v1
+      - mkdir -p ../frontend/contracts/core/v1 ../frontend/contracts/observer/v1
+      - bunx openapi-typescript-codegen --input core/v1/openapi.yaml --output ../frontend/contracts/core/v1 --client fetch --name core --useOptions
+      - bunx openapi-typescript-codegen --input observer/v1/openapi.yaml --output ../frontend/contracts/observer/v1 --client fetch --name observer --useOptions
