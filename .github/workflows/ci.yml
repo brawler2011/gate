@@ -53,7 +53,7 @@ jobs:
         if: matrix.job.type == 'bun' || matrix.job.type == 'full'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.2.4
 
       - name: Install dependencies
         if: matrix.job.type == 'bun' || matrix.job.type == 'full'
