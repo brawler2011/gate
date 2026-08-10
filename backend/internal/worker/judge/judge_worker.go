@@ -3,6 +3,7 @@ package judge
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -107,7 +108,7 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 			// Fetch next message
 			msgs, err := w.consumer.Fetch(1, jetstream.FetchMaxWait(5*time.Second))
 			if err != nil {
-				if err == jetstream.ErrNoMessages || err == context.DeadlineExceeded {
+				if errors.Is(err, jetstream.ErrNoMessages) || errors.Is(err, context.DeadlineExceeded) {
 					// No messages available, continue
 					continue
 				}

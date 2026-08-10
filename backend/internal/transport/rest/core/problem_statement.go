@@ -89,4 +89,3 @@ func (h *CoreServer) loadProblemSamples(ctx context.Context, problemID uuid.UUID
 
 	return samples
 }
-

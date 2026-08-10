@@ -102,7 +102,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.Sub
 		submissions[i] = mapListSubmissionsRow(row)
 	}
 
-	return submissions, int32(totalCount), nil
+	return submissions, safeInt32(totalCount), nil
 }
 
 func nullableUUIDToPgtype(id *uuid.UUID) pgtype.UUID {

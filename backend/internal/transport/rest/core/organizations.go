@@ -166,7 +166,7 @@ func (h *CoreServer) ListOrganizationMembers(ctx context.Context, request corev1
 	}
 
 	// Calculate total for pagination (using actual count)
-	total := int32(len(members))
+	total := safeInt32(len(members))
 
 	return corev1.ListOrganizationMembers200JSONResponse(*listOrganizationMembersDTO(members, request.Params.Page, total)), nil
 }

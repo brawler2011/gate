@@ -85,30 +85,32 @@ func (s *LocalStorage) DownloadFile(ctx context.Context, bucket, key string, ifN
 func (s *LocalStorage) DeleteFile(ctx context.Context, bucket, key string) error {
 	targetPath := filepath.Join(s.basePath, bucket, filepath.Clean(key))
 
-	err := os.Remove(targetPath)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to delete local file: %w", err)
+	if removeErr := os.Remove(targetPath); removeErr != nil && !os.IsNotExist(removeErr) {
+		return fmt.Errorf("failed to delete local file: %w", removeErr)
 	}
 
 	// Clean up empty parent directories recursively
 	bucketDir := filepath.Join(s.basePath, bucket)
-	parent := filepath.Dir(targetPath)
-	for parent != bucketDir && parent != s.basePath && len(parent) > len(bucketDir) {
-		err := os.Remove(parent) // os.Remove only removes if directory is empty
-		if err != nil {
-			break // stop if not empty or other error
-		}
-		parent = filepath.Dir(parent)
-	}
+	removeEmptyParents(filepath.Dir(targetPath), bucketDir, s.basePath)
 
 	return nil
+}
+
+func removeEmptyParents(dir, bucketDir, basePath string) {
+	for dir != bucketDir && dir != basePath && len(dir) > len(bucketDir) {
+		if os.Remove(dir) != nil {
+			break
+		}
+		dir = filepath.Dir(dir)
+	}
 }
 
 // ListFiles lists all files in the bucket subdirectory matching prefix recursively
 func (s *LocalStorage) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {
 	bucketDir := filepath.Join(s.basePath, bucket)
 
-	if _, err := os.Stat(bucketDir); os.IsNotExist(err) {
+	if _, statErr := os.Stat(bucketDir); os.IsNotExist(statErr) {
+		_ = statErr
 		return nil, nil
 	}
 
@@ -123,7 +125,7 @@ func (s *LocalStorage) ListFiles(ctx context.Context, bucket, prefix string) ([]
 
 		rel, err := filepath.Rel(bucketDir, path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get relative path: %w", err)
 		}
 
 		// Normalize paths to forward slashes for unified key representation

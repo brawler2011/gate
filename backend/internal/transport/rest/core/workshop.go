@@ -30,8 +30,6 @@ const (
 	testDir       = "tests"
 )
 
-
-
 // GetProblemLimits handles GET /problems/{problemId}/limits
 func (h *CoreServer) GetProblemLimits(ctx context.Context, request corev1.GetProblemLimitsRequestObject) (corev1.GetProblemLimitsResponseObject, error) {
 	manifest, err := h.readWorkshopManifest(ctx, request.ProblemId)
@@ -75,7 +73,7 @@ func (h *CoreServer) UpdateProblemLimits(ctx context.Context, request corev1.Upd
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid limits update")
 	}
 
-	if err := h.saveWorkshopManifest(ctx, request.ProblemId, middleware.GetUser(ctx).Id, manifest); err != nil {
+	if err := h.saveWorkshopManifest(ctx, request.ProblemId, manifest); err != nil {
 		return nil, err
 	}
 
@@ -213,7 +211,7 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, request corev1.
 			return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
 		}
 
-		if err := h.saveWorkshopManifest(ctx, request.ProblemId, user.Id, manifest); err != nil {
+		if err := h.saveWorkshopManifest(ctx, request.ProblemId, manifest); err != nil {
 			return nil, err
 		}
 		if err := h.syncProblemTitleIfNeeded(ctx, request.ProblemId, manifest.Statement.Title); err != nil {
@@ -632,11 +630,6 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, request corev
 		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
 
-	manifest, err := h.readWorkshopManifest(ctx, request.ProblemId)
-	if err != nil {
-		return nil, err
-	}
-
 	bodyBytes, err := json.Marshal(request.Body)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config payload")
@@ -646,7 +639,7 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, request corev
 	if err := json.Unmarshal(bodyBytes, &testsMeta); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to parse tests config")
 	}
-	if err := validateTestsMetadata(&testsMeta, manifest); err != nil {
+	if err := validateTestsMetadata(&testsMeta); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config")
 	}
 
@@ -833,7 +826,7 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 	return corev1.WorkshopFileListResponse{Files: &contractFiles}, nil
 }
 
-func (h *CoreServer) createWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader) error {
+func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader, actionErrMsg string) error {
 	if !h.workshopUC.IsInitialized(ctx, problemID) {
 		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
@@ -858,10 +851,14 @@ func (h *CoreServer) createWorkshopCollectionFile(ctx context.Context, problemID
 		Path:      filepath.Join(dir, cleanName),
 		Content:   content,
 	}); err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to create file")
+		return pkg.Wrap(pkg.ErrInternal, err, actionErrMsg)
 	}
 
 	return nil
+}
+
+func (h *CoreServer) createWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader) error {
+	return h.saveWorkshopCollectionFile(ctx, problemID, dir, name, body, "failed to create file")
 }
 
 func (h *CoreServer) getWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string) ([]byte, error) {
@@ -882,34 +879,7 @@ func (h *CoreServer) getWorkshopCollectionFile(ctx context.Context, problemID uu
 }
 
 func (h *CoreServer) updateWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader) error {
-	if !h.workshopUC.IsInitialized(ctx, problemID) {
-		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
-	}
-	if body == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
-	}
-
-	cleanName, err := sanitizeFileName(name)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid file name")
-	}
-
-	content, err := io.ReadAll(body)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to read request body")
-	}
-
-	user := middleware.GetUser(ctx)
-	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
-		ProblemID: problemID,
-		UserID:    user.Id,
-		Path:      filepath.Join(dir, cleanName),
-		Content:   content,
-	}); err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to update file")
-	}
-
-	return nil
+	return h.saveWorkshopCollectionFile(ctx, problemID, dir, name, body, "failed to update file")
 }
 
 func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name, componentType string) error {
@@ -928,7 +898,7 @@ func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID
 	}
 
 	if componentType != "" {
-		if err := h.removeMainComponentIfMatches(ctx, problemID, middleware.GetUser(ctx).Id, componentType, path); err != nil {
+		if err := h.removeMainComponentIfMatches(ctx, problemID, componentType, path); err != nil {
 			return err
 		}
 	}
@@ -997,14 +967,14 @@ func (h *CoreServer) setMainComponent(ctx context.Context, problemID uuid.UUID, 
 		return pkg.Wrap(pkg.ErrBadInput, err, "failed to set main component")
 	}
 
-	if err := h.saveWorkshopManifest(ctx, problemID, middleware.GetUser(ctx).Id, manifest); err != nil {
+	if err := h.saveWorkshopManifest(ctx, problemID, manifest); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (h *CoreServer) removeMainComponentIfMatches(ctx context.Context, problemID, userID uuid.UUID, componentType, deletedPath string) error {
+func (h *CoreServer) removeMainComponentIfMatches(ctx context.Context, problemID uuid.UUID, componentType, deletedPath string) error {
 	manifest, err := h.readWorkshopManifest(ctx, problemID)
 	if err != nil {
 		return err
@@ -1028,7 +998,7 @@ func (h *CoreServer) removeMainComponentIfMatches(ctx context.Context, problemID
 	if err := validateManifest(manifest); err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "failed to update manifest metadata")
 	}
-	return h.saveWorkshopManifest(ctx, problemID, userID, manifest)
+	return h.saveWorkshopManifest(ctx, problemID, manifest)
 }
 
 func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UUID) (*models.ProblemManifest, error) {
@@ -1044,7 +1014,7 @@ func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UU
 	return manifest, nil
 }
 
-func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID, userID uuid.UUID, manifest *models.ProblemManifest) error {
+func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID uuid.UUID, manifest *models.ProblemManifest) error {
 	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to update manifest")
 	}
@@ -1081,7 +1051,6 @@ func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) corev1.P
 		TimeLimitMs:   manifest.TimeLimitMs,
 	}
 }
-
 
 func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages []string, currentLang string) corev1.ProblemStatement {
 	return corev1.ProblemStatement{
@@ -1123,11 +1092,12 @@ func toContractFileEntries(files []models.FileEntry, manifest *models.ProblemMan
 		isMain := false
 		normalizedPath := filepath.ToSlash(f.Path)
 		if manifest != nil {
-			if strings.HasPrefix(normalizedPath, "checkers/") && normalizedPath == mainChecker {
+			switch {
+			case strings.HasPrefix(normalizedPath, "checkers/") && normalizedPath == mainChecker:
 				isMain = true
-			} else if strings.HasPrefix(normalizedPath, "interactors/") && normalizedPath == mainInteractor {
+			case strings.HasPrefix(normalizedPath, "interactors/") && normalizedPath == mainInteractor:
 				isMain = true
-			} else if strings.HasPrefix(normalizedPath, "validators/") && normalizedPath == mainValidator {
+			case strings.HasPrefix(normalizedPath, "validators/") && normalizedPath == mainValidator:
 				isMain = true
 			}
 		}
@@ -1151,7 +1121,7 @@ func validateManifest(m *models.ProblemManifest) error {
 	return nil
 }
 
-func validateTestsMetadata(t *models.TestsMetadata, m *models.ProblemManifest) error {
+func validateTestsMetadata(t *models.TestsMetadata) error {
 	if len(t.Tests) == 0 {
 		return fmt.Errorf("at least one test case is required")
 	}

@@ -245,7 +245,7 @@ func TestImport(t *testing.T) {
 	defer os.RemoveAll(tempDst)
 
 	srcPath := filepath.Join("..", "testdata", "polygon", "a-plus-b")
-	
+
 	// Clean up any generated markdown files from the source directory afterwards
 	defer func() {
 		os.Remove(filepath.Join(srcPath, "statements", "en.md"))

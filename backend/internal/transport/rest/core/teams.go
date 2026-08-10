@@ -53,7 +53,7 @@ func (h *CoreServer) ListTeams(ctx context.Context, request corev1.ListTeamsRequ
 	}
 
 	// Calculate total
-	total := int32(len(teams))
+	total := safeInt32(len(teams))
 
 	// Apply pagination
 	pageSize := int(request.Params.PageSize)
@@ -61,11 +61,12 @@ func (h *CoreServer) ListTeams(ctx context.Context, request corev1.ListTeamsRequ
 	start := (page - 1) * pageSize
 	end := start + pageSize
 
-	if start > len(teams) {
+	switch {
+	case start > len(teams):
 		teams = []models.Team{}
-	} else if end > len(teams) {
+	case end > len(teams):
 		teams = teams[start:]
-	} else {
+	default:
 		teams = teams[start:end]
 	}
 
@@ -180,7 +181,7 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, request corev1.ListTea
 	}
 
 	// Calculate total for pagination (using actual count)
-	total := int32(len(members))
+	total := safeInt32(len(members))
 
 	return corev1.ListTeamMembers200JSONResponse(*listTeamMembersDTO(members, request.Params.Page, total)), nil
 }

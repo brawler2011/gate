@@ -1,12 +1,30 @@
 package core
 
 import (
+	"math"
 	"strings"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
 )
+
+func safeInt32[T ~int | ~int64](v T) int32 {
+	if int64(v) > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if int64(v) < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
+}
+
+func safeInt64[T ~uint64](v T) int64 {
+	if uint64(v) > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
+}
 
 func PaginationDTO(p models.Pagination) corev1.PaginationModel {
 	return corev1.PaginationModel{
@@ -93,9 +111,9 @@ func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem 
 		Problem: corev1.ContestProblemModel{
 			ProblemId:        contestProblem.ProblemID,
 			Title:            title,
-			TimeLimit:        int32(problem.TimeLimitMs),
-			MemoryLimit:      int32(problem.MemoryLimitMb),
-			Position:         int32(contestProblem.Ordinal),
+			TimeLimit:        safeInt32(problem.TimeLimitMs),
+			MemoryLimit:      safeInt32(problem.MemoryLimitMb),
+			Position:         safeInt32(contestProblem.Ordinal),
 			LegendHtml:       statementField(statement, func(s models.Statement) string { return s.Legend }),
 			InputFormatHtml:  statementField(statement, func(s models.Statement) string { return s.InputFormat }),
 			OutputFormatHtml: statementField(statement, func(s models.Statement) string { return s.OutputFormat }),
@@ -191,14 +209,14 @@ func ContestProblemsListItemDTO(t models.ContestProblem, problem *models.Problem
 	memoryLimit := int32(0)
 	updatedAt := t.CreatedAt
 	if problem != nil {
-		timeLimit = int32(problem.TimeLimitMs)
-		memoryLimit = int32(problem.MemoryLimitMb)
+		timeLimit = safeInt32(problem.TimeLimitMs)
+		memoryLimit = safeInt32(problem.MemoryLimitMb)
 		updatedAt = problem.UpdatedAt
 	}
 
 	return corev1.ContestProblemListItemModel{
 		ProblemId:   t.ProblemID,
-		Position:    int32(t.Ordinal),
+		Position:    safeInt32(t.Ordinal),
 		Title:       title,
 		MemoryLimit: memoryLimit,
 		TimeLimit:   timeLimit,
@@ -234,8 +252,8 @@ func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
 		Id:          p.ID,
 		Title:       title,
 		Visibility:  &p.Visibility,
-		MemoryLimit: int32(p.MemoryLimitMb),
-		TimeLimit:   int32(p.TimeLimitMs),
+		MemoryLimit: safeInt32(p.MemoryLimitMb),
+		TimeLimit:   safeInt32(p.TimeLimitMs),
 		IsTemplate:  p.IsTemplate,
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
@@ -272,8 +290,8 @@ func ProblemDTO(p models.Problem, statement *models.Statement, samples []corev1.
 		Title:          title,
 		Visibility:     p.Visibility,
 		CreatedBy:      createdBy,
-		TimeLimit:      int32(p.TimeLimitMs),
-		MemoryLimit:    int32(p.MemoryLimitMb),
+		TimeLimit:      safeInt32(p.TimeLimitMs),
+		MemoryLimit:    safeInt32(p.MemoryLimitMb),
 
 		Legend:       legend,
 		InputFormat:  inputFormat,
@@ -556,8 +574,8 @@ func DashboardProblemDTO(p models.DashboardProblem) corev1.DashboardProblemModel
 		Title:            p.Title,
 		OrganizationId:   p.OrganizationID,
 		OrganizationName: p.OrganizationName,
-		TimeLimit:        int32(p.TimeLimitMs),
-		MemoryLimit:      int32(p.MemoryLimitMb),
+		TimeLimit:        safeInt32(p.TimeLimitMs),
+		MemoryLimit:      safeInt32(p.MemoryLimitMb),
 		UpdatedAt:        p.UpdatedAt,
 	}
 }

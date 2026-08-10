@@ -53,8 +53,8 @@ func (s *CoreServer) ListPosts(ctx context.Context, request corev1.ListPostsRequ
 
 	return corev1.ListPosts200JSONResponse{
 		Pagination: corev1.PaginationModel{
-			Total: int32(result.TotalPages),
-			Page:  int32(result.Page),
+			Total: safeInt32(result.TotalPages),
+			Page:  safeInt32(result.Page),
 		},
 		Posts: posts,
 	}, nil
@@ -182,16 +182,20 @@ func (s *CoreServer) GetPostImage(ctx context.Context, request corev1.GetPostIma
 	}
 
 	// Get image from storage
-	postImage, err := s.blogsUC.GetPostImage(ctx, post.ImageKey, request.Params.IfNoneMatch)
+	postImage, imageErr := s.blogsUC.GetPostImage(ctx, post.ImageKey, request.Params.IfNoneMatch)
 
 	var re *http.ResponseError
-	if errors.Is(err, storage.ErrNotModified) || (errors.As(err, &re) && re.HTTPStatusCode() == 304) {
+	if errors.Is(imageErr, storage.ErrNotModified) || (errors.As(imageErr, &re) && re.HTTPStatusCode() == 304) {
 		return corev1.GetPostImage304Response{
 			Headers: corev1.GetPostImage304ResponseHeaders{
 				ETag: *request.Params.IfNoneMatch,
 			},
 		}, nil
-	} else if err != nil {
+	} else if imageErr != nil {
+		if errors.Is(imageErr, context.DeadlineExceeded) || errors.Is(imageErr, context.Canceled) {
+			return nil, imageErr
+		}
+		_ = imageErr
 		return corev1.GetPostImage404JSONResponse{
 			Error: stringPtr("image not found"),
 		}, nil

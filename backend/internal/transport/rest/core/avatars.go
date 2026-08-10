@@ -27,7 +27,7 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, request corev1.UploadAvat
 	// Read parts from multipart reader
 	for {
 		part, err := request.Body.NextPart()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

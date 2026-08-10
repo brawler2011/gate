@@ -34,7 +34,9 @@ func NewClient(addr string) (*Client, error) {
 // Close terminates the gRPC connection.
 func (c *Client) Close() error {
 	if c.conn != nil {
-		return c.conn.Close()
+		if err := c.conn.Close(); err != nil {
+			return fmt.Errorf("failed to close grpc connection: %w", err)
+		}
 	}
 	return nil
 }
@@ -44,7 +46,11 @@ func (c *Client) Exec(ctx context.Context, req *pb.Request) (*pb.Response, error
 	if c.grpcClient == nil {
 		return nil, fmt.Errorf("gRPC client is not initialized")
 	}
-	return c.grpcClient.Exec(ctx, req)
+	resp, err := c.grpcClient.Exec(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("gRPC Exec failed: %w", err)
+	}
+	return resp, nil
 }
 
 // Helper constructors for go-judge Request_File fields.

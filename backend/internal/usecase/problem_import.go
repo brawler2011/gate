@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -104,13 +105,13 @@ func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipRea
 
 		rel, err := filepath.Rel(tempDst, path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get relative path for %s: %w", path, err)
 		}
 		rel = filepath.ToSlash(rel)
 
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read file %s: %w", path, err)
 		}
 
 		return uc.workspaceStorage.WriteFile(ctx, problemID, rel, content)
@@ -166,13 +167,14 @@ func mapImportPlanToManifest(plan *gfmt.ImportPlan, tempDst string) (*models.Pro
 	for _, mapping := range plan.Mappings {
 		target := mapping.TargetPath
 		var fileType string
-		if strings.HasPrefix(target, "checkers/") {
+		switch {
+		case strings.HasPrefix(target, "checkers/"):
 			fileType = "checker"
-		} else if strings.HasPrefix(target, "validators/") {
+		case strings.HasPrefix(target, "validators/"):
 			fileType = "validator"
-		} else if strings.HasPrefix(target, "interactors/") {
+		case strings.HasPrefix(target, "interactors/"):
 			fileType = "interactor"
-		} else if strings.HasPrefix(target, "generators/") {
+		case strings.HasPrefix(target, "generators/"):
 			fileType = "generator"
 		}
 
@@ -181,7 +183,7 @@ func mapImportPlanToManifest(plan *gfmt.ImportPlan, tempDst string) (*models.Pro
 			absPath := filepath.Join(tempDst, target)
 			data, err := os.ReadFile(absPath)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to read target file %s: %w", absPath, err)
 			}
 			hash := sha256.Sum256(data)
 			hashStr := fmt.Sprintf("%x", hash)
@@ -237,43 +239,45 @@ func enrichManifestDefaults(ctx context.Context, problemsRepo interfaces.Problem
 }
 
 func extractZip(r *zip.Reader, destDir string) error {
+	cleanDest := filepath.Clean(destDir)
+	const maxDecompressedFileSize = 500 * 1024 * 1024 // 500MB limit per file
+
 	for _, f := range r.File {
-		if strings.HasPrefix(f.Name, "../") || strings.Contains(f.Name, "..\\") {
+		path := filepath.Join(cleanDest, filepath.Clean(f.Name))
+		if !strings.HasPrefix(path, cleanDest+string(os.PathSeparator)) && path != cleanDest {
 			return fmt.Errorf("invalid file path in zip: %s", f.Name)
 		}
 
-		path := filepath.Join(destDir, f.Name)
-
 		if f.FileInfo().IsDir() {
 			if err := os.MkdirAll(path, f.Mode()); err != nil {
-				return err
+				return fmt.Errorf("failed to create directory %s: %w", path, err)
 			}
 			continue
 		}
 
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return err
+			return fmt.Errorf("failed to create parent directory for %s: %w", path, err)
 		}
 
 		rc, err := f.Open()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to open zip entry %s: %w", f.Name, err)
 		}
 
 		out, err := os.Create(path)
 		if err != nil {
-			rc.Close()
-			return err
+			_ = rc.Close()
+			return fmt.Errorf("failed to create file %s: %w", path, err)
 		}
 
-		if _, err := io.Copy(out, rc); err != nil {
-			out.Close()
-			rc.Close()
-			return err
+		if _, err := io.CopyN(out, rc, maxDecompressedFileSize); err != nil && !errors.Is(err, io.EOF) {
+			_ = out.Close()
+			_ = rc.Close()
+			return fmt.Errorf("failed to extract %s: %w", f.Name, err)
 		}
 
-		out.Close()
-		rc.Close()
+		_ = out.Close()
+		_ = rc.Close()
 	}
 
 	return nil
@@ -286,7 +290,7 @@ func detectPackageRoot(extractedDir string) (string, error) {
 
 	entries, err := os.ReadDir(extractedDir)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read extracted directory %s: %w", extractedDir, err)
 	}
 
 	filteredDirs := make([]string, 0)
@@ -309,7 +313,10 @@ func detectPackageRoot(extractedDir string) (string, error) {
 	bestDepth := int(^uint(0) >> 1)
 
 	walkErr := filepath.WalkDir(extractedDir, func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr != nil || !d.IsDir() {
+		if walkErr != nil {
+			return walkErr
+		}
+		if !d.IsDir() {
 			return nil
 		}
 
@@ -323,7 +330,7 @@ func detectPackageRoot(extractedDir string) (string, error) {
 
 		rel, relErr := filepath.Rel(extractedDir, path)
 		if relErr != nil {
-			return nil
+			return fmt.Errorf("failed to get relative path for %s: %w", path, relErr)
 		}
 		if rel == "." {
 			best = path
@@ -339,7 +346,7 @@ func detectPackageRoot(extractedDir string) (string, error) {
 		return nil
 	})
 	if walkErr != nil {
-		return "", walkErr
+		return "", fmt.Errorf("failed to walk extracted directory %s: %w", extractedDir, walkErr)
 	}
 
 	if best != "" {

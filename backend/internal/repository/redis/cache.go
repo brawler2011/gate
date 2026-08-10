@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -30,30 +31,39 @@ func NewRedisCache(client *redis.Client) *RedisCache {
 
 func (c *RedisCache) Get(ctx context.Context, key string, dest any) error {
 	val, err := c.client.Get(ctx, key).Bytes()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return ErrCacheMiss
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("redis get error: %w", err)
 	}
 
-	return json.Unmarshal(val, dest)
+	if err := json.Unmarshal(val, dest); err != nil {
+		return fmt.Errorf("failed to unmarshal cached value: %w", err)
+	}
+	return nil
 }
 
 func (c *RedisCache) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	bytes, err := json.Marshal(value)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal cache value: %w", err)
 	}
 
-	return c.client.Set(ctx, key, bytes, ttl).Err()
+	if err := c.client.Set(ctx, key, bytes, ttl).Err(); err != nil {
+		return fmt.Errorf("redis set error: %w", err)
+	}
+	return nil
 }
 
 func (c *RedisCache) Delete(ctx context.Context, keys ...string) error {
 	if len(keys) == 0 {
 		return nil
 	}
-	return c.client.Del(ctx, keys...).Err()
+	if err := c.client.Del(ctx, keys...).Err(); err != nil {
+		return fmt.Errorf("redis del error: %w", err)
+	}
+	return nil
 }
 
 func (c *RedisCache) DeleteByPattern(ctx context.Context, pattern string) error {
@@ -65,7 +75,7 @@ func (c *RedisCache) DeleteByPattern(ctx context.Context, pattern string) error 
 		var err error
 		scanKeys, cursor, err = c.client.Scan(ctx, cursor, pattern, 100).Result()
 		if err != nil {
-			return err
+			return fmt.Errorf("redis scan error: %w", err)
 		}
 
 		keys = append(keys, scanKeys...)
@@ -76,7 +86,9 @@ func (c *RedisCache) DeleteByPattern(ctx context.Context, pattern string) error 
 	}
 
 	if len(keys) > 0 {
-		return c.client.Del(ctx, keys...).Err()
+		if err := c.client.Del(ctx, keys...).Err(); err != nil {
+			return fmt.Errorf("redis del error: %w", err)
+		}
 	}
 
 	return nil

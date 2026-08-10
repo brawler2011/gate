@@ -451,7 +451,7 @@ func (h *CoreServer) GetMyContestRole(ctx context.Context, request corev1.GetMyC
 		return corev1.GetMyContestRole200JSONResponse{}, nil
 	}
 
-	permissionsMaskValue := int64(permissionsMask)
+	permissionsMaskValue := safeInt64(permissionsMask)
 
 	return corev1.GetMyContestRole200JSONResponse{
 		Role:            *contestRole,
@@ -504,7 +504,7 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, request corev1.
 	if seqErr != nil {
 		slog.Warn("failed to get submissions last sequence", "error", seqErr)
 	} else {
-		since = int64(lastSeq)
+		since = safeInt64(lastSeq)
 	}
 
 	resp := *ListSolutionsResponseDTO(submissionsList)

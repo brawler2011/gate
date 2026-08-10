@@ -25,7 +25,7 @@ func Import(tempSrc, tempDst string, parser Parser) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal problem.yaml: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(tempDst, "problem.yaml"), yamlBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDst, "problem.yaml"), yamlBytes, 0600); err != nil {
 		return fmt.Errorf("failed to write problem.yaml: %w", err)
 	}
 
@@ -45,20 +45,22 @@ func Import(tempSrc, tempDst string, parser Parser) error {
 func copyFile(src, dst string) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open source file %s: %w", src, err)
 	}
 	defer srcFile.Close()
 
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-		return err
+		return fmt.Errorf("failed to create destination directory for %s: %w", dst, err)
 	}
 
 	dstFile, err := os.Create(dst)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create destination file %s: %w", dst, err)
 	}
 	defer dstFile.Close()
 
-	_, err = io.Copy(dstFile, srcFile)
-	return err
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("failed to copy content from %s to %s: %w", src, dst, err)
+	}
+	return nil
 }

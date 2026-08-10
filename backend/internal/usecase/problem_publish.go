@@ -81,7 +81,7 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 			return nil, fmt.Errorf("failed to create parent directory for %s: %w", filePath, err)
 		}
-		if err := os.WriteFile(fullPath, content, 0o644); err != nil {
+		if err := os.WriteFile(fullPath, content, 0o600); err != nil {
 			return nil, fmt.Errorf("failed to write workspace file %s: %w", filePath, err)
 		}
 	}
@@ -202,24 +202,29 @@ func ZipDirectory(srcDir string, writer io.Writer) error {
 
 		rel, err := filepath.Rel(srcDir, path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get relative path for %s: %w", path, err)
 		}
 		rel = filepath.ToSlash(rel)
 
 		file, err := os.Open(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to open file %s: %w", path, err)
 		}
 		defer file.Close()
 
 		fWriter, err := archive.Create(rel)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create zip entry for %s: %w", rel, err)
 		}
 
-		_, err = io.Copy(fWriter, file)
-		return err
+		if _, err := io.Copy(fWriter, file); err != nil {
+			return fmt.Errorf("failed to copy file %s to zip: %w", path, err)
+		}
+		return nil
 	})
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to zip directory %s: %w", srcDir, err)
+	}
+	return nil
 }

@@ -84,13 +84,13 @@ func newHTTPService(name string, server *http.Server) appService {
 		name,
 		func(context.Context) error {
 			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				return err
+				return fmt.Errorf("http server ListenAndServe: %w", err)
 			}
 			return nil
 		},
 		func(ctx context.Context) error {
 			if err := server.Shutdown(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				return err
+				return fmt.Errorf("http server Shutdown: %w", err)
 			}
 			return nil
 		},
@@ -286,8 +286,9 @@ func runApp(envFile string) error {
 	})
 
 	publicServer := &http.Server{
-		Addr:    cfg.Address,
-		Handler: publicMux,
+		Addr:              cfg.Address,
+		Handler:           publicMux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

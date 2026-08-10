@@ -45,7 +45,7 @@ func NewPackageLoader(storage storage.Storage, bucket string, tempDir string) *P
 func (l *PackageLoader) LoadPackage(ctx context.Context, problemID string, packageHash string) (*LoadedPackage, error) {
 	pkgDir, err := os.MkdirTemp(l.tempDir, "package-*")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
 
 	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID, packageHash)
@@ -60,19 +60,19 @@ func (l *PackageLoader) LoadPackage(ctx context.Context, problemID string, packa
 	f, err := os.Create(tmpZip)
 	if err != nil {
 		os.RemoveAll(pkgDir)
-		return nil, err
+		return nil, fmt.Errorf("failed to create temp zip file %s: %w", tmpZip, err)
 	}
 	if _, err := io.Copy(f, rc); err != nil {
 		f.Close()
 		os.RemoveAll(pkgDir)
-		return nil, err
+		return nil, fmt.Errorf("failed to write package zip content: %w", err)
 	}
 	f.Close()
 
 	zipReader, err := zip.OpenReader(tmpZip)
 	if err != nil {
 		os.RemoveAll(pkgDir)
-		return nil, err
+		return nil, fmt.Errorf("failed to open package zip %s: %w", tmpZip, err)
 	}
 	defer zipReader.Close()
 
@@ -288,14 +288,14 @@ func loadLibDependencies(pkgPath string) (map[string][]byte, error) {
 		if os.IsNotExist(err) {
 			return deps, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to read lib directory %s: %w", libDir, err)
 	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			data, err := os.ReadFile(filepath.Join(libDir, entry.Name()))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to read lib file %s: %w", entry.Name(), err)
 			}
 			deps[entry.Name()] = data
 		}

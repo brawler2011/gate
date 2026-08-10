@@ -34,37 +34,45 @@ func OpenPackage(dir string) (*GateFormat, error) {
 	}, nil
 }
 
+func readFile(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
+	}
+	return data, nil
+}
+
 // GetSolution reads the content of the specified solution file.
 func (g *GateFormat) GetSolution(name string) ([]byte, error) {
-	return os.ReadFile(filepath.Join(g.Path, "solutions", name))
+	return readFile(filepath.Join(g.Path, "solutions", name))
 }
 
 // GetChecker reads the content of the specified checker file.
 func (g *GateFormat) GetChecker(name string) ([]byte, error) {
-	return os.ReadFile(filepath.Join(g.Path, "checkers", name))
+	return readFile(filepath.Join(g.Path, "checkers", name))
 }
 
 // GetGenerator reads the content of the specified generator file.
 func (g *GateFormat) GetGenerator(name string) ([]byte, error) {
-	return os.ReadFile(filepath.Join(g.Path, "generators", name))
+	return readFile(filepath.Join(g.Path, "generators", name))
 }
 
 // GetInteractor reads the content of the specified interactor file.
 func (g *GateFormat) GetInteractor(name string) ([]byte, error) {
-	return os.ReadFile(filepath.Join(g.Path, "interactors", name))
+	return readFile(filepath.Join(g.Path, "interactors", name))
 }
 
 // GetLib reads the content of the specified library file.
 func (g *GateFormat) GetLib(name string) ([]byte, error) {
-	return os.ReadFile(filepath.Join(g.Path, "lib", name))
+	return readFile(filepath.Join(g.Path, "lib", name))
 }
 
 // GetTestInput reads the content of the specified test input file.
 func (g *GateFormat) GetTestInput(name string) ([]byte, error) {
-	return os.ReadFile(filepath.Join(g.Path, "tests", name))
+	return readFile(filepath.Join(g.Path, "tests", name))
 }
 
 // GetTestOutput reads the content of the specified test output file.
 func (g *GateFormat) GetTestOutput(name string) ([]byte, error) {
-	return os.ReadFile(filepath.Join(g.Path, "tests", name))
+	return readFile(filepath.Join(g.Path, "tests", name))
 }

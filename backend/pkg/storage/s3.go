@@ -55,7 +55,7 @@ func NewS3Storage(cfg S3Config) *S3Storage {
 func (s *S3Storage) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error {
 	all, err := io.ReadAll(reader)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read input for S3 upload: %w", err)
 	}
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(bucket),

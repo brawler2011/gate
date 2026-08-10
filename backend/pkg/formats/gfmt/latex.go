@@ -84,29 +84,26 @@ func ConvertTexToMarkdown(texContent string) string {
 	getSectionText := func(start int, end int) string {
 		text := content[start:end]
 		text = strings.TrimSpace(text)
-		
+
 		// Strip the command itself
 		lowerText := strings.ToLower(text)
-		if strings.HasPrefix(lowerText, "\\inputfile") {
+		switch {
+		case strings.HasPrefix(lowerText, "\\inputfile"):
 			text = text[10:]
-		} else if strings.HasPrefix(lowerText, "\\outputfile") {
+		case strings.HasPrefix(lowerText, "\\outputfile"):
 			text = text[11:]
-		} else if strings.HasPrefix(lowerText, "\\interaction") {
+		case strings.HasPrefix(lowerText, "\\interaction"):
 			text = text[12:]
-		} else if strings.HasPrefix(lowerText, "\\example") {
-			if strings.HasPrefix(lowerText, "\\examples") {
-				text = text[9:]
-			} else {
-				text = text[8:]
-			}
-		} else if strings.HasPrefix(lowerText, "\\begin{example}") {
+		case strings.HasPrefix(lowerText, "\\examples"):
+			text = text[9:]
+		case strings.HasPrefix(lowerText, "\\example"):
+			text = text[8:]
+		case strings.HasPrefix(lowerText, "\\begin{example}"):
 			text = text[15:]
-		} else if strings.HasPrefix(lowerText, "\\note") {
-			if strings.HasPrefix(lowerText, "\\notes") {
-				text = text[6:]
-			} else {
-				text = text[5:]
-			}
+		case strings.HasPrefix(lowerText, "\\notes"):
+			text = text[6:]
+		case strings.HasPrefix(lowerText, "\\note"):
+			text = text[5:]
 		}
 		return strings.TrimSpace(text)
 	}
@@ -174,7 +171,7 @@ func ConvertTexToMarkdown(texContent string) string {
 
 		s = strings.ReplaceAll(s, "``", "\"")
 		s = strings.ReplaceAll(s, "''", "\"")
-		
+
 		// Clean quotes inside \item or text
 		s = strings.ReplaceAll(s, "\">\"", "`>`")
 		s = strings.ReplaceAll(s, "\"<\"", "`<`")

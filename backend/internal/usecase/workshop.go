@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -119,7 +120,6 @@ func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uu
 		return fmt.Errorf("workshop already initialized for problem %s", problemID)
 	}
 
-
 	testsMeta := defaultTestsMetadata()
 	manifest := defaultManifest(title)
 
@@ -166,13 +166,14 @@ func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.Upd
 
 	// If the file is a component, register it in the manifest's FilesMetadata
 	var componentType string
-	if strings.HasPrefix(req.Path, "checkers/") {
+	switch {
+	case strings.HasPrefix(req.Path, "checkers/"):
 		componentType = "checker"
-	} else if strings.HasPrefix(req.Path, "validators/") {
+	case strings.HasPrefix(req.Path, "validators/"):
 		componentType = "validator"
-	} else if strings.HasPrefix(req.Path, "interactors/") {
+	case strings.HasPrefix(req.Path, "interactors/"):
 		componentType = "interactor"
-	} else if strings.HasPrefix(req.Path, "generators/") {
+	case strings.HasPrefix(req.Path, "generators/"):
 		componentType = "generator"
 	}
 
@@ -189,11 +190,12 @@ func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.Upd
 
 			compiler := "cpp17"
 			ext := filepath.Ext(req.Path)
-			if ext == ".py" {
+			switch ext {
+			case ".py":
 				compiler = "python3"
-			} else if ext == ".go" {
+			case ".go":
 				compiler = "go"
-			} else if ext == ".java" {
+			case ".java":
 				compiler = "java"
 			}
 
@@ -304,9 +306,13 @@ func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req mode
 	}
 
 	langKey := detectLanguage(filepath.Ext(sourcePath))
-	binary, err := uc.sandbox.Compile(ctx, sourceCode, langKey, dependencies)
-	if err != nil {
-		return &models.CompileResult{Success: false, CompileError: err.Error()}, nil
+	binary, compileErr := uc.sandbox.Compile(ctx, sourceCode, langKey, dependencies)
+	if compileErr != nil {
+		if errors.Is(compileErr, context.DeadlineExceeded) || errors.Is(compileErr, context.Canceled) {
+			return nil, compileErr
+		}
+		_ = compileErr
+		return &models.CompileResult{Success: false, CompileError: compileErr.Error()}, nil
 	}
 
 	sha256Hash := computeSHA256([]byte(binary.PrimaryFileID))
@@ -323,11 +329,12 @@ func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req mode
 
 		compiler := "cpp17"
 		ext := filepath.Ext(sourcePath)
-		if ext == ".py" {
+		switch ext {
+		case ".py":
 			compiler = "python3"
-		} else if ext == ".go" {
+		case ".go":
 			compiler = "go"
-		} else if ext == ".java" {
+		case ".java":
 			compiler = "java"
 		}
 
@@ -852,8 +859,6 @@ func (uc *WorkshopUseCase) syncProblemTitle(ctx context.Context, problemID uuid.
 		}
 	}
 }
-
-
 
 func (uc *WorkshopUseCase) UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *models.TestsMetadata) error {
 	manifest, err := uc.loadManifest(ctx, problemID)

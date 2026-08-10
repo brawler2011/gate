@@ -23,4 +23,3 @@ type AuthUC interface {
 	Authenticate(ctx context.Context, sessionID uuid.UUID) (models.User, error)
 	CleanupExpiredSessions(ctx context.Context) error
 }
-

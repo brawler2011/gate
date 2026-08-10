@@ -13,7 +13,7 @@ const SubmissionsStreamName = "SUBMISSIONS"
 func NewNatsConn(natsUrl string) (*nats.Conn, error) {
 	conn, err := nats.Connect(natsUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to nats: %w", err)
 	}
 	return conn, nil
 }
@@ -21,11 +21,11 @@ func NewNatsConn(natsUrl string) (*nats.Conn, error) {
 func NewNatsJetStream(natsUrl string) (jetstream.JetStream, error) {
 	conn, err := nats.Connect(natsUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to nats: %w", err)
 	}
 	js, err := jetstream.New(conn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create jetstream: %w", err)
 	}
 	return js, nil
 }

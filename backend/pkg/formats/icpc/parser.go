@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
-
 	"gopkg.in/yaml.v3"
 )
 
@@ -147,7 +146,8 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 				Tests:  secrets,
 			}
 		} else {
-			if len(samples) > 0 && len(secrets) > 0 {
+			switch {
+			case len(samples) > 0 && len(secrets) > 0:
 				subtasks["samples"] = gfmt.Subtask{
 					Points: 0,
 					Policy: "complete",
@@ -159,13 +159,13 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 					Dependencies: []string{"samples"},
 					Tests:        secrets,
 				}
-			} else if len(samples) > 0 {
+			case len(samples) > 0:
 				subtasks["samples"] = gfmt.Subtask{
 					Points: 100,
 					Policy: "each",
 					Tests:  samples,
 				}
-			} else if len(secrets) > 0 {
+			case len(secrets) > 0:
 				subtasks["secret"] = gfmt.Subtask{
 					Points: 100,
 					Policy: "each",
@@ -216,79 +216,11 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 
 	// 6. Scan output_validators (checkers)
 	validatorsDir := filepath.Join(packageDir, "output_validators")
-	if entries, err := os.ReadDir(validatorsDir); err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				subDir := filepath.Join(validatorsDir, entry.Name())
-				if subEntries, err := os.ReadDir(subDir); err == nil {
-					for _, se := range subEntries {
-						if !se.IsDir() && strings.HasSuffix(se.Name(), ".cpp") {
-							mappings = append(mappings, gfmt.FileMapping{
-								SourcePath: filepath.ToSlash(filepath.Join("output_validators", entry.Name(), se.Name())),
-								TargetPath: "checkers/checker.cpp",
-							})
-						} else if !se.IsDir() && se.Name() == "testlib.h" {
-							mappings = append(mappings, gfmt.FileMapping{
-								SourcePath: filepath.ToSlash(filepath.Join("output_validators", entry.Name(), se.Name())),
-								TargetPath: "lib/testlib.h",
-							})
-						}
-					}
-				}
-				continue
-			}
-			name := entry.Name()
-			if strings.HasSuffix(name, ".cpp") {
-				mappings = append(mappings, gfmt.FileMapping{
-					SourcePath: filepath.ToSlash(filepath.Join("output_validators", name)),
-					TargetPath: "checkers/checker.cpp",
-				})
-			} else if name == "testlib.h" {
-				mappings = append(mappings, gfmt.FileMapping{
-					SourcePath: filepath.ToSlash(filepath.Join("output_validators", name)),
-					TargetPath: "lib/testlib.h",
-				})
-			}
-		}
-	}
+	scanValidatorDir(validatorsDir, "output_validators", "checkers/checker.cpp", &mappings)
 
 	// 7. Scan input_validators (validators)
 	inputValidatorsDir := filepath.Join(packageDir, "input_validators")
-	if entries, err := os.ReadDir(inputValidatorsDir); err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				subDir := filepath.Join(inputValidatorsDir, entry.Name())
-				if subEntries, err := os.ReadDir(subDir); err == nil {
-					for _, se := range subEntries {
-						if !se.IsDir() && strings.HasSuffix(se.Name(), ".cpp") {
-							mappings = append(mappings, gfmt.FileMapping{
-								SourcePath: filepath.ToSlash(filepath.Join("input_validators", entry.Name(), se.Name())),
-								TargetPath: "validators/validator.cpp",
-							})
-						} else if !se.IsDir() && se.Name() == "testlib.h" {
-							mappings = append(mappings, gfmt.FileMapping{
-								SourcePath: filepath.ToSlash(filepath.Join("input_validators", entry.Name(), se.Name())),
-								TargetPath: "lib/testlib.h",
-							})
-						}
-					}
-				}
-				continue
-			}
-			name := entry.Name()
-			if strings.HasSuffix(name, ".cpp") {
-				mappings = append(mappings, gfmt.FileMapping{
-					SourcePath: filepath.ToSlash(filepath.Join("input_validators", name)),
-					TargetPath: "validators/validator.cpp",
-				})
-			} else if name == "testlib.h" {
-				mappings = append(mappings, gfmt.FileMapping{
-					SourcePath: filepath.ToSlash(filepath.Join("input_validators", name)),
-					TargetPath: "lib/testlib.h",
-				})
-			}
-		}
-	}
+	scanValidatorDir(inputValidatorsDir, "input_validators", "validators/validator.cpp", &mappings)
 
 	// 8. Scan generators
 	generatorsDir := filepath.Join(packageDir, "generators")
@@ -323,7 +255,7 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 						if err := os.MkdirAll(filepath.Dir(mdAbsPath), 0755); err != nil {
 							return nil, fmt.Errorf("failed to create directory for markdown statement: %w", err)
 						}
-						if err := os.WriteFile(mdAbsPath, []byte(mdContent), 0644); err != nil {
+						if err := os.WriteFile(mdAbsPath, []byte(mdContent), 0600); err != nil {
 							return nil, fmt.Errorf("failed to write markdown statement: %w", err)
 						}
 
@@ -357,7 +289,7 @@ func scanTestFiles(dir string, packageDir string, globalIndex *int) ([]gfmt.Test
 
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read test directory %s: %w", dir, err)
 	}
 
 	var tests []gfmt.Test
@@ -419,4 +351,42 @@ func scanTestFiles(dir string, packageDir string, globalIndex *int) ([]gfmt.Test
 	}
 
 	return tests, mappings, nil
+}
+
+func scanValidatorDir(dir, targetPrefix, targetFile string, mappings *[]gfmt.FileMapping) {
+	if entries, err := os.ReadDir(dir); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				subDir := filepath.Join(dir, entry.Name())
+				if subEntries, err := os.ReadDir(subDir); err == nil {
+					for _, se := range subEntries {
+						if !se.IsDir() && strings.HasSuffix(se.Name(), ".cpp") {
+							*mappings = append(*mappings, gfmt.FileMapping{
+								SourcePath: filepath.ToSlash(filepath.Join(targetPrefix, entry.Name(), se.Name())),
+								TargetPath: targetFile,
+							})
+						} else if !se.IsDir() && se.Name() == "testlib.h" {
+							*mappings = append(*mappings, gfmt.FileMapping{
+								SourcePath: filepath.ToSlash(filepath.Join(targetPrefix, entry.Name(), se.Name())),
+								TargetPath: "lib/testlib.h",
+							})
+						}
+					}
+				}
+				continue
+			}
+			name := entry.Name()
+			if strings.HasSuffix(name, ".cpp") {
+				*mappings = append(*mappings, gfmt.FileMapping{
+					SourcePath: filepath.ToSlash(filepath.Join(targetPrefix, name)),
+					TargetPath: targetFile,
+				})
+			} else if name == "testlib.h" {
+				*mappings = append(*mappings, gfmt.FileMapping{
+					SourcePath: filepath.ToSlash(filepath.Join(targetPrefix, name)),
+					TargetPath: "lib/testlib.h",
+				})
+			}
+		}
+	}
 }

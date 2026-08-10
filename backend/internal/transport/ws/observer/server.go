@@ -106,7 +106,7 @@ func (f *SubmissionsFilter) Matches(event *WrappedEvent) bool {
 	}
 }
 
-func parseSubmissionsFilter(r *http.Request) (*SubmissionsFilter, error) {
+func parseSubmissionsFilter(r *http.Request) *SubmissionsFilter {
 	filter := &SubmissionsFilter{}
 	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
 		since, err := strconv.ParseUint(sinceStr, 10, 64)
@@ -140,7 +140,7 @@ func parseSubmissionsFilter(r *http.Request) (*SubmissionsFilter, error) {
 		}
 	}
 
-	return filter, nil
+	return filter
 }
 
 func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +152,7 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter, _ := parseSubmissionsFilter(r)
+	filter := parseSubmissionsFilter(r)
 
 	if !user.IsAdmin() {
 		// Non-admins can subscribe only to a specific contest

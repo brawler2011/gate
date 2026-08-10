@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"math"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -15,6 +16,16 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
+
+func safeInt32[T ~int | ~int64](v T) int32 {
+	if int64(v) > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if int64(v) < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
+}
 
 type ProblemsUseCase struct {
 	repo interfaces.ProblemsRepo
@@ -195,7 +206,7 @@ func (uc *ProblemsUseCase) UploadProblemTests(ctx context.Context, problemId uui
 
 	// Re-assign ordinals to be sequential 1..N
 	for i := range tests {
-		tests[i].Ordinal = int32(i + 1)
+		tests[i].Ordinal = safeInt32(i + 1)
 	}
 
 	// Delete existing tests

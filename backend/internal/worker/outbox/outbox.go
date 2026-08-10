@@ -2,7 +2,6 @@ package outbox
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"time"
 
@@ -49,7 +48,7 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Outbox worker stopping...")
+			slog.InfoContext(ctx, "Outbox worker stopping...")
 			return
 		case <-pollTicker.C:
 			w.processBatch(ctx)

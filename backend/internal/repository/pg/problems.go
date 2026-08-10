@@ -84,7 +84,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 			problems[i] = mapListAllProblemsRow(row)
 		}
 
-		return problems, int32(total), nil
+		return problems, safeInt32(total), nil
 	}
 
 	// Filter by organization
@@ -115,7 +115,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 		problems[i] = mapListProblemsRow(row)
 	}
 
-	return problems, int32(total), nil
+	return problems, safeInt32(total), nil
 }
 
 func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
@@ -248,8 +248,8 @@ func mapListProblemsRow(p sqlc.ListProblemsRow) models.Problem {
 func (r *ProblemsRepo) UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error {
 	err := r.queries.UpdateProblemLimits(ctx, sqlc.UpdateProblemLimitsParams{
 		ID:            id,
-		TimeLimitMs:   int32(timeLimitMs),
-		MemoryLimitMb: int32(memoryLimitMb),
+		TimeLimitMs:   safeInt32(timeLimitMs),
+		MemoryLimitMb: safeInt32(memoryLimitMb),
 	})
 	if err != nil {
 		return HandlePgErr(err)

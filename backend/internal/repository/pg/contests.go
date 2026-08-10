@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math"
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -14,6 +16,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func safeInt32[T ~int | ~int64](v T) int32 {
+	if int64(v) > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if int64(v) < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
+}
+
+func safeInt64[T ~uint64](v T) int64 {
+	if uint64(v) > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
+}
+
+func safeUint64[T ~int64](v T) uint64 {
+	if v < 0 {
+		return 0
+	}
+	return uint64(v)
+}
 
 type ContestsRepo struct {
 	queries *sqlc.Queries
@@ -136,7 +162,7 @@ func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter models.Admi
 		contests[i] = mapContest(row)
 	}
 
-	return contests, int32(count), nil
+	return contests, safeInt32(count), nil
 }
 
 func (r *ContestsRepo) ListUserContests(ctx context.Context, filter models.UserContestsFilter) ([]models.Contest, int32, error) {
@@ -156,7 +182,7 @@ func (r *ContestsRepo) ListUserContests(ctx context.Context, filter models.UserC
 		contests[i] = mapContest(row)
 	}
 
-	return contests, int32(count), nil
+	return contests, safeInt32(count), nil
 }
 
 func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]models.Contest, int32, error) {
@@ -188,7 +214,7 @@ func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter models.W
 		contests[i] = mapContest(row)
 	}
 
-	return contests, int32(count), nil
+	return contests, safeInt32(count), nil
 }
 
 func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) ([]models.Contest, int32, error) {
@@ -215,7 +241,7 @@ func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter models.Pub
 		contests[i] = mapContest(row)
 	}
 
-	return contests, int32(count), nil
+	return contests, safeInt32(count), nil
 }
 
 func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error {
@@ -236,7 +262,7 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c models.Contes
 		return HandlePgErr(err)
 	}
 
-	ordinal := int32(len(problems) + 1)
+	ordinal := safeInt32(len(problems) + 1)
 
 	err = r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
 		ContestID: c.ContestId,
@@ -374,7 +400,7 @@ func (r *ContestsRepo) ListContestMembers(ctx context.Context, filter models.Par
 		members[i] = mapListContestMembersRow(row)
 	}
 
-	return members, int32(count), nil
+	return members, safeInt32(count), nil
 }
 
 func (r *ContestsRepo) CreateContestMember(ctx context.Context, c *models.CreateContestMemberParams) error {
@@ -450,7 +476,7 @@ func (r *ContestsRepo) syncContestMemberPermissionsMask(
 		"UPDATE contest_members SET permissions_mask = $3 WHERE contest_id = $1 AND user_id = $2",
 		contestID,
 		userID,
-		int64(mask),
+		safeInt64(mask),
 	)
 	if err != nil {
 		return HandlePgErr(err)
@@ -475,7 +501,7 @@ func (r *ContestsRepo) syncContestTeamPermissionsMask(
 		"UPDATE contest_teams SET permissions_mask = $3 WHERE contest_id = $1 AND team_id = $2",
 		contestID,
 		teamID,
-		int64(mask),
+		safeInt64(mask),
 	)
 	if err != nil {
 		return HandlePgErr(err)
@@ -551,7 +577,7 @@ func mapListContestMembersRow(c sqlc.ListContestMembersRow) models.ContestMember
 }
 
 func mapContestMember(c sqlc.ContestMember) models.ContestMember {
-	mask := models.ContestPermissionMask(c.PermissionsMask)
+	mask := models.ContestPermissionMask(safeUint64(c.PermissionsMask))
 	return models.ContestMember{
 		UserID:          c.UserID,
 		ContestID:       c.ContestID,
@@ -561,7 +587,7 @@ func mapContestMember(c sqlc.ContestMember) models.ContestMember {
 }
 
 func mapContestTeam(c sqlc.ListContestTeamsRow) models.ContestTeam {
-	mask := models.ContestPermissionMask(c.PermissionsMask)
+	mask := models.ContestPermissionMask(safeUint64(c.PermissionsMask))
 	return models.ContestTeam{
 		ContestID:       c.ContestID,
 		TeamID:          c.TeamID,
@@ -622,13 +648,17 @@ func marshalJSON(v interface{}) ([]byte, error) {
 	if v == nil {
 		return []byte("{}"), nil
 	}
-	return json.Marshal(v)
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+	return data, nil
 }
 
 func (r *ContestsRepo) ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error) {
 	rows, err := r.queries.ListDashboardContests(ctx, sqlc.ListDashboardContestsParams{
-		UserID:  userID,
-		Limit:   limit,
+		UserID: userID,
+		Limit:  limit,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)

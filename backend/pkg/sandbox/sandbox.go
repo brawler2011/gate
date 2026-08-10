@@ -3,11 +3,33 @@ package sandbox
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
 	pb "github.com/criyle/go-judge/pb"
 )
+
+func safeUint64[T ~int | ~int64](v T) uint64 {
+	if v < 0 {
+		return 0
+	}
+	return uint64(v)
+}
+
+func safeInt64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
+}
+
+func safeDuration(v uint64) time.Duration {
+	if v > uint64(math.MaxInt64) {
+		return time.Duration(math.MaxInt64)
+	}
+	return time.Duration(v)
+}
 
 // Status represents the result status of a run or evaluation.
 type Status string
@@ -142,7 +164,7 @@ func (s *Sandbox) Compile(ctx context.Context, sourceCode []byte, langKey string
 			},
 			CopyIn:        copyIn,
 			CopyOutCached: copyOutCached,
-			CpuTimeLimit:  uint64(interpreterCompileCpuTimeLimit.Nanoseconds()),
+			CpuTimeLimit:  safeUint64(interpreterCompileCpuTimeLimit.Nanoseconds()),
 			MemoryLimit:   interpreterCompileMemoryLimit,
 			ProcLimit:     interpreterCompileProcLimit,
 			Env:           []string{"PATH=/usr/local/go/bin:/usr/bin:/bin", "GOCACHE=/tmp", "HOME=/tmp"},
@@ -212,7 +234,7 @@ func (s *Sandbox) Compile(ctx context.Context, sourceCode []byte, langKey string
 		CopyOutCached: []*pb.Request_CmdCopyOutFile{
 			pb.Request_CmdCopyOutFile_builder{Name: outputName}.Build(),
 		},
-		CpuTimeLimit: uint64(compilerCompileCpuTimeLimit.Nanoseconds()),
+		CpuTimeLimit: safeUint64(compilerCompileCpuTimeLimit.Nanoseconds()),
 		MemoryLimit:  compilerCompileMemoryLimit,
 		ProcLimit:    compilerCompileProcLimit,
 		Env:          []string{"PATH=/usr/local/go/bin:/usr/bin:/bin", "GOCACHE=/tmp", "HOME=/tmp"},
@@ -263,7 +285,7 @@ func (s *Sandbox) Generate(ctx context.Context, gen Executable, args []string) (
 			newPipeCollector("stderr", defaultPipeCollectorSize),
 		},
 		CopyIn:       copyIn,
-		CpuTimeLimit: uint64(generatorCpuTimeLimit.Nanoseconds()),
+		CpuTimeLimit: safeUint64(generatorCpuTimeLimit.Nanoseconds()),
 		MemoryLimit:  generatorMemoryLimit,
 		ProcLimit:    generatorProcLimit,
 		Env:          []string{"PATH=/usr/bin:/bin"},
@@ -327,9 +349,9 @@ func (s *Sandbox) Test(ctx context.Context, sol Executable, langKey string, inpu
 			newPipeCollector("stderr", defaultPipeCollectorSize),
 		},
 		CopyIn:         copyIn,
-		CpuTimeLimit:   uint64(timeLimitMs) * uint64(time.Millisecond),
-		ClockTimeLimit: uint64(timeLimitMs) * uint64(time.Millisecond) * solutionClockTimeMultiplier,
-		MemoryLimit:    uint64(memoryLimitMb) * 1024 * 1024,
+		CpuTimeLimit:   safeUint64(timeLimitMs) * safeUint64(time.Millisecond),
+		ClockTimeLimit: safeUint64(timeLimitMs) * safeUint64(time.Millisecond) * solutionClockTimeMultiplier,
+		MemoryLimit:    safeUint64(memoryLimitMb) * 1024 * 1024,
 		ProcLimit:      solutionProcLimit,
 		Env:            []string{"PATH=/usr/bin:/bin"},
 	}.Build()
@@ -352,8 +374,8 @@ func (s *Sandbox) Test(ctx context.Context, sol Executable, langKey string, inpu
 	return &RunResult{
 		Status:     statusStr,
 		ExitStatus: int(res.GetExitStatus()),
-		Time:       time.Duration(res.GetTime()),
-		Memory:     int64(res.GetMemory()),
+		Time:       safeDuration(res.GetTime()),
+		Memory:     safeInt64(res.GetMemory()),
 		Stdout:     res.GetFiles()["stdout"],
 		Stderr:     res.GetFiles()["stderr"],
 	}, nil
@@ -379,7 +401,7 @@ func (s *Sandbox) Check(ctx context.Context, checker Executable, input, output, 
 			newPipeCollector("stderr", defaultPipeCollectorSize),
 		},
 		CopyIn:       copyIn,
-		CpuTimeLimit: uint64(checkerCpuTimeLimit.Nanoseconds()),
+		CpuTimeLimit: safeUint64(checkerCpuTimeLimit.Nanoseconds()),
 		MemoryLimit:  checkerMemoryLimit,
 		ProcLimit:    checkerProcLimit,
 		Env:          []string{"PATH=/usr/bin:/bin"},
@@ -448,9 +470,9 @@ func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey strin
 			newPipeCollector("stdout", defaultPipeCollectorSize), // redirect stderr to stdout collector key
 		},
 		CopyIn:         solCopyIn,
-		CpuTimeLimit:   uint64(timeLimitMs) * uint64(time.Millisecond),
-		ClockTimeLimit: uint64(timeLimitMs) * uint64(time.Millisecond) * solutionClockTimeMultiplier,
-		MemoryLimit:    uint64(memoryLimitMb) * 1024 * 1024,
+		CpuTimeLimit:   safeUint64(timeLimitMs) * safeUint64(time.Millisecond),
+		ClockTimeLimit: safeUint64(timeLimitMs) * safeUint64(time.Millisecond) * solutionClockTimeMultiplier,
+		MemoryLimit:    safeUint64(memoryLimitMb) * 1024 * 1024,
 		ProcLimit:      solutionProcLimit,
 		Env:            []string{"PATH=/usr/bin:/bin"},
 	}.Build()
@@ -472,8 +494,8 @@ func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey strin
 			newPipeCollector("stdout", defaultPipeCollectorSize),
 		},
 		CopyIn:         interactorCopyIn,
-		CpuTimeLimit:   uint64(interactorCpuTimeLimit.Nanoseconds()),
-		ClockTimeLimit: uint64(interactorClockTimeLimit.Nanoseconds()),
+		CpuTimeLimit:   safeUint64(interactorCpuTimeLimit.Nanoseconds()),
+		ClockTimeLimit: safeUint64(interactorClockTimeLimit.Nanoseconds()),
 		MemoryLimit:    interactorMemoryLimit,
 		ProcLimit:      interactorProcLimit,
 		Env:            []string{"PATH=/usr/bin:/bin"},
@@ -528,16 +550,16 @@ func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey strin
 	solRun := RunResult{
 		Status:     statusToString(solRes.GetStatus()),
 		ExitStatus: int(solRes.GetExitStatus()),
-		Time:       time.Duration(solRes.GetTime()),
-		Memory:     int64(solRes.GetMemory()),
+		Time:       safeDuration(solRes.GetTime()),
+		Memory:     safeInt64(solRes.GetMemory()),
 		Stderr:     solRes.GetFiles()["stdout"], // stderr was redirected to stdout key
 	}
 
 	intRun := RunResult{
 		Status:     statusToString(intRes.GetStatus()),
 		ExitStatus: int(intRes.GetExitStatus()),
-		Time:       time.Duration(intRes.GetTime()),
-		Memory:     int64(intRes.GetMemory()),
+		Time:       safeDuration(intRes.GetTime()),
+		Memory:     safeInt64(intRes.GetMemory()),
 		Stderr:     intRes.GetFiles()["stdout"],
 	}
 

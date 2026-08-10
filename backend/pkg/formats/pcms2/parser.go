@@ -167,7 +167,8 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 			}
 		}
 
-		if len(sampleTests) > 0 && len(secretTests) > 0 {
+		switch {
+		case len(sampleTests) > 0 && len(secretTests) > 0:
 			subtasks["samples"] = gfmt.Subtask{
 				Points: 0,
 				Policy: "complete",
@@ -179,13 +180,13 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 				Dependencies: []string{"samples"},
 				Tests:        secretTests,
 			}
-		} else if len(sampleTests) > 0 {
+		case len(sampleTests) > 0:
 			subtasks["samples"] = gfmt.Subtask{
 				Points: 100,
 				Policy: "each",
 				Tests:  sampleTests,
 			}
-		} else if len(secretTests) > 0 {
+		case len(secretTests) > 0:
 			subtasks["secret"] = gfmt.Subtask{
 				Points: 100,
 				Policy: "each",
@@ -273,7 +274,7 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 		if err := os.MkdirAll(filepath.Dir(mdAbsPath), 0755); err != nil {
 			return nil, fmt.Errorf("failed to create directory for markdown statement: %w", err)
 		}
-		if err := os.WriteFile(mdAbsPath, []byte(mdContent), 0644); err != nil {
+		if err := os.WriteFile(mdAbsPath, []byte(mdContent), 0600); err != nil {
 			return nil, fmt.Errorf("failed to write markdown statement: %w", err)
 		}
 

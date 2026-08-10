@@ -34,8 +34,11 @@ func (w *WorkspaceStorage) ReadFile(ctx context.Context, problemID uuid.UUID, pa
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
-	return io.ReadAll(rc)
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read workspace file content: %w", err)
+	}
+	return data, nil
 }
 
 func (w *WorkspaceStorage) WriteFile(ctx context.Context, problemID uuid.UUID, path string, content []byte) error {

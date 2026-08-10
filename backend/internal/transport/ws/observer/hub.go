@@ -3,6 +3,7 @@ package observer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -42,17 +43,24 @@ type Hub struct {
 	mu          sync.RWMutex
 }
 
+func safeUint64(v int) uint64 {
+	if v < 0 {
+		return 0
+	}
+	return uint64(v)
+}
+
 func NewHub(ringSize int) *Hub {
 	return &Hub{
 		subscribers: make(map[uuid.UUID]*Subscriber),
-		ring:        NewRingBuffer[*WrappedEvent](uint64(ringSize)),
+		ring:        NewRingBuffer[*WrappedEvent](safeUint64(ringSize)),
 	}
 }
 
 func parseEvent[T any](payload []byte) (*T, error) {
 	var e T
 	if err := json.Unmarshal(payload, &e); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal event payload: %w", err)
 	}
 	return &e, nil
 }

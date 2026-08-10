@@ -2,10 +2,22 @@ package judge
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 )
+
+func safeInt32[T ~int | ~int64 | ~float64](v T) int32 {
+	v64 := float64(v)
+	if v64 > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if v64 < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
+}
 
 // TestResult represents the result of a single test
 type TestResult struct {
@@ -82,8 +94,8 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 			return &FinalVerdict{
 				State:      MapSandboxVerdict(result.Verdict),
 				Score:      0,
-				MaxTime:    int32(maxTime / 1_000_000),     // convert ns to ms
-				MaxMemory:  int32(maxMemory / 1024 / 1024), // convert bytes to MB
+				MaxTime:    safeInt32(maxTime / 1_000_000),     // convert ns to ms
+				MaxMemory:  safeInt32(maxMemory / 1024 / 1024), // convert bytes to MB
 				Message:    fmt.Sprintf("Failed on test %d: %s", result.TestNumber, result.Message),
 				FailedTest: &testNum,
 			}
@@ -93,8 +105,8 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 	return &FinalVerdict{
 		State:     models.Accepted,
 		Score:     100,
-		MaxTime:   int32(maxTime / 1_000_000),
-		MaxMemory: int32(maxMemory / 1024 / 1024),
+		MaxTime:   safeInt32(maxTime / 1_000_000),
+		MaxMemory: safeInt32(maxMemory / 1024 / 1024),
 		Message:   "All tests passed",
 	}
 }
@@ -117,7 +129,7 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 	}
 
 	for subName, sub := range vc.problem.Subtasks {
-		if !vc.checkSubtaskDependencies(subName, sub, testResults) {
+		if !vc.checkSubtaskDependencies(sub, testResults) {
 			continue
 		}
 		totalScore += vc.calculateSubtaskScore(subName, sub, testResults)
@@ -130,14 +142,14 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 
 	normalizedScore := int32(0)
 	if maxPossibleScore > 0 {
-		normalizedScore = int32((totalScore / float64(maxPossibleScore)) * 100)
+		normalizedScore = safeInt32((totalScore / float64(maxPossibleScore)) * 100)
 	}
 
 	return &FinalVerdict{
 		State:     models.Accepted, // scoring problems always "Accepted" with a score
 		Score:     normalizedScore,
-		MaxTime:   int32(maxTime / 1_000_000),
-		MaxMemory: int32(maxMemory / 1024 / 1024),
+		MaxTime:   safeInt32(maxTime / 1_000_000),
+		MaxMemory: safeInt32(maxMemory / 1024 / 1024),
 		Message:   fmt.Sprintf("Score: %d/%d points", int(totalScore), maxPossibleScore),
 	}
 }
@@ -153,7 +165,7 @@ func (vc *VerdictCalculator) getSubtaskTestIndexes(subName string) []int {
 	return idxs
 }
 
-func (vc *VerdictCalculator) checkSubtaskDependencies(subName string, subtask gfmt.Subtask, results map[int]TestResult) bool {
+func (vc *VerdictCalculator) checkSubtaskDependencies(subtask gfmt.Subtask, results map[int]TestResult) bool {
 	for _, depName := range subtask.Dependencies {
 		depTests := vc.getSubtaskTestIndexes(depName)
 		for _, testNum := range depTests {
@@ -226,8 +238,8 @@ func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *
 			return &FinalVerdict{
 				State:      MapSandboxVerdict(result.Verdict),
 				Score:      0,
-				MaxTime:    int32(maxTime / 1_000_000),
-				MaxMemory:  int32(maxMemory / 1024 / 1024),
+				MaxTime:    safeInt32(maxTime / 1_000_000),
+				MaxMemory:  safeInt32(maxMemory / 1024 / 1024),
 				Message:    fmt.Sprintf("Failed on test %d: %s", result.TestNumber, result.Message),
 				FailedTest: &testNum,
 			}
@@ -238,9 +250,9 @@ func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *
 		avgScore := totalScore / float64(len(results))
 		return &FinalVerdict{
 			State:     models.Accepted,
-			Score:     int32(avgScore),
-			MaxTime:   int32(maxTime / 1_000_000),
-			MaxMemory: int32(maxMemory / 1024 / 1024),
+			Score:     safeInt32(avgScore),
+			MaxTime:   safeInt32(maxTime / 1_000_000),
+			MaxMemory: safeInt32(maxMemory / 1024 / 1024),
 			Message:   fmt.Sprintf("Score: %.1f points", avgScore),
 		}
 	}
@@ -248,8 +260,8 @@ func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *
 	return &FinalVerdict{
 		State:     models.Accepted,
 		Score:     100,
-		MaxTime:   int32(maxTime / 1_000_000),
-		MaxMemory: int32(maxMemory / 1024 / 1024),
+		MaxTime:   safeInt32(maxTime / 1_000_000),
+		MaxMemory: safeInt32(maxMemory / 1024 / 1024),
 		Message:   "All tests passed",
 	}
 }

@@ -131,7 +131,7 @@ func (r *OrganizationsRepo) ListOrganizations(ctx context.Context, filter *model
 		}
 	}
 
-	return result, int32(count), nil
+	return result, safeInt32(count), nil
 }
 
 func (r *OrganizationsRepo) UpdateOrganization(ctx context.Context, id uuid.UUID, input *models.UpdateOrganizationInput) error {

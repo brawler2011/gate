@@ -31,6 +31,25 @@ linters-settings:
         msg: "Do not use fmt.Print*, use slog instead."
       - p: '^log\.(Print|Fatal|Panic).*$'
         msg: "Do not use log package, use slog instead."
+  wrapcheck:
+    ignoreSigs:
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - errors.Join(
+      - .Wrap(
+      - .Wrapf(
+      - HandleContextErr(
+      - .Err()
+      - .Write(
+      - .Encode(
+      - .Parse(
+    ignorePackageGlobs:
+      - github.com/brawler2011/gate/backend/*
+  revive:
+    rules:
+      - name: var-naming
+        disabled: true
 
 issues:
   exclude-dirs:

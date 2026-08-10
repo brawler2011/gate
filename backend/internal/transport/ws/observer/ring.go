@@ -2,6 +2,7 @@ package observer
 
 import (
 	"errors"
+	"math"
 	"sync"
 )
 
@@ -19,11 +20,9 @@ type RingBufferItem[T any] struct {
 type RingBuffer[T any] struct {
 	buffer []RingBufferItem[T]
 	size   uint64
-
 	minSeq uint64
 	maxSeq uint64
-
-	mu sync.RWMutex
+	mu     sync.RWMutex
 }
 
 func NewRingBuffer[T any](size uint64) *RingBuffer[T] {
@@ -37,7 +36,11 @@ func NewRingBuffer[T any](size uint64) *RingBuffer[T] {
 }
 
 func (b *RingBuffer[T]) index(seq uint64) int {
-	return int((seq - 1) % b.size)
+	idx := (seq - 1) % b.size
+	if idx > uint64(math.MaxInt) {
+		return math.MaxInt
+	}
+	return int(idx)
 }
 
 // Push expects monotonically increasing seq.

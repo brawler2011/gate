@@ -71,7 +71,7 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 	}
 
 	for _, tc := range flatTests {
-		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, int32(tc.TestIndex), meta); err != nil {
+		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, safeInt32(tc.TestIndex), meta); err != nil {
 			return nil, fmt.Errorf("failed to publish test started: %w", err)
 		}
 
@@ -154,7 +154,7 @@ func (s *StandardStrategy) getTestInput(ctx context.Context, test gfmt.Test) ([]
 			dir := filepath.Join(s.pkg.Path, "generators")
 			entries, err := os.ReadDir(dir)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to read generators dir: %w", err)
 			}
 			var filename string
 			for _, entry := range entries {
@@ -168,7 +168,7 @@ func (s *StandardStrategy) getTestInput(ctx context.Context, test gfmt.Test) ([]
 			}
 			data, err := os.ReadFile(filepath.Join(dir, filename))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to read generator file %s: %w", filename, err)
 			}
 			deps, _ := loadLibDependencies(s.pkg.Path)
 			lang := detectLanguage(filepath.Ext(filename))
@@ -183,20 +183,20 @@ func (s *StandardStrategy) getTestInput(ctx context.Context, test gfmt.Test) ([]
 		return s.sandbox.Generate(ctx, genExec, genArgs)
 	}
 
-	return nil, fmt.Errorf("invalid test case")
+	// Manual test
+	return s.pkg.GetTestInput(test.Manual)
 }
 
 func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, input []byte) ([]byte, error) {
 	if test.Manual != "" {
-		ansFile := strings.TrimSuffix(test.Manual, ".in") + ".out"
-		data, err := s.pkg.GetTestOutput(ansFile)
+		data, err := s.pkg.GetTestOutput(test.Manual)
 		if err != nil {
-			ansFile = strings.TrimSuffix(test.Manual, ".in") + ".ans"
-			data, err = s.pkg.GetTestOutput(ansFile)
+			return nil, err
 		}
-		return data, err
+		return data, nil
 	}
 
+	// Generated test -> run correct solution
 	var okSol string
 	for solFile, tag := range s.pkg.Problem.Solutions {
 		if tag == "OK" || tag == "Accepted" || tag == "main" {
@@ -212,7 +212,7 @@ func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, in
 	if !exists {
 		data, err := os.ReadFile(filepath.Join(s.pkg.Path, "solutions", okSol))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read solution file %s: %w", okSol, err)
 		}
 		lang := detectLanguage(filepath.Ext(okSol))
 		compiled, err := s.sandbox.Compile(ctx, data, lang, nil)
@@ -281,7 +281,7 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 	}
 
 	for _, tc := range flatTests {
-		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, int32(tc.TestIndex), meta); err != nil {
+		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, safeInt32(tc.TestIndex), meta); err != nil {
 			return nil, fmt.Errorf("failed to publish test started: %w", err)
 		}
 
@@ -386,7 +386,7 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 	}
 
 	for _, tc := range flatTests {
-		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, int32(tc.TestIndex), meta); err != nil {
+		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, safeInt32(tc.TestIndex), meta); err != nil {
 			return nil, fmt.Errorf("failed to publish test started: %w", err)
 		}
 
@@ -484,14 +484,14 @@ func loadLibDependencies(pkgPath string) (map[string][]byte, error) {
 		if os.IsNotExist(err) {
 			return deps, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to read lib directory %s: %w", libDir, err)
 	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			data, err := os.ReadFile(filepath.Join(libDir, entry.Name()))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to read lib file %s: %w", entry.Name(), err)
 			}
 			deps[entry.Name()] = data
 		}

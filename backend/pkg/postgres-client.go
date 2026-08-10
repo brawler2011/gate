@@ -3,6 +3,7 @@ package pkg
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -22,7 +23,7 @@ const (
 func NewPostgresDB(dsn string) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse postgres dsn: %w", err)
 	}
 
 	config.MaxConns = maxConns
@@ -33,12 +34,12 @@ func NewPostgresDB(dsn string) (*pgxpool.Pool, error) {
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create postgres pool: %w", err)
 	}
 
 	if err = pool.Ping(context.Background()); err != nil {
 		pool.Close()
-		return nil, err
+		return nil, fmt.Errorf("failed to ping postgres pool: %w", err)
 	}
 
 	return pool, nil
@@ -47,12 +48,12 @@ func NewPostgresDB(dsn string) (*pgxpool.Pool, error) {
 func NewPostgresDBForMigrations(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open postgres db for migrations: %w", err)
 	}
 
 	if err = db.Ping(); err != nil {
-		db.Close()
-		return nil, err
+		_ = db.Close()
+		return nil, fmt.Errorf("failed to ping postgres db for migrations: %w", err)
 	}
 
 	return db, nil

@@ -23,7 +23,7 @@ func (r customRegisterResponse) VisitRegisterResponse(w http.ResponseWriter) err
 		Value:    r.SessionID.String(),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false, // set true in production if needed; for local dev, false is fine
+		Secure:   false,            // set true in production if needed; for local dev, false is fine
 		MaxAge:   7 * 24 * 60 * 60, // 7 days (sliding)
 		SameSite: http.SameSiteLaxMode,
 	})

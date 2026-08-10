@@ -44,7 +44,7 @@ func (p *Parser) Parse(packageDir string) (*ImportPlan, error) {
 		}
 		rel, err := filepath.Rel(packageDir, path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get relative path: %w", err)
 		}
 		rel = filepath.ToSlash(rel)
 		if rel == "problem.yaml" {
