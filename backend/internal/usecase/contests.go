@@ -116,17 +116,7 @@ func (uc *ContestsUseCase) ListPublicContests(ctx context.Context, filter models
 }
 
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c models.ContestUpdateInput) error {
-	params := models.ContestUpdateParams{
-		ID:           c.ID,
-		Title:        c.Title,
-		Description:  c.Description,
-		Visibility:   c.Visibility,
-		Settings:     c.Settings,
-		AccessPolicy: c.AccessPolicy,
-		StartTime:    c.StartTime,
-		EndTime:      c.EndTime,
-		OwnerID:      c.OwnerID,
-	}
+	params := models.ContestUpdateParams(c)
 
 	return uc.contestRepo.UpdateContest(ctx, params)
 }

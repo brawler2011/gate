@@ -853,60 +853,7 @@ func (uc *WorkshopUseCase) syncProblemTitle(ctx context.Context, problemID uuid.
 	}
 }
 
-func (uc *WorkshopUseCase) setComponentActive(manifest *models.ProblemManifest, componentType, filename string) {
-	filename = filepath.ToSlash(filename)
-	if filename == "" {
-		return
-	}
 
-	firstIdx := -1
-	selectedIdx := -1
-	for i := range manifest.FilesMetadata {
-		if manifest.FilesMetadata[i].Type == componentType {
-			if firstIdx == -1 {
-				firstIdx = i
-			}
-			if filepath.ToSlash(manifest.FilesMetadata[i].Filename) == filename {
-				selectedIdx = i
-			}
-		}
-	}
-
-	if selectedIdx < 0 {
-		manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{
-			Type:         componentType,
-			Filename:     filename,
-			Compiler:     compilerByFilename(filepath.Base(filename)),
-			Dependencies: []models.Dependency{},
-		})
-		selectedIdx = len(manifest.FilesMetadata) - 1
-		if firstIdx == -1 {
-			firstIdx = selectedIdx
-		}
-	}
-
-	if firstIdx >= 0 && firstIdx != selectedIdx {
-		item := manifest.FilesMetadata[selectedIdx]
-		// Remove from selectedIdx
-		manifest.FilesMetadata = append(manifest.FilesMetadata[:selectedIdx], manifest.FilesMetadata[selectedIdx+1:]...)
-		// Insert at firstIdx
-		manifest.FilesMetadata = append(manifest.FilesMetadata[:firstIdx], append([]models.FileMetadata{item}, manifest.FilesMetadata[firstIdx:]...)...)
-	}
-}
-
-func compilerByFilename(name string) string {
-	ext := filepath.Ext(name)
-	switch ext {
-	case ".py":
-		return "python3"
-	case ".go":
-		return "go"
-	case ".java":
-		return "java"
-	default:
-		return "cpp17"
-	}
-}
 
 func (uc *WorkshopUseCase) UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *models.TestsMetadata) error {
 	manifest, err := uc.loadManifest(ctx, problemID)

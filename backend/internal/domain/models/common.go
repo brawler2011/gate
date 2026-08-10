@@ -41,3 +41,8 @@ type FileEntry struct {
 	IsDirectory bool   `json:"is_directory"`
 	Size        int64  `json:"size"`
 }
+
+type ContextKey string
+
+const MessageStreamSequenceKey ContextKey = "message_stream_sequence"
+

@@ -723,16 +723,12 @@ func (h *CoreServer) GenerateTests(ctx context.Context, request corev1.GenerateT
 	user := middleware.GetUser(ctx)
 
 	testNumbers := make([]int, len(request.Body.TestNumbers))
-	for i, num := range request.Body.TestNumbers {
-		testNumbers[i] = num
-	}
+	copy(testNumbers, request.Body.TestNumbers)
 
 	var arguments [][]string
 	if request.Body.Arguments != nil {
 		arguments = make([][]string, len(*request.Body.Arguments))
-		for i, args := range *request.Body.Arguments {
-			arguments[i] = args
-		}
+		copy(arguments, *request.Body.Arguments)
 	}
 
 	generateReq := models.GenerateTestsRequest{
@@ -784,9 +780,7 @@ func (h *CoreServer) TestSolution(ctx context.Context, request corev1.TestSoluti
 	var testNumbers []int
 	if request.Body.TestNumbers != nil {
 		testNumbers = make([]int, len(*request.Body.TestNumbers))
-		for i, num := range *request.Body.TestNumbers {
-			testNumbers[i] = num
-		}
+		copy(testNumbers, *request.Body.TestNumbers)
 	}
 
 	testReq := models.TestSolutionRequest{
@@ -1088,17 +1082,6 @@ func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) corev1.P
 	}
 }
 
-func (h *CoreServer) toContractStatement(manifest *models.ProblemManifest) corev1.ProblemStatement {
-	return corev1.ProblemStatement{
-		InputFormat:  manifest.Statement.InputFormat,
-		Interaction:  optionalString(manifest.Statement.Interaction),
-		Legend:       manifest.Statement.Legend,
-		Notes:        optionalString(manifest.Statement.Notes),
-		OutputFormat: manifest.Statement.OutputFormat,
-		Scoring:      optionalString(manifest.Statement.Scoring),
-		Title:        manifest.Statement.Title,
-	}
-}
 
 func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages []string, currentLang string) corev1.ProblemStatement {
 	return corev1.ProblemStatement{

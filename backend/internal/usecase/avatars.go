@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"strings"
+
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -103,7 +105,7 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, userID uuid.UUID) er
 	// Delete the avatar file
 	err = uc.storage.DeleteFile(ctx, uc.avatarBucket, *user.AvatarUrl)
 	if err != nil {
-		// Log error but continue to update user record
+		slog.Debug("failed to delete old avatar file", "error", err)
 	}
 
 	// Update user record to remove avatar URL

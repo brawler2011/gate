@@ -152,7 +152,7 @@ func mapImportPlanToManifest(plan *gfmt.ImportPlan, tempDst string) (*models.Pro
 	}
 
 	manifest.Statement.Title = plan.Problem.Title
-	manifest.Statement.Legend = fmt.Sprintf("Imported from unified package.")
+	manifest.Statement.Legend = "Imported from unified package."
 
 	// Try to load statement from statements/en.md
 	enStatementPath := filepath.Join(tempDst, "statements", "en.md")

@@ -58,10 +58,7 @@ func newCheckOrigin(allowedOrigins map[string]bool, env string) func(r *http.Req
 	}
 	return func(r *http.Request) bool {
 		origin := r.Header.Get("Origin")
-		if allowedOrigins[origin] {
-			return true
-		}
-		return false
+		return allowedOrigins[origin]
 	}
 }
 

@@ -139,10 +139,3 @@ func (r *UsersRepo) UpdateUser(
 	return nil
 }
 
-func userRoleToStringPtr(role *models.UserRole) *string {
-	if role == nil {
-		return nil
-	}
-	str := string(*role)
-	return &str
-}

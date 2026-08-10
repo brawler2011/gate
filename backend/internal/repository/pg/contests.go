@@ -490,10 +490,10 @@ func mapContest(c sqlc.Contest) models.Contest {
 
 	// Unmarshal JSON fields
 	if len(c.Settings) > 0 {
-		json.Unmarshal(c.Settings, &settings)
+		_ = json.Unmarshal(c.Settings, &settings)
 	}
 	if len(c.AccessPolicy) > 0 {
-		json.Unmarshal(c.AccessPolicy, &accessPolicy)
+		_ = json.Unmarshal(c.AccessPolicy, &accessPolicy)
 	}
 
 	return models.Contest{
@@ -573,13 +573,6 @@ func mapContestTeam(c sqlc.ListContestTeamsRow) models.ContestTeam {
 	}
 }
 
-func pgUUIDToUUID(p pgtype.UUID) uuid.UUID {
-	if !p.Valid {
-		return uuid.Nil
-	}
-	return p.Bytes
-}
-
 func pgUUIDToUUIDPtr(p pgtype.UUID) *uuid.UUID {
 	if !p.Valid {
 		return nil
@@ -595,34 +588,6 @@ func pgTimestamptzToTimePtr(t pgtype.Timestamptz) *time.Time {
 	return &t.Time
 }
 
-func nullTimeToTime(t pgtype.Timestamptz) *time.Time {
-	if !t.Valid {
-		return nil
-	}
-	return &t.Time
-}
-
-func nullTimeToTimeVal(t pgtype.Timestamptz) time.Time {
-	if !t.Valid {
-		return time.Time{}
-	}
-	return t.Time
-}
-
-func nullStringToString(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
-func nullInt32ToInt32(i *int32) int32 {
-	if i == nil {
-		return 0
-	}
-	return *i
-}
-
 func stringToNullContestVisibility(s *models.ContestVisibility) sqlc.NullContestVisibility {
 	if s == nil {
 		return sqlc.NullContestVisibility{Valid: false}
@@ -631,49 +596,6 @@ func stringToNullContestVisibility(s *models.ContestVisibility) sqlc.NullContest
 		ContestVisibility: sqlc.ContestVisibility(*s),
 		Valid:             true,
 	}
-}
-
-func stringToNullContestRole(s *models.ContestRole) sqlc.NullContestRole {
-	if s == nil {
-		return sqlc.NullContestRole{Valid: false}
-	}
-	return sqlc.NullContestRole{
-		ContestRole: sqlc.ContestRole(*s),
-		Valid:       true,
-	}
-}
-
-func timeToNullTime(t *time.Time) pgtype.Timestamptz {
-	if t == nil {
-		return pgtype.Timestamptz{Valid: false}
-	}
-	return pgtype.Timestamptz{
-		Time:  *t,
-		Valid: true,
-	}
-}
-
-func contestVisibilityToStringPtr(v *models.ContestVisibility) *string {
-	if v == nil {
-		return nil
-	}
-	s := string(*v)
-	return &s
-}
-
-func stringToStringPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-func sortOrderToStringPtr(s models.SortOrder) *string {
-	if s == "" {
-		return nil
-	}
-	str := string(s)
-	return &str
 }
 
 func uuidPtrToNullUUID(u *uuid.UUID) pgtype.UUID {

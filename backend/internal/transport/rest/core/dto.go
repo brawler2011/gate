@@ -421,39 +421,6 @@ func listUserSubmissionsParamsToFilter(userId uuid.UUID, params corev1.ListUserS
 	}
 }
 
-func submissionsListToDTO(solutionsList *models.SubmissionsList) *corev1.ListSubmissionsResponseModel {
-	resp := corev1.ListSubmissionsResponseModel{
-		Submissions: make([]corev1.SubmissionsListItemModel, len(solutionsList.Submissions)),
-		Pagination: corev1.PaginationModel{
-			Page:  solutionsList.Pagination.Page,
-			Total: solutionsList.Pagination.Total,
-		},
-	}
-
-	for i, solution := range solutionsList.Submissions {
-		resp.Submissions[i] = corev1.SubmissionsListItemModel{
-			Id:           solution.ID,
-			UserId:       uuidPtrToUUID(solution.CreatedBy),
-			Username:     solution.Username,
-			State:        solution.State,
-			Score:        solution.Score,
-			Penalty:      solution.Penalty,
-			TimeStat:     solution.TimeStat,
-			MemoryStat:   solution.MemoryStat,
-			Language:     solution.Language,
-			ProblemId:    uuidPtrToUUID(solution.ProblemID),
-			ProblemTitle: solution.ProblemTitle,
-			Position:     int32PtrToInt32(solution.Position),
-			ContestId:    uuidPtrToUUID(solution.ContestID),
-			ContestTitle: solution.ContestTitle,
-			UpdatedAt:    solution.UpdatedAt,
-			CreatedAt:    solution.CreatedAt,
-		}
-	}
-
-	return &resp
-}
-
 // Organizations DTOs
 
 func organizationDTO(o models.Organization) corev1.OrganizationModel {

@@ -183,7 +183,7 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 			if !entry.IsDir() {
 				continue
 			}
-			outcome := "OK"
+			var outcome string
 			switch entry.Name() {
 			case "accepted":
 				outcome = "OK"

@@ -9,7 +9,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 )
 
-const userKey = "user"
+const userKey contextKey = "user"
 
 // UsersMiddleware loads user from session into context
 func UsersMiddleware(usersUC interfaces.UsersUC) func(http.Handler) http.Handler {

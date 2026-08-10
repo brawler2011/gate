@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
@@ -130,8 +131,7 @@ func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (m
 	}
 	err = uc.authRepo.UpdateSessionExpiry(ctx, sessionID, newExpiry)
 	if err != nil {
-		// Log error but don't fail authentication
-		// (optional: could fail, but usually we just proceed)
+		slog.Debug("failed to update session expiry", "error", err)
 	}
 
 	user, err := uc.usersRepo.GetUserById(ctx, session.UserID)

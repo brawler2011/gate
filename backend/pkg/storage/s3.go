@@ -39,16 +39,10 @@ func NewS3Storage(cfg S3Config) *S3Storage {
 			"",
 		),
 		RetryMaxAttempts: 5,
-		EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(
-			func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-				return aws.Endpoint{
-					URL:               cfg.Endpoint,
-					SigningRegion:     cfg.Region,
-					HostnameImmutable: true,
-				}, nil
-			},
-		),
 	}, func(o *s3.Options) {
+		if cfg.Endpoint != "" {
+			o.BaseEndpoint = aws.String(cfg.Endpoint)
+		}
 		o.UsePathStyle = true
 	})
 

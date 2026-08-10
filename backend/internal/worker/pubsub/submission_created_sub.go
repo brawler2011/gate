@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -128,7 +129,7 @@ func (s *SubmissionsSub) handleMessage(parentCtx context.Context) jetstream.Mess
 		}
 
 		// Very important to pass sequence info
-		ctx = context.WithValue(ctx, "message_stream_sequence", meta.Sequence.Stream)
+		ctx = context.WithValue(ctx, models.MessageStreamSequenceKey, meta.Sequence.Stream)
 
 		if err := s.dispatcher.Dispatch(ctx, msg.Subject(), msg.Data()); err != nil {
 			s.logger.Error("failed to handle event", "error", err, "subject", msg.Subject())

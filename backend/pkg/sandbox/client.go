@@ -3,7 +3,6 @@ package sandbox
 import (
 	"context"
 	"fmt"
-	"time"
 
 	pb "github.com/criyle/go-judge/pb"
 	"google.golang.org/grpc"
@@ -18,12 +17,8 @@ type Client struct {
 
 // NewClient establishes a new gRPC connection to go-judge at the given address.
 func NewClient(addr string) (*Client, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, addr,
+	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024)), // 100MB
 	)
 	if err != nil {

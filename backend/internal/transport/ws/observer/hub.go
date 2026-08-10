@@ -58,7 +58,7 @@ func parseEvent[T any](payload []byte) (*T, error) {
 }
 
 func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) error {
-	seq, ok := ctx.Value("message_stream_sequence").(uint64)
+	seq, ok := ctx.Value(models.MessageStreamSequenceKey).(uint64)
 	if !ok {
 		slog.Error("missing message_stream_sequence")
 		return nil
