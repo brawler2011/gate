@@ -5,16 +5,20 @@ on:
     branches: [ main, dev ]
   workflow_call:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   backend-lint:
     name: Backend Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
           cache: true
@@ -26,15 +30,21 @@ jobs:
           version: v1.64.6
           working-directory: backend
 
+      - name: Cancel workflow on failure
+        if: failure()
+        run: gh run cancel ${{ github.run_id }} || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   backend-unit-tests:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
           cache: true
@@ -44,15 +54,21 @@ jobs:
         working-directory: backend
         run: go test -v ./...
 
+      - name: Cancel workflow on failure
+        if: failure()
+        run: gh run cancel ${{ github.run_id }} || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   backend-integration-tests:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
           cache: true
@@ -62,12 +78,18 @@ jobs:
         working-directory: backend
         run: go test -v -tags=integration ./tests/integration/...
 
+      - name: Cancel workflow on failure
+        if: failure()
+        run: gh run cancel ${{ github.run_id }} || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   frontend-checks:
     name: Frontend Typecheck, Lint & Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -89,3 +111,9 @@ jobs:
       - name: Build validation
         working-directory: frontend
         run: bun run build:local
+
+      - name: Cancel workflow on failure
+        if: failure()
+        run: gh run cancel ${{ github.run_id }} || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

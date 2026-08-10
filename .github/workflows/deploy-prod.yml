@@ -8,6 +8,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      actions: write
     uses: ./.github/workflows/deploy.yml
     with:
       environment: prod
