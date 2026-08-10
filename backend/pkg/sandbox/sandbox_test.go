@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 
@@ -76,6 +77,17 @@ func TestIntegrationSandbox(t *testing.T) {
 	}
 
 	sb := NewSandbox(client, cfg)
+
+	// Wait for go-judge gRPC server to be fully ready
+	for i := 0; i < 30; i++ {
+		probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		_, err := sb.Compile(probeCtx, []byte("int main(){return 0;}"), "cpp", nil)
+		cancel()
+		if err == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 
 	// Dynamically scan testdata/gfmt/ for packages
 	gfmtRoot := "../testdata/gfmt"
