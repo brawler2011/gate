@@ -350,6 +350,10 @@ func (m *mockProblemsRepo) UpdateProblemManifest(_ context.Context, id uuid.UUID
 	return nil
 }
 
+func (m *mockProblemsRepo) ListDashboardProblems(_ context.Context, _ uuid.UUID, _ int32) ([]models.DashboardProblem, error) {
+	return nil, nil
+}
+
 type mockTxManager struct{}
 
 func (m *mockTxManager) WithTx(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {

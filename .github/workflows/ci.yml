@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main, dev ]
+  workflow_call:
+
+jobs:
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.6
+          working-directory: backend
+
+  backend-unit-tests:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Run unit tests
+        working-directory: backend
+        run: go test -v ./...
+
+  backend-integration-tests:
+    name: Backend Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Run integration tests
+        working-directory: backend
+        run: go test -v -tags=integration ./tests/integration/...
+
+  frontend-checks:
+    name: Frontend Typecheck, Lint & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: bun install --frozen-lockfile
+
+      - name: Run typecheck
+        working-directory: frontend
+        run: bun run typecheck
+
+      - name: Run linter
+        working-directory: frontend
+        run: bun run lint
+
+      - name: Build validation
+        working-directory: frontend
+        run: bun run build:local

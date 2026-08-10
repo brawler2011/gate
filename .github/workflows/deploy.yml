@@ -1,0 +1,140 @@
+name: Deploy Template
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment tag (e.g. dev, prod)'
+        required: true
+        type: string
+      domain_name:
+        description: 'Domain name for frontend configuration'
+        required: true
+        type: string
+      deploy_dir:
+        description: 'Target directory on VPS'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  ci:
+    name: Run CI Checks
+    uses: ./.github/workflows/ci.yml
+
+  build-backend:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Convert owner to lowercase
+        run: |
+          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+        env:
+          OWNER: ${{ github.repository_owner }}
+
+      - name: Extract Docker metadata for Backend
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/gate-backend
+          tags: |
+            type=raw,value=${{ inputs.environment }}
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-frontend:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Convert owner to lowercase
+        run: |
+          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+        env:
+          OWNER: ${{ github.repository_owner }}
+
+      - name: Extract Docker metadata for Frontend
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/gate-frontend
+          tags: |
+            type=raw,value=${{ inputs.environment }}
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: frontend/Dockerfile
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://${{ inputs.domain_name }}
+            NEXT_PUBLIC_BACKEND_API_URL=/api
+            BACKEND_API_URL=http://backend:8080
+            WEBSOCKET_URL=wss://${{ inputs.domain_name }}/ws
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ inputs.deploy_dir }}
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+            DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose pull --ignore-buildable
+            DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose up -d
+            docker image prune -f
