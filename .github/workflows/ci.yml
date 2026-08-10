@@ -73,16 +73,12 @@ jobs:
           cache: true
           cache-dependency-path: backend/go.sum
 
-      - name: Install golangci-lint
+      - name: Run backend linter
         if: matrix.job.id == 'backend-lint'
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64.6
-          install-only: true
-
-      - name: Run backend linter
-        if: matrix.job.id == 'backend-lint'
-        run: task be:lint
+          working-directory: backend
 
       - name: Run unit tests
         if: matrix.job.id == 'backend-unit-tests'
