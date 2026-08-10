@@ -1,59 +1,61 @@
-run:
-  timeout: 5m
+version: "2"
 
 linters:
   enable:
     - bodyclose
     - dupl
-    - errcheck
     - errorlint
     - forbidigo
-    - gci
     - gocritic
     - gosec
-    - govet
-    - ineffassign
     - nilerr
-    - noctx
     - revive
     - sqlclosecheck
-    - staticcheck
     - testifylint
     - tparallel
     - unparam
-    - unused
     - wrapcheck
-
-linters-settings:
-  forbidigo:
-    forbid:
-      - p: '^fmt\.Print.*$'
-        msg: "Do not use fmt.Print*, use slog instead."
-      - p: '^log\.(Print|Fatal|Panic).*$'
-        msg: "Do not use log package, use slog instead."
-  wrapcheck:
-    ignoreSigs:
-      - .Errorf(
-      - errors.New(
-      - errors.Unwrap(
-      - errors.Join(
-      - .Wrap(
-      - .Wrapf(
-      - HandleContextErr(
-      - .Err()
-      - .Write(
-      - .Encode(
-      - .Parse(
-    ignorePackageGlobs:
-      - github.com/brawler2011/gate/backend/*
-  revive:
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: ^fmt\.Print.*$
+          msg: Do not use fmt.Print*, use slog instead.
+        - pattern: ^log\.(Print|Fatal|Panic).*$
+          msg: Do not use log package, use slog instead.
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - errors.Join(
+        - .Wrap(
+        - .Wrapf(
+        - HandleContextErr(
+        - .Err()
+        - .Write(
+        - .Encode(
+        - .Parse(
+      ignore-package-globs:
+        - github.com/brawler2011/gate/backend/*
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - .*\.pb\.go$
+      - contracts
+      - tests/mocks
     rules:
-      - name: var-naming
-        disabled: true
-
-issues:
-  exclude-dirs:
-    - contracts
-    - tests/mocks
-  exclude-files:
-    - ".*\\.pb\\.go$"
+      - linters:
+          - gosec
+        text: "G124|G122|G703|G304|G301"
+      - linters:
+          - staticcheck
+        text: "ST1023|ST1012|QF1003|QF1011"
