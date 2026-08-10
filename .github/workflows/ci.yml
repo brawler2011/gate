@@ -79,3 +79,9 @@ jobs:
         working-directory: frontend
         run: bun run lint
 
+      - name: Run dead code check (Knip)
+        if: matrix.job.id == 'frontend-checks'
+        working-directory: frontend
+        run: bun run knip
+
+

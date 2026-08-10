@@ -3,11 +3,34 @@ run:
 
 linters:
   enable:
+    - bodyclose
+    - dupl
     - errcheck
+    - errorlint
+    - forbidigo
+    - gci
+    - gocritic
+    - gosec
     - govet
     - ineffassign
+    - nilerr
+    - noctx
+    - revive
+    - sqlclosecheck
     - staticcheck
+    - testifylint
+    - tparallel
+    - unparam
     - unused
+    - wrapcheck
+
+linters-settings:
+  forbidigo:
+    forbid:
+      - p: '^fmt\.Print.*$'
+        msg: "Do not use fmt.Print*, use slog instead."
+      - p: '^log\.(Print|Fatal|Panic).*$'
+        msg: "Do not use log package, use slog instead."
 
 issues:
   exclude-dirs:
