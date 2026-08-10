@@ -219,7 +219,7 @@ func (s *IntegrationTestSuite) testMiddleware(next http.Handler) http.Handler {
 			if err == nil {
 				user, err := s.usersRepo.GetUserById(r.Context(), uid)
 				if err == nil {
-					ctx := context.WithValue(r.Context(), "user", user)
+					ctx := middleware.WithUser(r.Context(), user)
 					r = r.WithContext(ctx)
 				}
 			}

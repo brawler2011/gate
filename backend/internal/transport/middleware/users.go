@@ -42,6 +42,11 @@ func UsersMiddleware(usersUC interfaces.UsersUC) func(http.Handler) http.Handler
 	}
 }
 
+// WithUser returns a new context with the given user attached.
+func WithUser(ctx context.Context, user models.User) context.Context {
+	return context.WithValue(ctx, userKey, user)
+}
+
 // GetUser extracts User from context
 // Returns an anonymous user if no user is found in context
 func GetUser(ctx context.Context) models.User {
