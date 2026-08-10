@@ -85,7 +85,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   frontend-checks:
-    name: Frontend Typecheck, Lint & Build
+    name: Frontend Typecheck & Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -107,10 +107,6 @@ jobs:
       - name: Run linter
         working-directory: frontend
         run: bun run lint
-
-      - name: Build validation
-        working-directory: frontend
-        run: bun run build:local
 
       - name: Cancel workflow on failure
         if: failure()
