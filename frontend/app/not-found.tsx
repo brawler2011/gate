@@ -2,6 +2,7 @@ import {Container, Title, Text, Button, Stack, Paper} from "@mantine/core";
 import Link from "next/link";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 // Next.js 15 автоматически кэширует not-found.tsx при билде
 // Эта страница статическая и будет отдаваться из кеша
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
   robots: 'noindex, nofollow',
 };
 
-const NotFound = () => {
+const NotFound = (): ReactNode => {
   return (
     <Container size="sm" py="xl">
       <Paper p="xl" radius="md" withBorder>

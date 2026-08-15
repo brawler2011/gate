@@ -9,10 +9,11 @@ import {useState} from 'react';
 import {api} from '@/lib/api';
 
 import type {OrganizationModel} from '@/contracts/core/v1';
+import type {ReactNode} from "react";
 
 type Props = { org: OrganizationModel };
 
-export const OrgSettingsForm = ({org}: Props) => {
+export const OrgSettingsForm = ({org}: Props): ReactNode => {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 

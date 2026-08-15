@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {SubmissionsWsCloseCode} from '@/contracts/observer/v1';
 

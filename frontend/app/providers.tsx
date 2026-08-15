@@ -7,7 +7,7 @@ import {theme} from "@/lib/theme/theme";
 
 import type {ReactNode} from "react";
 
-export const Providers = ({children}: { children: ReactNode }) => {
+export const Providers = ({children}: { children: ReactNode }): ReactNode => {
   return (
     <MantineProvider
       theme={theme}

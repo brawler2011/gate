@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {useComputedColorScheme} from '@mantine/core';
 import React, {useEffect, useState} from 'react';
@@ -7,6 +7,8 @@ import go from 'react-syntax-highlighter/dist/esm/languages/prism/go';
 import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light';
 import {oneDark, oneLight} from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+import type {ReactNode} from "react";
 
 SyntaxHighlighter.registerLanguage('cpp', cpp);
 SyntaxHighlighter.registerLanguage('go', go);
@@ -17,7 +19,7 @@ interface CodeBlockProps {
     language: string;
 }
 
-const CodeBlock: React.FC<CodeBlockProps> = ({code, language}) => {
+const CodeBlock = ({code, language}: CodeBlockProps): ReactNode => {
   const [theme, setTheme] = useState(oneDark);
   const colorScheme = useComputedColorScheme('dark', {getInitialValueInEffect: true});
 

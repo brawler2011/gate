@@ -1,4 +1,5 @@
 "use client";
+
 import {
   Avatar,
   Card,
@@ -14,6 +15,8 @@ import Link from "next/link";
 import {formatDate} from "@/lib/formatDate";
 
 import classes from "./BlogPost.module.css";
+
+import type {ReactNode} from "react";
 
 export interface BlogPostProps {
   id: string;
@@ -33,7 +36,7 @@ export const BlogPost = ({
   previewImageUrl,
   description,
   date,
-}: BlogPostProps) => {
+}: BlogPostProps): ReactNode => {
   const imageUrl = previewImageUrl ? `/api/posts/${id}/image` : null;
 
   return (

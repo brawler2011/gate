@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {notifications} from '@mantine/notifications';
 import {useEffect, useRef, useState, useCallback, useMemo} from 'react';

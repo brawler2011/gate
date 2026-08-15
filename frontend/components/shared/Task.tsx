@@ -12,7 +12,7 @@ import {
   Title,
 } from "@mantine/core";
 import Link from "next/link";
-import React from "react";
+import React, {type ReactNode} from "react";
 
 import {Problem} from "@/components/problems/Problem";
 import {Layout} from "@/components/shared";
@@ -59,7 +59,7 @@ const Task = ({
   header,
   wsUrl,
   since,
-}: PageProps) => {
+}: PageProps): ReactNode => {
   const onSubmit = async (
     submission: FormData,
     language: string,

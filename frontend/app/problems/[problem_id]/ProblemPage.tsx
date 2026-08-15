@@ -1,7 +1,7 @@
 "use client";
 
 import {useParams} from "next/navigation";
-import {Suspense} from "react";
+import {Suspense, type ReactNode} from "react";
 
 import {WorkshopEditor} from "@/components/workshop";
 
@@ -9,7 +9,7 @@ type ProblemPageProps = {
   activeTab: string;
 };
 
-const ProblemPage = ({activeTab}: ProblemPageProps) => {
+const ProblemPage = ({activeTab}: ProblemPageProps): ReactNode => {
   const params = useParams();
   const problem_id = params.problem_id as string;
 

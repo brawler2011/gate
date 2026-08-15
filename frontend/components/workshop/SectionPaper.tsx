@@ -9,7 +9,7 @@ type Props = {
   children: ReactNode;
 };
 
-export const SectionPaper = ({title, children}: Props) => {
+export const SectionPaper = ({title, children}: Props): ReactNode => {
   return (
     <Paper
       withBorder

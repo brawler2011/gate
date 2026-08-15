@@ -8,6 +8,7 @@ import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
 import {api} from '@/lib/api';
 
 import type {Metadata} from 'next';
+import type {ReactNode} from "react";
 
 type Props = { params: Promise<{ org_id: string; team_id: string }> };
 
@@ -20,7 +21,7 @@ export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
   return {title: data.team.name};
 };
 
-const TeamPage = async ({params}: Props) => {
+const TeamPage = async ({params}: Props): Promise<ReactNode> => {
   const {org_id, team_id} = await params;
   const [error, data] = await api.getTeam({id: team_id});
   if (error) {

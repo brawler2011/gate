@@ -3,7 +3,7 @@
 import {Pagination} from "@mantine/core";
 import Link from "next/link";
 import {useRouter} from "next/navigation";
-import React from "react";
+import React, {type ReactNode} from "react";
 
 import type * as corev1 from "@/contracts/core/v1";
 
@@ -17,7 +17,7 @@ const NextPagination = ({
   pagination,
   baseUrl,
   queryParams = {},
-}: NextPaginationProps) => {
+}: NextPaginationProps): ReactNode => {
   const router = useRouter();
   const [, startTransition] = React.useTransition();
 

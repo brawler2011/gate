@@ -5,7 +5,9 @@ import {useRouter, useSearchParams} from "next/navigation";
 
 import {getRoleColor} from "@/lib/lib";
 
-export const UsersRoleFilter = () => {
+import type {ReactNode} from "react";
+
+export const UsersRoleFilter = (): ReactNode => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentRole = searchParams.get("role") || "";

@@ -5,7 +5,7 @@ import {useClipboard} from "@mantine/hooks";
 import {IconCheck, IconCopy} from "@tabler/icons-react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import {useEffect, useRef} from "react";
+import {useEffect, useRef, type ReactNode} from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
@@ -189,7 +189,7 @@ const StatementContent = ({value, problemId}: { value: string; problemId?: strin
   );
 };
 
-const Problem = ({problem, letter, problemId}: Props) => {
+const Problem = ({problem, letter, problemId}: Props): ReactNode => {
   letter = letter || "A";
   const activeProblemId = problemId || problem.id || problem.problem_id;
 

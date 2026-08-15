@@ -15,6 +15,7 @@ import {parsePage} from "@/lib/lib2";
 import {PermissionChecker} from "@/lib/permissions";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 export const metadata: Metadata = {
   title: "Мои посылки",
@@ -37,7 +38,7 @@ interface PageProps {
 
 const PAGE_SIZE = 20;
 
-const Page = async ({params, searchParams}: PageProps) => {
+const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
   const {contest_id} = await params;
   const queryParams = await searchParams;
 

@@ -11,6 +11,8 @@ import {
   Text,
 } from "@mantine/core";
 
+import type {ReactNode} from "react";
+
 type Props = {
   opened: boolean;
   onClose: () => void;
@@ -31,7 +33,7 @@ export const TestVerdictModal = ({
   memory,
   message,
   error,
-}: Props) => {
+}: Props): ReactNode => {
   return (
     <Modal opened={opened} onClose={onClose} title={<Text fw={600}>{title}</Text>} size="md">
       <Stack gap="md">

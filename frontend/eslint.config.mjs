@@ -80,12 +80,26 @@ const eslintConfig = [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+      "@typescript-eslint/explicit-module-boundary-types": [
+        "error",
+        {
+          allowTypedFunctionExpressions: true,
+          allowHigherOrderFunctions: true,
+          allowDirectConstAssertionInArrowFunctions: true,
+        },
+      ],
       "react-hooks/exhaustive-deps": "warn",
       "react-hooks/set-state-in-effect": "off",
 
       // Запрет использования function (за исключением генераторов function*) и принудительная типизация Next.js
       "no-restricted-syntax": [
         "error",
+        {
+          selector:
+            "TSTypeReference[typeName.name='FC'], TSTypeReference[typeName.left.name='React'][typeName.right.name='FC'], TSTypeReference[typeName.name='FunctionComponent'], TSTypeReference[typeName.left.name='React'][typeName.right.name='FunctionComponent']",
+          message:
+            "Do not use React.FC or FC. Type props directly and specify an explicit return type (e.g. : JSX.Element or : Promise<JSX.Element>).",
+        },
         {
           selector: "FunctionDeclaration[generator=false]",
           message: "Use arrow functions instead of function declarations.",

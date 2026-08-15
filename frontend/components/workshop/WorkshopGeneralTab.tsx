@@ -19,6 +19,8 @@ import useSWR, {useSWRConfig} from "swr";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api} from "@/lib/api";
 
+import type {ReactNode} from "react";
+
 type LimitsData = {
   problem_type: string;
   max_score: number | null;
@@ -36,7 +38,7 @@ const PROBLEM_TYPE_OPTIONS = [
   {value: "interactive", label: "Interactive"},
 ];
 
-export const WorkshopGeneralTab = ({problemId}: Props) => {
+export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
   const {mutate} = useSWRConfig();
   const [limits, setLimits] = useState<LimitsData>({
     problem_type: "pass-fail",

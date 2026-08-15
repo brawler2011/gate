@@ -39,12 +39,13 @@ import {
 import type {
   SubtaskItem,
   TestItem} from "./types";
+import type {ReactNode} from "react";
 
 type Props = {
   problemId: string;
 };
 
-export const WorkshopTestsManager = ({problemId}: Props) => {
+export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
   const [tests, setTests] = useState<TestItem[]>([]);
   const [subtasks, setSubtasks] = useState<SubtaskItem[]>([]);
   const [generators, setGenerators] = useState<string[]>([]);

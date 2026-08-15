@@ -3,6 +3,8 @@
 import {Button, Group, Modal, Stack, Text} from "@mantine/core";
 import {useState} from "react";
 
+import type {ReactNode} from "react";
+
 interface DeleteBlogPostModalProps {
   opened: boolean;
   onClose: () => void;
@@ -18,7 +20,7 @@ export const DeleteBlogPostModal = ({
   onClose,
   post,
   onSubmit,
-}: DeleteBlogPostModalProps) => {
+}: DeleteBlogPostModalProps): ReactNode => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {

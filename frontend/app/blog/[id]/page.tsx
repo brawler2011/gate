@@ -13,6 +13,7 @@ import 'katex/dist/katex.min.css';
 import classes from "./styles.module.css";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 export const revalidate: number = 600; // 10 minutes
 
@@ -46,7 +47,7 @@ export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
   };
 };
 
-const Page = async ({params}: Props) => {
+const Page = async ({params}: Props): Promise<ReactNode> => {
   const {id} = await params;
   const post = await getPost({id});
 

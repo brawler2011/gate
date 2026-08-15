@@ -13,6 +13,7 @@ import {numberToLetters} from "@/lib/lib";
 import {PermissionChecker} from "@/lib/permissions";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 const getCachedContestProblem = cache(
   async (problemId: string, contestId: string) => {
@@ -50,7 +51,7 @@ export const generateMetadata = async (props: Props): Promise<Metadata> => {
   };
 };
 
-const Page = async (props: Props) => {
+const Page = async (props: Props): Promise<ReactNode> => {
   const params = await props.params;
 
   // First get the user to filter submissions by their ID

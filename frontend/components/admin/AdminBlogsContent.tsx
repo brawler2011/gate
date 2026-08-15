@@ -24,13 +24,14 @@ import {AdminBlogsTable} from "./AdminBlogsTable";
 import {BlogPostForm} from "./BlogPostForm";
 
 import type {PostModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type AdminBlogsContentProps = {
   page: number;
   search?: string;
 };
 
-export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps) => {
+export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): ReactNode => {
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;

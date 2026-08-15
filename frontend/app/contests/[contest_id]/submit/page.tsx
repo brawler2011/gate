@@ -18,6 +18,7 @@ import {PermissionChecker} from "@/lib/permissions";
 import {SubmitSubmissionClient} from "./SubmitSubmissionClient";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 export const metadata: Metadata = {
   title: "Послать решение",
@@ -27,7 +28,7 @@ type PageProps = {
   params: Promise<{ contest_id: string }>;
 };
 
-const Page = async ({params}: PageProps) => {
+const Page = async ({params}: PageProps): Promise<ReactNode> => {
   const {contest_id} = await params;
 
   const response = await unwrapAndCache(api.getContest)({contestId: contest_id});

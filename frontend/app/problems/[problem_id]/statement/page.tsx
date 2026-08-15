@@ -1,6 +1,7 @@
 import ProblemPageLayoutWrapper, {generateMetadata as sharedGenerateMetadata} from "../ProblemPageLayoutWrapper";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 type SearchParams = Promise<{
   file?: string;
@@ -17,7 +18,7 @@ export const generateMetadata = async (props: { params: Promise<{ problem_id: st
   return sharedGenerateMetadata(problem_id);
 };
 
-const Page = ({params, searchParams}: Props) => {
+const Page = ({params, searchParams}: Props): ReactNode => {
   return (
     <ProblemPageLayoutWrapper
       activeTab="statement"

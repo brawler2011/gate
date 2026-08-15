@@ -5,12 +5,13 @@ import {IconTrophy, IconChevronRight} from "@tabler/icons-react";
 import {useRouter} from "next/navigation";
 
 import type {DashboardContestModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type DashboardContestsListProps = {
   contests: DashboardContestModel[];
 };
 
-export const DashboardContestsList = ({contests}: DashboardContestsListProps) => {
+export const DashboardContestsList = ({contests}: DashboardContestsListProps): ReactNode => {
   const router = useRouter();
 
   if (contests.length === 0) {

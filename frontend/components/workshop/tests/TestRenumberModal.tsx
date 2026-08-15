@@ -2,6 +2,8 @@
 
 import {Alert, Button, Group, Modal, Stack, Text} from "@mantine/core";
 
+import type {ReactNode} from "react";
+
 type Props = {
   opened: boolean;
   onClose: () => void;
@@ -16,7 +18,7 @@ export const TestRenumberModal = ({
   onConfirm,
   isLoading,
   gapNumbers,
-}: Props) => {
+}: Props): ReactNode => {
   return (
     <Modal
       opened={opened}

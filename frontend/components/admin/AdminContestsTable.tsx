@@ -18,6 +18,7 @@ import classes from "./AdminPage.module.css";
 import {DeleteContestModal} from "./DeleteContestModal";
 
 import type {ContestModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type AdminContestsTableProps = {
   contests: ContestModel[];
@@ -31,7 +32,7 @@ const getVisibilityDisplay = (visibility: string) => {
   return {label: "Приватный", color: "gray"};
 };
 
-export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTableProps) => {
+export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTableProps): ReactNode => {
   const router = useRouter();
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [contestToDelete, setContestToDelete] = useState<ContestModel | null>(null);

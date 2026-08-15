@@ -20,12 +20,13 @@ import {LangString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 import classes from "./AdminPage.module.css";
 
 import type {SubmissionModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type AdminSubmissionsContentProps = {
   page: number;
 };
 
-export const AdminSubmissionsContent = ({page}: AdminSubmissionsContentProps) => {
+export const AdminSubmissionsContent = ({page}: AdminSubmissionsContentProps): ReactNode => {
   const {data, error, isLoading} = useSWR(
     `/api/submissions?page=${page}&pageSize=10`,
     async (url) => {

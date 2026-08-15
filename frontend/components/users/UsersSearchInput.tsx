@@ -5,7 +5,9 @@ import {IconSearch} from "@tabler/icons-react";
 import {useRouter, useSearchParams} from "next/navigation";
 import {useEffect, useRef, useState} from "react";
 
-export const UsersSearchInput = () => {
+import type {ReactNode} from "react";
+
+export const UsersSearchInput = (): ReactNode => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";

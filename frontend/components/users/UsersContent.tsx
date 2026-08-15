@@ -7,13 +7,15 @@ import {UsersRoleFilter} from '@/components/users/UsersRoleFilter';
 import {UsersSearchInput} from '@/components/users/UsersSearchInput';
 import {UsersTable} from '@/components/users/UsersTable';
 
+import type {ReactNode} from "react";
+
 type UsersContentProps = {
   page: number;
   search?: string;
   role?: string;
 };
 
-export const UsersContent = ({page, search, role}: UsersContentProps) => {
+export const UsersContent = ({page, search, role}: UsersContentProps): ReactNode => {
   const {data, error, isLoading} = useSWR(
     `/api/users?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}${role ? `&role=${role}` : ""}`,
     async (url) => {

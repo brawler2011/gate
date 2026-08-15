@@ -5,6 +5,8 @@ import {useState, useEffect} from "react";
 
 import classes from "./TruncatedWithCopy.module.css";
 
+import type {ReactNode} from "react";
+
 type Props = {
   value: string;
   showOnHover?: boolean;
@@ -15,7 +17,7 @@ export const TruncatedWithCopy = ({
   value, 
   showOnHover = false,
   maxLength = 9 
-}: Props) => {
+}: Props): ReactNode => {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {

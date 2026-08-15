@@ -14,6 +14,7 @@ import {useEffect, useState} from "react";
 import {api} from "@/lib/api";
 
 import type {OrganizationModel, ProblemsListItemModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type Props = {
   opened: boolean;
@@ -29,7 +30,7 @@ export const CreateProblemModal = ({
   orgs,
   defaultOrgId,
   lockOrganization = false,
-}: Props) => {
+}: Props): ReactNode => {
   const router = useRouter();
   const [title, setTitle] = useState("New Problem");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);

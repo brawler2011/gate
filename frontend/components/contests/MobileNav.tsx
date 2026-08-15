@@ -4,6 +4,8 @@ import React from "react";
 
 import {getTabStyles} from "./get-tab-styles";
 
+import type {ReactNode} from "react";
+
 type NavSection = {
   key: string;
   label: string;
@@ -20,7 +22,7 @@ export const MobileNav = ({
   contestId,
   activeSection,
   sections,
-}: MobileNavProps) => {
+}: MobileNavProps): ReactNode => {
   return (
     <Box hiddenFrom="sm" style={{width: "100%"}}>
       <Group gap="xs" mb="md">

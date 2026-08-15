@@ -3,6 +3,8 @@
 import {Alert, Button, Group, Modal, Radio, Stack, Text} from "@mantine/core";
 import {useState} from "react";
 
+import type {ReactNode} from "react";
+
 type Props = {
   opened: boolean;
   onClose: () => void;
@@ -17,7 +19,7 @@ export const SubtaskDeleteModal = ({
   subtaskName,
   testCount,
   onConfirm,
-}: Props) => {
+}: Props): ReactNode => {
   const [deleteTests, setDeleteTests] = useState<"keep" | "delete">("keep");
 
   return (

@@ -6,13 +6,14 @@ import {BlogPost} from '@/components/blog/BlogPost';
 import {NextPagination} from '@/components/shared/Pagination';
 
 import type {PostModel, PaginationModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type Props = {
   posts: PostModel[];
   pagination: PaginationModel;
 };
 
-export const BlogList = ({posts, pagination}: Props) => {
+export const BlogList = ({posts, pagination}: Props): ReactNode => {
   if (posts.length === 0) { 
     return (
       <Text c="dimmed" ta="center" py="xl">

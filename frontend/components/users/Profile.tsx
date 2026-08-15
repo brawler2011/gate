@@ -8,7 +8,7 @@ type ProfileContainerProps = {
   children: ReactNode;
 };
 
-export const ProfileContainer = ({children}: ProfileContainerProps) => {
+export const ProfileContainer = ({children}: ProfileContainerProps): ReactNode => {
   return (
     <Container size="md" px={0}>
       <Stack gap="lg">{children}</Stack>

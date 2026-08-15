@@ -1,12 +1,14 @@
 "use client";
+
 import {Table, Text, Anchor} from '@mantine/core';
 import Link from 'next/link';
 
 import type {TeamModel} from '@/contracts/core/v1';
+import type {ReactNode} from "react";
 
 type Props = { teams: TeamModel[]; orgId: string };
 
-export const OrgTeamsTab = ({teams, orgId}: Props) => {
+export const OrgTeamsTab = ({teams, orgId}: Props): ReactNode => {
   if (teams.length === 0) {
     return <Text c="dimmed" py="xl" ta="center">Команды не найдены</Text>;
   }

@@ -7,7 +7,7 @@ type UserContestsSectionProps = {
   page: number;
 };
 
-export const UserContestsSection = async ({userId, page}: UserContestsSectionProps) => {
+export const UserContestsSection = async ({userId, page}: UserContestsSectionProps): Promise<JSX.Element> => {
   const [, contestsData] = await api.listUserContests({id: userId, page, pageSize: 10});
 
   return (

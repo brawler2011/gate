@@ -27,6 +27,7 @@ import type {
   UserModel,
 } from "@/contracts/core/v1";
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 type Props = {
   params: Promise<{ contest_id: string }>;
@@ -117,7 +118,7 @@ const Contest = ({
   );
 };
 
-const Page = async ({params}: Props) => {
+const Page = async ({params}: Props): Promise<ReactNode> => {
   const {contest_id} = await params;
   const response = await unwrapAndCache(api.getContest)({contestId: contest_id});
 

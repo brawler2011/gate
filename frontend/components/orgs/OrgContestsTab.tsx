@@ -14,6 +14,7 @@ import type {
   OrganizationModel,
   PaginationModel,
 } from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type Props = {
   contests: ContestModel[];
@@ -29,7 +30,7 @@ export const OrgContestsTab = ({
   org,
   isAuthenticated,
   search = "",
-}: Props) => {
+}: Props): ReactNode => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchTimeoutRef = useRef<NodeJS.Timeout>();

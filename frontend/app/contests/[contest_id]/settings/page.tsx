@@ -56,7 +56,7 @@ type Props = {
 const ContestManagePage = async ({
   params,
   searchParams,
-}: Props) => {
+}: Props): Promise<JSX.Element> => {
   const {contest_id: contestId} = await params;
   const {section = "settings"} = await searchParams;
 

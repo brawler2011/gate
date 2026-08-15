@@ -9,6 +9,7 @@ import {buildOrgHeaderNav} from "@/lib/org-header-nav";
 import {canManageOrgMembers} from "@/lib/org-permissions";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 type Props = {
   params: Promise<{ org_id: string }>;
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
   title: "Участники",
 };
 
-const OrgMembersPage = async ({params}: Props) => {
+const OrgMembersPage = async ({params}: Props): Promise<ReactNode> => {
   const {org_id} = await params;
 
   const canManage = await canManageOrgMembers(org_id);

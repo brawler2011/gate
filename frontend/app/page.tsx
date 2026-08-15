@@ -17,12 +17,13 @@ import {DefaultLayout} from '@/components/shared';
 import {api} from "@/lib/api";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 export const metadata: Metadata = {
   title: "Главная",
 };
 
-const Page = async () => {
+const Page = async (): Promise<ReactNode> => {
   const [, me] = await api.getMe();
   const authenticated = Boolean(me?.user);
 

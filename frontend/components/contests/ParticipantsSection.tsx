@@ -25,6 +25,7 @@ import {api} from "@/lib/api";
 import {ChangeRoleModal} from "./ChangeRoleModal";
 
 import type * as corev1 from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 const ROLE_OPTIONS = [
   {label: "Участник", value: "participant", color: "gray"},
@@ -41,7 +42,7 @@ interface ParticipantsSectionProps {
   contestId: string;
 }
 
-export const ParticipantsSection = ({contestId}: ParticipantsSectionProps) => {
+export const ParticipantsSection = ({contestId}: ParticipantsSectionProps): ReactNode => {
   const [participants, setParticipants] = useState<corev1.ContestMemberModel[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);

@@ -27,6 +27,7 @@ import {
 } from "@/lib/lib";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 type Props = {
   params: Promise<{ submission_id: string }>;
@@ -37,7 +38,7 @@ const metadata: Metadata = {
   description: "",
 };
 
-const Page = async (props: Props) => {
+const Page = async (props: Props): Promise<ReactNode> => {
   const solutionId = (await props.params).submission_id;
   const [error, resp] = await api.getSubmission({submissionId: solutionId});
 

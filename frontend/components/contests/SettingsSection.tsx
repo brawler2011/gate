@@ -22,6 +22,7 @@ import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type * as corev1 from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 interface SettingsSectionProps {
   contest: corev1.ContestModel;
@@ -98,7 +99,7 @@ const toLocalDatetimeString = (dateStr: string | null | undefined): string => {
   )}:${pad(date.getMinutes())}`;
 };
 
-export const SettingsSection = ({contest}: SettingsSectionProps) => {
+export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{

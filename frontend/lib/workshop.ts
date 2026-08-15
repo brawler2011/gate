@@ -1,4 +1,6 @@
-import {api, type ApiError} from "./api";
+import {api, type ApiError, type ApiResult} from "./api";
+
+import type {CreationResponseModel, MessageResponse, TestReport} from "@/contracts/core/v1";
 
 const toText = async (data: Blob | string | ArrayBuffer | ArrayBufferView | null) => {
   if (data === null || data === undefined) {
@@ -35,17 +37,28 @@ export const getWorkshopCheckerFile = async (
   return [null, await toText(data)];
 };
 
-export const createWorkshopCheckerFile = async (problemId: string, name: string, content: string) => {
+export const createWorkshopCheckerFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.createProblemChecker({problemId, name, requestBody: blob});
 };
 
-export const updateWorkshopCheckerFile = async (problemId: string, name: string, content: string) => {
+export const updateWorkshopCheckerFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.updateProblemChecker({problemId, name, requestBody: blob});
 };
 
-export const setWorkshopCheckerMain = async (problemId: string, name: string) => {
+export const setWorkshopCheckerMain = async (
+  problemId: string,
+  name: string
+): Promise<ApiResult<MessageResponse>> => {
   return api.setProblemCheckerMain({problemId, requestBody: {name}});
 };
 
@@ -60,12 +73,20 @@ export const getWorkshopGeneratorFile = async (
   return [null, await toText(data)];
 };
 
-export const createWorkshopGeneratorFile = async (problemId: string, name: string, content: string) => {
+export const createWorkshopGeneratorFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.createProblemGenerator({problemId, name, requestBody: blob});
 };
 
-export const updateWorkshopGeneratorFile = async (problemId: string, name: string, content: string) => {
+export const updateWorkshopGeneratorFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.updateProblemGenerator({problemId, name, requestBody: blob});
 };
@@ -81,26 +102,39 @@ export const getWorkshopInteractorFile = async (
   return [null, await toText(data)];
 };
 
-export const createWorkshopInteractorFile = async (problemId: string, name: string, content: string) => {
+export const createWorkshopInteractorFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.createProblemInteractor({problemId, name, requestBody: blob});
 };
 
-export const updateWorkshopInteractorFile = async (problemId: string, name: string, content: string) => {
+export const updateWorkshopInteractorFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.updateProblemInteractor({problemId, name, requestBody: blob});
 };
 
-export const setWorkshopInteractorMain = async (problemId: string, name: string) => {
+export const setWorkshopInteractorMain = async (
+  problemId: string,
+  name: string
+): Promise<ApiResult<MessageResponse>> => {
   return api.setProblemInteractorMain({problemId, requestBody: {name}});
 };
 
-export const uploadWorkshopMediaBinary = async (formData: FormData) => {
+export const uploadWorkshopMediaBinary = async (
+  formData: FormData
+): Promise<ApiResult<MessageResponse>> => {
   const problemId = formData.get("problemId") as string;
   const name = formData.get("name") as string;
   const file = formData.get("file") as File | null;
   if (!problemId || !name || !file) {
-    return [{status: 400, message: "Файл не выбран"}, null] as const;
+    return [{status: 400, message: "Файл не выбран"}, null];
   }
   const arrayBuffer = await file.arrayBuffer();
   const blob = new Blob([arrayBuffer], {type: file.type || 'application/octet-stream'});
@@ -118,12 +152,20 @@ export const getWorkshopSolutionFile = async (
   return [null, await toText(data)];
 };
 
-export const createWorkshopSolutionFile = async (problemId: string, name: string, content: string) => {
+export const createWorkshopSolutionFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.createProblemWorkshopSubmission({problemId, name, requestBody: blob});
 };
 
-export const updateWorkshopSolutionFile = async (problemId: string, name: string, content: string) => {
+export const updateWorkshopSolutionFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.updateProblemWorkshopSubmission({problemId, name, requestBody: blob});
 };
@@ -139,22 +181,30 @@ export const getWorkshopTestFile = async (
   return [null, await toText(data)];
 };
 
-export const createWorkshopTestFile = async (problemId: string, name: string, content: string) => {
+export const createWorkshopTestFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   if (name === 'tests.json') {
-    return [{status: 400, message: 'tests/tests.json is reserved for tests configuration updates'}, null] as const;
+    return [{status: 400, message: 'tests/tests.json is reserved for tests configuration updates'}, null];
   }
 
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.createProblemTestFile({problemId, name, requestBody: blob});
 };
 
-export const updateWorkshopTestFile = async (problemId: string, name: string, content: string) => {
+export const updateWorkshopTestFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   if (name === 'tests.json') {
     let testsConfig: Record<string, unknown>;
     try {
       testsConfig = JSON.parse(content) as Record<string, unknown>;
     } catch {
-      return [{status: 400, message: 'tests/tests.json must contain valid JSON'}, null] as const;
+      return [{status: 400, message: 'tests/tests.json must contain valid JSON'}, null];
     }
     return api.updateProblemTestsConfig({problemId, requestBody: testsConfig});
   }
@@ -174,17 +224,28 @@ export const getWorkshopValidatorFile = async (
   return [null, await toText(data)];
 };
 
-export const createWorkshopValidatorFile = async (problemId: string, name: string, content: string) => {
+export const createWorkshopValidatorFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.createProblemValidator({problemId, name, requestBody: blob});
 };
 
-export const updateWorkshopValidatorFile = async (problemId: string, name: string, content: string) => {
+export const updateWorkshopValidatorFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.updateProblemValidator({problemId, name, requestBody: blob});
 };
 
-export const setWorkshopValidatorMain = async (problemId: string, name: string) => {
+export const setWorkshopValidatorMain = async (
+  problemId: string,
+  name: string
+): Promise<ApiResult<MessageResponse>> => {
   return api.setProblemValidatorMain({problemId, requestBody: {name}});
 };
 
@@ -193,7 +254,7 @@ export const generateWorkshopTests = async (
   generatorName: string,
   testNumbers: number[],
   args?: string[][]
-) => {
+): Promise<ApiResult<{ message?: string }>> => {
   return api.generateTests({
     problemId,
     requestBody: {
@@ -204,7 +265,11 @@ export const generateWorkshopTests = async (
   });
 };
 
-export const testWorkshopSolution = async (problemId: string, solutionPath: string, testNumbers?: number[]) => {
+export const testWorkshopSolution = async (
+  problemId: string,
+  solutionPath: string,
+  testNumbers?: number[]
+): Promise<ApiResult<TestReport>> => {
   return api.testSolution({
     problemId,
     requestBody: {
@@ -219,7 +284,7 @@ export const createSolution = async (
   contestId: string,
   language: number,
   submission: FormData
-) => {
+): Promise<ApiResult<CreationResponseModel>> => {
   const solutionData = submission.get("submission");
   let solutionContent: string;
 
@@ -228,7 +293,7 @@ export const createSolution = async (
   } else if (typeof solutionData === "string") {
     solutionContent = solutionData;
   } else {
-    return [{status: 400, message: "Invalid solution data type"}, null] as const;
+    return [{status: 400, message: "Invalid solution data type"}, null];
   }
 
   return api.createSubmission({

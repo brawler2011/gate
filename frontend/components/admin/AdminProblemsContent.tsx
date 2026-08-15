@@ -29,13 +29,14 @@ import classes from "./AdminPage.module.css";
 import {DeleteProblemModal} from "./DeleteProblemModal";
 
 import type {ProblemsListItemModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type AdminProblemsContentProps = {
   page: number;
   search?: string;
 };
 
-export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps) => {
+export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps): ReactNode => {
   const router = useRouter();
   const searchParams = useSearchParams();
 

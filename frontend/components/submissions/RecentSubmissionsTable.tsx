@@ -11,6 +11,7 @@ import {
 import styles from "./RecentSubmissionsTable.module.css";
 
 import type {SubmissionsListItemModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 const RECENT_SUBMISSIONS_LIMIT = 5;
 
@@ -71,7 +72,7 @@ export const RecentSubmissionsTable = ({
   problemId,
   wsUrl,
   since,
-}: RecentSubmissionsTableProps) => {
+}: RecentSubmissionsTableProps): ReactNode => {
   // Enable WS only if wsUrl is provided and we have userId and problemId for filtering
   const enabled = Boolean(wsUrl && userId && problemId);
 

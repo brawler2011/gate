@@ -5,12 +5,14 @@ import {useEffect, useState} from "react";
 
 import {APP_COLORS} from "@/lib/theme/colors";
 
+import type {ReactNode} from "react";
+
 interface ContestCountdownProps {
   startTime: string;
   title: string;
 }
 
-export const ContestCountdown = ({startTime, title}: ContestCountdownProps) => {
+export const ContestCountdown = ({startTime, title}: ContestCountdownProps): ReactNode => {
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
     hours: number;

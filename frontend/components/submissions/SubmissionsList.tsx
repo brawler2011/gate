@@ -13,7 +13,7 @@ import {
   TableScrollContainer,
 } from "@mantine/core";
 import Link from "next/link";
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, type ReactNode} from "react";
 
 import {LangString, ProblemTitle, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
@@ -141,7 +141,7 @@ const SubmissionRow = ({submission, isHighlighted, isNew}: SubmissionRowProps) =
   );
 };
 
-const SubmissionsList = ({submissions, highlightedIds = new Set()}: SubmissionsListProps) => {
+const SubmissionsList = ({submissions, highlightedIds = new Set()}: SubmissionsListProps): ReactNode => {
   return (
     <>
       <TableScrollContainer minWidth={800}>

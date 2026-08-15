@@ -11,8 +11,9 @@ import {
 import {WorkshopCollectionTab} from "./WorkshopCollectionTab";
 
 import type {WorkshopFileTabProps} from "./WorkshopFileTabProps";
+import type {ReactNode} from "react";
 
-export const WorkshopInteractorsTab = (props: WorkshopFileTabProps) => {
+export const WorkshopInteractorsTab = (props: WorkshopFileTabProps): ReactNode => {
   return (
     <WorkshopCollectionTab
       {...props}

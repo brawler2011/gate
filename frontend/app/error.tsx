@@ -4,12 +4,14 @@ import {Button, Code, Container, Paper, Stack, Text, Title} from "@mantine/core"
 import Link from "next/link";
 import {useEffect} from "react";
 
+import type {ReactNode} from "react";
+
 type ErrorProps = {
   error: Error & { digest?: string };
   reset: () => void;
 };
 
-const Error = ({error, reset}: ErrorProps) => {
+const Error = ({error, reset}: ErrorProps): ReactNode => {
   useEffect(() => {
     console.error("Unhandled page error:", error);
   }, [error]);

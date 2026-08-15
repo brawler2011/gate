@@ -5,7 +5,6 @@ import {Providers} from "./providers";
 
 import type {Metadata, Viewport} from "next";
 import type {ReactNode} from "react";
-
 import "@mantine/core/styles.css";
 import "@mantine/dropzone/styles.css";
 import "@mantine/notifications/styles.css";
@@ -26,7 +25,7 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-const RootLayout = ({children}: { children: ReactNode }) => {
+const RootLayout = ({children}: { children: ReactNode }): ReactNode => {
   return (
     <html lang="ru" className={inter.className} {...mantineHtmlProps}>
       <head>

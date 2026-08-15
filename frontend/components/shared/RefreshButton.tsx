@@ -2,7 +2,9 @@
 
 import {Button} from "@mantine/core";
 
-export const RefreshButton = () => {
+import type {ReactNode} from "react";
+
+export const RefreshButton = (): ReactNode => {
   return (
     <Button onClick={() => window.location.reload()} variant="filled">
       Обновить страницу

@@ -22,6 +22,7 @@ import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 
 import type {OrganizationMemberModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 const ROLE_OPTIONS = [
   {label: "Владелец", value: "owner", color: "red"},
@@ -37,7 +38,7 @@ const getRoleDisplay = (role: string) => {
 
 type Props = { orgId: string };
 
-export const OrgMembersManagement = ({orgId}: Props) => {
+export const OrgMembersManagement = ({orgId}: Props): ReactNode => {
   const [members, setMembers] = useState<OrganizationMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
 

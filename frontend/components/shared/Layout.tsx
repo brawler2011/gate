@@ -1,7 +1,7 @@
 "use client";
 
 import {AppShell, AppShellFooter, AppShellHeader, AppShellMain, Box,} from "@mantine/core";
-import React from "react";
+import React, {type ReactNode} from "react";
 
 import {Footer} from '@/components/shared/Footer';
 
@@ -39,7 +39,7 @@ const Layout = ({
     },
   },
   paddingConfig = "md",
-}: LayoutProps) => {
+}: LayoutProps): ReactNode => {
   return (
     <AppShell
       header={headerConfig}
@@ -54,7 +54,7 @@ const Layout = ({
   );
 };
 
-const DefaultLayoutClient = ({children, header, ...props}: LayoutProps) => {
+const DefaultLayoutClient = ({children, header, ...props}: LayoutProps): ReactNode => {
   return (
     <Layout {...props}>
       <AppShellHeader>

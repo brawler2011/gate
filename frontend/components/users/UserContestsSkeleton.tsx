@@ -3,7 +3,9 @@
 import {Skeleton, Stack, Tabs} from "@mantine/core";
 import {IconTrophy} from "@tabler/icons-react";
 
-export const UserContestsSkeleton = () => {
+import type {ReactNode} from "react";
+
+export const UserContestsSkeleton = (): ReactNode => {
   return (
     <Tabs defaultValue="contests">
       <Tabs.List>

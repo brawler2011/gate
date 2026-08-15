@@ -16,6 +16,8 @@ import {useCallback, useEffect, useState, useTransition} from "react";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api} from "@/lib/api";
 
+import type {ReactNode} from "react";
+
 type PackageItem = {
   id?: string;
   version?: number;
@@ -65,7 +67,7 @@ const formatDateTime = (iso?: string) => {
   }
 };
 
-export const WorkshopPackagesTab = ({problemId}: Props) => {
+export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
   const [isBuilding, startBuilding] = useTransition();
   const [packages, setPackages] = useState<PackageItem[]>([]);
   const [loading, setLoading] = useState(true);

@@ -3,6 +3,8 @@
 import {Button, Group, Modal, Stack, Text} from "@mantine/core";
 import {useState} from "react";
 
+import type {ReactNode} from "react";
+
 interface DeleteOrgModalProps {
   opened: boolean;
   onClose: () => void;
@@ -18,7 +20,7 @@ export const DeleteOrgModal = ({
   onClose,
   org,
   onSubmit,
-}: DeleteOrgModalProps) => {
+}: DeleteOrgModalProps): ReactNode => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {

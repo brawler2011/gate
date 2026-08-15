@@ -6,10 +6,11 @@ import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
 import {api} from '@/lib/api';
 
 import type {Metadata} from 'next';
+import type {ReactNode} from "react";
 
 export const metadata: Metadata = {title: 'Организации'};
 
-const OrgsPage = async () => {
+const OrgsPage = async (): Promise<ReactNode> => {
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
   const [error, data] = await api.listOrganizations({page: 1, pageSize: 50});

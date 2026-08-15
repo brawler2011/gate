@@ -10,13 +10,14 @@ import {APP_COLORS} from "@/lib/theme/colors";
 import classes from "./ProblemCard.module.css";
 
 import type {ProblemsListItemModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type Props = {
   problem: ProblemsListItemModel;
   showEditButton: boolean;
 };
 
-export const ProblemCard = ({problem, showEditButton}: Props) => {
+export const ProblemCard = ({problem, showEditButton}: Props): ReactNode => {
   const router = useRouter();
 
   return (

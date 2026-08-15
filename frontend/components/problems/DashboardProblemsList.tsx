@@ -7,12 +7,13 @@ import {useRouter} from "next/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type {DashboardProblemModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type DashboardProblemsListProps = {
   problems: DashboardProblemModel[];
 };
 
-export const DashboardProblemsList = ({problems}: DashboardProblemsListProps) => {
+export const DashboardProblemsList = ({problems}: DashboardProblemsListProps): ReactNode => {
   const router = useRouter();
 
   if (problems.length === 0) {

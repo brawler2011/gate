@@ -9,6 +9,7 @@ import {getMyContestRole} from "@/lib/contest-role";
 import {PermissionChecker} from "@/lib/permissions";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 const metadata: Metadata = {
   title: "Положение",
@@ -18,7 +19,7 @@ type PageProps = {
   params: Promise<{ contest_id: string }>;
 };
 
-const Page = async ({params}: PageProps) => {
+const Page = async ({params}: PageProps): Promise<ReactNode> => {
   const {contest_id} = await params;
 
   // Fetch contest data for the info panel

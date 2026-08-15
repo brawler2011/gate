@@ -9,6 +9,7 @@ import {numberToLetters} from "@/lib/lib";
 import classes from "./ContestProblemsTable.module.css";
 
 import type {ContestProblemListItemModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type ContestProblemsTableProps = {
   contestId: string | number;
@@ -29,7 +30,7 @@ const formatMemoryLimit = (memoryKb: number) => {
 export const ContestProblemsTable = ({
   contestId,
   problems,
-}: ContestProblemsTableProps) => {
+}: ContestProblemsTableProps): ReactNode => {
   const router = useRouter();
 
   return (

@@ -1,6 +1,8 @@
 import {redirect} from "next/navigation";
 
-const AdminPage = () => {
+import type {ReactNode} from "react";
+
+const AdminPage = (): ReactNode => {
   redirect("/admin/users");
 };
 

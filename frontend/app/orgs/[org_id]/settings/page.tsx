@@ -22,6 +22,7 @@ const SECTIONS = {
 type Section = (typeof SECTIONS)[keyof typeof SECTIONS];
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 type Props = {
   params: Promise<{ org_id: string }>;
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
   title: "Настройки",
 };
 
-const OrgSettingsPage = async ({params, searchParams}: Props) => {
+const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode> => {
   const {org_id} = await params;
   const {section = "settings"} = await searchParams;
 

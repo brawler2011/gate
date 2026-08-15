@@ -9,6 +9,8 @@ import {
   type OrgSettingsNavSection,
 } from "@/components/orgs/OrgSettingsNavShared";
 
+import type {ReactNode} from "react";
+
 interface OrgSettingsSidebarNavProps {
   orgId: string;
   activeSection: string;
@@ -19,7 +21,7 @@ export const OrgSettingsSidebarNav = ({
   orgId,
   activeSection,
   sections,
-}: OrgSettingsSidebarNavProps) => {
+}: OrgSettingsSidebarNavProps): ReactNode => {
   return (
     <Box
       style={{

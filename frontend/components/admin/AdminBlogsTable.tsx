@@ -20,6 +20,7 @@ import classes from "./AdminPage.module.css";
 import {DeleteBlogPostModal} from "./DeleteBlogPostModal";
 
 import type {PostModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type AdminBlogsTableProps = {
   posts: PostModel[];
@@ -27,7 +28,7 @@ type AdminBlogsTableProps = {
   onEditPost: (post: PostModel) => void;
 };
 
-export const AdminBlogsTable = ({posts, onDeletePost, onEditPost}: AdminBlogsTableProps) => {
+export const AdminBlogsTable = ({posts, onDeletePost, onEditPost}: AdminBlogsTableProps): ReactNode => {
   const router = useRouter();
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [postToDelete, setPostToDelete] = useState<PostModel | null>(null);

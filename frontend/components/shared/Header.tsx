@@ -43,7 +43,7 @@ import cx from "clsx";
 import NextImage from "next/image";
 import Link from "next/link";
 import {usePathname} from "next/navigation";
-import {
+import { 
   type ComponentType,
   useCallback,
   useEffect,
@@ -64,6 +64,7 @@ import type {
   HeaderSecondaryNavIcon,
   HeaderSecondaryNavItem,
 } from "@/lib/contest-header-nav";
+import type {ReactNode} from "react";
 
 const NAV_ICON_MAP: Record<
   HeaderSecondaryNavIcon,
@@ -416,7 +417,7 @@ const Header = ({
   organization?: HeaderOrganization;
   contest?: HeaderContest;
   problem?: HeaderProblem;
-}) => {
+}): ReactNode => {
   const [drawerOpened, {toggle: toggleDrawer, close: closeDrawer}] =
     useDisclosure(false);
   const pathname = usePathname();

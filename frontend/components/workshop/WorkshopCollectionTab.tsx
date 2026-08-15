@@ -23,6 +23,7 @@ import classes from "./WorkshopFolderTab.module.css";
 
 import type {FileEntry} from "@/contracts/core/v1";
 import type {ApiError} from "@/lib/api";
+import type {ReactNode} from "react";
 
 type ListFilesResult = Promise<
   [ApiError | null, { files?: FileEntry[] } | null]
@@ -65,7 +66,7 @@ export const WorkshopCollectionTab = ({
   createFile,
   updateFile,
   setMain,
-}: Props) => {
+}: Props): ReactNode => {
   const [content, setContent] = useState<string>("");
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, startSaving] = useTransition();

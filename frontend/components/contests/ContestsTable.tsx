@@ -10,13 +10,14 @@ import {useRouter} from "next/navigation";
 import classes from "./ContestsTable.module.css";
 
 import type {ContestModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type ContestsTableProps = {
   contests: ContestModel[];
   showCreatedAt?: boolean;
 };
 
-export const ContestsTable = ({contests, showCreatedAt = true}: ContestsTableProps) => {
+export const ContestsTable = ({contests, showCreatedAt = true}: ContestsTableProps): ReactNode => {
   const router = useRouter();
 
   return (

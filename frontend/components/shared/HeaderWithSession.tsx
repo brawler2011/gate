@@ -23,7 +23,7 @@ export const HeaderWithSession = async ({
   organization: passedOrganization,
   contest,
   problem,
-}: HeaderWithSessionProps = {}) => {
+}: HeaderWithSessionProps = {}): Promise<JSX.Element> => {
   const targetOrgId = passedOrganization?.id || organizationId;
 
   const [meResult, organizationResult] = await Promise.all([

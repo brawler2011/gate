@@ -6,6 +6,8 @@ import {IconCalendar} from "@tabler/icons-react";
 import {getRoleColor} from "@/lib/lib";
 import {APP_COLORS} from "@/lib/theme/colors";
 
+import type {ReactNode} from "react";
+
 type ProfileHeaderProps = {
   username: string;
   role: string;
@@ -13,7 +15,7 @@ type ProfileHeaderProps = {
   isOwnProfile?: boolean;
 };
 
-export const ProfileHeader = (props: ProfileHeaderProps) => {
+export const ProfileHeader = (props: ProfileHeaderProps): ReactNode => {
   const showRole = props.role?.toLowerCase() !== "user";
   const initials = props.username?.[0]?.toUpperCase() ?? "?";
 

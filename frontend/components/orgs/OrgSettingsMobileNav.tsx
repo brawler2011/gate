@@ -9,6 +9,8 @@ import {
   type OrgSettingsNavSection,
 } from "@/components/orgs/OrgSettingsNavShared";
 
+import type {ReactNode} from "react";
+
 interface OrgSettingsMobileNavProps {
   orgId: string;
   activeSection: string;
@@ -19,7 +21,7 @@ export const OrgSettingsMobileNav = ({
   orgId,
   activeSection,
   sections,
-}: OrgSettingsMobileNavProps) => {
+}: OrgSettingsMobileNavProps): ReactNode => {
   return (
     <Box hiddenFrom="sm" style={{width: "100%"}}>
       <Group gap="xs" mb="md">

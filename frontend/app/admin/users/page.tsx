@@ -5,6 +5,7 @@ import {UsersContent, UsersContentSkeleton} from "@/components/users";
 import {parsePage} from "@/lib/lib2";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 export const metadata: Metadata = {
   title: "Админ | Пользователи",
@@ -20,7 +21,7 @@ type PageProps = {
   }>;
 };
 
-const AdminUsersPage = async ({searchParams}: PageProps) => {
+const AdminUsersPage = async ({searchParams}: PageProps): Promise<ReactNode> => {
   const resolvedSearchParams = await searchParams;
   const page = parsePage(resolvedSearchParams.page);
   if (!page) {

@@ -19,11 +19,11 @@ import {IconAlertCircle} from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
 import {useRouter, useSearchParams} from "next/navigation";
-import {Suspense, useState} from "react";
+import {Suspense, useState, type ReactNode} from "react";
 
 import {api} from "@/lib/api";
 
-const RegistrationPage = () => {
+const RegistrationPage = (): ReactNode => {
   return (
     <Suspense
       fallback={

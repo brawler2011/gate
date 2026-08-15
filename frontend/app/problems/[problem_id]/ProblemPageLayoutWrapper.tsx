@@ -99,7 +99,7 @@ const ProblemPageLayoutWrapper = async ({
   activeTab,
   params,
   searchParams,
-}: Props) => {
+}: Props): Promise<JSX.Element> => {
   const {problem_id} = await params;
   const resolvedSearchParams = await searchParams;
 

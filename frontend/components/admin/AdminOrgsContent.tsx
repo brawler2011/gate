@@ -29,13 +29,14 @@ import {DeleteOrgModal} from "./DeleteOrgModal";
 import {CreateOrgButton} from "../orgs/CreateOrgButton";
 
 import type {OrganizationModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type AdminOrgsContentProps = {
   page: number;
   search?: string;
 };
 
-export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps) => {
+export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNode => {
   const router = useRouter();
   const searchParams = useSearchParams();
 

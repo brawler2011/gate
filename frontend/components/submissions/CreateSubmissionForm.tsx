@@ -12,7 +12,7 @@ import {
 import {useForm} from "@mantine/form";
 import {IconPaperclip, IconTrash} from "@tabler/icons-react";
 import dynamic from "next/dynamic";
-import React, {useRef, useState, useTransition} from "react";
+import React, {useRef, useState, useTransition, type ReactNode} from "react";
 
 import {highlightCode} from "@/lib/highlightCode";
 import {APP_COLORS} from "@/lib/theme/colors";
@@ -53,7 +53,7 @@ const CreateSubmissionForm = ({
   problemSelect,
   large = false,
   disabled = false,
-}: Props) => {
+}: Props): ReactNode => {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [mounted, setMounted] = useState(false);

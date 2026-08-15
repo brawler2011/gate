@@ -11,6 +11,7 @@ import type {
   PaginationModel as PaginationType,
   UserModel,
 } from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type Props = {
   users: UserModel[];
@@ -20,7 +21,7 @@ type Props = {
   role?: string;
 };
 
-export const UsersTable = ({users, pagination, page, search, role}: Props) => {
+export const UsersTable = ({users, pagination, page, search, role}: Props): ReactNode => {
   const router = useRouter();
 
   // Use page from URL props, not from API response state

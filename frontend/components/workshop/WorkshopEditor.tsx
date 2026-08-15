@@ -17,6 +17,8 @@ import {WorkshopStatementTab} from "./WorkshopStatementTab";
 import {WorkshopTestsTab} from "./WorkshopTestsTab";
 import {WorkshopValidatorsTab} from "./WorkshopValidatorsTab";
 
+import type {ReactNode} from "react";
+
 type Props = {
   problemId: string;
   activeTab: string;
@@ -27,7 +29,7 @@ const STATEMENT_TAB = "statement";
 const PACKAGES_TAB = "packages";
 const IMPORT_TAB = "import";
 
-export const WorkshopEditor = ({problemId, activeTab}: Props) => {
+export const WorkshopEditor = ({problemId, activeTab}: Props): ReactNode => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();

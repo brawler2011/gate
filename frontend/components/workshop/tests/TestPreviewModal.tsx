@@ -16,6 +16,8 @@ import {useEffect, useState, useTransition} from "react";
 
 import {getWorkshopTestFile, updateWorkshopTestFile} from "@/lib/workshop";
 
+import type {ReactNode} from "react";
+
 type Props = {
   opened: boolean;
   onClose: () => void;
@@ -32,7 +34,7 @@ export const TestPreviewModal = ({
   problemId,
   filename,
   onSaved,
-}: Props) => {
+}: Props): ReactNode => {
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, startSaving] = useTransition();

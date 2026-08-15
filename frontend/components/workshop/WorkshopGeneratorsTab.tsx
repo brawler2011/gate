@@ -10,8 +10,9 @@ import {
 import {WorkshopCollectionTab} from "./WorkshopCollectionTab";
 
 import type {WorkshopFileTabProps} from "./WorkshopFileTabProps";
+import type {ReactNode} from "react";
 
-export const WorkshopGeneratorsTab = (props: WorkshopFileTabProps) => {
+export const WorkshopGeneratorsTab = (props: WorkshopFileTabProps): ReactNode => {
   return (
     <WorkshopCollectionTab
       {...props}

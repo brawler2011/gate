@@ -28,6 +28,7 @@ import {TestVerdictModal} from "./TestVerdictModal";
 import {formatPaddedOrdinal} from "./types";
 
 import type {SubtaskItem, TestItem} from "./types";
+import type {ReactNode} from "react";
 
 type Props = {
   problemId: string;
@@ -51,7 +52,7 @@ export const TestsListTable = ({
   onAddTest,
   onDeleteSelectedTests,
   onSavedPreviewFile,
-}: Props) => {
+}: Props): ReactNode => {
   const [deletingTestId, setDeletingTestId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [previewFile, setPreviewFile] = useState<string | null>(null);

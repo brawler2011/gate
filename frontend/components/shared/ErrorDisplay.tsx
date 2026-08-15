@@ -7,6 +7,7 @@ import {usePathname} from "next/navigation";
 import {RefreshButton} from "./RefreshButton";
 
 import type {ApiError} from "@/lib/api";
+import type {ReactNode} from "react";
 
 type Props = {
   error: ApiError;
@@ -42,7 +43,7 @@ const getErrorDisplay = (status: number): { title: string; description: string }
   }
 };
 
-export const ErrorDisplay = ({error}: Props) => {
+export const ErrorDisplay = ({error}: Props): ReactNode => {
   const display = getErrorDisplay(error.status);
   const pathname = usePathname();
   const getReturnUrl = () => {

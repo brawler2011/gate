@@ -6,6 +6,7 @@ import {AdminOrgsContent} from "@/components/admin";
 import {parsePage} from "@/lib/lib2";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 export const metadata: Metadata = {
   title: "Админ | Организации",
@@ -37,7 +38,7 @@ type PageProps = {
   }>;
 };
 
-const AdminOrgsPage = async ({searchParams}: PageProps) => {
+const AdminOrgsPage = async ({searchParams}: PageProps): Promise<ReactNode> => {
   const resolvedSearchParams = await searchParams;
   const page = parsePage(resolvedSearchParams.page);
   if (!page) {

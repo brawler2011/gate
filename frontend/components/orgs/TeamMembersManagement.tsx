@@ -21,10 +21,11 @@ import {StatusMessage} from '@/components/shared/StatusMessage';
 import {api} from '@/lib/api';
 
 import type {TeamMemberModel} from '@/contracts/core/v1';
+import type {ReactNode} from "react";
 
 type Props = { teamId: string };
 
-export const TeamMembersManagement = ({teamId}: Props) => {
+export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
   const [members, setMembers] = useState<TeamMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

@@ -7,13 +7,14 @@ import Link from "next/link";
 import {formatDate} from "@/lib/formatDate";
 
 import type {PostModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type CompactBlogListProps = {
   posts: PostModel[];
   error?: boolean;
 };
 
-export const CompactBlogList = ({posts, error}: CompactBlogListProps) => {
+export const CompactBlogList = ({posts, error}: CompactBlogListProps): ReactNode => {
   if (error) {
     return <Text size="sm" c="red">Не удалось загрузить посты</Text>;
   }

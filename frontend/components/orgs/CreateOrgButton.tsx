@@ -1,4 +1,5 @@
 "use client";
+
 import {Alert, Button, Modal, TextInput, Stack} from '@mantine/core';
 import {useDisclosure} from '@mantine/hooks';
 import {IconAlertCircle, IconPlus} from '@tabler/icons-react';
@@ -6,6 +7,8 @@ import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 
 import {api} from '@/lib/api';
+
+import type {ReactNode} from "react";
 
 const translateApiError = (message: string): string => {
   if (message.includes('at least one latin letter or digit')) {
@@ -20,7 +23,7 @@ const translateApiError = (message: string): string => {
   return message;
 };
 
-export const CreateOrgButton = () => {
+export const CreateOrgButton = (): ReactNode => {
   const [opened, {open, close}] = useDisclosure(false);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);

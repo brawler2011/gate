@@ -28,6 +28,7 @@ import {
 import type {
   SubtaskItem,
   TestItem} from "./types";
+import type {ReactNode} from "react";
 
 type Props = {
   subtasks: SubtaskItem[];
@@ -196,7 +197,7 @@ export const SubtasksTable = ({
   onDeleteSubtaskWithTests,
   maxScore,
   problemType,
-}: Props) => {
+}: Props): ReactNode => {
   const [deleteModalSubtask, setDeleteModalSubtask] = useState<SubtaskItem | null>(null);
 
   const totalPoints = subtasks.reduce((sum, s) => sum + s.points, 0);

@@ -35,13 +35,14 @@ import {
 import classes from "./WorkshopFolderTab.module.css";
 
 import type {WorkshopFileTabProps} from "./WorkshopFileTabProps";
+import type {ReactNode} from "react";
 
 export const WorkshopMediaTab = ({
   problemId,
   selectedFile,
   onFileSelect,
   onFileCreated,
-}: WorkshopFileTabProps) => {
+}: WorkshopFileTabProps): ReactNode => {
   const [isUploading, startUploading] = useTransition();
   const [isDeleting, startDeleting] = useTransition();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);

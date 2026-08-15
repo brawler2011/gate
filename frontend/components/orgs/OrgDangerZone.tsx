@@ -9,9 +9,11 @@ import {useState} from 'react';
 
 import {api} from '@/lib/api';
 
+import type {ReactNode} from "react";
+
 type Props = { orgId: string; orgName: string };
 
-export const OrgDangerZone = ({orgId, orgName}: Props) => {
+export const OrgDangerZone = ({orgId, orgName}: Props): ReactNode => {
   const [opened, {open, close}] = useDisclosure(false);
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);

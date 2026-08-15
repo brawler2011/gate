@@ -1,4 +1,4 @@
-export const getTabStyles = (isActive: boolean) => ({
+export const getTabStyles = (isActive: boolean): Record<string, Record<string, unknown>> => ({
   root: {
     backgroundColor: isActive
       ? "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))"

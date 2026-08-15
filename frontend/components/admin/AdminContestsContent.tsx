@@ -19,12 +19,14 @@ import {api} from "@/lib/api";
 import {AdminContestsSearchInput} from "./AdminContestsSearchInput";
 import {AdminContestsTable} from "./AdminContestsTable";
 
+import type {ReactNode} from "react";
+
 type AdminContestsContentProps = {
   page: number;
   search?: string;
 };
 
-export const AdminContestsContent = ({page, search}: AdminContestsContentProps) => {
+export const AdminContestsContent = ({page, search}: AdminContestsContentProps): ReactNode => {
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;

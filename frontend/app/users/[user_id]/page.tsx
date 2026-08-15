@@ -34,7 +34,7 @@ export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
   return {title: `${data.user.username}`};
 };
 
-const Page = async ({params, searchParams}: Props) => {
+const Page = async ({params, searchParams}: Props): Promise<JSX.Element> => {
   const {user_id} = await params;
   const {contestsPage} = await searchParams;
 

@@ -16,6 +16,7 @@ import type {
   ContestProblemListItemModel,
   UserModel,
 } from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type Props = {
   contest: ContestModel;
@@ -23,7 +24,7 @@ type Props = {
   user: UserModel | null;
 };
 
-export const SubmitSubmissionClient = ({contest, problems, user}: Props) => {
+export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactNode => {
   const router = useRouter();
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
     problems.length > 0 ? problems[0].problem_id : null,

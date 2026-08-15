@@ -6,6 +6,8 @@ import {useEffect, useState} from "react";
 
 import classes from "./StatusMessage.module.css";
 
+import type {ReactNode} from "react";
+
 interface StatusMessageProps {
   type: "success" | "error";
   message: string;
@@ -18,7 +20,7 @@ export const StatusMessage = ({
   message,
   opened,
   onClose,
-}: StatusMessageProps) => {
+}: StatusMessageProps): ReactNode => {
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {

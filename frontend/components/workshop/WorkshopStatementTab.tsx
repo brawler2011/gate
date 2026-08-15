@@ -17,12 +17,13 @@ import {
 import {useClipboard} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconCopy} from "@tabler/icons-react";
-import "katex/dist/katex.min.css";
-import {useDeferredValue, useEffect, useState, useTransition} from "react";
+import {useDeferredValue, useEffect, useState, useTransition, type ReactNode} from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+
+import "katex/dist/katex.min.css";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api} from "@/lib/api";
@@ -331,7 +332,7 @@ const WorkshopStatementPreview = ({
   );
 };
 
-export const WorkshopStatementTab = ({problemId}: Props) => {
+export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
   const [statement, setStatement] = useState<StatementData | null>(null);
   const [previewMeta, setPreviewMeta] = useState<PreviewMeta | null>(null);
   const [samples, setSamples] = useState<Array<{ input: string; output: string }>>([]);

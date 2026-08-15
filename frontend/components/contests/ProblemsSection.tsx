@@ -24,6 +24,7 @@ import {api} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
 
 import type * as corev1 from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 interface ProblemsSectionProps {
   contestId: string;
@@ -33,7 +34,7 @@ interface ProblemsSectionProps {
 export const ProblemsSection = ({
   contestId,
   initialProblems,
-}: ProblemsSectionProps) => {
+}: ProblemsSectionProps): ReactNode => {
   const router = useRouter();
   const [problems, setProblems] = useState(initialProblems);
   const [searchQuery, setSearchQuery] = useState("");

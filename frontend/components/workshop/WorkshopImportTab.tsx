@@ -17,11 +17,13 @@ import {useState, useTransition} from "react";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api} from "@/lib/api";
 
+import type {ReactNode} from "react";
+
 type Props = {
   problemId: string;
 };
 
-export const WorkshopImportTab = ({problemId}: Props) => {
+export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
   const router = useRouter();
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const [isImporting, startImport] = useTransition();

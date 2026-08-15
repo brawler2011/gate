@@ -11,6 +11,7 @@ import {buildOrgHeaderNav} from "@/lib/org-header-nav";
 import {canManageOrgMembers} from "@/lib/org-permissions";
 
 import type {Metadata} from "next";
+import type {ReactNode} from "react";
 
 type Props = {
   params: Promise<{ org_id: string }>;
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
   title: "Задачи",
 };
 
-const OrgProblemsPage = async ({params, searchParams}: Props) => {
+const OrgProblemsPage = async ({params, searchParams}: Props): Promise<ReactNode> => {
   const {org_id} = await params;
   const {page} = await searchParams;
   const currentPage = parsePage(page);

@@ -3,6 +3,8 @@
 import {Button, Modal, Select, Stack, Text} from "@mantine/core";
 import {useEffect, useState} from "react";
 
+import type {ReactNode} from "react";
+
 const ROLE_OPTIONS = [
   {label: "Участник", value: "participant"},
   {label: "Модератор", value: "moderator"},
@@ -25,7 +27,7 @@ export const ChangeRoleModal = ({
   participant,
   currentRole,
   onSubmit,
-}: ChangeRoleModalProps) => {
+}: ChangeRoleModalProps): ReactNode => {
   const [selectedRole, setSelectedRole] = useState<string>(currentRole);
   const [loading, setLoading] = useState(false);
 

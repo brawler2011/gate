@@ -13,6 +13,7 @@ import {IconPhoto, IconUpload} from "@tabler/icons-react";
 import {useEffect, useState} from "react";
 
 import type {PostModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 interface BlogPostFormProps {
   opened: boolean;
@@ -31,7 +32,7 @@ export const BlogPostForm = ({
   onClose,
   post,
   onSubmit,
-}: BlogPostFormProps) => {
+}: BlogPostFormProps): ReactNode => {
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState(post?.title || "");
   const [description, setDescription] = useState(post?.description || "");

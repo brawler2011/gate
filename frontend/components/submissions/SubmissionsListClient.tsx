@@ -1,12 +1,13 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 import {useSubmissionsWebSocket} from '@/lib/useSubmissionsWebSocket';
 
 import {SubmissionsList} from './SubmissionsList';
 
 import type {SubmissionsListItemModel} from '@/contracts/core/v1';
+import type {ReactNode} from "react";
 
 interface SubmissionsListClientProps {
     initialSubmissions: SubmissionsListItemModel[];
@@ -32,7 +33,7 @@ export const SubmissionsListClient = ({
   pageSize,
   page,
   sortOrder,
-}: SubmissionsListClientProps) => {
+}: SubmissionsListClientProps): ReactNode => {
   // WS only active on first page with desc sort order (desc is default when not specified)
   const enabled = page === 1 && (sortOrder === 'desc' || sortOrder === undefined);
 

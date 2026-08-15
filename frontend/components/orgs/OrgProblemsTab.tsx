@@ -21,6 +21,7 @@ import type {
   PaginationModel,
   ProblemsListItemModel,
 } from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type Props = {
   problems: ProblemsListItemModel[];
@@ -34,7 +35,7 @@ export const OrgProblemsTab = ({
   pagination,
   org,
   isAuthenticated,
-}: Props) => {
+}: Props): ReactNode => {
   const [searchValue, setSearchValue] = useState("");
   const [createOpened, setCreateOpened] = useState(false);
 

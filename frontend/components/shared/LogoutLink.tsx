@@ -10,7 +10,7 @@ import type {ReactNode} from "react";
 
 type LogoutLinkProps = ButtonProps & { children?: ReactNode };
 
-const LogoutLink = (props: LogoutLinkProps) => {
+const LogoutLink = (props: LogoutLinkProps): ReactNode => {
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {

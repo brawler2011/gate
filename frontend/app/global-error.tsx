@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 
+import type {ReactNode} from "react";
+
 type GlobalErrorProps = {
   error: Error & { digest?: string };
   reset: () => void;
 };
 
-const GlobalError = ({error, reset}: GlobalErrorProps) => {
+const GlobalError = ({error, reset}: GlobalErrorProps): ReactNode => {
   return (
     <html lang="ru">
       <body>

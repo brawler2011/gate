@@ -8,6 +8,7 @@ import {NextPagination} from "@/components/shared/Pagination";
 import {TimeBeautify} from "@/lib/lib";
 
 import type {ContestModel} from "@/contracts/core/v1";
+import type {ReactNode} from "react";
 
 type ProfileContestsProps = {
   userId: string;
@@ -21,7 +22,7 @@ export const ProfileContests = ({
   contests,
   contestsPagination,
   contestsPage,
-}: ProfileContestsProps) => {
+}: ProfileContestsProps): ReactNode => {
   return (
     <Tabs defaultValue="contests">
       <Tabs.List>
