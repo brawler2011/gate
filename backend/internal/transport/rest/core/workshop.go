@@ -25,6 +25,7 @@ const (
 	generatorDir  = "generators"
 	interactorDir = "interactors"
 	validatorDir  = "validators"
+	libDir        = "lib"
 	mediaDir      = "media"
 	solutionDir   = "solutions"
 	testDir       = "tests"
@@ -283,16 +284,7 @@ func (h *CoreServer) DeleteProblemChecker(ctx context.Context, request corev1.De
 	return corev1.DeleteProblemChecker200JSONResponse{Message: strPtr("Checker deleted successfully")}, nil
 }
 
-// SetProblemCheckerMain handles PATCH /problems/{problemId}/checkers/main
-func (h *CoreServer) SetProblemCheckerMain(ctx context.Context, request corev1.SetProblemCheckerMainRequestObject) (corev1.SetProblemCheckerMainResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
-	}
-	if err := h.setMainComponent(ctx, request.ProblemId, checkerDir, "checker", request.Body.Name); err != nil {
-		return nil, err
-	}
-	return corev1.SetProblemCheckerMain200JSONResponse{Message: strPtr("Main checker selected successfully")}, nil
-}
+
 
 // ListProblemGenerators handles GET /problems/{problemId}/generators
 func (h *CoreServer) ListProblemGenerators(ctx context.Context, request corev1.ListProblemGeneratorsRequestObject) (corev1.ListProblemGeneratorsResponseObject, error) {
@@ -336,16 +328,7 @@ func (h *CoreServer) DeleteProblemGenerator(ctx context.Context, request corev1.
 	return corev1.DeleteProblemGenerator200JSONResponse{Message: strPtr("Generator deleted successfully")}, nil
 }
 
-// SetProblemGeneratorMain handles PATCH /problems/{problemId}/generators/main
-func (h *CoreServer) SetProblemGeneratorMain(ctx context.Context, request corev1.SetProblemGeneratorMainRequestObject) (corev1.SetProblemGeneratorMainResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
-	}
-	if err := h.setMainComponent(ctx, request.ProblemId, generatorDir, "generator", request.Body.Name); err != nil {
-		return nil, err
-	}
-	return corev1.SetProblemGeneratorMain200JSONResponse{Message: strPtr("Main generator selected successfully")}, nil
-}
+
 
 // ListProblemInteractors handles GET /problems/{problemId}/interactors
 func (h *CoreServer) ListProblemInteractors(ctx context.Context, request corev1.ListProblemInteractorsRequestObject) (corev1.ListProblemInteractorsResponseObject, error) {
@@ -389,16 +372,7 @@ func (h *CoreServer) DeleteProblemInteractor(ctx context.Context, request corev1
 	return corev1.DeleteProblemInteractor200JSONResponse{Message: strPtr("Interactor deleted successfully")}, nil
 }
 
-// SetProblemInteractorMain handles PATCH /problems/{problemId}/interactors/main
-func (h *CoreServer) SetProblemInteractorMain(ctx context.Context, request corev1.SetProblemInteractorMainRequestObject) (corev1.SetProblemInteractorMainResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
-	}
-	if err := h.setMainComponent(ctx, request.ProblemId, interactorDir, "interactor", request.Body.Name); err != nil {
-		return nil, err
-	}
-	return corev1.SetProblemInteractorMain200JSONResponse{Message: strPtr("Main interactor selected successfully")}, nil
-}
+
 
 // ListProblemValidators handles GET /problems/{problemId}/validators
 func (h *CoreServer) ListProblemValidators(ctx context.Context, request corev1.ListProblemValidatorsRequestObject) (corev1.ListProblemValidatorsResponseObject, error) {
@@ -442,15 +416,46 @@ func (h *CoreServer) DeleteProblemValidator(ctx context.Context, request corev1.
 	return corev1.DeleteProblemValidator200JSONResponse{Message: strPtr("Validator deleted successfully")}, nil
 }
 
-// SetProblemValidatorMain handles PATCH /problems/{problemId}/validators/main
-func (h *CoreServer) SetProblemValidatorMain(ctx context.Context, request corev1.SetProblemValidatorMainRequestObject) (corev1.SetProblemValidatorMainResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
-	}
-	if err := h.setMainComponent(ctx, request.ProblemId, validatorDir, "validator", request.Body.Name); err != nil {
+// ListProblemLibs handles GET /problems/{problemId}/lib
+func (h *CoreServer) ListProblemLibs(ctx context.Context, request corev1.ListProblemLibsRequestObject) (corev1.ListProblemLibsResponseObject, error) {
+	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, libDir)
+	if err != nil {
 		return nil, err
 	}
-	return corev1.SetProblemValidatorMain200JSONResponse{Message: strPtr("Main validator selected successfully")}, nil
+	return corev1.ListProblemLibs200JSONResponse(resp), nil
+}
+
+// CreateProblemLib handles POST /problems/{problemId}/lib
+func (h *CoreServer) CreateProblemLib(ctx context.Context, request corev1.CreateProblemLibRequestObject) (corev1.CreateProblemLibResponseObject, error) {
+	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Params.Name, request.Body); err != nil {
+		return nil, err
+	}
+	return corev1.CreateProblemLib200JSONResponse{Message: strPtr("Library file created successfully")}, nil
+}
+
+// GetProblemLib handles GET /problems/{problemId}/lib/{name}
+func (h *CoreServer) GetProblemLib(ctx context.Context, request corev1.GetProblemLibRequestObject) (corev1.GetProblemLibResponseObject, error) {
+	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Name)
+	if err != nil {
+		return nil, err
+	}
+	return corev1.GetProblemLib200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+}
+
+// UpdateProblemLib handles PUT /problems/{problemId}/lib/{name}
+func (h *CoreServer) UpdateProblemLib(ctx context.Context, request corev1.UpdateProblemLibRequestObject) (corev1.UpdateProblemLibResponseObject, error) {
+	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Name, request.Body); err != nil {
+		return nil, err
+	}
+	return corev1.UpdateProblemLib200JSONResponse{Message: strPtr("Library file updated successfully")}, nil
+}
+
+// DeleteProblemLib handles DELETE /problems/{problemId}/lib/{name}
+func (h *CoreServer) DeleteProblemLib(ctx context.Context, request corev1.DeleteProblemLibRequestObject) (corev1.DeleteProblemLibResponseObject, error) {
+	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Name, ""); err != nil {
+		return nil, err
+	}
+	return corev1.DeleteProblemLib200JSONResponse{Message: strPtr("Library file deleted successfully")}, nil
 }
 
 type mediaFileResponse struct {
@@ -826,6 +831,45 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 	return corev1.WorkshopFileListResponse{Files: &contractFiles}, nil
 }
 
+func validateCollectionFileExtension(dir, name string) error {
+	ext := strings.ToLower(filepath.Ext(name))
+	if ext == "" {
+		return fmt.Errorf("file extension is required")
+	}
+
+	allowedLangs := map[string]bool{
+		".cpp":  true,
+		".cc":   true,
+		".cxx":  true,
+		".py":   true,
+		".go":   true,
+		".java": true,
+	}
+
+	switch dir {
+	case checkerDir, generatorDir, interactorDir, validatorDir, solutionDir:
+		if !allowedLangs[ext] {
+			return fmt.Errorf("unsupported file extension %q for %s. Allowed extensions: .cpp, .py, .go, .java", ext, dir)
+		}
+	case libDir:
+		allowedLib := map[string]bool{
+			".cpp":  true,
+			".cc":   true,
+			".cxx":  true,
+			".h":    true,
+			".hpp":  true,
+			".inc":  true,
+			".py":   true,
+			".go":   true,
+			".java": true,
+		}
+		if !allowedLib[ext] {
+			return fmt.Errorf("unsupported file extension %q for library. Allowed extensions: .cpp, .h, .hpp, .inc, .py, .go, .java", ext)
+		}
+	}
+	return nil
+}
+
 func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader, actionErrMsg string) error {
 	if !h.workshopUC.IsInitialized(ctx, problemID) {
 		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
@@ -837,6 +881,10 @@ func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID u
 	cleanName, err := sanitizeFileName(name)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid file name")
+	}
+
+	if err := validateCollectionFileExtension(dir, cleanName); err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, err.Error())
 	}
 
 	content, err := io.ReadAll(body)
@@ -858,6 +906,16 @@ func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID u
 }
 
 func (h *CoreServer) createWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader) error {
+	if dir == checkerDir || dir == generatorDir || dir == interactorDir || dir == validatorDir {
+		existing, err := h.workshopUC.ListProblemFiles(ctx, problemID, dir)
+		if err == nil {
+			for _, f := range existing {
+				if !f.IsDirectory {
+					return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("a component file already exists in %s. Only one instance is allowed per problem.", dir))
+				}
+			}
+		}
+	}
 	return h.saveWorkshopCollectionFile(ctx, problemID, dir, name, body, "failed to create file")
 }
 
@@ -897,108 +955,7 @@ func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to delete file")
 	}
 
-	if componentType != "" {
-		if err := h.removeMainComponentIfMatches(ctx, problemID, componentType, path); err != nil {
-			return err
-		}
-	}
-
 	return nil
-}
-
-func (h *CoreServer) setMainComponent(ctx context.Context, problemID uuid.UUID, dir, componentType, name string) error {
-	if !h.workshopUC.IsInitialized(ctx, problemID) {
-		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
-	}
-
-	cleanName, err := sanitizeFileName(name)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid file name")
-	}
-
-	componentPath := filepath.Join(dir, cleanName)
-	if _, err := h.workshopUC.ReadProblemFile(ctx, problemID, componentPath); err != nil {
-		return pkg.Wrap(pkg.ErrNotFound, err, "file not found")
-	}
-
-	manifest, err := h.readWorkshopManifest(ctx, problemID)
-	if err != nil {
-		return err
-	}
-
-	componentPath = filepath.ToSlash(componentPath)
-
-	firstIdx := -1
-	selectedIdx := -1
-	for i := range manifest.FilesMetadata {
-		if manifest.FilesMetadata[i].Type == componentType {
-			if firstIdx == -1 {
-				firstIdx = i
-			}
-			if filepath.ToSlash(manifest.FilesMetadata[i].Filename) == componentPath {
-				selectedIdx = i
-			}
-		}
-	}
-
-	if selectedIdx < 0 {
-		manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{
-			Type:         componentType,
-			Filename:     componentPath,
-			Compiler:     compilerByFilename(cleanName),
-			BinarySha256: nil,
-			Dependencies: []models.Dependency{},
-		})
-		selectedIdx = len(manifest.FilesMetadata) - 1
-		if firstIdx == -1 {
-			firstIdx = selectedIdx
-		}
-	}
-
-	if firstIdx >= 0 && firstIdx != selectedIdx {
-		item := manifest.FilesMetadata[selectedIdx]
-		// Remove from selectedIdx
-		manifest.FilesMetadata = append(manifest.FilesMetadata[:selectedIdx], manifest.FilesMetadata[selectedIdx+1:]...)
-		// Insert at firstIdx
-		manifest.FilesMetadata = append(manifest.FilesMetadata[:firstIdx], append([]models.FileMetadata{item}, manifest.FilesMetadata[firstIdx:]...)...)
-	}
-
-	if err := validateManifest(manifest); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to set main component")
-	}
-
-	if err := h.saveWorkshopManifest(ctx, problemID, manifest); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *CoreServer) removeMainComponentIfMatches(ctx context.Context, problemID uuid.UUID, componentType, deletedPath string) error {
-	manifest, err := h.readWorkshopManifest(ctx, problemID)
-	if err != nil {
-		return err
-	}
-
-	changed := false
-	filtered := make([]models.FileMetadata, 0, len(manifest.FilesMetadata))
-	for _, meta := range manifest.FilesMetadata {
-		if meta.Type == componentType && meta.Filename == deletedPath {
-			changed = true
-			continue
-		}
-		filtered = append(filtered, meta)
-	}
-
-	if !changed {
-		return nil
-	}
-
-	manifest.FilesMetadata = filtered
-	if err := validateManifest(manifest); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to update manifest metadata")
-	}
-	return h.saveWorkshopManifest(ctx, problemID, manifest)
 }
 
 func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UUID) (*models.ProblemManifest, error) {

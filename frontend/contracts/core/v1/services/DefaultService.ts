@@ -29,12 +29,12 @@ import type { ListTeamsResponseModel } from '../models/ListTeamsResponseModel';
 import type { ListUserContestsResponseModel } from '../models/ListUserContestsResponseModel';
 import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
 import type { LoginRequestModel } from '../models/LoginRequestModel';
-import type { MainComponentSelectionRequest } from '../models/MainComponentSelectionRequest';
 import type { MessageResponse } from '../models/MessageResponse';
 import type { PostModel } from '../models/PostModel';
 import type { ProblemLimits } from '../models/ProblemLimits';
 import type { ProblemStatement } from '../models/ProblemStatement';
 import type { RegisterRequestModel } from '../models/RegisterRequestModel';
+import type { SupportedLanguagesResponse } from '../models/SupportedLanguagesResponse';
 import type { TestReport } from '../models/TestReport';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
 import type { UpdateOrganizationRequestModel } from '../models/UpdateOrganizationRequestModel';
@@ -49,6 +49,17 @@ import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class DefaultService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
+    /**
+     * Get supported programming languages
+     * @returns SupportedLanguagesResponse OK
+     * @throws ApiError
+     */
+    public getLanguages(): CancelablePromise<SupportedLanguagesResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/languages',
+        });
+    }
     /**
      * @returns ListProblemsResponseModel OK
      * @throws ApiError
@@ -1146,28 +1157,6 @@ export class DefaultService {
         });
     }
     /**
-     * Set main checker file
-     * @returns MessageResponse Main checker selected successfully
-     * @throws ApiError
-     */
-    public setProblemCheckerMain({
-        problemId,
-        requestBody,
-    }: {
-        problemId: string,
-        requestBody: MainComponentSelectionRequest,
-    }): CancelablePromise<MessageResponse> {
-        return this.httpRequest.request({
-            method: 'PATCH',
-            url: '/problems/{problemId}/checkers/main',
-            path: {
-                'problemId': problemId,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
-        });
-    }
-    /**
      * List generator files
      * @returns WorkshopFileListResponse List of generators
      * @throws ApiError
@@ -1277,28 +1266,6 @@ export class DefaultService {
                 'problemId': problemId,
                 'name': name,
             },
-        });
-    }
-    /**
-     * Set main generator file
-     * @returns MessageResponse Main generator selected successfully
-     * @throws ApiError
-     */
-    public setProblemGeneratorMain({
-        problemId,
-        requestBody,
-    }: {
-        problemId: string,
-        requestBody: MainComponentSelectionRequest,
-    }): CancelablePromise<MessageResponse> {
-        return this.httpRequest.request({
-            method: 'PATCH',
-            url: '/problems/{problemId}/generators/main',
-            path: {
-                'problemId': problemId,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
         });
     }
     /**
@@ -1414,28 +1381,6 @@ export class DefaultService {
         });
     }
     /**
-     * Set main interactor file
-     * @returns MessageResponse Main interactor selected successfully
-     * @throws ApiError
-     */
-    public setProblemInteractorMain({
-        problemId,
-        requestBody,
-    }: {
-        problemId: string,
-        requestBody: MainComponentSelectionRequest,
-    }): CancelablePromise<MessageResponse> {
-        return this.httpRequest.request({
-            method: 'PATCH',
-            url: '/problems/{problemId}/interactors/main',
-            path: {
-                'problemId': problemId,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
-        });
-    }
-    /**
      * List media files
      * @returns WorkshopFileListResponse List of media files
      * @throws ApiError
@@ -1541,6 +1486,118 @@ export class DefaultService {
         return this.httpRequest.request({
             method: 'DELETE',
             url: '/problems/{problemId}/media/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * List library files
+     * @returns WorkshopFileListResponse List of library files
+     * @throws ApiError
+     */
+    public listProblemLibs({
+        problemId,
+    }: {
+        problemId: string,
+    }): CancelablePromise<WorkshopFileListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/lib',
+            path: {
+                'problemId': problemId,
+            },
+        });
+    }
+    /**
+     * Create library file
+     * @returns MessageResponse Library file created successfully
+     * @throws ApiError
+     */
+    public createProblemLib({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{problemId}/lib',
+            path: {
+                'problemId': problemId,
+            },
+            query: {
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Get library file content
+     * @returns binary Library file content
+     * @throws ApiError
+     */
+    public getProblemLib({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{problemId}/lib/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+        });
+    }
+    /**
+     * Update library file
+     * @returns MessageResponse Library file updated successfully
+     * @throws ApiError
+     */
+    public updateProblemLib({
+        problemId,
+        name,
+        requestBody,
+    }: {
+        problemId: string,
+        name: string,
+        requestBody: Blob,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/problems/{problemId}/lib/{name}',
+            path: {
+                'problemId': problemId,
+                'name': name,
+            },
+            body: requestBody,
+            mediaType: 'application/octet-stream',
+        });
+    }
+    /**
+     * Delete library file
+     * @returns MessageResponse Library file deleted successfully
+     * @throws ApiError
+     */
+    public deleteProblemLib({
+        problemId,
+        name,
+    }: {
+        problemId: string,
+        name: string,
+    }): CancelablePromise<MessageResponse> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{problemId}/lib/{name}',
             path: {
                 'problemId': problemId,
                 'name': name,
@@ -1903,28 +1960,6 @@ export class DefaultService {
                 'problemId': problemId,
                 'name': name,
             },
-        });
-    }
-    /**
-     * Set main validator file
-     * @returns MessageResponse Main validator selected successfully
-     * @throws ApiError
-     */
-    public setProblemValidatorMain({
-        problemId,
-        requestBody,
-    }: {
-        problemId: string,
-        requestBody: MainComponentSelectionRequest,
-    }): CancelablePromise<MessageResponse> {
-        return this.httpRequest.request({
-            method: 'PATCH',
-            url: '/problems/{problemId}/validators/main',
-            path: {
-                'problemId': problemId,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
         });
     }
     /**

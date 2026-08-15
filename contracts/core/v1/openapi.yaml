@@ -3,6 +3,17 @@ info:
   title: CoreService API
   version: 0.0.1
 paths:
+  /languages:
+    get:
+      operationId: GetLanguages
+      summary: Get supported programming languages
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportedLanguagesResponse"
   /problems:
     get:
       operationId: ListProblems
@@ -1308,30 +1319,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/checkers/main:
-    patch:
-      operationId: SetProblemCheckerMain
-      summary: Set main checker file
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MainComponentSelectionRequest"
-      responses:
-        "200":
-          description: Main checker selected successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
+
   /problems/{problemId}/generators:
     get:
       operationId: ListProblemGenerators
@@ -1454,30 +1442,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/generators/main:
-    patch:
-      operationId: SetProblemGeneratorMain
-      summary: Set main generator file
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MainComponentSelectionRequest"
-      responses:
-        "200":
-          description: Main generator selected successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
+
   /problems/{problemId}/interactors:
     get:
       operationId: ListProblemInteractors
@@ -1600,30 +1565,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/interactors/main:
-    patch:
-      operationId: SetProblemInteractorMain
-      summary: Set main interactor file
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MainComponentSelectionRequest"
-      responses:
-        "200":
-          description: Main interactor selected successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
+
   /problems/{problemId}/media:
     get:
       operationId: ListProblemMediaFiles
@@ -1742,6 +1684,128 @@ paths:
       responses:
         "200":
           description: Media file deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/lib:
+    get:
+      operationId: ListProblemLibs
+      summary: List library files
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of library files
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkshopFileListResponse"
+    post:
+      operationId: CreateProblemLib
+      summary: Create library file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Library file created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /problems/{problemId}/lib/{name}:
+    get:
+      operationId: GetProblemLib
+      summary: Get library file content
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Library file content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    put:
+      operationId: UpdateProblemLib
+      summary: Update library file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Library file updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+    delete:
+      operationId: DeleteProblemLib
+      summary: Delete library file
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Library file deleted successfully
           content:
             application/json:
               schema:
@@ -2136,30 +2200,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/validators/main:
-    patch:
-      operationId: SetProblemValidatorMain
-      summary: Set main validator file
-      parameters:
-        - name: problemId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MainComponentSelectionRequest"
-      responses:
-        "200":
-          description: Main validator selected successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
+
   /problems/{problemId}/workshop/components/{componentType}/compile:
     post:
       operationId: CompileProblemComponent
@@ -4341,3 +4382,27 @@ components:
         session_id:
           type: string
           format: uuid
+    SupportedLanguage:
+      type: object
+      required:
+        - name
+        - extension
+      properties:
+        name:
+          type: string
+          example: cpp
+        extension:
+          type: string
+          example: cpp
+        type:
+          type: string
+          example: compiler
+    SupportedLanguagesResponse:
+      type: object
+      required:
+        - languages
+      properties:
+        languages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportedLanguage"

@@ -5,24 +5,25 @@ import {
   createWorkshopInteractorFile,
   getWorkshopInteractorFile,
   updateWorkshopInteractorFile,
-  setWorkshopInteractorMain,
 } from "@/lib/workshop";
 
-import {WorkshopCollectionTab} from "./WorkshopCollectionTab";
+import {WorkshopSingleComponentTab} from "./WorkshopSingleComponentTab";
 
 import type {WorkshopFileTabProps} from "./WorkshopFileTabProps";
 import type {ReactNode} from "react";
 
 export const WorkshopInteractorsTab = (props: WorkshopFileTabProps): ReactNode => {
   return (
-    <WorkshopCollectionTab
+    <WorkshopSingleComponentTab
       {...props}
-      folderName="interactors"
+      componentType="interactor"
+      componentTitle="Интерактор"
+      defaultFileName="interactor"
       listFiles={(problemId) => api.listProblemInteractors({problemId})}
       getFile={getWorkshopInteractorFile}
       createFile={createWorkshopInteractorFile}
       updateFile={updateWorkshopInteractorFile}
-      setMain={setWorkshopInteractorMain}
+      deleteFile={(problemId, name) => api.deleteProblemInteractor({problemId, name})}
     />
   );
 };

@@ -8,6 +8,7 @@ import {
   Group,
   Loader,
   Modal,
+  Select,
   Stack,
   Text,
   TextInput,
@@ -15,10 +16,11 @@ import {
   Title,
 } from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {IconFile, IconPlus, IconRefresh} from "@tabler/icons-react";
+import {IconFile, IconPlus, IconRefresh, IconTrash} from "@tabler/icons-react";
 import {useEffect, useRef, useState, useTransition} from "react";
 import useSWR from "swr";
 
+import {api} from "@/lib/api";
 import classes from "./WorkshopFolderTab.module.css";
 
 import type {FileEntry} from "@/contracts/core/v1";
@@ -53,6 +55,10 @@ type Props = {
     problemId: string,
     name: string,
   ) => SaveFileResult;
+  deleteFile?: (
+    problemId: string,
+    name: string,
+  ) => SaveFileResult;
 };
 
 export const WorkshopCollectionTab = ({
@@ -66,6 +72,7 @@ export const WorkshopCollectionTab = ({
   createFile,
   updateFile,
   setMain,
+  deleteFile,
 }: Props): ReactNode => {
   const [content, setContent] = useState<string>("");
   const [isDirty, setIsDirty] = useState(false);
@@ -73,10 +80,56 @@ export const WorkshopCollectionTab = ({
 
   const [isCreating, setIsCreating] = useState(false);
   const [newFileName, setNewFileName] = useState("");
+  const [selectedExt, setSelectedExt] = useState<string>("cpp");
   const [isCreatingFile, startCreatingFile] = useTransition();
   const newFileInputRef = useRef<HTMLInputElement>(null);
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, startDeleting] = useTransition();
+
   const getFileName = (path: string) => path.split("/").pop() ?? path;
+
+  // Fetch languages dynamically from backend API
+  const {data: languagesData} = useSWR("supported-languages", async () => {
+    const [err, res] = await api.getLanguages();
+    if (err || !res?.languages) {
+      return null;
+    }
+    return res.languages;
+  });
+
+  const baseLangOptions = languagesData?.length
+    ? languagesData.map((lang) => {
+        const isCpp = lang.name.toLowerCase() === "cpp" || lang.extension === "cc" || lang.extension === "cpp";
+        const ext = isCpp ? "cpp" : lang.extension;
+        const labelName = isCpp ? "C++" : lang.name.toUpperCase();
+        return {
+          value: ext,
+          label: `${labelName} (.${ext})`,
+        };
+      })
+    : [
+        {value: "cpp", label: "C++ (.cpp)"},
+        {value: "py", label: "Python (.py)"},
+        {value: "go", label: "Go (.go)"},
+        {value: "java", label: "Java (.java)"},
+      ];
+
+  const extensionOptions =
+    folderName === "lib"
+      ? [
+          ...baseLangOptions,
+          {value: "h", label: "Header (.h)"},
+          {value: "hpp", label: "Header (.hpp)"},
+          {value: "inc", label: "Include (.inc)"},
+        ]
+      : baseLangOptions;
+
+  const uniqueExtensionOptions = extensionOptions.filter(
+    (opt, index, self) => self.findIndex((o) => o.value === opt.value) === index
+  );
+
+  const allowedExtensions = uniqueExtensionOptions.map((o) => o.value);
 
   const {data: filesData, isLoading: isLoadingFiles, mutate: mutateFiles} = useSWR(
     ["workshop-files", problemId, folderName],
@@ -103,7 +156,9 @@ export const WorkshopCollectionTab = ({
     }
   );
 
-  const leafFiles = files.filter((file) => !file.is_directory && file.path !== "tests.json");
+  const leafFiles = files.filter(
+    (file) => !file.is_directory && file.path && file.path !== "tests.json" && !getFileName(file.path).startsWith(".")
+  );
 
   useEffect(() => {
     if (fileContent !== undefined && selectedFile) {
@@ -161,6 +216,7 @@ export const WorkshopCollectionTab = ({
   const openCreateInput = () => {
     setIsCreating(true);
     setNewFileName("");
+    setSelectedExt("cpp");
     setTimeout(() => newFileInputRef.current?.focus(), 0);
   };
 
@@ -175,10 +231,32 @@ export const WorkshopCollectionTab = ({
       return;
     }
 
-    const fullPath = `${folderName}/${trimmed}`;
+    let base = trimmed;
+    let ext = selectedExt;
+
+    if (trimmed.includes(".")) {
+      const parts = trimmed.split(".");
+      const inputExt = parts.pop()?.toLowerCase() || "";
+      const inputBase = parts.join(".");
+
+      if (allowedExtensions.includes(inputExt)) {
+        base = inputBase;
+        ext = inputExt;
+      } else {
+        notifications.show({
+          title: "Недопустимое расширение",
+          message: `Расширение .${inputExt} недопустимо. Допустимые расширения: ${allowedExtensions.map((e) => `.${e}`).join(", ")}`,
+          color: "red",
+        });
+        return;
+      }
+    }
+
+    const finalFileName = `${base}.${ext}`;
+    const fullPath = `${folderName}/${finalFileName}`;
 
     startCreatingFile(async () => {
-      const [error] = await createFile(problemId, trimmed, "");
+      const [error] = await createFile(problemId, finalFileName, "");
       if (error) {
         notifications.show({
           title: "Ошибка создания файла",
@@ -195,13 +273,44 @@ export const WorkshopCollectionTab = ({
     });
   };
 
+  const handleDelete = () => {
+    if (!selectedFile || !deleteFile) {
+      return;
+    }
+
+    startDeleting(async () => {
+      const targetFileName = getFileName(selectedFile);
+      const [error] = await deleteFile(problemId, targetFileName);
+
+      if (error) {
+        notifications.show({
+          title: "Ошибка удаления",
+          message: error.message ?? "Не удалось удалить файл",
+          color: "red",
+        });
+        return;
+      }
+
+      setIsDeleteModalOpen(false);
+      setContent("");
+      setIsDirty(false);
+      notifications.show({
+        title: "Удалено",
+        message: `Файл ${targetFileName} был удален`,
+        color: "blue",
+      });
+      onFileSelect("");
+      mutateFiles();
+    });
+  };
+
   return (
     <div className={classes.container}>
       {/* Modal for creating files */}
       <Modal
         opened={isCreating}
         onClose={cancelCreate}
-        title="Добавить файл"
+        title={folderName === "lib" ? "Добавить файл библиотеки" : "Добавить решение"}
         centered
         size="sm"
       >
@@ -211,7 +320,7 @@ export const WorkshopCollectionTab = ({
             label="Имя файла"
             value={newFileName}
             onChange={(event) => setNewFileName(event.currentTarget.value)}
-            placeholder="например: checker.cpp"
+            placeholder={folderName === "lib" ? "например: testlib" : "например: solution"}
             data-autofocus
             styles={{
               input: {
@@ -226,6 +335,13 @@ export const WorkshopCollectionTab = ({
                 cancelCreate();
               }
             }}
+            disabled={isCreatingFile}
+          />
+          <Select
+            label="Расширение файла"
+            value={selectedExt}
+            onChange={(val) => setSelectedExt(val || "cpp")}
+            data={uniqueExtensionOptions}
             disabled={isCreatingFile}
           />
           <Group gap="xs" justify="flex-end">
@@ -248,6 +364,40 @@ export const WorkshopCollectionTab = ({
           </Group>
         </Stack>
       </Modal>
+
+      {/* Modal for deleting files */}
+      {deleteFile && selectedFile && (
+        <Modal
+          opened={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title="Подтверждение удаления"
+          centered
+          size="sm"
+        >
+          <Stack gap="md">
+            <Text size="sm">
+              Вы действительно хотите удалить файл <Code>{getFileName(selectedFile)}</Code>?
+            </Text>
+            <Group gap="xs" justify="flex-end">
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
+              >
+                Отмена
+              </Button>
+              <Button
+                color="red"
+                loading={isDeleting}
+                onClick={handleDelete}
+              >
+                Удалить
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
+      )}
 
       {/* Left Sidebar - Files list & Add button */}
       <div className={classes.sidebar}>
@@ -361,6 +511,17 @@ export const WorkshopCollectionTab = ({
                 onClick={() => mutateContent()}
               >
                 <IconRefresh size={16} />
+              </ActionIcon>
+            )}
+            {selectedFile && deleteFile && (
+              <ActionIcon
+                variant="subtle"
+                color="red"
+                title="Удалить файл"
+                disabled={isSaving || isLoadingFile || isDeleting}
+                onClick={() => setIsDeleteModalOpen(true)}
+              >
+                <IconTrash size={16} />
               </ActionIcon>
             )}
             <Button

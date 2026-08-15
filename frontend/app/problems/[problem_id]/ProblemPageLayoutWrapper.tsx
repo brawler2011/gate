@@ -12,6 +12,7 @@ const WORKSHOP_FOLDER_TABS = [
   "checkers",
   "generators",
   "interactors",
+  "lib",
   "media",
   "solutions",
   "tests",
@@ -19,13 +20,14 @@ const WORKSHOP_FOLDER_TABS = [
 ] as const;
 
 const TAB_LABELS: Record<string, string> = {
-  checkers: "Чекеры",
-  generators: "Генераторы",
-  interactors: "Интеракторы",
+  checkers: "Чекер",
+  generators: "Генератор",
+  interactors: "Интерактор",
+  lib: "Библиотека",
   media: "Медиа",
   solutions: "Решения",
   tests: "Тесты",
-  validators: "Валидаторы",
+  validators: "Валидатор",
 };
 
 const buildProblemTabHref = (

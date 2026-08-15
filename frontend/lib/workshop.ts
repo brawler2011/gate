@@ -55,13 +55,6 @@ export const updateWorkshopCheckerFile = async (
   return api.updateProblemChecker({problemId, name, requestBody: blob});
 };
 
-export const setWorkshopCheckerMain = async (
-  problemId: string,
-  name: string
-): Promise<ApiResult<MessageResponse>> => {
-  return api.setProblemCheckerMain({problemId, requestBody: {name}});
-};
-
 export const getWorkshopGeneratorFile = async (
   problemId: string,
   name: string
@@ -120,11 +113,69 @@ export const updateWorkshopInteractorFile = async (
   return api.updateProblemInteractor({problemId, name, requestBody: blob});
 };
 
-export const setWorkshopInteractorMain = async (
+export const getWorkshopValidatorFile = async (
+  problemId: string,
+  name: string
+): Promise<[ApiError | null, string | null]> => {
+  const [error, data] = await api.getProblemValidator({problemId, name});
+  if (error || !data) {
+    return [error, null];
+  }
+  return [null, await toText(data)];
+};
+
+export const createWorkshopValidatorFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
+  const blob = new Blob([content], {type: 'application/octet-stream'});
+  return api.createProblemValidator({problemId, name, requestBody: blob});
+};
+
+export const updateWorkshopValidatorFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
+  const blob = new Blob([content], {type: 'application/octet-stream'});
+  return api.updateProblemValidator({problemId, name, requestBody: blob});
+};
+
+export const getWorkshopLibFile = async (
+  problemId: string,
+  name: string
+): Promise<[ApiError | null, string | null]> => {
+  const [error, data] = await api.getProblemLib({problemId, name});
+  if (error || !data) {
+    return [error, null];
+  }
+  return [null, await toText(data)];
+};
+
+export const createWorkshopLibFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
+  const blob = new Blob([content], {type: 'application/octet-stream'});
+  return api.createProblemLib({problemId, name, requestBody: blob});
+};
+
+export const updateWorkshopLibFile = async (
+  problemId: string,
+  name: string,
+  content: string
+): Promise<ApiResult<MessageResponse>> => {
+  const blob = new Blob([content], {type: 'application/octet-stream'});
+  return api.updateProblemLib({problemId, name, requestBody: blob});
+};
+
+export const deleteWorkshopLibFile = async (
   problemId: string,
   name: string
 ): Promise<ApiResult<MessageResponse>> => {
-  return api.setProblemInteractorMain({problemId, requestBody: {name}});
+  return api.deleteProblemLib({problemId, name});
 };
 
 export const uploadWorkshopMediaBinary = async (
@@ -170,6 +221,13 @@ export const updateWorkshopSolutionFile = async (
   return api.updateProblemWorkshopSubmission({problemId, name, requestBody: blob});
 };
 
+export const deleteWorkshopSolutionFile = async (
+  problemId: string,
+  name: string
+): Promise<ApiResult<MessageResponse>> => {
+  return api.deleteProblemWorkshopSubmission({problemId, name});
+};
+
 export const getWorkshopTestFile = async (
   problemId: string,
   name: string
@@ -211,42 +269,6 @@ export const updateWorkshopTestFile = async (
 
   const blob = new Blob([content], {type: 'application/octet-stream'});
   return api.updateProblemTestFile({problemId, name, requestBody: blob});
-};
-
-export const getWorkshopValidatorFile = async (
-  problemId: string,
-  name: string
-): Promise<[ApiError | null, string | null]> => {
-  const [error, data] = await api.getProblemValidator({problemId, name});
-  if (error || !data) {
-    return [error, null];
-  }
-  return [null, await toText(data)];
-};
-
-export const createWorkshopValidatorFile = async (
-  problemId: string,
-  name: string,
-  content: string
-): Promise<ApiResult<MessageResponse>> => {
-  const blob = new Blob([content], {type: 'application/octet-stream'});
-  return api.createProblemValidator({problemId, name, requestBody: blob});
-};
-
-export const updateWorkshopValidatorFile = async (
-  problemId: string,
-  name: string,
-  content: string
-): Promise<ApiResult<MessageResponse>> => {
-  const blob = new Blob([content], {type: 'application/octet-stream'});
-  return api.updateProblemValidator({problemId, name, requestBody: blob});
-};
-
-export const setWorkshopValidatorMain = async (
-  problemId: string,
-  name: string
-): Promise<ApiResult<MessageResponse>> => {
-  return api.setProblemValidatorMain({problemId, requestBody: {name}});
 };
 
 export const generateWorkshopTests = async (

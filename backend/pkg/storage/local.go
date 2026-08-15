@@ -119,6 +119,12 @@ func (s *LocalStorage) ListFiles(ctx context.Context, bucket, prefix string) ([]
 		if err != nil {
 			return err
 		}
+		if path != bucketDir && strings.HasPrefix(d.Name(), ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 		if d.IsDir() {
 			return nil
 		}

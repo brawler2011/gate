@@ -61,6 +61,8 @@ export type { RegisterRequestModel } from './models/RegisterRequestModel';
 export type { SubmissionModel } from './models/SubmissionModel';
 export type { SubmissionsListItemModel } from './models/SubmissionsListItemModel';
 export type { SubmissionWebSocketEventModel } from './models/SubmissionWebSocketEventModel';
+export type { SupportedLanguage } from './models/SupportedLanguage';
+export type { SupportedLanguagesResponse } from './models/SupportedLanguagesResponse';
 export type { TeamMemberModel } from './models/TeamMemberModel';
 export type { TeamModel } from './models/TeamModel';
 export type { TestCompletedEventModel } from './models/TestCompletedEventModel';

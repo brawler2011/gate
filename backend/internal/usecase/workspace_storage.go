@@ -61,7 +61,17 @@ func (w *WorkspaceStorage) ListAllFiles(ctx context.Context, problemID uuid.UUID
 	for _, key := range keys {
 		rel := strings.TrimPrefix(key, prefix)
 		if rel != "" {
-			files = append(files, rel)
+			parts := strings.Split(rel, "/")
+			isDotfile := false
+			for _, p := range parts {
+				if strings.HasPrefix(p, ".") {
+					isDotfile = true
+					break
+				}
+			}
+			if !isDotfile {
+				files = append(files, rel)
+			}
 		}
 	}
 	return files, nil

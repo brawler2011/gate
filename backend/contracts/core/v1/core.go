@@ -369,11 +369,6 @@ type LoginRequestModel struct {
 	Password   string `json:"password"`
 }
 
-// MainComponentSelectionRequest defines model for MainComponentSelectionRequest.
-type MainComponentSelectionRequest struct {
-	Name string `json:"name"`
-}
-
 // MessageResponse defines model for MessageResponse.
 type MessageResponse struct {
 	Message *string `json:"message,omitempty"`
@@ -527,6 +522,18 @@ type SubmissionsListItemModel struct {
 	UpdatedAt    time.Time          `json:"updated_at"`
 	UserId       openapi_types.UUID `json:"user_id"`
 	Username     string             `json:"username"`
+}
+
+// SupportedLanguage defines model for SupportedLanguage.
+type SupportedLanguage struct {
+	Extension string  `json:"extension"`
+	Name      string  `json:"name"`
+	Type      *string `json:"type,omitempty"`
+}
+
+// SupportedLanguagesResponse defines model for SupportedLanguagesResponse.
+type SupportedLanguagesResponse struct {
+	Languages []SupportedLanguage `json:"languages"`
 }
 
 // TeamMemberModel defines model for TeamMemberModel.
@@ -821,6 +828,11 @@ type CreateProblemInteractorParams struct {
 	Name string `form:"name" json:"name"`
 }
 
+// CreateProblemLibParams defines parameters for CreateProblemLib.
+type CreateProblemLibParams struct {
+	Name string `form:"name" json:"name"`
+}
+
 // CreateProblemMediaFileParams defines parameters for CreateProblemMediaFile.
 type CreateProblemMediaFileParams struct {
 	Name string `form:"name" json:"name"`
@@ -1023,15 +1035,6 @@ type UpdateProblemJSONRequestBody = UpdateProblemRequestModel
 // ImportProblemMultipartRequestBody defines body for ImportProblem for multipart/form-data ContentType.
 type ImportProblemMultipartRequestBody ImportProblemMultipartBody
 
-// SetProblemCheckerMainJSONRequestBody defines body for SetProblemCheckerMain for application/json ContentType.
-type SetProblemCheckerMainJSONRequestBody = MainComponentSelectionRequest
-
-// SetProblemGeneratorMainJSONRequestBody defines body for SetProblemGeneratorMain for application/json ContentType.
-type SetProblemGeneratorMainJSONRequestBody = MainComponentSelectionRequest
-
-// SetProblemInteractorMainJSONRequestBody defines body for SetProblemInteractorMain for application/json ContentType.
-type SetProblemInteractorMainJSONRequestBody = MainComponentSelectionRequest
-
 // UpdateProblemLimitsJSONRequestBody defines body for UpdateProblemLimits for application/json ContentType.
 type UpdateProblemLimitsJSONRequestBody = UpdateProblemLimitsRequest
 
@@ -1040,9 +1043,6 @@ type UpdateProblemStatementJSONRequestBody = UpdateProblemStatementRequest
 
 // UpdateProblemTestsConfigJSONRequestBody defines body for UpdateProblemTestsConfig for application/json ContentType.
 type UpdateProblemTestsConfigJSONRequestBody = UpdateProblemTestsConfigRequest
-
-// SetProblemValidatorMainJSONRequestBody defines body for SetProblemValidatorMain for application/json ContentType.
-type SetProblemValidatorMainJSONRequestBody = MainComponentSelectionRequest
 
 // TestSolutionJSONRequestBody defines body for TestSolution for application/json ContentType.
 type TestSolutionJSONRequestBody TestSolutionJSONBody
@@ -1195,6 +1195,9 @@ type ClientInterface interface {
 	// GetHealth request
 	GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetLanguages request
+	GetLanguages(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListOrganizations request
 	ListOrganizations(ctx context.Context, params *ListOrganizationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1274,11 +1277,6 @@ type ClientInterface interface {
 	// CreateProblemCheckerWithBody request with any body
 	CreateProblemCheckerWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemCheckerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// SetProblemCheckerMainWithBody request with any body
-	SetProblemCheckerMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	SetProblemCheckerMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// DeleteProblemChecker request
 	DeleteProblemChecker(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1293,11 +1291,6 @@ type ClientInterface interface {
 
 	// CreateProblemGeneratorWithBody request with any body
 	CreateProblemGeneratorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemGeneratorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// SetProblemGeneratorMainWithBody request with any body
-	SetProblemGeneratorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	SetProblemGeneratorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteProblemGenerator request
 	DeleteProblemGenerator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1314,11 +1307,6 @@ type ClientInterface interface {
 	// CreateProblemInteractorWithBody request with any body
 	CreateProblemInteractorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemInteractorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// SetProblemInteractorMainWithBody request with any body
-	SetProblemInteractorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	SetProblemInteractorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// DeleteProblemInteractor request
 	DeleteProblemInteractor(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1327,6 +1315,21 @@ type ClientInterface interface {
 
 	// UpdateProblemInteractorWithBody request with any body
 	UpdateProblemInteractorWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemLibs request
+	ListProblemLibs(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemLibWithBody request with any body
+	CreateProblemLibWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemLibParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemLib request
+	DeleteProblemLib(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemLib request
+	GetProblemLib(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemLibWithBody request with any body
+	UpdateProblemLibWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetProblemLimits request
 	GetProblemLimits(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1399,11 +1402,6 @@ type ClientInterface interface {
 
 	// CreateProblemValidatorWithBody request with any body
 	CreateProblemValidatorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemValidatorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// SetProblemValidatorMainWithBody request with any body
-	SetProblemValidatorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	SetProblemValidatorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteProblemValidator request
 	DeleteProblemValidator(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1755,6 +1753,18 @@ func (c *Client) GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetLanguages(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetLanguagesRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListOrganizations(ctx context.Context, params *ListOrganizationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListOrganizationsRequest(c.Server, params)
 	if err != nil {
@@ -2079,30 +2089,6 @@ func (c *Client) CreateProblemCheckerWithBody(ctx context.Context, problemId ope
 	return c.Client.Do(req)
 }
 
-func (c *Client) SetProblemCheckerMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSetProblemCheckerMainRequestWithBody(c.Server, problemId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SetProblemCheckerMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSetProblemCheckerMainRequest(c.Server, problemId, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) DeleteProblemChecker(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteProblemCheckerRequest(c.Server, problemId, name)
 	if err != nil {
@@ -2153,30 +2139,6 @@ func (c *Client) ListProblemGenerators(ctx context.Context, problemId openapi_ty
 
 func (c *Client) CreateProblemGeneratorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemGeneratorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateProblemGeneratorRequestWithBody(c.Server, problemId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SetProblemGeneratorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSetProblemGeneratorMainRequestWithBody(c.Server, problemId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SetProblemGeneratorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSetProblemGeneratorMainRequest(c.Server, problemId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2247,30 +2209,6 @@ func (c *Client) CreateProblemInteractorWithBody(ctx context.Context, problemId 
 	return c.Client.Do(req)
 }
 
-func (c *Client) SetProblemInteractorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSetProblemInteractorMainRequestWithBody(c.Server, problemId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SetProblemInteractorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSetProblemInteractorMainRequest(c.Server, problemId, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) DeleteProblemInteractor(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteProblemInteractorRequest(c.Server, problemId, name)
 	if err != nil {
@@ -2297,6 +2235,66 @@ func (c *Client) GetProblemInteractor(ctx context.Context, problemId openapi_typ
 
 func (c *Client) UpdateProblemInteractorWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateProblemInteractorRequestWithBody(c.Server, problemId, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemLibs(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemLibsRequest(c.Server, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemLibWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemLibParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemLibRequestWithBody(c.Server, problemId, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemLib(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemLibRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemLib(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemLibRequest(c.Server, problemId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemLibWithBody(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemLibRequestWithBody(c.Server, problemId, name, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2597,30 +2595,6 @@ func (c *Client) ListProblemValidators(ctx context.Context, problemId openapi_ty
 
 func (c *Client) CreateProblemValidatorWithBody(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemValidatorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateProblemValidatorRequestWithBody(c.Server, problemId, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SetProblemValidatorMainWithBody(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSetProblemValidatorMainRequestWithBody(c.Server, problemId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SetProblemValidatorMain(ctx context.Context, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSetProblemValidatorMainRequest(c.Server, problemId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4014,6 +3988,33 @@ func NewGetHealthRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewGetLanguagesRequest generates requests for GetLanguages
+func NewGetLanguagesRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/languages")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListOrganizationsRequest generates requests for ListOrganizations
 func NewListOrganizationsRequest(server string, params *ListOrganizationsParams) (*http.Request, error) {
 	var err error
@@ -5252,53 +5253,6 @@ func NewCreateProblemCheckerRequestWithBody(server string, problemId openapi_typ
 	return req, nil
 }
 
-// NewSetProblemCheckerMainRequest calls the generic SetProblemCheckerMain builder with application/json body
-func NewSetProblemCheckerMainRequest(server string, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewSetProblemCheckerMainRequestWithBody(server, problemId, "application/json", bodyReader)
-}
-
-// NewSetProblemCheckerMainRequestWithBody generates requests for SetProblemCheckerMain with any type of body
-func NewSetProblemCheckerMainRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/checkers/main", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PATCH", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
 // NewDeleteProblemCheckerRequest generates requests for DeleteProblemChecker
 func NewDeleteProblemCheckerRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
 	var err error
@@ -5503,53 +5457,6 @@ func NewCreateProblemGeneratorRequestWithBody(server string, problemId openapi_t
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewSetProblemGeneratorMainRequest calls the generic SetProblemGeneratorMain builder with application/json body
-func NewSetProblemGeneratorMainRequest(server string, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewSetProblemGeneratorMainRequestWithBody(server, problemId, "application/json", bodyReader)
-}
-
-// NewSetProblemGeneratorMainRequestWithBody generates requests for SetProblemGeneratorMain with any type of body
-func NewSetProblemGeneratorMainRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/generators/main", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PATCH", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -5772,53 +5679,6 @@ func NewCreateProblemInteractorRequestWithBody(server string, problemId openapi_
 	return req, nil
 }
 
-// NewSetProblemInteractorMainRequest calls the generic SetProblemInteractorMain builder with application/json body
-func NewSetProblemInteractorMainRequest(server string, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewSetProblemInteractorMainRequestWithBody(server, problemId, "application/json", bodyReader)
-}
-
-// NewSetProblemInteractorMainRequestWithBody generates requests for SetProblemInteractorMain with any type of body
-func NewSetProblemInteractorMainRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/interactors/main", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PATCH", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
 // NewDeleteProblemInteractorRequest generates requests for DeleteProblemInteractor
 func NewDeleteProblemInteractorRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
 	var err error
@@ -5925,6 +5785,219 @@ func NewUpdateProblemInteractorRequestWithBody(server string, problemId openapi_
 	}
 
 	operationPath := fmt.Sprintf("/problems/%s/interactors/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListProblemLibsRequest generates requests for ListProblemLibs
+func NewListProblemLibsRequest(server string, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/lib", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemLibRequestWithBody generates requests for CreateProblemLib with any type of body
+func NewCreateProblemLibRequestWithBody(server string, problemId openapi_types.UUID, params *CreateProblemLibParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/lib", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "name", runtime.ParamLocationQuery, params.Name); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteProblemLibRequest generates requests for DeleteProblemLib
+func NewDeleteProblemLibRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/lib/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProblemLibRequest generates requests for GetProblemLib
+func NewGetProblemLibRequest(server string, problemId openapi_types.UUID, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/lib/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemLibRequestWithBody generates requests for UpdateProblemLib with any type of body
+func NewUpdateProblemLibRequestWithBody(server string, problemId openapi_types.UUID, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/lib/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -6915,53 +6988,6 @@ func NewCreateProblemValidatorRequestWithBody(server string, problemId openapi_t
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewSetProblemValidatorMainRequest calls the generic SetProblemValidatorMain builder with application/json body
-func NewSetProblemValidatorMainRequest(server string, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewSetProblemValidatorMainRequestWithBody(server, problemId, "application/json", bodyReader)
-}
-
-// NewSetProblemValidatorMainRequestWithBody generates requests for SetProblemValidatorMain with any type of body
-func NewSetProblemValidatorMainRequestWithBody(server string, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "problemId", runtime.ParamLocationPath, problemId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/problems/%s/validators/main", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PATCH", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -8811,6 +8837,9 @@ type ClientWithResponsesInterface interface {
 	// GetHealthWithResponse request
 	GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error)
 
+	// GetLanguagesWithResponse request
+	GetLanguagesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLanguagesResponse, error)
+
 	// ListOrganizationsWithResponse request
 	ListOrganizationsWithResponse(ctx context.Context, params *ListOrganizationsParams, reqEditors ...RequestEditorFn) (*ListOrganizationsResponse, error)
 
@@ -8890,11 +8919,6 @@ type ClientWithResponsesInterface interface {
 	// CreateProblemCheckerWithBodyWithResponse request with any body
 	CreateProblemCheckerWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemCheckerParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemCheckerResponse, error)
 
-	// SetProblemCheckerMainWithBodyWithResponse request with any body
-	SetProblemCheckerMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemCheckerMainResponse, error)
-
-	SetProblemCheckerMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemCheckerMainResponse, error)
-
 	// DeleteProblemCheckerWithResponse request
 	DeleteProblemCheckerWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemCheckerResponse, error)
 
@@ -8909,11 +8933,6 @@ type ClientWithResponsesInterface interface {
 
 	// CreateProblemGeneratorWithBodyWithResponse request with any body
 	CreateProblemGeneratorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemGeneratorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemGeneratorResponse, error)
-
-	// SetProblemGeneratorMainWithBodyWithResponse request with any body
-	SetProblemGeneratorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemGeneratorMainResponse, error)
-
-	SetProblemGeneratorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemGeneratorMainResponse, error)
 
 	// DeleteProblemGeneratorWithResponse request
 	DeleteProblemGeneratorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemGeneratorResponse, error)
@@ -8930,11 +8949,6 @@ type ClientWithResponsesInterface interface {
 	// CreateProblemInteractorWithBodyWithResponse request with any body
 	CreateProblemInteractorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemInteractorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemInteractorResponse, error)
 
-	// SetProblemInteractorMainWithBodyWithResponse request with any body
-	SetProblemInteractorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemInteractorMainResponse, error)
-
-	SetProblemInteractorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemInteractorMainResponse, error)
-
 	// DeleteProblemInteractorWithResponse request
 	DeleteProblemInteractorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemInteractorResponse, error)
 
@@ -8943,6 +8957,21 @@ type ClientWithResponsesInterface interface {
 
 	// UpdateProblemInteractorWithBodyWithResponse request with any body
 	UpdateProblemInteractorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemInteractorResponse, error)
+
+	// ListProblemLibsWithResponse request
+	ListProblemLibsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemLibsResponse, error)
+
+	// CreateProblemLibWithBodyWithResponse request with any body
+	CreateProblemLibWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemLibParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemLibResponse, error)
+
+	// DeleteProblemLibWithResponse request
+	DeleteProblemLibWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemLibResponse, error)
+
+	// GetProblemLibWithResponse request
+	GetProblemLibWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemLibResponse, error)
+
+	// UpdateProblemLibWithBodyWithResponse request with any body
+	UpdateProblemLibWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemLibResponse, error)
 
 	// GetProblemLimitsWithResponse request
 	GetProblemLimitsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemLimitsResponse, error)
@@ -9015,11 +9044,6 @@ type ClientWithResponsesInterface interface {
 
 	// CreateProblemValidatorWithBodyWithResponse request with any body
 	CreateProblemValidatorWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemValidatorParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemValidatorResponse, error)
-
-	// SetProblemValidatorMainWithBodyWithResponse request with any body
-	SetProblemValidatorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemValidatorMainResponse, error)
-
-	SetProblemValidatorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemValidatorMainResponse, error)
 
 	// DeleteProblemValidatorWithResponse request
 	DeleteProblemValidatorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemValidatorResponse, error)
@@ -9503,6 +9527,28 @@ func (r GetHealthResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetHealthResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetLanguagesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SupportedLanguagesResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetLanguagesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetLanguagesResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -10078,28 +10124,6 @@ func (r CreateProblemCheckerResponse) StatusCode() int {
 	return 0
 }
 
-type SetProblemCheckerMainResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *MessageResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r SetProblemCheckerMainResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r SetProblemCheckerMainResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type DeleteProblemCheckerResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -10203,28 +10227,6 @@ func (r CreateProblemGeneratorResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r CreateProblemGeneratorResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type SetProblemGeneratorMainResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *MessageResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r SetProblemGeneratorMainResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r SetProblemGeneratorMainResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -10340,28 +10342,6 @@ func (r CreateProblemInteractorResponse) StatusCode() int {
 	return 0
 }
 
-type SetProblemInteractorMainResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *MessageResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r SetProblemInteractorMainResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r SetProblemInteractorMainResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type DeleteProblemInteractorResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -10421,6 +10401,115 @@ func (r UpdateProblemInteractorResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UpdateProblemInteractorResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemLibsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *WorkshopFileListResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemLibsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemLibsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemLibResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemLibResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemLibResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemLibResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemLibResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemLibResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemLibResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemLibResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemLibResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemLibResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *MessageResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemLibResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemLibResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -10902,28 +10991,6 @@ func (r CreateProblemValidatorResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r CreateProblemValidatorResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type SetProblemValidatorMainResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *MessageResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r SetProblemValidatorMainResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r SetProblemValidatorMainResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -11753,6 +11820,15 @@ func (c *ClientWithResponses) GetHealthWithResponse(ctx context.Context, reqEdit
 	return ParseGetHealthResponse(rsp)
 }
 
+// GetLanguagesWithResponse request returning *GetLanguagesResponse
+func (c *ClientWithResponses) GetLanguagesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLanguagesResponse, error) {
+	rsp, err := c.GetLanguages(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetLanguagesResponse(rsp)
+}
+
 // ListOrganizationsWithResponse request returning *ListOrganizationsResponse
 func (c *ClientWithResponses) ListOrganizationsWithResponse(ctx context.Context, params *ListOrganizationsParams, reqEditors ...RequestEditorFn) (*ListOrganizationsResponse, error) {
 	rsp, err := c.ListOrganizations(ctx, params, reqEditors...)
@@ -11994,23 +12070,6 @@ func (c *ClientWithResponses) CreateProblemCheckerWithBodyWithResponse(ctx conte
 	return ParseCreateProblemCheckerResponse(rsp)
 }
 
-// SetProblemCheckerMainWithBodyWithResponse request with arbitrary body returning *SetProblemCheckerMainResponse
-func (c *ClientWithResponses) SetProblemCheckerMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemCheckerMainResponse, error) {
-	rsp, err := c.SetProblemCheckerMainWithBody(ctx, problemId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSetProblemCheckerMainResponse(rsp)
-}
-
-func (c *ClientWithResponses) SetProblemCheckerMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemCheckerMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemCheckerMainResponse, error) {
-	rsp, err := c.SetProblemCheckerMain(ctx, problemId, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSetProblemCheckerMainResponse(rsp)
-}
-
 // DeleteProblemCheckerWithResponse request returning *DeleteProblemCheckerResponse
 func (c *ClientWithResponses) DeleteProblemCheckerWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemCheckerResponse, error) {
 	rsp, err := c.DeleteProblemChecker(ctx, problemId, name, reqEditors...)
@@ -12054,23 +12113,6 @@ func (c *ClientWithResponses) CreateProblemGeneratorWithBodyWithResponse(ctx con
 		return nil, err
 	}
 	return ParseCreateProblemGeneratorResponse(rsp)
-}
-
-// SetProblemGeneratorMainWithBodyWithResponse request with arbitrary body returning *SetProblemGeneratorMainResponse
-func (c *ClientWithResponses) SetProblemGeneratorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemGeneratorMainResponse, error) {
-	rsp, err := c.SetProblemGeneratorMainWithBody(ctx, problemId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSetProblemGeneratorMainResponse(rsp)
-}
-
-func (c *ClientWithResponses) SetProblemGeneratorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemGeneratorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemGeneratorMainResponse, error) {
-	rsp, err := c.SetProblemGeneratorMain(ctx, problemId, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSetProblemGeneratorMainResponse(rsp)
 }
 
 // DeleteProblemGeneratorWithResponse request returning *DeleteProblemGeneratorResponse
@@ -12118,23 +12160,6 @@ func (c *ClientWithResponses) CreateProblemInteractorWithBodyWithResponse(ctx co
 	return ParseCreateProblemInteractorResponse(rsp)
 }
 
-// SetProblemInteractorMainWithBodyWithResponse request with arbitrary body returning *SetProblemInteractorMainResponse
-func (c *ClientWithResponses) SetProblemInteractorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemInteractorMainResponse, error) {
-	rsp, err := c.SetProblemInteractorMainWithBody(ctx, problemId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSetProblemInteractorMainResponse(rsp)
-}
-
-func (c *ClientWithResponses) SetProblemInteractorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemInteractorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemInteractorMainResponse, error) {
-	rsp, err := c.SetProblemInteractorMain(ctx, problemId, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSetProblemInteractorMainResponse(rsp)
-}
-
 // DeleteProblemInteractorWithResponse request returning *DeleteProblemInteractorResponse
 func (c *ClientWithResponses) DeleteProblemInteractorWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemInteractorResponse, error) {
 	rsp, err := c.DeleteProblemInteractor(ctx, problemId, name, reqEditors...)
@@ -12160,6 +12185,51 @@ func (c *ClientWithResponses) UpdateProblemInteractorWithBodyWithResponse(ctx co
 		return nil, err
 	}
 	return ParseUpdateProblemInteractorResponse(rsp)
+}
+
+// ListProblemLibsWithResponse request returning *ListProblemLibsResponse
+func (c *ClientWithResponses) ListProblemLibsWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemLibsResponse, error) {
+	rsp, err := c.ListProblemLibs(ctx, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemLibsResponse(rsp)
+}
+
+// CreateProblemLibWithBodyWithResponse request with arbitrary body returning *CreateProblemLibResponse
+func (c *ClientWithResponses) CreateProblemLibWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, params *CreateProblemLibParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateProblemLibResponse, error) {
+	rsp, err := c.CreateProblemLibWithBody(ctx, problemId, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemLibResponse(rsp)
+}
+
+// DeleteProblemLibWithResponse request returning *DeleteProblemLibResponse
+func (c *ClientWithResponses) DeleteProblemLibWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*DeleteProblemLibResponse, error) {
+	rsp, err := c.DeleteProblemLib(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemLibResponse(rsp)
+}
+
+// GetProblemLibWithResponse request returning *GetProblemLibResponse
+func (c *ClientWithResponses) GetProblemLibWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, reqEditors ...RequestEditorFn) (*GetProblemLibResponse, error) {
+	rsp, err := c.GetProblemLib(ctx, problemId, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemLibResponse(rsp)
+}
+
+// UpdateProblemLibWithBodyWithResponse request with arbitrary body returning *UpdateProblemLibResponse
+func (c *ClientWithResponses) UpdateProblemLibWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateProblemLibResponse, error) {
+	rsp, err := c.UpdateProblemLibWithBody(ctx, problemId, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemLibResponse(rsp)
 }
 
 // GetProblemLimitsWithResponse request returning *GetProblemLimitsResponse
@@ -12382,23 +12452,6 @@ func (c *ClientWithResponses) CreateProblemValidatorWithBodyWithResponse(ctx con
 		return nil, err
 	}
 	return ParseCreateProblemValidatorResponse(rsp)
-}
-
-// SetProblemValidatorMainWithBodyWithResponse request with arbitrary body returning *SetProblemValidatorMainResponse
-func (c *ClientWithResponses) SetProblemValidatorMainWithBodyWithResponse(ctx context.Context, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetProblemValidatorMainResponse, error) {
-	rsp, err := c.SetProblemValidatorMainWithBody(ctx, problemId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSetProblemValidatorMainResponse(rsp)
-}
-
-func (c *ClientWithResponses) SetProblemValidatorMainWithResponse(ctx context.Context, problemId openapi_types.UUID, body SetProblemValidatorMainJSONRequestBody, reqEditors ...RequestEditorFn) (*SetProblemValidatorMainResponse, error) {
-	rsp, err := c.SetProblemValidatorMain(ctx, problemId, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSetProblemValidatorMainResponse(rsp)
 }
 
 // DeleteProblemValidatorWithResponse request returning *DeleteProblemValidatorResponse
@@ -13110,6 +13163,32 @@ func ParseGetHealthResponse(rsp *http.Response) (*GetHealthResponse, error) {
 	return response, nil
 }
 
+// ParseGetLanguagesResponse parses an HTTP response from a GetLanguagesWithResponse call
+func ParseGetLanguagesResponse(rsp *http.Response) (*GetLanguagesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetLanguagesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SupportedLanguagesResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListOrganizationsResponse parses an HTTP response from a ListOrganizationsWithResponse call
 func ParseListOrganizationsResponse(rsp *http.Response) (*ListOrganizationsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -13788,32 +13867,6 @@ func ParseCreateProblemCheckerResponse(rsp *http.Response) (*CreateProblemChecke
 	return response, nil
 }
 
-// ParseSetProblemCheckerMainResponse parses an HTTP response from a SetProblemCheckerMainWithResponse call
-func ParseSetProblemCheckerMainResponse(rsp *http.Response) (*SetProblemCheckerMainResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SetProblemCheckerMainResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest MessageResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseDeleteProblemCheckerResponse parses an HTTP response from a DeleteProblemCheckerWithResponse call
 func ParseDeleteProblemCheckerResponse(rsp *http.Response) (*DeleteProblemCheckerResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -13917,32 +13970,6 @@ func ParseCreateProblemGeneratorResponse(rsp *http.Response) (*CreateProblemGene
 	}
 
 	response := &CreateProblemGeneratorResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest MessageResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseSetProblemGeneratorMainResponse parses an HTTP response from a SetProblemGeneratorMainWithResponse call
-func ParseSetProblemGeneratorMainResponse(rsp *http.Response) (*SetProblemGeneratorMainResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SetProblemGeneratorMainResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -14080,32 +14107,6 @@ func ParseCreateProblemInteractorResponse(rsp *http.Response) (*CreateProblemInt
 	return response, nil
 }
 
-// ParseSetProblemInteractorMainResponse parses an HTTP response from a SetProblemInteractorMainWithResponse call
-func ParseSetProblemInteractorMainResponse(rsp *http.Response) (*SetProblemInteractorMainResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SetProblemInteractorMainResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest MessageResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseDeleteProblemInteractorResponse parses an HTTP response from a DeleteProblemInteractorWithResponse call
 func ParseDeleteProblemInteractorResponse(rsp *http.Response) (*DeleteProblemInteractorResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -14157,6 +14158,126 @@ func ParseUpdateProblemInteractorResponse(rsp *http.Response) (*UpdateProblemInt
 	}
 
 	response := &UpdateProblemInteractorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProblemLibsResponse parses an HTTP response from a ListProblemLibsWithResponse call
+func ParseListProblemLibsResponse(rsp *http.Response) (*ListProblemLibsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemLibsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WorkshopFileListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemLibResponse parses an HTTP response from a CreateProblemLibWithResponse call
+func ParseCreateProblemLibResponse(rsp *http.Response) (*CreateProblemLibResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemLibResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemLibResponse parses an HTTP response from a DeleteProblemLibWithResponse call
+func ParseDeleteProblemLibResponse(rsp *http.Response) (*DeleteProblemLibResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemLibResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MessageResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemLibResponse parses an HTTP response from a GetProblemLibWithResponse call
+func ParseGetProblemLibResponse(rsp *http.Response) (*GetProblemLibResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemLibResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemLibResponse parses an HTTP response from a UpdateProblemLibWithResponse call
+func ParseUpdateProblemLibResponse(rsp *http.Response) (*UpdateProblemLibResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemLibResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -14699,32 +14820,6 @@ func ParseCreateProblemValidatorResponse(rsp *http.Response) (*CreateProblemVali
 	}
 
 	response := &CreateProblemValidatorResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest MessageResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseSetProblemValidatorMainResponse parses an HTTP response from a SetProblemValidatorMainWithResponse call
-func ParseSetProblemValidatorMainResponse(rsp *http.Response) (*SetProblemValidatorMainResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SetProblemValidatorMainResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -15503,6 +15598,9 @@ type ServerInterface interface {
 
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// Get supported programming languages
+	// (GET /languages)
+	GetLanguages(w http.ResponseWriter, r *http.Request)
 	// List organizations
 	// (GET /organizations)
 	ListOrganizations(w http.ResponseWriter, r *http.Request, params ListOrganizationsParams)
@@ -15578,9 +15676,6 @@ type ServerInterface interface {
 	// Create checker file
 	// (POST /problems/{problemId}/checkers)
 	CreateProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemCheckerParams)
-	// Set main checker file
-	// (PATCH /problems/{problemId}/checkers/main)
-	SetProblemCheckerMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Delete checker file
 	// (DELETE /problems/{problemId}/checkers/{name})
 	DeleteProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
@@ -15596,9 +15691,6 @@ type ServerInterface interface {
 	// Create generator file
 	// (POST /problems/{problemId}/generators)
 	CreateProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemGeneratorParams)
-	// Set main generator file
-	// (PATCH /problems/{problemId}/generators/main)
-	SetProblemGeneratorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Delete generator file
 	// (DELETE /problems/{problemId}/generators/{name})
 	DeleteProblemGenerator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
@@ -15614,9 +15706,6 @@ type ServerInterface interface {
 	// Create interactor file
 	// (POST /problems/{problemId}/interactors)
 	CreateProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemInteractorParams)
-	// Set main interactor file
-	// (PATCH /problems/{problemId}/interactors/main)
-	SetProblemInteractorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Delete interactor file
 	// (DELETE /problems/{problemId}/interactors/{name})
 	DeleteProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
@@ -15626,6 +15715,21 @@ type ServerInterface interface {
 	// Update interactor file
 	// (PUT /problems/{problemId}/interactors/{name})
 	UpdateProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// List library files
+	// (GET /problems/{problemId}/lib)
+	ListProblemLibs(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
+	// Create library file
+	// (POST /problems/{problemId}/lib)
+	CreateProblemLib(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemLibParams)
+	// Delete library file
+	// (DELETE /problems/{problemId}/lib/{name})
+	DeleteProblemLib(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Get library file content
+	// (GET /problems/{problemId}/lib/{name})
+	GetProblemLib(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
+	// Update library file
+	// (PUT /problems/{problemId}/lib/{name})
+	UpdateProblemLib(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
 	// Get problem limits and type settings
 	// (GET /problems/{problemId}/limits)
 	GetProblemLimits(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
@@ -15692,9 +15796,6 @@ type ServerInterface interface {
 	// Create validator file
 	// (POST /problems/{problemId}/validators)
 	CreateProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemValidatorParams)
-	// Set main validator file
-	// (PATCH /problems/{problemId}/validators/main)
-	SetProblemValidatorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
 	// Delete validator file
 	// (DELETE /problems/{problemId}/validators/{name})
 	DeleteProblemValidator(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string)
@@ -16474,6 +16575,20 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLanguages operation middleware
+func (siw *ServerInterfaceWrapper) GetLanguages(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLanguages(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -17398,31 +17513,6 @@ func (siw *ServerInterfaceWrapper) CreateProblemChecker(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
-// SetProblemCheckerMain operation middleware
-func (siw *ServerInterfaceWrapper) SetProblemCheckerMain(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetProblemCheckerMain(w, r, problemId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // DeleteProblemChecker operation middleware
 func (siw *ServerInterfaceWrapper) DeleteProblemChecker(w http.ResponseWriter, r *http.Request) {
 
@@ -17584,31 +17674,6 @@ func (siw *ServerInterfaceWrapper) CreateProblemGenerator(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateProblemGenerator(w, r, problemId, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetProblemGeneratorMain operation middleware
-func (siw *ServerInterfaceWrapper) SetProblemGeneratorMain(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetProblemGeneratorMain(w, r, problemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -17788,31 +17853,6 @@ func (siw *ServerInterfaceWrapper) CreateProblemInteractor(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
-// SetProblemInteractorMain operation middleware
-func (siw *ServerInterfaceWrapper) SetProblemInteractorMain(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetProblemInteractorMain(w, r, problemId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // DeleteProblemInteractor operation middleware
 func (siw *ServerInterfaceWrapper) DeleteProblemInteractor(w http.ResponseWriter, r *http.Request) {
 
@@ -17906,6 +17946,176 @@ func (siw *ServerInterfaceWrapper) UpdateProblemInteractor(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateProblemInteractor(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProblemLibs operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemLibs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemLibs(w, r, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemLib operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemLib(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemLibParams
+
+	// ------------- Required query parameter "name" -------------
+
+	if paramValue := r.URL.Query().Get("name"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "name"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemLib(w, r, problemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProblemLib operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemLib(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemLib(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemLib operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemLib(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemLib(w, r, problemId, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemLib operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemLib(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", r.PathValue("name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemLib(w, r, problemId, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -18631,31 +18841,6 @@ func (siw *ServerInterfaceWrapper) CreateProblemValidator(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateProblemValidator(w, r, problemId, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetProblemValidatorMain operation middleware
-func (siw *ServerInterfaceWrapper) SetProblemValidatorMain(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "problemId" -------------
-	var problemId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemId", r.PathValue("problemId"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetProblemValidatorMain(w, r, problemId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20041,6 +20226,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/contests/{contest_id}/problems/{problem_id}", wrapper.GetContestProblem)
 	m.HandleFunc("GET "+options.BaseURL+"/contests/{contest_id}/submissions", wrapper.ListContestSubmissions)
 	m.HandleFunc("GET "+options.BaseURL+"/health", wrapper.GetHealth)
+	m.HandleFunc("GET "+options.BaseURL+"/languages", wrapper.GetLanguages)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations", wrapper.ListOrganizations)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations", wrapper.CreateOrganization)
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{id}", wrapper.DeleteOrganization)
@@ -20066,22 +20252,24 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{id}/publish", wrapper.PublishProblem)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/checkers", wrapper.ListProblemCheckers)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/checkers", wrapper.CreateProblemChecker)
-	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/checkers/main", wrapper.SetProblemCheckerMain)
 	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/checkers/{name}", wrapper.DeleteProblemChecker)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/checkers/{name}", wrapper.GetProblemChecker)
 	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/checkers/{name}", wrapper.UpdateProblemChecker)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/generators", wrapper.ListProblemGenerators)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/generators", wrapper.CreateProblemGenerator)
-	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/generators/main", wrapper.SetProblemGeneratorMain)
 	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/generators/{name}", wrapper.DeleteProblemGenerator)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/generators/{name}", wrapper.GetProblemGenerator)
 	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/generators/{name}", wrapper.UpdateProblemGenerator)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/interactors", wrapper.ListProblemInteractors)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/interactors", wrapper.CreateProblemInteractor)
-	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/interactors/main", wrapper.SetProblemInteractorMain)
 	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/interactors/{name}", wrapper.DeleteProblemInteractor)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/interactors/{name}", wrapper.GetProblemInteractor)
 	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/interactors/{name}", wrapper.UpdateProblemInteractor)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/lib", wrapper.ListProblemLibs)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/lib", wrapper.CreateProblemLib)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/lib/{name}", wrapper.DeleteProblemLib)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/lib/{name}", wrapper.GetProblemLib)
+	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/lib/{name}", wrapper.UpdateProblemLib)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/limits", wrapper.GetProblemLimits)
 	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/limits", wrapper.UpdateProblemLimits)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/media", wrapper.ListProblemMediaFiles)
@@ -20104,7 +20292,6 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/tests/{name}", wrapper.UpdateProblemTestFile)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/validators", wrapper.ListProblemValidators)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/validators", wrapper.CreateProblemValidator)
-	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{problemId}/validators/main", wrapper.SetProblemValidatorMain)
 	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/validators/{name}", wrapper.DeleteProblemValidator)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/validators/{name}", wrapper.GetProblemValidator)
 	m.HandleFunc("PUT "+options.BaseURL+"/problems/{problemId}/validators/{name}", wrapper.UpdateProblemValidator)
@@ -20439,6 +20626,22 @@ type GetHealthResponseObject interface {
 type GetHealth200JSONResponse GetHealthResponseModel
 
 func (response GetHealth200JSONResponse) VisitGetHealthResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetLanguagesRequestObject struct {
+}
+
+type GetLanguagesResponseObject interface {
+	VisitGetLanguagesResponse(w http.ResponseWriter) error
+}
+
+type GetLanguages200JSONResponse SupportedLanguagesResponse
+
+func (response GetLanguages200JSONResponse) VisitGetLanguagesResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -21057,24 +21260,6 @@ func (response CreateProblemChecker200JSONResponse) VisitCreateProblemCheckerRes
 	return json.NewEncoder(w).Encode(response)
 }
 
-type SetProblemCheckerMainRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Body      *SetProblemCheckerMainJSONRequestBody
-}
-
-type SetProblemCheckerMainResponseObject interface {
-	VisitSetProblemCheckerMainResponse(w http.ResponseWriter) error
-}
-
-type SetProblemCheckerMain200JSONResponse MessageResponse
-
-func (response SetProblemCheckerMain200JSONResponse) VisitSetProblemCheckerMainResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type DeleteProblemCheckerRequestObject struct {
 	ProblemId openapi_types.UUID `json:"problemId"`
 	Name      string             `json:"name"`
@@ -21170,24 +21355,6 @@ type CreateProblemGeneratorResponseObject interface {
 type CreateProblemGenerator200JSONResponse MessageResponse
 
 func (response CreateProblemGenerator200JSONResponse) VisitCreateProblemGeneratorResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type SetProblemGeneratorMainRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Body      *SetProblemGeneratorMainJSONRequestBody
-}
-
-type SetProblemGeneratorMainResponseObject interface {
-	VisitSetProblemGeneratorMainResponse(w http.ResponseWriter) error
-}
-
-type SetProblemGeneratorMain200JSONResponse MessageResponse
-
-func (response SetProblemGeneratorMain200JSONResponse) VisitSetProblemGeneratorMainResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -21295,24 +21462,6 @@ func (response CreateProblemInteractor200JSONResponse) VisitCreateProblemInterac
 	return json.NewEncoder(w).Encode(response)
 }
 
-type SetProblemInteractorMainRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Body      *SetProblemInteractorMainJSONRequestBody
-}
-
-type SetProblemInteractorMainResponseObject interface {
-	VisitSetProblemInteractorMainResponse(w http.ResponseWriter) error
-}
-
-type SetProblemInteractorMain200JSONResponse MessageResponse
-
-func (response SetProblemInteractorMain200JSONResponse) VisitSetProblemInteractorMainResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type DeleteProblemInteractorRequestObject struct {
 	ProblemId openapi_types.UUID `json:"problemId"`
 	Name      string             `json:"name"`
@@ -21372,6 +21521,107 @@ type UpdateProblemInteractorResponseObject interface {
 type UpdateProblemInteractor200JSONResponse MessageResponse
 
 func (response UpdateProblemInteractor200JSONResponse) VisitUpdateProblemInteractorResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProblemLibsRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+}
+
+type ListProblemLibsResponseObject interface {
+	VisitListProblemLibsResponse(w http.ResponseWriter) error
+}
+
+type ListProblemLibs200JSONResponse WorkshopFileListResponse
+
+func (response ListProblemLibs200JSONResponse) VisitListProblemLibsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateProblemLibRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Params    CreateProblemLibParams
+	Body      io.Reader
+}
+
+type CreateProblemLibResponseObject interface {
+	VisitCreateProblemLibResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemLib200JSONResponse MessageResponse
+
+func (response CreateProblemLib200JSONResponse) VisitCreateProblemLibResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProblemLibRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type DeleteProblemLibResponseObject interface {
+	VisitDeleteProblemLibResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemLib200JSONResponse MessageResponse
+
+func (response DeleteProblemLib200JSONResponse) VisitDeleteProblemLibResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemLibRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+}
+
+type GetProblemLibResponseObject interface {
+	VisitGetProblemLibResponse(w http.ResponseWriter) error
+}
+
+type GetProblemLib200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetProblemLib200ApplicationoctetStreamResponse) VisitGetProblemLibResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type UpdateProblemLibRequestObject struct {
+	ProblemId openapi_types.UUID `json:"problemId"`
+	Name      string             `json:"name"`
+	Body      io.Reader
+}
+
+type UpdateProblemLibResponseObject interface {
+	VisitUpdateProblemLibResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemLib200JSONResponse MessageResponse
+
+func (response UpdateProblemLib200JSONResponse) VisitUpdateProblemLibResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -21801,24 +22051,6 @@ type CreateProblemValidatorResponseObject interface {
 type CreateProblemValidator200JSONResponse MessageResponse
 
 func (response CreateProblemValidator200JSONResponse) VisitCreateProblemValidatorResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type SetProblemValidatorMainRequestObject struct {
-	ProblemId openapi_types.UUID `json:"problemId"`
-	Body      *SetProblemValidatorMainJSONRequestBody
-}
-
-type SetProblemValidatorMainResponseObject interface {
-	VisitSetProblemValidatorMainResponse(w http.ResponseWriter) error
-}
-
-type SetProblemValidatorMain200JSONResponse MessageResponse
-
-func (response SetProblemValidatorMain200JSONResponse) VisitSetProblemValidatorMainResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -22445,6 +22677,9 @@ type StrictServerInterface interface {
 
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// Get supported programming languages
+	// (GET /languages)
+	GetLanguages(ctx context.Context, request GetLanguagesRequestObject) (GetLanguagesResponseObject, error)
 	// List organizations
 	// (GET /organizations)
 	ListOrganizations(ctx context.Context, request ListOrganizationsRequestObject) (ListOrganizationsResponseObject, error)
@@ -22520,9 +22755,6 @@ type StrictServerInterface interface {
 	// Create checker file
 	// (POST /problems/{problemId}/checkers)
 	CreateProblemChecker(ctx context.Context, request CreateProblemCheckerRequestObject) (CreateProblemCheckerResponseObject, error)
-	// Set main checker file
-	// (PATCH /problems/{problemId}/checkers/main)
-	SetProblemCheckerMain(ctx context.Context, request SetProblemCheckerMainRequestObject) (SetProblemCheckerMainResponseObject, error)
 	// Delete checker file
 	// (DELETE /problems/{problemId}/checkers/{name})
 	DeleteProblemChecker(ctx context.Context, request DeleteProblemCheckerRequestObject) (DeleteProblemCheckerResponseObject, error)
@@ -22538,9 +22770,6 @@ type StrictServerInterface interface {
 	// Create generator file
 	// (POST /problems/{problemId}/generators)
 	CreateProblemGenerator(ctx context.Context, request CreateProblemGeneratorRequestObject) (CreateProblemGeneratorResponseObject, error)
-	// Set main generator file
-	// (PATCH /problems/{problemId}/generators/main)
-	SetProblemGeneratorMain(ctx context.Context, request SetProblemGeneratorMainRequestObject) (SetProblemGeneratorMainResponseObject, error)
 	// Delete generator file
 	// (DELETE /problems/{problemId}/generators/{name})
 	DeleteProblemGenerator(ctx context.Context, request DeleteProblemGeneratorRequestObject) (DeleteProblemGeneratorResponseObject, error)
@@ -22556,9 +22785,6 @@ type StrictServerInterface interface {
 	// Create interactor file
 	// (POST /problems/{problemId}/interactors)
 	CreateProblemInteractor(ctx context.Context, request CreateProblemInteractorRequestObject) (CreateProblemInteractorResponseObject, error)
-	// Set main interactor file
-	// (PATCH /problems/{problemId}/interactors/main)
-	SetProblemInteractorMain(ctx context.Context, request SetProblemInteractorMainRequestObject) (SetProblemInteractorMainResponseObject, error)
 	// Delete interactor file
 	// (DELETE /problems/{problemId}/interactors/{name})
 	DeleteProblemInteractor(ctx context.Context, request DeleteProblemInteractorRequestObject) (DeleteProblemInteractorResponseObject, error)
@@ -22568,6 +22794,21 @@ type StrictServerInterface interface {
 	// Update interactor file
 	// (PUT /problems/{problemId}/interactors/{name})
 	UpdateProblemInteractor(ctx context.Context, request UpdateProblemInteractorRequestObject) (UpdateProblemInteractorResponseObject, error)
+	// List library files
+	// (GET /problems/{problemId}/lib)
+	ListProblemLibs(ctx context.Context, request ListProblemLibsRequestObject) (ListProblemLibsResponseObject, error)
+	// Create library file
+	// (POST /problems/{problemId}/lib)
+	CreateProblemLib(ctx context.Context, request CreateProblemLibRequestObject) (CreateProblemLibResponseObject, error)
+	// Delete library file
+	// (DELETE /problems/{problemId}/lib/{name})
+	DeleteProblemLib(ctx context.Context, request DeleteProblemLibRequestObject) (DeleteProblemLibResponseObject, error)
+	// Get library file content
+	// (GET /problems/{problemId}/lib/{name})
+	GetProblemLib(ctx context.Context, request GetProblemLibRequestObject) (GetProblemLibResponseObject, error)
+	// Update library file
+	// (PUT /problems/{problemId}/lib/{name})
+	UpdateProblemLib(ctx context.Context, request UpdateProblemLibRequestObject) (UpdateProblemLibResponseObject, error)
 	// Get problem limits and type settings
 	// (GET /problems/{problemId}/limits)
 	GetProblemLimits(ctx context.Context, request GetProblemLimitsRequestObject) (GetProblemLimitsResponseObject, error)
@@ -22634,9 +22875,6 @@ type StrictServerInterface interface {
 	// Create validator file
 	// (POST /problems/{problemId}/validators)
 	CreateProblemValidator(ctx context.Context, request CreateProblemValidatorRequestObject) (CreateProblemValidatorResponseObject, error)
-	// Set main validator file
-	// (PATCH /problems/{problemId}/validators/main)
-	SetProblemValidatorMain(ctx context.Context, request SetProblemValidatorMainRequestObject) (SetProblemValidatorMainResponseObject, error)
 	// Delete validator file
 	// (DELETE /problems/{problemId}/validators/{name})
 	DeleteProblemValidator(ctx context.Context, request DeleteProblemValidatorRequestObject) (DeleteProblemValidatorResponseObject, error)
@@ -23237,6 +23475,30 @@ func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetHealthResponseObject); ok {
 		if err := validResponse.VisitGetHealthResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetLanguages operation middleware
+func (sh *strictHandler) GetLanguages(w http.ResponseWriter, r *http.Request) {
+	var request GetLanguagesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetLanguages(ctx, request.(GetLanguagesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetLanguages")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetLanguagesResponseObject); ok {
+		if err := validResponse.VisitGetLanguagesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -23935,39 +24197,6 @@ func (sh *strictHandler) CreateProblemChecker(w http.ResponseWriter, r *http.Req
 	}
 }
 
-// SetProblemCheckerMain operation middleware
-func (sh *strictHandler) SetProblemCheckerMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
-	var request SetProblemCheckerMainRequestObject
-
-	request.ProblemId = problemId
-
-	var body SetProblemCheckerMainJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.SetProblemCheckerMain(ctx, request.(SetProblemCheckerMainRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SetProblemCheckerMain")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SetProblemCheckerMainResponseObject); ok {
-		if err := validResponse.VisitSetProblemCheckerMainResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // DeleteProblemChecker operation middleware
 func (sh *strictHandler) DeleteProblemChecker(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
 	var request DeleteProblemCheckerRequestObject
@@ -24099,39 +24328,6 @@ func (sh *strictHandler) CreateProblemGenerator(w http.ResponseWriter, r *http.R
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateProblemGeneratorResponseObject); ok {
 		if err := validResponse.VisitCreateProblemGeneratorResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// SetProblemGeneratorMain operation middleware
-func (sh *strictHandler) SetProblemGeneratorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
-	var request SetProblemGeneratorMainRequestObject
-
-	request.ProblemId = problemId
-
-	var body SetProblemGeneratorMainJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.SetProblemGeneratorMain(ctx, request.(SetProblemGeneratorMainRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SetProblemGeneratorMain")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SetProblemGeneratorMainResponseObject); ok {
-		if err := validResponse.VisitSetProblemGeneratorMainResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -24277,39 +24473,6 @@ func (sh *strictHandler) CreateProblemInteractor(w http.ResponseWriter, r *http.
 	}
 }
 
-// SetProblemInteractorMain operation middleware
-func (sh *strictHandler) SetProblemInteractorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
-	var request SetProblemInteractorMainRequestObject
-
-	request.ProblemId = problemId
-
-	var body SetProblemInteractorMainJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.SetProblemInteractorMain(ctx, request.(SetProblemInteractorMainRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SetProblemInteractorMain")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SetProblemInteractorMainResponseObject); ok {
-		if err := validResponse.VisitSetProblemInteractorMainResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // DeleteProblemInteractor operation middleware
 func (sh *strictHandler) DeleteProblemInteractor(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
 	var request DeleteProblemInteractorRequestObject
@@ -24386,6 +24549,144 @@ func (sh *strictHandler) UpdateProblemInteractor(w http.ResponseWriter, r *http.
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateProblemInteractorResponseObject); ok {
 		if err := validResponse.VisitUpdateProblemInteractorResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemLibs operation middleware
+func (sh *strictHandler) ListProblemLibs(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
+	var request ListProblemLibsRequestObject
+
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemLibs(ctx, request.(ListProblemLibsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemLibs")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemLibsResponseObject); ok {
+		if err := validResponse.VisitListProblemLibsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemLib operation middleware
+func (sh *strictHandler) CreateProblemLib(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, params CreateProblemLibParams) {
+	var request CreateProblemLibRequestObject
+
+	request.ProblemId = problemId
+	request.Params = params
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemLib(ctx, request.(CreateProblemLibRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemLib")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemLibResponseObject); ok {
+		if err := validResponse.VisitCreateProblemLibResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteProblemLib operation middleware
+func (sh *strictHandler) DeleteProblemLib(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request DeleteProblemLibRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemLib(ctx, request.(DeleteProblemLibRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemLib")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemLibResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemLibResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemLib operation middleware
+func (sh *strictHandler) GetProblemLib(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request GetProblemLibRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemLib(ctx, request.(GetProblemLibRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemLib")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemLibResponseObject); ok {
+		if err := validResponse.VisitGetProblemLibResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemLib operation middleware
+func (sh *strictHandler) UpdateProblemLib(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID, name string) {
+	var request UpdateProblemLibRequestObject
+
+	request.ProblemId = problemId
+	request.Name = name
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemLib(ctx, request.(UpdateProblemLibRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemLib")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemLibResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemLibResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -25008,39 +25309,6 @@ func (sh *strictHandler) CreateProblemValidator(w http.ResponseWriter, r *http.R
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateProblemValidatorResponseObject); ok {
 		if err := validResponse.VisitCreateProblemValidatorResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// SetProblemValidatorMain operation middleware
-func (sh *strictHandler) SetProblemValidatorMain(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID) {
-	var request SetProblemValidatorMainRequestObject
-
-	request.ProblemId = problemId
-
-	var body SetProblemValidatorMainJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.SetProblemValidatorMain(ctx, request.(SetProblemValidatorMainRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SetProblemValidatorMain")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SetProblemValidatorMainResponseObject); ok {
-		if err := validResponse.VisitSetProblemValidatorMainResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

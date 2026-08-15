@@ -60,11 +60,11 @@ export const WorkshopMediaTab = ({
     return res;
   });
 
-  const files = (filesData?.files || []).filter(
-    (file) => !file.is_directory && file.path !== "tests.json"
-  );
-
   const getFileName = (path: string) => path.split("/").pop() ?? path;
+
+  const files = (filesData?.files || []).filter(
+    (file) => !file.is_directory && file.path && file.path !== "tests.json" && !getFileName(file.path).startsWith(".")
+  );
 
   const currentFileName = selectedFile ? getFileName(selectedFile) : null;
   const currentFileEntry = files.find((f) => f.path === selectedFile);

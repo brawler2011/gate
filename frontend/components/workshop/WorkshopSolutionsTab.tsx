@@ -3,6 +3,7 @@
 import {api} from "@/lib/api";
 import {
   createWorkshopSolutionFile,
+  deleteWorkshopSolutionFile,
   getWorkshopSolutionFile,
   updateWorkshopSolutionFile,
 } from "@/lib/workshop";
@@ -21,6 +22,7 @@ export const WorkshopSolutionsTab = (props: WorkshopFileTabProps): ReactNode => 
       getFile={getWorkshopSolutionFile}
       createFile={createWorkshopSolutionFile}
       updateFile={updateWorkshopSolutionFile}
+      deleteFile={deleteWorkshopSolutionFile}
     />
   );
 };

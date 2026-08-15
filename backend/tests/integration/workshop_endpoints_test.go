@@ -98,7 +98,7 @@ func (s *IntegrationTestSuite) TestWorkshopCheckerEndpointsCRUD() {
 	s.Require().NotNil(listResp.JSON200.Files)
 	s.Len(*listResp.JSON200.Files, 1)
 	s.Require().NotNil((*listResp.JSON200.Files)[0].Path)
-	s.Equal("checkers/checker.cpp", *(*listResp.JSON200.Files)[0].Path)
+	s.Equal("checker.cpp", *(*listResp.JSON200.Files)[0].Path)
 
 	getResp, err := s.client.GetProblemCheckerWithResponse(s.ctx, problemID, "checker.cpp", func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("X-Test-User-ID", admin.Id.String())
@@ -122,15 +122,6 @@ func (s *IntegrationTestSuite) TestWorkshopCheckerEndpointsCRUD() {
 	)
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, updateCheckerResp.StatusCode())
-
-	setMainResp, err := s.client.SetProblemCheckerMainWithResponse(s.ctx, problemID, corev1.SetProblemCheckerMainJSONRequestBody{
-		Name: "checker.cpp",
-	}, func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-Test-User-ID", admin.Id.String())
-		return nil
-	})
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, setMainResp.StatusCode())
 
 	deleteResp, err := s.client.DeleteProblemCheckerWithResponse(s.ctx, problemID, "checker.cpp", func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("X-Test-User-ID", admin.Id.String())

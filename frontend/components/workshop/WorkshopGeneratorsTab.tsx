@@ -7,20 +7,23 @@ import {
   updateWorkshopGeneratorFile,
 } from "@/lib/workshop";
 
-import {WorkshopCollectionTab} from "./WorkshopCollectionTab";
+import {WorkshopSingleComponentTab} from "./WorkshopSingleComponentTab";
 
 import type {WorkshopFileTabProps} from "./WorkshopFileTabProps";
 import type {ReactNode} from "react";
 
 export const WorkshopGeneratorsTab = (props: WorkshopFileTabProps): ReactNode => {
   return (
-    <WorkshopCollectionTab
+    <WorkshopSingleComponentTab
       {...props}
-      folderName="generators"
+      componentType="generator"
+      componentTitle="Генератор"
+      defaultFileName="generator"
       listFiles={(problemId) => api.listProblemGenerators({problemId})}
       getFile={getWorkshopGeneratorFile}
       createFile={createWorkshopGeneratorFile}
       updateFile={updateWorkshopGeneratorFile}
+      deleteFile={(problemId, name) => api.deleteProblemGenerator({problemId, name})}
     />
   );
 };

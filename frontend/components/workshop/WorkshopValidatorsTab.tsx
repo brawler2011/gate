@@ -5,24 +5,25 @@ import {
   createWorkshopValidatorFile,
   getWorkshopValidatorFile,
   updateWorkshopValidatorFile,
-  setWorkshopValidatorMain,
 } from "@/lib/workshop";
 
-import {WorkshopCollectionTab} from "./WorkshopCollectionTab";
+import {WorkshopSingleComponentTab} from "./WorkshopSingleComponentTab";
 
 import type {WorkshopFileTabProps} from "./WorkshopFileTabProps";
 import type {ReactNode} from "react";
 
 export const WorkshopValidatorsTab = (props: WorkshopFileTabProps): ReactNode => {
   return (
-    <WorkshopCollectionTab
+    <WorkshopSingleComponentTab
       {...props}
-      folderName="validators"
+      componentType="validator"
+      componentTitle="Валидатор"
+      defaultFileName="validator"
       listFiles={(problemId) => api.listProblemValidators({problemId})}
       getFile={getWorkshopValidatorFile}
       createFile={createWorkshopValidatorFile}
       updateFile={updateWorkshopValidatorFile}
-      setMain={setWorkshopValidatorMain}
+      deleteFile={(problemId, name) => api.deleteProblemValidator({problemId, name})}
     />
   );
 };

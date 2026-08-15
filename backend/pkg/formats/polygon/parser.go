@@ -244,9 +244,13 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 
 	// Checker
 	if prob.Assets != nil && prob.Assets.Checker != nil && prob.Assets.Checker.Source.Path != "" {
+		ext := filepath.Ext(prob.Assets.Checker.Source.Path)
+		if ext == "" {
+			ext = ".cpp"
+		}
 		mappings = append(mappings, gfmt.FileMapping{
 			SourcePath: prob.Assets.Checker.Source.Path,
-			TargetPath: "checkers/checker.cpp",
+			TargetPath: "checker" + ext,
 		})
 	}
 
@@ -254,13 +258,17 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 	if prob.Assets != nil {
 		for i, val := range prob.Assets.Validators {
 			if val.Source.Path != "" {
-				targetName := "validator.cpp"
+				ext := filepath.Ext(val.Source.Path)
+				if ext == "" {
+					ext = ".cpp"
+				}
+				targetPath := "validator" + ext
 				if i > 0 {
-					targetName = fmt.Sprintf("validator_%d.cpp", i+1)
+					targetPath = filepath.Join("lib", fmt.Sprintf("validator_%d%s", i+1, ext))
 				}
 				mappings = append(mappings, gfmt.FileMapping{
 					SourcePath: val.Source.Path,
-					TargetPath: filepath.Join("validators", targetName),
+					TargetPath: targetPath,
 				})
 			}
 		}

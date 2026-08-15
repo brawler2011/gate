@@ -262,7 +262,7 @@ func TestImport(t *testing.T) {
 		t.Errorf("problem.yaml not found in dst: %v", err)
 	}
 
-	checkerPath := filepath.Join(tempDst, "checkers", "checker.cpp")
+	checkerPath := filepath.Join(tempDst, "checker.cpp")
 	if _, err := os.Stat(checkerPath); err != nil {
 		t.Errorf("checker.cpp not found in checkers/: %v", err)
 	}

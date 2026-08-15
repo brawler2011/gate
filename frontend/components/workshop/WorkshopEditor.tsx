@@ -10,6 +10,7 @@ import {WorkshopGeneralTab} from "./WorkshopGeneralTab";
 import {WorkshopGeneratorsTab} from "./WorkshopGeneratorsTab";
 import {WorkshopImportTab} from "./WorkshopImportTab";
 import {WorkshopInteractorsTab} from "./WorkshopInteractorsTab";
+import {WorkshopLibTab} from "./WorkshopLibTab";
 import {WorkshopMediaTab} from "./WorkshopMediaTab";
 import {WorkshopPackagesTab} from "./WorkshopPackagesTab";
 import {WorkshopSolutionsTab} from "./WorkshopSolutionsTab";
@@ -69,6 +70,8 @@ export const WorkshopEditor = ({problemId, activeTab}: Props): ReactNode => {
         return <WorkshopGeneratorsTab {...folderTabProps} />;
       case "interactors":
         return <WorkshopInteractorsTab {...folderTabProps} />;
+      case "lib":
+        return <WorkshopLibTab {...folderTabProps} />;
       case "media":
         return <WorkshopMediaTab {...folderTabProps} />;
       case "solutions":
