@@ -74,52 +74,79 @@ func (c *Contest) HasRolePermission(role ContestRole, action ContestAction) bool
 }
 
 func (c *Contest) PermissionMaskForRole(role ContestRole) (ContestPermissionMask, bool) {
-	if len(c.AccessPolicy) == 0 {
-		return 0, false
-	}
-
-	rawRolePolicy, ok := c.AccessPolicy[string(role)]
-	if !ok {
-		return 0, false
-	}
-
-	rolePolicy, ok := rawRolePolicy.(map[string]interface{})
-	if !ok {
-		return 0, false
-	}
-
 	var mask ContestPermissionMask
 	hasConfiguredPermission := false
 
-	for action, policyKey := range contestActionPolicyKeys {
-		rawValue, ok := rolePolicy[policyKey]
+	if len(c.AccessPolicy) > 0 {
+		rawRolePolicy, ok := c.AccessPolicy[string(role)]
 		if !ok {
-			continue
+			return 0, false
 		}
 
-		allowed, ok := rawValue.(bool)
+		rolePolicy, ok := rawRolePolicy.(map[string]interface{})
 		if !ok {
-			continue
+			return 0, false
 		}
 
+		for action, policyKey := range contestActionPolicyKeys {
+			rawValue, ok := rolePolicy[policyKey]
+			if !ok {
+				continue
+			}
+
+			allowed, ok := rawValue.(bool)
+			if !ok {
+				continue
+			}
+
+			hasConfiguredPermission = true
+			if !allowed {
+				continue
+			}
+
+			bit, ok := ContestPermissionBitForAction(action)
+			if !ok {
+				continue
+			}
+
+			mask |= bit
+		}
+
+		if !hasConfiguredPermission {
+			return 0, false
+		}
+	} else {
+		defaultMask, ok := ContestRoleDefaultPermissionMask(role)
+		if !ok {
+			return 0, false
+		}
+		mask = defaultMask
 		hasConfiguredPermission = true
-		if !allowed {
-			continue
-		}
-
-		bit, ok := ContestPermissionBitForAction(action)
-		if !ok {
-			continue
-		}
-
-		mask |= bit
 	}
 
-	if !hasConfiguredPermission {
-		return 0, false
+	if len(c.Settings) > 0 {
+		if rawMonitorScope, ok := c.Settings["monitor_scope"]; ok {
+			if monitorScopeStr, ok := rawMonitorScope.(string); ok && monitorScopeStr != "" {
+				if RoleGraterOrEquals(role, ContestRole(monitorScopeStr)) {
+					mask |= ContestPermissionGetMonitor
+				} else {
+					mask &^= ContestPermissionGetMonitor
+				}
+			}
+		}
+
+		if rawSubmissionsListScope, ok := c.Settings["submissions_list_scope"]; ok {
+			if submissionsScopeStr, ok := rawSubmissionsListScope.(string); ok && submissionsScopeStr != "" {
+				if RoleGraterOrEquals(role, ContestRole(submissionsScopeStr)) {
+					mask |= ContestPermissionListUsersSubmissions
+				} else {
+					mask &^= ContestPermissionListUsersSubmissions
+				}
+			}
+		}
 	}
 
-	return mask, true
+	return mask, hasConfiguredPermission
 }
 
 func DefaultContestAccessPolicy() map[string]interface{} {

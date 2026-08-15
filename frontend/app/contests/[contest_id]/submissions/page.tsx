@@ -78,6 +78,22 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
     parsedParams.language = Number(queryParams.language);
   }
 
+  const contestData = await unwrapAndCache(api.getContest)({contestId: contest_id});
+
+  const [, me] = await api.getMe();
+  const user = me?.user ?? null;
+  const contestRole = user ? await getMyContestRole(contest_id) : null;
+
+  if (contestData?.contest) {
+    const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
+    const isManager = checker.canManageContest(contestData.contest);
+    const hasStarted = !contestData.contest.start_time || new Date(contestData.contest.start_time) <= new Date();
+
+    if (!checker.canViewAllSubmissions(contestData.contest) || (!isManager && !hasStarted)) {
+      redirect(`/contests/${contest_id}`);
+    }
+  }
+
   const [error, submissionsData] = await api.listContestSubmissions(parsedParams);
 
   if (error) {
@@ -111,22 +127,6 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
   };
 
   const wsBaseUrl = env.getWebSocketUrl();
-
-  const contestData = await unwrapAndCache(api.getContest)({contestId: contest_id});
-
-  const [, me] = await api.getMe();
-  const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(contest_id) : null;
-
-  if (contestData?.contest) {
-    const checker = new PermissionChecker(user, contestRole?.role ?? null);
-    const isManager = checker.canManageContest(contestData.contest);
-    const hasStarted = !contestData.contest.start_time || new Date(contestData.contest.start_time) <= new Date();
-
-    if (!isManager && !hasStarted) {
-      redirect(`/contests/${contest_id}`);
-    }
-  }
 
   const contestHeaderNav = contestData?.contest
     ? buildContestHeaderNav({

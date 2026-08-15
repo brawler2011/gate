@@ -63,9 +63,15 @@ func (uc *PermissionsUseCase) HasContestPermission(
 	userID uuid.UUID,
 	action models.ContestAction,
 ) (bool, error) {
-	user, err := uc.usersUC.GetUserById(ctx, userID)
-	if err != nil {
-		return false, fmt.Errorf("get user: %w", err)
+	var user models.User
+	var err error
+	if userID != uuid.Nil {
+		user, err = uc.usersUC.GetUserById(ctx, userID)
+		if err != nil {
+			return false, fmt.Errorf("get user: %w", err)
+		}
+	} else {
+		user = models.Guest
 	}
 
 	contest, err := uc.contestsRepo.GetContest(ctx, contestID)
@@ -73,7 +79,7 @@ func (uc *PermissionsUseCase) HasContestPermission(
 		return false, fmt.Errorf("get contest: %w", err)
 	}
 
-	contestRole, contestPermissions, err := uc.resolveContestRoleAndMask(ctx, contestID, contest.OrganizationID, userID)
+	contestRole, contestPermissions, err := uc.resolveContestRoleAndMask(ctx, &contest, userID)
 	if err != nil {
 		return false, err
 	}
@@ -254,9 +260,15 @@ func (uc *PermissionsUseCase) HasProblemPermission(
 	userID uuid.UUID,
 	action models.ProblemAction,
 ) (bool, error) {
-	user, err := uc.usersUC.GetUserById(ctx, userID)
-	if err != nil {
-		return false, fmt.Errorf("get user: %w", err)
+	var user models.User
+	var err error
+	if userID != uuid.Nil {
+		user, err = uc.usersUC.GetUserById(ctx, userID)
+		if err != nil {
+			return false, fmt.Errorf("get user: %w", err)
+		}
+	} else {
+		user = models.Guest
 	}
 
 	problem, err := uc.problemsRepo.GetProblemById(ctx, problemID)
@@ -283,7 +295,7 @@ func (uc *PermissionsUseCase) HasProblemPermission(
 		return uc.canViewProblem(pc), nil
 	case models.ActionEditProblem:
 		return uc.canEditProblem(pc), nil
-	case models.ActionAdminProblem:
+	case models.ActionAdminProblem, models.ActionDeleteProblem:
 		return uc.canAdminProblem(pc), nil
 	default:
 		return false, fmt.Errorf("unknown problem action: %s", action)
@@ -315,7 +327,7 @@ func (uc *PermissionsUseCase) GetEffectiveContestRole(
 		return nil, 0, fmt.Errorf("get contest: %w", err)
 	}
 
-	return uc.resolveContestRoleAndMask(ctx, contestID, contest.OrganizationID, userID)
+	return uc.resolveContestRoleAndMask(ctx, &contest, userID)
 }
 
 func (uc *PermissionsUseCase) GetContestPermissions(
@@ -333,7 +345,7 @@ func (uc *PermissionsUseCase) GetContestPermissions(
 		return nil, fmt.Errorf("get contest: %w", err)
 	}
 
-	contestRole, contestPermissions, err := uc.resolveContestRoleAndMask(ctx, contestID, contest.OrganizationID, userID)
+	contestRole, contestPermissions, err := uc.resolveContestRoleAndMask(ctx, &contest, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -379,9 +391,15 @@ func (uc *PermissionsUseCase) GetProblemPermissions(
 	problemID uuid.UUID,
 	userID uuid.UUID,
 ) (*models.ProblemPermissions, error) {
-	user, err := uc.usersUC.GetUserById(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("get user: %w", err)
+	var user models.User
+	var err error
+	if userID != uuid.Nil {
+		user, err = uc.usersUC.GetUserById(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("get user: %w", err)
+		}
+	} else {
+		user = models.Guest
 	}
 
 	problem, err := uc.problemsRepo.GetProblemById(ctx, problemID)
@@ -430,11 +448,14 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 
 	member, err := uc.orgsRepo.GetMember(ctx, orgID, userID)
 	if err != nil {
-		// User is not a member of the organization
-		if action == models.ActionViewOrganization {
-			return true, nil
+		if errors.Is(err, pkg.ErrNotFound) {
+			// User is not a member of the organization
+			if action == models.ActionViewOrganization {
+				return true, nil
+			}
+			return false, nil
 		}
-		return false, nil
+		return false, fmt.Errorf("get organization member: %w", err)
 	}
 
 	switch action {
@@ -451,44 +472,76 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 
 func (uc *PermissionsUseCase) resolveContestRoleAndMask(
 	ctx context.Context,
-	contestID uuid.UUID,
-	organizationID uuid.UUID,
+	contest *models.Contest,
 	userID uuid.UUID,
 ) (*models.ContestRole, models.ContestPermissionMask, error) {
 	var bestRole *models.ContestRole
 	var bestMask models.ContestPermissionMask
 
-	directMember, err := uc.contestsRepo.GetContestMember(ctx, &models.ContestPermissionGet{
-		ContestId: contestID,
-		UserId:    userID,
-	})
-	if err == nil {
-		bestRole, bestMask = pickHigherContestRoleWithMask(bestRole, bestMask, directMember.ContestRole, directMember.PermissionsMask)
-	} else if !errors.Is(err, pkg.ErrNotFound) {
-		return nil, 0, fmt.Errorf("get contest member: %w", err)
-	}
-
-	contestTeams, err := uc.contestsRepo.GetContestTeams(ctx, contestID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("get contest teams: %w", err)
-	}
-	if len(contestTeams) == 0 {
+	if userID == uuid.Nil {
+		if contest.Visibility == models.ContestVisibilityPublic {
+			partRole := models.ContestRoleParticipant
+			bestRole = &partRole
+			if mask, ok := contest.PermissionMaskForRole(models.ContestRoleParticipant); ok {
+				bestMask = mask
+			} else if fallbackMask, ok := models.ContestRoleDefaultPermissionMask(models.ContestRoleParticipant); ok {
+				bestMask = fallbackMask
+			}
+		}
 		return bestRole, bestMask, nil
 	}
 
-	userTeams, err := uc.teamsRepo.GetUserTeamsByOrganization(ctx, userID, organizationID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("get user teams: %w", err)
+	if contest.OwnerID != nil && *contest.OwnerID == userID {
+		ownerRole := models.ContestRoleOwner
+		bestRole = &ownerRole
+		if mask, ok := contest.PermissionMaskForRole(models.ContestRoleOwner); ok {
+			bestMask = mask
+		} else if fallbackMask, ok := models.ContestRoleDefaultPermissionMask(models.ContestRoleOwner); ok {
+			bestMask = fallbackMask
+		}
 	}
 
-	userTeamIDs := make(map[uuid.UUID]struct{}, len(userTeams))
-	for _, team := range userTeams {
-		userTeamIDs[team.ID] = struct{}{}
+	if uc.contestsRepo != nil {
+		directMember, err := uc.contestsRepo.GetContestMember(ctx, &models.ContestPermissionGet{
+			ContestId: contest.ID,
+			UserId:    userID,
+		})
+		if err == nil {
+			bestRole, bestMask = pickHigherContestRoleWithMask(contest, bestRole, bestMask, directMember.ContestRole, directMember.PermissionsMask)
+		} else if !errors.Is(err, pkg.ErrNotFound) {
+			return nil, 0, fmt.Errorf("get contest member: %w", err)
+		}
+
+		contestTeams, err := uc.contestsRepo.GetContestTeams(ctx, contest.ID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("get contest teams: %w", err)
+		}
+		if len(contestTeams) > 0 && uc.teamsRepo != nil {
+			userTeams, err := uc.teamsRepo.GetUserTeamsByOrganization(ctx, userID, contest.OrganizationID)
+			if err != nil {
+				return nil, 0, fmt.Errorf("get user teams: %w", err)
+			}
+
+			userTeamIDs := make(map[uuid.UUID]struct{}, len(userTeams))
+			for _, team := range userTeams {
+				userTeamIDs[team.ID] = struct{}{}
+			}
+
+			for _, contestTeam := range contestTeams {
+				if _, ok := userTeamIDs[contestTeam.TeamID]; ok {
+					bestRole, bestMask = pickHigherContestRoleWithMask(contest, bestRole, bestMask, contestTeam.Role, contestTeam.PermissionsMask)
+				}
+			}
+		}
 	}
 
-	for _, contestTeam := range contestTeams {
-		if _, ok := userTeamIDs[contestTeam.TeamID]; ok {
-			bestRole, bestMask = pickHigherContestRoleWithMask(bestRole, bestMask, contestTeam.Role, contestTeam.PermissionsMask)
+	if bestRole == nil && contest.Visibility == models.ContestVisibilityPublic {
+		partRole := models.ContestRoleParticipant
+		bestRole = &partRole
+		if mask, ok := contest.PermissionMaskForRole(models.ContestRoleParticipant); ok {
+			bestMask = mask
+		} else if fallbackMask, ok := models.ContestRoleDefaultPermissionMask(models.ContestRoleParticipant); ok {
+			bestMask = fallbackMask
 		}
 	}
 
@@ -501,6 +554,10 @@ func (uc *PermissionsUseCase) resolveProblemPermission(
 	organizationID uuid.UUID,
 	userID uuid.UUID,
 ) (*models.ProblemPermission, error) {
+	if userID == uuid.Nil {
+		return nil, nil
+	}
+
 	var bestPermission *models.ProblemPermission
 
 	directMember, err := uc.problemsRepo.GetProblemMember(ctx, problemID, userID)
@@ -539,9 +596,19 @@ func (uc *PermissionsUseCase) resolveProblemPermission(
 	return bestPermission, nil
 }
 
-func resolvePersistedContestMask(mask *models.ContestPermissionMask, role models.ContestRole) models.ContestPermissionMask {
+func resolvePersistedContestMask(
+	contest *models.Contest,
+	mask *models.ContestPermissionMask,
+	role models.ContestRole,
+) models.ContestPermissionMask {
 	if mask != nil {
 		return *mask
+	}
+
+	if contest != nil {
+		if policyMask, ok := contest.PermissionMaskForRole(role); ok {
+			return policyMask
+		}
 	}
 
 	fallbackMask, ok := models.ContestRoleDefaultPermissionMask(role)
@@ -553,21 +620,29 @@ func resolvePersistedContestMask(mask *models.ContestPermissionMask, role models
 }
 
 func pickHigherContestRoleWithMask(
+	contest *models.Contest,
 	currentRole *models.ContestRole,
 	currentMask models.ContestPermissionMask,
 	candidateRole models.ContestRole,
 	candidateMask *models.ContestPermissionMask,
 ) (*models.ContestRole, models.ContestPermissionMask) {
-	if !models.RoleGraterOrEquals(candidateRole, candidateRole) {
+	if !models.IsValidContestRole(candidateRole) {
 		return currentRole, currentMask
 	}
 
-	if currentRole == nil || models.RoleGraterOrEquals(candidateRole, *currentRole) {
+	candResolvedMask := resolvePersistedContestMask(contest, candidateMask, candidateRole)
+
+	if currentRole == nil {
 		role := candidateRole
-		return &role, resolvePersistedContestMask(candidateMask, candidateRole)
+		return &role, candResolvedMask
 	}
 
-	return currentRole, currentMask
+	if models.RoleGraterOrEquals(candidateRole, *currentRole) {
+		role := candidateRole
+		return &role, currentMask | candResolvedMask
+	}
+
+	return currentRole, currentMask | candResolvedMask
 }
 
 func mapProblemRoleToPermission(role models.ProblemRole) (models.ProblemPermission, bool) {

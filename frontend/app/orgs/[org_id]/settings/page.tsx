@@ -52,7 +52,10 @@ const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode
   }
   const org = data!.organization;
 
-  const showMembersTab = await canManageOrgMembers(org_id);
+  const canManage = await canManageOrgMembers(org_id);
+  if (!canManage) {
+    notFound();
+  }
 
   const validSections = Object.values(SECTIONS);
   const activeSection = (
@@ -61,7 +64,7 @@ const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode
   const orgHeaderNav = buildOrgHeaderNav({
     orgId: org_id,
     activeTab: "settings",
-    showMembersTab,
+    showMembersTab: canManage,
   });
 
   return (

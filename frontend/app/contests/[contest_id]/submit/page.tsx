@@ -38,11 +38,11 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
   const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(contest_id) : null;
 
-  const checker = new PermissionChecker(user, contestRole?.role ?? null);
+  const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
   const isManager = checker.canManageContest(response.contest);
   const hasStarted = !response.contest.start_time || new Date(response.contest.start_time) <= new Date();
 
-  if (!isManager && !hasStarted) {
+  if (!checker.canSubmitSolution(response.contest) || (!isManager && !hasStarted)) {
     redirect(`/contests/${contest_id}`);
   }
 

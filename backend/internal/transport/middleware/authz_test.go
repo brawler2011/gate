@@ -12,7 +12,8 @@ func TestStrictAuthzPoliciesCoverStrictOperations(t *testing.T) {
 
 	for i := 0; i < strictInterfaceType.NumMethod(); i++ {
 		operationID := strictInterfaceType.Method(i).Name
-		if _, ok := strictAuthzPolicies[operationID]; !ok {
+		evaluators, ok := endpointPolicies[operationID]
+		if !ok || len(evaluators) == 0 {
 			t.Errorf("missing authz policy for operation %q", operationID)
 		}
 	}
@@ -21,7 +22,7 @@ func TestStrictAuthzPoliciesCoverStrictOperations(t *testing.T) {
 func TestStrictAuthzPoliciesContainOnlyStrictOperations(t *testing.T) {
 	strictInterfaceType := reflect.TypeOf((*corev1.StrictServerInterface)(nil)).Elem()
 
-	for operationID := range strictAuthzPolicies {
+	for operationID := range endpointPolicies {
 		if _, ok := strictInterfaceType.MethodByName(operationID); !ok {
 			t.Errorf("unknown operation in authz policy map %q", operationID)
 		}

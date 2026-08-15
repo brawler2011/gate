@@ -7,6 +7,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -48,6 +49,16 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 	_, err = uc.problemsUC.GetProblemById(ctx, creation.ProblemId)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	if creation.ContestId != uuid.Nil {
+		_, err = uc.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
+			ContestId: creation.ContestId,
+			ProblemId: creation.ProblemId,
+		})
+		if err != nil {
+			return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "problem does not belong to contest")
+		}
 	}
 
 	var id uuid.UUID

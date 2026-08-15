@@ -178,13 +178,19 @@ func (uc *OrganizationsUseCase) AddMember(ctx context.Context, input *models.Add
 }
 
 func (uc *OrganizationsUseCase) ListMembers(ctx context.Context, orgID, requestUserID uuid.UUID) ([]models.OrganizationMember, error) {
-	// Check permissions
-	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, orgID, requestUserID, models.ActionViewOrganization)
+	user, err := uc.usersRepo.GetUserById(ctx, requestUserID)
 	if err != nil {
-		return nil, fmt.Errorf("check permissions: %w", err)
+		return nil, fmt.Errorf("get user: %w", err)
 	}
-	if !hasAccess {
-		return nil, errors.New("access denied")
+
+	if user.Role != models.UserRoleAdmin {
+		_, err := uc.repo.GetMember(ctx, orgID, requestUserID)
+		if err != nil {
+			if errors.Is(err, pkg.ErrNotFound) {
+				return nil, errors.New("access denied: must be a member of organization")
+			}
+			return nil, fmt.Errorf("get member: %w", err)
+		}
 	}
 
 	return uc.repo.ListMembers(ctx, orgID)

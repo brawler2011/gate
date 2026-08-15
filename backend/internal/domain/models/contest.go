@@ -207,6 +207,11 @@ var roleHierarchy = map[ContestRole]int{
 	ContestRoleParticipant: 1,
 }
 
+func IsValidContestRole(role ContestRole) bool {
+	_, ok := roleHierarchy[role]
+	return ok
+}
+
 func RoleGraterOrEquals(r1 ContestRole, r2 ContestRole) bool {
 	h1, ok1 := roleHierarchy[r1]
 	h2, ok2 := roleHierarchy[r2]
@@ -217,6 +222,11 @@ func RoleGraterOrEquals(r1 ContestRole, r2 ContestRole) bool {
 
 	return h1 >= h2
 }
+
+func RoleGreaterOrEquals(r1 ContestRole, r2 ContestRole) bool {
+	return RoleGraterOrEquals(r1, r2)
+}
+
 
 type CreateContestMemberInput struct {
 	ContestId uuid.UUID

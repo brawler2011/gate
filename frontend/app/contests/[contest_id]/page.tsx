@@ -133,7 +133,7 @@ const Page = async ({params}: Props): Promise<ReactNode> => {
     activeTab: "tasks",
   });
 
-  const checker = new PermissionChecker(user, contestRole?.role ?? null);
+  const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
   const isManager = checker.canManageContest(response.contest);
 
   return (

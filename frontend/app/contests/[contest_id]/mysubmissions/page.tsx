@@ -119,11 +119,11 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
   const contestRole = user ? await getMyContestRole(contest_id) : null;
 
   if (contestData?.contest) {
-    const checker = new PermissionChecker(user, contestRole?.role ?? null);
+    const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
     const isManager = checker.canManageContest(contestData.contest);
     const hasStarted = !contestData.contest.start_time || new Date(contestData.contest.start_time) <= new Date();
 
-    if (!isManager && !hasStarted) {
+    if (!checker.canViewMySubmissions(contestData.contest) || (!isManager && !hasStarted)) {
       redirect(`/contests/${contest_id}`);
     }
   }

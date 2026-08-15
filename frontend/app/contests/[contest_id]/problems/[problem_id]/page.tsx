@@ -96,11 +96,11 @@ const Page = async (props: Props): Promise<ReactNode> => {
   // Get contest role for permissions
   const contestRole = user ? await getMyContestRole(params.contest_id) : null;
 
-  const checker = new PermissionChecker(user, contestRole?.role ?? null);
+  const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
   const isManager = checker.canManageContest(contestResponse.contest);
   const hasStarted = !contestResponse.contest.start_time || new Date(contestResponse.contest.start_time) <= new Date();
 
-  if (!isManager && !hasStarted) {
+  if (!checker.canViewProblems(contestResponse.contest) || (!isManager && !hasStarted)) {
     redirect(`/contests/${params.contest_id}`);
   }
 

@@ -13,108 +13,203 @@ import (
 	"github.com/google/uuid"
 )
 
-type strictAuthzPolicy struct {
-	public        bool
-	requireAuth   bool
-	requireAdmin  bool
-	contestAction *models.ContestAction
-	problemAction *models.ProblemAction
-	customCheck   strictAuthzCustomCheck
+type EvalContext struct {
+	User        models.User
+	Request     interface{}
+	OperationID string
+	Deps        strictAuthzDependencies
 }
 
-type strictAuthzCustomCheck func(
-	ctx context.Context,
-	request interface{},
-	user models.User,
-	deps strictAuthzDependencies,
-) error
+type AccessEvaluator func(ctx context.Context, evalCtx *EvalContext) error
 
 type strictAuthzDependencies struct {
 	permissionsUC interfaces.PermissionsUC
 	submissionsUC interfaces.SubmissionsUC
 }
 
-var strictAuthzPolicies = buildStrictAuthzPolicies()
+// Parameterless Evaluators (Bare Function Pointers)
+func Public(ctx context.Context, evalCtx *EvalContext) error {
+	return nil
+}
 
-func buildStrictAuthzPolicies() map[string]strictAuthzPolicy {
-	policies := map[string]strictAuthzPolicy{
-		"GetHealth":           {public: true},
-		"ListPublicContests":  {public: true},
-		"ListPosts":           {public: true},
-		"GetPostById":         {public: true},
-		"GetPostImage":        {public: true},
-		"GetPublishedPackage": {public: true},
-		"ListProblems":        {public: true},
-		"ListUsers":           {public: true},
-		"GetUser":             {public: true},
-		"GetUserAvatar":       {public: true},
-		"GetLanguages":       {public: true},
-		"Register":            {public: true},
-		"Login":               {public: true},
-		"Logout":              {public: true},
+func RequireAuth(ctx context.Context, evalCtx *EvalContext) error {
+	if evalCtx.User.IsGuest() {
+		return pkg.ErrUnauthenticated
+	}
+	return nil
+}
 
-		"GetMe":            {requireAuth: true},
-		"GetMyDashboard":   {requireAuth: true},
-		"CreateContest":    {requireAuth: true},
-		"GetMyContestRole": {requireAuth: true},
+func RequireAdmin(ctx context.Context, evalCtx *EvalContext) error {
+	if evalCtx.User.IsGuest() {
+		return pkg.ErrUnauthenticated
+	}
+	if !evalCtx.User.IsAdmin() {
+		return pkg.Wrap(pkg.NoPermission, nil, "admin access required")
+	}
+	return nil
+}
 
-		"ListOrganizations":        {requireAuth: true},
-		"CreateOrganization":       {requireAuth: true},
-		"GetOrganization":          {requireAuth: true},
-		"UpdateOrganization":       {requireAuth: true},
-		"DeleteOrganization":       {requireAuth: true},
-		"ListOrganizationMembers":  {requireAuth: true},
-		"AddOrganizationMember":    {requireAuth: true},
-		"RemoveOrganizationMember": {requireAuth: true},
+// Parameterized Evaluator Factories (Closure Factories)
+func RequireSelfOrAdmin(idFieldNames ...string) AccessEvaluator {
+	return func(ctx context.Context, evalCtx *EvalContext) error {
+		if evalCtx.User.IsGuest() {
+			return pkg.ErrUnauthenticated
+		}
+		targetUserID, err := extractUUIDFromRequest(evalCtx.Request, idFieldNames...)
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, "user id is required for authorization")
+		}
+		if targetUserID != evalCtx.User.Id && !evalCtx.User.IsAdmin() {
+			return pkg.Wrap(pkg.NoPermission, nil, "can only modify your own resource")
+		}
+		return nil
+	}
+}
 
-		"ListTeams":        {requireAuth: true},
-		"CreateTeam":       {requireAuth: true},
-		"GetTeam":          {requireAuth: true},
-		"UpdateTeam":       {requireAuth: true},
-		"DeleteTeam":       {requireAuth: true},
-		"ListTeamMembers":  {requireAuth: true},
-		"AddTeamMember":    {requireAuth: true},
-		"RemoveTeamMember": {requireAuth: true},
+func RequireOrgPermission(action models.OrgAction) AccessEvaluator {
+	return func(ctx context.Context, evalCtx *EvalContext) error {
+		if evalCtx.User.IsGuest() {
+			return pkg.ErrUnauthenticated
+		}
+		orgID, err := extractUUIDFromRequest(evalCtx.Request, "OrganizationId", "OrgId", "Id")
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, "organization id is required for authorization")
+		}
+		allowed, err := evalCtx.Deps.permissionsUC.HasOrganizationPermission(ctx, orgID, evalCtx.User.Id, action)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.Wrap(pkg.NoPermission, nil, "insufficient organization permissions")
+		}
+		return nil
+	}
+}
 
-		"CreateProblem":        {requireAuth: true},
-		"ListUserContests":     {requireAuth: true, customCheck: checkListUserContestsAccess},
-		"ListUserSubmissions":  {requireAuth: true, customCheck: checkListUserSubmissionsAccess},
-		"ListWorkshopContests": {requireAuth: true},
-		"GetSubmission":        {requireAuth: true, customCheck: checkGetSubmissionAccess},
-		"UploadAvatar":         {requireAuth: true, customCheck: checkAvatarSelfOrAdminAccess},
-		"DeleteAvatar":         {requireAuth: true, customCheck: checkAvatarSelfOrAdminAccess},
+func RequireContestPermission(action models.ContestAction) AccessEvaluator {
+	return func(ctx context.Context, evalCtx *EvalContext) error {
+		if evalCtx.User.IsGuest() && action != models.ActionGetContest && action != models.ActionGetContestProblem {
+			return pkg.ErrUnauthenticated
+		}
+		contestID, err := extractUUIDFromRequest(evalCtx.Request, "ContestId", "Id")
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, "contest id is required for authorization")
+		}
+		allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, action)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			if evalCtx.User.IsGuest() {
+				return pkg.ErrUnauthenticated
+			}
+			return pkg.Wrap(pkg.NoPermission, nil, "insufficient contest permissions")
+		}
+		return nil
+	}
+}
 
-		"ListAdminContests": {requireAdmin: true},
-		"CreatePost":        {requireAdmin: true},
-		"PatchPostById":     {requireAdmin: true},
-		"DeletePostById":    {requireAdmin: true},
-		"ListSubmissions":   {requireAdmin: true},
+func RequireProblemPermission(action models.ProblemAction) AccessEvaluator {
+	return func(ctx context.Context, evalCtx *EvalContext) error {
+		if evalCtx.User.IsGuest() {
+			return pkg.ErrUnauthenticated
+		}
+		problemID, err := extractUUIDFromRequest(evalCtx.Request, "ProblemId", "Id")
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, "problem id is required for authorization")
+		}
+		allowed, err := evalCtx.Deps.permissionsUC.HasProblemPermission(ctx, problemID, evalCtx.User.Id, action)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.Wrap(pkg.NoPermission, nil, "insufficient problem permissions")
+		}
+		return nil
+	}
+}
 
-		"GetContest":             {contestAction: contestActionPtr(models.ActionGetContest)},
-		"UpdateContest":          {contestAction: contestActionPtr(models.ActionUpdateContest)},
-		"DeleteContest":          {contestAction: contestActionPtr(models.ActionAdminContest)},
-		"CreateContestProblem":   {contestAction: contestActionPtr(models.ActionUpdateContest)},
-		"GetContestProblem":      {contestAction: contestActionPtr(models.ActionGetContestProblem)},
-		"DeleteContestProblem":   {contestAction: contestActionPtr(models.ActionUpdateContest)},
-		"CreateContestMember":    {contestAction: contestActionPtr(models.ActionUpdateContest)},
-		"UpdateContestMember":    {contestAction: contestActionPtr(models.ActionUpdateContest)},
-		"DeleteContestMember":    {contestAction: contestActionPtr(models.ActionUpdateContest)},
-		"ListContestMembers":     {requireAuth: true, customCheck: checkListContestMembersAccess},
-		"ListContestSubmissions": {requireAuth: true, customCheck: checkListContestSubmissionsAccess},
-		"CreateSubmission":       {contestAction: contestActionPtr(models.ActionCreateSubmission)},
+var endpointPolicies = buildEndpointPolicies()
 
-		"GetProblem":          {problemAction: problemActionPtr(models.ActionViewProblem)},
-		"UpdateProblem":       {problemAction: problemActionPtr(models.ActionEditProblem)},
-		"DeleteProblem":       {problemAction: problemActionPtr(models.ActionAdminProblem)},
-		"ImportProblem":       {problemAction: problemActionPtr(models.ActionEditProblem)},
-		"PublishProblem":      {problemAction: problemActionPtr(models.ActionEditProblem)},
-		"ListProblemPackages": {problemAction: problemActionPtr(models.ActionViewProblem)},
+func buildEndpointPolicies() map[string][]AccessEvaluator {
+	policies := map[string][]AccessEvaluator{
+		"GetHealth":           {Public},
+		"ListPublicContests":  {Public},
+		"ListPosts":           {Public},
+		"GetPostById":         {Public},
+		"GetPostImage":        {Public},
+		"GetPublishedPackage": {Public},
+		"ListProblems":        {Public},
+		"ListUsers":           {RequireAuth},
+		"GetUser":             {Public},
+		"GetUserAvatar":       {Public},
+		"GetLanguages":        {Public},
+		"Register":            {Public},
+		"Login":               {Public},
+		"Logout":              {Public},
+
+		"GetMe":            {RequireAuth},
+		"GetMyDashboard":   {RequireAuth},
+		"CreateContest":    {RequireAuth},
+		"GetMyContestRole": {RequireAuth},
+
+		"ListOrganizations":        {RequireAuth},
+		"CreateOrganization":       {RequireAuth},
+		"GetOrganization":          {RequireAuth, RequireOrgPermission(models.ActionViewOrganization)},
+		"UpdateOrganization":       {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
+		"DeleteOrganization":       {RequireAuth, RequireOrgPermission(models.ActionDeleteOrganization)},
+		"ListOrganizationMembers":  {RequireAuth, RequireOrgPermission(models.ActionViewOrganization)},
+		"AddOrganizationMember":    {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
+		"RemoveOrganizationMember": {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
+
+		"ListTeams":        {RequireAuth},
+		"CreateTeam":       {RequireAuth},
+		"GetTeam":          {RequireAuth},
+		"UpdateTeam":       {RequireAuth},
+		"DeleteTeam":       {RequireAuth},
+		"ListTeamMembers":  {RequireAuth},
+		"AddTeamMember":    {RequireAuth},
+		"RemoveTeamMember": {RequireAuth},
+
+		"CreateProblem":        {RequireAuth},
+		"ListUserContests":     {RequireAuth, checkListUserContestsAccess},
+		"ListUserSubmissions":  {RequireAuth, checkListUserSubmissionsAccess},
+		"ListWorkshopContests": {RequireAuth},
+		"GetSubmission":        {RequireAuth, checkGetSubmissionAccess},
+		"UploadAvatar":         {RequireAuth, RequireSelfOrAdmin("Id")},
+		"DeleteAvatar":         {RequireAuth, RequireSelfOrAdmin("Id")},
+
+		"ListAdminContests": {RequireAuth, RequireAdmin},
+		"CreatePost":        {RequireAuth, RequireAdmin},
+		"PatchPostById":     {RequireAuth, RequireAdmin},
+		"DeletePostById":    {RequireAuth, RequireAdmin},
+		"ListSubmissions":   {RequireAuth, RequireAdmin},
+
+		"GetContest":             {RequireContestPermission(models.ActionGetContest)},
+		"UpdateContest":          {RequireAuth, RequireContestPermission(models.ActionUpdateContest)},
+		"DeleteContest":          {RequireAuth, RequireContestPermission(models.ActionAdminContest)},
+		"CreateContestProblem":   {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"GetContestProblem":      {RequireContestPermission(models.ActionGetContestProblem)},
+		"DeleteContestProblem":   {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"CreateContestMember":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"UpdateContestMember":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"DeleteContestMember":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"ListContestMembers":     {RequireAuth, checkListContestMembersAccess},
+		"ListContestSubmissions": {RequireAuth, checkListContestSubmissionsAccess},
+		"CreateSubmission":       {RequireAuth, RequireContestPermission(models.ActionCreateSubmission)},
+
+		"GetProblem":          {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
+		"GetProblemLimits":    {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
+		"GetProblemStatement": {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
+		"UpdateProblem":       {RequireAuth, RequireProblemPermission(models.ActionEditProblem)},
+		"DeleteProblem":       {RequireAuth, RequireProblemPermission(models.ActionAdminProblem)},
+		"ImportProblem":       {RequireAuth, RequireProblemPermission(models.ActionEditProblem)},
+		"PublishProblem":      {RequireAuth, RequireProblemPermission(models.ActionEditProblem)},
+		"ListProblemPackages": {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
 	}
 
 	for _, operationID := range []string{
-		"GetProblemLimits",
 		"UpdateProblemLimits",
-		"GetProblemStatement",
 		"UpdateProblemStatement",
 		"ListProblemCheckers",
 		"CreateProblemChecker",
@@ -162,20 +257,10 @@ func buildStrictAuthzPolicies() map[string]strictAuthzPolicy {
 		"ValidateAllTests",
 		"TestSolution",
 	} {
-		policies[operationID] = strictAuthzPolicy{problemAction: problemActionPtr(models.ActionEditProblem)}
+		policies[operationID] = []AccessEvaluator{RequireAuth, RequireProblemPermission(models.ActionEditProblem)}
 	}
 
 	return policies
-}
-
-func contestActionPtr(action models.ContestAction) *models.ContestAction {
-	a := action
-	return &a
-}
-
-func problemActionPtr(action models.ProblemAction) *models.ProblemAction {
-	a := action
-	return &a
 }
 
 // AuthzStrictMiddleware validates operation access before strict handlers are called.
@@ -186,59 +271,26 @@ func AuthzStrictMiddleware(permissionsUC interfaces.PermissionsUC, submissionsUC
 	}
 
 	return func(next corev1.StrictHandlerFunc, operationID string) corev1.StrictHandlerFunc {
-		policy, ok := strictAuthzPolicies[operationID]
-		if !ok {
-			return next
+		evaluators, ok := endpointPolicies[operationID]
+		if !ok || len(evaluators) == 0 {
+			// Zero-Trust Default Deny
+			return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+				return nil, pkg.Wrap(pkg.NoPermission, nil, "endpoint not permitted by authorization policy")
+			}
 		}
 
 		return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-			if policy.public {
-				return next(ctx, w, r, request)
-			}
-
 			user := GetUser(ctx)
-			if requiresAuthentication(policy) && user.IsGuest() {
-				return nil, pkg.ErrUnauthenticated
+			evalCtx := &EvalContext{
+				User:        user,
+				Request:     request,
+				OperationID: operationID,
+				Deps:        deps,
 			}
 
-			if policy.requireAdmin && !user.IsAdmin() {
-				return nil, pkg.Wrap(pkg.NoPermission, nil, "admin access required")
-			}
-
-			if policy.customCheck != nil {
-				err := policy.customCheck(ctx, request, user, deps)
-				if err != nil {
+			for _, evaluator := range evaluators {
+				if err := evaluator(ctx, evalCtx); err != nil {
 					return nil, err
-				}
-			}
-
-			if policy.contestAction != nil {
-				contestID, err := extractUUIDFromRequest(request, "ContestId")
-				if err != nil {
-					return nil, pkg.Wrap(pkg.ErrBadInput, err, "contest id is required for authorization")
-				}
-
-				allowed, err := deps.permissionsUC.HasContestPermission(ctx, contestID, user.Id, *policy.contestAction)
-				if err != nil {
-					return nil, err
-				}
-				if !allowed {
-					return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient contest permissions")
-				}
-			}
-
-			if policy.problemAction != nil {
-				problemID, err := extractUUIDFromRequest(request, "ProblemId", "Id")
-				if err != nil {
-					return nil, pkg.Wrap(pkg.ErrBadInput, err, "problem id is required for authorization")
-				}
-
-				allowed, err := deps.permissionsUC.HasProblemPermission(ctx, problemID, user.Id, *policy.problemAction)
-				if err != nil {
-					return nil, err
-				}
-				if !allowed {
-					return nil, pkg.Wrap(pkg.NoPermission, nil, "insufficient problem permissions")
 				}
 			}
 
@@ -247,62 +299,34 @@ func AuthzStrictMiddleware(permissionsUC interfaces.PermissionsUC, submissionsUC
 	}
 }
 
-func checkAvatarSelfOrAdminAccess(
-	ctx context.Context,
-	request interface{},
-	user models.User,
-	deps strictAuthzDependencies,
-) error {
-	targetUserID, err := extractUUIDFromRequest(request, "Id")
+func checkListUserContestsAccess(ctx context.Context, evalCtx *EvalContext) error {
+	targetUserID, err := extractUUIDFromRequest(evalCtx.Request, "Id")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "user id is required for authorization")
 	}
 
-	if targetUserID != user.Id && !user.IsAdmin() {
-		return pkg.Wrap(pkg.NoPermission, nil, "can only modify your own avatar")
-	}
-
-	return nil
-}
-
-func checkListUserContestsAccess(
-	ctx context.Context,
-	request interface{},
-	user models.User,
-	deps strictAuthzDependencies,
-) error {
-	targetUserID, err := extractUUIDFromRequest(request, "Id")
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "user id is required for authorization")
-	}
-
-	if targetUserID != user.Id && !user.IsAdmin() {
+	if targetUserID != evalCtx.User.Id && !evalCtx.User.IsAdmin() {
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
 	}
 
 	return nil
 }
 
-func checkListUserSubmissionsAccess(
-	ctx context.Context,
-	request interface{},
-	user models.User,
-	deps strictAuthzDependencies,
-) error {
-	req, err := asListUserSubmissionsRequestObject(request)
+func checkListUserSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) error {
+	req, err := asListUserSubmissionsRequestObject(evalCtx.Request)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid submissions request")
 	}
 
-	if req.UserId != user.Id && !user.IsAdmin() {
+	if req.UserId != evalCtx.User.Id && !evalCtx.User.IsAdmin() {
 		return pkg.Wrap(pkg.NoPermission, nil, "only admins can view other users' submissions")
 	}
 
-	if req.UserId == user.Id && req.Params.ContestId != nil {
-		allowed, err := deps.permissionsUC.HasContestPermission(
+	if req.UserId == evalCtx.User.Id && req.Params.ContestId != nil {
+		allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(
 			ctx,
 			*req.Params.ContestId,
-			user.Id,
+			evalCtx.User.Id,
 			models.ActionListOwnSubmissions,
 		)
 		if err != nil {
@@ -316,18 +340,13 @@ func checkListUserSubmissionsAccess(
 	return nil
 }
 
-func checkListContestMembersAccess(
-	ctx context.Context,
-	request interface{},
-	user models.User,
-	deps strictAuthzDependencies,
-) error {
-	contestID, err := extractUUIDFromRequest(request, "ContestId")
+func checkListContestMembersAccess(ctx context.Context, evalCtx *EvalContext) error {
+	contestID, err := extractUUIDFromRequest(evalCtx.Request, "ContestId")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "contest id is required for authorization")
 	}
 
-	allowed, err := deps.permissionsUC.HasContestPermission(ctx, contestID, user.Id, models.ActionGetMonitor)
+	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, models.ActionGetMonitor)
 	if err != nil {
 		return err
 	}
@@ -335,7 +354,7 @@ func checkListContestMembersAccess(
 		return nil
 	}
 
-	allowed, err = deps.permissionsUC.HasContestPermission(ctx, contestID, user.Id, models.ActionListOwnSubmissions)
+	allowed, err = evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, models.ActionListOwnSubmissions)
 	if err != nil {
 		return err
 	}
@@ -346,13 +365,8 @@ func checkListContestMembersAccess(
 	return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
 }
 
-func checkListContestSubmissionsAccess(
-	ctx context.Context,
-	request interface{},
-	user models.User,
-	deps strictAuthzDependencies,
-) error {
-	req, err := asListContestSubmissionsRequestObject(request)
+func checkListContestSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) error {
+	req, err := asListContestSubmissionsRequestObject(evalCtx.Request)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid contest submissions request")
 	}
@@ -361,7 +375,7 @@ func checkListContestSubmissionsAccess(
 	errMessage := "insufficient permission to list all contest submissions"
 
 	if req.Params.UserId != nil {
-		if *req.Params.UserId == user.Id {
+		if *req.Params.UserId == evalCtx.User.Id {
 			action = models.ActionListOwnSubmissions
 			errMessage = "insufficient permission to view own submissions in this contest"
 		} else {
@@ -370,7 +384,7 @@ func checkListContestSubmissionsAccess(
 		}
 	}
 
-	allowed, err := deps.permissionsUC.HasContestPermission(ctx, req.ContestId, user.Id, action)
+	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, req.ContestId, evalCtx.User.Id, action)
 	if err != nil {
 		return err
 	}
@@ -381,31 +395,42 @@ func checkListContestSubmissionsAccess(
 	return nil
 }
 
-func checkGetSubmissionAccess(
-	ctx context.Context,
-	request interface{},
-	user models.User,
-	deps strictAuthzDependencies,
-) error {
-	if deps.submissionsUC == nil {
+func checkGetSubmissionAccess(ctx context.Context, evalCtx *EvalContext) error {
+	if evalCtx.Deps.submissionsUC == nil {
 		return pkg.Wrap(pkg.ErrInternal, nil, "submissions authorization dependency is not configured")
 	}
 
-	submissionID, err := extractUUIDFromRequest(request, "SubmissionId")
+	submissionID, err := extractUUIDFromRequest(evalCtx.Request, "SubmissionId")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "submission id is required for authorization")
 	}
 
-	submission, err := deps.submissionsUC.GetSubmission(ctx, submissionID)
+	submission, err := evalCtx.Deps.submissionsUC.GetSubmission(ctx, submissionID)
 	if err != nil {
 		return err
 	}
 
-	if submission.CreatedBy == nil || *submission.CreatedBy != user.Id {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
+	if evalCtx.User.IsAdmin() {
+		return nil
 	}
 
-	return nil
+	if submission.CreatedBy != nil && *submission.CreatedBy == evalCtx.User.Id {
+		return nil
+	}
+
+	if submission.ContestID != nil {
+		allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(
+			ctx,
+			*submission.ContestID,
+			evalCtx.User.Id,
+			models.ActionGetOtherUserSubmission,
+		)
+		if err == nil && allowed {
+			return nil
+		}
+	}
+
+	return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
 }
 
 func asListContestSubmissionsRequestObject(request interface{}) (corev1.ListContestSubmissionsRequestObject, error) {
@@ -428,10 +453,6 @@ func asListUserSubmissionsRequestObject(request interface{}) (corev1.ListUserSub
 	default:
 		return corev1.ListUserSubmissionsRequestObject{}, fmt.Errorf("unexpected request type %T", request)
 	}
-}
-
-func requiresAuthentication(policy strictAuthzPolicy) bool {
-	return policy.requireAuth || policy.requireAdmin || policy.contestAction != nil || policy.problemAction != nil || policy.customCheck != nil
 }
 
 var uuidType = reflect.TypeOf(uuid.UUID{})

@@ -12,5 +12,6 @@ type PermissionsUC interface {
 	GetProblemPermissions(ctx context.Context, problemID uuid.UUID, userID uuid.UUID) (*models.ProblemPermissions, error)
 	HasContestPermission(ctx context.Context, contestID uuid.UUID, userID uuid.UUID, action models.ContestAction) (bool, error)
 	HasProblemPermission(ctx context.Context, problemID uuid.UUID, userID uuid.UUID, action models.ProblemAction) (bool, error)
+	HasOrganizationPermission(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, action models.OrgAction) (bool, error)
 	GetEffectiveContestRole(ctx context.Context, contestID uuid.UUID, userID uuid.UUID) (*models.ContestRole, models.ContestPermissionMask, error)
 }

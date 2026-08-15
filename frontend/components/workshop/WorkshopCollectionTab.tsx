@@ -21,6 +21,7 @@ import {useEffect, useRef, useState, useTransition} from "react";
 import useSWR from "swr";
 
 import {api} from "@/lib/api";
+
 import classes from "./WorkshopFolderTab.module.css";
 
 import type {FileEntry} from "@/contracts/core/v1";
@@ -100,29 +101,29 @@ export const WorkshopCollectionTab = ({
 
   const baseLangOptions = languagesData?.length
     ? languagesData.map((lang) => {
-        const isCpp = lang.name.toLowerCase() === "cpp" || lang.extension === "cc" || lang.extension === "cpp";
-        const ext = isCpp ? "cpp" : lang.extension;
-        const labelName = isCpp ? "C++" : lang.name.toUpperCase();
-        return {
-          value: ext,
-          label: `${labelName} (.${ext})`,
-        };
-      })
+      const isCpp = lang.name.toLowerCase() === "cpp" || lang.extension === "cc" || lang.extension === "cpp";
+      const ext = isCpp ? "cpp" : lang.extension;
+      const labelName = isCpp ? "C++" : lang.name.toUpperCase();
+      return {
+        value: ext,
+        label: `${labelName} (.${ext})`,
+      };
+    })
     : [
-        {value: "cpp", label: "C++ (.cpp)"},
-        {value: "py", label: "Python (.py)"},
-        {value: "go", label: "Go (.go)"},
-        {value: "java", label: "Java (.java)"},
-      ];
+      {value: "cpp", label: "C++ (.cpp)"},
+      {value: "py", label: "Python (.py)"},
+      {value: "go", label: "Go (.go)"},
+      {value: "java", label: "Java (.java)"},
+    ];
 
   const extensionOptions =
     folderName === "lib"
       ? [
-          ...baseLangOptions,
-          {value: "h", label: "Header (.h)"},
-          {value: "hpp", label: "Header (.hpp)"},
-          {value: "inc", label: "Include (.inc)"},
-        ]
+        ...baseLangOptions,
+        {value: "h", label: "Header (.h)"},
+        {value: "hpp", label: "Header (.hpp)"},
+        {value: "inc", label: "Include (.inc)"},
+      ]
       : baseLangOptions;
 
   const uniqueExtensionOptions = extensionOptions.filter(

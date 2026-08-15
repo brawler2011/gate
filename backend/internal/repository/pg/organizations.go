@@ -2,12 +2,14 @@ package pg
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -58,6 +60,9 @@ func (r *OrganizationsRepo) CreateOrganization(ctx context.Context, input *model
 func (r *OrganizationsRepo) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
 	org, err := r.q.GetOrganizationByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+			return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
+		}
 		return nil, fmt.Errorf("failed to get organization by ID: %w", err)
 	}
 
@@ -180,6 +185,9 @@ func (r *OrganizationsRepo) GetMember(ctx context.Context, orgID, userID uuid.UU
 		UserID:         userID,
 	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+			return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization member not found")
+		}
 		return nil, fmt.Errorf("failed to get organization member: %w", err)
 	}
 

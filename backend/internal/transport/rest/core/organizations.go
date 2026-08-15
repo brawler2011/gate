@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"strings"
 
@@ -50,7 +51,7 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, request corev1.ListO
 	// Get organizations
 	organizationsList, err := h.organizationsUC.ListOrganizations(ctx, filter, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list organizations")
+		return nil, wrapOrgUCError(err, "failed to list organizations")
 	}
 
 	return corev1.ListOrganizations200JSONResponse(*listOrganizationsDTO(organizationsList)), nil
@@ -84,7 +85,7 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, request corev1.Crea
 	// Create organization
 	org, err := h.organizationsUC.CreateOrganization(ctx, input)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to create organization")
+		return nil, wrapOrgUCError(err, "failed to create organization")
 	}
 
 	return corev1.CreateOrganization200JSONResponse{
@@ -100,7 +101,7 @@ func (h *CoreServer) GetOrganization(ctx context.Context, request corev1.GetOrga
 	// Get organization
 	org, err := h.organizationsUC.GetOrganization(ctx, request.Id, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get organization")
+		return nil, wrapOrgUCError(err, "failed to get organization")
 	}
 
 	return corev1.GetOrganization200JSONResponse{
@@ -128,7 +129,7 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, request corev1.Upda
 	// Update organization
 	err := h.organizationsUC.UpdateOrganization(ctx, request.Id, user.Id, input)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to update organization")
+		return nil, wrapOrgUCError(err, "failed to update organization")
 	}
 
 	return corev1.UpdateOrganization200Response{}, nil
@@ -142,7 +143,7 @@ func (h *CoreServer) DeleteOrganization(ctx context.Context, request corev1.Dele
 	// Delete organization
 	err := h.organizationsUC.DeleteOrganization(ctx, request.Id, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to delete organization")
+		return nil, wrapOrgUCError(err, "failed to delete organization")
 	}
 
 	return corev1.DeleteOrganization200Response{}, nil
@@ -162,7 +163,7 @@ func (h *CoreServer) ListOrganizationMembers(ctx context.Context, request corev1
 	// Get members
 	members, err := h.organizationsUC.ListMembers(ctx, request.Id, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list organization members")
+		return nil, wrapOrgUCError(err, "failed to list organization members")
 	}
 
 	// Calculate total for pagination (using actual count)
@@ -191,7 +192,7 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, request corev1.A
 	// Add member
 	err := h.organizationsUC.AddMember(ctx, input, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to add organization member")
+		return nil, wrapOrgUCError(err, "failed to add organization member")
 	}
 
 	return corev1.AddOrganizationMember200Response{}, nil
@@ -205,8 +206,21 @@ func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, request corev
 	// Remove member
 	err := h.organizationsUC.RemoveMember(ctx, request.Id, request.Params.UserId, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to remove organization member")
+		return nil, wrapOrgUCError(err, "failed to remove organization member")
 	}
 
 	return corev1.RemoveOrganizationMember200Response{}, nil
+}
+
+func wrapOrgUCError(err error, fallbackMsg string) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
+		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
+	}
+	if errors.Is(err, pkg.ErrNotFound) {
+		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
+	}
+	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
 }

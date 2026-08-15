@@ -44,7 +44,12 @@ export const buildContestHeaderNav = ({
   contestRole,
   activeTab,
 }: BuildContestHeaderNavParams): HeaderSecondaryNavItem[] => {
-  const checker = new PermissionChecker(user, contestRole?.role ?? null);
+  const checker = new PermissionChecker(
+    user,
+    contestRole?.role ?? null,
+    null,
+    contestRole?.permissionsMask ?? null
+  );
 
   const items: HeaderSecondaryNavItem[] = [];
 

@@ -214,6 +214,9 @@ func (s *IntegrationTestSuite) createOrganization(login string, name string, own
 	})
 	s.Require().NoError(err)
 
+	err = s.organizationsRepo.AddMember(s.ctx, org.ID, ownerID, models.OrgRoleOwner)
+	s.Require().NoError(err)
+
 	return org
 }
 

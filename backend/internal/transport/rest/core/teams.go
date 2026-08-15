@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -31,13 +33,13 @@ func (h *CoreServer) ListTeams(ctx context.Context, request corev1.ListTeamsRequ
 	if request.Params.OrganizationId != nil {
 		teams, err = h.teamsUC.ListOrganizationTeams(ctx, *request.Params.OrganizationId, user.Id)
 		if err != nil {
-			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list organization teams")
+			return nil, wrapTeamUCError(err, "failed to list organization teams")
 		}
 	} else {
 		// Otherwise, list all teams the user is a member of
 		teams, err = h.teamsUC.GetUserTeams(ctx, user.Id)
 		if err != nil {
-			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list user teams")
+			return nil, wrapTeamUCError(err, "failed to list user teams")
 		}
 	}
 
@@ -99,7 +101,7 @@ func (h *CoreServer) CreateTeam(ctx context.Context, request corev1.CreateTeamRe
 	// Create team
 	team, err := h.teamsUC.CreateTeam(ctx, input, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to create team")
+		return nil, wrapTeamUCError(err, "failed to create team")
 	}
 
 	return corev1.CreateTeam200JSONResponse{
@@ -115,7 +117,7 @@ func (h *CoreServer) GetTeam(ctx context.Context, request corev1.GetTeamRequestO
 	// Get team
 	team, err := h.teamsUC.GetTeam(ctx, request.Id, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get team")
+		return nil, wrapTeamUCError(err, "failed to get team")
 	}
 
 	return corev1.GetTeam200JSONResponse{
@@ -143,7 +145,7 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, request corev1.UpdateTeamRe
 	// Update team
 	err := h.teamsUC.UpdateTeam(ctx, request.Id, user.Id, input)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to update team")
+		return nil, wrapTeamUCError(err, "failed to update team")
 	}
 
 	return corev1.UpdateTeam200Response{}, nil
@@ -157,7 +159,7 @@ func (h *CoreServer) DeleteTeam(ctx context.Context, request corev1.DeleteTeamRe
 	// Delete team
 	err := h.teamsUC.DeleteTeam(ctx, request.Id, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to delete team")
+		return nil, wrapTeamUCError(err, "failed to delete team")
 	}
 
 	return corev1.DeleteTeam200Response{}, nil
@@ -177,7 +179,7 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, request corev1.ListTea
 	// Get members
 	members, err := h.teamsUC.ListTeamMembers(ctx, request.Id, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list team members")
+		return nil, wrapTeamUCError(err, "failed to list team members")
 	}
 
 	// Calculate total for pagination (using actual count)
@@ -201,7 +203,7 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, request corev1.AddTeamMe
 	// Add member
 	err := h.teamsUC.AddTeamMember(ctx, input, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to add team member")
+		return nil, wrapTeamUCError(err, "failed to add team member")
 	}
 
 	return corev1.AddTeamMember200Response{}, nil
@@ -215,10 +217,23 @@ func (h *CoreServer) RemoveTeamMember(ctx context.Context, request corev1.Remove
 	// Remove member
 	err := h.teamsUC.RemoveTeamMember(ctx, request.Id, request.Params.UserId, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to remove team member")
+		return nil, wrapTeamUCError(err, "failed to remove team member")
 	}
 
 	return corev1.RemoveTeamMember200Response{}, nil
+}
+
+func wrapTeamUCError(err error, fallbackMsg string) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
+		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
+	}
+	if errors.Is(err, pkg.ErrNotFound) {
+		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
+	}
+	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
 }
 
 // containsIgnoreCase is a helper function to check if a string contains a substring (case-insensitive)

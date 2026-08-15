@@ -34,19 +34,33 @@ const hasRequiredRole = (userRole: ContestRole, requiredScope: ContestScope): bo
   return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredScope];
 };
 
+export const ContestPermissionMasks = {
+  GetContest: 1 << 0,
+  ManageContest: 1 << 1,
+  GetMonitor: 1 << 2,
+  ListUsersSubmissions: 1 << 3,
+  ListOwnSubmissions: 1 << 4,
+  GetOwnSubmission: 1 << 5,
+  GetOtherUserSubmission: 1 << 6,
+  CreateSubmission: 1 << 7,
+} as const;
+
 export class PermissionChecker {
   private user: UserModel | null;
   private contestRole: ContestRole | null;
   private orgRole: OrgRole | null;
+  private permissionsMask: number | null;
 
   constructor(
     user: UserModel | null = null,
     contestRole: ContestRole | null = null,
-    orgRole: OrgRole | null = null
+    orgRole: OrgRole | null = null,
+    permissionsMask: number | null = null
   ) {
     this.user = user;
     this.contestRole = contestRole;
     this.orgRole = orgRole;
+    this.permissionsMask = permissionsMask;
   }
 
   isAuthenticated(): boolean {
@@ -59,28 +73,41 @@ export class PermissionChecker {
 
   // Contest permissions
 
+  isContestOwner(contest: ContestModel): boolean {
+    if (!this.user?.id) {
+      return false;
+    }
+    if (contest.created_by && this.user.id === contest.created_by) {
+      return true;
+    }
+    if (contest.owner?.id && this.user.id === contest.owner.id) {
+      return true;
+    }
+    return false;
+  }
+
   canViewContest(contest: ContestModel): boolean {
-    // Global admin can view any contest
-    if (this.isGlobalAdmin()) {
+    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
       return true;
     }
 
-    // Public contests can be viewed by anyone (including unauthenticated users)
     if (contest.visibility === "public") {
       return true;
     }
 
-    // Private contests require authentication and membership
     if (!this.isAuthenticated()) {
       return false;
     }
 
-    // For authenticated users, backend will enforce actual visibility rules
+    if (this.permissionsMask !== null) {
+      return (this.permissionsMask & ContestPermissionMasks.GetContest) !== 0;
+    }
+
     return this.contestRole !== null;
   }
 
   canViewProblems(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin()) {
+    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
       return true;
     }
     if (this.canManageContest(contest)) {
@@ -94,13 +121,17 @@ export class PermissionChecker {
 
     if (contest.visibility === "public") {
       return true;
+    }
+
+    if (this.permissionsMask !== null) {
+      return (this.permissionsMask & ContestPermissionMasks.GetContest) !== 0;
     }
 
     return this.isAuthenticated() && this.contestRole !== null;
   }
 
   canSubmitSolution(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin()) {
+    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
       return true;
     }
     if (this.canManageContest(contest)) {
@@ -114,6 +145,10 @@ export class PermissionChecker {
 
     if (!this.isAuthenticated()) {
       return false;
+    }
+
+    if (this.permissionsMask !== null) {
+      return (this.permissionsMask & ContestPermissionMasks.CreateSubmission) !== 0;
     }
 
     if (contest.visibility === "public") {
@@ -124,7 +159,7 @@ export class PermissionChecker {
   }
 
   canViewMySubmissions(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin()) {
+    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
       return true;
     }
     if (this.canManageContest(contest)) {
@@ -140,6 +175,10 @@ export class PermissionChecker {
       return false;
     }
 
+    if (this.permissionsMask !== null) {
+      return (this.permissionsMask & ContestPermissionMasks.ListOwnSubmissions) !== 0;
+    }
+
     if (contest.visibility === "public") {
       return true;
     }
@@ -148,42 +187,48 @@ export class PermissionChecker {
   }
 
   canViewAllSubmissions(contest: ContestModel): boolean {
-    // Global admin всегда может
-    if (this.isGlobalAdmin()) {
+    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
       return true;
     }
 
-    // Проверяем роль в контесте
+    if (this.permissionsMask !== null) {
+      return (this.permissionsMask & ContestPermissionMasks.ListUsersSubmissions) !== 0;
+    }
+
     if (!this.contestRole) {
       return false;
     }
 
-    // Проверяем соответствие роли требуемому scope
-    return hasRequiredRole(this.contestRole, contest.submissions_list_scope as ContestScope);
+    const requiredScope = (contest.submissions_list_scope ?? "moderator") as ContestScope;
+    return hasRequiredRole(this.contestRole, requiredScope);
   }
 
   canViewMonitor(contest: ContestModel): boolean {
-    // Global admin всегда может
-    if (this.isGlobalAdmin()) {
+    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
       return true;
     }
 
-    // Проверяем роль в контесте
+    if (this.permissionsMask !== null) {
+      return (this.permissionsMask & ContestPermissionMasks.GetMonitor) !== 0;
+    }
+
     if (!this.contestRole) {
       return false;
     }
 
-    // Проверяем соответствие роли требуемому scope
-    return hasRequiredRole(this.contestRole, contest.monitor_scope as ContestScope);
+    const requiredScope = (contest.monitor_scope ?? "participant") as ContestScope;
+    return hasRequiredRole(this.contestRole, requiredScope);
   }
 
-  canManageContest(_contest: ContestModel): boolean {
-    // Global admin всегда может управлять
-    if (this.isGlobalAdmin()) {
+  canManageContest(contest: ContestModel): boolean {
+    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
       return true;
     }
 
-    // Проверяем роль в контесте - только owner или moderator
+    if (this.permissionsMask !== null) {
+      return (this.permissionsMask & ContestPermissionMasks.ManageContest) !== 0;
+    }
+
     if (!this.contestRole) {
       return false;
     }
@@ -191,18 +236,15 @@ export class PermissionChecker {
     return this.contestRole === "owner" || this.contestRole === "moderator";
   }
 
-  canDeleteContest(_contest: ContestModel): boolean {
-    // Global admin can delete
-    if (this.isGlobalAdmin()) {
+  canDeleteContest(contest: ContestModel): boolean {
+    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
       return true;
     }
 
-    // Only contest owner can delete
     return this.contestRole === "owner";
   }
 
   canManageContestParticipants(contest: ContestModel): boolean {
-    // Same as manage for now
     return this.canManageContest(contest);
   }
 
@@ -213,41 +255,35 @@ export class PermissionChecker {
       return false;
     }
 
-    // Global admin can view any problem
-    if (this.isGlobalAdmin()) {
+    if (this.isGlobalAdmin() || (problem.created_by && this.user?.id === problem.created_by)) {
       return true;
     }
 
-    // Public problems can be viewed by any authenticated user
-    if (!problem.is_private) {
-      return true;
-    }
-
-    // Private problems - only admin can view
-    return this.isGlobalAdmin();
+    return problem.visibility === "public" || (!problem.is_private && problem.visibility !== "private");
   }
 
-  canEditProblem(_problem: ProblemModel): boolean {
+  canEditProblem(problem: ProblemModel): boolean {
     if (!this.isAuthenticated()) {
       return false;
     }
 
-    // Global admin can edit any problem
-    if (this.isGlobalAdmin()) {
+    if (this.isGlobalAdmin() || (problem.created_by && this.user?.id === problem.created_by)) {
       return true;
     }
 
-    // For now, assume backend will check if user is owner/moderator
     return false;
   }
 
-  canDeleteProblem(_problem: ProblemModel): boolean {
+  canDeleteProblem(problem: ProblemModel): boolean {
     if (!this.isAuthenticated()) {
       return false;
     }
 
-    // Only admin can delete
-    return this.isGlobalAdmin();
+    if (this.isGlobalAdmin() || (problem.created_by && this.user?.id === problem.created_by)) {
+      return true;
+    }
+
+    return false;
   }
 
   // User permissions

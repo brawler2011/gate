@@ -114,14 +114,14 @@ export const WorkshopSingleComponentTab = ({
 
   const languageOptions = languagesData?.length
     ? languagesData.map((lang) => {
-        const isCpp = lang.name.toLowerCase() === "cpp" || lang.extension === "cc" || lang.extension === "cpp";
-        const ext = isCpp ? "cpp" : lang.extension;
-        const labelName = isCpp ? "C++" : lang.name.toUpperCase();
-        return {
-          value: ext,
-          label: `${labelName} (.${ext})`,
-        };
-      })
+      const isCpp = lang.name.toLowerCase() === "cpp" || lang.extension === "cc" || lang.extension === "cpp";
+      const ext = isCpp ? "cpp" : lang.extension;
+      const labelName = isCpp ? "C++" : lang.name.toUpperCase();
+      return {
+        value: ext,
+        label: `${labelName} (.${ext})`,
+      };
+    })
     : DEFAULT_LANGUAGE_OPTIONS;
 
   useEffect(() => {
@@ -167,7 +167,9 @@ export const WorkshopSingleComponentTab = ({
   }, [fileContent, activeFileName]);
 
   const handleSave = () => {
-    if (!activeFileName) return;
+    if (!activeFileName) {
+      return;
+    }
     startSaving(async () => {
       const [error] = await updateFile(problemId, activeFileName, content);
       if (error) {
@@ -213,7 +215,9 @@ export const WorkshopSingleComponentTab = ({
   };
 
   const handleDelete = () => {
-    if (!activeFileName) return;
+    if (!activeFileName) {
+      return;
+    }
     startDeleting(async () => {
       const [error] = await deleteFile(problemId, activeFileName);
       if (error) {
