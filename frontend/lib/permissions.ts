@@ -34,7 +34,7 @@ const hasRequiredRole = (userRole: ContestRole, requiredScope: ContestScope): bo
   return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredScope];
 };
 
-export const ContestPermissionMasks = {
+const ContestPermissionMasks = {
   GetContest: 1 << 0,
   ManageContest: 1 << 1,
   GetMonitor: 1 << 2,

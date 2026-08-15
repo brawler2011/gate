@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"testing"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -54,7 +55,7 @@ func TestResolveContestRoleAndMask_OwnerAndPublic(t *testing.T) {
 	uc := &PermissionsUseCase{}
 
 	// Test 1: Owner gets Owner role
-	role, mask, err := uc.resolveContestRoleAndMask(nil, contest, ownerID)
+	role, mask, err := uc.resolveContestRoleAndMask(context.Background(), contest, ownerID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -69,7 +70,7 @@ func TestResolveContestRoleAndMask_OwnerAndPublic(t *testing.T) {
 	publicContest := &models.Contest{
 		Visibility: models.ContestVisibilityPublic,
 	}
-	role, mask, err = uc.resolveContestRoleAndMask(nil, publicContest, uuid.New())
+	role, mask, err = uc.resolveContestRoleAndMask(context.Background(), publicContest, uuid.New())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -83,7 +84,7 @@ func TestResolveContestRoleAndMask_OwnerAndPublic(t *testing.T) {
 
 func TestResolveProblemPermission_Guest(t *testing.T) {
 	uc := &PermissionsUseCase{}
-	perm, err := uc.resolveProblemPermission(nil, uuid.New(), uuid.New(), uuid.Nil)
+	perm, err := uc.resolveProblemPermission(context.Background(), uuid.New(), uuid.New(), uuid.Nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

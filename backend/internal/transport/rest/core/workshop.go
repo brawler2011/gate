@@ -278,7 +278,7 @@ func (h *CoreServer) UpdateProblemChecker(ctx context.Context, request corev1.Up
 
 // DeleteProblemChecker handles DELETE /problems/{problemId}/checkers/{name}
 func (h *CoreServer) DeleteProblemChecker(ctx context.Context, request corev1.DeleteProblemCheckerRequestObject) (corev1.DeleteProblemCheckerResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, checkerDir, request.Name, "checker"); err != nil {
+	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, checkerDir, request.Name); err != nil {
 		return nil, err
 	}
 	return corev1.DeleteProblemChecker200JSONResponse{Message: strPtr("Checker deleted successfully")}, nil
@@ -322,7 +322,7 @@ func (h *CoreServer) UpdateProblemGenerator(ctx context.Context, request corev1.
 
 // DeleteProblemGenerator handles DELETE /problems/{problemId}/generators/{name}
 func (h *CoreServer) DeleteProblemGenerator(ctx context.Context, request corev1.DeleteProblemGeneratorRequestObject) (corev1.DeleteProblemGeneratorResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, generatorDir, request.Name, "generator"); err != nil {
+	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, generatorDir, request.Name); err != nil {
 		return nil, err
 	}
 	return corev1.DeleteProblemGenerator200JSONResponse{Message: strPtr("Generator deleted successfully")}, nil
@@ -366,7 +366,7 @@ func (h *CoreServer) UpdateProblemInteractor(ctx context.Context, request corev1
 
 // DeleteProblemInteractor handles DELETE /problems/{problemId}/interactors/{name}
 func (h *CoreServer) DeleteProblemInteractor(ctx context.Context, request corev1.DeleteProblemInteractorRequestObject) (corev1.DeleteProblemInteractorResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, interactorDir, request.Name, "interactor"); err != nil {
+	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, interactorDir, request.Name); err != nil {
 		return nil, err
 	}
 	return corev1.DeleteProblemInteractor200JSONResponse{Message: strPtr("Interactor deleted successfully")}, nil
@@ -410,7 +410,7 @@ func (h *CoreServer) UpdateProblemValidator(ctx context.Context, request corev1.
 
 // DeleteProblemValidator handles DELETE /problems/{problemId}/validators/{name}
 func (h *CoreServer) DeleteProblemValidator(ctx context.Context, request corev1.DeleteProblemValidatorRequestObject) (corev1.DeleteProblemValidatorResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, validatorDir, request.Name, "validator"); err != nil {
+	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, validatorDir, request.Name); err != nil {
 		return nil, err
 	}
 	return corev1.DeleteProblemValidator200JSONResponse{Message: strPtr("Validator deleted successfully")}, nil
@@ -452,7 +452,7 @@ func (h *CoreServer) UpdateProblemLib(ctx context.Context, request corev1.Update
 
 // DeleteProblemLib handles DELETE /problems/{problemId}/lib/{name}
 func (h *CoreServer) DeleteProblemLib(ctx context.Context, request corev1.DeleteProblemLibRequestObject) (corev1.DeleteProblemLibResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Name, ""); err != nil {
+	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Name); err != nil {
 		return nil, err
 	}
 	return corev1.DeleteProblemLib200JSONResponse{Message: strPtr("Library file deleted successfully")}, nil
@@ -561,7 +561,7 @@ func (h *CoreServer) UpdateProblemMediaFile(ctx context.Context, request corev1.
 
 // DeleteProblemMediaFile handles DELETE /problems/{problemId}/media/{name}
 func (h *CoreServer) DeleteProblemMediaFile(ctx context.Context, request corev1.DeleteProblemMediaFileRequestObject) (corev1.DeleteProblemMediaFileResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Name, ""); err != nil {
+	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Name); err != nil {
 		return nil, err
 	}
 	return corev1.DeleteProblemMediaFile200JSONResponse{Message: strPtr("Media file deleted successfully")}, nil
@@ -603,7 +603,7 @@ func (h *CoreServer) UpdateProblemWorkshopSubmission(ctx context.Context, reques
 
 // DeleteProblemWorkshopSubmission handles DELETE /problems/{problemId}/submissions/{name}
 func (h *CoreServer) DeleteProblemWorkshopSubmission(ctx context.Context, request corev1.DeleteProblemWorkshopSubmissionRequestObject) (corev1.DeleteProblemWorkshopSubmissionResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, solutionDir, request.Name, ""); err != nil {
+	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, solutionDir, request.Name); err != nil {
 		return nil, err
 	}
 	return corev1.DeleteProblemWorkshopSubmission200JSONResponse{Message: strPtr("Author solution file deleted successfully")}, nil
@@ -686,7 +686,7 @@ func (h *CoreServer) UpdateProblemTestFile(ctx context.Context, request corev1.U
 
 // DeleteProblemTestFile handles DELETE /problems/{problemId}/tests/{name}
 func (h *CoreServer) DeleteProblemTestFile(ctx context.Context, request corev1.DeleteProblemTestFileRequestObject) (corev1.DeleteProblemTestFileResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, testDir, request.Name, ""); err != nil {
+	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, testDir, request.Name); err != nil {
 		return nil, err
 	}
 	return corev1.DeleteProblemTestFile200JSONResponse{Message: strPtr("Test file deleted successfully")}, nil
@@ -940,7 +940,7 @@ func (h *CoreServer) updateWorkshopCollectionFile(ctx context.Context, problemID
 	return h.saveWorkshopCollectionFile(ctx, problemID, dir, name, body, "failed to update file")
 }
 
-func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name, componentType string) error {
+func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string) error {
 	if !h.workshopUC.IsInitialized(ctx, problemID) {
 		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
@@ -1094,23 +1094,6 @@ func sanitizeFileName(name string) (string, error) {
 		return "", fmt.Errorf("path separators are not allowed")
 	}
 	return clean, nil
-}
-
-func compilerByFilename(name string) string {
-	switch strings.ToLower(filepath.Ext(name)) {
-	case ".cpp", ".cc", ".cxx":
-		return "cpp17"
-	case ".py":
-		return "python3"
-	case ".go":
-		return "golang"
-	case ".java":
-		return "java11"
-	case ".c":
-		return "c11"
-	default:
-		return "cpp17"
-	}
 }
 
 func optionalString(value string) *string {
