@@ -1,6 +1,7 @@
 import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
 
 type AdminHeaderNavKey =
+  | "dashboard"
   | "users"
   | "contests"
   | "blogs"
@@ -25,12 +26,22 @@ export const buildAdminHeaderNav = (pathname: string): HeaderSecondaryNavItem[] 
     if (path.includes("/admin/submissions")) {
       return "submissions";
     }
-    return "users";
+    if (path.includes("/admin/users")) {
+      return "users";
+    }
+    return "dashboard";
   };
 
   const activeTab = getActiveTab(pathname);
 
   return [
+    {
+      key: "dashboard",
+      label: "Обзор",
+      href: "/admin",
+      icon: "dashboard",
+      active: activeTab === "dashboard",
+    },
     {
       key: "users",
       label: "Пользователи",

@@ -47,6 +47,7 @@ import type { UpdateProblemRequestModel } from '../models/UpdateProblemRequestMo
 import type { UpdateProblemStatementRequest } from '../models/UpdateProblemStatementRequest';
 import type { UpdateProblemTestsConfigRequest } from '../models/UpdateProblemTestsConfigRequest';
 import type { UpdateTeamRequestModel } from '../models/UpdateTeamRequestModel';
+import type { UpdateUserRequestModel } from '../models/UpdateUserRequestModel';
 import type { ValidationReport } from '../models/ValidationReport';
 import type { WorkshopFileListResponse } from '../models/WorkshopFileListResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -888,6 +889,27 @@ export class DefaultService {
             path: {
                 'id': id,
             },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public updateUser({
+        id,
+        requestBody,
+    }: {
+        id: string,
+        requestBody: UpdateUserRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/users/{id}',
+            path: {
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**

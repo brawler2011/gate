@@ -4,7 +4,9 @@ import (
 	"context"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	"github.com/brawler2011/gate/backend/pkg"
 )
 
 func (h *CoreServer) GetUser(ctx context.Context, request corev1.GetUserRequestObject) (corev1.GetUserResponseObject, error) {
@@ -65,3 +67,27 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, request corev1.Lis
 
 	return corev1.ListUserSubmissions200JSONResponse(*ListSolutionsResponseDTO(submissions)), nil
 }
+
+func (h *CoreServer) UpdateUser(ctx context.Context, request corev1.UpdateUserRequestObject) (corev1.UpdateUserResponseObject, error) {
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
+	}
+
+	input := models.UpdateUserInput{
+		Id:       request.Id,
+		Username: request.Body.Username,
+		Email:    request.Body.Email,
+	}
+	if request.Body.Role != nil {
+		r := string(*request.Body.Role)
+		input.Role = &r
+	}
+
+	err := h.usersUC.UpdateUser(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.UpdateUser200Response{}, nil
+}
+

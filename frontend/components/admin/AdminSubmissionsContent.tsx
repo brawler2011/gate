@@ -1,20 +1,30 @@
 "use client";
 
 import {
+  ActionIcon,
   Badge,
   Box,
   Center,
   Container,
+  Group,
+  Select,
   Skeleton,
   Stack,
   Table,
   Text,
+  TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
+import {notifications} from "@mantine/notifications";
+import {IconRefresh, IconSearch, IconX} from "@tabler/icons-react";
 import Link from "next/link";
+import {usePathname, useRouter, useSearchParams} from "next/navigation";
+import {useState} from "react";
 import useSWR from "swr";
 
 import {NextPagination} from '@/components/shared/Pagination';
+import {api} from "@/lib/api";
 import {LangString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
@@ -24,23 +34,109 @@ import type {ReactNode} from "react";
 
 type AdminSubmissionsContentProps = {
   page: number;
+  state?: string;
+  language?: string;
+  contestId?: string;
+  problemId?: string;
+  userId?: string;
 };
 
-export const AdminSubmissionsContent = ({page}: AdminSubmissionsContentProps): ReactNode => {
-  const {data, error, isLoading} = useSWR(
-    `/api/submissions?page=${page}&pageSize=10`,
-    async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Не удалось загрузить посылки");
+export const AdminSubmissionsContent = ({
+  page,
+  state,
+  language,
+  contestId,
+  problemId,
+  userId,
+}: AdminSubmissionsContentProps): ReactNode => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [rejudgingId, setRejudgingId] = useState<string | null>(null);
+
+  // Filter input states
+  const [selectedState, setSelectedState] = useState<string>(state || "all");
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(language || "all");
+  const [contestFilter, setContestFilter] = useState<string>(contestId || "");
+  const [problemFilter, setProblemFilter] = useState<string>(problemId || "");
+  const [userFilter, setUserFilter] = useState<string>(userId || "");
+
+  const updateFilters = (updates: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page"); // Reset page on filter change
+
+    Object.entries(updates).forEach(([key, val]) => {
+      if (!val || val === "all") {
+        params.delete(key);
+      } else {
+        params.set(key, val);
       }
-      return res.json();
+    });
+
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleClearFilters = () => {
+    setSelectedState("all");
+    setSelectedLanguage("all");
+    setContestFilter("");
+    setProblemFilter("");
+    setUserFilter("");
+    router.push(pathname);
+  };
+
+  // Fetch submissions
+  const {data, error, isLoading, mutate} = useSWR(
+    ["admin-submissions", page, state, language, contestId, problemId, userId],
+    async () => {
+      const [err, res] = await api.listSubmissions({
+        page,
+        pageSize: 10,
+        state: state as any,
+        language: language as any,
+        contestId: contestId || undefined,
+        problemId: problemId || undefined,
+      });
+
+      if (err) {
+        throw new Error(err.message);
+      }
+      return res;
     }
   );
 
-  const submissions = data?.submissions || [];
+  const submissions = (data?.submissions || []) as unknown as SubmissionModel[];
   const pagination = data?.pagination || {total: 0, page: page};
+
+  const handleRejudge = async (e: React.MouseEvent, submission: SubmissionModel) => {
+    e.stopPropagation();
+    setRejudgingId(submission.id);
+    try {
+      const [err] = await api.rejudgeSubmission({
+        submissionId: submission.id,
+        contestId: submission.contest_id,
+      });
+
+      if (err) {
+        notifications.show({
+          title: "Ошибка",
+          message: err.message || "Не удалось перепроверить посылку",
+          color: "red",
+        });
+        return;
+      }
+
+      notifications.show({
+        title: "Успех",
+        message: "Посылка отправлена на перепроверку",
+        color: "green",
+      });
+
+      mutate();
+    } finally {
+      setRejudgingId(null);
+    }
+  };
 
   if (error) {
     return (
@@ -56,10 +152,132 @@ export const AdminSubmissionsContent = ({page}: AdminSubmissionsContentProps): R
   }
 
   const totalPages = pagination.total || 1;
+  const hasActiveFilters = !!(state || language || contestId || problemId || userId);
+
+  const queryParams: Record<string, string | number | undefined> = {};
+  if (state) queryParams.state = state;
+  if (language) queryParams.language = language;
+  if (contestId) queryParams.contestId = contestId;
+  if (problemId) queryParams.problemId = problemId;
+  if (userId) queryParams.userId = userId;
 
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
+        {/* Filters Bar */}
+        <Group wrap="wrap" align="flex-end" gap="sm">
+          <Select
+            label="Вердикт"
+            size="xs"
+            value={selectedState}
+            onChange={(val) => {
+              const v = val || "all";
+              setSelectedState(v);
+              updateFilters({state: v});
+            }}
+            data={[
+              {value: "all", label: "Все вердикты"},
+              {value: "OK", label: "OK (Успешно)"},
+              {value: "WA", label: "WA (Неверный ответ)"},
+              {value: "TLE", label: "TLE (Превышение времени)"},
+              {value: "MLE", label: "MLE (Превышение памяти)"},
+              {value: "CE", label: "CE (Ошибка компиляции)"},
+              {value: "RE", label: "RE (Ошибка выполнения)"},
+              {value: "SE", label: "SE (Ошибка системы)"},
+            ]}
+            style={{width: 170}}
+          />
+
+          <Select
+            label="Язык"
+            size="xs"
+            value={selectedLanguage}
+            onChange={(val) => {
+              const v = val || "all";
+              setSelectedLanguage(v);
+              updateFilters({language: v});
+            }}
+            data={[
+              {value: "all", label: "Все языки"},
+              {value: "cpp", label: "C++"},
+              {value: "python", label: "Python"},
+              {value: "go", label: "Go"},
+              {value: "java", label: "Java"},
+            ]}
+            style={{width: 140}}
+          />
+
+          <TextInput
+            label="ID контеста"
+            size="xs"
+            placeholder="Фильтр по контесту..."
+            value={contestFilter}
+            onChange={(e) => setContestFilter(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                updateFilters({contestId: contestFilter});
+              }
+            }}
+            style={{width: 160}}
+          />
+
+          <TextInput
+            label="ID задачи"
+            size="xs"
+            placeholder="Фильтр по задаче..."
+            value={problemFilter}
+            onChange={(e) => setProblemFilter(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                updateFilters({problemId: problemFilter});
+              }
+            }}
+            style={{width: 160}}
+          />
+
+          <TextInput
+            label="ID пользователя"
+            size="xs"
+            placeholder="Фильтр по автору..."
+            value={userFilter}
+            onChange={(e) => setUserFilter(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                updateFilters({userId: userFilter});
+              }
+            }}
+            style={{width: 160}}
+          />
+
+          <ActionIcon
+            variant="light"
+            color="blue"
+            size="sm"
+            title="Применить текстовые фильтры"
+            onClick={() =>
+              updateFilters({
+                contestId: contestFilter,
+                problemId: problemFilter,
+                userId: userFilter,
+              })
+            }
+          >
+            <IconSearch size={14} />
+          </ActionIcon>
+
+          {hasActiveFilters && (
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              size="sm"
+              title="Сбросить все фильтры"
+              onClick={handleClearFilters}
+            >
+              <IconX size={14} />
+            </ActionIcon>
+          )}
+        </Group>
+
         {isLoading && (
           <Stack gap="sm">
             <Skeleton height={35} radius="sm" />
@@ -80,13 +298,14 @@ export const AdminSubmissionsContent = ({page}: AdminSubmissionsContentProps): R
               <Table className={classes.table} verticalSpacing="xs">
                 <Table.Thead className={classes.thead}>
                   <Table.Tr>
-                    <Table.Th style={{width: "15%"}}>ID</Table.Th>
+                    <Table.Th style={{width: "12%"}}>ID</Table.Th>
                     <Table.Th style={{width: "20%"}}>Задача</Table.Th>
                     <Table.Th style={{width: "15%"}}>Контест</Table.Th>
                     <Table.Th style={{width: "15%"}}>Отправитель</Table.Th>
                     <Table.Th style={{width: "10%"}}>Язык</Table.Th>
-                    <Table.Th style={{width: "15%"}}>Вердикт</Table.Th>
+                    <Table.Th style={{width: "13%"}}>Вердикт</Table.Th>
                     <Table.Th style={{width: "10%"}}>Когда</Table.Th>
+                    <Table.Th style={{width: "5%"}}>Действия</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody className={classes.tbody}>
@@ -139,6 +358,18 @@ export const AdminSubmissionsContent = ({page}: AdminSubmissionsContentProps): R
                           {TimeBeautify(submission.created_at)}
                         </Text>
                       </Table.Td>
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        <Tooltip label="Перепроверить посылку">
+                          <ActionIcon
+                            variant="subtle"
+                            color="orange"
+                            loading={rejudgingId === submission.id}
+                            onClick={(e) => handleRejudge(e, submission)}
+                          >
+                            <IconRefresh size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      </Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -153,6 +384,7 @@ export const AdminSubmissionsContent = ({page}: AdminSubmissionsContentProps): R
                     total: totalPages,
                   }}
                   baseUrl="/admin/submissions"
+                  queryParams={queryParams}
                 />
               </Stack>
             )}
@@ -162,3 +394,4 @@ export const AdminSubmissionsContent = ({page}: AdminSubmissionsContentProps): R
     </Container>
   );
 };
+

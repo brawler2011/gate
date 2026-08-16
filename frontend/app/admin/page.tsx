@@ -1,9 +1,16 @@
-import {redirect} from "next/navigation";
+import {AdminDashboardContent} from "@/components/admin";
 
+import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
+export const metadata: Metadata = {
+  title: "Админ | Обзор",
+};
+
+export const dynamic: string = "force-dynamic";
+
 const AdminPage = (): ReactNode => {
-  redirect("/admin/users");
+  return <AdminDashboardContent />;
 };
 
 export default AdminPage;

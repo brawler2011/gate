@@ -7,12 +7,21 @@ import {
   Group,
   Table,
   Text,
+  Tooltip,
 } from "@mantine/core";
-import {IconEdit, IconTrash} from "@tabler/icons-react";
+import {notifications} from "@mantine/notifications";
+import {
+  IconDeviceDesktop,
+  IconEdit,
+  IconFileCode,
+  IconRefresh,
+  IconTrash,
+} from "@tabler/icons-react";
 import {useRouter} from "next/navigation";
 import {useState} from "react";
 
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
+import {api} from "@/lib/api";
 
 import classes from "./AdminPage.module.css";
 import {DeleteContestModal} from "./DeleteContestModal";
@@ -37,6 +46,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [contestToDelete, setContestToDelete] = useState<ContestModel | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [rejudgingId, setRejudgingId] = useState<string | null>(null);
 
   const handleRowClick = (contestId: string) => {
     router.push(`/contests/${contestId}`);
@@ -45,6 +55,39 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
   const handleEditClick = (e: React.MouseEvent, contestId: string) => {
     e.stopPropagation();
     router.push(`/contests/${contestId}/settings`);
+  };
+
+  const handleSubmissionsClick = (e: React.MouseEvent, contestId: string) => {
+    e.stopPropagation();
+    router.push(`/admin/submissions?contestId=${contestId}`);
+  };
+
+  const handleMonitorClick = (e: React.MouseEvent, contestId: string) => {
+    e.stopPropagation();
+    router.push(`/contests/${contestId}/monitor`);
+  };
+
+  const handleRejudgeContest = async (e: React.MouseEvent, contestId: string) => {
+    e.stopPropagation();
+    setRejudgingId(contestId);
+    try {
+      const [err] = await api.rejudgeContest({contestId});
+      if (err) {
+        notifications.show({
+          title: "Ошибка",
+          message: err.message || "Не удалось запустить перепроверку контеста",
+          color: "red",
+        });
+        return;
+      }
+      notifications.show({
+        title: "Успех",
+        message: "Перепроверка всех посылок контеста запущена",
+        color: "green",
+      });
+    } finally {
+      setRejudgingId(null);
+    }
   };
 
   const handleAuthorClick = (e: React.MouseEvent, authorId: string) => {
@@ -78,12 +121,12 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
         <Table className={classes.table} verticalSpacing="xs">
           <Table.Thead className={classes.thead}>
             <Table.Tr>
-              <Table.Th style={{width: "30%"}}>Название</Table.Th>
+              <Table.Th style={{width: "25%"}}>Название</Table.Th>
               <Table.Th style={{width: "12%"}}>ID</Table.Th>
               <Table.Th style={{width: "12%"}}>Видимость</Table.Th>
               <Table.Th style={{width: "15%"}}>Автор</Table.Th>
               <Table.Th style={{width: "15%"}}>Дата создания</Table.Th>
-              <Table.Th style={{width: "10%"}}>Действия</Table.Th>
+              <Table.Th style={{width: "21%"}}>Действия</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody className={classes.tbody}>
@@ -131,21 +174,53 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
                   </Table.Td>
                   <Table.Td className={classes.actionsCell}>
                     <Group gap="xs" wrap="nowrap">
-                      <ActionIcon
-                        color="blue"
-                        variant="subtle"
-                        onClick={(e) => handleEditClick(e, contest.id)}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        color="red"
-                        variant="subtle"
-                        onClick={(e) => handleDeleteClick(e, contest)}
-                        loading={deletingId === contest.id}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
+                      <Tooltip label="Посылки контеста">
+                        <ActionIcon
+                          color="indigo"
+                          variant="subtle"
+                          onClick={(e) => handleSubmissionsClick(e, contest.id)}
+                        >
+                          <IconFileCode size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Монитор результатов">
+                        <ActionIcon
+                          color="teal"
+                          variant="subtle"
+                          onClick={(e) => handleMonitorClick(e, contest.id)}
+                        >
+                          <IconDeviceDesktop size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Перепроверить все посылки контеста">
+                        <ActionIcon
+                          color="orange"
+                          variant="subtle"
+                          loading={rejudgingId === contest.id}
+                          onClick={(e) => handleRejudgeContest(e, contest.id)}
+                        >
+                          <IconRefresh size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Редактировать контест">
+                        <ActionIcon
+                          color="blue"
+                          variant="subtle"
+                          onClick={(e) => handleEditClick(e, contest.id)}
+                        >
+                          <IconEdit size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Удалить контест">
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          onClick={(e) => handleDeleteClick(e, contest)}
+                          loading={deletingId === contest.id}
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Tooltip>
                     </Group>
                   </Table.Td>
                 </Table.Tr>

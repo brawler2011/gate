@@ -13,6 +13,7 @@ type ContestHeaderNavKey =
 
 export type HeaderSecondaryNavIcon =
   | ContestHeaderNavKey
+  | "dashboard"
   | "contests"
   | "problems"
   | "teams"

@@ -1,15 +1,20 @@
 "use client";
 
-import {Badge, Stack, Table, Text} from "@mantine/core";
+import {ActionIcon, Badge, Group, Select, Stack, Table, Text} from "@mantine/core";
+import {notifications} from "@mantine/notifications";
+import {IconFileCode} from "@tabler/icons-react";
 import {useRouter} from "next/navigation";
+import {useState} from "react";
 
 import {NextPagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
+import {api} from "@/lib/api";
 import {getRoleColor} from "@/lib/lib";
 
 import type {
   PaginationModel as PaginationType,
   UserModel,
+  UpdateUserRequestModel,
 } from "@/contracts/core/v1";
 import type {ReactNode} from "react";
 
@@ -19,14 +24,50 @@ type Props = {
   page: number;
   search?: string;
   role?: string;
+  onRefresh?: () => void;
 };
 
-export const UsersTable = ({users, pagination, page, search, role}: Props): ReactNode => {
+export const UsersTable = ({users, pagination, page, search, role, onRefresh}: Props): ReactNode => {
   const router = useRouter();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  // Use page from URL props, not from API response state
   const currentPage = page;
   const totalPages = Number(pagination.total) || 1;
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    setUpdatingId(userId);
+    try {
+      const [err] = await api.updateUser({
+        id: userId,
+        requestBody: {
+          role: newRole as UpdateUserRequestModel.role,
+        },
+      });
+
+      if (err) {
+        notifications.show({
+          title: "Ошибка",
+          message: err.message || "Не удалось обновить роль пользователя",
+          color: "red",
+        });
+        return;
+      }
+
+      notifications.show({
+        title: "Успех",
+        message: "Роль пользователя успешно обновлена",
+        color: "green",
+      });
+
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        router.refresh();
+      }
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   if (users.length === 0) {
     return (
@@ -51,10 +92,11 @@ export const UsersTable = ({users, pagination, page, search, role}: Props): Reac
       <Table striped highlightOnHover style={{tableLayout: "fixed"}}>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th style={{width: "30%"}}>Имя пользователя</Table.Th>
-            <Table.Th style={{width: "15%"}}>ID</Table.Th>
-            <Table.Th style={{width: "10%"}}>Роль</Table.Th>
-            <Table.Th style={{width: "10%"}}>Дата создания</Table.Th>
+            <Table.Th style={{width: "25%"}}>Имя пользователя</Table.Th>
+            <Table.Th style={{width: "25%"}}>ID</Table.Th>
+            <Table.Th style={{width: "20%"}}>Роль</Table.Th>
+            <Table.Th style={{width: "15%"}}>Дата создания</Table.Th>
+            <Table.Th style={{width: "15%"}}>Действия</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -62,8 +104,8 @@ export const UsersTable = ({users, pagination, page, search, role}: Props): Reac
             <Table.Tr
               key={user.id}
               onClick={(e) => {
-                // Ignore clicks on buttons and interactive elements
-                if ((e.target as HTMLElement).closest('button')) {
+                const target = e.target as HTMLElement;
+                if (target.closest('button') || target.closest('.mantine-Select-root') || target.closest('.mantine-ActionIcon-root')) {
                   return;
                 }
                 router.push(`/users/${user.id}`);
@@ -74,11 +116,37 @@ export const UsersTable = ({users, pagination, page, search, role}: Props): Reac
               <Table.Td style={{maxWidth: 0, overflow: "hidden"}}>
                 <TruncatedWithCopy value={user.id} />
               </Table.Td>
-              <Table.Td style={{maxWidth: 0, overflow: "hidden"}}>
-                <Badge color={getRoleColor(user.role)}>{user.role}</Badge>
+              <Table.Td style={{maxWidth: 0, overflow: "hidden"}} onClick={(e) => e.stopPropagation()}>
+                <Select
+                  size="xs"
+                  value={user.role}
+                  disabled={updatingId === user.id}
+                  data={[
+                    {value: "user", label: "Пользователь"},
+                    {value: "admin", label: "Администратор"},
+                  ]}
+                  onChange={(val) => {
+                    if (val && val !== user.role) {
+                      handleRoleChange(user.id, val);
+                    }
+                  }}
+                  style={{maxWidth: 150}}
+                />
               </Table.Td>
               <Table.Td style={{maxWidth: 0, overflow: "hidden"}}>
                 {new Date(user.createdAt).toLocaleDateString("ru-RU")}
+              </Table.Td>
+              <Table.Td style={{maxWidth: 0, overflow: "hidden"}} onClick={(e) => e.stopPropagation()}>
+                <Group gap="xs">
+                  <ActionIcon
+                    variant="subtle"
+                    color="blue"
+                    title="Посмотреть посылки пользователя"
+                    onClick={() => router.push(`/admin/submissions?userId=${user.id}`)}
+                  >
+                    <IconFileCode size={18} />
+                  </ActionIcon>
+                </Group>
               </Table.Td>
             </Table.Tr>
           ))}
@@ -100,3 +168,4 @@ export const UsersTable = ({users, pagination, page, search, role}: Props): Reac
     </>
   );
 };
+

@@ -974,6 +974,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetUserResponseModel"
+    patch:
+      operationId: UpdateUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequestModel"
+      responses:
+        "200":
+          description: OK
+          content: {}
   /users/{user_id}/submissions:
     get:
       operationId: ListUserSubmissions
@@ -3397,6 +3416,18 @@ components:
         id:
           type: string
           format: uuid
+    UpdateUserRequestModel:
+      type: object
+      properties:
+        username:
+          type: string
+        role:
+          type: string
+          enum:
+            - user
+            - admin
+        email:
+          type: string
     PaginationModel:
       type: object
       required:

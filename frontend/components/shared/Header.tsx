@@ -38,6 +38,7 @@ import {
   IconUsersGroup,
   IconNews,
   IconFileText,
+  IconLayoutDashboard,
 } from "@tabler/icons-react";
 import cx from "clsx";
 import NextImage from "next/image";
@@ -70,6 +71,7 @@ const NAV_ICON_MAP: Record<
   HeaderSecondaryNavIcon,
   ComponentType<{ size?: string | number }>
 > = {
+  dashboard: IconLayoutDashboard,
   tasks: IconPuzzle,
   submit: IconSend,
   mysubmissions: IconUser,

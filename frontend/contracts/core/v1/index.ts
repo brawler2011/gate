@@ -89,6 +89,7 @@ export type { UpdateProblemRequestModel } from './models/UpdateProblemRequestMod
 export type { UpdateProblemStatementRequest } from './models/UpdateProblemStatementRequest';
 export type { UpdateProblemTestsConfigRequest } from './models/UpdateProblemTestsConfigRequest';
 export type { UpdateTeamRequestModel } from './models/UpdateTeamRequestModel';
+export { UpdateUserRequestModel } from './models/UpdateUserRequestModel';
 export type { UserModel } from './models/UserModel';
 export type { ValidationReport } from './models/ValidationReport';
 export { WebSocketMessageType } from './models/WebSocketMessageType';

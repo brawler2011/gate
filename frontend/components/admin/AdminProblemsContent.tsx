@@ -13,9 +13,10 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {IconSearch, IconTrash} from "@tabler/icons-react";
+import {IconFileCode, IconSearch, IconTrash} from "@tabler/icons-react";
 import {useRouter, useSearchParams} from "next/navigation";
 import {useEffect, useRef, useState} from "react";
 import useSWR from "swr";
@@ -227,14 +228,25 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
                       </Table.Td>
                       <Table.Td onClick={(e) => e.stopPropagation()}>
                         <Group gap="xs">
-                          <ActionIcon
-                            color="red"
-                            variant="subtle"
-                            onClick={(e) => handleDeleteClick(e, problem)}
-                            loading={deletingId === problem.id}
-                          >
-                            <IconTrash size={16} />
-                          </ActionIcon>
+                          <Tooltip label="Посылки по этой задаче">
+                            <ActionIcon
+                              color="indigo"
+                              variant="subtle"
+                              onClick={() => router.push(`/admin/submissions?problemId=${problem.id}`)}
+                            >
+                              <IconFileCode size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="Удалить задачу">
+                            <ActionIcon
+                              color="red"
+                              variant="subtle"
+                              onClick={(e) => handleDeleteClick(e, problem)}
+                              loading={deletingId === problem.id}
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Tooltip>
                         </Group>
                       </Table.Td>
                     </Table.Tr>

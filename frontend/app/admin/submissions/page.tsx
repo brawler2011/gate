@@ -34,6 +34,11 @@ const AdminSubmissionsContentSkeleton = () => {
 type PageProps = {
   searchParams: Promise<{
     page?: string;
+    state?: string;
+    language?: string;
+    contestId?: string;
+    problemId?: string;
+    userId?: string;
   }>;
 };
 
@@ -46,7 +51,14 @@ const AdminSubmissionsPage = async ({searchParams}: PageProps): Promise<ReactNod
 
   return (
     <Suspense fallback={<AdminSubmissionsContentSkeleton />}>
-      <AdminSubmissionsContent page={page} />
+      <AdminSubmissionsContent
+        page={page}
+        state={resolvedSearchParams.state}
+        language={resolvedSearchParams.language}
+        contestId={resolvedSearchParams.contestId}
+        problemId={resolvedSearchParams.problemId}
+        userId={resolvedSearchParams.userId}
+      />
     </Suspense>
   );
 };

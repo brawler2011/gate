@@ -16,7 +16,7 @@ type UsersContentProps = {
 };
 
 export const UsersContent = ({page, search, role}: UsersContentProps): ReactNode => {
-  const {data, error, isLoading} = useSWR(
+  const {data, error, isLoading, mutate} = useSWR(
     `/api/users?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}${role ? `&role=${role}` : ""}`,
     async (url) => {
       const res = await fetch(url);
@@ -73,6 +73,7 @@ export const UsersContent = ({page, search, role}: UsersContentProps): ReactNode
             page={page}
             search={search}
             role={role}
+            onRefresh={() => mutate()}
           />
         )}
       </Stack>
