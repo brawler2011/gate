@@ -1,6 +1,6 @@
 "use client";
 
-import {Badge, Card, Center, Group, Loader, Stack, Table, Text} from "@mantine/core";
+import {Badge, Card, Center, Loader, Stack, Table, Text} from "@mantine/core";
 import {IconFileCode} from "@tabler/icons-react";
 import Link from "next/link";
 import {useCallback, useEffect, useState} from "react";

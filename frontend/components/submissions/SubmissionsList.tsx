@@ -221,4 +221,3 @@ const SubmissionsList = ({
 };
 
 export {SubmissionsList};
-

@@ -338,15 +338,17 @@ export const ProblemsSection = ({
         size="sm"
       >
         <Stack gap="md">
-          {loadingPackages ? (
+          {loadingPackages && (
             <Center py="md">
               <Loader size="sm" />
             </Center>
-          ) : availablePackages.length === 0 ? (
+          )}
+          {!loadingPackages && availablePackages.length === 0 && (
             <Text size="sm" c="dimmed">
               У этой задачи пока нет скомпилированных пакетов.
             </Text>
-          ) : (
+          )}
+          {!loadingPackages && availablePackages.length > 0 && (
             <>
               <Select
                 label="Выберите версию пакета"
@@ -375,4 +377,3 @@ export const ProblemsSection = ({
     </>
   );
 };
-

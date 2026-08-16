@@ -59,7 +59,9 @@ const Page = async (props: Props): Promise<ReactNode> => {
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
   const contestRole = submission.contest_id ? await getMyContestRole(submission.contest_id) : null;
-  const contestData = submission.contest_id ? await unwrapAndCache(api.getContest)({contestId: submission.contest_id}) : null;
+  const contestData = submission.contest_id
+    ? await unwrapAndCache(api.getContest)({contestId: submission.contest_id})
+    : null;
 
   const checker = contestData?.contest
     ? new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null)
@@ -145,4 +147,3 @@ const Page = async (props: Props): Promise<ReactNode> => {
 };
 
 export {Page as default, metadata};
-

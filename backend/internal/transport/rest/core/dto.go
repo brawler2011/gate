@@ -571,7 +571,7 @@ func listTeamMembersDTO(members []models.TeamMember, page, total int32) *corev1.
 func contestTeamDTO(ct models.ContestTeam) corev1.ContestTeamModel {
 	var mask *int64
 	if ct.PermissionsMask != nil {
-		m := int64(*ct.PermissionsMask)
+		m := int64(*ct.PermissionsMask) // #nosec G115
 		mask = &m
 	}
 	return corev1.ContestTeamModel{

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -306,10 +307,16 @@ func (c *Contest) GetPenaltyPerAttempt() int32 {
 		if raw, ok := c.Settings["penalty_per_attempt"]; ok {
 			switch v := raw.(type) {
 			case float64:
+				if v > math.MaxInt32 || v < math.MinInt32 {
+					return 20
+				}
 				return int32(v)
 			case int32:
 				return v
 			case int:
+				if v > math.MaxInt32 || v < math.MinInt32 {
+					return 20
+				}
 				return int32(v)
 			}
 		}

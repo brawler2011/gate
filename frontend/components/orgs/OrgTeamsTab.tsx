@@ -79,4 +79,3 @@ export const OrgTeamsTab = ({teams, orgId, canManage = true}: Props): ReactNode 
     </Stack>
   );
 };
-

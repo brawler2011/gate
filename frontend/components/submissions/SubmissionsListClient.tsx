@@ -62,7 +62,9 @@ export const SubmissionsListClient = ({
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
 
   const handleRejudgeConfirm = async () => {
-    if (!modalState || !filter.contestId) return;
+    if (!modalState || !filter.contestId) {
+      return;
+    }
 
     setLoading(true);
     let err = null;
@@ -103,19 +105,19 @@ export const SubmissionsListClient = ({
     }
   };
 
-  const modalTitle =
-    modalState?.type === "submission"
-      ? "Перетестирование посылки"
-      : modalState?.type === "problem"
-      ? "Перетестировать все решения задачи"
-      : "Перетестировать все решения контеста";
+  let modalTitle = "Перетестировать все решения контеста";
+  if (modalState?.type === "submission") {
+    modalTitle = "Перетестирование посылки";
+  } else if (modalState?.type === "problem") {
+    modalTitle = "Перетестировать все решения задачи";
+  }
 
-  const modalDescription =
-    modalState?.type === "submission"
-      ? "Вы действительно хотите отправить выбранное решение на повторную проверку?"
-      : modalState?.type === "problem"
-      ? "Вы действительно хотите отправить ВСЕ решения этой задачи в контесте на повторную проверку?"
-      : "Вы действительно хотите отправить ВСЕ решения контеста на повторную проверку?";
+  let modalDescription = "Вы действительно хотите отправить ВСЕ решения контеста на повторную проверку?";
+  if (modalState?.type === "submission") {
+    modalDescription = "Вы действительно хотите отправить выбранное решение на повторную проверку?";
+  } else if (modalState?.type === "problem") {
+    modalDescription = "Вы действительно хотите отправить ВСЕ решения этой задачи в контесте на повторную проверку?";
+  }
 
   return (
     <>
@@ -185,4 +187,3 @@ export const SubmissionsListClient = ({
     </>
   );
 };
-

@@ -1,12 +1,13 @@
 "use client";
 
-import { Box, Group, Table, Text, TextInput, Title, Tooltip } from "@mantine/core";
-import { IconSearch } from "@tabler/icons-react";
-import React, { useEffect, useState, useMemo } from "react";
+import {Box, Group, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
+import {IconSearch} from "@tabler/icons-react";
+import React, {useEffect, useState, useMemo} from "react";
+
+import {env} from "@/lib/env";
+import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
 import classes from "./ContestMonitorTable.module.css";
-import { env } from "@/lib/env";
-import { submissionsWsManager } from "@/lib/submissionsWsManager";
 
 import type {
   ScoreboardResponseModel,
@@ -14,7 +15,7 @@ import type {
   ScoreboardProblemResultModel,
   ScoreboardProblemHeaderModel,
 } from "@/contracts/core/v1";
-import type { SubmissionsMessage, MessageSubmissionCompleted } from "@/contracts/observer/v1";
+import type {SubmissionsMessage, MessageSubmissionCompleted} from "@/contracts/observer/v1";
 
 interface ContestMonitorTableProps {
   contestId: string;
@@ -23,19 +24,21 @@ interface ContestMonitorTableProps {
   endTime?: string | null;
 }
 
-function formatTimeMinutes(timeMinutes?: number | null): string {
-  if (timeMinutes === undefined || timeMinutes === null) return "";
+const formatTimeMinutes = (timeMinutes?: number | null): string => {
+  if (timeMinutes === undefined || timeMinutes === null) {
+    return "";
+  }
   const h = Math.floor(timeMinutes / 60);
   const m = timeMinutes % 60;
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-}
+};
 
-function getProblemLetter(ordinal: number, shortName?: string): string {
+const getProblemLetter = (ordinal: number, shortName?: string): string => {
   if (shortName && shortName.length <= 3) {
     return shortName;
   }
   return String.fromCharCode(65 + (ordinal - 1));
-}
+};
 
 export const ContestMonitorTable = ({
   contestId,
@@ -60,7 +63,12 @@ export const ContestMonitorTable = ({
         }
 
         const payload = msg.payload as MessageSubmissionCompleted;
-        if (payload.contest_id !== contestId || !payload.user_id || !payload.problem_id || payload.state === undefined) {
+        if (
+          payload.contest_id !== contestId ||
+          !payload.user_id ||
+          !payload.problem_id ||
+          payload.state === undefined
+        ) {
           return;
         }
 
@@ -70,8 +78,12 @@ export const ContestMonitorTable = ({
 
         if (payload.created_at) {
           const createdAtTime = new Date(payload.created_at).getTime();
-          if (startTime && createdAtTime < new Date(startTime).getTime()) return;
-          if (endTime && createdAtTime > new Date(endTime).getTime()) return;
+          if (startTime && createdAtTime < new Date(startTime).getTime()) {
+            return;
+          }
+          if (endTime && createdAtTime > new Date(endTime).getTime()) {
+            return;
+          }
         }
 
         setItems((prevItems) => {
@@ -89,13 +101,13 @@ export const ContestMonitorTable = ({
           const pResults = [...existingItem.problem_results];
           const pIndex = pResults.findIndex((r) => r.problem_id === problemId);
 
-          let pResult: ScoreboardProblemResultModel = pIndex !== -1
-            ? { ...pResults[pIndex] }
+          const pResult: ScoreboardProblemResultModel = pIndex !== -1
+            ? {...pResults[pIndex]}
             : {
-                problem_id: problemId!,
-                solved: false,
-                failed_attempts: 0,
-              };
+              problem_id: problemId!,
+              solved: false,
+              failed_attempts: 0,
+            };
 
           if (pResult.solved) {
             return prevItems;
@@ -162,7 +174,9 @@ export const ContestMonitorTable = ({
             }
             if (a.last_accepted_at && b.last_accepted_at) {
               const diff = new Date(a.last_accepted_at).getTime() - new Date(b.last_accepted_at).getTime();
-              if (diff !== 0) return diff;
+              if (diff !== 0) {
+                return diff;
+              }
             } else if (a.last_accepted_at) {
               return -1;
             } else if (b.last_accepted_at) {
@@ -195,7 +209,9 @@ export const ContestMonitorTable = ({
   }, [contestId, startTime, endTime, penaltyPerAttempt]);
 
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return items;
+    if (!searchQuery.trim()) {
+      return items;
+    }
     const q = searchQuery.toLowerCase().trim();
     return items.filter((item) => item.username.toLowerCase().includes(q));
   }, [items, searchQuery]);
@@ -220,7 +236,7 @@ export const ContestMonitorTable = ({
       }
     }
 
-    return { solvedCounts, attemptedCounts };
+    return {solvedCounts, attemptedCounts};
   }, [items, problems]);
 
   return (
@@ -242,16 +258,16 @@ export const ContestMonitorTable = ({
         <Table verticalSpacing="sm" className={classes.table}>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th style={{ width: "50px" }}>№</Table.Th>
+              <Table.Th style={{width: "50px"}}>№</Table.Th>
               <Table.Th>Название</Table.Th>
-              <Table.Th className={classes.thCenter} style={{ width: "50px" }}>
+              <Table.Th className={classes.thCenter} style={{width: "50px"}}>
                 =
               </Table.Th>
-              <Table.Th className={classes.thCenter} style={{ width: "80px" }}>
+              <Table.Th className={classes.thCenter} style={{width: "80px"}}>
                 Штраф
               </Table.Th>
               {problems.map((p) => (
-                <Table.Th key={p.problem_id} className={classes.thCenter} style={{ width: "70px" }}>
+                <Table.Th key={p.problem_id} className={classes.thCenter} style={{width: "70px"}}>
                   <Tooltip label={p.title} withArrow>
                     <span>{getProblemLetter(p.ordinal, p.short_name)}</span>
                   </Tooltip>

@@ -13,10 +13,10 @@ interface SingleSubmissionRejudgeButtonProps {
   submissionId: string;
 }
 
-export const SingleSubmissionRejudgeButton: React.FC<SingleSubmissionRejudgeButtonProps> = ({
+export const SingleSubmissionRejudgeButton = ({
   contestId,
   submissionId,
-}) => {
+}: SingleSubmissionRejudgeButtonProps): React.ReactNode => {
   const [opened, setOpened] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();

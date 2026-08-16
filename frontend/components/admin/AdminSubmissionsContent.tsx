@@ -92,8 +92,8 @@ export const AdminSubmissionsContent = ({
       const [err, res] = await api.listSubmissions({
         page,
         pageSize: 10,
-        state: state as any,
-        language: language as any,
+        state: state as Parameters<typeof api.listSubmissions>[0]["state"],
+        language: language as Parameters<typeof api.listSubmissions>[0]["language"],
         contestId: contestId || undefined,
         problemId: problemId || undefined,
       });
@@ -155,11 +155,21 @@ export const AdminSubmissionsContent = ({
   const hasActiveFilters = !!(state || language || contestId || problemId || userId);
 
   const queryParams: Record<string, string | number | undefined> = {};
-  if (state) queryParams.state = state;
-  if (language) queryParams.language = language;
-  if (contestId) queryParams.contestId = contestId;
-  if (problemId) queryParams.problemId = problemId;
-  if (userId) queryParams.userId = userId;
+  if (state) {
+    queryParams.state = state;
+  }
+  if (language) {
+    queryParams.language = language;
+  }
+  if (contestId) {
+    queryParams.contestId = contestId;
+  }
+  if (problemId) {
+    queryParams.problemId = problemId;
+  }
+  if (userId) {
+    queryParams.userId = userId;
+  }
 
   return (
     <Container size="xl" py="md">
@@ -394,4 +404,3 @@ export const AdminSubmissionsContent = ({
     </Container>
   );
 };
-

@@ -148,7 +148,7 @@ func (h *CoreServer) loadPackageStatementAndSamples(
 			rc.Close()
 			continue
 		}
-		_, _ = io.Copy(out, rc)
+		_, _ = io.Copy(out, io.LimitReader(rc, 100<<20))
 		rc.Close()
 		out.Close()
 	}

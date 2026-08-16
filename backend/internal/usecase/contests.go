@@ -225,7 +225,10 @@ func (uc *ContestsUseCase) ProcessSubmissionResult(ctx context.Context, submissi
 		ContestId: contestID,
 		UserId:    userID,
 	})
-	if err != nil || member.ContestRole != models.ContestRoleParticipant {
+	if err != nil {
+		return nil //nolint:nilerr // Non-members do not participate in scoreboard
+	}
+	if member.ContestRole != models.ContestRoleParticipant {
 		return nil
 	}
 
@@ -307,7 +310,7 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, 
 			ProblemID: p.ProblemID,
 			Title:     p.Title,
 			ShortName: p.ShortName,
-			Ordinal:   int32(p.Ordinal),
+			Ordinal:   int32(p.Ordinal), // #nosec G115
 		}
 	}
 
@@ -370,13 +373,14 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, 
 		if items[i].TotalPenalty != items[j].TotalPenalty {
 			return items[i].TotalPenalty < items[j].TotalPenalty
 		}
-		if items[i].LastAcceptedAt != nil && items[j].LastAcceptedAt != nil {
+		switch {
+		case items[i].LastAcceptedAt != nil && items[j].LastAcceptedAt != nil:
 			if !items[i].LastAcceptedAt.Equal(*items[j].LastAcceptedAt) {
 				return items[i].LastAcceptedAt.Before(*items[j].LastAcceptedAt)
 			}
-		} else if items[i].LastAcceptedAt != nil {
+		case items[i].LastAcceptedAt != nil:
 			return true
-		} else if items[j].LastAcceptedAt != nil {
+		case items[j].LastAcceptedAt != nil:
 			return false
 		}
 		return items[i].Username < items[j].Username

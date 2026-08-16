@@ -1,6 +1,6 @@
 "use client";
 
-import {ActionIcon, Badge, Group, Select, Stack, Table, Text} from "@mantine/core";
+import {ActionIcon, Group, Select, Stack, Table, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconFileCode} from "@tabler/icons-react";
 import {useRouter} from "next/navigation";
@@ -9,7 +9,6 @@ import {useState} from "react";
 import {NextPagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
-import {getRoleColor} from "@/lib/lib";
 
 import type {
   PaginationModel as PaginationType,
@@ -168,4 +167,3 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
     </>
   );
 };
-

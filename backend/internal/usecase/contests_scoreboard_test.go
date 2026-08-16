@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type ContestsRepoMock struct {
@@ -20,40 +21,40 @@ type ContestsRepoMock struct {
 
 func (m *ContestsRepoMock) GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (models.ContestMember, error) {
 	args := m.Called(ctx, c)
-	return args.Get(0).(models.ContestMember), args.Error(1)
+	return args.Get(0).(models.ContestMember), args.Error(1) //nolint:wrapcheck
 }
 
 func (m *ContestsRepoMock) GetContest(ctx context.Context, id uuid.UUID) (models.Contest, error) {
 	args := m.Called(ctx, id)
-	return args.Get(0).(models.Contest), args.Error(1)
+	return args.Get(0).(models.Contest), args.Error(1) //nolint:wrapcheck
 }
 
 func (m *ContestsRepoMock) GetContestProblemResult(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestProblemResult, error) {
 	args := m.Called(ctx, contestID, userID, problemID)
 	if res := args.Get(0); res != nil {
-		return res.(*models.ContestProblemResult), args.Error(1)
+		return res.(*models.ContestProblemResult), args.Error(1) //nolint:wrapcheck
 	}
-	return nil, args.Error(1)
+	return nil, args.Error(1) //nolint:wrapcheck
 }
 
 func (m *ContestsRepoMock) UpsertContestProblemResult(ctx context.Context, params *models.UpsertContestProblemResultParams) error {
 	args := m.Called(ctx, params)
-	return args.Error(0)
+	return args.Error(0) //nolint:wrapcheck
 }
 
 func (m *ContestsRepoMock) GetContestProblems(ctx context.Context, contestID uuid.UUID) ([]models.ContestProblem, error) {
 	args := m.Called(ctx, contestID)
-	return args.Get(0).([]models.ContestProblem), args.Error(1)
+	return args.Get(0).([]models.ContestProblem), args.Error(1) //nolint:wrapcheck
 }
 
 func (m *ContestsRepoMock) GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]models.ContestProblemResult, map[uuid.UUID]string, error) {
 	args := m.Called(ctx, contestID)
-	return args.Get(0).([]models.ContestProblemResult), args.Get(1).(map[uuid.UUID]string), args.Error(2)
+	return args.Get(0).([]models.ContestProblemResult), args.Get(1).(map[uuid.UUID]string), args.Error(2) //nolint:wrapcheck
 }
 
 func (m *ContestsRepoMock) GetSubmissionsForScoreboard(ctx context.Context, contestID, userID, problemID uuid.UUID) ([]models.SubmissionForScoreboard, error) {
 	args := m.Called(ctx, contestID, userID, problemID)
-	return args.Get(0).([]models.SubmissionForScoreboard), args.Error(1)
+	return args.Get(0).([]models.SubmissionForScoreboard), args.Error(1) //nolint:wrapcheck
 }
 
 func TestProcessSubmissionResult_Rules(t *testing.T) {
@@ -107,7 +108,7 @@ func TestProcessSubmissionResult_Rules(t *testing.T) {
 	})).Return(nil).Once()
 
 	err := uc.ProcessSubmissionResult(ctx, subWA)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 2. Second submission: Accepted at startTime + 25m
 	subAC := &models.Submission{
@@ -131,7 +132,7 @@ func TestProcessSubmissionResult_Rules(t *testing.T) {
 	})).Return(nil).Once()
 
 	err = uc.ProcessSubmissionResult(ctx, subAC)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// 3. Third submission: WA after AC -> should be IGNORED
 	subPostAC := &models.Submission{
@@ -156,7 +157,7 @@ func TestProcessSubmissionResult_Rules(t *testing.T) {
 	})).Return(nil).Once()
 
 	err = uc.ProcessSubmissionResult(ctx, subPostAC)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	mockRepo.AssertExpectations(t)
 }
@@ -227,7 +228,7 @@ func TestGetContestScoreboard_TieBreakerAndCustomPenalty(t *testing.T) {
 		Return(results, userMap, nil)
 
 	sb, err := uc.GetContestScoreboard(ctx, contestID, uuid.New())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, int32(15), sb.PenaltyPerAttempt)
 	assert.Len(t, sb.Items, 2)
 

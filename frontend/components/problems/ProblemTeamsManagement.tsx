@@ -5,7 +5,6 @@ import {
   Autocomplete,
   Badge,
   Button,
-  Card,
   Center,
   Group,
   Loader,
@@ -18,8 +17,8 @@ import {notifications} from "@mantine/notifications";
 import {IconEdit, IconPlus, IconTrash, IconUsersGroup} from "@tabler/icons-react";
 import {useCallback, useEffect, useState} from "react";
 
-import {StatusMessage} from "@/components/shared/StatusMessage";
 import {ChangeRoleModal} from "@/components/contests/ChangeRoleModal";
+import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 
 import type * as corev1 from "@/contracts/core/v1";
