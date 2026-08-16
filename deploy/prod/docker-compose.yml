@@ -41,7 +41,8 @@ services:
     labels:
       - "traefik.enable=true"
       # API router (/api)
-      - "traefik.http.routers.gate-backend-prod.rule=(Host(`${DOMAIN_NAME}`) || Host(`traefik`)) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.gate-backend-prod.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.gate-backend-prod.service=gate-backend-prod-svc"
       - "traefik.http.routers.gate-backend-prod.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-prod.tls=true"
       - "traefik.http.routers.gate-backend-prod.tls.certresolver=letsencrypt"
@@ -50,12 +51,14 @@ services:
       - "traefik.http.middlewares.gate-backend-prod-strip.stripprefix.prefixes=/api"
       # WS router (/ws)
       - "traefik.http.routers.gate-backend-prod-ws.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.gate-backend-prod-ws.service=gate-backend-prod-svc"
       - "traefik.http.routers.gate-backend-prod-ws.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-prod-ws.tls=true"
       - "traefik.http.routers.gate-backend-prod-ws.tls.certresolver=letsencrypt"
       - "traefik.http.routers.gate-backend-prod-ws.middlewares=gate-backend-prod-headers@docker"
       # Health router (/health)
       - "traefik.http.routers.gate-backend-prod-health.rule=Host(`${DOMAIN_NAME}`) && Path(`/health`)"
+      - "traefik.http.routers.gate-backend-prod-health.service=gate-backend-prod-svc"
       - "traefik.http.routers.gate-backend-prod-health.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-prod-health.tls=true"
       - "traefik.http.routers.gate-backend-prod-health.tls.certresolver=letsencrypt"
@@ -125,6 +128,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.gate-frontend-prod.rule=Host(`${DOMAIN_NAME}`)"
+      - "traefik.http.routers.gate-frontend-prod.service=gate-frontend-prod-svc"
       - "traefik.http.routers.gate-frontend-prod.entrypoints=websecure"
       - "traefik.http.routers.gate-frontend-prod.tls=true"
       - "traefik.http.routers.gate-frontend-prod.tls.certresolver=letsencrypt"
