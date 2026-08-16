@@ -1,0 +1,65 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.searchInput {
+  width: 240px;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+}
+
+.thCenter {
+  text-align: center !important;
+}
+
+.tdCenter {
+  text-align: center !important;
+}
+
+.cellSolved {
+  color: #2b8a3e;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.cellFailed {
+  color: #e03131;
+  font-weight: 600;
+}
+
+.cellTime {
+  font-size: 11px;
+  color: #868e96;
+  font-weight: 400;
+  display: block;
+  margin-top: 1px;
+}
+
+.summaryLabelSolved {
+  color: #2b8a3e;
+  font-weight: 600;
+}
+
+.summaryLabelAttempted {
+  color: #212529;
+  font-weight: 600;
+}

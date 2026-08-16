@@ -702,3 +702,114 @@ func mapDashboardContest(row sqlc.ListDashboardContestsRow) models.DashboardCont
 		LastSubmissionTime: lastSubTime,
 	}
 }
+
+func (r *ContestsRepo) UpsertContestProblemResult(ctx context.Context, params *models.UpsertContestProblemResultParams) error {
+	var firstACTime pgtype.Timestamptz
+	if params.FirstACTime != nil {
+		firstACTime = pgtype.Timestamptz{Time: *params.FirstACTime, Valid: true}
+	}
+
+	err := r.queries.UpsertContestProblemResult(ctx, sqlc.UpsertContestProblemResultParams{
+		ContestID:      params.ContestID,
+		UserID:         params.UserID,
+		ProblemID:      params.ProblemID,
+		Solved:         params.Solved,
+		FailedAttempts: params.FailedAttempts,
+		FirstAcTime:    firstACTime,
+		TimeMinutes:    params.TimeMinutes,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *ContestsRepo) GetContestProblemResult(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestProblemResult, error) {
+	row, err := r.queries.GetContestProblemResult(ctx, sqlc.GetContestProblemResultParams{
+		ContestID: contestID,
+		UserID:    userID,
+		ProblemID: problemID,
+	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	var firstAC *time.Time
+	if row.FirstAcTime.Valid {
+		firstAC = &row.FirstAcTime.Time
+	}
+
+	return &models.ContestProblemResult{
+		ContestID:      row.ContestID,
+		UserID:         row.UserID,
+		ProblemID:      row.ProblemID,
+		Solved:         row.Solved,
+		FailedAttempts: row.FailedAttempts,
+		FirstACTime:    firstAC,
+		TimeMinutes:    row.TimeMinutes,
+	}, nil
+}
+
+func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]models.ContestProblemResult, map[uuid.UUID]string, error) {
+	rows, err := r.queries.GetContestScoreboardFromStandings(ctx, contestID)
+	if err != nil {
+		return nil, nil, HandlePgErr(err)
+	}
+
+	userMap := make(map[uuid.UUID]string)
+	results := make([]models.ContestProblemResult, 0, len(rows))
+
+	for _, row := range rows {
+		userMap[row.UserID] = row.Username
+		if row.ProblemID.Valid {
+			probID := uuid.UUID(row.ProblemID.Bytes)
+			var solved bool
+			if row.Solved != nil {
+				solved = *row.Solved
+			}
+			var failedAttempts int32
+			if row.FailedAttempts != nil {
+				failedAttempts = *row.FailedAttempts
+			}
+			var firstAC *time.Time
+			if row.FirstAcTime.Valid {
+				firstAC = &row.FirstAcTime.Time
+			}
+
+			results = append(results, models.ContestProblemResult{
+				ContestID:      contestID,
+				UserID:         row.UserID,
+				ProblemID:      probID,
+				Solved:         solved,
+				FailedAttempts: failedAttempts,
+				FirstACTime:    firstAC,
+				TimeMinutes:    row.TimeMinutes,
+			})
+		}
+	}
+
+	return results, userMap, nil
+}
+
+func (r *ContestsRepo) GetSubmissionsForScoreboard(ctx context.Context, contestID, userID, problemID uuid.UUID) ([]models.SubmissionForScoreboard, error) {
+	rows, err := r.queries.GetSubmissionsForScoreboard(ctx, sqlc.GetSubmissionsForScoreboardParams{
+		ContestID: nullableUUIDToPgtype(&contestID),
+		OwnerID:   nullableUUIDToPgtype(&userID),
+		ProblemID: nullableUUIDToPgtype(&problemID),
+	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	subs := make([]models.SubmissionForScoreboard, len(rows))
+	for i, row := range rows {
+		subs[i] = models.SubmissionForScoreboard{
+			State:     row.State,
+			CreatedAt: row.CreatedAt,
+		}
+	}
+	return subs, nil
+}
+
+
+

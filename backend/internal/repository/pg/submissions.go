@@ -257,3 +257,12 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 		CreatedAt:    row.CreatedAt,
 	}
 }
+
+func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]uuid.UUID, error) {
+	return r.queries.ResetSubmissionsState(ctx, sqlc.ResetSubmissionsStateParams{
+		ContestID:    filter.ContestID,
+		ProblemID:    nullableUUIDToPgtype(filter.ProblemID),
+		SubmissionID: nullableUUIDToPgtype(filter.SubmissionID),
+	})
+}
+

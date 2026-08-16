@@ -13,6 +13,7 @@ type SubmissionsRepo interface {
 	GetSubmission(ctx context.Context, id uuid.UUID) (models.Submission, error)
 	ListSubmissions(ctx context.Context, filter models.SubmissionsFilter) ([]models.Submission, int32, error)
 	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
+	ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]uuid.UUID, error)
 	WithTx(tx pgx.Tx) SubmissionsRepo
 }
 
@@ -21,4 +22,5 @@ type SubmissionsUC interface {
 	GetSubmission(ctx context.Context, id uuid.UUID) (models.Submission, error)
 	ListSubmissions(ctx context.Context, filter models.SubmissionsFilter) (*models.SubmissionsList, error)
 	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
+	RejudgeSubmissions(ctx context.Context, filter models.RejudgeFilter) (int, error)
 }

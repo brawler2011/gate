@@ -1,6 +1,7 @@
-import {Container, Text, Title} from "@mantine/core";
+import {Container} from "@mantine/core";
 import {redirect} from "next/navigation";
 
+import {ContestMonitorTable} from "@/components/contests";
 import {DefaultLayout} from "@/components/shared";
 import {api} from "@/lib/api";
 import {unwrapAndCache} from "@/lib/api2";
@@ -22,8 +23,9 @@ type PageProps = {
 const Page = async ({params}: PageProps): Promise<ReactNode> => {
   const {contest_id} = await params;
 
-  // Fetch contest data for the info panel
+  // Fetch contest data and scoreboard
   const contestResponse = await unwrapAndCache(api.getContest)({contestId: contest_id});
+  const scoreboard = await unwrapAndCache(api.getContestScoreboard)({contestId: contest_id});
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(contest_id) : null;
@@ -63,10 +65,14 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
       }
     >
       <Container size="lg" py="md">
-        <Title order={2}>Монитор</Title>
-        <Text c="dimmed" mt="md">
-          Монитор скоро будет здесь!
-        </Text>
+        {scoreboard && (
+          <ContestMonitorTable
+            contestId={contest_id}
+            initialScoreboard={scoreboard}
+            startTime={contestResponse?.contest.start_time}
+            endTime={contestResponse?.contest.end_time}
+          />
+        )}
       </Container>
     </DefaultLayout>
   );

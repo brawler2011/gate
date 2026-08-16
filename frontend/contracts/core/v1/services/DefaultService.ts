@@ -34,6 +34,7 @@ import type { PostModel } from '../models/PostModel';
 import type { ProblemLimits } from '../models/ProblemLimits';
 import type { ProblemStatement } from '../models/ProblemStatement';
 import type { RegisterRequestModel } from '../models/RegisterRequestModel';
+import type { ScoreboardResponseModel } from '../models/ScoreboardResponseModel';
 import type { SupportedLanguagesResponse } from '../models/SupportedLanguagesResponse';
 import type { TestReport } from '../models/TestReport';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
@@ -585,6 +586,80 @@ export class DefaultService {
                 'state': state,
                 'sortOrder': sortOrder,
                 'language': language,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public rejudgeSubmission({
+        contestId,
+        submissionId,
+    }: {
+        contestId: string,
+        submissionId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/contests/{contest_id}/submissions/{submission_id}/rejudge',
+            path: {
+                'contest_id': contestId,
+                'submission_id': submissionId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public rejudgeContestProblem({
+        contestId,
+        problemId,
+    }: {
+        contestId: string,
+        problemId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/contests/{contest_id}/problems/{problem_id}/rejudge',
+            path: {
+                'contest_id': contestId,
+                'problem_id': problemId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public rejudgeContest({
+        contestId,
+    }: {
+        contestId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/contests/{contest_id}/rejudge',
+            path: {
+                'contest_id': contestId,
+            },
+        });
+    }
+    /**
+     * @returns ScoreboardResponseModel OK
+     * @throws ApiError
+     */
+    public getContestScoreboard({
+        contestId,
+    }: {
+        contestId: string,
+    }): CancelablePromise<ScoreboardResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/contests/{contest_id}/scoreboard',
+            path: {
+                'contest_id': contestId,
             },
         });
     }

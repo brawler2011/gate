@@ -310,6 +310,124 @@ func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemPa
 	return i, err
 }
 
+const getContestProblemResult = `-- name: GetContestProblemResult :one
+SELECT contest_id, user_id, problem_id, solved, failed_attempts, first_ac_time, time_minutes, updated_at FROM contest_problem_results
+WHERE contest_id = $1 AND user_id = $2 AND problem_id = $3
+`
+
+type GetContestProblemResultParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+}
+
+func (q *Queries) GetContestProblemResult(ctx context.Context, arg GetContestProblemResultParams) (ContestProblemResult, error) {
+	row := q.db.QueryRow(ctx, getContestProblemResult, arg.ContestID, arg.UserID, arg.ProblemID)
+	var i ContestProblemResult
+	err := row.Scan(
+		&i.ContestID,
+		&i.UserID,
+		&i.ProblemID,
+		&i.Solved,
+		&i.FailedAttempts,
+		&i.FirstAcTime,
+		&i.TimeMinutes,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getContestScoreboardFromStandings = `-- name: GetContestScoreboardFromStandings :many
+SELECT 
+    cm.user_id,
+    u.username,
+    cpr.problem_id,
+    cpr.solved,
+    cpr.failed_attempts,
+    cpr.first_ac_time,
+    cpr.time_minutes
+FROM contest_members cm
+JOIN users u ON cm.user_id = u.id
+LEFT JOIN contest_problem_results cpr ON cpr.contest_id = cm.contest_id AND cpr.user_id = cm.user_id
+WHERE cm.contest_id = $1 AND cm.role = 'participant'
+`
+
+type GetContestScoreboardFromStandingsRow struct {
+	UserID         uuid.UUID          `json:"user_id"`
+	Username       string             `json:"username"`
+	ProblemID      pgtype.UUID        `json:"problem_id"`
+	Solved         *bool              `json:"solved"`
+	FailedAttempts *int32             `json:"failed_attempts"`
+	FirstAcTime    pgtype.Timestamptz `json:"first_ac_time"`
+	TimeMinutes    *int32             `json:"time_minutes"`
+}
+
+func (q *Queries) GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]GetContestScoreboardFromStandingsRow, error) {
+	rows, err := q.db.Query(ctx, getContestScoreboardFromStandings, contestID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetContestScoreboardFromStandingsRow{}
+	for rows.Next() {
+		var i GetContestScoreboardFromStandingsRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Username,
+			&i.ProblemID,
+			&i.Solved,
+			&i.FailedAttempts,
+			&i.FirstAcTime,
+			&i.TimeMinutes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSubmissionsForScoreboard = `-- name: GetSubmissionsForScoreboard :many
+SELECT state, created_at
+FROM submissions
+WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3
+ORDER BY created_at ASC
+`
+
+type GetSubmissionsForScoreboardParams struct {
+	ContestID pgtype.UUID `json:"contest_id"`
+	OwnerID   pgtype.UUID `json:"owner_id"`
+	ProblemID pgtype.UUID `json:"problem_id"`
+}
+
+type GetSubmissionsForScoreboardRow struct {
+	State     models.State `json:"state"`
+	CreatedAt time.Time    `json:"created_at"`
+}
+
+func (q *Queries) GetSubmissionsForScoreboard(ctx context.Context, arg GetSubmissionsForScoreboardParams) ([]GetSubmissionsForScoreboardRow, error) {
+	rows, err := q.db.Query(ctx, getSubmissionsForScoreboard, arg.ContestID, arg.OwnerID, arg.ProblemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetSubmissionsForScoreboardRow{}
+	for rows.Next() {
+		var i GetSubmissionsForScoreboardRow
+		if err := rows.Scan(&i.State, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAllContests = `-- name: ListAllContests :many
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
 WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
@@ -797,5 +915,42 @@ type UpdateContestProblemOrdinalParams struct {
 
 func (q *Queries) UpdateContestProblemOrdinal(ctx context.Context, arg UpdateContestProblemOrdinalParams) error {
 	_, err := q.db.Exec(ctx, updateContestProblemOrdinal, arg.ContestID, arg.ProblemID, arg.Ordinal)
+	return err
+}
+
+const upsertContestProblemResult = `-- name: UpsertContestProblemResult :exec
+
+INSERT INTO contest_problem_results (contest_id, user_id, problem_id, solved, failed_attempts, first_ac_time, time_minutes)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (contest_id, user_id, problem_id)
+DO UPDATE SET
+    solved = EXCLUDED.solved,
+    failed_attempts = EXCLUDED.failed_attempts,
+    first_ac_time = EXCLUDED.first_ac_time,
+    time_minutes = EXCLUDED.time_minutes,
+    updated_at = NOW()
+`
+
+type UpsertContestProblemResultParams struct {
+	ContestID      uuid.UUID          `json:"contest_id"`
+	UserID         uuid.UUID          `json:"user_id"`
+	ProblemID      uuid.UUID          `json:"problem_id"`
+	Solved         bool               `json:"solved"`
+	FailedAttempts int32              `json:"failed_attempts"`
+	FirstAcTime    pgtype.Timestamptz `json:"first_ac_time"`
+	TimeMinutes    *int32             `json:"time_minutes"`
+}
+
+// Contest Standings (Scoreboard)
+func (q *Queries) UpsertContestProblemResult(ctx context.Context, arg UpsertContestProblemResultParams) error {
+	_, err := q.db.Exec(ctx, upsertContestProblemResult,
+		arg.ContestID,
+		arg.UserID,
+		arg.ProblemID,
+		arg.Solved,
+		arg.FailedAttempts,
+		arg.FirstAcTime,
+		arg.TimeMinutes,
+	)
 	return err
 }

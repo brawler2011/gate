@@ -66,6 +66,12 @@ type SubmissionsFilter struct {
 	Order     *int32
 }
 
+type RejudgeFilter struct {
+	ContestID    uuid.UUID
+	ProblemID    *uuid.UUID
+	SubmissionID *uuid.UUID
+}
+
 type SubmissionListItem struct {
 	ID           uuid.UUID `json:"id"`
 	UserID       uuid.UUID `json:"user_id"`

@@ -483,6 +483,42 @@ type RegisterRequestModel struct {
 	Username string              `json:"username"`
 }
 
+// ScoreboardItemModel defines model for ScoreboardItemModel.
+type ScoreboardItemModel struct {
+	LastAcceptedAt *time.Time                     `json:"last_accepted_at,omitempty"`
+	ProblemResults []ScoreboardProblemResultModel `json:"problem_results"`
+	ProblemsSolved int32                          `json:"problems_solved"`
+	TotalPenalty   int32                          `json:"total_penalty"`
+	UserId         openapi_types.UUID             `json:"user_id"`
+	Username       string                         `json:"username"`
+}
+
+// ScoreboardProblemHeaderModel defines model for ScoreboardProblemHeaderModel.
+type ScoreboardProblemHeaderModel struct {
+	Ordinal   int32              `json:"ordinal"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+	ShortName string             `json:"short_name"`
+	Title     string             `json:"title"`
+}
+
+// ScoreboardProblemResultModel defines model for ScoreboardProblemResultModel.
+type ScoreboardProblemResultModel struct {
+	FailedAttempts int32              `json:"failed_attempts"`
+	FirstAcTime    *time.Time         `json:"first_ac_time,omitempty"`
+	Penalty        *int32             `json:"penalty,omitempty"`
+	ProblemId      openapi_types.UUID `json:"problem_id"`
+	Solved         bool               `json:"solved"`
+	TimeMinutes    *int32             `json:"time_minutes,omitempty"`
+}
+
+// ScoreboardResponseModel defines model for ScoreboardResponseModel.
+type ScoreboardResponseModel struct {
+	ContestId         openapi_types.UUID             `json:"contest_id"`
+	Items             []ScoreboardItemModel          `json:"items"`
+	PenaltyPerAttempt int32                          `json:"penalty_per_attempt"`
+	Problems          []ScoreboardProblemHeaderModel `json:"problems"`
+}
+
 // SubmissionModel defines model for SubmissionModel.
 type SubmissionModel struct {
 	ContestId    openapi_types.UUID `json:"contest_id"`
@@ -1189,8 +1225,20 @@ type ClientInterface interface {
 	// GetContestProblem request
 	GetContestProblem(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// RejudgeContestProblem request
+	RejudgeContestProblem(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RejudgeContest request
+	RejudgeContest(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetContestScoreboard request
+	GetContestScoreboard(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListContestSubmissions request
 	ListContestSubmissions(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RejudgeSubmission request
+	RejudgeSubmission(ctx context.Context, contestId openapi_types.UUID, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetHealth request
 	GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1729,8 +1777,56 @@ func (c *Client) GetContestProblem(ctx context.Context, contestId openapi_types.
 	return c.Client.Do(req)
 }
 
+func (c *Client) RejudgeContestProblem(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRejudgeContestProblemRequest(c.Server, contestId, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RejudgeContest(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRejudgeContestRequest(c.Server, contestId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetContestScoreboard(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetContestScoreboardRequest(c.Server, contestId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListContestSubmissions(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListContestSubmissionsRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RejudgeSubmission(ctx context.Context, contestId openapi_types.UUID, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRejudgeSubmissionRequest(c.Server, contestId, submissionId)
 	if err != nil {
 		return nil, err
 	}
@@ -3817,6 +3913,115 @@ func NewGetContestProblemRequest(server string, contestId openapi_types.UUID, pr
 	return req, nil
 }
 
+// NewRejudgeContestProblemRequest generates requests for RejudgeContestProblem
+func NewRejudgeContestProblemRequest(server string, contestId openapi_types.UUID, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "problem_id", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/problems/%s/rejudge", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRejudgeContestRequest generates requests for RejudgeContest
+func NewRejudgeContestRequest(server string, contestId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/rejudge", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetContestScoreboardRequest generates requests for GetContestScoreboard
+func NewGetContestScoreboardRequest(server string, contestId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/scoreboard", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListContestSubmissionsRequest generates requests for ListContestSubmissions
 func NewListContestSubmissionsRequest(server string, contestId openapi_types.UUID, params *ListContestSubmissionsParams) (*http.Request, error) {
 	var err error
@@ -3954,6 +4159,47 @@ func NewListContestSubmissionsRequest(server string, contestId openapi_types.UUI
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRejudgeSubmissionRequest generates requests for RejudgeSubmission
+func NewRejudgeSubmissionRequest(server string, contestId openapi_types.UUID, submissionId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "submission_id", runtime.ParamLocationPath, submissionId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/submissions/%s/rejudge", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -8831,8 +9077,20 @@ type ClientWithResponsesInterface interface {
 	// GetContestProblemWithResponse request
 	GetContestProblemWithResponse(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetContestProblemResponse, error)
 
+	// RejudgeContestProblemWithResponse request
+	RejudgeContestProblemWithResponse(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeContestProblemResponse, error)
+
+	// RejudgeContestWithResponse request
+	RejudgeContestWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeContestResponse, error)
+
+	// GetContestScoreboardWithResponse request
+	GetContestScoreboardWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetContestScoreboardResponse, error)
+
 	// ListContestSubmissionsWithResponse request
 	ListContestSubmissionsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*ListContestSubmissionsResponse, error)
+
+	// RejudgeSubmissionWithResponse request
+	RejudgeSubmissionWithResponse(ctx context.Context, contestId openapi_types.UUID, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeSubmissionResponse, error)
 
 	// GetHealthWithResponse request
 	GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error)
@@ -9489,6 +9747,70 @@ func (r GetContestProblemResponse) StatusCode() int {
 	return 0
 }
 
+type RejudgeContestProblemResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r RejudgeContestProblemResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RejudgeContestProblemResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type RejudgeContestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r RejudgeContestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RejudgeContestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetContestScoreboardResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ScoreboardResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetContestScoreboardResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetContestScoreboardResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListContestSubmissionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -9505,6 +9827,27 @@ func (r ListContestSubmissionsResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r ListContestSubmissionsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type RejudgeSubmissionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r RejudgeSubmissionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RejudgeSubmissionResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -11802,6 +12145,33 @@ func (c *ClientWithResponses) GetContestProblemWithResponse(ctx context.Context,
 	return ParseGetContestProblemResponse(rsp)
 }
 
+// RejudgeContestProblemWithResponse request returning *RejudgeContestProblemResponse
+func (c *ClientWithResponses) RejudgeContestProblemWithResponse(ctx context.Context, contestId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeContestProblemResponse, error) {
+	rsp, err := c.RejudgeContestProblem(ctx, contestId, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRejudgeContestProblemResponse(rsp)
+}
+
+// RejudgeContestWithResponse request returning *RejudgeContestResponse
+func (c *ClientWithResponses) RejudgeContestWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeContestResponse, error) {
+	rsp, err := c.RejudgeContest(ctx, contestId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRejudgeContestResponse(rsp)
+}
+
+// GetContestScoreboardWithResponse request returning *GetContestScoreboardResponse
+func (c *ClientWithResponses) GetContestScoreboardWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetContestScoreboardResponse, error) {
+	rsp, err := c.GetContestScoreboard(ctx, contestId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetContestScoreboardResponse(rsp)
+}
+
 // ListContestSubmissionsWithResponse request returning *ListContestSubmissionsResponse
 func (c *ClientWithResponses) ListContestSubmissionsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*ListContestSubmissionsResponse, error) {
 	rsp, err := c.ListContestSubmissions(ctx, contestId, params, reqEditors...)
@@ -11809,6 +12179,15 @@ func (c *ClientWithResponses) ListContestSubmissionsWithResponse(ctx context.Con
 		return nil, err
 	}
 	return ParseListContestSubmissionsResponse(rsp)
+}
+
+// RejudgeSubmissionWithResponse request returning *RejudgeSubmissionResponse
+func (c *ClientWithResponses) RejudgeSubmissionWithResponse(ctx context.Context, contestId openapi_types.UUID, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeSubmissionResponse, error) {
+	rsp, err := c.RejudgeSubmission(ctx, contestId, submissionId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRejudgeSubmissionResponse(rsp)
 }
 
 // GetHealthWithResponse request returning *GetHealthResponse
@@ -13111,6 +13490,64 @@ func ParseGetContestProblemResponse(rsp *http.Response) (*GetContestProblemRespo
 	return response, nil
 }
 
+// ParseRejudgeContestProblemResponse parses an HTTP response from a RejudgeContestProblemWithResponse call
+func ParseRejudgeContestProblemResponse(rsp *http.Response) (*RejudgeContestProblemResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RejudgeContestProblemResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseRejudgeContestResponse parses an HTTP response from a RejudgeContestWithResponse call
+func ParseRejudgeContestResponse(rsp *http.Response) (*RejudgeContestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RejudgeContestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseGetContestScoreboardResponse parses an HTTP response from a GetContestScoreboardWithResponse call
+func ParseGetContestScoreboardResponse(rsp *http.Response) (*GetContestScoreboardResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetContestScoreboardResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ScoreboardResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListContestSubmissionsResponse parses an HTTP response from a ListContestSubmissionsWithResponse call
 func ParseListContestSubmissionsResponse(rsp *http.Response) (*ListContestSubmissionsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -13132,6 +13569,22 @@ func ParseListContestSubmissionsResponse(rsp *http.Response) (*ListContestSubmis
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseRejudgeSubmissionResponse parses an HTTP response from a RejudgeSubmissionWithResponse call
+func ParseRejudgeSubmissionResponse(rsp *http.Response) (*RejudgeSubmissionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RejudgeSubmissionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -15593,8 +16046,20 @@ type ServerInterface interface {
 	// (GET /contests/{contest_id}/problems/{problem_id})
 	GetContestProblem(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, problemId openapi_types.UUID)
 
+	// (POST /contests/{contest_id}/problems/{problem_id}/rejudge)
+	RejudgeContestProblem(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, problemId openapi_types.UUID)
+
+	// (POST /contests/{contest_id}/rejudge)
+	RejudgeContest(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID)
+
+	// (GET /contests/{contest_id}/scoreboard)
+	GetContestScoreboard(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID)
+
 	// (GET /contests/{contest_id}/submissions)
 	ListContestSubmissions(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params ListContestSubmissionsParams)
+
+	// (POST /contests/{contest_id}/submissions/{submission_id}/rejudge)
+	RejudgeSubmission(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, submissionId openapi_types.UUID)
 
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -16472,6 +16937,90 @@ func (siw *ServerInterfaceWrapper) GetContestProblem(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// RejudgeContestProblem operation middleware
+func (siw *ServerInterfaceWrapper) RejudgeContestProblem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", r.PathValue("contest_id"), &contestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "problem_id" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problem_id", r.PathValue("problem_id"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problem_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejudgeContestProblem(w, r, contestId, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejudgeContest operation middleware
+func (siw *ServerInterfaceWrapper) RejudgeContest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", r.PathValue("contest_id"), &contestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejudgeContest(w, r, contestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetContestScoreboard operation middleware
+func (siw *ServerInterfaceWrapper) GetContestScoreboard(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", r.PathValue("contest_id"), &contestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetContestScoreboard(w, r, contestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListContestSubmissions operation middleware
 func (siw *ServerInterfaceWrapper) ListContestSubmissions(w http.ResponseWriter, r *http.Request) {
 
@@ -16561,6 +17110,40 @@ func (siw *ServerInterfaceWrapper) ListContestSubmissions(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListContestSubmissions(w, r, contestId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejudgeSubmission operation middleware
+func (siw *ServerInterfaceWrapper) RejudgeSubmission(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", r.PathValue("contest_id"), &contestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "submission_id" -------------
+	var submissionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "submission_id", r.PathValue("submission_id"), &submissionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "submission_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejudgeSubmission(w, r, contestId, submissionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20224,7 +20807,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("POST "+options.BaseURL+"/contests/{contest_id}/problems", wrapper.CreateContestProblem)
 	m.HandleFunc("DELETE "+options.BaseURL+"/contests/{contest_id}/problems/{problem_id}", wrapper.DeleteContestProblem)
 	m.HandleFunc("GET "+options.BaseURL+"/contests/{contest_id}/problems/{problem_id}", wrapper.GetContestProblem)
+	m.HandleFunc("POST "+options.BaseURL+"/contests/{contest_id}/problems/{problem_id}/rejudge", wrapper.RejudgeContestProblem)
+	m.HandleFunc("POST "+options.BaseURL+"/contests/{contest_id}/rejudge", wrapper.RejudgeContest)
+	m.HandleFunc("GET "+options.BaseURL+"/contests/{contest_id}/scoreboard", wrapper.GetContestScoreboard)
 	m.HandleFunc("GET "+options.BaseURL+"/contests/{contest_id}/submissions", wrapper.ListContestSubmissions)
+	m.HandleFunc("POST "+options.BaseURL+"/contests/{contest_id}/submissions/{submission_id}/rejudge", wrapper.RejudgeSubmission)
 	m.HandleFunc("GET "+options.BaseURL+"/health", wrapper.GetHealth)
 	m.HandleFunc("GET "+options.BaseURL+"/languages", wrapper.GetLanguages)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations", wrapper.ListOrganizations)
@@ -20598,6 +21185,56 @@ func (response GetContestProblem200JSONResponse) VisitGetContestProblemResponse(
 	return json.NewEncoder(w).Encode(response)
 }
 
+type RejudgeContestProblemRequestObject struct {
+	ContestId openapi_types.UUID `json:"contest_id"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+}
+
+type RejudgeContestProblemResponseObject interface {
+	VisitRejudgeContestProblemResponse(w http.ResponseWriter) error
+}
+
+type RejudgeContestProblem200Response struct {
+}
+
+func (response RejudgeContestProblem200Response) VisitRejudgeContestProblemResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type RejudgeContestRequestObject struct {
+	ContestId openapi_types.UUID `json:"contest_id"`
+}
+
+type RejudgeContestResponseObject interface {
+	VisitRejudgeContestResponse(w http.ResponseWriter) error
+}
+
+type RejudgeContest200Response struct {
+}
+
+func (response RejudgeContest200Response) VisitRejudgeContestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type GetContestScoreboardRequestObject struct {
+	ContestId openapi_types.UUID `json:"contest_id"`
+}
+
+type GetContestScoreboardResponseObject interface {
+	VisitGetContestScoreboardResponse(w http.ResponseWriter) error
+}
+
+type GetContestScoreboard200JSONResponse ScoreboardResponseModel
+
+func (response GetContestScoreboard200JSONResponse) VisitGetContestScoreboardResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListContestSubmissionsRequestObject struct {
 	ContestId openapi_types.UUID `json:"contest_id"`
 	Params    ListContestSubmissionsParams
@@ -20614,6 +21251,23 @@ func (response ListContestSubmissions200JSONResponse) VisitListContestSubmission
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type RejudgeSubmissionRequestObject struct {
+	ContestId    openapi_types.UUID `json:"contest_id"`
+	SubmissionId openapi_types.UUID `json:"submission_id"`
+}
+
+type RejudgeSubmissionResponseObject interface {
+	VisitRejudgeSubmissionResponse(w http.ResponseWriter) error
+}
+
+type RejudgeSubmission200Response struct {
+}
+
+func (response RejudgeSubmission200Response) VisitRejudgeSubmissionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
 }
 
 type GetHealthRequestObject struct {
@@ -22672,8 +23326,20 @@ type StrictServerInterface interface {
 	// (GET /contests/{contest_id}/problems/{problem_id})
 	GetContestProblem(ctx context.Context, request GetContestProblemRequestObject) (GetContestProblemResponseObject, error)
 
+	// (POST /contests/{contest_id}/problems/{problem_id}/rejudge)
+	RejudgeContestProblem(ctx context.Context, request RejudgeContestProblemRequestObject) (RejudgeContestProblemResponseObject, error)
+
+	// (POST /contests/{contest_id}/rejudge)
+	RejudgeContest(ctx context.Context, request RejudgeContestRequestObject) (RejudgeContestResponseObject, error)
+
+	// (GET /contests/{contest_id}/scoreboard)
+	GetContestScoreboard(ctx context.Context, request GetContestScoreboardRequestObject) (GetContestScoreboardResponseObject, error)
+
 	// (GET /contests/{contest_id}/submissions)
 	ListContestSubmissions(ctx context.Context, request ListContestSubmissionsRequestObject) (ListContestSubmissionsResponseObject, error)
+
+	// (POST /contests/{contest_id}/submissions/{submission_id}/rejudge)
+	RejudgeSubmission(ctx context.Context, request RejudgeSubmissionRequestObject) (RejudgeSubmissionResponseObject, error)
 
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
@@ -23431,6 +24097,85 @@ func (sh *strictHandler) GetContestProblem(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// RejudgeContestProblem operation middleware
+func (sh *strictHandler) RejudgeContestProblem(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, problemId openapi_types.UUID) {
+	var request RejudgeContestProblemRequestObject
+
+	request.ContestId = contestId
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RejudgeContestProblem(ctx, request.(RejudgeContestProblemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejudgeContestProblem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RejudgeContestProblemResponseObject); ok {
+		if err := validResponse.VisitRejudgeContestProblemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejudgeContest operation middleware
+func (sh *strictHandler) RejudgeContest(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID) {
+	var request RejudgeContestRequestObject
+
+	request.ContestId = contestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RejudgeContest(ctx, request.(RejudgeContestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejudgeContest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RejudgeContestResponseObject); ok {
+		if err := validResponse.VisitRejudgeContestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetContestScoreboard operation middleware
+func (sh *strictHandler) GetContestScoreboard(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID) {
+	var request GetContestScoreboardRequestObject
+
+	request.ContestId = contestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetContestScoreboard(ctx, request.(GetContestScoreboardRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetContestScoreboard")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetContestScoreboardResponseObject); ok {
+		if err := validResponse.VisitGetContestScoreboardResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListContestSubmissions operation middleware
 func (sh *strictHandler) ListContestSubmissions(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params ListContestSubmissionsParams) {
 	var request ListContestSubmissionsRequestObject
@@ -23451,6 +24196,33 @@ func (sh *strictHandler) ListContestSubmissions(w http.ResponseWriter, r *http.R
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListContestSubmissionsResponseObject); ok {
 		if err := validResponse.VisitListContestSubmissionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejudgeSubmission operation middleware
+func (sh *strictHandler) RejudgeSubmission(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, submissionId openapi_types.UUID) {
+	var request RejudgeSubmissionRequestObject
+
+	request.ContestId = contestId
+	request.SubmissionId = submissionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RejudgeSubmission(ctx, request.(RejudgeSubmissionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejudgeSubmission")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RejudgeSubmissionResponseObject); ok {
+		if err := validResponse.VisitRejudgeSubmissionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

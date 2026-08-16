@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -512,3 +513,33 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, request corev1.
 
 	return corev1.ListContestSubmissions200JSONResponse(resp), nil
 }
+
+func (h *CoreServer) GetContestScoreboard(ctx context.Context, request corev1.GetContestScoreboardRequestObject) (corev1.GetContestScoreboardResponseObject, error) {
+	contest, err := h.contestsUC.GetContest(ctx, request.ContestId)
+	if err != nil {
+		return nil, err
+	}
+
+	user := middleware.GetUser(ctx)
+	allowed, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetMonitor)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied to view contest monitor")
+	}
+
+	isManager := user.Role == models.UserRoleAdmin || (contest.OwnerID != nil && *contest.OwnerID == user.Id)
+	hasStarted := contest.StartTime == nil || !time.Now().Before(*contest.StartTime)
+	if !isManager && !hasStarted {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
+	}
+
+	sb, err := h.contestsUC.GetContestScoreboard(ctx, request.ContestId, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.GetContestScoreboard200JSONResponse(*GetScoreboardResponseDTO(sb)), nil
+}
+

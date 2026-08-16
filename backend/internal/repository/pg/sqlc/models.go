@@ -476,6 +476,17 @@ type ContestProblem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type ContestProblemResult struct {
+	ContestID      uuid.UUID          `json:"contest_id"`
+	UserID         uuid.UUID          `json:"user_id"`
+	ProblemID      uuid.UUID          `json:"problem_id"`
+	Solved         bool               `json:"solved"`
+	FailedAttempts int32              `json:"failed_attempts"`
+	FirstAcTime    pgtype.Timestamptz `json:"first_ac_time"`
+	TimeMinutes    *int32             `json:"time_minutes"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+}
+
 type ContestTeam struct {
 	ContestID       uuid.UUID          `json:"contest_id"`
 	TeamID          uuid.UUID          `json:"team_id"`

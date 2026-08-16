@@ -33,6 +33,11 @@ type ContestsRepo interface {
 
 	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]models.Contest, int32, error)
 	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error)
+
+	UpsertContestProblemResult(ctx context.Context, params *models.UpsertContestProblemResultParams) error
+	GetContestProblemResult(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestProblemResult, error)
+	GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]models.ContestProblemResult, map[uuid.UUID]string, error)
+	GetSubmissionsForScoreboard(ctx context.Context, contestID, userID, problemID uuid.UUID) ([]models.SubmissionForScoreboard, error)
 }
 
 type ContestsUC interface {
@@ -57,4 +62,8 @@ type ContestsUC interface {
 	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (models.ContestProblem, error)
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]models.ContestProblem, error)
 	DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error
+
+	ProcessSubmissionResult(ctx context.Context, submission *models.Submission) error
+	GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID) (*models.ScoreboardResponse, error)
 }
+

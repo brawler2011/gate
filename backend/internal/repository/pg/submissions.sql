@@ -131,3 +131,22 @@ WHERE (
     sqlc.narg('state')::integer IS NULL
     OR s.state = sqlc.narg('state')::integer
   );
+
+-- name: ResetSubmissionsState :many
+UPDATE submissions
+SET state = 1,
+  score = 0,
+  time_stat = 0,
+  memory_stat = 0,
+  updated_at = NOW()
+WHERE contest_id = @contest_id::uuid
+  AND (
+    sqlc.narg('problem_id')::uuid IS NULL
+    OR problem_id = sqlc.narg('problem_id')::uuid
+  )
+  AND (
+    sqlc.narg('submission_id')::uuid IS NULL
+    OR id = sqlc.narg('submission_id')::uuid
+  )
+RETURNING id;
+

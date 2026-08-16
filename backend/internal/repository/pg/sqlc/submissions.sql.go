@@ -319,6 +319,51 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 	return items, nil
 }
 
+const resetSubmissionsState = `-- name: ResetSubmissionsState :many
+UPDATE submissions
+SET state = 1,
+  score = 0,
+  time_stat = 0,
+  memory_stat = 0,
+  updated_at = NOW()
+WHERE contest_id = $1::uuid
+  AND (
+    $2::uuid IS NULL
+    OR problem_id = $2::uuid
+  )
+  AND (
+    $3::uuid IS NULL
+    OR id = $3::uuid
+  )
+RETURNING id
+`
+
+type ResetSubmissionsStateParams struct {
+	ContestID    uuid.UUID   `json:"contest_id"`
+	ProblemID    pgtype.UUID `json:"problem_id"`
+	SubmissionID pgtype.UUID `json:"submission_id"`
+}
+
+func (q *Queries) ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, resetSubmissionsState, arg.ContestID, arg.ProblemID, arg.SubmissionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateSubmission = `-- name: UpdateSubmission :exec
 UPDATE submissions
 SET state = $1,

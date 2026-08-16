@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"context"
+	"sort"
+	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -205,3 +207,182 @@ func (uc *ContestsUseCase) ListDashboardContests(ctx context.Context, userID uui
 	}
 	return contests, nil
 }
+
+func (uc *ContestsUseCase) ProcessSubmissionResult(ctx context.Context, submission *models.Submission) error {
+	if submission == nil || submission.ContestID == nil || submission.CreatedBy == nil || submission.ProblemID == nil {
+		return nil
+	}
+
+	contestID := *submission.ContestID
+	userID := *submission.CreatedBy
+	problemID := *submission.ProblemID
+
+	member, err := uc.contestRepo.GetContestMember(ctx, &models.ContestPermissionGet{
+		ContestId: contestID,
+		UserId:    userID,
+	})
+	if err != nil || member.ContestRole != models.ContestRoleParticipant {
+		return nil
+	}
+
+	contest, err := uc.contestRepo.GetContest(ctx, contestID)
+	if err != nil {
+		return err
+	}
+
+	submissions, err := uc.contestRepo.GetSubmissionsForScoreboard(ctx, contestID, userID, problemID)
+	if err != nil {
+		return err
+	}
+
+	var solved bool
+	var failedAttempts int32
+	var firstACTime *time.Time
+	var timeMinutes *int32
+
+	for _, sub := range submissions {
+		if contest.StartTime != nil && sub.CreatedAt.Before(*contest.StartTime) {
+			continue
+		}
+		if contest.EndTime != nil && sub.CreatedAt.After(*contest.EndTime) {
+			continue
+		}
+
+		if sub.State == models.Saved || sub.State == models.GotCE {
+			continue
+		}
+
+		if sub.State == models.Accepted {
+			solved = true
+			t := sub.CreatedAt
+			firstACTime = &t
+			if contest.StartTime != nil {
+				mins := int32(sub.CreatedAt.Sub(*contest.StartTime).Minutes())
+				if mins < 0 {
+					mins = 0
+				}
+				timeMinutes = &mins
+			} else {
+				zero := int32(0)
+				timeMinutes = &zero
+			}
+			break
+		} else if sub.State == models.GotTL || sub.State == models.GotML ||
+			sub.State == models.GotRE || sub.State == models.GotPE || sub.State == models.GotWA {
+			failedAttempts++
+		}
+	}
+
+	return uc.contestRepo.UpsertContestProblemResult(ctx, &models.UpsertContestProblemResultParams{
+		ContestID:      contestID,
+		UserID:         userID,
+		ProblemID:      problemID,
+		Solved:         solved,
+		FailedAttempts: failedAttempts,
+		FirstACTime:    firstACTime,
+		TimeMinutes:    timeMinutes,
+	})
+}
+
+func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID) (*models.ScoreboardResponse, error) {
+	contest, err := uc.contestRepo.GetContest(ctx, contestID)
+	if err != nil {
+		return nil, err
+	}
+
+	penaltyPerAttempt := contest.GetPenaltyPerAttempt()
+
+	problems, err := uc.contestRepo.GetContestProblems(ctx, contestID)
+	if err != nil {
+		return nil, err
+	}
+
+	problemHeaders := make([]models.ScoreboardProblemHeader, len(problems))
+	for i, p := range problems {
+		problemHeaders[i] = models.ScoreboardProblemHeader{
+			ProblemID: p.ProblemID,
+			Title:     p.Title,
+			ShortName: p.ShortName,
+			Ordinal:   int32(p.Ordinal),
+		}
+	}
+
+	results, userMap, err := uc.contestRepo.GetContestScoreboardFromStandings(ctx, contestID)
+	if err != nil {
+		return nil, err
+	}
+
+	userResults := make(map[uuid.UUID][]models.ContestProblemResult)
+	for _, res := range results {
+		res.Penalty = 0
+		if res.Solved {
+			res.Penalty = res.FailedAttempts * penaltyPerAttempt
+		}
+		userResults[res.UserID] = append(userResults[res.UserID], res)
+	}
+
+	items := make([]models.ScoreboardItem, 0, len(userMap))
+	for uID, username := range userMap {
+		pResults := userResults[uID]
+		if pResults == nil {
+			pResults = []models.ContestProblemResult{}
+		}
+
+		var solvedCount int32
+		var totalPenalty int32
+		var lastAC *time.Time
+
+		for _, r := range pResults {
+			if r.Solved {
+				solvedCount++
+				var timeMins int32
+				if r.TimeMinutes != nil {
+					timeMins = *r.TimeMinutes
+				}
+				totalPenalty += timeMins + r.Penalty
+
+				if r.FirstACTime != nil {
+					if lastAC == nil || r.FirstACTime.After(*lastAC) {
+						lastAC = r.FirstACTime
+					}
+				}
+			}
+		}
+
+		items = append(items, models.ScoreboardItem{
+			UserID:         uID,
+			Username:       username,
+			ProblemsSolved: solvedCount,
+			TotalPenalty:   totalPenalty,
+			LastAcceptedAt: lastAC,
+			ProblemResults: pResults,
+		})
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].ProblemsSolved != items[j].ProblemsSolved {
+			return items[i].ProblemsSolved > items[j].ProblemsSolved
+		}
+		if items[i].TotalPenalty != items[j].TotalPenalty {
+			return items[i].TotalPenalty < items[j].TotalPenalty
+		}
+		if items[i].LastAcceptedAt != nil && items[j].LastAcceptedAt != nil {
+			if !items[i].LastAcceptedAt.Equal(*items[j].LastAcceptedAt) {
+				return items[i].LastAcceptedAt.Before(*items[j].LastAcceptedAt)
+			}
+		} else if items[i].LastAcceptedAt != nil {
+			return true
+		} else if items[j].LastAcceptedAt != nil {
+			return false
+		}
+		return items[i].Username < items[j].Username
+	})
+
+	return &models.ScoreboardResponse{
+		ContestID:         contestID,
+		PenaltyPerAttempt: penaltyPerAttempt,
+		Problems:          problemHeaders,
+		Items:             items,
+	}, nil
+}
+

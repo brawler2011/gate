@@ -113,3 +113,45 @@ func ListSolutionsResponseDTO(solutionsList *models.SubmissionsList) *corev1.Lis
 
 	return &resp
 }
+
+func (h *CoreServer) RejudgeSubmission(ctx context.Context, request corev1.RejudgeSubmissionRequestObject) (corev1.RejudgeSubmissionResponseObject, error) {
+	filter := models.RejudgeFilter{
+		ContestID:    request.ContestId,
+		SubmissionID: &request.SubmissionId,
+	}
+
+	_, err := h.submissionsUC.RejudgeSubmissions(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.RejudgeSubmission200Response{}, nil
+}
+
+func (h *CoreServer) RejudgeContestProblem(ctx context.Context, request corev1.RejudgeContestProblemRequestObject) (corev1.RejudgeContestProblemResponseObject, error) {
+	filter := models.RejudgeFilter{
+		ContestID: request.ContestId,
+		ProblemID: &request.ProblemId,
+	}
+
+	_, err := h.submissionsUC.RejudgeSubmissions(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.RejudgeContestProblem200Response{}, nil
+}
+
+func (h *CoreServer) RejudgeContest(ctx context.Context, request corev1.RejudgeContestRequestObject) (corev1.RejudgeContestResponseObject, error) {
+	filter := models.RejudgeFilter{
+		ContestID: request.ContestId,
+	}
+
+	_, err := h.submissionsUC.RejudgeSubmissions(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.RejudgeContest200Response{}, nil
+}
+

@@ -596,3 +596,51 @@ func DashboardResponseDTO(contests []models.DashboardContest, problems []models.
 		MyProblems:     problemDTOs,
 	}
 }
+
+func GetScoreboardResponseDTO(sb *models.ScoreboardResponse) *corev1.ScoreboardResponseModel {
+	if sb == nil {
+		return &corev1.ScoreboardResponseModel{}
+	}
+
+	problems := make([]corev1.ScoreboardProblemHeaderModel, len(sb.Problems))
+	for i, p := range sb.Problems {
+		problems[i] = corev1.ScoreboardProblemHeaderModel{
+			ProblemId: p.ProblemID,
+			Title:     p.Title,
+			ShortName: p.ShortName,
+			Ordinal:   p.Ordinal,
+		}
+	}
+
+	items := make([]corev1.ScoreboardItemModel, len(sb.Items))
+	for i, item := range sb.Items {
+		pResults := make([]corev1.ScoreboardProblemResultModel, len(item.ProblemResults))
+		for j, r := range item.ProblemResults {
+			pResults[j] = corev1.ScoreboardProblemResultModel{
+				ProblemId:      r.ProblemID,
+				Solved:         r.Solved,
+				FailedAttempts: r.FailedAttempts,
+				FirstAcTime:    r.FirstACTime,
+				TimeMinutes:    r.TimeMinutes,
+				Penalty:        &r.Penalty,
+			}
+		}
+
+		items[i] = corev1.ScoreboardItemModel{
+			UserId:         item.UserID,
+			Username:       item.Username,
+			ProblemsSolved: item.ProblemsSolved,
+			TotalPenalty:   item.TotalPenalty,
+			LastAcceptedAt: item.LastAcceptedAt,
+			ProblemResults: pResults,
+		}
+	}
+
+	return &corev1.ScoreboardResponseModel{
+		ContestId:         sb.ContestID,
+		PenaltyPerAttempt: sb.PenaltyPerAttempt,
+		Problems:          problems,
+		Items:             items,
+	}
+}
+

@@ -97,6 +97,7 @@ func (l *PackageLoader) LoadPackage(ctx context.Context, problemID string, packa
 type JudgeUseCase struct {
 	submissionsRepo interfaces.SubmissionsRepo
 	packagesRepo    interfaces.PackagesRepo
+	contestsUC      interfaces.ContestsUC
 	packageLoader   *PackageLoader
 	sandbox         *sandbox.Sandbox
 	eventPublisher  *judge.EventPublisher
@@ -107,6 +108,7 @@ type JudgeUseCase struct {
 func NewJudgeUseCase(
 	submissionsRepo interfaces.SubmissionsRepo,
 	packagesRepo interfaces.PackagesRepo,
+	contestsUC interfaces.ContestsUC,
 	storage storage.Storage,
 	packageBucket string,
 	tempDir string,
@@ -116,6 +118,7 @@ func NewJudgeUseCase(
 	return &JudgeUseCase{
 		submissionsRepo: submissionsRepo,
 		packagesRepo:    packagesRepo,
+		contestsUC:      contestsUC,
 		packageLoader:   NewPackageLoader(storage, packageBucket, tempDir),
 		sandbox:         sandbox,
 		eventPublisher:  eventPublisher,
@@ -219,6 +222,13 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		meta,
 	); err != nil {
 		uc.logger.Error("failed to publish completed event", "error", err)
+	}
+
+	submission.State = verdict.State
+	if uc.contestsUC != nil {
+		if procErr := uc.contestsUC.ProcessSubmissionResult(ctx, &submission); procErr != nil {
+			uc.logger.Error("failed to process contest submission result", "error", procErr)
+		}
 	}
 
 	uc.logger.Info("judging completed",

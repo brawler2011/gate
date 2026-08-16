@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  ActionIcon,
+  Group,
   Loader,
   Table,
   TableTbody,
@@ -9,9 +11,11 @@ import {
   TableThead,
   TableTr,
   Text,
+  Tooltip,
   Transition,
   TableScrollContainer,
 } from "@mantine/core";
+import {IconRefresh} from "@tabler/icons-react";
 import Link from "next/link";
 import React, {useEffect, useState, type ReactNode} from "react";
 
@@ -24,6 +28,9 @@ import type {SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";
 interface SubmissionsListProps {
     submissions: SubmissionWithProgress[];
     highlightedIds?: Set<string>;
+    canRejudge?: boolean;
+    onRejudgeSubmission?: (submissionId: string) => Promise<void>;
+    rejudgingId?: string | null;
 }
 
 interface VerdictCellProps {
@@ -71,9 +78,19 @@ interface SubmissionRowProps {
     submission: SubmissionWithProgress;
     isHighlighted: boolean;
     isNew: boolean;
+    canRejudge?: boolean;
+    onRejudgeSubmission?: (submissionId: string) => Promise<void>;
+    rejudgingId?: string | null;
 }
 
-const SubmissionRow = ({submission, isHighlighted, isNew}: SubmissionRowProps) => {
+const SubmissionRow = ({
+  submission,
+  isHighlighted,
+  isNew,
+  canRejudge,
+  onRejudgeSubmission,
+  rejudgingId,
+}: SubmissionRowProps) => {
   const [mounted, setMounted] = useState(!isNew);
 
   useEffect(() => {
@@ -131,9 +148,24 @@ const SubmissionRow = ({submission, isHighlighted, isNew}: SubmissionRowProps) =
             <Text>{submission.memory_stat} КБ</Text>
           </TableTd>
           <TableTd ta="center">
-            <Link href={`/submissions/${submission.id}`} style={{color: 'inherit'}}>
-              <Text span td="underline">Посмотреть</Text>
-            </Link>
+            <Group gap="xs" justify="center" wrap="nowrap">
+              <Link href={`/submissions/${submission.id}`} style={{color: 'inherit'}}>
+                <Text span td="underline">Посмотреть</Text>
+              </Link>
+              {canRejudge && (
+                <Tooltip label="Перетестировать посылку">
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color="blue"
+                    loading={rejudgingId === submission.id}
+                    onClick={() => onRejudgeSubmission?.(submission.id)}
+                  >
+                    <IconRefresh size="1rem" />
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </Group>
           </TableTd>
         </TableTr>
       )}
@@ -141,7 +173,13 @@ const SubmissionRow = ({submission, isHighlighted, isNew}: SubmissionRowProps) =
   );
 };
 
-const SubmissionsList = ({submissions, highlightedIds = new Set()}: SubmissionsListProps): ReactNode => {
+const SubmissionsList = ({
+  submissions,
+  highlightedIds = new Set(),
+  canRejudge,
+  onRejudgeSubmission,
+  rejudgingId,
+}: SubmissionsListProps): ReactNode => {
   return (
     <>
       <TableScrollContainer minWidth={800}>
@@ -155,7 +193,7 @@ const SubmissionsList = ({submissions, highlightedIds = new Set()}: SubmissionsL
               <TableTh ta="center" className={styles.colVerdict}>Вердикт</TableTh>
               <TableTh ta="center">Время</TableTh>
               <TableTh ta="center">Память</TableTh>
-              <TableTh ta="center">Просмотр</TableTh>
+              <TableTh ta="center">Действия</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>
@@ -165,6 +203,9 @@ const SubmissionsList = ({submissions, highlightedIds = new Set()}: SubmissionsL
                 submission={submission}
                 isHighlighted={highlightedIds.has(submission.id)}
                 isNew={submission.isNew ?? false}
+                canRejudge={canRejudge}
+                onRejudgeSubmission={onRejudgeSubmission}
+                rejudgingId={rejudgingId}
               />
             ))}
           </TableTbody>
@@ -180,3 +221,4 @@ const SubmissionsList = ({submissions, highlightedIds = new Set()}: SubmissionsL
 };
 
 export {SubmissionsList};
+

@@ -66,6 +66,8 @@ type Querier interface {
 	GetContestByShortName(ctx context.Context, arg GetContestByShortNameParams) (Contest, error)
 	GetContestMember(ctx context.Context, arg GetContestMemberParams) (ContestMember, error)
 	GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error)
+	GetContestProblemResult(ctx context.Context, arg GetContestProblemResultParams) (ContestProblemResult, error)
+	GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]GetContestScoreboardFromStandingsRow, error)
 	GetContestTeam(ctx context.Context, arg GetContestTeamParams) (ContestTeam, error)
 	GetLatestUserOrganizationID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organization, error)
@@ -84,6 +86,7 @@ type Querier interface {
 	GetSession(ctx context.Context, id uuid.UUID) (Session, error)
 	GetSpecificUserOrganizationID(ctx context.Context, arg GetSpecificUserOrganizationIDParams) (uuid.UUID, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error)
+	GetSubmissionsForScoreboard(ctx context.Context, arg GetSubmissionsForScoreboardParams) ([]GetSubmissionsForScoreboardRow, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
 	GetTeamBySlug(ctx context.Context, arg GetTeamBySlugParams) (Team, error)
 	GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]Contest, error)
@@ -131,6 +134,7 @@ type Querier interface {
 	RemoveProblemTeam(ctx context.Context, arg RemoveProblemTeamParams) error
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error
+	ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]uuid.UUID, error)
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error
 	UpdateContestMemberRole(ctx context.Context, arg UpdateContestMemberRoleParams) error
 	UpdateContestProblemOrdinal(ctx context.Context, arg UpdateContestProblemOrdinalParams) error
@@ -150,6 +154,8 @@ type Querier interface {
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) error
 	UpdateTeamMemberRole(ctx context.Context, arg UpdateTeamMemberRoleParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error
+	// Contest Standings (Scoreboard)
+	UpsertContestProblemResult(ctx context.Context, arg UpsertContestProblemResultParams) error
 }
 
 var _ Querier = (*Queries)(nil)

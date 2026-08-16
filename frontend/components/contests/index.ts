@@ -5,4 +5,5 @@ export * from './ParticipantsSection';
 export * from './ProblemsSection';
 export * from './SettingsSection';
 export * from './SidebarNav';
-export * from './ContestCountdown';
+export * from './ContestMonitorTable';
+

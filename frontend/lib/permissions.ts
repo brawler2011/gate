@@ -248,6 +248,10 @@ export class PermissionChecker {
     return this.canManageContest(contest);
   }
 
+  canRejudgeSubmissions(contest: ContestModel): boolean {
+    return this.canManageContest(contest);
+  }
+
   // Problem permissions
 
   canViewProblem(problem: ProblemModel): boolean {

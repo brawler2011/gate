@@ -157,3 +157,42 @@ LEFT JOIN (
 WHERE user_has_contest_access($1, c.id)
 ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC, c.created_at DESC
 LIMIT $2;
+
+-- Contest Standings (Scoreboard)
+
+-- name: UpsertContestProblemResult :exec
+INSERT INTO contest_problem_results (contest_id, user_id, problem_id, solved, failed_attempts, first_ac_time, time_minutes)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (contest_id, user_id, problem_id)
+DO UPDATE SET
+    solved = EXCLUDED.solved,
+    failed_attempts = EXCLUDED.failed_attempts,
+    first_ac_time = EXCLUDED.first_ac_time,
+    time_minutes = EXCLUDED.time_minutes,
+    updated_at = NOW();
+
+-- name: GetContestProblemResult :one
+SELECT * FROM contest_problem_results
+WHERE contest_id = $1 AND user_id = $2 AND problem_id = $3;
+
+-- name: GetContestScoreboardFromStandings :many
+SELECT 
+    cm.user_id,
+    u.username,
+    cpr.problem_id,
+    cpr.solved,
+    cpr.failed_attempts,
+    cpr.first_ac_time,
+    cpr.time_minutes
+FROM contest_members cm
+JOIN users u ON cm.user_id = u.id
+LEFT JOIN contest_problem_results cpr ON cpr.contest_id = cm.contest_id AND cpr.user_id = cm.user_id
+WHERE cm.contest_id = $1 AND cm.role = 'participant';
+
+-- name: GetSubmissionsForScoreboard :many
+SELECT state, created_at
+FROM submissions
+WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3
+ORDER BY created_at ASC;
+
+

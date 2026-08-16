@@ -186,6 +186,7 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ListSubmissions":   {RequireAuth, RequireAdmin},
 
 		"GetContest":             {RequireContestPermission(models.ActionGetContest)},
+		"GetContestScoreboard":   {RequireContestPermission(models.ActionGetMonitor)},
 		"UpdateContest":          {RequireAuth, RequireContestPermission(models.ActionUpdateContest)},
 		"DeleteContest":          {RequireAuth, RequireContestPermission(models.ActionAdminContest)},
 		"CreateContestProblem":   {RequireAuth, RequireContestPermission(models.ActionManageContest)},
@@ -197,6 +198,9 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ListContestMembers":     {RequireAuth, checkListContestMembersAccess},
 		"ListContestSubmissions": {RequireAuth, checkListContestSubmissionsAccess},
 		"CreateSubmission":       {RequireAuth, RequireContestPermission(models.ActionCreateSubmission)},
+		"RejudgeSubmission":     {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"RejudgeContestProblem": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"RejudgeContest":        {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 
 		"GetProblem":          {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
 		"GetProblemLimits":    {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},

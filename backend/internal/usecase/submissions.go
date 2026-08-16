@@ -140,3 +140,69 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter models
 		Pagination:  models.NewPagination(filter.Page, filter.PageSize, total),
 	}, nil
 }
+
+func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter models.RejudgeFilter) (int, error) {
+	if filter.ContestID == uuid.Nil {
+		return 0, pkg.Wrap(pkg.ErrBadInput, nil, "contest id is required")
+	}
+
+	_, err := uc.contestsUC.GetContest(ctx, filter.ContestID)
+	if err != nil {
+		return 0, err
+	}
+
+	if filter.ProblemID != nil && *filter.ProblemID != uuid.Nil {
+		_, err = uc.problemsUC.GetProblemById(ctx, *filter.ProblemID)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	if filter.SubmissionID != nil && *filter.SubmissionID != uuid.Nil {
+		sub, err := uc.submissionsRepo.GetSubmission(ctx, *filter.SubmissionID)
+		if err != nil {
+			return 0, err
+		}
+		if sub.ContestID != nil && *sub.ContestID != filter.ContestID {
+			return 0, pkg.Wrap(pkg.ErrBadInput, nil, "submission does not belong to specified contest")
+		}
+	}
+
+	var rejudgedCount int
+
+	err = uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		txSubRepo := uc.submissionsRepo.WithTx(tx)
+		txOutboxRepo := uc.outboxRepo.WithTx(tx)
+
+		resetIDs, err := txSubRepo.ResetSubmissionsState(ctx, filter)
+		if err != nil {
+			return fmt.Errorf("failed to reset submissions state: %w", err)
+		}
+
+		for _, id := range resetIDs {
+			submission, err := txSubRepo.GetSubmission(ctx, id)
+			if err != nil {
+				return fmt.Errorf("failed to get submission %s for rejudge: %w", id, err)
+			}
+
+			eventParams, err := newOutboxEventParams(submission)
+			if err != nil {
+				return fmt.Errorf("failed to create event params for submission %s: %w", id, err)
+			}
+
+			if err := txOutboxRepo.CreateEvent(ctx, eventParams); err != nil {
+				return fmt.Errorf("failed to create outbox event for submission %s: %w", id, err)
+			}
+		}
+
+		rejudgedCount = len(resetIDs)
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return rejudgedCount, nil
+}
+

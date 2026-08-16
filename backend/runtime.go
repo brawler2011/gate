@@ -210,6 +210,7 @@ func runApp(envFile string) error {
 	judgeUC := usecase.NewJudgeUseCase(
 		submissionsRepo,
 		packagesRepo,
+		contestsUC,
 		store,
 		defaultS3PackageBucket,
 		judgeTempDir,

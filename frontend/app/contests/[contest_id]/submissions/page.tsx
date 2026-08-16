@@ -84,8 +84,11 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
   const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(contest_id) : null;
 
-  if (contestData?.contest) {
-    const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
+  const checker = contestData?.contest
+    ? new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null)
+    : null;
+
+  if (contestData?.contest && checker) {
     const isManager = checker.canManageContest(contestData.contest);
     const hasStarted = !contestData.contest.start_time || new Date(contestData.contest.start_time) <= new Date();
 
@@ -93,6 +96,8 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
       redirect(`/contests/${contest_id}`);
     }
   }
+
+  const canRejudge = contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
 
   const [error, submissionsData] = await api.listContestSubmissions(parsedParams);
 
@@ -179,6 +184,7 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
                 pageSize={PAGE_SIZE}
                 page={parsedParams.page}
                 sortOrder={parsedParams.sortOrder}
+                canRejudge={canRejudge}
               />
               <Group justify="center">
                 <NextPagination

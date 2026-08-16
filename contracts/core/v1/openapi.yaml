@@ -649,6 +649,74 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListSubmissionsResponseModel"
+  /contests/{contest_id}/submissions/{submission_id}/rejudge:
+    post:
+      operationId: RejudgeSubmission
+      parameters:
+        - name: contest_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: submission_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+  /contests/{contest_id}/problems/{problem_id}/rejudge:
+    post:
+      operationId: RejudgeContestProblem
+      parameters:
+        - name: contest_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: problem_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+  /contests/{contest_id}/rejudge:
+    post:
+      operationId: RejudgeContest
+      parameters:
+        - name: contest_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+  /contests/{contest_id}/scoreboard:
+    get:
+      operationId: GetContestScoreboard
+      parameters:
+        - name: contest_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreboardResponseModel"
   /submissions:
     post:
       operationId: CreateSubmission
@@ -3750,6 +3818,97 @@ components:
           format: int64
           description: Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access
           example: 255
+    ScoreboardProblemResultModel:
+      type: object
+      required:
+        - problem_id
+        - solved
+        - failed_attempts
+      properties:
+        problem_id:
+          type: string
+          format: uuid
+        solved:
+          type: boolean
+        failed_attempts:
+          type: integer
+          format: int32
+        first_ac_time:
+          type: string
+          format: date-time
+        time_minutes:
+          type: integer
+          format: int32
+        penalty:
+          type: integer
+          format: int32
+    ScoreboardItemModel:
+      type: object
+      required:
+        - user_id
+        - username
+        - problems_solved
+        - total_penalty
+        - problem_results
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        problems_solved:
+          type: integer
+          format: int32
+        total_penalty:
+          type: integer
+          format: int32
+        last_accepted_at:
+          type: string
+          format: date-time
+        problem_results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreboardProblemResultModel"
+    ScoreboardProblemHeaderModel:
+      type: object
+      required:
+        - problem_id
+        - title
+        - short_name
+        - ordinal
+      properties:
+        problem_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        short_name:
+          type: string
+        ordinal:
+          type: integer
+          format: int32
+    ScoreboardResponseModel:
+      type: object
+      required:
+        - contest_id
+        - penalty_per_attempt
+        - problems
+        - items
+      properties:
+        contest_id:
+          type: string
+          format: uuid
+        penalty_per_attempt:
+          type: integer
+          format: int32
+        problems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreboardProblemHeaderModel"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreboardItemModel"
     TestProgressEventType:
       type: string
       enum:

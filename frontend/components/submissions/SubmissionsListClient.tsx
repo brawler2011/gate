@@ -1,46 +1,53 @@
 "use client";
 
-import React from "react";
+import {Button, Group, Modal, Text} from "@mantine/core";
+import {notifications} from "@mantine/notifications";
+import {IconRefresh} from "@tabler/icons-react";
+import React, {useState, type ReactNode} from "react";
 
-import {useSubmissionsWebSocket} from '@/lib/useSubmissionsWebSocket';
+import {api} from "@/lib/api";
+import {useSubmissionsWebSocket} from "@/lib/useSubmissionsWebSocket";
 
-import {SubmissionsList} from './SubmissionsList';
+import {SubmissionsList} from "./SubmissionsList";
 
-import type {SubmissionsListItemModel} from '@/contracts/core/v1';
-import type {ReactNode} from "react";
+import type {SubmissionsListItemModel} from "@/contracts/core/v1";
 
 interface SubmissionsListClientProps {
-    initialSubmissions: SubmissionsListItemModel[];
-    wsUrl: string;
-    since?: number;
-    snapshotScope?: 'all' | 'mine';
-    filter: {
-        contestId?: string;
-        userId?: string;
-        problemId?: string;
-    };
-    pageSize: number;
-    page: number;
-    sortOrder?: string;
+  initialSubmissions: SubmissionsListItemModel[];
+  wsUrl: string;
+  since?: number;
+  snapshotScope?: "all" | "mine";
+  filter: {
+    contestId?: string;
+    userId?: string;
+    problemId?: string;
+  };
+  pageSize: number;
+  page: number;
+  sortOrder?: string;
+  canRejudge?: boolean;
 }
+
+type ModalState =
+  | { type: "submission"; id: string }
+  | { type: "problem"; problemId: string }
+  | { type: "all" }
+  | null;
 
 export const SubmissionsListClient = ({
   initialSubmissions,
   wsUrl,
   since,
-  snapshotScope = 'all',
+  snapshotScope = "all",
   filter,
   pageSize,
   page,
   sortOrder,
+  canRejudge = false,
 }: SubmissionsListClientProps): ReactNode => {
-  // WS only active on first page with desc sort order (desc is default when not specified)
-  const enabled = page === 1 && (sortOrder === 'desc' || sortOrder === undefined);
+  const enabled = page === 1 && (sortOrder === "desc" || sortOrder === undefined);
 
-  const {
-    submissions,
-    highlightedIds,
-  } = useSubmissionsWebSocket({
+  const {submissions, highlightedIds} = useSubmissionsWebSocket({
     wsUrl,
     since,
     initialSubmissions,
@@ -50,12 +57,132 @@ export const SubmissionsListClient = ({
     enabled,
   });
 
+  const [modalState, setModalState] = useState<ModalState>(null);
+  const [loading, setLoading] = useState(false);
+  const [rejudgingId, setRejudgingId] = useState<string | null>(null);
+
+  const handleRejudgeConfirm = async () => {
+    if (!modalState || !filter.contestId) return;
+
+    setLoading(true);
+    let err = null;
+
+    if (modalState.type === "submission") {
+      setRejudgingId(modalState.id);
+      [err] = await api.rejudgeSubmission({
+        contestId: filter.contestId,
+        submissionId: modalState.id,
+      });
+    } else if (modalState.type === "problem") {
+      [err] = await api.rejudgeContestProblem({
+        contestId: filter.contestId,
+        problemId: modalState.problemId,
+      });
+    } else if (modalState.type === "all") {
+      [err] = await api.rejudgeContest({
+        contestId: filter.contestId,
+      });
+    }
+
+    setLoading(false);
+    setRejudgingId(null);
+    setModalState(null);
+
+    if (err) {
+      notifications.show({
+        title: "Ошибка",
+        message: err.message || "Не удалось отправить решения на перетестирование",
+        color: "red",
+      });
+    } else {
+      notifications.show({
+        title: "Успешно",
+        message: "Решения отправлены на повторную проверку",
+        color: "green",
+      });
+    }
+  };
+
+  const modalTitle =
+    modalState?.type === "submission"
+      ? "Перетестирование посылки"
+      : modalState?.type === "problem"
+      ? "Перетестировать все решения задачи"
+      : "Перетестировать все решения контеста";
+
+  const modalDescription =
+    modalState?.type === "submission"
+      ? "Вы действительно хотите отправить выбранное решение на повторную проверку?"
+      : modalState?.type === "problem"
+      ? "Вы действительно хотите отправить ВСЕ решения этой задачи в контесте на повторную проверку?"
+      : "Вы действительно хотите отправить ВСЕ решения контеста на повторную проверку?";
+
   return (
     <>
+      {canRejudge && filter.contestId && (
+        <Group justify="flex-end" mb="xs">
+          {filter.problemId && (
+            <Button
+              size="xs"
+              variant="outline"
+              color="orange"
+              leftSection={<IconRefresh size="0.9rem" />}
+              onClick={() =>
+                setModalState({type: "problem", problemId: filter.problemId!})
+              }
+            >
+              Перетестировать задачу
+            </Button>
+          )}
+          <Button
+            size="xs"
+            variant="outline"
+            color="red"
+            leftSection={<IconRefresh size="0.9rem" />}
+            onClick={() => setModalState({type: "all"})}
+          >
+            Перетестировать все решения
+          </Button>
+        </Group>
+      )}
+
       <SubmissionsList
         submissions={submissions}
         highlightedIds={highlightedIds}
+        canRejudge={canRejudge}
+        onRejudgeSubmission={async (submissionId) => {
+          setModalState({type: "submission", id: submissionId});
+        }}
+        rejudgingId={rejudgingId}
       />
+
+      <Modal
+        opened={modalState !== null}
+        onClose={() => setModalState(null)}
+        title={modalTitle}
+        centered
+      >
+        <Text size="sm" mb="lg">
+          {modalDescription}
+        </Text>
+        <Group justify="flex-end">
+          <Button
+            variant="default"
+            onClick={() => setModalState(null)}
+            disabled={loading}
+          >
+            Отмена
+          </Button>
+          <Button
+            color="red"
+            onClick={handleRejudgeConfirm}
+            loading={loading}
+          >
+            Перетестировать
+          </Button>
+        </Group>
+      </Modal>
     </>
   );
 };
+

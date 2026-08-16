@@ -1,4 +1,5 @@
 import {
+  Group,
   Stack,
   Table,
   TableTbody,
@@ -16,7 +17,10 @@ import Link from "next/link";
 import {DefaultLayout} from '@/components/shared';
 import {CodeBlock} from '@/components/shared/CodeBlock';
 import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
+import {SingleSubmissionRejudgeButton} from "@/components/submissions";
 import {api} from "@/lib/api";
+import {unwrapAndCache} from "@/lib/api2";
+import {getMyContestRole} from "@/lib/contest-role";
 import {
   LangNameToString,
   LangString,
@@ -25,6 +29,7 @@ import {
   StateString,
   TimeBeautify,
 } from "@/lib/lib";
+import {PermissionChecker} from "@/lib/permissions";
 
 import type {Metadata} from "next";
 import type {ReactNode} from "react";
@@ -51,7 +56,17 @@ const Page = async (props: Props): Promise<ReactNode> => {
 
   const {submission} = resp;
 
-  // TODO: submission.failed_test
+  const [, me] = await api.getMe();
+  const user = me?.user ?? null;
+  const contestRole = submission.contest_id ? await getMyContestRole(submission.contest_id) : null;
+  const contestData = submission.contest_id ? await unwrapAndCache(api.getContest)({contestId: submission.contest_id}) : null;
+
+  const checker = contestData?.contest
+    ? new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null)
+    : null;
+
+  const canRejudge = contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
+
   const rows = [submission].map((submission) => (
     <TableTr key={submission.id}>
       <TableTd ta="center">
@@ -109,7 +124,15 @@ const Page = async (props: Props): Promise<ReactNode> => {
             </Table>
           </ScrollArea>
           <Stack align="flex-start" w="100%">
-            <Title order={2}>Код решения</Title>
+            <Group justify="space-between" align="center" w="100%">
+              <Title order={2}>Код решения</Title>
+              {canRejudge && submission.contest_id && (
+                <SingleSubmissionRejudgeButton
+                  contestId={submission.contest_id}
+                  submissionId={submission.id}
+                />
+              )}
+            </Group>
             <CodeBlock
               code={submission.submission}
               language={LangNameToString(submission.language)}
@@ -122,3 +145,4 @@ const Page = async (props: Props): Promise<ReactNode> => {
 };
 
 export {Page as default, metadata};
+
