@@ -231,7 +231,7 @@ export const ContestMonitorTable = ({
         </Title>
         <TextInput
           placeholder="Найти участника"
-          leftSection={<IconSearch size={16} />}
+          rightSection={<IconSearch size={16} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.currentTarget.value)}
           className={classes.searchInput}
@@ -239,7 +239,7 @@ export const ContestMonitorTable = ({
       </Group>
 
       <Box className={classes.tableWrapper}>
-        <Table verticalSpacing="sm" className={classes.table} withTableBorder>
+        <Table verticalSpacing="sm" className={classes.table}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th style={{ width: "50px" }}>№</Table.Th>
@@ -319,9 +319,12 @@ export const ContestMonitorTable = ({
 
             {/* Bottom summary rows */}
             <Table.Tr>
-              <Table.Td colSpan={4}>
+              <Table.Td />
+              <Table.Td>
                 <Text className={classes.summaryLabelSolved}>Сдали</Text>
               </Table.Td>
+              <Table.Td />
+              <Table.Td />
               {problems.map((prob) => (
                 <Table.Td key={prob.problem_id} className={classes.tdCenter}>
                   <Text className={classes.summaryLabelSolved}>
@@ -331,9 +334,12 @@ export const ContestMonitorTable = ({
               ))}
             </Table.Tr>
             <Table.Tr>
-              <Table.Td colSpan={4}>
+              <Table.Td />
+              <Table.Td>
                 <Text className={classes.summaryLabelAttempted}>Пытались</Text>
               </Table.Td>
+              <Table.Td />
+              <Table.Td />
               {problems.map((prob) => (
                 <Table.Td key={prob.problem_id} className={classes.tdCenter}>
                   <Text className={classes.summaryLabelAttempted}>

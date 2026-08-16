@@ -36,30 +36,30 @@
 }
 
 .cellSolved {
-  color: #2b8a3e;
+  color: var(--mantine-color-green-5, #40c057);
   font-weight: 600;
   line-height: 1.15;
 }
 
 .cellFailed {
-  color: #e03131;
+  color: var(--mantine-color-red-6, #e03131);
   font-weight: 600;
 }
 
 .cellTime {
   font-size: 11px;
-  color: #868e96;
+  color: var(--mantine-color-dimmed, #868e96);
   font-weight: 400;
   display: block;
   margin-top: 1px;
 }
 
 .summaryLabelSolved {
-  color: #2b8a3e;
+  color: var(--mantine-color-green-5, #40c057);
   font-weight: 600;
 }
 
 .summaryLabelAttempted {
-  color: #212529;
+  color: var(--mantine-color-text);
   font-weight: 600;
 }
