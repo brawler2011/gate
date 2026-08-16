@@ -130,44 +130,42 @@ export const OrgMembersManagement = ({orgId}: Props): ReactNode => {
   return (
     <>
       <Stack gap="md">
-        <Card withBorder padding="lg">
-          <Group gap="md" align="flex-end">
-            <Select
-              size="md"
-              placeholder="Поиск пользователя..."
-              searchable
-              clearable
-              value={selectedUserId}
-              onChange={setSelectedUserId}
-              data={searchResults}
-              searchValue={searchQuery}
-              onSearchChange={setSearchQuery}
-              nothingFoundMessage={
-                searchQuery.length < 2
-                  ? "Введите минимум 2 символа"
-                  : "Пользователь не найден"
-              }
-              rightSection={searching ? <Loader size="xs" /> : null}
-              style={{flex: 1}}
-            />
-            <Select
-              size="md"
-              data={ROLE_OPTIONS}
-              value={selectedRole}
-              onChange={(v) => setSelectedRole(v ?? "member")}
-              w={180}
-            />
-            <Button
-              size="md"
-              onClick={handleAdd}
-              loading={adding}
-              disabled={!selectedUserId}
-              leftSection={<IconPlus size={16} />}
-            >
-              Добавить
-            </Button>
-          </Group>
-        </Card>
+        <Group gap="md" align="center">
+          <Select
+            size="md"
+            placeholder="Поиск пользователя..."
+            searchable
+            clearable
+            value={selectedUserId}
+            onChange={setSelectedUserId}
+            data={searchResults}
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            nothingFoundMessage={
+              searchQuery.length < 2
+                ? "Введите минимум 2 символа"
+                : "Пользователь не найден"
+            }
+            rightSection={searching ? <Loader size="xs" /> : null}
+            style={{flex: 1}}
+          />
+          <Select
+            size="md"
+            data={ROLE_OPTIONS}
+            value={selectedRole}
+            onChange={(v) => setSelectedRole(v ?? "member")}
+            w={180}
+          />
+          <Button
+            size="md"
+            onClick={handleAdd}
+            loading={adding}
+            disabled={!selectedUserId}
+            leftSection={<IconPlus size={16} />}
+          >
+            Добавить
+          </Button>
+        </Group>
 
         {loading && (
           <Center py="xl">

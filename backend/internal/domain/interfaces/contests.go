@@ -26,6 +26,7 @@ type ContestsRepo interface {
 
 	CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error
 	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (models.ContestProblem, error)
+	UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error
 	DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error
 
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]models.ContestProblem, error)
@@ -69,6 +70,7 @@ type ContestsUC interface {
 	CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error
 	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (models.ContestProblem, error)
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]models.ContestProblem, error)
+	UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error
 	DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error
 
 	ProcessSubmissionResult(ctx context.Context, submission *models.Submission) error

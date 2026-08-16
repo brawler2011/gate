@@ -9,17 +9,20 @@ import {
   Center,
   Group,
   Loader,
+  Modal,
+  Select,
   Stack,
   Table,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconPlus, IconTrash} from "@tabler/icons-react";
+import {IconPlus, IconRefresh, IconTrash} from "@tabler/icons-react";
 import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
 
-import {StatusMessage} from '@/components/shared/StatusMessage';
+import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
 
@@ -41,22 +44,26 @@ export const ProblemsSection = ({
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<corev1.ProblemsListItemModel[]>([]);
   const [searching, setSearching] = useState(false);
-  const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
-    null
-  );
+  const [selectedProblemId, setSelectedProblemId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Modal for replacing package version
+  const [replaceTarget, setReplaceTarget] = useState<{ problemId: string; title: string } | null>(null);
+  const [availablePackages, setAvailablePackages] = useState<Array<{ value: string; label: string }>>([]);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [loadingPackages, setLoadingPackages] = useState(false);
+  const [replacing, setReplacing] = useState(false);
+
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  // Синхронизация списка задач с initialProblems
   useEffect(() => {
     setProblems(initialProblems);
   }, [initialProblems]);
 
-  // Search for problems
   useEffect(() => {
     const searchProblemsAsync = async () => {
       if (!debouncedQuery || debouncedQuery.length < 2) {
@@ -139,6 +146,68 @@ export const ProblemsSection = ({
     router.refresh();
   };
 
+  const openReplacePackageModal = async (problemId: string, title: string) => {
+    setReplaceTarget({problemId, title});
+    setSelectedPackageId(null);
+    setLoadingPackages(true);
+
+    const [error, response] = await api.listProblemPackages({id: problemId});
+    setLoadingPackages(false);
+
+    if (error || !response?.packages) {
+      notifications.show({
+        title: "Ошибка",
+        message: error?.message || "Не удалось загрузить пакеты задачи",
+        color: "red",
+      });
+      return;
+    }
+
+    const readyPkgs = response.packages
+      .filter((p) => p.status === "ready" && p.id)
+      .map((p) => ({
+        value: p.id!,
+        label: `Версия v${p.version ?? "?"} (${new Date(p.created_at || "").toLocaleDateString("ru-RU")})`,
+      }));
+
+    setAvailablePackages(readyPkgs);
+    if (readyPkgs.length > 0) {
+      setSelectedPackageId(readyPkgs[0].value);
+    }
+  };
+
+  const handleConfirmReplacePackage = async () => {
+    if (!replaceTarget || !selectedPackageId) {
+      return;
+    }
+
+    setReplacing(true);
+    const [error] = await api.createContestProblem({
+      contestId,
+      problemId: replaceTarget.problemId,
+      packageId: selectedPackageId,
+    });
+    setReplacing(false);
+
+    if (error) {
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось обновить пакет задачи",
+        color: "red",
+      });
+      return;
+    }
+
+    notifications.show({
+      title: "Успешно",
+      message: "Пакет задачи обновлён на контесте",
+      color: "green",
+    });
+
+    setReplaceTarget(null);
+    router.refresh();
+  };
+
   const autocompleteData = searchResults.map((p) => ({
     value: p.id,
     label: p.title,
@@ -201,7 +270,7 @@ export const ProblemsSection = ({
                 <Table.Th>Название</Table.Th>
                 <Table.Th style={{width: 120}}>Время</Table.Th>
                 <Table.Th style={{width: 120}}>Память</Table.Th>
-                <Table.Th style={{width: 80}}>Действия</Table.Th>
+                <Table.Th style={{width: 100}}>Действия</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -227,14 +296,32 @@ export const ProblemsSection = ({
                     <Text size="sm">{problem.memory_limit}MB</Text>
                   </Table.Td>
                   <Table.Td>
-                    <ActionIcon
-                      color="red"
-                      variant="subtle"
-                      onClick={() => handleDeleteProblem(problem.problem_id)}
-                      loading={deletingId === problem.problem_id}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
+                    <Group gap="xs" wrap="nowrap">
+                      <Tooltip label="Заменить пакет" withArrow>
+                        <ActionIcon
+                          color="blue"
+                          variant="subtle"
+                          onClick={() =>
+                            openReplacePackageModal(
+                              problem.problem_id,
+                              problem.title,
+                            )
+                          }
+                        >
+                          <IconRefresh size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Удалить задачу" withArrow>
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          onClick={() => handleDeleteProblem(problem.problem_id)}
+                          loading={deletingId === problem.problem_id}
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Table.Td>
                 </Table.Tr>
               ))}
@@ -242,6 +329,42 @@ export const ProblemsSection = ({
           </Table>
         )}
       </Stack>
+
+      <Modal
+        opened={!!replaceTarget}
+        onClose={() => setReplaceTarget(null)}
+        title={`Заменить пакет — ${replaceTarget?.title ?? ""}`}
+        centered
+        size="sm"
+      >
+        <Stack gap="md">
+          {loadingPackages ? (
+            <Center py="md">
+              <Loader size="sm" />
+            </Center>
+          ) : availablePackages.length === 0 ? (
+            <Text size="sm" c="dimmed">
+              У этой задачи пока нет скомпилированных пакетов.
+            </Text>
+          ) : (
+            <>
+              <Select
+                label="Выберите версию пакета"
+                data={availablePackages}
+                value={selectedPackageId}
+                onChange={setSelectedPackageId}
+              />
+              <Button
+                loading={replacing}
+                onClick={handleConfirmReplacePackage}
+                disabled={!selectedPackageId}
+              >
+                Обновить пакет на контесте
+              </Button>
+            </>
+          )}
+        </Stack>
+      </Modal>
 
       <StatusMessage
         type={statusMessage?.type || "success"}
@@ -252,3 +375,4 @@ export const ProblemsSection = ({
     </>
   );
 };
+

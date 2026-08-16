@@ -152,12 +152,30 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	if submission.ProblemID == nil {
 		return fmt.Errorf("submission has no problem ID")
 	}
-	readyPackage, err := uc.packagesRepo.GetReadyPackage(ctx, *submission.ProblemID)
-	if err != nil {
-		return fmt.Errorf("problem has no published version")
+
+	var targetPkg models.ProblemPackage
+	if submission.ContestID != nil {
+		contestProb, err := uc.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
+			ContestId: *submission.ContestID,
+			ProblemId: *submission.ProblemID,
+		})
+		if err == nil && contestProb.PackageID != uuid.Nil {
+			targetPkg, err = uc.packagesRepo.GetPackageByID(ctx, contestProb.PackageID)
+			if err != nil {
+				uc.logger.Warn("failed to load contest problem package, falling back to ready package", "error", err)
+			}
+		}
 	}
 
-	pkg, err := uc.packageLoader.LoadPackage(ctx, submission.ProblemID.String(), readyPackage.PackageHash)
+	if targetPkg.PackageHash == "" {
+		readyPackage, err := uc.packagesRepo.GetReadyPackage(ctx, *submission.ProblemID)
+		if err != nil {
+			return fmt.Errorf("problem has no published version")
+		}
+		targetPkg = readyPackage
+	}
+
+	pkg, err := uc.packageLoader.LoadPackage(ctx, submission.ProblemID.String(), targetPkg.PackageHash)
 	if err != nil {
 		return fmt.Errorf("failed to load problem package: %w", err)
 	}

@@ -181,6 +181,7 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"GetSubmission":        {RequireAuth, checkGetSubmissionAccess},
 		"UploadAvatar":         {RequireAuth, RequireSelfOrAdmin("Id")},
 		"DeleteAvatar":         {RequireAuth, RequireSelfOrAdmin("Id")},
+		"UpdateUser":           {RequireAuth, RequireSelfOrAdmin("Id")},
 
 		"ListAdminContests": {RequireAuth, RequireAdmin},
 		"CreatePost":        {RequireAuth, RequireAdmin},

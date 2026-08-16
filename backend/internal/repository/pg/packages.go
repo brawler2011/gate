@@ -59,6 +59,14 @@ func (r *PackagesRepo) GetReadyPackage(ctx context.Context, problemID uuid.UUID)
 	return mapPackage(row), nil
 }
 
+func (r *PackagesRepo) GetPackageByID(ctx context.Context, id uuid.UUID) (models.ProblemPackage, error) {
+	row, err := r.queries.GetProblemPackageByID(ctx, id)
+	if err != nil {
+		return models.ProblemPackage{}, HandlePgErr(err)
+	}
+	return mapPackage(row), nil
+}
+
 func (r *PackagesRepo) GetPackageByVersion(ctx context.Context, problemID uuid.UUID, version int32) (models.ProblemPackage, error) {
 	row, err := r.queries.GetProblemPackageByVersion(ctx, sqlc.GetProblemPackageByVersionParams{
 		ProblemID: problemID,

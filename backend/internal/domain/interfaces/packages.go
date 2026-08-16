@@ -11,6 +11,7 @@ type PackagesRepo interface {
 	CreatePackage(ctx context.Context, params *models.CreatePackageParams) (models.ProblemPackage, error)
 	ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]models.ProblemPackage, error)
 	GetReadyPackage(ctx context.Context, problemID uuid.UUID) (models.ProblemPackage, error)
+	GetPackageByID(ctx context.Context, id uuid.UUID) (models.ProblemPackage, error)
 	GetPackageByVersion(ctx context.Context, problemID uuid.UUID, version int32) (models.ProblemPackage, error)
 	UpdatePackageStatus(ctx context.Context, params *models.UpdatePackageStatusParams) error
 }

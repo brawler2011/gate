@@ -139,6 +139,10 @@ func (uc *ContestsUseCase) GetContestProblems(ctx context.Context, contestId uui
 	return uc.contestRepo.GetContestProblems(ctx, contestId)
 }
 
+func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
+	return uc.contestRepo.UpdateContestProblemPackage(ctx, contestId, problemId, packageId)
+}
+
 func (uc *ContestsUseCase) DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error {
 	return uc.contestRepo.DeleteContestProblem(ctx, c)
 }

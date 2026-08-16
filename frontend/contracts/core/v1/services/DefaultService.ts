@@ -387,9 +387,11 @@ export class DefaultService {
     public createContestProblem({
         contestId,
         problemId,
+        packageId,
     }: {
         contestId: string,
         problemId: string,
+        packageId?: string,
     }): CancelablePromise<CreationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
@@ -399,6 +401,7 @@ export class DefaultService {
             },
             query: {
                 'problem_id': problemId,
+                'package_id': packageId,
             },
         });
     }

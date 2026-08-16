@@ -138,6 +138,7 @@ type Querier interface {
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error
 	UpdateContestMemberRole(ctx context.Context, arg UpdateContestMemberRoleParams) error
 	UpdateContestProblemOrdinal(ctx context.Context, arg UpdateContestProblemOrdinalParams) error
+	UpdateContestProblemPackage(ctx context.Context, arg UpdateContestProblemPackageParams) error
 	UpdateContestTeamRole(ctx context.Context, arg UpdateContestTeamRoleParams) error
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error
 	UpdateOrganizationMemberRole(ctx context.Context, arg UpdateOrganizationMemberRoleParams) error

@@ -271,6 +271,13 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c models.Contes
 		Ordinal:   ordinal,
 	})
 	if err != nil {
+		if errUpdate := r.queries.UpdateContestProblemPackage(ctx, sqlc.UpdateContestProblemPackageParams{
+			ContestID: c.ContestId,
+			ProblemID: c.ProblemId,
+			PackageID: packageId,
+		}); errUpdate == nil {
+			return nil
+		}
 		return HandlePgErr(err)
 	}
 	return nil
@@ -310,6 +317,18 @@ func (r *ContestsRepo) GetContestProblems(ctx context.Context, contestId uuid.UU
 	}
 
 	return problems, nil
+}
+
+func (r *ContestsRepo) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
+	err := r.queries.UpdateContestProblemPackage(ctx, sqlc.UpdateContestProblemPackageParams{
+		ContestID: contestId,
+		ProblemID: problemId,
+		PackageID: packageId,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
 }
 
 func (r *ContestsRepo) GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]models.ContestTeam, error) {

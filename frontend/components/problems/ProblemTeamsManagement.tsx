@@ -220,38 +220,33 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
   return (
     <>
       <Stack gap="md">
-        <Card withBorder padding="md">
-          <Stack gap="sm">
-            <Text size="sm" fw={500}>
-              Выдать доступ команде
-            </Text>
-            <Group gap="sm">
-              <Autocomplete
-                placeholder="Поиск команды по названию..."
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onOptionSubmit={(value) => {
-                  setSelectedTeamId(value);
-                  const selected = searchResults.find((t) => t.id === value);
-                  if (selected) {
-                    setSearchQuery(selected.name);
-                  }
-                }}
-                data={autocompleteData}
-                rightSection={searching && <Loader size="xs" />}
-                style={{flex: 1}}
-              />
-              <Button
-                onClick={handleAddTeam}
-                disabled={!selectedTeamId || adding}
-                loading={adding}
-                leftSection={<IconPlus size={16} />}
-              >
-                Добавить
-              </Button>
-            </Group>
-          </Stack>
-        </Card>
+        <Group gap="sm">
+          <Autocomplete
+            size="md"
+            placeholder="Поиск команды по названию..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onOptionSubmit={(value) => {
+              setSelectedTeamId(value);
+              const selected = searchResults.find((t) => t.id === value);
+              if (selected) {
+                setSearchQuery(selected.name);
+              }
+            }}
+            data={autocompleteData}
+            rightSection={searching && <Loader size="xs" />}
+            style={{flex: 1}}
+          />
+          <Button
+            size="md"
+            onClick={handleAddTeam}
+            disabled={!selectedTeamId || adding}
+            loading={adding}
+            leftSection={<IconPlus size={16} />}
+          >
+            Выдать доступ
+          </Button>
+        </Group>
 
         {loading && (
           <Center py="xl">

@@ -811,7 +811,8 @@ type CreateContestMemberParams struct {
 
 // CreateContestProblemParams defines parameters for CreateContestProblem.
 type CreateContestProblemParams struct {
-	ProblemId openapi_types.UUID `form:"problem_id" json:"problem_id"`
+	ProblemId openapi_types.UUID  `form:"problem_id" json:"problem_id"`
+	PackageId *openapi_types.UUID `form:"package_id,omitempty" json:"package_id,omitempty"`
 }
 
 // ListContestSubmissionsParams defines parameters for ListContestSubmissions.
@@ -4214,6 +4215,22 @@ func NewCreateContestProblemRequest(server string, contestId openapi_types.UUID,
 					queryValues.Add(k, v2)
 				}
 			}
+		}
+
+		if params.PackageId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "package_id", runtime.ParamLocationQuery, *params.PackageId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
 		}
 
 		queryURL.RawQuery = queryValues.Encode()
@@ -19103,6 +19120,14 @@ func (siw *ServerInterfaceWrapper) CreateContestProblem(w http.ResponseWriter, r
 	err = runtime.BindQueryParameter("form", true, true, "problem_id", r.URL.Query(), &params.ProblemId)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problem_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "package_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "package_id", r.URL.Query(), &params.PackageId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "package_id", Err: err})
 		return
 	}
 

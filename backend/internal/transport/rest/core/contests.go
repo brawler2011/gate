@@ -315,9 +315,14 @@ func (h *CoreServer) ListPublicContests(ctx context.Context, request corev1.List
 }
 
 func (h *CoreServer) CreateContestProblem(ctx context.Context, request corev1.CreateContestProblemRequestObject) (corev1.CreateContestProblemResponseObject, error) {
+	pkgID := uuid.Nil
+	if request.Params.PackageId != nil {
+		pkgID = *request.Params.PackageId
+	}
 	err := h.contestsUC.CreateContestProblem(ctx, models.ContestProblemCreation{
 		ContestId: request.ContestId,
 		ProblemId: request.Params.ProblemId,
+		PackageId: pkgID,
 	})
 	if err != nil {
 		return nil, err
@@ -340,8 +345,19 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, request corev1.GetCo
 		return nil, err
 	}
 
-	statement := h.loadProblemStatement(ctx, request.ProblemId)
-	samples := h.loadProblemSamples(ctx, request.ProblemId)
+	var statement *models.Statement
+	var samples []corev1.ProblemSampleModel
+
+	if p.PackageID != uuid.Nil {
+		statement, samples = h.loadPackageStatementAndSamples(ctx, request.ProblemId, p.PackageID)
+	}
+
+	if statement == nil {
+		statement = h.loadProblemStatement(ctx, request.ProblemId)
+	}
+	if len(samples) == 0 {
+		samples = h.loadProblemSamples(ctx, request.ProblemId)
+	}
 
 	return corev1.GetContestProblem200JSONResponse(*GetContestProblemResponseDTO(p, problem, statement, samples)), nil
 }

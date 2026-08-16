@@ -19,7 +19,7 @@ export const env = {
   /**
    * WebSocket base URL for real-time updates.
    */
-  WEBSOCKET_URL: process.env.WEBSOCKET_URL,
+  NEXT_PUBLIC_WEBSOCKET_URL: process.env.NEXT_PUBLIC_WEBSOCKET_URL,
 
   /**
    * Public App URL.
@@ -59,7 +59,7 @@ export const env = {
    * Returns WebSocket URL without trailing slashes.
    */
   getWebSocketUrl: (): string => {
-    return requireEnv("WEBSOCKET_URL", process.env.WEBSOCKET_URL).replace(/\/+$/, "");
+    return requireEnv("NEXT_PUBLIC_WEBSOCKET_URL", process.env.NEXT_PUBLIC_WEBSOCKET_URL).replace(/\/+$/, "");
   },
 
   /**

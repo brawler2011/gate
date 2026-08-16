@@ -63,7 +63,7 @@ const OrgTeamsPage = async ({params, searchParams}: Props): Promise<ReactNode> =
         {teamsError ? (
           <ErrorDisplay error={teamsError} />
         ) : (
-          <OrgTeamsTab teams={teams} orgId={org_id} />
+          <OrgTeamsTab teams={teams} orgId={org_id} canManage={showMembersTab} />
         )}
       </Container>
     </DefaultLayout >

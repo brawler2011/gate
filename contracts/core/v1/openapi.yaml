@@ -429,6 +429,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: package_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: OK

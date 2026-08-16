@@ -104,6 +104,11 @@ UPDATE contest_problems
 SET ordinal = $3
 WHERE contest_id = $1 AND problem_id = $2;
 
+-- name: UpdateContestProblemPackage :exec
+UPDATE contest_problems
+SET package_id = $3
+WHERE contest_id = $1 AND problem_id = $2;
+
 -- name: RemoveContestProblem :exec
 DELETE FROM contest_problems
 WHERE contest_id = $1 AND problem_id = $2;

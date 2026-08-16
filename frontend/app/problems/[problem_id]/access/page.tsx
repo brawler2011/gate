@@ -1,46 +1,31 @@
-"use client";
+import ProblemPageLayoutWrapper, {generateMetadata as sharedGenerateMetadata} from "../ProblemPageLayoutWrapper";
 
-import {Container, Paper, Tabs, Title} from "@mantine/core";
-import {IconUser, IconUsersGroup} from "@tabler/icons-react";
-import {useParams} from "next/navigation";
-import {useState} from "react";
-
-import {ProblemMembersManagement} from "@/components/problems/ProblemMembersManagement";
-import {ProblemTeamsManagement} from "@/components/problems/ProblemTeamsManagement";
-
+import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-export default function ProblemAccessPage(): ReactNode {
-  const params = useParams();
-  const problemId = params?.problem_id as string;
-  const [activeTab, setActiveTab] = useState<string | null>("users");
+type SearchParams = Promise<{
+  file?: string;
+  [key: string]: string | string[] | undefined;
+}>;
 
+type Props = {
+  params: Promise<{ problem_id: string }>;
+  searchParams: SearchParams;
+};
+
+export const generateMetadata = async (props: { params: Promise<{ problem_id: string }> }): Promise<Metadata> => {
+  const {problem_id} = await props.params;
+  return sharedGenerateMetadata(problem_id);
+};
+
+const Page = ({params, searchParams}: Props): ReactNode => {
   return (
-    <Container size="lg" py="xl">
-      <Paper radius="md" p="xl" withBorder>
-        <Title order={2} mb="lg">
-          Права доступа к задаче
-        </Title>
-
-        <Tabs value={activeTab} onChange={setActiveTab}>
-          <Tabs.List mb="md">
-            <Tabs.Tab value="users" leftSection={<IconUser size={16} />}>
-              Пользователи
-            </Tabs.Tab>
-            <Tabs.Tab value="teams" leftSection={<IconUsersGroup size={16} />}>
-              Команды
-            </Tabs.Tab>
-          </Tabs.List>
-
-          <Tabs.Panel value="users">
-            <ProblemMembersManagement problemId={problemId} />
-          </Tabs.Panel>
-
-          <Tabs.Panel value="teams">
-            <ProblemTeamsManagement problemId={problemId} />
-          </Tabs.Panel>
-        </Tabs>
-      </Paper>
-    </Container>
+    <ProblemPageLayoutWrapper
+      activeTab="access"
+      params={params}
+      searchParams={searchParams}
+    />
   );
-}
+};
+
+export default Page;

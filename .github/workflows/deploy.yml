@@ -117,7 +117,7 @@ jobs:
             NEXT_PUBLIC_APP_URL=https://${{ inputs.domain_name }}
             NEXT_PUBLIC_BACKEND_API_URL=/api
             BACKEND_API_URL=http://backend:8080
-            WEBSOCKET_URL=wss://${{ inputs.domain_name }}/ws
+            NEXT_PUBLIC_WEBSOCKET_URL=wss://${{ inputs.domain_name }}/ws
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

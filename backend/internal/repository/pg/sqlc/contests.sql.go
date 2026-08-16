@@ -918,6 +918,23 @@ func (q *Queries) UpdateContestProblemOrdinal(ctx context.Context, arg UpdateCon
 	return err
 }
 
+const updateContestProblemPackage = `-- name: UpdateContestProblemPackage :exec
+UPDATE contest_problems
+SET package_id = $3
+WHERE contest_id = $1 AND problem_id = $2
+`
+
+type UpdateContestProblemPackageParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	PackageID uuid.UUID `json:"package_id"`
+}
+
+func (q *Queries) UpdateContestProblemPackage(ctx context.Context, arg UpdateContestProblemPackageParams) error {
+	_, err := q.db.Exec(ctx, updateContestProblemPackage, arg.ContestID, arg.ProblemID, arg.PackageID)
+	return err
+}
+
 const upsertContestProblemResult = `-- name: UpsertContestProblemResult :exec
 
 INSERT INTO contest_problem_results (contest_id, user_id, problem_id, solved, failed_attempts, first_ac_time, time_minutes)

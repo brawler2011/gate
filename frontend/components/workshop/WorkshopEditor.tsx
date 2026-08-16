@@ -4,6 +4,7 @@ import {Stack} from "@mantine/core";
 import {useRouter, useSearchParams, usePathname} from "next/navigation";
 import {useCallback} from "react";
 
+import {WorkshopAccessTab} from "./WorkshopAccessTab";
 import {WorkshopCheckersTab} from "./WorkshopCheckersTab";
 import classes from "./WorkshopEditor.module.css";
 import {WorkshopGeneralTab} from "./WorkshopGeneralTab";
@@ -27,6 +28,7 @@ type Props = {
 
 const GENERAL_TAB = "general";
 const STATEMENT_TAB = "statement";
+const ACCESS_TAB = "access";
 const PACKAGES_TAB = "packages";
 const IMPORT_TAB = "import";
 
@@ -91,6 +93,9 @@ export const WorkshopEditor = ({problemId, activeTab}: Props): ReactNode => {
     }
     if (activeTab === STATEMENT_TAB) {
       return <WorkshopStatementTab problemId={problemId} />;
+    }
+    if (activeTab === ACCESS_TAB) {
+      return <WorkshopAccessTab problemId={problemId} />;
     }
     if (activeTab === PACKAGES_TAB) {
       return <WorkshopPackagesTab problemId={problemId} />;

@@ -1,7 +1,13 @@
 package core
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
@@ -88,4 +94,114 @@ func (h *CoreServer) loadProblemSamples(ctx context.Context, problemID uuid.UUID
 	}
 
 	return samples
+}
+
+func (h *CoreServer) loadPackageStatementAndSamples(
+	ctx context.Context,
+	problemID uuid.UUID,
+	packageID uuid.UUID,
+) (*models.Statement, []corev1.ProblemSampleModel) {
+	if h.publishUC == nil || packageID == uuid.Nil {
+		return nil, nil
+	}
+
+	pkg, err := h.publishUC.GetPackageByID(ctx, packageID)
+	if err != nil || pkg.PackageHash == "" {
+		return nil, nil
+	}
+
+	reader, err := h.publishUC.DownloadPackage(ctx, problemID, pkg.PackageHash)
+	if err != nil {
+		return nil, nil
+	}
+	defer reader.Close()
+
+	tempDir, err := os.MkdirTemp("", "contest-pkg-*")
+	if err != nil {
+		return nil, nil
+	}
+	defer os.RemoveAll(tempDir)
+
+	zipBytes, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, nil
+	}
+
+	zipReader, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+	if err != nil {
+		return nil, nil
+	}
+
+	for _, f := range zipReader.File {
+		path := filepath.Join(tempDir, filepath.Clean(f.Name))
+		if f.FileInfo().IsDir() {
+			_ = os.MkdirAll(path, 0o755)
+			continue
+		}
+		_ = os.MkdirAll(filepath.Dir(path), 0o755)
+		rc, err := f.Open()
+		if err != nil {
+			continue
+		}
+		out, err := os.Create(path)
+		if err != nil {
+			rc.Close()
+			continue
+		}
+		_, _ = io.Copy(out, rc)
+		rc.Close()
+		out.Close()
+	}
+
+	gfmtPkg, err := gfmt.OpenPackage(tempDir)
+	if err != nil || gfmtPkg == nil || gfmtPkg.Problem == nil {
+		return nil, nil
+	}
+
+	var statement models.Statement
+	statementBytes, err := os.ReadFile(filepath.Join(tempDir, "statement.json"))
+	if err == nil {
+		_ = json.Unmarshal(statementBytes, &statement)
+	}
+
+	if !hasStatementContent(statement) {
+		statement = models.Statement{
+			Title: gfmtPkg.Problem.Title,
+		}
+	}
+
+	var samples []corev1.ProblemSampleModel
+	for subName, subtask := range gfmtPkg.Problem.Subtasks {
+		for _, t := range subtask.Tests {
+			if !t.Sample && subName != "samples" {
+				continue
+			}
+			if t.Manual == "" {
+				continue
+			}
+
+			inputBytes, err := os.ReadFile(filepath.Join(tempDir, "tests", t.Manual))
+			if err != nil {
+				continue
+			}
+
+			ansFile := strings.TrimSuffix(t.Manual, ".in") + ".out"
+			outputBytes, err := os.ReadFile(filepath.Join(tempDir, "tests", ansFile))
+			if err != nil {
+				ansFile = strings.TrimSuffix(t.Manual, ".in") + ".ans"
+				outputBytes, err = os.ReadFile(filepath.Join(tempDir, "tests", ansFile))
+			}
+
+			if err != nil {
+				continue
+			}
+
+			samples = append(samples, corev1.ProblemSampleModel{
+				Input:  string(inputBytes),
+				Output: string(outputBytes),
+			})
+		}
+	}
+
+	return &statement, samples
 }
