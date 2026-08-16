@@ -206,6 +206,30 @@ func (m *problemImportMockProblemsRepo) GetProblemTeams(_ context.Context, _ uui
 	return nil, nil
 }
 
+func (m *problemImportMockProblemsRepo) AddProblemTeam(_ context.Context, _, _ uuid.UUID, _ models.ProblemPermission) error {
+	return nil
+}
+
+func (m *problemImportMockProblemsRepo) UpdateProblemTeamPermission(_ context.Context, _, _ uuid.UUID, _ models.ProblemPermission) error {
+	return nil
+}
+
+func (m *problemImportMockProblemsRepo) RemoveProblemTeam(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
+func (m *problemImportMockProblemsRepo) ListProblemMembers(_ context.Context, _ uuid.UUID) ([]models.ProblemMember, error) {
+	return nil, nil
+}
+
+func (m *problemImportMockProblemsRepo) UpdateProblemMemberRole(_ context.Context, _, _ uuid.UUID, _ models.ProblemRole) error {
+	return nil
+}
+
+func (m *problemImportMockProblemsRepo) RemoveProblemMember(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
 func (m *problemImportMockProblemsRepo) ListProblems(_ context.Context, _ *models.ProblemsFilter) ([]models.Problem, int32, error) {
 	return nil, 0, nil
 }

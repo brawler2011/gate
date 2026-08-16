@@ -187,6 +187,78 @@ func (r *ProblemsRepo) GetProblemTeams(ctx context.Context, problemId uuid.UUID)
 	return teams, nil
 }
 
+func (r *ProblemsRepo) AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission models.ProblemPermission) error {
+	err := r.queries.AddProblemTeam(ctx, sqlc.AddProblemTeamParams{
+		ProblemID:  problemID,
+		TeamID:     teamID,
+		Permission: sqlc.ProblemPermission(permission),
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *ProblemsRepo) UpdateProblemTeamPermission(ctx context.Context, problemID, teamID uuid.UUID, permission models.ProblemPermission) error {
+	err := r.queries.UpdateProblemTeamPermission(ctx, sqlc.UpdateProblemTeamPermissionParams{
+		ProblemID:  problemID,
+		TeamID:     teamID,
+		Permission: sqlc.ProblemPermission(permission),
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *ProblemsRepo) RemoveProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) error {
+	err := r.queries.RemoveProblemTeam(ctx, sqlc.RemoveProblemTeamParams{
+		ProblemID: problemID,
+		TeamID:    teamID,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *ProblemsRepo) ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]models.ProblemMember, error) {
+	rows, err := r.queries.ListProblemMembers(ctx, problemID)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	members := make([]models.ProblemMember, len(rows))
+	for i, row := range rows {
+		members[i] = mapListProblemMembersRow(row)
+	}
+
+	return members, nil
+}
+
+func (r *ProblemsRepo) UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role models.ProblemRole) error {
+	err := r.queries.UpdateProblemMemberRole(ctx, sqlc.UpdateProblemMemberRoleParams{
+		ProblemID: problemID,
+		UserID:    userID,
+		Role:      sqlc.ProblemRole(role),
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *ProblemsRepo) RemoveProblemMember(ctx context.Context, problemID, userID uuid.UUID) error {
+	err := r.queries.RemoveProblemMember(ctx, sqlc.RemoveProblemMemberParams{
+		ProblemID: problemID,
+		UserID:    userID,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
 func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
 	if s == nil {
 		return sqlc.NullProblemVisibility{Valid: false}
@@ -296,10 +368,19 @@ func mapProblemMember(pm sqlc.ProblemMember) models.ProblemMember {
 		ProblemID: pm.ProblemID,
 		UserID:    pm.UserID,
 		Role:      models.ProblemRole(pm.Role),
-		// Username and Email would need to be joined from users table
-		// For now, leave empty
 		Username:  "",
 		Email:     "",
+		CreatedAt: pm.CreatedAt,
+	}
+}
+
+func mapListProblemMembersRow(pm sqlc.ListProblemMembersRow) models.ProblemMember {
+	return models.ProblemMember{
+		ProblemID: pm.ProblemID,
+		UserID:    pm.UserID,
+		Role:      models.ProblemRole(pm.Role),
+		Username:  pm.Username,
+		Email:     pm.Email,
 		CreatedAt: pm.CreatedAt,
 	}
 }

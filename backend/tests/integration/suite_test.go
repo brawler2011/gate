@@ -53,6 +53,8 @@ type IntegrationTestSuite struct {
 	usersRepo         *pg.UsersRepo
 	contestsRepo      *pg.ContestsRepo
 	organizationsRepo interfaces.OrganizationsRepo
+	teamsRepo         interfaces.TeamsRepo
+	problemsRepo      *pg.ProblemsRepo
 }
 
 func TestIntegrationSuite(t *testing.T) {
@@ -128,10 +130,10 @@ func (s *IntegrationTestSuite) initApp() {
 	s.usersRepo = pg.NewUsersRepo(s.dbPool)
 	s.contestsRepo = pg.NewContestsRepo(s.dbPool)
 	s.organizationsRepo = pg.NewOrganizationsRepo(s.dbPool)
-	problemsRepo := pg.NewProblemsRepo(s.dbPool)
+	s.problemsRepo = pg.NewProblemsRepo(s.dbPool)
+	s.teamsRepo = pg.NewTeamsRepo(s.dbPool)
 	submissionsRepo := pg.NewSubmissionsRepo(s.dbPool)
 	outboxRepo := pg.NewOutboxRepo(s.dbPool)
-	teamsRepo := pg.NewTeamsRepo(s.dbPool)
 	blogsRepo := pg.NewBlogsRepo(s.dbPool)
 	txManager := pg.NewTransactor(s.dbPool)
 	tempStoragePath := s.T().TempDir()
@@ -143,20 +145,20 @@ func (s *IntegrationTestSuite) initApp() {
 	// UseCases
 	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, txManager)
 	authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager)
-	problemsUC := usecase.NewProblemsUseCase(problemsRepo)
+	problemsUC := usecase.NewProblemsUseCase(s.problemsRepo)
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo)
-	permissionsUC := usecase.NewPermissionsUseCase(s.contestsRepo, usersUC, problemsRepo, teamsRepo, s.organizationsRepo)
+	permissionsUC := usecase.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
 	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
-	teamsUC := usecase.NewTeamsUseCase(teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
+	teamsUC := usecase.NewTeamsUseCase(s.teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
-	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, workspaceStorage, nil, txManager)
+	workshopUC := usecase.NewWorkshopUseCase(s.problemsRepo, workspaceStorage, nil, txManager)
 
 	avatarsUC := usecase.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
 
 	packagesRepo := pg.NewPackagesRepo(s.dbPool)
-	importUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
-	publishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages")
+	importUC := usecase.NewProblemImportUseCase(s.problemsRepo, workspaceStorage)
+	publishUC := usecase.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages")
 
 	// Handler
 	coreServer := handlers.NewCoreServer(

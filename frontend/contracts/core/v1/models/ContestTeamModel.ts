@@ -2,11 +2,13 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type TeamMemberModel = {
-    user_id: string;
+export type ContestTeamModel = {
+    contest_id: string;
     team_id: string;
-    username: string;
-    role: string;
+    team_name: string;
+    team_slug: string;
+    contest_role: string;
+    permissions_mask?: number;
     created_at: string;
 };
 

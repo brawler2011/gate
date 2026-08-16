@@ -260,6 +260,19 @@ func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
 	}
 }
 
+func ListProblemsResponseDTO(problemsList *models.ProblemsList) *corev1.ListProblemsResponseModel {
+	resp := corev1.ListProblemsResponseModel{
+		Problems:   make([]corev1.ProblemsListItemModel, len(problemsList.Problems)),
+		Pagination: PaginationDTO(problemsList.Pagination),
+	}
+
+	for i, problem := range problemsList.Problems {
+		resp.Problems[i] = ProblemsListItemDTO(problem)
+	}
+
+	return &resp
+}
+
 func ProblemDTO(p models.Problem, statement *models.Statement, samples []corev1.ProblemSampleModel) *corev1.ProblemModel {
 	title := strings.TrimSpace(p.Title)
 	if statement != nil {
@@ -534,6 +547,7 @@ func teamMemberDTO(m models.TeamMember) corev1.TeamMemberModel {
 		UserId:    m.UserID,
 		TeamId:    m.TeamID,
 		Username:  m.Username,
+		Role:      string(m.Role),
 		CreatedAt: m.CreatedAt,
 	}
 }
@@ -551,6 +565,78 @@ func listTeamMembersDTO(members []models.TeamMember, page, total int32) *corev1.
 		resp.Members[i] = teamMemberDTO(member)
 	}
 
+	return &resp
+}
+
+func contestTeamDTO(ct models.ContestTeam) corev1.ContestTeamModel {
+	var mask *int64
+	if ct.PermissionsMask != nil {
+		m := int64(*ct.PermissionsMask)
+		mask = &m
+	}
+	return corev1.ContestTeamModel{
+		ContestId:       ct.ContestID,
+		TeamId:          ct.TeamID,
+		TeamName:        ct.TeamName,
+		TeamSlug:        ct.TeamSlug,
+		ContestRole:     string(ct.Role),
+		PermissionsMask: mask,
+		CreatedAt:       ct.CreatedAt,
+	}
+}
+
+func listContestTeamsDTO(teams []models.ContestTeam) *corev1.ListContestTeamsResponseModel {
+	resp := corev1.ListContestTeamsResponseModel{
+		Teams: make([]corev1.ContestTeamModel, len(teams)),
+	}
+	for i, team := range teams {
+		resp.Teams[i] = contestTeamDTO(team)
+	}
+	return &resp
+}
+
+func problemTeamDTO(pt models.ProblemTeam) corev1.ProblemTeamModel {
+	return corev1.ProblemTeamModel{
+		ProblemId:  pt.ProblemID,
+		TeamId:     pt.TeamID,
+		TeamName:   pt.TeamName,
+		TeamSlug:   pt.TeamSlug,
+		Permission: string(pt.Permission),
+		CreatedAt:  pt.CreatedAt,
+	}
+}
+
+func listProblemTeamsDTO(teams []models.ProblemTeam) *corev1.ListProblemTeamsResponseModel {
+	resp := corev1.ListProblemTeamsResponseModel{
+		Teams: make([]corev1.ProblemTeamModel, len(teams)),
+	}
+	for i, team := range teams {
+		resp.Teams[i] = problemTeamDTO(team)
+	}
+	return &resp
+}
+
+func problemMemberDTO(pm models.ProblemMember) corev1.ProblemMemberModel {
+	return corev1.ProblemMemberModel{
+		ProblemId: pm.ProblemID,
+		UserId:    pm.UserID,
+		Username:  pm.Username,
+		Role:      string(pm.Role),
+		CreatedAt: pm.CreatedAt,
+	}
+}
+
+func listProblemMembersDTO(members []models.ProblemMember, page, total int32) *corev1.ListProblemMembersResponseModel {
+	resp := corev1.ListProblemMembersResponseModel{
+		Members: make([]corev1.ProblemMemberModel, len(members)),
+		Pagination: corev1.PaginationModel{
+			Page:  page,
+			Total: total,
+		},
+	}
+	for i, member := range members {
+		resp.Members[i] = problemMemberDTO(member)
+	}
 	return &resp
 }
 

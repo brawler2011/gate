@@ -238,3 +238,39 @@ func (uc *ProblemsUseCase) ListDashboardProblems(ctx context.Context, userID uui
 	}
 	return problems, nil
 }
+
+func (uc *ProblemsUseCase) AddProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission models.ProblemPermission) error {
+	return uc.repo.AddProblemTeam(ctx, problemID, teamID, permission)
+}
+
+func (uc *ProblemsUseCase) GetProblemTeams(ctx context.Context, problemID, requestUserID uuid.UUID) ([]models.ProblemTeam, error) {
+	return uc.repo.GetProblemTeams(ctx, problemID)
+}
+
+func (uc *ProblemsUseCase) UpdateProblemTeamPermission(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission models.ProblemPermission) error {
+	return uc.repo.UpdateProblemTeamPermission(ctx, problemID, teamID, permission)
+}
+
+func (uc *ProblemsUseCase) RemoveProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID) error {
+	return uc.repo.RemoveProblemTeam(ctx, problemID, teamID)
+}
+
+func (uc *ProblemsUseCase) CreateProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role models.ProblemRole) error {
+	return uc.repo.CreateProblemMember(ctx, &models.CreateProblemMemberParams{
+		ProblemID: problemID,
+		UserID:    userID,
+		Role:      role,
+	})
+}
+
+func (uc *ProblemsUseCase) ListProblemMembers(ctx context.Context, problemID, requestUserID uuid.UUID) ([]models.ProblemMember, error) {
+	return uc.repo.ListProblemMembers(ctx, problemID)
+}
+
+func (uc *ProblemsUseCase) UpdateProblemMemberRole(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role models.ProblemRole) error {
+	return uc.repo.UpdateProblemMemberRole(ctx, problemID, userID, role)
+}
+
+func (uc *ProblemsUseCase) RemoveProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID) error {
+	return uc.repo.RemoveProblemMember(ctx, problemID, userID)
+}

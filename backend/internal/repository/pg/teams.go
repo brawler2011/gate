@@ -275,6 +275,57 @@ func (r *TeamsRepo) GetUserTeamsByOrganization(ctx context.Context, userID, orgI
 	return result, nil
 }
 
+func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]models.Contest, error) {
+	contests, err := r.q.GetTeamContests(ctx, teamID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get team contests: %w", err)
+	}
+
+	result := make([]models.Contest, len(contests))
+	for i, c := range contests {
+		result[i] = models.Contest{
+			ID:             c.ID,
+			OrganizationID: c.OrganizationID,
+			OwnerID:        pgtypeToNullableUUID(c.OwnerID),
+			Visibility:     string(c.Visibility),
+			Title:          c.Title,
+			Description:    c.Description,
+			StartTime:      pgTimestamptzToTimePtr(c.StartTime),
+			EndTime:        pgTimestamptzToTimePtr(c.EndTime),
+			CreatedAt:      c.CreatedAt,
+			UpdatedAt:      c.UpdatedAt,
+		}
+	}
+
+	return result, nil
+}
+
+func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]models.Problem, error) {
+	problems, err := r.q.GetTeamProblems(ctx, teamID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get team problems: %w", err)
+	}
+
+	result := make([]models.Problem, len(problems))
+	for i, p := range problems {
+		result[i] = models.Problem{
+			ID:             p.ID,
+			OrganizationID: p.OrganizationID,
+			OwnerID:        pgtypeToNullableUUID(p.OwnerID),
+			Visibility:     string(p.Visibility),
+			Title:          p.Title,
+			ShortName:      p.ShortName,
+			TimeLimitMs:    int(p.TimeLimitMs),
+			MemoryLimitMb:  int(p.MemoryLimitMb),
+			IsTemplate:     p.IsTemplate,
+			CreatedAt:      p.CreatedAt,
+			UpdatedAt:      p.UpdatedAt,
+		}
+	}
+
+	return result, nil
+}
+
 // Helper functions
 func pgtypeToNullableUUID(pgu pgtype.UUID) *uuid.UUID {
 	if !pgu.Valid {

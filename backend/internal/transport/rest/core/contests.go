@@ -543,3 +543,52 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, request corev1.Ge
 	return corev1.GetContestScoreboard200JSONResponse(*GetScoreboardResponseDTO(sb)), nil
 }
 
+func (h *CoreServer) ListContestTeams(ctx context.Context, request corev1.ListContestTeamsRequestObject) (corev1.ListContestTeamsResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	teams, err := h.contestsUC.GetContestTeams(ctx, request.ContestId, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.ListContestTeams200JSONResponse(*listContestTeamsDTO(teams)), nil
+}
+
+func (h *CoreServer) CreateContestTeam(ctx context.Context, request corev1.CreateContestTeamRequestObject) (corev1.CreateContestTeamResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	role := models.ContestRoleParticipant
+	if request.Params.Role != nil && *request.Params.Role != "" {
+		role = models.ContestRole(*request.Params.Role)
+	}
+
+	err := h.contestsUC.CreateContestTeam(ctx, request.ContestId, request.Params.TeamId, user.Id, role)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.CreateContestTeam200Response{}, nil
+}
+
+func (h *CoreServer) UpdateContestTeam(ctx context.Context, request corev1.UpdateContestTeamRequestObject) (corev1.UpdateContestTeamResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	err := h.contestsUC.UpdateContestTeamRole(ctx, request.ContestId, request.Params.TeamId, user.Id, models.ContestRole(request.Params.Role))
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.UpdateContestTeam200Response{}, nil
+}
+
+func (h *CoreServer) DeleteContestTeam(ctx context.Context, request corev1.DeleteContestTeamRequestObject) (corev1.DeleteContestTeamResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	err := h.contestsUC.DeleteContestTeam(ctx, request.ContestId, request.Params.TeamId, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.DeleteContestTeam200Response{}, nil
+}
+

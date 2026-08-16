@@ -30,6 +30,9 @@ type ContestsRepo interface {
 
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]models.ContestProblem, error)
 	GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]models.ContestTeam, error)
+	CreateContestTeam(ctx context.Context, contestID, teamID uuid.UUID, role models.ContestRole) error
+	UpdateContestTeamRole(ctx context.Context, contestID, teamID uuid.UUID, role models.ContestRole) error
+	DeleteContestTeam(ctx context.Context, contestID, teamID uuid.UUID) error
 
 	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) ([]models.Contest, int32, error)
 	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error)
@@ -57,6 +60,11 @@ type ContestsUC interface {
 	UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error
 	DeleteParticipant(ctx context.Context, c models.ParticipantDeletion) error
 	ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*models.ContestMembersList, error)
+
+	CreateContestTeam(ctx context.Context, contestID, teamID, requestUserID uuid.UUID, role models.ContestRole) error
+	GetContestTeams(ctx context.Context, contestID, requestUserID uuid.UUID) ([]models.ContestTeam, error)
+	UpdateContestTeamRole(ctx context.Context, contestID, teamID, requestUserID uuid.UUID, role models.ContestRole) error
+	DeleteContestTeam(ctx context.Context, contestID, teamID, requestUserID uuid.UUID) error
 
 	CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error
 	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (models.ContestProblem, error)

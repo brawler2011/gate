@@ -240,3 +240,102 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdatePro
 
 	return corev1.UpdateProblem200Response{}, nil
 }
+
+func (h *CoreServer) ListProblemTeams(ctx context.Context, request corev1.ListProblemTeamsRequestObject) (corev1.ListProblemTeamsResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	teams, err := h.problemsUC.GetProblemTeams(ctx, request.Id, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.ListProblemTeams200JSONResponse(*listProblemTeamsDTO(teams)), nil
+}
+
+func (h *CoreServer) CreateProblemTeam(ctx context.Context, request corev1.CreateProblemTeamRequestObject) (corev1.CreateProblemTeamResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	permission := models.ProblemPermissionRead
+	if request.Params.Permission != nil && *request.Params.Permission != "" {
+		permission = models.ProblemPermission(*request.Params.Permission)
+	}
+
+	err := h.problemsUC.AddProblemTeam(ctx, request.Id, request.Params.TeamId, user.Id, permission)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.CreateProblemTeam200Response{}, nil
+}
+
+func (h *CoreServer) UpdateProblemTeam(ctx context.Context, request corev1.UpdateProblemTeamRequestObject) (corev1.UpdateProblemTeamResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	err := h.problemsUC.UpdateProblemTeamPermission(ctx, request.Id, request.Params.TeamId, user.Id, models.ProblemPermission(request.Params.Permission))
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.UpdateProblemTeam200Response{}, nil
+}
+
+func (h *CoreServer) DeleteProblemTeam(ctx context.Context, request corev1.DeleteProblemTeamRequestObject) (corev1.DeleteProblemTeamResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	err := h.problemsUC.RemoveProblemTeam(ctx, request.Id, request.Params.TeamId, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.DeleteProblemTeam200Response{}, nil
+}
+
+func (h *CoreServer) ListProblemMembers(ctx context.Context, request corev1.ListProblemMembersRequestObject) (corev1.ListProblemMembersResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	members, err := h.problemsUC.ListProblemMembers(ctx, request.Id, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	total := safeInt32(len(members))
+	return corev1.ListProblemMembers200JSONResponse(*listProblemMembersDTO(members, request.Params.Page, total)), nil
+}
+
+func (h *CoreServer) CreateProblemMember(ctx context.Context, request corev1.CreateProblemMemberRequestObject) (corev1.CreateProblemMemberResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	role := models.ProblemRoleViewer
+	if request.Params.Role != nil && *request.Params.Role != "" {
+		role = models.ProblemRole(*request.Params.Role)
+	}
+
+	err := h.problemsUC.CreateProblemMember(ctx, request.Id, request.Params.UserId, user.Id, role)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.CreateProblemMember200Response{}, nil
+}
+
+func (h *CoreServer) UpdateProblemMember(ctx context.Context, request corev1.UpdateProblemMemberRequestObject) (corev1.UpdateProblemMemberResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	err := h.problemsUC.UpdateProblemMemberRole(ctx, request.Id, request.Params.UserId, user.Id, models.ProblemRole(request.Params.Role))
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.UpdateProblemMember200Response{}, nil
+}
+
+func (h *CoreServer) DeleteProblemMember(ctx context.Context, request corev1.DeleteProblemMemberRequestObject) (corev1.DeleteProblemMemberResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	err := h.problemsUC.RemoveProblemMember(ctx, request.Id, request.Params.UserId, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.DeleteProblemMember200Response{}, nil
+}

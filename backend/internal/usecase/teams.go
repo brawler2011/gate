@@ -266,3 +266,31 @@ func (uc *TeamsUseCase) RemoveTeamMember(ctx context.Context, teamID, userID, re
 func (uc *TeamsUseCase) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
 	return uc.repo.GetUserTeams(ctx, userID)
 }
+
+func (uc *TeamsUseCase) GetTeamContests(ctx context.Context, teamID, requestUserID uuid.UUID) ([]models.Contest, error) {
+	team, err := uc.repo.GetTeamByID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, models.ActionViewOrganization)
+	if !hasOrgAccess {
+		return nil, errors.New("access denied")
+	}
+
+	return uc.repo.GetTeamContests(ctx, teamID)
+}
+
+func (uc *TeamsUseCase) GetTeamProblems(ctx context.Context, teamID, requestUserID uuid.UUID) ([]models.Problem, error) {
+	team, err := uc.repo.GetTeamByID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, models.ActionViewOrganization)
+	if !hasOrgAccess {
+		return nil, errors.New("access denied")
+	}
+
+	return uc.repo.GetTeamProblems(ctx, teamID)
+}

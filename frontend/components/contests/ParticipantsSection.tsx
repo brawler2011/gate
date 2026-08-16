@@ -12,17 +12,19 @@ import {
   Pagination,
   Stack,
   Table,
+  Tabs,
   Text,
 } from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconEdit, IconPlus, IconTrash} from "@tabler/icons-react";
+import {IconEdit, IconPlus, IconTrash, IconUser, IconUsersGroup} from "@tabler/icons-react";
 import {useCallback, useEffect, useState} from "react";
 
 import {StatusMessage} from '@/components/shared/StatusMessage';
 import {api} from "@/lib/api";
 
 import {ChangeRoleModal} from "./ChangeRoleModal";
+import {ContestTeamsManagement} from "./ContestTeamsManagement";
 
 import type * as corev1 from "@/contracts/core/v1";
 import type {ReactNode} from "react";
@@ -40,9 +42,11 @@ const getRoleDisplay = (role: string) => {
 
 interface ParticipantsSectionProps {
   contestId: string;
+  orgId?: string;
 }
 
-export const ParticipantsSection = ({contestId}: ParticipantsSectionProps): ReactNode => {
+export const ParticipantsSection = ({contestId, orgId}: ParticipantsSectionProps): ReactNode => {
+  const [activeTab, setActiveTab] = useState<string | null>("users");
   const [participants, setParticipants] = useState<corev1.ContestMemberModel[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -224,126 +228,143 @@ export const ParticipantsSection = ({contestId}: ParticipantsSectionProps): Reac
 
   return (
     <>
-      <Stack gap="md">
-        {/* Add Participant Form */}
-        <Card withBorder padding="md">
-          <Stack gap="sm">
-            <Text size="sm" fw={500}>
-              Добавить участника
-            </Text>
-            <Group gap="sm">
-              <Autocomplete
-                placeholder="Поиск по имени пользователя или email..."
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onOptionSubmit={(value) => {
-                  setSelectedUserId(value);
-                  const selected = searchResults.find((u) => u.id === value);
-                  if (selected) {
-                    setSearchQuery(selected.username);
-                  }
-                }}
-                data={autocompleteData}
-                rightSection={searching && <Loader size="xs" />}
-                style={{flex: 1}}
-              />
-              <Button
-                onClick={handleAddParticipant}
-                disabled={!selectedUserId || adding}
-                loading={adding}
-                leftSection={<IconPlus size={16} />}
-              >
-                Добавить
-              </Button>
-            </Group>
-          </Stack>
-        </Card>
+      <Tabs value={activeTab} onChange={setActiveTab} mb="md">
+        <Tabs.List>
+          <Tabs.Tab value="users" leftSection={<IconUser size={16} />}>
+            Пользователи
+          </Tabs.Tab>
+          <Tabs.Tab value="teams" leftSection={<IconUsersGroup size={16} />}>
+            Команды
+          </Tabs.Tab>
+        </Tabs.List>
 
-        {loading && (
-          <Center py="xl">
-            <Loader size="md" />
-          </Center>
-        )}
-        {!loading && participants.length === 0 && (
-          <Center py="xl">
-            <Stack align="center" gap="sm">
-              <Text size="lg" c="dimmed">
-                Нет участников
-              </Text>
-              <Text size="sm" c="dimmed">
-                Добавьте участников для контеста
-              </Text>
-            </Stack>
-          </Center>
-        )}
-        {!loading && participants.length > 0 && (
+        <Tabs.Panel value="users" pt="md">
           <Stack gap="md">
-            <Table highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{width: 140}}>Пользователь</Table.Th>
-                  <Table.Th style={{textAlign: 'center'}}>Роль</Table.Th>
-                  <Table.Th style={{width: 80}}>Действия</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {participants.map((user) => (
-                  <Table.Tr key={user.user_id}>
-                    <Table.Td>
-                      <Text size="sm" fw={500}>
-                        {user.username}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td style={{textAlign: 'center'}}>
-                      <Badge
-                        variant="filled"
-                        color={getRoleDisplay(user.contest_role).color}
-                        tt="none"
-                        size="md"
-                      >
-                        {getRoleDisplay(user.contest_role).label}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs" wrap="nowrap">
-                        {user.contest_role !== "owner" ? (
-                          <ActionIcon
-                            color="blue"
-                            variant="subtle"
-                            onClick={() => handleEditRole(user)}
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                        ) : (
-                          <div style={{width: 28}} />
-                        )}
-                        <ActionIcon
-                          color="red"
-                          variant="subtle"
-                          onClick={() => handleDeleteParticipant(user.user_id)}
-                          loading={deletingId === user.user_id}
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Group>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+            {/* Add Participant Form */}
+            <Card withBorder padding="md">
+              <Stack gap="sm">
+                <Text size="sm" fw={500}>
+                  Добавить участника
+                </Text>
+                <Group gap="sm">
+                  <Autocomplete
+                    placeholder="Поиск по имени пользователя или email..."
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    onOptionSubmit={(value) => {
+                      setSelectedUserId(value);
+                      const selected = searchResults.find((u) => u.id === value);
+                      if (selected) {
+                        setSearchQuery(selected.username);
+                      }
+                    }}
+                    data={autocompleteData}
+                    rightSection={searching && <Loader size="xs" />}
+                    style={{flex: 1}}
+                  />
+                  <Button
+                    onClick={handleAddParticipant}
+                    disabled={!selectedUserId || adding}
+                    loading={adding}
+                    leftSection={<IconPlus size={16} />}
+                  >
+                    Добавить
+                  </Button>
+                </Group>
+              </Stack>
+            </Card>
 
-            {totalPages > 1 && (
-              <Center>
-                <Pagination
-                  value={page}
-                  onChange={setPage}
-                  total={totalPages}
-                />
+            {loading && (
+              <Center py="xl">
+                <Loader size="md" />
               </Center>
             )}
+            {!loading && participants.length === 0 && (
+              <Center py="xl">
+                <Stack align="center" gap="sm">
+                  <Text size="lg" c="dimmed">
+                    Нет участников
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    Добавьте участников для контеста
+                  </Text>
+                </Stack>
+              </Center>
+            )}
+            {!loading && participants.length > 0 && (
+              <Stack gap="md">
+                <Table highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th style={{width: 140}}>Пользователь</Table.Th>
+                      <Table.Th style={{textAlign: 'center'}}>Роль</Table.Th>
+                      <Table.Th style={{width: 80}}>Действия</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {participants.map((user) => (
+                      <Table.Tr key={user.user_id}>
+                        <Table.Td>
+                          <Text size="sm" fw={500}>
+                            {user.username}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td style={{textAlign: 'center'}}>
+                          <Badge
+                            variant="filled"
+                            color={getRoleDisplay(user.contest_role).color}
+                            tt="none"
+                            size="md"
+                          >
+                            {getRoleDisplay(user.contest_role).label}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap="xs" wrap="nowrap">
+                            {user.contest_role !== "owner" ? (
+                              <ActionIcon
+                                color="blue"
+                                variant="subtle"
+                                onClick={() => handleEditRole(user)}
+                              >
+                                <IconEdit size={16} />
+                              </ActionIcon>
+                            ) : (
+                              <div style={{width: 28}} />
+                            )}
+                            <ActionIcon
+                              color="red"
+                              variant="subtle"
+                              onClick={() => handleDeleteParticipant(user.user_id)}
+                              loading={deletingId === user.user_id}
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+
+                {totalPages > 1 && (
+                  <Center>
+                    <Pagination
+                      value={page}
+                      onChange={setPage}
+                      total={totalPages}
+                    />
+                  </Center>
+                )}
+              </Stack>
+            )}
           </Stack>
-        )}
-      </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="teams" pt="md">
+          <ContestTeamsManagement contestId={contestId} orgId={orgId} />
+        </Tabs.Panel>
+      </Tabs>
 
       {editingParticipant && (
         <ChangeRoleModal

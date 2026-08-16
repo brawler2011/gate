@@ -324,6 +324,30 @@ func (m *mockProblemsRepo) GetProblemTeams(_ context.Context, _ uuid.UUID) ([]mo
 	return nil, nil
 }
 
+func (m *mockProblemsRepo) AddProblemTeam(_ context.Context, _, _ uuid.UUID, _ models.ProblemPermission) error {
+	return nil
+}
+
+func (m *mockProblemsRepo) UpdateProblemTeamPermission(_ context.Context, _, _ uuid.UUID, _ models.ProblemPermission) error {
+	return nil
+}
+
+func (m *mockProblemsRepo) RemoveProblemTeam(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
+func (m *mockProblemsRepo) ListProblemMembers(_ context.Context, _ uuid.UUID) ([]models.ProblemMember, error) {
+	return nil, nil
+}
+
+func (m *mockProblemsRepo) UpdateProblemMemberRole(_ context.Context, _, _ uuid.UUID, _ models.ProblemRole) error {
+	return nil
+}
+
+func (m *mockProblemsRepo) RemoveProblemMember(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
 func (m *mockProblemsRepo) ListProblems(_ context.Context, _ *models.ProblemsFilter) ([]models.Problem, int32, error) {
 	return nil, 0, nil
 }

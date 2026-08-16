@@ -1,0 +1,348 @@
+"use client";
+
+import {
+  ActionIcon,
+  Autocomplete,
+  Badge,
+  Button,
+  Card,
+  Center,
+  Group,
+  Loader,
+  Stack,
+  Table,
+  Text,
+} from "@mantine/core";
+import {useDebouncedValue} from "@mantine/hooks";
+import {notifications} from "@mantine/notifications";
+import {IconEdit, IconPlus, IconTrash, IconUsersGroup} from "@tabler/icons-react";
+import {useCallback, useEffect, useState} from "react";
+
+import {StatusMessage} from "@/components/shared/StatusMessage";
+import {api} from "@/lib/api";
+
+import {ChangeRoleModal} from "./ChangeRoleModal";
+
+import type * as corev1 from "@/contracts/core/v1";
+import type {ReactNode} from "react";
+
+const CONTEST_TEAM_ROLE_OPTIONS = [
+  {label: "Участник", value: "participant", color: "gray"},
+  {label: "Модератор", value: "moderator", color: "yellow"},
+];
+
+const getRoleDisplay = (role: string) => {
+  const found = CONTEST_TEAM_ROLE_OPTIONS.find((r) => r.value === role);
+  return found || {label: role, color: "gray"};
+};
+
+interface ContestTeamsManagementProps {
+  contestId: string;
+  orgId?: string;
+}
+
+export const ContestTeamsManagement = ({contestId, orgId}: ContestTeamsManagementProps): ReactNode => {
+  const [teams, setTeams] = useState<corev1.ContestTeamModel[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
+  const [searchResults, setSearchResults] = useState<corev1.TeamModel[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [editingTeam, setEditingTeam] = useState<{
+    teamName: string;
+    teamId: string;
+    currentRole: string;
+  } | null>(null);
+  const [modalOpened, setModalOpened] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const loadTeams = useCallback(async () => {
+    setLoading(true);
+    const [error, response] = await api.listContestTeams({contestId});
+    setLoading(false);
+
+    if (error || !response) {
+      console.error("Failed to load contest teams:", error);
+      return;
+    }
+
+    setTeams(response.teams);
+  }, [contestId]);
+
+  useEffect(() => {
+    loadTeams();
+  }, [loadTeams]);
+
+  useEffect(() => {
+    const searchTeamsAsync = async () => {
+      if (!debouncedQuery || debouncedQuery.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setSearching(true);
+      const [error, response] = await api.listTeams({
+        organizationId: orgId,
+        search: debouncedQuery,
+        page: 1,
+        pageSize: 10,
+      });
+      setSearching(false);
+
+      if (error || !response) {
+        return;
+      }
+
+      setSearchResults(response.teams);
+    };
+
+    searchTeamsAsync();
+  }, [debouncedQuery, orgId]);
+
+  const handleAddTeam = async () => {
+    if (!selectedTeamId) {
+      return;
+    }
+
+    setAdding(true);
+    const [error] = await api.createContestTeam({
+      contestId,
+      teamId: selectedTeamId,
+      role: "participant",
+    });
+    setAdding(false);
+
+    if (error) {
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось добавить команду",
+        color: "red",
+      });
+      setStatusMessage({
+        type: "error",
+        message: "Не удалось добавить команду",
+      });
+      return;
+    }
+
+    setStatusMessage({
+      type: "success",
+      message: "Команда добавлена",
+    });
+
+    setSearchQuery("");
+    setSelectedTeamId(null);
+    await loadTeams();
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    setDeletingId(teamId);
+    const [error] = await api.deleteContestTeam({contestId, teamId});
+    setDeletingId(null);
+
+    if (error) {
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось удалить команду",
+        color: "red",
+      });
+      setStatusMessage({
+        type: "error",
+        message: "Не удалось удалить команду",
+      });
+      return;
+    }
+
+    setStatusMessage({
+      type: "success",
+      message: "Команда удалена",
+    });
+
+    await loadTeams();
+  };
+
+  const handleEditRole = (team: corev1.ContestTeamModel) => {
+    setEditingTeam({
+      teamName: team.team_name,
+      teamId: team.team_id,
+      currentRole: team.contest_role,
+    });
+    setModalOpened(true);
+  };
+
+  const handleChangeRole = async (newRole: string) => {
+    if (!editingTeam) {
+      return;
+    }
+
+    const [error] = await api.updateContestTeam({
+      contestId,
+      teamId: editingTeam.teamId,
+      role: newRole,
+    });
+
+    setModalOpened(false);
+
+    if (error) {
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось изменить роль команды",
+        color: "red",
+      });
+      setStatusMessage({
+        type: "error",
+        message: "Не удалось изменить роль команды",
+      });
+      return;
+    }
+
+    setStatusMessage({
+      type: "success",
+      message: "Роль команды обновлена",
+    });
+
+    await loadTeams();
+  };
+
+  const autocompleteData = searchResults.map((t) => ({
+    value: t.id,
+    label: t.name,
+  }));
+
+  return (
+    <>
+      <Stack gap="md">
+        <Card withBorder padding="md">
+          <Stack gap="sm">
+            <Text size="sm" fw={500}>
+              Добавить команду
+            </Text>
+            <Group gap="sm">
+              <Autocomplete
+                placeholder="Поиск команды по названию..."
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onOptionSubmit={(value) => {
+                  setSelectedTeamId(value);
+                  const selected = searchResults.find((t) => t.id === value);
+                  if (selected) {
+                    setSearchQuery(selected.name);
+                  }
+                }}
+                data={autocompleteData}
+                rightSection={searching && <Loader size="xs" />}
+                style={{flex: 1}}
+              />
+              <Button
+                onClick={handleAddTeam}
+                disabled={!selectedTeamId || adding}
+                loading={adding}
+                leftSection={<IconPlus size={16} />}
+              >
+                Добавить
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
+
+        {loading && (
+          <Center py="xl">
+            <Loader size="md" />
+          </Center>
+        )}
+        {!loading && teams.length === 0 && (
+          <Center py="xl">
+            <Stack align="center" gap="sm">
+              <IconUsersGroup size={32} color="var(--mantine-color-dimmed)" />
+              <Text size="lg" c="dimmed">
+                Нет команд
+              </Text>
+              <Text size="sm" c="dimmed">
+                Добавьте команды для привязки к контесту
+              </Text>
+            </Stack>
+          </Center>
+        )}
+        {!loading && teams.length > 0 && (
+          <Table highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th style={{width: 180}}>Команда</Table.Th>
+                <Table.Th style={{textAlign: "center"}}>Роль</Table.Th>
+                <Table.Th style={{width: 80}}>Действия</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {teams.map((t) => (
+                <Table.Tr key={t.team_id}>
+                  <Table.Td>
+                    <Text size="sm" fw={500}>
+                      {t.team_name}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td style={{textAlign: "center"}}>
+                    <Badge
+                      variant="filled"
+                      color={getRoleDisplay(t.contest_role).color}
+                      tt="none"
+                      size="md"
+                    >
+                      {getRoleDisplay(t.contest_role).label}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs" wrap="nowrap">
+                      <ActionIcon
+                        color="blue"
+                        variant="subtle"
+                        onClick={() => handleEditRole(t)}
+                      >
+                        <IconEdit size={16} />
+                      </ActionIcon>
+                      <ActionIcon
+                        color="red"
+                        variant="subtle"
+                        onClick={() => handleDeleteTeam(t.team_id)}
+                        loading={deletingId === t.team_id}
+                      >
+                        <IconTrash size={16} />
+                      </ActionIcon>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        )}
+      </Stack>
+
+      {editingTeam && (
+        <ChangeRoleModal
+          opened={modalOpened}
+          onClose={() => setModalOpened(false)}
+          participant={{
+            username: editingTeam.teamName,
+            userId: editingTeam.teamId,
+          }}
+          currentRole={editingTeam.currentRole}
+          onSubmit={handleChangeRole}
+        />
+      )}
+
+      <StatusMessage
+        type={statusMessage?.type || "success"}
+        message={statusMessage?.message || ""}
+        opened={!!statusMessage}
+        onClose={() => setStatusMessage(null)}
+      />
+    </>
+  );
+};

@@ -189,6 +189,17 @@ type ContestProblemModel struct {
 	UpdatedAt        time.Time            `json:"updated_at"`
 }
 
+// ContestTeamModel defines model for ContestTeamModel.
+type ContestTeamModel struct {
+	ContestId       openapi_types.UUID `json:"contest_id"`
+	ContestRole     string             `json:"contest_role"`
+	CreatedAt       time.Time          `json:"created_at"`
+	PermissionsMask *int64             `json:"permissions_mask,omitempty"`
+	TeamId          openapi_types.UUID `json:"team_id"`
+	TeamName        string             `json:"team_name"`
+	TeamSlug        string             `json:"team_slug"`
+}
+
 // CreateSubmissionRequestModel defines model for CreateSubmissionRequestModel.
 type CreateSubmissionRequestModel struct {
 	Submission string `json:"submission"`
@@ -302,6 +313,11 @@ type ListContestMembersResponseModel struct {
 	Pagination PaginationModel      `json:"pagination"`
 }
 
+// ListContestTeamsResponseModel defines model for ListContestTeamsResponseModel.
+type ListContestTeamsResponseModel struct {
+	Teams []ContestTeamModel `json:"teams"`
+}
+
 // ListContestsResponseModel defines model for ListContestsResponseModel.
 type ListContestsResponseModel struct {
 	Contests   []ContestModel  `json:"contests"`
@@ -324,6 +340,17 @@ type ListOrganizationsResponseModel struct {
 type ListPostsResponseModel struct {
 	Pagination PaginationModel `json:"pagination"`
 	Posts      []PostModel     `json:"posts"`
+}
+
+// ListProblemMembersResponseModel defines model for ListProblemMembersResponseModel.
+type ListProblemMembersResponseModel struct {
+	Members    []ProblemMemberModel `json:"members"`
+	Pagination PaginationModel      `json:"pagination"`
+}
+
+// ListProblemTeamsResponseModel defines model for ListProblemTeamsResponseModel.
+type ListProblemTeamsResponseModel struct {
+	Teams []ProblemTeamModel `json:"teams"`
 }
 
 // ListProblemsResponseModel defines model for ListProblemsResponseModel.
@@ -419,6 +446,15 @@ type ProblemLimits struct {
 	TimeLimitMs   int    `json:"time_limit_ms"`
 }
 
+// ProblemMemberModel defines model for ProblemMemberModel.
+type ProblemMemberModel struct {
+	CreatedAt time.Time          `json:"created_at"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+	Role      string             `json:"role"`
+	UserId    openapi_types.UUID `json:"user_id"`
+	Username  string             `json:"username"`
+}
+
 // ProblemModel defines model for ProblemModel.
 type ProblemModel struct {
 	CreatedAt        time.Time            `json:"created_at"`
@@ -462,6 +498,16 @@ type ProblemStatement struct {
 	OutputFormat string    `json:"output_format"`
 	Scoring      *string   `json:"scoring,omitempty"`
 	Title        string    `json:"title"`
+}
+
+// ProblemTeamModel defines model for ProblemTeamModel.
+type ProblemTeamModel struct {
+	CreatedAt  time.Time          `json:"created_at"`
+	Permission string             `json:"permission"`
+	ProblemId  openapi_types.UUID `json:"problem_id"`
+	TeamId     openapi_types.UUID `json:"team_id"`
+	TeamName   string             `json:"team_name"`
+	TeamSlug   string             `json:"team_slug"`
 }
 
 // ProblemsListItemModel defines model for ProblemsListItemModel.
@@ -575,6 +621,7 @@ type SupportedLanguagesResponse struct {
 // TeamMemberModel defines model for TeamMemberModel.
 type TeamMemberModel struct {
 	CreatedAt time.Time          `json:"created_at"`
+	Role      string             `json:"role"`
 	TeamId    openapi_types.UUID `json:"team_id"`
 	UserId    openapi_types.UUID `json:"user_id"`
 	Username  string             `json:"username"`
@@ -765,6 +812,23 @@ type ListContestSubmissionsParams struct {
 // ListContestSubmissionsParamsSortOrder defines parameters for ListContestSubmissions.
 type ListContestSubmissionsParamsSortOrder string
 
+// DeleteContestTeamParams defines parameters for DeleteContestTeam.
+type DeleteContestTeamParams struct {
+	TeamId openapi_types.UUID `form:"team_id" json:"team_id"`
+}
+
+// UpdateContestTeamParams defines parameters for UpdateContestTeam.
+type UpdateContestTeamParams struct {
+	TeamId openapi_types.UUID `form:"team_id" json:"team_id"`
+	Role   string             `form:"role" json:"role"`
+}
+
+// CreateContestTeamParams defines parameters for CreateContestTeam.
+type CreateContestTeamParams struct {
+	TeamId openapi_types.UUID `form:"team_id" json:"team_id"`
+	Role   *string            `form:"role,omitempty" json:"role,omitempty"`
+}
+
 // ListOrganizationsParams defines parameters for ListOrganizations.
 type ListOrganizationsParams struct {
 	Page     int32   `form:"page" json:"page"`
@@ -847,6 +911,46 @@ type CreateProblemParams struct {
 type ImportProblemMultipartBody struct {
 	// Package Problem package archive (zip)
 	Package *openapi_types.File `json:"package,omitempty"`
+}
+
+// DeleteProblemMemberParams defines parameters for DeleteProblemMember.
+type DeleteProblemMemberParams struct {
+	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+}
+
+// ListProblemMembersParams defines parameters for ListProblemMembers.
+type ListProblemMembersParams struct {
+	Page     int32 `form:"page" json:"page"`
+	PageSize int32 `form:"pageSize" json:"pageSize"`
+}
+
+// UpdateProblemMemberParams defines parameters for UpdateProblemMember.
+type UpdateProblemMemberParams struct {
+	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	Role   string             `form:"role" json:"role"`
+}
+
+// CreateProblemMemberParams defines parameters for CreateProblemMember.
+type CreateProblemMemberParams struct {
+	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	Role   *string            `form:"role,omitempty" json:"role,omitempty"`
+}
+
+// DeleteProblemTeamParams defines parameters for DeleteProblemTeam.
+type DeleteProblemTeamParams struct {
+	TeamId openapi_types.UUID `form:"team_id" json:"team_id"`
+}
+
+// UpdateProblemTeamParams defines parameters for UpdateProblemTeam.
+type UpdateProblemTeamParams struct {
+	TeamId     openapi_types.UUID `form:"team_id" json:"team_id"`
+	Permission string             `form:"permission" json:"permission"`
+}
+
+// CreateProblemTeamParams defines parameters for CreateProblemTeam.
+type CreateProblemTeamParams struct {
+	TeamId     openapi_types.UUID `form:"team_id" json:"team_id"`
+	Permission *string            `form:"permission,omitempty" json:"permission,omitempty"`
 }
 
 // CreateProblemCheckerParams defines parameters for CreateProblemChecker.
@@ -969,6 +1073,12 @@ type CreateTeamJSONBody struct {
 	OrganizationId openapi_types.UUID `json:"organization_id"`
 }
 
+// ListTeamContestsParams defines parameters for ListTeamContests.
+type ListTeamContestsParams struct {
+	Page     *int32 `form:"page,omitempty" json:"page,omitempty"`
+	PageSize *int32 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
 // RemoveTeamMemberParams defines parameters for RemoveTeamMember.
 type RemoveTeamMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
@@ -980,9 +1090,22 @@ type ListTeamMembersParams struct {
 	PageSize int32 `form:"pageSize" json:"pageSize"`
 }
 
+// UpdateTeamMemberRoleParams defines parameters for UpdateTeamMemberRole.
+type UpdateTeamMemberRoleParams struct {
+	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	Role   string             `form:"role" json:"role"`
+}
+
 // AddTeamMemberParams defines parameters for AddTeamMember.
 type AddTeamMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	Role   *string            `form:"role,omitempty" json:"role,omitempty"`
+}
+
+// ListTeamProblemsParams defines parameters for ListTeamProblems.
+type ListTeamProblemsParams struct {
+	Page     *int32 `form:"page,omitempty" json:"page,omitempty"`
+	PageSize *int32 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
 // ListUserContestsParams defines parameters for ListUserContests.
@@ -1240,6 +1363,18 @@ type ClientInterface interface {
 	// RejudgeSubmission request
 	RejudgeSubmission(ctx context.Context, contestId openapi_types.UUID, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteContestTeam request
+	DeleteContestTeam(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListContestTeams request
+	ListContestTeams(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateContestTeam request
+	UpdateContestTeam(ctx context.Context, contestId openapi_types.UUID, params *UpdateContestTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateContestTeam request
+	CreateContestTeam(ctx context.Context, contestId openapi_types.UUID, params *CreateContestTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetHealth request
 	GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1310,6 +1445,18 @@ type ClientInterface interface {
 	// ImportProblemWithBody request with any body
 	ImportProblemWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteProblemMember request
+	DeleteProblemMember(ctx context.Context, id openapi_types.UUID, params *DeleteProblemMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemMembers request
+	ListProblemMembers(ctx context.Context, id openapi_types.UUID, params *ListProblemMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemMember request
+	UpdateProblemMember(ctx context.Context, id openapi_types.UUID, params *UpdateProblemMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemMember request
+	CreateProblemMember(ctx context.Context, id openapi_types.UUID, params *CreateProblemMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetPublishedPackage request
 	GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1318,6 +1465,18 @@ type ClientInterface interface {
 
 	// PublishProblem request
 	PublishProblem(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteProblemTeam request
+	DeleteProblemTeam(ctx context.Context, id openapi_types.UUID, params *DeleteProblemTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemTeams request
+	ListProblemTeams(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateProblemTeam request
+	UpdateProblemTeam(ctx context.Context, id openapi_types.UUID, params *UpdateProblemTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateProblemTeam request
+	CreateProblemTeam(ctx context.Context, id openapi_types.UUID, params *CreateProblemTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListProblemCheckers request
 	ListProblemCheckers(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1509,14 +1668,23 @@ type ClientInterface interface {
 
 	UpdateTeam(ctx context.Context, id openapi_types.UUID, body UpdateTeamJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListTeamContests request
+	ListTeamContests(ctx context.Context, id openapi_types.UUID, params *ListTeamContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RemoveTeamMember request
 	RemoveTeamMember(ctx context.Context, id openapi_types.UUID, params *RemoveTeamMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListTeamMembers request
 	ListTeamMembers(ctx context.Context, id openapi_types.UUID, params *ListTeamMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// UpdateTeamMemberRole request
+	UpdateTeamMemberRole(ctx context.Context, id openapi_types.UUID, params *UpdateTeamMemberRoleParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// AddTeamMember request
 	AddTeamMember(ctx context.Context, id openapi_types.UUID, params *AddTeamMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListTeamProblems request
+	ListTeamProblems(ctx context.Context, id openapi_types.UUID, params *ListTeamProblemsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListUserContests request
 	ListUserContests(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1837,6 +2005,54 @@ func (c *Client) RejudgeSubmission(ctx context.Context, contestId openapi_types.
 	return c.Client.Do(req)
 }
 
+func (c *Client) DeleteContestTeam(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteContestTeamRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListContestTeams(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListContestTeamsRequest(c.Server, contestId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateContestTeam(ctx context.Context, contestId openapi_types.UUID, params *UpdateContestTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateContestTeamRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateContestTeam(ctx context.Context, contestId openapi_types.UUID, params *CreateContestTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateContestTeamRequest(c.Server, contestId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetHealthRequest(c.Server)
 	if err != nil {
@@ -2125,6 +2341,54 @@ func (c *Client) ImportProblemWithBody(ctx context.Context, id openapi_types.UUI
 	return c.Client.Do(req)
 }
 
+func (c *Client) DeleteProblemMember(ctx context.Context, id openapi_types.UUID, params *DeleteProblemMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemMemberRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemMembers(ctx context.Context, id openapi_types.UUID, params *ListProblemMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemMembersRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemMember(ctx context.Context, id openapi_types.UUID, params *UpdateProblemMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemMemberRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemMember(ctx context.Context, id openapi_types.UUID, params *CreateProblemMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemMemberRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetPublishedPackage(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPublishedPackageRequest(c.Server, id, version)
 	if err != nil {
@@ -2151,6 +2415,54 @@ func (c *Client) ListProblemPackages(ctx context.Context, id openapi_types.UUID,
 
 func (c *Client) PublishProblem(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPublishProblemRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteProblemTeam(ctx context.Context, id openapi_types.UUID, params *DeleteProblemTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteProblemTeamRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemTeams(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemTeamsRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateProblemTeam(ctx context.Context, id openapi_types.UUID, params *UpdateProblemTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateProblemTeamRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateProblemTeam(ctx context.Context, id openapi_types.UUID, params *CreateProblemTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateProblemTeamRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -2953,6 +3265,18 @@ func (c *Client) UpdateTeam(ctx context.Context, id openapi_types.UUID, body Upd
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListTeamContests(ctx context.Context, id openapi_types.UUID, params *ListTeamContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListTeamContestsRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) RemoveTeamMember(ctx context.Context, id openapi_types.UUID, params *RemoveTeamMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRemoveTeamMemberRequest(c.Server, id, params)
 	if err != nil {
@@ -2977,8 +3301,32 @@ func (c *Client) ListTeamMembers(ctx context.Context, id openapi_types.UUID, par
 	return c.Client.Do(req)
 }
 
+func (c *Client) UpdateTeamMemberRole(ctx context.Context, id openapi_types.UUID, params *UpdateTeamMemberRoleParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateTeamMemberRoleRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) AddTeamMember(ctx context.Context, id openapi_types.UUID, params *AddTeamMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAddTeamMemberRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListTeamProblems(ctx context.Context, id openapi_types.UUID, params *ListTeamProblemsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListTeamProblemsRequest(c.Server, id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -4207,6 +4555,224 @@ func NewRejudgeSubmissionRequest(server string, contestId openapi_types.UUID, su
 	return req, nil
 }
 
+// NewDeleteContestTeamRequest generates requests for DeleteContestTeam
+func NewDeleteContestTeamRequest(server string, contestId openapi_types.UUID, params *DeleteContestTeamParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/teams", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "team_id", runtime.ParamLocationQuery, params.TeamId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListContestTeamsRequest generates requests for ListContestTeams
+func NewListContestTeamsRequest(server string, contestId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/teams", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateContestTeamRequest generates requests for UpdateContestTeam
+func NewUpdateContestTeamRequest(server string, contestId openapi_types.UUID, params *UpdateContestTeamParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/teams", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "team_id", runtime.ParamLocationQuery, params.TeamId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "role", runtime.ParamLocationQuery, params.Role); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateContestTeamRequest generates requests for CreateContestTeam
+func NewCreateContestTeamRequest(server string, contestId openapi_types.UUID, params *CreateContestTeamParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "contest_id", runtime.ParamLocationPath, contestId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/contests/%s/teams", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "team_id", runtime.ParamLocationQuery, params.TeamId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Role != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "role", runtime.ParamLocationQuery, *params.Role); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetHealthRequest generates requests for GetHealth
 func NewGetHealthRequest(server string) (*http.Request, error) {
 	var err error
@@ -5302,6 +5868,254 @@ func NewImportProblemRequestWithBody(server string, id openapi_types.UUID, conte
 	return req, nil
 }
 
+// NewDeleteProblemMemberRequest generates requests for DeleteProblemMember
+func NewDeleteProblemMemberRequest(server string, id openapi_types.UUID, params *DeleteProblemMemberParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/members", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "user_id", runtime.ParamLocationQuery, params.UserId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListProblemMembersRequest generates requests for ListProblemMembers
+func NewListProblemMembersRequest(server string, id openapi_types.UUID, params *ListProblemMembersParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/members", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemMemberRequest generates requests for UpdateProblemMember
+func NewUpdateProblemMemberRequest(server string, id openapi_types.UUID, params *UpdateProblemMemberParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/members", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "user_id", runtime.ParamLocationQuery, params.UserId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "role", runtime.ParamLocationQuery, params.Role); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemMemberRequest generates requests for CreateProblemMember
+func NewCreateProblemMemberRequest(server string, id openapi_types.UUID, params *CreateProblemMemberParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/members", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "user_id", runtime.ParamLocationQuery, params.UserId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Role != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "role", runtime.ParamLocationQuery, *params.Role); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetPublishedPackageRequest generates requests for GetPublishedPackage
 func NewGetPublishedPackageRequest(server string, id openapi_types.UUID, version string) (*http.Request, error) {
 	var err error
@@ -5401,6 +6215,224 @@ func NewPublishProblemRequest(server string, id openapi_types.UUID) (*http.Reque
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeleteProblemTeamRequest generates requests for DeleteProblemTeam
+func NewDeleteProblemTeamRequest(server string, id openapi_types.UUID, params *DeleteProblemTeamParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/teams", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "team_id", runtime.ParamLocationQuery, params.TeamId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListProblemTeamsRequest generates requests for ListProblemTeams
+func NewListProblemTeamsRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/teams", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateProblemTeamRequest generates requests for UpdateProblemTeam
+func NewUpdateProblemTeamRequest(server string, id openapi_types.UUID, params *UpdateProblemTeamParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/teams", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "team_id", runtime.ParamLocationQuery, params.TeamId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "permission", runtime.ParamLocationQuery, params.Permission); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateProblemTeamRequest generates requests for CreateProblemTeam
+func NewCreateProblemTeamRequest(server string, id openapi_types.UUID, params *CreateProblemTeamParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problems/%s/teams", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "team_id", runtime.ParamLocationQuery, params.TeamId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Permission != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "permission", runtime.ParamLocationQuery, *params.Permission); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), nil)
@@ -8155,6 +9187,78 @@ func NewUpdateTeamRequestWithBody(server string, id openapi_types.UUID, contentT
 	return req, nil
 }
 
+// NewListTeamContestsRequest generates requests for ListTeamContests
+func NewListTeamContestsRequest(server string, id openapi_types.UUID, params *ListTeamContestsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/teams/%s/contests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewRemoveTeamMemberRequest generates requests for RemoveTeamMember
 func NewRemoveTeamMemberRequest(server string, id openapi_types.UUID, params *RemoveTeamMemberParams) (*http.Request, error) {
 	var err error
@@ -8271,6 +9375,70 @@ func NewListTeamMembersRequest(server string, id openapi_types.UUID, params *Lis
 	return req, nil
 }
 
+// NewUpdateTeamMemberRoleRequest generates requests for UpdateTeamMemberRole
+func NewUpdateTeamMemberRoleRequest(server string, id openapi_types.UUID, params *UpdateTeamMemberRoleParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/teams/%s/members", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "user_id", runtime.ParamLocationQuery, params.UserId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "role", runtime.ParamLocationQuery, params.Role); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewAddTeamMemberRequest generates requests for AddTeamMember
 func NewAddTeamMemberRequest(server string, id openapi_types.UUID, params *AddTeamMemberParams) (*http.Request, error) {
 	var err error
@@ -8312,10 +9480,98 @@ func NewAddTeamMemberRequest(server string, id openapi_types.UUID, params *AddTe
 			}
 		}
 
+		if params.Role != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "role", runtime.ParamLocationQuery, *params.Role); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
 		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListTeamProblemsRequest generates requests for ListTeamProblems
+func NewListTeamProblemsRequest(server string, id openapi_types.UUID, params *ListTeamProblemsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/teams/%s/problems", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -9092,6 +10348,18 @@ type ClientWithResponsesInterface interface {
 	// RejudgeSubmissionWithResponse request
 	RejudgeSubmissionWithResponse(ctx context.Context, contestId openapi_types.UUID, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeSubmissionResponse, error)
 
+	// DeleteContestTeamWithResponse request
+	DeleteContestTeamWithResponse(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestTeamParams, reqEditors ...RequestEditorFn) (*DeleteContestTeamResponse, error)
+
+	// ListContestTeamsWithResponse request
+	ListContestTeamsWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListContestTeamsResponse, error)
+
+	// UpdateContestTeamWithResponse request
+	UpdateContestTeamWithResponse(ctx context.Context, contestId openapi_types.UUID, params *UpdateContestTeamParams, reqEditors ...RequestEditorFn) (*UpdateContestTeamResponse, error)
+
+	// CreateContestTeamWithResponse request
+	CreateContestTeamWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateContestTeamParams, reqEditors ...RequestEditorFn) (*CreateContestTeamResponse, error)
+
 	// GetHealthWithResponse request
 	GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error)
 
@@ -9162,6 +10430,18 @@ type ClientWithResponsesInterface interface {
 	// ImportProblemWithBodyWithResponse request with any body
 	ImportProblemWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ImportProblemResponse, error)
 
+	// DeleteProblemMemberWithResponse request
+	DeleteProblemMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *DeleteProblemMemberParams, reqEditors ...RequestEditorFn) (*DeleteProblemMemberResponse, error)
+
+	// ListProblemMembersWithResponse request
+	ListProblemMembersWithResponse(ctx context.Context, id openapi_types.UUID, params *ListProblemMembersParams, reqEditors ...RequestEditorFn) (*ListProblemMembersResponse, error)
+
+	// UpdateProblemMemberWithResponse request
+	UpdateProblemMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateProblemMemberParams, reqEditors ...RequestEditorFn) (*UpdateProblemMemberResponse, error)
+
+	// CreateProblemMemberWithResponse request
+	CreateProblemMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateProblemMemberParams, reqEditors ...RequestEditorFn) (*CreateProblemMemberResponse, error)
+
 	// GetPublishedPackageWithResponse request
 	GetPublishedPackageWithResponse(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*GetPublishedPackageResponse, error)
 
@@ -9170,6 +10450,18 @@ type ClientWithResponsesInterface interface {
 
 	// PublishProblemWithResponse request
 	PublishProblemWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*PublishProblemResponse, error)
+
+	// DeleteProblemTeamWithResponse request
+	DeleteProblemTeamWithResponse(ctx context.Context, id openapi_types.UUID, params *DeleteProblemTeamParams, reqEditors ...RequestEditorFn) (*DeleteProblemTeamResponse, error)
+
+	// ListProblemTeamsWithResponse request
+	ListProblemTeamsWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemTeamsResponse, error)
+
+	// UpdateProblemTeamWithResponse request
+	UpdateProblemTeamWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateProblemTeamParams, reqEditors ...RequestEditorFn) (*UpdateProblemTeamResponse, error)
+
+	// CreateProblemTeamWithResponse request
+	CreateProblemTeamWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateProblemTeamParams, reqEditors ...RequestEditorFn) (*CreateProblemTeamResponse, error)
 
 	// ListProblemCheckersWithResponse request
 	ListProblemCheckersWithResponse(ctx context.Context, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemCheckersResponse, error)
@@ -9361,14 +10653,23 @@ type ClientWithResponsesInterface interface {
 
 	UpdateTeamWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateTeamJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateTeamResponse, error)
 
+	// ListTeamContestsWithResponse request
+	ListTeamContestsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListTeamContestsParams, reqEditors ...RequestEditorFn) (*ListTeamContestsResponse, error)
+
 	// RemoveTeamMemberWithResponse request
 	RemoveTeamMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *RemoveTeamMemberParams, reqEditors ...RequestEditorFn) (*RemoveTeamMemberResponse, error)
 
 	// ListTeamMembersWithResponse request
 	ListTeamMembersWithResponse(ctx context.Context, id openapi_types.UUID, params *ListTeamMembersParams, reqEditors ...RequestEditorFn) (*ListTeamMembersResponse, error)
 
+	// UpdateTeamMemberRoleWithResponse request
+	UpdateTeamMemberRoleWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateTeamMemberRoleParams, reqEditors ...RequestEditorFn) (*UpdateTeamMemberRoleResponse, error)
+
 	// AddTeamMemberWithResponse request
 	AddTeamMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *AddTeamMemberParams, reqEditors ...RequestEditorFn) (*AddTeamMemberResponse, error)
+
+	// ListTeamProblemsWithResponse request
+	ListTeamProblemsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListTeamProblemsParams, reqEditors ...RequestEditorFn) (*ListTeamProblemsResponse, error)
 
 	// ListUserContestsWithResponse request
 	ListUserContestsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*ListUserContestsResponse, error)
@@ -9848,6 +11149,91 @@ func (r RejudgeSubmissionResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r RejudgeSubmissionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteContestTeamResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteContestTeamResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteContestTeamResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListContestTeamsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListContestTeamsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListContestTeamsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListContestTeamsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateContestTeamResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateContestTeamResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateContestTeamResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateContestTeamResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateContestTeamResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateContestTeamResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -10346,6 +11732,91 @@ func (r ImportProblemResponse) StatusCode() int {
 	return 0
 }
 
+type DeleteProblemMemberResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemMemberResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemMembersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListProblemMembersResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemMembersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemMembersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemMemberResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemMemberResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemMemberResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemMemberResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetPublishedPackageResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -10417,6 +11888,91 @@ func (r PublishProblemResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PublishProblemResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteProblemTeamResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteProblemTeamResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteProblemTeamResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemTeamsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListProblemTeamsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemTeamsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemTeamsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateProblemTeamResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateProblemTeamResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateProblemTeamResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateProblemTeamResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateProblemTeamResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateProblemTeamResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -11691,6 +13247,28 @@ func (r UpdateTeamResponse) StatusCode() int {
 	return 0
 }
 
+type ListTeamContestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListContestsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListTeamContestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListTeamContestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type RemoveTeamMemberResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -11734,6 +13312,27 @@ func (r ListTeamMembersResponse) StatusCode() int {
 	return 0
 }
 
+type UpdateTeamMemberRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateTeamMemberRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateTeamMemberRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type AddTeamMemberResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -11749,6 +13348,28 @@ func (r AddTeamMemberResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r AddTeamMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListTeamProblemsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListProblemsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListTeamProblemsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListTeamProblemsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -12190,6 +13811,42 @@ func (c *ClientWithResponses) RejudgeSubmissionWithResponse(ctx context.Context,
 	return ParseRejudgeSubmissionResponse(rsp)
 }
 
+// DeleteContestTeamWithResponse request returning *DeleteContestTeamResponse
+func (c *ClientWithResponses) DeleteContestTeamWithResponse(ctx context.Context, contestId openapi_types.UUID, params *DeleteContestTeamParams, reqEditors ...RequestEditorFn) (*DeleteContestTeamResponse, error) {
+	rsp, err := c.DeleteContestTeam(ctx, contestId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteContestTeamResponse(rsp)
+}
+
+// ListContestTeamsWithResponse request returning *ListContestTeamsResponse
+func (c *ClientWithResponses) ListContestTeamsWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListContestTeamsResponse, error) {
+	rsp, err := c.ListContestTeams(ctx, contestId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListContestTeamsResponse(rsp)
+}
+
+// UpdateContestTeamWithResponse request returning *UpdateContestTeamResponse
+func (c *ClientWithResponses) UpdateContestTeamWithResponse(ctx context.Context, contestId openapi_types.UUID, params *UpdateContestTeamParams, reqEditors ...RequestEditorFn) (*UpdateContestTeamResponse, error) {
+	rsp, err := c.UpdateContestTeam(ctx, contestId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateContestTeamResponse(rsp)
+}
+
+// CreateContestTeamWithResponse request returning *CreateContestTeamResponse
+func (c *ClientWithResponses) CreateContestTeamWithResponse(ctx context.Context, contestId openapi_types.UUID, params *CreateContestTeamParams, reqEditors ...RequestEditorFn) (*CreateContestTeamResponse, error) {
+	rsp, err := c.CreateContestTeam(ctx, contestId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateContestTeamResponse(rsp)
+}
+
 // GetHealthWithResponse request returning *GetHealthResponse
 func (c *ClientWithResponses) GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error) {
 	rsp, err := c.GetHealth(ctx, reqEditors...)
@@ -12404,6 +14061,42 @@ func (c *ClientWithResponses) ImportProblemWithBodyWithResponse(ctx context.Cont
 	return ParseImportProblemResponse(rsp)
 }
 
+// DeleteProblemMemberWithResponse request returning *DeleteProblemMemberResponse
+func (c *ClientWithResponses) DeleteProblemMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *DeleteProblemMemberParams, reqEditors ...RequestEditorFn) (*DeleteProblemMemberResponse, error) {
+	rsp, err := c.DeleteProblemMember(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemMemberResponse(rsp)
+}
+
+// ListProblemMembersWithResponse request returning *ListProblemMembersResponse
+func (c *ClientWithResponses) ListProblemMembersWithResponse(ctx context.Context, id openapi_types.UUID, params *ListProblemMembersParams, reqEditors ...RequestEditorFn) (*ListProblemMembersResponse, error) {
+	rsp, err := c.ListProblemMembers(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemMembersResponse(rsp)
+}
+
+// UpdateProblemMemberWithResponse request returning *UpdateProblemMemberResponse
+func (c *ClientWithResponses) UpdateProblemMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateProblemMemberParams, reqEditors ...RequestEditorFn) (*UpdateProblemMemberResponse, error) {
+	rsp, err := c.UpdateProblemMember(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemMemberResponse(rsp)
+}
+
+// CreateProblemMemberWithResponse request returning *CreateProblemMemberResponse
+func (c *ClientWithResponses) CreateProblemMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateProblemMemberParams, reqEditors ...RequestEditorFn) (*CreateProblemMemberResponse, error) {
+	rsp, err := c.CreateProblemMember(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemMemberResponse(rsp)
+}
+
 // GetPublishedPackageWithResponse request returning *GetPublishedPackageResponse
 func (c *ClientWithResponses) GetPublishedPackageWithResponse(ctx context.Context, id openapi_types.UUID, version string, reqEditors ...RequestEditorFn) (*GetPublishedPackageResponse, error) {
 	rsp, err := c.GetPublishedPackage(ctx, id, version, reqEditors...)
@@ -12429,6 +14122,42 @@ func (c *ClientWithResponses) PublishProblemWithResponse(ctx context.Context, id
 		return nil, err
 	}
 	return ParsePublishProblemResponse(rsp)
+}
+
+// DeleteProblemTeamWithResponse request returning *DeleteProblemTeamResponse
+func (c *ClientWithResponses) DeleteProblemTeamWithResponse(ctx context.Context, id openapi_types.UUID, params *DeleteProblemTeamParams, reqEditors ...RequestEditorFn) (*DeleteProblemTeamResponse, error) {
+	rsp, err := c.DeleteProblemTeam(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteProblemTeamResponse(rsp)
+}
+
+// ListProblemTeamsWithResponse request returning *ListProblemTeamsResponse
+func (c *ClientWithResponses) ListProblemTeamsWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListProblemTeamsResponse, error) {
+	rsp, err := c.ListProblemTeams(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemTeamsResponse(rsp)
+}
+
+// UpdateProblemTeamWithResponse request returning *UpdateProblemTeamResponse
+func (c *ClientWithResponses) UpdateProblemTeamWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateProblemTeamParams, reqEditors ...RequestEditorFn) (*UpdateProblemTeamResponse, error) {
+	rsp, err := c.UpdateProblemTeam(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateProblemTeamResponse(rsp)
+}
+
+// CreateProblemTeamWithResponse request returning *CreateProblemTeamResponse
+func (c *ClientWithResponses) CreateProblemTeamWithResponse(ctx context.Context, id openapi_types.UUID, params *CreateProblemTeamParams, reqEditors ...RequestEditorFn) (*CreateProblemTeamResponse, error) {
+	rsp, err := c.CreateProblemTeam(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateProblemTeamResponse(rsp)
 }
 
 // ListProblemCheckersWithResponse request returning *ListProblemCheckersResponse
@@ -13017,6 +14746,15 @@ func (c *ClientWithResponses) UpdateTeamWithResponse(ctx context.Context, id ope
 	return ParseUpdateTeamResponse(rsp)
 }
 
+// ListTeamContestsWithResponse request returning *ListTeamContestsResponse
+func (c *ClientWithResponses) ListTeamContestsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListTeamContestsParams, reqEditors ...RequestEditorFn) (*ListTeamContestsResponse, error) {
+	rsp, err := c.ListTeamContests(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListTeamContestsResponse(rsp)
+}
+
 // RemoveTeamMemberWithResponse request returning *RemoveTeamMemberResponse
 func (c *ClientWithResponses) RemoveTeamMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *RemoveTeamMemberParams, reqEditors ...RequestEditorFn) (*RemoveTeamMemberResponse, error) {
 	rsp, err := c.RemoveTeamMember(ctx, id, params, reqEditors...)
@@ -13035,6 +14773,15 @@ func (c *ClientWithResponses) ListTeamMembersWithResponse(ctx context.Context, i
 	return ParseListTeamMembersResponse(rsp)
 }
 
+// UpdateTeamMemberRoleWithResponse request returning *UpdateTeamMemberRoleResponse
+func (c *ClientWithResponses) UpdateTeamMemberRoleWithResponse(ctx context.Context, id openapi_types.UUID, params *UpdateTeamMemberRoleParams, reqEditors ...RequestEditorFn) (*UpdateTeamMemberRoleResponse, error) {
+	rsp, err := c.UpdateTeamMemberRole(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateTeamMemberRoleResponse(rsp)
+}
+
 // AddTeamMemberWithResponse request returning *AddTeamMemberResponse
 func (c *ClientWithResponses) AddTeamMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *AddTeamMemberParams, reqEditors ...RequestEditorFn) (*AddTeamMemberResponse, error) {
 	rsp, err := c.AddTeamMember(ctx, id, params, reqEditors...)
@@ -13042,6 +14789,15 @@ func (c *ClientWithResponses) AddTeamMemberWithResponse(ctx context.Context, id 
 		return nil, err
 	}
 	return ParseAddTeamMemberResponse(rsp)
+}
+
+// ListTeamProblemsWithResponse request returning *ListTeamProblemsResponse
+func (c *ClientWithResponses) ListTeamProblemsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListTeamProblemsParams, reqEditors ...RequestEditorFn) (*ListTeamProblemsResponse, error) {
+	rsp, err := c.ListTeamProblems(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListTeamProblemsResponse(rsp)
 }
 
 // ListUserContestsWithResponse request returning *ListUserContestsResponse
@@ -13583,6 +15339,80 @@ func ParseRejudgeSubmissionResponse(rsp *http.Response) (*RejudgeSubmissionRespo
 	}
 
 	response := &RejudgeSubmissionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseDeleteContestTeamResponse parses an HTTP response from a DeleteContestTeamWithResponse call
+func ParseDeleteContestTeamResponse(rsp *http.Response) (*DeleteContestTeamResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteContestTeamResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseListContestTeamsResponse parses an HTTP response from a ListContestTeamsWithResponse call
+func ParseListContestTeamsResponse(rsp *http.Response) (*ListContestTeamsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListContestTeamsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListContestTeamsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateContestTeamResponse parses an HTTP response from a UpdateContestTeamWithResponse call
+func ParseUpdateContestTeamResponse(rsp *http.Response) (*UpdateContestTeamResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateContestTeamResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseCreateContestTeamResponse parses an HTTP response from a CreateContestTeamWithResponse call
+func ParseCreateContestTeamResponse(rsp *http.Response) (*CreateContestTeamResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateContestTeamResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -14188,6 +16018,80 @@ func ParseImportProblemResponse(rsp *http.Response) (*ImportProblemResponse, err
 	return response, nil
 }
 
+// ParseDeleteProblemMemberResponse parses an HTTP response from a DeleteProblemMemberWithResponse call
+func ParseDeleteProblemMemberResponse(rsp *http.Response) (*DeleteProblemMemberResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemMemberResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseListProblemMembersResponse parses an HTTP response from a ListProblemMembersWithResponse call
+func ParseListProblemMembersResponse(rsp *http.Response) (*ListProblemMembersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemMembersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListProblemMembersResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemMemberResponse parses an HTTP response from a UpdateProblemMemberWithResponse call
+func ParseUpdateProblemMemberResponse(rsp *http.Response) (*UpdateProblemMemberResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemMemberResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemMemberResponse parses an HTTP response from a CreateProblemMemberWithResponse call
+func ParseCreateProblemMemberResponse(rsp *http.Response) (*CreateProblemMemberResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemMemberResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseGetPublishedPackageResponse parses an HTTP response from a GetPublishedPackageWithResponse call
 func ParseGetPublishedPackageResponse(rsp *http.Response) (*GetPublishedPackageResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -14263,6 +16167,80 @@ func ParsePublishProblemResponse(rsp *http.Response) (*PublishProblemResponse, e
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseDeleteProblemTeamResponse parses an HTTP response from a DeleteProblemTeamWithResponse call
+func ParseDeleteProblemTeamResponse(rsp *http.Response) (*DeleteProblemTeamResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteProblemTeamResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseListProblemTeamsResponse parses an HTTP response from a ListProblemTeamsWithResponse call
+func ParseListProblemTeamsResponse(rsp *http.Response) (*ListProblemTeamsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemTeamsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListProblemTeamsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateProblemTeamResponse parses an HTTP response from a UpdateProblemTeamWithResponse call
+func ParseUpdateProblemTeamResponse(rsp *http.Response) (*UpdateProblemTeamResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateProblemTeamResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseCreateProblemTeamResponse parses an HTTP response from a CreateProblemTeamWithResponse call
+func ParseCreateProblemTeamResponse(rsp *http.Response) (*CreateProblemTeamResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateProblemTeamResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -15678,6 +17656,32 @@ func ParseUpdateTeamResponse(rsp *http.Response) (*UpdateTeamResponse, error) {
 	return response, nil
 }
 
+// ParseListTeamContestsResponse parses an HTTP response from a ListTeamContestsWithResponse call
+func ParseListTeamContestsResponse(rsp *http.Response) (*ListTeamContestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListTeamContestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListContestsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseRemoveTeamMemberResponse parses an HTTP response from a RemoveTeamMemberWithResponse call
 func ParseRemoveTeamMemberResponse(rsp *http.Response) (*RemoveTeamMemberResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -15720,6 +17724,22 @@ func ParseListTeamMembersResponse(rsp *http.Response) (*ListTeamMembersResponse,
 	return response, nil
 }
 
+// ParseUpdateTeamMemberRoleResponse parses an HTTP response from a UpdateTeamMemberRoleWithResponse call
+func ParseUpdateTeamMemberRoleResponse(rsp *http.Response) (*UpdateTeamMemberRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateTeamMemberRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseAddTeamMemberResponse parses an HTTP response from a AddTeamMemberWithResponse call
 func ParseAddTeamMemberResponse(rsp *http.Response) (*AddTeamMemberResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -15731,6 +17751,32 @@ func ParseAddTeamMemberResponse(rsp *http.Response) (*AddTeamMemberResponse, err
 	response := &AddTeamMemberResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseListTeamProblemsResponse parses an HTTP response from a ListTeamProblemsWithResponse call
+func ParseListTeamProblemsResponse(rsp *http.Response) (*ListTeamProblemsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListTeamProblemsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListProblemsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -16061,6 +18107,18 @@ type ServerInterface interface {
 	// (POST /contests/{contest_id}/submissions/{submission_id}/rejudge)
 	RejudgeSubmission(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, submissionId openapi_types.UUID)
 
+	// (DELETE /contests/{contest_id}/teams)
+	DeleteContestTeam(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params DeleteContestTeamParams)
+
+	// (GET /contests/{contest_id}/teams)
+	ListContestTeams(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID)
+
+	// (PATCH /contests/{contest_id}/teams)
+	UpdateContestTeam(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params UpdateContestTeamParams)
+
+	// (POST /contests/{contest_id}/teams)
+	CreateContestTeam(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params CreateContestTeamParams)
+
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
 	// Get supported programming languages
@@ -16126,6 +18184,18 @@ type ServerInterface interface {
 	// Import package into existing problem
 	// (POST /problems/{id}/import)
 	ImportProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+
+	// (DELETE /problems/{id}/members)
+	DeleteProblemMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DeleteProblemMemberParams)
+
+	// (GET /problems/{id}/members)
+	ListProblemMembers(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListProblemMembersParams)
+
+	// (PATCH /problems/{id}/members)
+	UpdateProblemMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateProblemMemberParams)
+
+	// (POST /problems/{id}/members)
+	CreateProblemMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params CreateProblemMemberParams)
 	// Get redirect to published problem package
 	// (GET /problems/{id}/package/{version})
 	GetPublishedPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, version string)
@@ -16135,6 +18205,18 @@ type ServerInterface interface {
 	// Publish problem package
 	// (POST /problems/{id}/publish)
 	PublishProblem(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+
+	// (DELETE /problems/{id}/teams)
+	DeleteProblemTeam(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DeleteProblemTeamParams)
+
+	// (GET /problems/{id}/teams)
+	ListProblemTeams(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+
+	// (PATCH /problems/{id}/teams)
+	UpdateProblemTeam(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateProblemTeamParams)
+
+	// (POST /problems/{id}/teams)
+	CreateProblemTeam(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params CreateProblemTeamParams)
 	// List checker files
 	// (GET /problems/{problemId}/checkers)
 	ListProblemCheckers(w http.ResponseWriter, r *http.Request, problemId openapi_types.UUID)
@@ -16309,15 +18391,24 @@ type ServerInterface interface {
 	// Update team
 	// (PATCH /teams/{id})
 	UpdateTeam(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// List contests accessible by team
+	// (GET /teams/{id}/contests)
+	ListTeamContests(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListTeamContestsParams)
 	// Remove member from team
 	// (DELETE /teams/{id}/members)
 	RemoveTeamMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params RemoveTeamMemberParams)
 	// List team members
 	// (GET /teams/{id}/members)
 	ListTeamMembers(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListTeamMembersParams)
+	// Update member role in team
+	// (PATCH /teams/{id}/members)
+	UpdateTeamMemberRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateTeamMemberRoleParams)
 	// Add member to team
 	// (POST /teams/{id}/members)
 	AddTeamMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params AddTeamMemberParams)
+	// List problems accessible by team
+	// (GET /teams/{id}/problems)
+	ListTeamProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListTeamProblemsParams)
 
 	// (GET /user/{id}/contests)
 	ListUserContests(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListUserContestsParams)
@@ -17153,6 +19244,183 @@ func (siw *ServerInterfaceWrapper) RejudgeSubmission(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteContestTeam operation middleware
+func (siw *ServerInterfaceWrapper) DeleteContestTeam(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", r.PathValue("contest_id"), &contestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteContestTeamParams
+
+	// ------------- Required query parameter "team_id" -------------
+
+	if paramValue := r.URL.Query().Get("team_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "team_id", r.URL.Query(), &params.TeamId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteContestTeam(w, r, contestId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListContestTeams operation middleware
+func (siw *ServerInterfaceWrapper) ListContestTeams(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", r.PathValue("contest_id"), &contestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListContestTeams(w, r, contestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateContestTeam operation middleware
+func (siw *ServerInterfaceWrapper) UpdateContestTeam(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", r.PathValue("contest_id"), &contestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateContestTeamParams
+
+	// ------------- Required query parameter "team_id" -------------
+
+	if paramValue := r.URL.Query().Get("team_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "team_id", r.URL.Query(), &params.TeamId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team_id", Err: err})
+		return
+	}
+
+	// ------------- Required query parameter "role" -------------
+
+	if paramValue := r.URL.Query().Get("role"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "role"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "role", r.URL.Query(), &params.Role)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateContestTeam(w, r, contestId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateContestTeam operation middleware
+func (siw *ServerInterfaceWrapper) CreateContestTeam(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "contest_id" -------------
+	var contestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_id", r.PathValue("contest_id"), &contestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateContestTeamParams
+
+	// ------------- Required query parameter "team_id" -------------
+
+	if paramValue := r.URL.Query().Get("team_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "team_id", r.URL.Query(), &params.TeamId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "role" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "role", r.URL.Query(), &params.Role)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateContestTeam(w, r, contestId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Request) {
 
@@ -17944,6 +20212,216 @@ func (siw *ServerInterfaceWrapper) ImportProblem(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteProblemMember operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteProblemMemberParams
+
+	// ------------- Required query parameter "user_id" -------------
+
+	if paramValue := r.URL.Query().Get("user_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "user_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "user_id", r.URL.Query(), &params.UserId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemMember(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProblemMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListProblemMembersParams
+
+	// ------------- Required query parameter "page" -------------
+
+	if paramValue := r.URL.Query().Get("page"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "page"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "page", r.URL.Query(), &params.Page)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Required query parameter "pageSize" -------------
+
+	if paramValue := r.URL.Query().Get("pageSize"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageSize"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "pageSize", r.URL.Query(), &params.PageSize)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemMembers(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemMember operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateProblemMemberParams
+
+	// ------------- Required query parameter "user_id" -------------
+
+	if paramValue := r.URL.Query().Get("user_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "user_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "user_id", r.URL.Query(), &params.UserId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	// ------------- Required query parameter "role" -------------
+
+	if paramValue := r.URL.Query().Get("role"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "role"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "role", r.URL.Query(), &params.Role)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemMember(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemMember operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemMemberParams
+
+	// ------------- Required query parameter "user_id" -------------
+
+	if paramValue := r.URL.Query().Get("user_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "user_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "user_id", r.URL.Query(), &params.UserId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "role" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "role", r.URL.Query(), &params.Role)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemMember(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPublishedPackage operation middleware
 func (siw *ServerInterfaceWrapper) GetPublishedPackage(w http.ResponseWriter, r *http.Request) {
 
@@ -18019,6 +20497,183 @@ func (siw *ServerInterfaceWrapper) PublishProblem(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PublishProblem(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProblemTeam operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProblemTeam(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteProblemTeamParams
+
+	// ------------- Required query parameter "team_id" -------------
+
+	if paramValue := r.URL.Query().Get("team_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "team_id", r.URL.Query(), &params.TeamId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProblemTeam(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProblemTeams operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemTeams(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemTeams(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProblemTeam operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProblemTeam(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateProblemTeamParams
+
+	// ------------- Required query parameter "team_id" -------------
+
+	if paramValue := r.URL.Query().Get("team_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "team_id", r.URL.Query(), &params.TeamId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team_id", Err: err})
+		return
+	}
+
+	// ------------- Required query parameter "permission" -------------
+
+	if paramValue := r.URL.Query().Get("permission"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "permission"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "permission", r.URL.Query(), &params.Permission)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "permission", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProblemTeam(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateProblemTeam operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemTeam(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateProblemTeamParams
+
+	// ------------- Required query parameter "team_id" -------------
+
+	if paramValue := r.URL.Query().Get("team_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "team_id", r.URL.Query(), &params.TeamId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "permission" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "permission", r.URL.Query(), &params.Permission)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "permission", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemTeam(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20057,6 +22712,50 @@ func (siw *ServerInterfaceWrapper) UpdateTeam(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListTeamContests operation middleware
+func (siw *ServerInterfaceWrapper) ListTeamContests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTeamContestsParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "page", r.URL.Query(), &params.Page)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "pageSize", r.URL.Query(), &params.PageSize)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTeamContests(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveTeamMember operation middleware
 func (siw *ServerInterfaceWrapper) RemoveTeamMember(w http.ResponseWriter, r *http.Request) {
 
@@ -20158,6 +22857,64 @@ func (siw *ServerInterfaceWrapper) ListTeamMembers(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateTeamMemberRole operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTeamMemberRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateTeamMemberRoleParams
+
+	// ------------- Required query parameter "user_id" -------------
+
+	if paramValue := r.URL.Query().Get("user_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "user_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "user_id", r.URL.Query(), &params.UserId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	// ------------- Required query parameter "role" -------------
+
+	if paramValue := r.URL.Query().Get("role"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "role"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "role", r.URL.Query(), &params.Role)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTeamMemberRole(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AddTeamMember operation middleware
 func (siw *ServerInterfaceWrapper) AddTeamMember(w http.ResponseWriter, r *http.Request) {
 
@@ -20190,8 +22947,60 @@ func (siw *ServerInterfaceWrapper) AddTeamMember(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "role" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "role", r.URL.Query(), &params.Role)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AddTeamMember(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListTeamProblems operation middleware
+func (siw *ServerInterfaceWrapper) ListTeamProblems(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTeamProblemsParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "page", r.URL.Query(), &params.Page)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "pageSize", r.URL.Query(), &params.PageSize)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTeamProblems(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20812,6 +23621,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/contests/{contest_id}/scoreboard", wrapper.GetContestScoreboard)
 	m.HandleFunc("GET "+options.BaseURL+"/contests/{contest_id}/submissions", wrapper.ListContestSubmissions)
 	m.HandleFunc("POST "+options.BaseURL+"/contests/{contest_id}/submissions/{submission_id}/rejudge", wrapper.RejudgeSubmission)
+	m.HandleFunc("DELETE "+options.BaseURL+"/contests/{contest_id}/teams", wrapper.DeleteContestTeam)
+	m.HandleFunc("GET "+options.BaseURL+"/contests/{contest_id}/teams", wrapper.ListContestTeams)
+	m.HandleFunc("PATCH "+options.BaseURL+"/contests/{contest_id}/teams", wrapper.UpdateContestTeam)
+	m.HandleFunc("POST "+options.BaseURL+"/contests/{contest_id}/teams", wrapper.CreateContestTeam)
 	m.HandleFunc("GET "+options.BaseURL+"/health", wrapper.GetHealth)
 	m.HandleFunc("GET "+options.BaseURL+"/languages", wrapper.GetLanguages)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations", wrapper.ListOrganizations)
@@ -20834,9 +23647,17 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}", wrapper.GetProblem)
 	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{id}", wrapper.UpdateProblem)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{id}/import", wrapper.ImportProblem)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{id}/members", wrapper.DeleteProblemMember)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/members", wrapper.ListProblemMembers)
+	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{id}/members", wrapper.UpdateProblemMember)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{id}/members", wrapper.CreateProblemMember)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/package/{version}", wrapper.GetPublishedPackage)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/packages", wrapper.ListProblemPackages)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{id}/publish", wrapper.PublishProblem)
+	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{id}/teams", wrapper.DeleteProblemTeam)
+	m.HandleFunc("GET "+options.BaseURL+"/problems/{id}/teams", wrapper.ListProblemTeams)
+	m.HandleFunc("PATCH "+options.BaseURL+"/problems/{id}/teams", wrapper.UpdateProblemTeam)
+	m.HandleFunc("POST "+options.BaseURL+"/problems/{id}/teams", wrapper.CreateProblemTeam)
 	m.HandleFunc("GET "+options.BaseURL+"/problems/{problemId}/checkers", wrapper.ListProblemCheckers)
 	m.HandleFunc("POST "+options.BaseURL+"/problems/{problemId}/checkers", wrapper.CreateProblemChecker)
 	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{problemId}/checkers/{name}", wrapper.DeleteProblemChecker)
@@ -20895,9 +23716,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("DELETE "+options.BaseURL+"/teams/{id}", wrapper.DeleteTeam)
 	m.HandleFunc("GET "+options.BaseURL+"/teams/{id}", wrapper.GetTeam)
 	m.HandleFunc("PATCH "+options.BaseURL+"/teams/{id}", wrapper.UpdateTeam)
+	m.HandleFunc("GET "+options.BaseURL+"/teams/{id}/contests", wrapper.ListTeamContests)
 	m.HandleFunc("DELETE "+options.BaseURL+"/teams/{id}/members", wrapper.RemoveTeamMember)
 	m.HandleFunc("GET "+options.BaseURL+"/teams/{id}/members", wrapper.ListTeamMembers)
+	m.HandleFunc("PATCH "+options.BaseURL+"/teams/{id}/members", wrapper.UpdateTeamMemberRole)
 	m.HandleFunc("POST "+options.BaseURL+"/teams/{id}/members", wrapper.AddTeamMember)
+	m.HandleFunc("GET "+options.BaseURL+"/teams/{id}/problems", wrapper.ListTeamProblems)
 	m.HandleFunc("GET "+options.BaseURL+"/user/{id}/contests", wrapper.ListUserContests)
 	m.HandleFunc("GET "+options.BaseURL+"/users", wrapper.ListUsers)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetMe)
@@ -21266,6 +24090,74 @@ type RejudgeSubmission200Response struct {
 }
 
 func (response RejudgeSubmission200Response) VisitRejudgeSubmissionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type DeleteContestTeamRequestObject struct {
+	ContestId openapi_types.UUID `json:"contest_id"`
+	Params    DeleteContestTeamParams
+}
+
+type DeleteContestTeamResponseObject interface {
+	VisitDeleteContestTeamResponse(w http.ResponseWriter) error
+}
+
+type DeleteContestTeam200Response struct {
+}
+
+func (response DeleteContestTeam200Response) VisitDeleteContestTeamResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ListContestTeamsRequestObject struct {
+	ContestId openapi_types.UUID `json:"contest_id"`
+}
+
+type ListContestTeamsResponseObject interface {
+	VisitListContestTeamsResponse(w http.ResponseWriter) error
+}
+
+type ListContestTeams200JSONResponse ListContestTeamsResponseModel
+
+func (response ListContestTeams200JSONResponse) VisitListContestTeamsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateContestTeamRequestObject struct {
+	ContestId openapi_types.UUID `json:"contest_id"`
+	Params    UpdateContestTeamParams
+}
+
+type UpdateContestTeamResponseObject interface {
+	VisitUpdateContestTeamResponse(w http.ResponseWriter) error
+}
+
+type UpdateContestTeam200Response struct {
+}
+
+func (response UpdateContestTeam200Response) VisitUpdateContestTeamResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type CreateContestTeamRequestObject struct {
+	ContestId openapi_types.UUID `json:"contest_id"`
+	Params    CreateContestTeamParams
+}
+
+type CreateContestTeamResponseObject interface {
+	VisitCreateContestTeamResponse(w http.ResponseWriter) error
+}
+
+type CreateContestTeam200Response struct {
+}
+
+func (response CreateContestTeam200Response) VisitCreateContestTeamResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
 }
@@ -21809,6 +24701,75 @@ func (response ImportProblem200JSONResponse) VisitImportProblemResponse(w http.R
 	return json.NewEncoder(w).Encode(response)
 }
 
+type DeleteProblemMemberRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params DeleteProblemMemberParams
+}
+
+type DeleteProblemMemberResponseObject interface {
+	VisitDeleteProblemMemberResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemMember200Response struct {
+}
+
+func (response DeleteProblemMember200Response) VisitDeleteProblemMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ListProblemMembersRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params ListProblemMembersParams
+}
+
+type ListProblemMembersResponseObject interface {
+	VisitListProblemMembersResponse(w http.ResponseWriter) error
+}
+
+type ListProblemMembers200JSONResponse ListProblemMembersResponseModel
+
+func (response ListProblemMembers200JSONResponse) VisitListProblemMembersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateProblemMemberRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params UpdateProblemMemberParams
+}
+
+type UpdateProblemMemberResponseObject interface {
+	VisitUpdateProblemMemberResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemMember200Response struct {
+}
+
+func (response UpdateProblemMember200Response) VisitUpdateProblemMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type CreateProblemMemberRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params CreateProblemMemberParams
+}
+
+type CreateProblemMemberResponseObject interface {
+	VisitCreateProblemMemberResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemMember200Response struct {
+}
+
+func (response CreateProblemMember200Response) VisitCreateProblemMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
 type GetPublishedPackageRequestObject struct {
 	Id      openapi_types.UUID `json:"id"`
 	Version string             `json:"version"`
@@ -21876,6 +24837,74 @@ func (response PublishProblem200JSONResponse) VisitPublishProblemResponse(w http
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProblemTeamRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params DeleteProblemTeamParams
+}
+
+type DeleteProblemTeamResponseObject interface {
+	VisitDeleteProblemTeamResponse(w http.ResponseWriter) error
+}
+
+type DeleteProblemTeam200Response struct {
+}
+
+func (response DeleteProblemTeam200Response) VisitDeleteProblemTeamResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ListProblemTeamsRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type ListProblemTeamsResponseObject interface {
+	VisitListProblemTeamsResponse(w http.ResponseWriter) error
+}
+
+type ListProblemTeams200JSONResponse ListProblemTeamsResponseModel
+
+func (response ListProblemTeams200JSONResponse) VisitListProblemTeamsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateProblemTeamRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params UpdateProblemTeamParams
+}
+
+type UpdateProblemTeamResponseObject interface {
+	VisitUpdateProblemTeamResponse(w http.ResponseWriter) error
+}
+
+type UpdateProblemTeam200Response struct {
+}
+
+func (response UpdateProblemTeam200Response) VisitUpdateProblemTeamResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type CreateProblemTeamRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params CreateProblemTeamParams
+}
+
+type CreateProblemTeamResponseObject interface {
+	VisitCreateProblemTeamResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemTeam200Response struct {
+}
+
+func (response CreateProblemTeam200Response) VisitCreateProblemTeamResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
 }
 
 type ListProblemCheckersRequestObject struct {
@@ -23002,6 +26031,24 @@ func (response UpdateTeam200Response) VisitUpdateTeamResponse(w http.ResponseWri
 	return nil
 }
 
+type ListTeamContestsRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params ListTeamContestsParams
+}
+
+type ListTeamContestsResponseObject interface {
+	VisitListTeamContestsResponse(w http.ResponseWriter) error
+}
+
+type ListTeamContests200JSONResponse ListContestsResponseModel
+
+func (response ListTeamContests200JSONResponse) VisitListTeamContestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type RemoveTeamMemberRequestObject struct {
 	Id     openapi_types.UUID `json:"id"`
 	Params RemoveTeamMemberParams
@@ -23037,6 +26084,23 @@ func (response ListTeamMembers200JSONResponse) VisitListTeamMembersResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
+type UpdateTeamMemberRoleRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params UpdateTeamMemberRoleParams
+}
+
+type UpdateTeamMemberRoleResponseObject interface {
+	VisitUpdateTeamMemberRoleResponse(w http.ResponseWriter) error
+}
+
+type UpdateTeamMemberRole200Response struct {
+}
+
+func (response UpdateTeamMemberRole200Response) VisitUpdateTeamMemberRoleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
 type AddTeamMemberRequestObject struct {
 	Id     openapi_types.UUID `json:"id"`
 	Params AddTeamMemberParams
@@ -23052,6 +26116,24 @@ type AddTeamMember200Response struct {
 func (response AddTeamMember200Response) VisitAddTeamMemberResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
+}
+
+type ListTeamProblemsRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params ListTeamProblemsParams
+}
+
+type ListTeamProblemsResponseObject interface {
+	VisitListTeamProblemsResponse(w http.ResponseWriter) error
+}
+
+type ListTeamProblems200JSONResponse ListProblemsResponseModel
+
+func (response ListTeamProblems200JSONResponse) VisitListTeamProblemsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type ListUserContestsRequestObject struct {
@@ -23341,6 +26423,18 @@ type StrictServerInterface interface {
 	// (POST /contests/{contest_id}/submissions/{submission_id}/rejudge)
 	RejudgeSubmission(ctx context.Context, request RejudgeSubmissionRequestObject) (RejudgeSubmissionResponseObject, error)
 
+	// (DELETE /contests/{contest_id}/teams)
+	DeleteContestTeam(ctx context.Context, request DeleteContestTeamRequestObject) (DeleteContestTeamResponseObject, error)
+
+	// (GET /contests/{contest_id}/teams)
+	ListContestTeams(ctx context.Context, request ListContestTeamsRequestObject) (ListContestTeamsResponseObject, error)
+
+	// (PATCH /contests/{contest_id}/teams)
+	UpdateContestTeam(ctx context.Context, request UpdateContestTeamRequestObject) (UpdateContestTeamResponseObject, error)
+
+	// (POST /contests/{contest_id}/teams)
+	CreateContestTeam(ctx context.Context, request CreateContestTeamRequestObject) (CreateContestTeamResponseObject, error)
+
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
 	// Get supported programming languages
@@ -23406,6 +26500,18 @@ type StrictServerInterface interface {
 	// Import package into existing problem
 	// (POST /problems/{id}/import)
 	ImportProblem(ctx context.Context, request ImportProblemRequestObject) (ImportProblemResponseObject, error)
+
+	// (DELETE /problems/{id}/members)
+	DeleteProblemMember(ctx context.Context, request DeleteProblemMemberRequestObject) (DeleteProblemMemberResponseObject, error)
+
+	// (GET /problems/{id}/members)
+	ListProblemMembers(ctx context.Context, request ListProblemMembersRequestObject) (ListProblemMembersResponseObject, error)
+
+	// (PATCH /problems/{id}/members)
+	UpdateProblemMember(ctx context.Context, request UpdateProblemMemberRequestObject) (UpdateProblemMemberResponseObject, error)
+
+	// (POST /problems/{id}/members)
+	CreateProblemMember(ctx context.Context, request CreateProblemMemberRequestObject) (CreateProblemMemberResponseObject, error)
 	// Get redirect to published problem package
 	// (GET /problems/{id}/package/{version})
 	GetPublishedPackage(ctx context.Context, request GetPublishedPackageRequestObject) (GetPublishedPackageResponseObject, error)
@@ -23415,6 +26521,18 @@ type StrictServerInterface interface {
 	// Publish problem package
 	// (POST /problems/{id}/publish)
 	PublishProblem(ctx context.Context, request PublishProblemRequestObject) (PublishProblemResponseObject, error)
+
+	// (DELETE /problems/{id}/teams)
+	DeleteProblemTeam(ctx context.Context, request DeleteProblemTeamRequestObject) (DeleteProblemTeamResponseObject, error)
+
+	// (GET /problems/{id}/teams)
+	ListProblemTeams(ctx context.Context, request ListProblemTeamsRequestObject) (ListProblemTeamsResponseObject, error)
+
+	// (PATCH /problems/{id}/teams)
+	UpdateProblemTeam(ctx context.Context, request UpdateProblemTeamRequestObject) (UpdateProblemTeamResponseObject, error)
+
+	// (POST /problems/{id}/teams)
+	CreateProblemTeam(ctx context.Context, request CreateProblemTeamRequestObject) (CreateProblemTeamResponseObject, error)
 	// List checker files
 	// (GET /problems/{problemId}/checkers)
 	ListProblemCheckers(ctx context.Context, request ListProblemCheckersRequestObject) (ListProblemCheckersResponseObject, error)
@@ -23589,15 +26707,24 @@ type StrictServerInterface interface {
 	// Update team
 	// (PATCH /teams/{id})
 	UpdateTeam(ctx context.Context, request UpdateTeamRequestObject) (UpdateTeamResponseObject, error)
+	// List contests accessible by team
+	// (GET /teams/{id}/contests)
+	ListTeamContests(ctx context.Context, request ListTeamContestsRequestObject) (ListTeamContestsResponseObject, error)
 	// Remove member from team
 	// (DELETE /teams/{id}/members)
 	RemoveTeamMember(ctx context.Context, request RemoveTeamMemberRequestObject) (RemoveTeamMemberResponseObject, error)
 	// List team members
 	// (GET /teams/{id}/members)
 	ListTeamMembers(ctx context.Context, request ListTeamMembersRequestObject) (ListTeamMembersResponseObject, error)
+	// Update member role in team
+	// (PATCH /teams/{id}/members)
+	UpdateTeamMemberRole(ctx context.Context, request UpdateTeamMemberRoleRequestObject) (UpdateTeamMemberRoleResponseObject, error)
 	// Add member to team
 	// (POST /teams/{id}/members)
 	AddTeamMember(ctx context.Context, request AddTeamMemberRequestObject) (AddTeamMemberResponseObject, error)
+	// List problems accessible by team
+	// (GET /teams/{id}/problems)
+	ListTeamProblems(ctx context.Context, request ListTeamProblemsRequestObject) (ListTeamProblemsResponseObject, error)
 
 	// (GET /user/{id}/contests)
 	ListUserContests(ctx context.Context, request ListUserContestsRequestObject) (ListUserContestsResponseObject, error)
@@ -24230,6 +27357,113 @@ func (sh *strictHandler) RejudgeSubmission(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// DeleteContestTeam operation middleware
+func (sh *strictHandler) DeleteContestTeam(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params DeleteContestTeamParams) {
+	var request DeleteContestTeamRequestObject
+
+	request.ContestId = contestId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteContestTeam(ctx, request.(DeleteContestTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteContestTeam")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteContestTeamResponseObject); ok {
+		if err := validResponse.VisitDeleteContestTeamResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListContestTeams operation middleware
+func (sh *strictHandler) ListContestTeams(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID) {
+	var request ListContestTeamsRequestObject
+
+	request.ContestId = contestId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListContestTeams(ctx, request.(ListContestTeamsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListContestTeams")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListContestTeamsResponseObject); ok {
+		if err := validResponse.VisitListContestTeamsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateContestTeam operation middleware
+func (sh *strictHandler) UpdateContestTeam(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params UpdateContestTeamParams) {
+	var request UpdateContestTeamRequestObject
+
+	request.ContestId = contestId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateContestTeam(ctx, request.(UpdateContestTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateContestTeam")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateContestTeamResponseObject); ok {
+		if err := validResponse.VisitUpdateContestTeamResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateContestTeam operation middleware
+func (sh *strictHandler) CreateContestTeam(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params CreateContestTeamParams) {
+	var request CreateContestTeamRequestObject
+
+	request.ContestId = contestId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateContestTeam(ctx, request.(CreateContestTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateContestTeam")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateContestTeamResponseObject); ok {
+		if err := validResponse.VisitCreateContestTeamResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetHealth operation middleware
 func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	var request GetHealthRequestObject
@@ -24835,6 +28069,114 @@ func (sh *strictHandler) ImportProblem(w http.ResponseWriter, r *http.Request, i
 	}
 }
 
+// DeleteProblemMember operation middleware
+func (sh *strictHandler) DeleteProblemMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DeleteProblemMemberParams) {
+	var request DeleteProblemMemberRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemMember(ctx, request.(DeleteProblemMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemMemberResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemMembers operation middleware
+func (sh *strictHandler) ListProblemMembers(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListProblemMembersParams) {
+	var request ListProblemMembersRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemMembers(ctx, request.(ListProblemMembersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemMembers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemMembersResponseObject); ok {
+		if err := validResponse.VisitListProblemMembersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemMember operation middleware
+func (sh *strictHandler) UpdateProblemMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateProblemMemberParams) {
+	var request UpdateProblemMemberRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemMember(ctx, request.(UpdateProblemMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemMemberResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemMember operation middleware
+func (sh *strictHandler) CreateProblemMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params CreateProblemMemberParams) {
+	var request CreateProblemMemberRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemMember(ctx, request.(CreateProblemMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemMemberResponseObject); ok {
+		if err := validResponse.VisitCreateProblemMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetPublishedPackage operation middleware
 func (sh *strictHandler) GetPublishedPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, version string) {
 	var request GetPublishedPackageRequestObject
@@ -24907,6 +28249,113 @@ func (sh *strictHandler) PublishProblem(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PublishProblemResponseObject); ok {
 		if err := validResponse.VisitPublishProblemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteProblemTeam operation middleware
+func (sh *strictHandler) DeleteProblemTeam(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DeleteProblemTeamParams) {
+	var request DeleteProblemTeamRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProblemTeam(ctx, request.(DeleteProblemTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProblemTeam")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProblemTeamResponseObject); ok {
+		if err := validResponse.VisitDeleteProblemTeamResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemTeams operation middleware
+func (sh *strictHandler) ListProblemTeams(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request ListProblemTeamsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemTeams(ctx, request.(ListProblemTeamsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemTeams")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemTeamsResponseObject); ok {
+		if err := validResponse.VisitListProblemTeamsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProblemTeam operation middleware
+func (sh *strictHandler) UpdateProblemTeam(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateProblemTeamParams) {
+	var request UpdateProblemTeamRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProblemTeam(ctx, request.(UpdateProblemTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProblemTeam")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProblemTeamResponseObject); ok {
+		if err := validResponse.VisitUpdateProblemTeamResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemTeam operation middleware
+func (sh *strictHandler) CreateProblemTeam(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params CreateProblemTeamParams) {
+	var request CreateProblemTeamRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemTeam(ctx, request.(CreateProblemTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemTeam")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemTeamResponseObject); ok {
+		if err := validResponse.VisitCreateProblemTeamResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -26543,6 +29992,33 @@ func (sh *strictHandler) UpdateTeam(w http.ResponseWriter, r *http.Request, id o
 	}
 }
 
+// ListTeamContests operation middleware
+func (sh *strictHandler) ListTeamContests(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListTeamContestsParams) {
+	var request ListTeamContestsRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTeamContests(ctx, request.(ListTeamContestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTeamContests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListTeamContestsResponseObject); ok {
+		if err := validResponse.VisitListTeamContestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RemoveTeamMember operation middleware
 func (sh *strictHandler) RemoveTeamMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params RemoveTeamMemberParams) {
 	var request RemoveTeamMemberRequestObject
@@ -26597,6 +30073,33 @@ func (sh *strictHandler) ListTeamMembers(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// UpdateTeamMemberRole operation middleware
+func (sh *strictHandler) UpdateTeamMemberRole(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateTeamMemberRoleParams) {
+	var request UpdateTeamMemberRoleRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateTeamMemberRole(ctx, request.(UpdateTeamMemberRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateTeamMemberRole")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateTeamMemberRoleResponseObject); ok {
+		if err := validResponse.VisitUpdateTeamMemberRoleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // AddTeamMember operation middleware
 func (sh *strictHandler) AddTeamMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params AddTeamMemberParams) {
 	var request AddTeamMemberRequestObject
@@ -26617,6 +30120,33 @@ func (sh *strictHandler) AddTeamMember(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AddTeamMemberResponseObject); ok {
 		if err := validResponse.VisitAddTeamMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTeamProblems operation middleware
+func (sh *strictHandler) ListTeamProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListTeamProblemsParams) {
+	var request ListTeamProblemsRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTeamProblems(ctx, request.(ListTeamProblemsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTeamProblems")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListTeamProblemsResponseObject); ok {
+		if err := validResponse.VisitListTeamProblemsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

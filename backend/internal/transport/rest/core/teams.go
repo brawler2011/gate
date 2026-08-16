@@ -190,17 +190,19 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, request corev1.ListTea
 
 // AddTeamMember handles POST /teams/{id}/members
 func (h *CoreServer) AddTeamMember(ctx context.Context, request corev1.AddTeamMemberRequestObject) (corev1.AddTeamMemberResponseObject, error) {
-	// Get current user
 	user := middleware.GetUser(ctx)
 
-	// Create input with default role "member"
+	role := models.TeamRoleMember
+	if request.Params.Role != nil && *request.Params.Role != "" {
+		role = models.TeamRole(*request.Params.Role)
+	}
+
 	input := &models.AddTeamMemberInput{
 		TeamID: request.Id,
 		UserID: request.Params.UserId,
-		Role:   models.TeamRoleMember, // Default role
+		Role:   role,
 	}
 
-	// Add member
 	err := h.teamsUC.AddTeamMember(ctx, input, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to add team member")
@@ -209,18 +211,68 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, request corev1.AddTeamMe
 	return corev1.AddTeamMember200Response{}, nil
 }
 
-// RemoveTeamMember handles DELETE /teams/{id}/members
-func (h *CoreServer) RemoveTeamMember(ctx context.Context, request corev1.RemoveTeamMemberRequestObject) (corev1.RemoveTeamMemberResponseObject, error) {
-	// Get current user
+// UpdateTeamMemberRole handles PATCH /teams/{id}/members
+func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, request corev1.UpdateTeamMemberRoleRequestObject) (corev1.UpdateTeamMemberRoleResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
-	// Remove member
+	err := h.teamsUC.UpdateTeamMemberRole(ctx, request.Id, request.Params.UserId, models.TeamRole(request.Params.Role), user.Id)
+	if err != nil {
+		return nil, wrapTeamUCError(err, "failed to update team member role")
+	}
+
+	return corev1.UpdateTeamMemberRole200Response{}, nil
+}
+
+// RemoveTeamMember handles DELETE /teams/{id}/members
+func (h *CoreServer) RemoveTeamMember(ctx context.Context, request corev1.RemoveTeamMemberRequestObject) (corev1.RemoveTeamMemberResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
 	err := h.teamsUC.RemoveTeamMember(ctx, request.Id, request.Params.UserId, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to remove team member")
 	}
 
 	return corev1.RemoveTeamMember200Response{}, nil
+}
+
+// ListTeamContests handles GET /teams/{id}/contests
+func (h *CoreServer) ListTeamContests(ctx context.Context, request corev1.ListTeamContestsRequestObject) (corev1.ListTeamContestsResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	contests, err := h.teamsUC.GetTeamContests(ctx, request.Id, user.Id)
+	if err != nil {
+		return nil, wrapTeamUCError(err, "failed to list team contests")
+	}
+
+	contestsList := &models.ContestsList{
+		Contests: contests,
+		Pagination: models.Pagination{
+			Page:  1,
+			Total: safeInt32(len(contests)),
+		},
+	}
+
+	return corev1.ListTeamContests200JSONResponse(*ListContestsResponseDTO(contestsList)), nil
+}
+
+// ListTeamProblems handles GET /teams/{id}/problems
+func (h *CoreServer) ListTeamProblems(ctx context.Context, request corev1.ListTeamProblemsRequestObject) (corev1.ListTeamProblemsResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	problems, err := h.teamsUC.GetTeamProblems(ctx, request.Id, user.Id)
+	if err != nil {
+		return nil, wrapTeamUCError(err, "failed to list team problems")
+	}
+
+	problemsList := &models.ProblemsList{
+		Problems: problems,
+		Pagination: models.Pagination{
+			Page:  1,
+			Total: safeInt32(len(problems)),
+		},
+	}
+
+	return corev1.ListTeamProblems200JSONResponse(*ListProblemsResponseDTO(problemsList)), nil
 }
 
 func wrapTeamUCError(err error, fallbackMsg string) error {

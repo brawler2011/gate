@@ -19,10 +19,13 @@ import type { GetUserDashboardResponseModel } from '../models/GetUserDashboardRe
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
 import type { ListContestMembersResponseModel } from '../models/ListContestMembersResponseModel';
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
+import type { ListContestTeamsResponseModel } from '../models/ListContestTeamsResponseModel';
 import type { ListOrganizationMembersResponseModel } from '../models/ListOrganizationMembersResponseModel';
 import type { ListOrganizationsResponseModel } from '../models/ListOrganizationsResponseModel';
 import type { ListPostsResponseModel } from '../models/ListPostsResponseModel';
+import type { ListProblemMembersResponseModel } from '../models/ListProblemMembersResponseModel';
 import type { ListProblemsResponseModel } from '../models/ListProblemsResponseModel';
+import type { ListProblemTeamsResponseModel } from '../models/ListProblemTeamsResponseModel';
 import type { ListSubmissionsResponseModel } from '../models/ListSubmissionsResponseModel';
 import type { ListTeamMembersResponseModel } from '../models/ListTeamMembersResponseModel';
 import type { ListTeamsResponseModel } from '../models/ListTeamsResponseModel';
@@ -533,6 +536,95 @@ export class DefaultService {
         });
     }
     /**
+     * @returns ListContestTeamsResponseModel OK
+     * @throws ApiError
+     */
+    public listContestTeams({
+        contestId,
+    }: {
+        contestId: string,
+    }): CancelablePromise<ListContestTeamsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/contests/{contest_id}/teams',
+            path: {
+                'contest_id': contestId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public createContestTeam({
+        contestId,
+        teamId,
+        role = 'participant',
+    }: {
+        contestId: string,
+        teamId: string,
+        role?: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/contests/{contest_id}/teams',
+            path: {
+                'contest_id': contestId,
+            },
+            query: {
+                'team_id': teamId,
+                'role': role,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public deleteContestTeam({
+        contestId,
+        teamId,
+    }: {
+        contestId: string,
+        teamId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/contests/{contest_id}/teams',
+            path: {
+                'contest_id': contestId,
+            },
+            query: {
+                'team_id': teamId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public updateContestTeam({
+        contestId,
+        teamId,
+        role,
+    }: {
+        contestId: string,
+        teamId: string,
+        role: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/contests/{contest_id}/teams',
+            path: {
+                'contest_id': contestId,
+            },
+            query: {
+                'team_id': teamId,
+                'role': role,
+            },
+        });
+    }
+    /**
      * @returns GetMyContestRoleResponseModel OK
      * @throws ApiError
      */
@@ -925,6 +1017,192 @@ export class DefaultService {
             url: '/users/{id}/avatar',
             path: {
                 'id': id,
+            },
+        });
+    }
+    /**
+     * @returns ListProblemTeamsResponseModel OK
+     * @throws ApiError
+     */
+    public listProblemTeams({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<ListProblemTeamsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{id}/teams',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public createProblemTeam({
+        id,
+        teamId,
+        permission = 'read',
+    }: {
+        id: string,
+        teamId: string,
+        permission?: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{id}/teams',
+            path: {
+                'id': id,
+            },
+            query: {
+                'team_id': teamId,
+                'permission': permission,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public deleteProblemTeam({
+        id,
+        teamId,
+    }: {
+        id: string,
+        teamId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{id}/teams',
+            path: {
+                'id': id,
+            },
+            query: {
+                'team_id': teamId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public updateProblemTeam({
+        id,
+        teamId,
+        permission,
+    }: {
+        id: string,
+        teamId: string,
+        permission: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{id}/teams',
+            path: {
+                'id': id,
+            },
+            query: {
+                'team_id': teamId,
+                'permission': permission,
+            },
+        });
+    }
+    /**
+     * @returns ListProblemMembersResponseModel OK
+     * @throws ApiError
+     */
+    public listProblemMembers({
+        id,
+        page = 1,
+        pageSize = 10,
+    }: {
+        id: string,
+        page?: number,
+        pageSize?: number,
+    }): CancelablePromise<ListProblemMembersResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problems/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public createProblemMember({
+        id,
+        userId,
+        role = 'viewer',
+    }: {
+        id: string,
+        userId: string,
+        role?: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/problems/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'user_id': userId,
+                'role': role,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public deleteProblemMember({
+        id,
+        userId,
+    }: {
+        id: string,
+        userId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/problems/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'user_id': userId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public updateProblemMember({
+        id,
+        userId,
+        role,
+    }: {
+        id: string,
+        userId: string,
+        role: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/problems/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'user_id': userId,
+                'role': role,
             },
         });
     }
@@ -2449,9 +2727,11 @@ export class DefaultService {
     public addTeamMember({
         id,
         userId,
+        role = 'member',
     }: {
         id: string,
         userId: string,
+        role?: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'POST',
@@ -2461,6 +2741,33 @@ export class DefaultService {
             },
             query: {
                 'user_id': userId,
+                'role': role,
+            },
+        });
+    }
+    /**
+     * Update member role in team
+     * @returns any Member role updated successfully
+     * @throws ApiError
+     */
+    public updateTeamMemberRole({
+        id,
+        userId,
+        role,
+    }: {
+        id: string,
+        userId: string,
+        role: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/teams/{id}/members',
+            path: {
+                'id': id,
+            },
+            query: {
+                'user_id': userId,
+                'role': role,
             },
         });
     }
@@ -2484,6 +2791,58 @@ export class DefaultService {
             },
             query: {
                 'user_id': userId,
+            },
+        });
+    }
+    /**
+     * List contests accessible by team
+     * @returns ListContestsResponseModel OK
+     * @throws ApiError
+     */
+    public listTeamContests({
+        id,
+        page = 1,
+        pageSize = 10,
+    }: {
+        id: string,
+        page?: number,
+        pageSize?: number,
+    }): CancelablePromise<ListContestsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/teams/{id}/contests',
+            path: {
+                'id': id,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+            },
+        });
+    }
+    /**
+     * List problems accessible by team
+     * @returns ListProblemsResponseModel OK
+     * @throws ApiError
+     */
+    public listTeamProblems({
+        id,
+        page = 1,
+        pageSize = 10,
+    }: {
+        id: string,
+        page?: number,
+        pageSize?: number,
+    }): CancelablePromise<ListProblemsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/teams/{id}/problems',
+            path: {
+                'id': id,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
             },
         });
     }

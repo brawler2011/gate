@@ -27,6 +27,10 @@ type TeamsRepo interface {
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]models.Team, error)
 	GetUserTeamsByOrganization(ctx context.Context, userID, orgID uuid.UUID) ([]models.Team, error)
 
+	// Resource associations
+	GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]models.Contest, error)
+	GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]models.Problem, error)
+
 	WithTx(tx pgx.Tx) TeamsRepo
 }
 
@@ -43,4 +47,8 @@ type TeamsUC interface {
 	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole, requestUserID uuid.UUID) error
 	RemoveTeamMember(ctx context.Context, teamID, userID, requestUserID uuid.UUID) error
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]models.Team, error)
+
+	// Resource associations
+	GetTeamContests(ctx context.Context, teamID, requestUserID uuid.UUID) ([]models.Contest, error)
+	GetTeamProblems(ctx context.Context, teamID, requestUserID uuid.UUID) ([]models.Problem, error)
 }

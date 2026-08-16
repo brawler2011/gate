@@ -67,6 +67,7 @@ const buildProblemHeaderNav = (
   const tabs: Array<{ key: string; label: string }> = [
     {key: GENERAL_TAB, label: "Общее"},
     {key: "statement", label: "Условие"},
+    {key: "access", label: "Доступ"},
     {key: "packages", label: "Пакеты"},
     {key: "import", label: "Импорт"},
     ...WORKSHOP_FOLDER_TABS.map((tab) => ({

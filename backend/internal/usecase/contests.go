@@ -386,3 +386,33 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, 
 	}, nil
 }
 
+func (uc *ContestsUseCase) CreateContestTeam(
+	ctx context.Context,
+	contestID, teamID, requestUserID uuid.UUID,
+	role models.ContestRole,
+) error {
+	return uc.contestRepo.CreateContestTeam(ctx, contestID, teamID, role)
+}
+
+func (uc *ContestsUseCase) GetContestTeams(
+	ctx context.Context,
+	contestID, requestUserID uuid.UUID,
+) ([]models.ContestTeam, error) {
+	return uc.contestRepo.GetContestTeams(ctx, contestID)
+}
+
+func (uc *ContestsUseCase) UpdateContestTeamRole(
+	ctx context.Context,
+	contestID, teamID, requestUserID uuid.UUID,
+	role models.ContestRole,
+) error {
+	return uc.contestRepo.UpdateContestTeamRole(ctx, contestID, teamID, role)
+}
+
+func (uc *ContestsUseCase) DeleteContestTeam(
+	ctx context.Context,
+	contestID, teamID, requestUserID uuid.UUID,
+) error {
+	return uc.contestRepo.DeleteContestTeam(ctx, contestID, teamID)
+}
+

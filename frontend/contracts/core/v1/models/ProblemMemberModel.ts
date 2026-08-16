@@ -2,9 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type TeamMemberModel = {
+export type ProblemMemberModel = {
+    problem_id: string;
     user_id: string;
-    team_id: string;
     username: string;
     role: string;
     created_at: string;
