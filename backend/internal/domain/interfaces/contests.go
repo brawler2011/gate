@@ -74,6 +74,6 @@ type ContestsUC interface {
 	DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error
 
 	ProcessSubmissionResult(ctx context.Context, submission *models.Submission) error
-	GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID) (*models.ScoreboardResponse, error)
+	GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*models.ScoreboardResponse, error)
 }
 

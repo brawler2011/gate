@@ -4,6 +4,7 @@ import {
   Button,
   Stack,
   TextInput,
+  NumberInput,
   Badge,
   Combobox,
   useCombobox,
@@ -37,6 +38,12 @@ const SCOPE_OPTIONS = [
 const VISIBILITY_OPTIONS = [
   {label: "Публичный", value: "public", color: "green"},
   {label: "Приватный", value: "private", color: "red"},
+];
+
+const FREEZE_STATUS_OPTIONS = [
+  {label: "Автоматически по таймеру", value: "auto", color: "blue"},
+  {label: "Заморожен", value: "frozen", color: "orange"},
+  {label: "Разморожен", value: "unfrozen", color: "green"},
 ];
 
 interface CustomSelectProps {
@@ -107,7 +114,18 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     message: string;
   } | null>(null);
 
-  const form = useForm({
+  const form = useForm<{
+    title: string;
+    description: string;
+    visibility: string;
+    monitor_scope: string;
+    submissions_list_scope: string;
+    submissions_review_scope: string;
+    start_time: string;
+    end_time: string;
+    freeze_duration_minutes: number | string | undefined | null;
+    freeze_status: corev1.UpdateContestRequestModel.freeze_status;
+  }>({
     initialValues: {
       title: contest.title,
       description: contest.description,
@@ -117,15 +135,32 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       submissions_review_scope: contest.submissions_review_scope,
       start_time: toLocalDatetimeString(contest.start_time),
       end_time: toLocalDatetimeString(contest.end_time),
+      freeze_duration_minutes: contest.freeze_duration_minutes ?? "",
+      freeze_status: (contest.freeze_status as corev1.UpdateContestRequestModel.freeze_status) || "auto",
+    },
+    validate: {
+      freeze_duration_minutes: (value) =>
+        value !== "" && value !== undefined && value !== null && Number(value) < 0
+          ? "Длительность заморозки не может быть отрицательной"
+          : null,
     },
   });
 
   const handleSave = async (values: typeof form.values) => {
     setSaving(true);
-    const payload = {
+    const freezeDuration =
+      values.freeze_duration_minutes !== "" &&
+      values.freeze_duration_minutes !== undefined &&
+      values.freeze_duration_minutes !== null
+        ? Number(values.freeze_duration_minutes)
+        : null;
+
+    const payload: corev1.UpdateContestRequestModel = {
       ...values,
       start_time: values.start_time ? new Date(values.start_time).toISOString() : null,
       end_time: values.end_time ? new Date(values.end_time).toISOString() : null,
+      freeze_duration_minutes: freezeDuration,
+      freeze_status: values.freeze_status as corev1.UpdateContestRequestModel.freeze_status,
     };
     const [error] = await api.updateContest({contestId: contest.id, requestBody: payload});
     setSaving(false);
@@ -179,6 +214,20 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             label="Время окончания контеста"
             type="datetime-local"
             {...form.getInputProps("end_time")}
+          />
+
+          <NumberInput
+            label="Заморозка монитора (минут до окончания)"
+            min={0}
+            clampBehavior="strict"
+            {...form.getInputProps("freeze_duration_minutes")}
+          />
+
+          <CustomSelect
+            label="Режим заморозки"
+            value={form.values.freeze_status}
+            onChange={(value) => form.setFieldValue("freeze_status", value as corev1.UpdateContestRequestModel.freeze_status)}
+            options={FREEZE_STATUS_OPTIONS}
           />
 
           <CustomSelect

@@ -78,6 +78,17 @@ func validateUpdateContestRequest(params corev1.UpdateContestRequestModel) error
 		return pkg.Wrap(pkg.ErrBadInput, nil, "end_time must be after start_time")
 	}
 
+	if params.FreezeDurationMinutes != nil && *params.FreezeDurationMinutes < 0 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "freeze_duration_minutes must be non-negative")
+	}
+
+	if params.FreezeStatus != nil {
+		status := string(*params.FreezeStatus)
+		if status != models.FreezeStatusAuto && status != models.FreezeStatusFrozen && status != models.FreezeStatusUnfrozen {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid freeze_status value")
+		}
+	}
+
 	return nil
 }
 

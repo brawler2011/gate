@@ -748,14 +748,22 @@ export class DefaultService {
      */
     public getContestScoreboard({
         contestId,
+        unfrozen,
     }: {
         contestId: string,
+        /**
+         * Whether to return unfrozen scoreboard (managers only)
+         */
+        unfrozen?: boolean,
     }): CancelablePromise<ScoreboardResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/contests/{contest_id}/scoreboard',
             path: {
                 'contest_id': contestId,
+            },
+            query: {
+                'unfrozen': unfrozen,
             },
         });
     }

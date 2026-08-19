@@ -111,19 +111,43 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 		return nil, err
 	}
 
+	existingContest, err := h.contestsUC.GetContest(ctx, request.ContestId)
+	if err != nil {
+		return nil, err
+	}
+
+	settingsMap := make(map[string]interface{})
+	if existingContest.Settings != nil {
+		for k, v := range existingContest.Settings {
+			settingsMap[k] = v
+		}
+	}
+
+	hasSettingsUpdate := false
+	if req.MonitorScope != nil {
+		settingsMap["monitor_scope"] = *req.MonitorScope
+		hasSettingsUpdate = true
+	}
+	if req.SubmissionsListScope != nil {
+		settingsMap["submissions_list_scope"] = *req.SubmissionsListScope
+		hasSettingsUpdate = true
+	}
+	if req.SubmissionsReviewScope != nil {
+		settingsMap["submissions_review_scope"] = *req.SubmissionsReviewScope
+		hasSettingsUpdate = true
+	}
+	if req.FreezeDurationMinutes != nil {
+		settingsMap["freeze_duration_minutes"] = *req.FreezeDurationMinutes
+		hasSettingsUpdate = true
+	}
+	if req.FreezeStatus != nil {
+		settingsMap["freeze_status"] = string(*req.FreezeStatus)
+		hasSettingsUpdate = true
+	}
+
 	var settings *map[string]interface{}
-	if req.MonitorScope != nil || req.SubmissionsListScope != nil || req.SubmissionsReviewScope != nil {
-		s := make(map[string]interface{})
-		if req.MonitorScope != nil {
-			s["monitor_scope"] = *req.MonitorScope
-		}
-		if req.SubmissionsListScope != nil {
-			s["submissions_list_scope"] = *req.SubmissionsListScope
-		}
-		if req.SubmissionsReviewScope != nil {
-			s["submissions_review_scope"] = *req.SubmissionsReviewScope
-		}
-		settings = &s
+	if hasSettingsUpdate {
+		settings = &settingsMap
 	}
 
 	err = h.contestsUC.UpdateContest(ctx, models.ContestUpdateInput{
@@ -551,7 +575,19 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, request corev1.Ge
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
 	}
 
-	sb, err := h.contestsUC.GetContestScoreboard(ctx, request.ContestId, user.Id)
+	unfrozen := false
+	if request.Params.Unfrozen != nil && *request.Params.Unfrozen {
+		unfrozen = true
+		canManage, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionManageContest)
+		if err != nil {
+			return nil, err
+		}
+		if !canManage {
+			return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied to view unfrozen scoreboard")
+		}
+	}
+
+	sb, err := h.contestsUC.GetContestScoreboard(ctx, request.ContestId, user.Id, unfrozen)
 	if err != nil {
 		return nil, err
 	}

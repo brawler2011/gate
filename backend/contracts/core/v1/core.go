@@ -26,6 +26,20 @@ const (
 	CookieAuthScopes = "cookieAuth.Scopes"
 )
 
+// Defines values for ContestModelFreezeStatus.
+const (
+	ContestModelFreezeStatusAuto     ContestModelFreezeStatus = "auto"
+	ContestModelFreezeStatusFrozen   ContestModelFreezeStatus = "frozen"
+	ContestModelFreezeStatusUnfrozen ContestModelFreezeStatus = "unfrozen"
+)
+
+// Defines values for UpdateContestRequestModelFreezeStatus.
+const (
+	UpdateContestRequestModelFreezeStatusAuto     UpdateContestRequestModelFreezeStatus = "auto"
+	UpdateContestRequestModelFreezeStatusFrozen   UpdateContestRequestModelFreezeStatus = "frozen"
+	UpdateContestRequestModelFreezeStatusUnfrozen UpdateContestRequestModelFreezeStatus = "unfrozen"
+)
+
 // Defines values for UpdateUserRequestModelRole.
 const (
 	Admin UpdateUserRequestModelRole = "admin"
@@ -151,21 +165,30 @@ type ContestMemberModel struct {
 
 // ContestModel defines model for ContestModel.
 type ContestModel struct {
-	CreatedAt              time.Time           `json:"created_at"`
-	CreatedBy              openapi_types.UUID  `json:"created_by"`
-	Description            string              `json:"description"`
-	EndTime                *time.Time          `json:"end_time"`
-	Id                     openapi_types.UUID  `json:"id"`
-	MonitorScope           string              `json:"monitor_scope"`
-	OrganizationId         *openapi_types.UUID `json:"organization_id,omitempty"`
-	Owner                  *UserModel          `json:"owner,omitempty"`
-	StartTime              *time.Time          `json:"start_time"`
-	SubmissionsListScope   string              `json:"submissions_list_scope"`
-	SubmissionsReviewScope string              `json:"submissions_review_scope"`
-	Title                  string              `json:"title"`
-	UpdatedAt              time.Time           `json:"updated_at"`
-	Visibility             string              `json:"visibility"`
+	CreatedAt   time.Time          `json:"created_at"`
+	CreatedBy   openapi_types.UUID `json:"created_by"`
+	Description string             `json:"description"`
+	EndTime     *time.Time         `json:"end_time"`
+
+	// FreezeDurationMinutes Freeze duration in minutes before contest end
+	FreezeDurationMinutes *int32 `json:"freeze_duration_minutes"`
+
+	// FreezeStatus Freeze mode status
+	FreezeStatus           ContestModelFreezeStatus `json:"freeze_status"`
+	Id                     openapi_types.UUID       `json:"id"`
+	MonitorScope           string                   `json:"monitor_scope"`
+	OrganizationId         *openapi_types.UUID      `json:"organization_id,omitempty"`
+	Owner                  *UserModel               `json:"owner,omitempty"`
+	StartTime              *time.Time               `json:"start_time"`
+	SubmissionsListScope   string                   `json:"submissions_list_scope"`
+	SubmissionsReviewScope string                   `json:"submissions_review_scope"`
+	Title                  string                   `json:"title"`
+	UpdatedAt              time.Time                `json:"updated_at"`
+	Visibility             string                   `json:"visibility"`
 }
+
+// ContestModelFreezeStatus Freeze mode status
+type ContestModelFreezeStatus string
 
 // ContestProblemListItemModel defines model for ContestProblemListItemModel.
 type ContestProblemListItemModel struct {
@@ -555,17 +578,26 @@ type ScoreboardProblemHeaderModel struct {
 
 // ScoreboardProblemResultModel defines model for ScoreboardProblemResultModel.
 type ScoreboardProblemResultModel struct {
-	FailedAttempts int32              `json:"failed_attempts"`
-	FirstAcTime    *time.Time         `json:"first_ac_time,omitempty"`
-	Penalty        *int32             `json:"penalty,omitempty"`
-	ProblemId      openapi_types.UUID `json:"problem_id"`
-	Solved         bool               `json:"solved"`
-	TimeMinutes    *int32             `json:"time_minutes,omitempty"`
+	FailedAttempts int32      `json:"failed_attempts"`
+	FirstAcTime    *time.Time `json:"first_ac_time,omitempty"`
+	Penalty        *int32     `json:"penalty,omitempty"`
+
+	// PendingAttempts Number of attempts submitted during freeze
+	PendingAttempts int32              `json:"pending_attempts"`
+	ProblemId       openapi_types.UUID `json:"problem_id"`
+	Solved          bool               `json:"solved"`
+	TimeMinutes     *int32             `json:"time_minutes,omitempty"`
 }
 
 // ScoreboardResponseModel defines model for ScoreboardResponseModel.
 type ScoreboardResponseModel struct {
-	ContestId         openapi_types.UUID             `json:"contest_id"`
+	ContestId openapi_types.UUID `json:"contest_id"`
+
+	// FreezeTime RFC3339 timestamp when scoreboard was or will be frozen
+	FreezeTime *time.Time `json:"freeze_time"`
+
+	// IsFrozen Whether the scoreboard is currently frozen
+	IsFrozen          bool                           `json:"is_frozen"`
 	Items             []ScoreboardItemModel          `json:"items"`
 	PenaltyPerAttempt int32                          `json:"penalty_per_attempt"`
 	Problems          []ScoreboardProblemHeaderModel `json:"problems"`
@@ -670,15 +702,24 @@ type TestValidationResult struct {
 
 // UpdateContestRequestModel defines model for UpdateContestRequestModel.
 type UpdateContestRequestModel struct {
-	Description            *string    `json:"description,omitempty"`
-	EndTime                *time.Time `json:"end_time"`
-	MonitorScope           *string    `json:"monitor_scope,omitempty"`
-	StartTime              *time.Time `json:"start_time"`
-	SubmissionsListScope   *string    `json:"submissions_list_scope,omitempty"`
-	SubmissionsReviewScope *string    `json:"submissions_review_scope,omitempty"`
-	Title                  *string    `json:"title,omitempty"`
-	Visibility             *string    `json:"visibility,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	EndTime     *time.Time `json:"end_time"`
+
+	// FreezeDurationMinutes Freeze duration in minutes before contest end
+	FreezeDurationMinutes *int32 `json:"freeze_duration_minutes"`
+
+	// FreezeStatus Freeze mode status
+	FreezeStatus           *UpdateContestRequestModelFreezeStatus `json:"freeze_status,omitempty"`
+	MonitorScope           *string                                `json:"monitor_scope,omitempty"`
+	StartTime              *time.Time                             `json:"start_time"`
+	SubmissionsListScope   *string                                `json:"submissions_list_scope,omitempty"`
+	SubmissionsReviewScope *string                                `json:"submissions_review_scope,omitempty"`
+	Title                  *string                                `json:"title,omitempty"`
+	Visibility             *string                                `json:"visibility,omitempty"`
 }
+
+// UpdateContestRequestModelFreezeStatus Freeze mode status
+type UpdateContestRequestModelFreezeStatus string
 
 // UpdateOrganizationRequestModel defines model for UpdateOrganizationRequestModel.
 type UpdateOrganizationRequestModel struct {
@@ -813,6 +854,12 @@ type CreateContestMemberParams struct {
 type CreateContestProblemParams struct {
 	ProblemId openapi_types.UUID  `form:"problem_id" json:"problem_id"`
 	PackageId *openapi_types.UUID `form:"package_id,omitempty" json:"package_id,omitempty"`
+}
+
+// GetContestScoreboardParams defines parameters for GetContestScoreboard.
+type GetContestScoreboardParams struct {
+	// Unfrozen Whether to return unfrozen scoreboard (managers only)
+	Unfrozen *bool `form:"unfrozen,omitempty" json:"unfrozen,omitempty"`
 }
 
 // ListContestSubmissionsParams defines parameters for ListContestSubmissions.
@@ -1375,7 +1422,7 @@ type ClientInterface interface {
 	RejudgeContest(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetContestScoreboard request
-	GetContestScoreboard(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetContestScoreboard(ctx context.Context, contestId openapi_types.UUID, params *GetContestScoreboardParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListContestSubmissions request
 	ListContestSubmissions(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1994,8 +2041,8 @@ func (c *Client) RejudgeContest(ctx context.Context, contestId openapi_types.UUI
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetContestScoreboard(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetContestScoreboardRequest(c.Server, contestId)
+func (c *Client) GetContestScoreboard(ctx context.Context, contestId openapi_types.UUID, params *GetContestScoreboardParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetContestScoreboardRequest(c.Server, contestId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -4402,7 +4449,7 @@ func NewRejudgeContestRequest(server string, contestId openapi_types.UUID) (*htt
 }
 
 // NewGetContestScoreboardRequest generates requests for GetContestScoreboard
-func NewGetContestScoreboardRequest(server string, contestId openapi_types.UUID) (*http.Request, error) {
+func NewGetContestScoreboardRequest(server string, contestId openapi_types.UUID, params *GetContestScoreboardParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4425,6 +4472,28 @@ func NewGetContestScoreboardRequest(server string, contestId openapi_types.UUID)
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Unfrozen != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "unfrozen", runtime.ParamLocationQuery, *params.Unfrozen); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
@@ -10452,7 +10521,7 @@ type ClientWithResponsesInterface interface {
 	RejudgeContestWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeContestResponse, error)
 
 	// GetContestScoreboardWithResponse request
-	GetContestScoreboardWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetContestScoreboardResponse, error)
+	GetContestScoreboardWithResponse(ctx context.Context, contestId openapi_types.UUID, params *GetContestScoreboardParams, reqEditors ...RequestEditorFn) (*GetContestScoreboardResponse, error)
 
 	// ListContestSubmissionsWithResponse request
 	ListContestSubmissionsWithResponse(ctx context.Context, contestId openapi_types.UUID, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*ListContestSubmissionsResponse, error)
@@ -13923,8 +13992,8 @@ func (c *ClientWithResponses) RejudgeContestWithResponse(ctx context.Context, co
 }
 
 // GetContestScoreboardWithResponse request returning *GetContestScoreboardResponse
-func (c *ClientWithResponses) GetContestScoreboardWithResponse(ctx context.Context, contestId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetContestScoreboardResponse, error) {
-	rsp, err := c.GetContestScoreboard(ctx, contestId, reqEditors...)
+func (c *ClientWithResponses) GetContestScoreboardWithResponse(ctx context.Context, contestId openapi_types.UUID, params *GetContestScoreboardParams, reqEditors ...RequestEditorFn) (*GetContestScoreboardResponse, error) {
+	rsp, err := c.GetContestScoreboard(ctx, contestId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -18270,7 +18339,7 @@ type ServerInterface interface {
 	RejudgeContest(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID)
 
 	// (GET /contests/{contest_id}/scoreboard)
-	GetContestScoreboard(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID)
+	GetContestScoreboard(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params GetContestScoreboardParams)
 
 	// (GET /contests/{contest_id}/submissions)
 	ListContestSubmissions(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params ListContestSubmissionsParams)
@@ -19283,8 +19352,19 @@ func (siw *ServerInterfaceWrapper) GetContestScoreboard(w http.ResponseWriter, r
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetContestScoreboardParams
+
+	// ------------- Optional query parameter "unfrozen" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "unfrozen", r.URL.Query(), &params.Unfrozen)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unfrozen", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetContestScoreboard(w, r, contestId)
+		siw.Handler.GetContestScoreboard(w, r, contestId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -24252,6 +24332,7 @@ func (response RejudgeContest200Response) VisitRejudgeContestResponse(w http.Res
 
 type GetContestScoreboardRequestObject struct {
 	ContestId openapi_types.UUID `json:"contest_id"`
+	Params    GetContestScoreboardParams
 }
 
 type GetContestScoreboardResponseObject interface {
@@ -27506,10 +27587,11 @@ func (sh *strictHandler) RejudgeContest(w http.ResponseWriter, r *http.Request, 
 }
 
 // GetContestScoreboard operation middleware
-func (sh *strictHandler) GetContestScoreboard(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID) {
+func (sh *strictHandler) GetContestScoreboard(w http.ResponseWriter, r *http.Request, contestId openapi_types.UUID, params GetContestScoreboardParams) {
 	var request GetContestScoreboardRequestObject
 
 	request.ContestId = contestId
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetContestScoreboard(ctx, request.(GetContestScoreboardRequestObject))

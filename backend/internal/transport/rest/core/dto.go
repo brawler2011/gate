@@ -172,6 +172,9 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		}
 	}
 
+	freezeDurationMinutes := c.GetFreezeDurationMinutes()
+	freezeStatus := corev1.ContestModelFreezeStatus(c.GetFreezeStatus())
+
 	model := corev1.ContestModel{
 		Id:                     c.ID,
 		OrganizationId:         &c.OrganizationID,
@@ -181,6 +184,8 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		MonitorScope:           monitorScope,
 		SubmissionsListScope:   submissionsListScope,
 		SubmissionsReviewScope: submissionsReviewScope,
+		FreezeDurationMinutes:  freezeDurationMinutes,
+		FreezeStatus:           freezeStatus,
 		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,
@@ -703,12 +708,13 @@ func GetScoreboardResponseDTO(sb *models.ScoreboardResponse) *corev1.ScoreboardR
 		pResults := make([]corev1.ScoreboardProblemResultModel, len(item.ProblemResults))
 		for j, r := range item.ProblemResults {
 			pResults[j] = corev1.ScoreboardProblemResultModel{
-				ProblemId:      r.ProblemID,
-				Solved:         r.Solved,
-				FailedAttempts: r.FailedAttempts,
-				FirstAcTime:    r.FirstACTime,
-				TimeMinutes:    r.TimeMinutes,
-				Penalty:        &r.Penalty,
+				ProblemId:       r.ProblemID,
+				Solved:          r.Solved,
+				FailedAttempts:  r.FailedAttempts,
+				PendingAttempts: r.PendingAttempts,
+				FirstAcTime:     r.FirstACTime,
+				TimeMinutes:     r.TimeMinutes,
+				Penalty:         &r.Penalty,
 			}
 		}
 
@@ -725,6 +731,8 @@ func GetScoreboardResponseDTO(sb *models.ScoreboardResponse) *corev1.ScoreboardR
 	return &corev1.ScoreboardResponseModel{
 		ContestId:         sb.ContestID,
 		PenaltyPerAttempt: sb.PenaltyPerAttempt,
+		IsFrozen:          sb.IsFrozen,
+		FreezeTime:        sb.FreezeTime,
 		Problems:          problems,
 		Items:             items,
 	}

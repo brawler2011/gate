@@ -1,9 +1,11 @@
 "use client";
 
-import {Box, Group, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
+import {Badge, Box, Group, Switch, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
+import {notifications} from "@mantine/notifications";
 import {IconSearch} from "@tabler/icons-react";
 import React, {useEffect, useState, useMemo} from "react";
 
+import {api} from "@/lib/api";
 import {env} from "@/lib/env";
 import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
@@ -22,6 +24,7 @@ interface ContestMonitorTableProps {
   initialScoreboard: ScoreboardResponseModel;
   startTime?: string | null;
   endTime?: string | null;
+  isManager?: boolean;
 }
 
 const formatTimeMinutes = (timeMinutes?: number | null): string => {
@@ -45,12 +48,41 @@ export const ContestMonitorTable = ({
   initialScoreboard,
   startTime,
   endTime,
+  isManager = false,
 }: ContestMonitorTableProps): React.ReactNode => {
   const [searchQuery, setSearchQuery] = useState("");
   const [items, setItems] = useState<ScoreboardItemModel[]>(initialScoreboard.items || []);
   const [problems] = useState<ScoreboardProblemHeaderModel[]>(initialScoreboard.problems || []);
+  const [isFrozen, setIsFrozen] = useState<boolean>(initialScoreboard.is_frozen ?? false);
+  const [showRealMonitor, setShowRealMonitor] = useState<boolean>(false);
+  const [loadingScoreboard, setLoadingScoreboard] = useState<boolean>(false);
 
   const penaltyPerAttempt = initialScoreboard.penalty_per_attempt || 20;
+
+  const handleToggleRealMonitor = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.currentTarget.checked;
+    setShowRealMonitor(checked);
+    setLoadingScoreboard(true);
+    const [err, res] = await api.getContestScoreboard({
+      contestId,
+      unfrozen: checked,
+    });
+    setLoadingScoreboard(false);
+    if (err) {
+      notifications.show({
+        title: "Ошибка",
+        message: err.message || "Не удалось загрузить таблицу",
+        color: "red",
+      });
+      return;
+    }
+    if (res) {
+      setItems(res.items || []);
+      if (!checked) {
+        setIsFrozen(res.is_frozen ?? false);
+      }
+    }
+  };
 
   useEffect(() => {
     const wsUrl = `${env.getWebSocketUrl()}/ws/submissions`;
@@ -86,6 +118,50 @@ export const ContestMonitorTable = ({
           }
         }
 
+        if (isFrozen && !showRealMonitor) {
+          setItems((prevItems) => {
+            const userId = payload.user_id;
+            const problemId = payload.problem_id;
+
+            const existingItemIndex = prevItems.findIndex((item) => item.user_id === userId);
+            if (existingItemIndex === -1) {
+              return prevItems;
+            }
+
+            const existingItem = prevItems[existingItemIndex];
+            const pResults = [...existingItem.problem_results];
+            const pIndex = pResults.findIndex((r) => r.problem_id === problemId);
+
+            const pResult: ScoreboardProblemResultModel =
+              pIndex !== -1
+                ? {...pResults[pIndex]}
+                : {
+                    problem_id: problemId!,
+                    solved: false,
+                    failed_attempts: 0,
+                    pending_attempts: 0,
+                  };
+
+            pResult.pending_attempts = (pResult.pending_attempts || 0) + 1;
+
+            if (pIndex !== -1) {
+              pResults[pIndex] = pResult;
+            } else {
+              pResults.push(pResult);
+            }
+
+            const updatedItem: ScoreboardItemModel = {
+              ...existingItem,
+              problem_results: pResults,
+            };
+
+            const newItems = [...prevItems];
+            newItems[existingItemIndex] = updatedItem;
+            return newItems;
+          });
+          return;
+        }
+
         setItems((prevItems) => {
           const userId = payload.user_id;
           const problemId = payload.problem_id;
@@ -107,6 +183,7 @@ export const ContestMonitorTable = ({
               problem_id: problemId!,
               solved: false,
               failed_attempts: 0,
+              pending_attempts: 0,
             };
 
           if (pResult.solved) {
@@ -206,7 +283,7 @@ export const ContestMonitorTable = ({
     return () => {
       submissionsWsManager.removeListener(listenerId);
     };
-  }, [contestId, startTime, endTime, penaltyPerAttempt]);
+  }, [contestId, startTime, endTime, penaltyPerAttempt, isFrozen, showRealMonitor]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -230,7 +307,7 @@ export const ContestMonitorTable = ({
         if (res.solved) {
           solvedCounts[res.problem_id] = (solvedCounts[res.problem_id] || 0) + 1;
           attemptedCounts[res.problem_id] = (attemptedCounts[res.problem_id] || 0) + 1;
-        } else if (res.failed_attempts > 0) {
+        } else if ((res.failed_attempts || 0) > 0 || (res.pending_attempts || 0) > 0) {
           attemptedCounts[res.problem_id] = (attemptedCounts[res.problem_id] || 0) + 1;
         }
       }
@@ -242,16 +319,34 @@ export const ContestMonitorTable = ({
   return (
     <Box className={classes.container}>
       <Group justify="space-between" align="center" className={classes.topBar}>
-        <Title order={2} className={classes.title}>
-          Положение
-        </Title>
-        <TextInput
-          placeholder="Найти участника"
-          rightSection={<IconSearch size={16} />}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.currentTarget.value)}
-          className={classes.searchInput}
-        />
+        <Group align="center" gap="sm">
+          <Title order={2} className={classes.title}>
+            Положение
+          </Title>
+          {(isFrozen || initialScoreboard.is_frozen) && (
+            <Badge color="orange" variant="light" size="lg">
+              Монитор заморожен
+            </Badge>
+          )}
+        </Group>
+        <Group align="center" gap="md">
+          {isManager && (initialScoreboard.is_frozen || isFrozen) && (
+            <Switch
+              size="sm"
+              label={showRealMonitor ? "Реальный монитор" : "Замороженный вид"}
+              checked={showRealMonitor}
+              onChange={handleToggleRealMonitor}
+              disabled={loadingScoreboard}
+            />
+          )}
+          <TextInput
+            placeholder="Найти участника"
+            rightSection={<IconSearch size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            className={classes.searchInput}
+          />
+        </Group>
       </Group>
 
       <Box className={classes.tableWrapper}>
@@ -304,12 +399,20 @@ export const ContestMonitorTable = ({
                       return <Table.Td key={prob.problem_id} className={classes.tdCenter} />;
                     }
 
+                    const hasPending = (res.pending_attempts || 0) > 0;
+                    const failed = res.failed_attempts || 0;
+                    const pending = res.pending_attempts || 0;
+                    const timeStr = formatTimeMinutes(res.time_minutes);
+
                     if (res.solved) {
-                      const label = res.failed_attempts > 0 ? `+${res.failed_attempts}` : "+";
-                      const timeStr = formatTimeMinutes(res.time_minutes);
+                      let label = failed > 0 ? `+${failed}` : "+";
+                      if (hasPending) {
+                        label = `${label} ${pending}?`;
+                      }
+                      const cellClass = hasPending ? classes.cellFrozenPending : classes.cellSolved;
                       return (
                         <Table.Td key={prob.problem_id} className={classes.tdCenter}>
-                          <div className={classes.cellSolved}>
+                          <div className={cellClass}>
                             <span>{label}</span>
                             {timeStr && <span className={classes.cellTime}>{timeStr}</span>}
                           </div>
@@ -317,11 +420,25 @@ export const ContestMonitorTable = ({
                       );
                     }
 
-                    if (res.failed_attempts > 0) {
+                    if (hasPending) {
+                      let label = `?${pending}`;
+                      if (failed > 0) {
+                        label = `-${failed} ${pending}?`;
+                      }
+                      return (
+                        <Table.Td key={prob.problem_id} className={classes.tdCenter}>
+                          <div className={classes.cellFrozenPending}>
+                            <span>{label}</span>
+                          </div>
+                        </Table.Td>
+                      );
+                    }
+
+                    if (failed > 0) {
                       return (
                         <Table.Td key={prob.problem_id} className={classes.tdCenter}>
                           <div className={classes.cellFailed}>
-                            <span>-{res.failed_attempts}</span>
+                            <span>-{failed}</span>
                           </div>
                         </Table.Td>
                       );

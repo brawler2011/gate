@@ -6,6 +6,10 @@ export type ScoreboardProblemResultModel = {
     problem_id: string;
     solved: boolean;
     failed_attempts: number;
+    /**
+     * Number of attempts submitted during freeze
+     */
+    pending_attempts: number;
     first_ac_time?: string;
     time_minutes?: number;
     penalty?: number;

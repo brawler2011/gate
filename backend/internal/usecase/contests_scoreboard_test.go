@@ -227,9 +227,11 @@ func TestGetContestScoreboard_TieBreakerAndCustomPenalty(t *testing.T) {
 	mockRepo.On("GetContestScoreboardFromStandings", mock.Anything, contestID).
 		Return(results, userMap, nil)
 
-	sb, err := uc.GetContestScoreboard(ctx, contestID, uuid.New())
+	sb, err := uc.GetContestScoreboard(ctx, contestID, uuid.New(), false)
 	require.NoError(t, err)
 	assert.Equal(t, int32(15), sb.PenaltyPerAttempt)
+	assert.False(t, sb.IsFrozen)
+	assert.Nil(t, sb.FreezeTime)
 	assert.Len(t, sb.Items, 2)
 
 	// Bob solved 1 problem with total penalty 20
@@ -240,5 +242,314 @@ func TestGetContestScoreboard_TieBreakerAndCustomPenalty(t *testing.T) {
 	assert.Equal(t, "alice", sb.Items[1].Username)
 	assert.Equal(t, int32(40), sb.Items[1].TotalPenalty)
 
+	mockRepo.AssertExpectations(t)
+}
+
+func TestGetContestScoreboard_Freeze_ParticipantView(t *testing.T) {
+	ctx := context.Background()
+
+	contestID := uuid.New()
+	userAlice := uuid.New()
+	userBob := uuid.New()
+	userCharlie := uuid.New()
+	userDave := uuid.New()
+
+	probA := uuid.New()
+	probB := uuid.New()
+
+	// Contest started 2 hours ago, ends in 30 minutes.
+	// Freeze duration = 60 minutes -> Freeze began 30 minutes ago.
+	startTime := time.Now().Add(-2 * time.Hour)
+	endTime := time.Now().Add(30 * time.Minute)
+	freezeTime := endTime.Add(-60 * time.Minute) // 30 minutes ago
+
+	mockRepo := new(ContestsRepoMock)
+	uc := usecase.NewContestsUseCase(mockRepo)
+
+	contest := models.Contest{
+		ID:        contestID,
+		StartTime: &startTime,
+		EndTime:   &endTime,
+		Settings: map[string]interface{}{
+			"freeze_status":           "auto",
+			"freeze_duration_minutes": 60,
+			"penalty_per_attempt":     20,
+		},
+	}
+
+	mockRepo.On("GetContest", mock.Anything, contestID).Return(contest, nil)
+
+	problems := []models.ContestProblem{
+		{ContestID: contestID, ProblemID: probA, Title: "Problem A", ShortName: "A", Ordinal: 1},
+		{ContestID: contestID, ProblemID: probB, Title: "Problem B", ShortName: "B", Ordinal: 2},
+	}
+	mockRepo.On("GetContestProblems", mock.Anything, contestID).Return(problems, nil)
+
+	userMap := map[uuid.UUID]string{
+		userAlice:   "alice",
+		userBob:     "bob",
+		userCharlie: "charlie",
+		userDave:    "dave",
+	}
+	mockRepo.On("GetContestScoreboardFromStandings", mock.Anything, contestID).
+		Return([]models.ContestProblemResult{}, userMap, nil)
+
+	// --- Alice Submissions ---
+	// Problem A: WA at T-90m (pre-freeze), AC at T-70m (pre-freeze).
+	// During freeze: WA at T-20m, AC at T-10m.
+	// Expected Prob A: Solved=true, FailedAttempts=1, PendingAttempts=2, TimeMinutes=50, Penalty=20
+	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userAlice, probA).
+		Return([]models.SubmissionForScoreboard{
+			{State: models.GotWA, CreatedAt: startTime.Add(30 * time.Minute)}, // T-90m
+			{State: models.Accepted, CreatedAt: startTime.Add(50 * time.Minute)}, // T-70m (AC at min 50)
+			{State: models.GotWA, CreatedAt: freezeTime.Add(10 * time.Minute)},  // During freeze
+			{State: models.Accepted, CreatedAt: freezeTime.Add(20 * time.Minute)}, // During freeze
+		}, nil)
+	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userAlice, probB).
+		Return([]models.SubmissionForScoreboard{}, nil)
+
+	// --- Bob Submissions ---
+	// Problem A: 2 WA before freeze (T-80m, T-60m). AC during freeze (T-15m).
+	// Expected Prob A: Solved=false, FailedAttempts=2, PendingAttempts=1, Penalty=0
+	// Problem B: 1 WA during freeze (T-10m).
+	// Expected Prob B: Solved=false, FailedAttempts=0, PendingAttempts=1, Penalty=0
+	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userBob, probA).
+		Return([]models.SubmissionForScoreboard{
+			{State: models.GotWA, CreatedAt: startTime.Add(40 * time.Minute)},
+			{State: models.GotWA, CreatedAt: startTime.Add(60 * time.Minute)},
+			{State: models.Accepted, CreatedAt: freezeTime.Add(15 * time.Minute)}, // During freeze
+		}, nil)
+	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userBob, probB).
+		Return([]models.SubmissionForScoreboard{
+			{State: models.GotWA, CreatedAt: freezeTime.Add(20 * time.Minute)}, // During freeze
+		}, nil)
+
+	// --- Charlie Submissions ---
+	// Problem A: AC at T-80m (40m into contest). No freeze submissions.
+	// Expected Prob A: Solved=true, FailedAttempts=0, PendingAttempts=0, TimeMinutes=40, Penalty=0
+	// Problem B: 2 WA during freeze (first attempts to B).
+	// Expected Prob B: Solved=false, FailedAttempts=0, PendingAttempts=2, Penalty=0
+	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userCharlie, probA).
+		Return([]models.SubmissionForScoreboard{
+			{State: models.Accepted, CreatedAt: startTime.Add(40 * time.Minute)},
+		}, nil)
+	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userCharlie, probB).
+		Return([]models.SubmissionForScoreboard{
+			{State: models.GotWA, CreatedAt: freezeTime.Add(5 * time.Minute)},
+			{State: models.GotWA, CreatedAt: freezeTime.Add(10 * time.Minute)},
+		}, nil)
+
+	// --- Dave Submissions ---
+	// Problem A: 1 AC during freeze (first attempt).
+	// Expected Prob A: Solved=false, FailedAttempts=0, PendingAttempts=1, Penalty=0
+	// Problem B: None.
+	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userDave, probA).
+		Return([]models.SubmissionForScoreboard{
+			{State: models.Accepted, CreatedAt: freezeTime.Add(5 * time.Minute)},
+		}, nil)
+	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userDave, probB).
+		Return([]models.SubmissionForScoreboard{}, nil)
+
+	// Request scoreboard as participant (unfrozen=false)
+	sb, err := uc.GetContestScoreboard(ctx, contestID, userAlice, false)
+	require.NoError(t, err)
+	assert.True(t, sb.IsFrozen)
+	require.NotNil(t, sb.FreezeTime)
+	assert.Equal(t, int32(20), sb.PenaltyPerAttempt)
+	assert.Len(t, sb.Items, 4)
+
+	// Check Rankings:
+	// Charlie: 1 solved, 40 penalty
+	// Alice: 1 solved, 70 penalty (50 mins + 20 penalty)
+	// Bob: 0 solved, 0 penalty
+	// Dave: 0 solved, 0 penalty
+	assert.Equal(t, "charlie", sb.Items[0].Username)
+	assert.Equal(t, int32(1), sb.Items[0].ProblemsSolved)
+	assert.Equal(t, int32(40), sb.Items[0].TotalPenalty)
+
+	assert.Equal(t, "alice", sb.Items[1].Username)
+	assert.Equal(t, int32(1), sb.Items[1].ProblemsSolved)
+	assert.Equal(t, int32(70), sb.Items[1].TotalPenalty)
+
+	assert.Equal(t, "bob", sb.Items[2].Username)
+	assert.Equal(t, int32(0), sb.Items[2].ProblemsSolved)
+	assert.Equal(t, int32(0), sb.Items[2].TotalPenalty)
+
+	assert.Equal(t, "dave", sb.Items[3].Username)
+	assert.Equal(t, int32(0), sb.Items[3].ProblemsSolved)
+	assert.Equal(t, int32(0), sb.Items[3].TotalPenalty)
+
+	// Check Alice's problem results
+	aliceResults := make(map[uuid.UUID]models.ContestProblemResult)
+	for _, r := range sb.Items[1].ProblemResults {
+		aliceResults[r.ProblemID] = r
+	}
+	resAliceA, ok := aliceResults[probA]
+	require.True(t, ok)
+	assert.True(t, resAliceA.Solved)
+	assert.Equal(t, int32(1), resAliceA.FailedAttempts)
+	assert.Equal(t, int32(2), resAliceA.PendingAttempts) // +1 2?
+	assert.Equal(t, int32(20), resAliceA.Penalty)
+	assert.Equal(t, int32(50), *resAliceA.TimeMinutes)
+
+	// Check Bob's problem results
+	bobResults := make(map[uuid.UUID]models.ContestProblemResult)
+	for _, r := range sb.Items[2].ProblemResults {
+		bobResults[r.ProblemID] = r
+	}
+	resBobA, ok := bobResults[probA]
+	require.True(t, ok)
+	assert.False(t, resBobA.Solved)
+	assert.Equal(t, int32(2), resBobA.FailedAttempts)
+	assert.Equal(t, int32(1), resBobA.PendingAttempts) // -2 1?
+
+	resBobB, ok := bobResults[probB]
+	require.True(t, ok)
+	assert.False(t, resBobB.Solved)
+	assert.Equal(t, int32(0), resBobB.FailedAttempts)
+	assert.Equal(t, int32(1), resBobB.PendingAttempts) // ?1
+
+	// Check Dave's problem results
+	daveResults := make(map[uuid.UUID]models.ContestProblemResult)
+	for _, r := range sb.Items[3].ProblemResults {
+		daveResults[r.ProblemID] = r
+	}
+	resDaveA, ok := daveResults[probA]
+	require.True(t, ok)
+	assert.False(t, resDaveA.Solved)
+	assert.Equal(t, int32(0), resDaveA.FailedAttempts)
+	assert.Equal(t, int32(1), resDaveA.PendingAttempts) // ?1
+
+	mockRepo.AssertExpectations(t)
+}
+
+func TestGetContestScoreboard_Freeze_ManagerUnfrozenView(t *testing.T) {
+	ctx := context.Background()
+
+	contestID := uuid.New()
+	userAlice := uuid.New()
+	userBob := uuid.New()
+	probA := uuid.New()
+
+	startTime := time.Now().Add(-2 * time.Hour)
+	endTime := time.Now().Add(30 * time.Minute)
+
+	mockRepo := new(ContestsRepoMock)
+	uc := usecase.NewContestsUseCase(mockRepo)
+
+	contest := models.Contest{
+		ID:        contestID,
+		StartTime: &startTime,
+		EndTime:   &endTime,
+		Settings: map[string]interface{}{
+			"freeze_status":           "auto",
+			"freeze_duration_minutes": 60,
+			"penalty_per_attempt":     20,
+		},
+	}
+
+	mockRepo.On("GetContest", mock.Anything, contestID).Return(contest, nil)
+
+	problems := []models.ContestProblem{
+		{ContestID: contestID, ProblemID: probA, Title: "Problem A", ShortName: "A", Ordinal: 1},
+	}
+	mockRepo.On("GetContestProblems", mock.Anything, contestID).Return(problems, nil)
+
+	minsAlice := int32(50)
+	minsBob := int32(105)
+
+	// Live standings in database
+	liveResults := []models.ContestProblemResult{
+		{
+			ContestID:      contestID,
+			UserID:         userAlice,
+			ProblemID:      probA,
+			Solved:         true,
+			FailedAttempts: 1,
+			TimeMinutes:    &minsAlice,
+		},
+		{
+			ContestID:      contestID,
+			UserID:         userBob,
+			ProblemID:      probA,
+			Solved:         true,
+			FailedAttempts: 2,
+			TimeMinutes:    &minsBob,
+		},
+	}
+
+	userMap := map[uuid.UUID]string{
+		userAlice: "alice",
+		userBob:   "bob",
+	}
+
+	mockRepo.On("GetContestScoreboardFromStandings", mock.Anything, contestID).
+		Return(liveResults, userMap, nil)
+
+	// Manager requests live scoreboard with unfrozen=true
+	sb, err := uc.GetContestScoreboard(ctx, contestID, uuid.New(), true)
+	require.NoError(t, err)
+
+	// Response preserves freeze metadata
+	assert.True(t, sb.IsFrozen)
+	require.NotNil(t, sb.FreezeTime)
+
+	// Scoreboard returns real live standings
+	assert.Len(t, sb.Items, 2)
+	assert.Equal(t, "alice", sb.Items[0].Username)
+	assert.Equal(t, int32(1), sb.Items[0].ProblemsSolved)
+	assert.Equal(t, int32(70), sb.Items[0].TotalPenalty) // 50 + 20
+
+	assert.Equal(t, "bob", sb.Items[1].Username)
+	assert.Equal(t, int32(1), sb.Items[1].ProblemsSolved)
+	assert.Equal(t, int32(145), sb.Items[1].TotalPenalty) // 105 + 40
+
+	// PendingAttempts should be 0 in unfrozen view
+	assert.Equal(t, int32(0), sb.Items[0].ProblemResults[0].PendingAttempts)
+	assert.Equal(t, int32(0), sb.Items[1].ProblemResults[0].PendingAttempts)
+
+	mockRepo.AssertExpectations(t)
+}
+
+func TestGetContestScoreboard_ManualUnfrozenOverride(t *testing.T) {
+	ctx := context.Background()
+
+	contestID := uuid.New()
+	userID := uuid.New()
+	probA := uuid.New()
+
+	startTime := time.Now().Add(-2 * time.Hour)
+	endTime := time.Now().Add(30 * time.Minute)
+
+	mockRepo := new(ContestsRepoMock)
+	uc := usecase.NewContestsUseCase(mockRepo)
+
+	// freeze_status is manually "unfrozen"
+	contest := models.Contest{
+		ID:        contestID,
+		StartTime: &startTime,
+		EndTime:   &endTime,
+		Settings: map[string]interface{}{
+			"freeze_status":           "unfrozen",
+			"freeze_duration_minutes": 60,
+			"penalty_per_attempt":     20,
+		},
+	}
+
+	mockRepo.On("GetContest", mock.Anything, contestID).Return(contest, nil)
+
+	problems := []models.ContestProblem{
+		{ContestID: contestID, ProblemID: probA, Title: "Problem A", ShortName: "A", Ordinal: 1},
+	}
+	mockRepo.On("GetContestProblems", mock.Anything, contestID).Return(problems, nil)
+
+	userMap := map[uuid.UUID]string{userID: "alice"}
+	mockRepo.On("GetContestScoreboardFromStandings", mock.Anything, contestID).
+		Return([]models.ContestProblemResult{}, userMap, nil)
+
+	sb, err := uc.GetContestScoreboard(ctx, contestID, userID, false)
+	require.NoError(t, err)
+
+	assert.False(t, sb.IsFrozen)
 	mockRepo.AssertExpectations(t)
 }

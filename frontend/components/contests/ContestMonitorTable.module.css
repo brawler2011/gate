@@ -46,6 +46,16 @@
   font-weight: 600;
 }
 
+.cellFrozenPending {
+  color: var(--mantine-color-yellow-6, #e67700);
+  background-color: light-dark(rgba(252, 196, 25, 0.12), rgba(252, 196, 25, 0.18));
+  border-radius: var(--mantine-radius-sm, 4px);
+  padding: 2px 4px;
+  font-weight: 600;
+  display: inline-block;
+  line-height: 1.15;
+}
+
 .cellTime {
   font-size: 11px;
   color: var(--mantine-color-dimmed, #868e96);

@@ -799,6 +799,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: unfrozen
+          in: query
+          required: false
+          description: Whether to return unfrozen scoreboard (managers only)
+          schema:
+            type: boolean
       responses:
         "200":
           description: OK
@@ -3662,6 +3668,7 @@ components:
         - monitor_scope
         - submissions_list_scope
         - submissions_review_scope
+        - freeze_status
         - created_by
         - created_at
         - updated_at
@@ -3685,6 +3692,20 @@ components:
           type: string
         submissions_review_scope:
           type: string
+        freeze_duration_minutes:
+          type: integer
+          format: int32
+          minimum: 0
+          nullable: true
+          description: Freeze duration in minutes before contest end
+        freeze_status:
+          type: string
+          enum:
+            - auto
+            - frozen
+            - unfrozen
+          default: auto
+          description: Freeze mode status
         created_by:
           type: string
           format: uuid
@@ -3823,6 +3844,20 @@ components:
         submissions_review_scope:
           type: string
           example: admin
+        freeze_duration_minutes:
+          type: integer
+          format: int32
+          minimum: 0
+          nullable: true
+          description: Freeze duration in minutes before contest end
+        freeze_status:
+          type: string
+          enum:
+            - auto
+            - frozen
+            - unfrozen
+          default: auto
+          description: Freeze mode status
         start_time:
           type: string
           format: date-time
@@ -4216,6 +4251,7 @@ components:
         - problem_id
         - solved
         - failed_attempts
+        - pending_attempts
       properties:
         problem_id:
           type: string
@@ -4225,6 +4261,10 @@ components:
         failed_attempts:
           type: integer
           format: int32
+        pending_attempts:
+          type: integer
+          format: int32
+          description: Number of attempts submitted during freeze
         first_ac_time:
           type: string
           format: date-time
@@ -4284,6 +4324,7 @@ components:
       required:
         - contest_id
         - penalty_per_attempt
+        - is_frozen
         - problems
         - items
       properties:
@@ -4293,6 +4334,14 @@ components:
         penalty_per_attempt:
           type: integer
           format: int32
+        is_frozen:
+          type: boolean
+          description: Whether the scoreboard is currently frozen
+        freeze_time:
+          type: string
+          format: date-time
+          nullable: true
+          description: RFC3339 timestamp when scoreboard was or will be frozen
         problems:
           type: array
           items:

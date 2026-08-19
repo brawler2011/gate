@@ -23,6 +23,14 @@ const (
 	ContestRoleParticipant ContestRole = "participant"
 )
 
+type ContestFreezeStatus = string
+
+const (
+	FreezeStatusAuto     ContestFreezeStatus = "auto"
+	FreezeStatusFrozen   ContestFreezeStatus = "frozen"
+	FreezeStatusUnfrozen ContestFreezeStatus = "unfrozen"
+)
+
 // ContestPermissionMask stores action permissions as bit flags.
 type ContestPermissionMask uint64
 
@@ -324,6 +332,75 @@ func (c *Contest) GetPenaltyPerAttempt() int32 {
 	return 20
 }
 
+func (c *Contest) GetFreezeDurationMinutes() *int32 {
+	if c.Settings != nil {
+		if raw, ok := c.Settings["freeze_duration_minutes"]; ok && raw != nil {
+			switch v := raw.(type) {
+			case float64:
+				if v >= math.MinInt32 && v <= math.MaxInt32 {
+					res := int32(v)
+					return &res
+				}
+			case int32:
+				res := v
+				return &res
+			case int:
+				if v >= math.MinInt32 && v <= math.MaxInt32 {
+					res := int32(v)
+					return &res
+				}
+			case int64:
+				if v >= math.MinInt32 && v <= math.MaxInt32 {
+					res := int32(v)
+					return &res
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Contest) GetFreezeStatus() string {
+	if c.Settings != nil {
+		if raw, ok := c.Settings["freeze_status"]; ok && raw != nil {
+			if str, ok := raw.(string); ok && str != "" {
+				switch str {
+				case FreezeStatusAuto, FreezeStatusFrozen, FreezeStatusUnfrozen:
+					return str
+				}
+			}
+		}
+	}
+	return FreezeStatusAuto
+}
+
+func (c *Contest) GetFreezeTime() *time.Time {
+	durPtr := c.GetFreezeDurationMinutes()
+	if durPtr == nil || *durPtr <= 0 || c.EndTime == nil {
+		return nil
+	}
+	freezeTime := c.EndTime.Add(-time.Duration(*durPtr) * time.Minute)
+	return &freezeTime
+}
+
+func (c *Contest) IsFrozenAt(t time.Time) bool {
+	status := c.GetFreezeStatus()
+	switch status {
+	case FreezeStatusUnfrozen:
+		return false
+	case FreezeStatusFrozen:
+		return true
+	case FreezeStatusAuto:
+		freezeTime := c.GetFreezeTime()
+		if freezeTime == nil {
+			return false
+		}
+		return !t.Before(*freezeTime)
+	default:
+		return false
+	}
+}
+
 type UpsertContestProblemResultParams struct {
 	ContestID      uuid.UUID
 	UserID         uuid.UUID
@@ -335,14 +412,15 @@ type UpsertContestProblemResultParams struct {
 }
 
 type ContestProblemResult struct {
-	ContestID      uuid.UUID  `json:"contest_id"`
-	UserID         uuid.UUID  `json:"user_id"`
-	ProblemID      uuid.UUID  `json:"problem_id"`
-	Solved         bool       `json:"solved"`
-	FailedAttempts int32      `json:"failed_attempts"`
-	FirstACTime    *time.Time `json:"first_ac_time,omitempty"`
-	TimeMinutes    *int32     `json:"time_minutes,omitempty"`
-	Penalty        int32      `json:"penalty"`
+	ContestID       uuid.UUID  `json:"contest_id"`
+	UserID          uuid.UUID  `json:"user_id"`
+	ProblemID       uuid.UUID  `json:"problem_id"`
+	Solved          bool       `json:"solved"`
+	FailedAttempts  int32      `json:"failed_attempts"`
+	PendingAttempts int32      `json:"pending_attempts"`
+	FirstACTime     *time.Time `json:"first_ac_time,omitempty"`
+	TimeMinutes     *int32     `json:"time_minutes,omitempty"`
+	Penalty         int32      `json:"penalty"`
 }
 
 type ScoreboardItem struct {
@@ -364,6 +442,8 @@ type ScoreboardProblemHeader struct {
 type ScoreboardResponse struct {
 	ContestID         uuid.UUID                 `json:"contest_id"`
 	PenaltyPerAttempt int32                     `json:"penalty_per_attempt"`
+	IsFrozen          bool                      `json:"is_frozen"`
+	FreezeTime        *time.Time                `json:"freeze_time,omitempty"`
 	Problems          []ScoreboardProblemHeader `json:"problems"`
 	Items             []ScoreboardItem          `json:"items"`
 }
