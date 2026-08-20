@@ -14,7 +14,7 @@ import {
 import {notifications} from "@mantine/notifications";
 import {useEffect, useState, useTransition} from "react";
 
-import {getWorkshopTestFile, updateWorkshopTestFile} from "@/lib/workshop";
+import {api} from "@/lib/api";
 
 import type {ReactNode} from "react";
 
@@ -23,45 +23,90 @@ type Props = {
   onClose: () => void;
   problemId: string;
   filename: string | null;
+  fileSize?: number;
   onSaved?: () => void;
 };
 
-const MAX_PREVIEW_BYTES = 50 * 1024; // 50 KB
+const MAX_PREVIEW_BYTES = 100 * 1024; // 100 KB
+
+const formatBytes = (bytes?: number): string => {
+  if (bytes === undefined || bytes === null) {
+    return "";
+  }
+  if (bytes < 1024) {
+    return `${bytes} Б`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} КБ`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+};
 
 export const TestPreviewModal = ({
   opened,
   onClose,
   problemId,
   filename,
+  fileSize,
   onSaved,
 }: Props): ReactNode => {
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [isSaving, startSaving] = useTransition();
   const [isTruncated, setIsTruncated] = useState(false);
+  const [isTooLarge, setIsTooLarge] = useState(false);
   const [originalError, setOriginalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (opened && filename) {
-      setIsLoading(true);
       setOriginalError(null);
-      getWorkshopTestFile(problemId, filename).then(([err, text]) => {
+      setContent("");
+      setIsTruncated(false);
+
+      if (typeof fileSize === "number" && fileSize > MAX_PREVIEW_BYTES) {
+        setIsTooLarge(true);
         setIsLoading(false);
-        if (err || text === null) {
-          setOriginalError(err?.message || "Файл отсутствует или пуст");
-          setContent("");
-        } else {
-          if (text.length > MAX_PREVIEW_BYTES) {
-            setContent(text.slice(0, MAX_PREVIEW_BYTES));
-            setIsTruncated(true);
+      } else {
+        setIsTooLarge(false);
+        setIsLoading(true);
+        api.getProblemTestFile({problemId, name: filename}).then(async ([err, blob]) => {
+          setIsLoading(false);
+          if (err || !blob) {
+            setOriginalError(err?.message || "Файл отсутствует или пуст");
+            setContent("");
           } else {
-            setContent(text);
-            setIsTruncated(false);
+            const text = await blob.text();
+            if (text.length > MAX_PREVIEW_BYTES) {
+              setContent(text.slice(0, MAX_PREVIEW_BYTES));
+              setIsTruncated(true);
+            } else {
+              setContent(text);
+              setIsTruncated(false);
+            }
           }
-        }
-      });
+        });
+      }
     }
-  }, [opened, filename, problemId]);
+  }, [opened, filename, fileSize, problemId]);
+
+  const handleLoadPartial = async () => {
+    if (!filename) {
+      return;
+    }
+    setIsLoading(true);
+    const [err, blob] = await api.getProblemTestFile({problemId, name: filename});
+    setIsLoading(false);
+    if (err || !blob) {
+      setOriginalError(err?.message || "Ошибка загрузки файла");
+      return;
+    }
+    const sliced = blob.slice(0, MAX_PREVIEW_BYTES);
+    const text = await sliced.text();
+    setContent(text);
+    setIsTruncated(true);
+    setIsTooLarge(false);
+  };
 
   const handleSave = () => {
     if (!filename) {
@@ -69,7 +114,8 @@ export const TestPreviewModal = ({
     }
 
     startSaving(async () => {
-      const [err] = await updateWorkshopTestFile(problemId, filename, content);
+      const blob = new Blob([content], {type: "application/octet-stream"});
+      const [err] = await api.updateProblemTestFile({problemId, name: filename, requestBody: blob});
       if (err) {
         notifications.show({
           title: "Ошибка сохранения",
@@ -89,11 +135,21 @@ export const TestPreviewModal = ({
     });
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!filename) {
       return;
     }
-    const blob = new Blob([content], {type: "text/plain;charset=utf-8"});
+    setIsDownloading(true);
+    const [err, blob] = await api.getProblemTestFile({problemId, name: filename});
+    setIsDownloading(false);
+    if (err || !blob) {
+      notifications.show({
+        title: "Ошибка скачивания",
+        message: err?.message || "Не удалось скачать файл",
+        color: "red",
+      });
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -108,13 +164,13 @@ export const TestPreviewModal = ({
       onClose={onClose}
       title={
         <Text fw={600} size="md">
-          Просмотр файла: {filename}
+          Просмотр файла: {filename} {fileSize !== undefined ? `(${formatBytes(fileSize)})` : ""}
         </Text>
       }
       size="lg"
     >
       <Box pos="relative" mih={200}>
-        <LoadingOverlay visible={isLoading} />
+        <LoadingOverlay visible={isLoading || isDownloading} />
 
         <Stack gap="md">
           {originalError && (
@@ -123,25 +179,47 @@ export const TestPreviewModal = ({
             </Alert>
           )}
 
-          {isTruncated && (
+          {isTooLarge && (
             <Alert color="yellow" title="Большой размер файла">
-              Отображаются первые 50 КБ файла. Редактирование большого файла сбросит
-              данные после превью. Воспользуйтесь кнопкой скачивания оригинала.
+              <Stack gap="xs">
+                <Text size="sm">
+                  Размер файла составляет {formatBytes(fileSize)} (больше 100 КБ).
+                  Автоматическая загрузка отключена во избежание зависания браузера.
+                </Text>
+                <Group gap="sm" mt="xs">
+                  <Button variant="default" size="xs" onClick={handleDownload} loading={isDownloading}>
+                    Скачать файл ({formatBytes(fileSize)})
+                  </Button>
+                  <Button variant="outline" size="xs" onClick={handleLoadPartial} loading={isLoading}>
+                    Показать первые 100 КБ
+                  </Button>
+                </Group>
+              </Stack>
             </Alert>
           )}
 
-          <Textarea
-            label="Содержимое файла"
-            autosize
-            minRows={10}
-            maxRows={20}
-            value={content}
-            onChange={(e) => setContent(e.currentTarget.value)}
-            style={{fontFamily: "monospace"}}
-          />
+          {isTruncated && (
+            <Alert color="yellow" title="Предпросмотр ограничен">
+              Отображаются первые 100 КБ файла. Редактирование и сохранение большого файла
+              перезапишет файл только содержимым превью. Воспользуйтесь кнопкой скачивания
+              оригинала для полного доступа.
+            </Alert>
+          )}
+
+          {!isTooLarge && (
+            <Textarea
+              label="Содержимое файла"
+              autosize
+              minRows={10}
+              maxRows={20}
+              value={content}
+              onChange={(e) => setContent(e.currentTarget.value)}
+              style={{fontFamily: "monospace"}}
+            />
+          )}
 
           <Group justify="space-between">
-            <Button variant="default" onClick={handleDownload}>
+            <Button variant="default" onClick={handleDownload} loading={isDownloading}>
               Скачать файл
             </Button>
 
@@ -149,9 +227,11 @@ export const TestPreviewModal = ({
               <Button variant="subtle" color="gray" onClick={onClose}>
                 Отмена
               </Button>
-              <Button loading={isSaving} onClick={handleSave}>
-                Сохранить
-              </Button>
+              {!isTooLarge && (
+                <Button loading={isSaving} onClick={handleSave}>
+                  Сохранить
+                </Button>
+              )}
             </Group>
           </Group>
         </Stack>

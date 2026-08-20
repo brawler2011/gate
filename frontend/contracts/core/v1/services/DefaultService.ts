@@ -1460,7 +1460,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'POST',
@@ -1472,12 +1472,12 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
      * Get checker file content
-     * @returns binary Checker content
+     * @returns string Checker content
      * @throws ApiError
      */
     public getProblemChecker({
@@ -1486,7 +1486,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-    }): CancelablePromise<Blob> {
+    }): CancelablePromise<string> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/problems/{problemId}/checkers/{name}',
@@ -1508,7 +1508,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'PUT',
@@ -1518,7 +1518,7 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
@@ -1572,7 +1572,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'POST',
@@ -1584,12 +1584,12 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
      * Get generator file content
-     * @returns binary Generator content
+     * @returns string Generator content
      * @throws ApiError
      */
     public getProblemGenerator({
@@ -1598,7 +1598,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-    }): CancelablePromise<Blob> {
+    }): CancelablePromise<string> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/problems/{problemId}/generators/{name}',
@@ -1620,7 +1620,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'PUT',
@@ -1630,7 +1630,7 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
@@ -1684,7 +1684,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'POST',
@@ -1696,12 +1696,12 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
      * Get interactor file content
-     * @returns binary Interactor content
+     * @returns string Interactor content
      * @throws ApiError
      */
     public getProblemInteractor({
@@ -1710,7 +1710,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-    }): CancelablePromise<Blob> {
+    }): CancelablePromise<string> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/problems/{problemId}/interactors/{name}',
@@ -1732,7 +1732,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'PUT',
@@ -1742,7 +1742,7 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
@@ -1908,7 +1908,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'POST',
@@ -1920,12 +1920,12 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
      * Get library file content
-     * @returns binary Library file content
+     * @returns string Library file content
      * @throws ApiError
      */
     public getProblemLib({
@@ -1934,7 +1934,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-    }): CancelablePromise<Blob> {
+    }): CancelablePromise<string> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/problems/{problemId}/lib/{name}',
@@ -1956,7 +1956,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'PUT',
@@ -1966,7 +1966,7 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
@@ -2020,7 +2020,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'POST',
@@ -2032,12 +2032,12 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
      * Get author solution file content
-     * @returns binary Author solution file content
+     * @returns string Author solution file content
      * @throws ApiError
      */
     public getProblemWorkshopSubmission({
@@ -2046,7 +2046,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-    }): CancelablePromise<Blob> {
+    }): CancelablePromise<string> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/problems/{problemId}/submissions/{name}',
@@ -2068,7 +2068,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'PUT',
@@ -2078,7 +2078,7 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
@@ -2266,7 +2266,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'POST',
@@ -2278,12 +2278,12 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**
      * Get validator file content
-     * @returns binary Validator content
+     * @returns string Validator content
      * @throws ApiError
      */
     public getProblemValidator({
@@ -2292,7 +2292,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-    }): CancelablePromise<Blob> {
+    }): CancelablePromise<string> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/problems/{problemId}/validators/{name}',
@@ -2314,7 +2314,7 @@ export class DefaultService {
     }: {
         problemId: string,
         name: string,
-        requestBody: Blob,
+        requestBody: string,
     }): CancelablePromise<MessageResponse> {
         return this.httpRequest.request({
             method: 'PUT',
@@ -2324,7 +2324,7 @@ export class DefaultService {
                 'name': name,
             },
             body: requestBody,
-            mediaType: 'application/octet-stream',
+            mediaType: 'text/plain',
         });
     }
     /**

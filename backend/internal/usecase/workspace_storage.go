@@ -51,15 +51,15 @@ func (w *WorkspaceStorage) DeleteFile(ctx context.Context, problemID uuid.UUID, 
 	return w.storage.DeleteFile(ctx, w.bucket, key)
 }
 
-func (w *WorkspaceStorage) ListAllFiles(ctx context.Context, problemID uuid.UUID) ([]string, error) {
+func (w *WorkspaceStorage) ListAllObjects(ctx context.Context, problemID uuid.UUID) ([]storage.ObjectInfo, error) {
 	prefix := fmt.Sprintf("workspaces/%s/", problemID.String())
-	keys, err := w.storage.ListFiles(ctx, w.bucket, prefix)
+	objects, err := w.storage.ListObjects(ctx, w.bucket, prefix)
 	if err != nil {
 		return nil, err
 	}
-	var files []string
-	for _, key := range keys {
-		rel := strings.TrimPrefix(key, prefix)
+	var filtered []storage.ObjectInfo
+	for _, obj := range objects {
+		rel := strings.TrimPrefix(obj.Key, prefix)
 		if rel != "" {
 			parts := strings.Split(rel, "/")
 			isDotfile := false
@@ -70,15 +70,30 @@ func (w *WorkspaceStorage) ListAllFiles(ctx context.Context, problemID uuid.UUID
 				}
 			}
 			if !isDotfile {
-				files = append(files, rel)
+				filtered = append(filtered, storage.ObjectInfo{
+					Key:  rel,
+					Size: obj.Size,
+				})
 			}
 		}
+	}
+	return filtered, nil
+}
+
+func (w *WorkspaceStorage) ListAllFiles(ctx context.Context, problemID uuid.UUID) ([]string, error) {
+	objects, err := w.ListAllObjects(ctx, problemID)
+	if err != nil {
+		return nil, err
+	}
+	files := make([]string, len(objects))
+	for i, obj := range objects {
+		files[i] = obj.Key
 	}
 	return files, nil
 }
 
 func (w *WorkspaceStorage) ListFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]models.FileEntry, error) {
-	allFiles, err := w.ListAllFiles(ctx, problemID)
+	allObjects, err := w.ListAllObjects(ctx, problemID)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +106,8 @@ func (w *WorkspaceStorage) ListFiles(ctx context.Context, problemID uuid.UUID, d
 	seen := make(map[string]bool)
 	var entries []models.FileEntry
 
-	for _, file := range allFiles {
+	for _, obj := range allObjects {
+		file := obj.Key
 		if prefix != "" && !strings.HasPrefix(file, prefix) {
 			continue
 		}
@@ -116,10 +132,15 @@ func (w *WorkspaceStorage) ListFiles(ctx context.Context, problemID uuid.UUID, d
 			entryPath = name
 		}
 
+		size := obj.Size
+		if isDir {
+			size = 0
+		}
+
 		entries = append(entries, models.FileEntry{
 			Path:        entryPath,
 			IsDirectory: isDir,
-			Size:        0, // size is not tracked in workspaces list dir
+			Size:        size,
 		})
 	}
 

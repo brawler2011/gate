@@ -1,11 +1,6 @@
 "use client";
 
 import {api} from "@/lib/api";
-import {
-  createWorkshopGeneratorFile,
-  getWorkshopGeneratorFile,
-  updateWorkshopGeneratorFile,
-} from "@/lib/workshop";
 
 import {WorkshopSingleComponentTab} from "./WorkshopSingleComponentTab";
 
@@ -20,9 +15,9 @@ export const WorkshopGeneratorsTab = (props: WorkshopFileTabProps): ReactNode =>
       componentTitle="Генератор"
       defaultFileName="generator"
       listFiles={(problemId) => api.listProblemGenerators({problemId})}
-      getFile={getWorkshopGeneratorFile}
-      createFile={createWorkshopGeneratorFile}
-      updateFile={updateWorkshopGeneratorFile}
+      getFile={(problemId, name) => api.getProblemGenerator({problemId, name})}
+      createFile={(problemId, name, requestBody) => api.createProblemGenerator({problemId, name, requestBody})}
+      updateFile={(problemId, name, requestBody) => api.updateProblemGenerator({problemId, name, requestBody})}
       deleteFile={(problemId, name) => api.deleteProblemGenerator({problemId, name})}
     />
   );

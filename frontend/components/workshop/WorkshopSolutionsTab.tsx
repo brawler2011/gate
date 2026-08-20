@@ -1,12 +1,6 @@
 "use client";
 
 import {api} from "@/lib/api";
-import {
-  createWorkshopSolutionFile,
-  deleteWorkshopSolutionFile,
-  getWorkshopSolutionFile,
-  updateWorkshopSolutionFile,
-} from "@/lib/workshop";
 
 import {WorkshopCollectionTab} from "./WorkshopCollectionTab";
 
@@ -19,10 +13,10 @@ export const WorkshopSolutionsTab = (props: WorkshopFileTabProps): ReactNode => 
       {...props}
       folderName="solutions"
       listFiles={(problemId) => api.listProblemWorkshopSubmissions({problemId})}
-      getFile={getWorkshopSolutionFile}
-      createFile={createWorkshopSolutionFile}
-      updateFile={updateWorkshopSolutionFile}
-      deleteFile={deleteWorkshopSolutionFile}
+      getFile={(problemId, name) => api.getProblemWorkshopSubmission({problemId, name})}
+      createFile={(problemId, name, requestBody) => api.createProblemWorkshopSubmission({problemId, name, requestBody})}
+      updateFile={(problemId, name, requestBody) => api.updateProblemWorkshopSubmission({problemId, name, requestBody})}
+      deleteFile={(problemId, name) => api.deleteProblemWorkshopSubmission({problemId, name})}
     />
   );
 };

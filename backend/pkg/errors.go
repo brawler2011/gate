@@ -16,6 +16,7 @@ var (
 	ErrNotFound        = errors.New("not found")
 	ErrBadInput        = errors.New("bad input")
 	ErrInternal        = errors.New("internal")
+	ErrPayloadTooLarge = errors.New("payload too large")
 	NotImplemented     = errors.New("not implemented")
 )
 
@@ -75,6 +76,8 @@ func ToREST(err error) int {
 		return http.StatusNotFound
 	case errors.Is(err, ErrInternal):
 		return http.StatusInternalServerError
+	case errors.Is(err, ErrPayloadTooLarge):
+		return http.StatusRequestEntityTooLarge
 	case errors.Is(err, NoPermission):
 		return http.StatusForbidden
 	}

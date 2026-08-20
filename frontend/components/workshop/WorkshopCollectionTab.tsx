@@ -181,8 +181,31 @@ export const WorkshopCollectionTab = ({
     }
   }, [leafFiles, onFileSelect, selectedFile]);
 
+  const formatBytes = (bytes?: number): string => {
+    if (bytes === undefined || bytes === null) {
+      return "";
+    }
+    if (bytes < 1024) {
+      return `${bytes} Б`;
+    }
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} КБ`;
+    }
+    return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+  };
+
   const handleSave = () => {
     if (!selectedFile) {
+      return;
+    }
+
+    const blobSize = new Blob([content]).size;
+    if (blobSize > 2 * 1024 * 1024) {
+      notifications.show({
+        title: "Файл слишком большой",
+        message: "Размер исходного кода не должен превышать 2 МБ",
+        color: "red",
+      });
       return;
     }
 
@@ -446,7 +469,12 @@ export const WorkshopCollectionTab = ({
                     }
                   }}
                 >
-                  <span>{getFileName(file.path!)}</span>
+                  <span style={{display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%"}}>
+                    <span>{getFileName(file.path!)}</span>
+                    {typeof file.size === "number" && file.size > 0 && (
+                      <span style={{opacity: 0.6, fontSize: "0.75rem", marginLeft: 8}}>{formatBytes(file.size)}</span>
+                    )}
+                  </span>
                 </button>
               );
             })

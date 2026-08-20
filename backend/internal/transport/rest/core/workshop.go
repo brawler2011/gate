@@ -29,6 +29,12 @@ const (
 	mediaDir      = "media"
 	solutionDir   = "solutions"
 	testDir       = "tests"
+
+	MaxSourceFileSize    = 2 * 1024 * 1024   // 2 MB
+	MaxStatementFileSize = 2 * 1024 * 1024   // 2 MB
+	MaxMediaFileSize     = 50 * 1024 * 1024  // 50 MB
+	MaxTestFileSize      = 256 * 1024 * 1024 // 256 MB
+	MaxPackageZipSize    = 500 * 1024 * 1024 // 500 MB
 )
 
 // GetProblemLimits handles GET /problems/{problemId}/limits
@@ -195,6 +201,9 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, request corev1.
 
 	// 2. Write statement back to workspace storage
 	stmtBytes := []byte(usecase.RenderStatementMarkdown(stmt))
+	if int64(len(stmtBytes)) > MaxStatementFileSize {
+		return nil, pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "statement size exceeds maximum allowed limit of 2MB")
+	}
 	user := middleware.GetUser(ctx)
 	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
 		ProblemID: request.ProblemId,
@@ -253,7 +262,11 @@ func (h *CoreServer) ListProblemCheckers(ctx context.Context, request corev1.Lis
 
 // CreateProblemChecker handles POST /problems/{problemId}/checkers
 func (h *CoreServer) CreateProblemChecker(ctx context.Context, request corev1.CreateProblemCheckerRequestObject) (corev1.CreateProblemCheckerResponseObject, error) {
-	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, checkerDir, request.Params.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, checkerDir, request.Params.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.CreateProblemChecker200JSONResponse{Message: strPtr("Checker created successfully")}, nil
@@ -265,12 +278,16 @@ func (h *CoreServer) GetProblemChecker(ctx context.Context, request corev1.GetPr
 	if err != nil {
 		return nil, err
 	}
-	return corev1.GetProblemChecker200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+	return corev1.GetProblemChecker200TextResponse(string(content)), nil
 }
 
 // UpdateProblemChecker handles PUT /problems/{problemId}/checkers/{name}
 func (h *CoreServer) UpdateProblemChecker(ctx context.Context, request corev1.UpdateProblemCheckerRequestObject) (corev1.UpdateProblemCheckerResponseObject, error) {
-	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, checkerDir, request.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, checkerDir, request.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.UpdateProblemChecker200JSONResponse{Message: strPtr("Checker updated successfully")}, nil
@@ -284,8 +301,6 @@ func (h *CoreServer) DeleteProblemChecker(ctx context.Context, request corev1.De
 	return corev1.DeleteProblemChecker200JSONResponse{Message: strPtr("Checker deleted successfully")}, nil
 }
 
-
-
 // ListProblemGenerators handles GET /problems/{problemId}/generators
 func (h *CoreServer) ListProblemGenerators(ctx context.Context, request corev1.ListProblemGeneratorsRequestObject) (corev1.ListProblemGeneratorsResponseObject, error) {
 	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, generatorDir)
@@ -297,7 +312,11 @@ func (h *CoreServer) ListProblemGenerators(ctx context.Context, request corev1.L
 
 // CreateProblemGenerator handles POST /problems/{problemId}/generators
 func (h *CoreServer) CreateProblemGenerator(ctx context.Context, request corev1.CreateProblemGeneratorRequestObject) (corev1.CreateProblemGeneratorResponseObject, error) {
-	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, generatorDir, request.Params.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, generatorDir, request.Params.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.CreateProblemGenerator200JSONResponse{Message: strPtr("Generator created successfully")}, nil
@@ -309,12 +328,16 @@ func (h *CoreServer) GetProblemGenerator(ctx context.Context, request corev1.Get
 	if err != nil {
 		return nil, err
 	}
-	return corev1.GetProblemGenerator200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+	return corev1.GetProblemGenerator200TextResponse(string(content)), nil
 }
 
 // UpdateProblemGenerator handles PUT /problems/{problemId}/generators/{name}
 func (h *CoreServer) UpdateProblemGenerator(ctx context.Context, request corev1.UpdateProblemGeneratorRequestObject) (corev1.UpdateProblemGeneratorResponseObject, error) {
-	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, generatorDir, request.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, generatorDir, request.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.UpdateProblemGenerator200JSONResponse{Message: strPtr("Generator updated successfully")}, nil
@@ -328,8 +351,6 @@ func (h *CoreServer) DeleteProblemGenerator(ctx context.Context, request corev1.
 	return corev1.DeleteProblemGenerator200JSONResponse{Message: strPtr("Generator deleted successfully")}, nil
 }
 
-
-
 // ListProblemInteractors handles GET /problems/{problemId}/interactors
 func (h *CoreServer) ListProblemInteractors(ctx context.Context, request corev1.ListProblemInteractorsRequestObject) (corev1.ListProblemInteractorsResponseObject, error) {
 	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, interactorDir)
@@ -341,7 +362,11 @@ func (h *CoreServer) ListProblemInteractors(ctx context.Context, request corev1.
 
 // CreateProblemInteractor handles POST /problems/{problemId}/interactors
 func (h *CoreServer) CreateProblemInteractor(ctx context.Context, request corev1.CreateProblemInteractorRequestObject) (corev1.CreateProblemInteractorResponseObject, error) {
-	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, interactorDir, request.Params.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, interactorDir, request.Params.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.CreateProblemInteractor200JSONResponse{Message: strPtr("Interactor created successfully")}, nil
@@ -353,12 +378,16 @@ func (h *CoreServer) GetProblemInteractor(ctx context.Context, request corev1.Ge
 	if err != nil {
 		return nil, err
 	}
-	return corev1.GetProblemInteractor200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+	return corev1.GetProblemInteractor200TextResponse(string(content)), nil
 }
 
 // UpdateProblemInteractor handles PUT /problems/{problemId}/interactors/{name}
 func (h *CoreServer) UpdateProblemInteractor(ctx context.Context, request corev1.UpdateProblemInteractorRequestObject) (corev1.UpdateProblemInteractorResponseObject, error) {
-	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, interactorDir, request.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, interactorDir, request.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.UpdateProblemInteractor200JSONResponse{Message: strPtr("Interactor updated successfully")}, nil
@@ -372,8 +401,6 @@ func (h *CoreServer) DeleteProblemInteractor(ctx context.Context, request corev1
 	return corev1.DeleteProblemInteractor200JSONResponse{Message: strPtr("Interactor deleted successfully")}, nil
 }
 
-
-
 // ListProblemValidators handles GET /problems/{problemId}/validators
 func (h *CoreServer) ListProblemValidators(ctx context.Context, request corev1.ListProblemValidatorsRequestObject) (corev1.ListProblemValidatorsResponseObject, error) {
 	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, validatorDir)
@@ -385,7 +412,11 @@ func (h *CoreServer) ListProblemValidators(ctx context.Context, request corev1.L
 
 // CreateProblemValidator handles POST /problems/{problemId}/validators
 func (h *CoreServer) CreateProblemValidator(ctx context.Context, request corev1.CreateProblemValidatorRequestObject) (corev1.CreateProblemValidatorResponseObject, error) {
-	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, validatorDir, request.Params.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, validatorDir, request.Params.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.CreateProblemValidator200JSONResponse{Message: strPtr("Validator created successfully")}, nil
@@ -397,12 +428,16 @@ func (h *CoreServer) GetProblemValidator(ctx context.Context, request corev1.Get
 	if err != nil {
 		return nil, err
 	}
-	return corev1.GetProblemValidator200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+	return corev1.GetProblemValidator200TextResponse(string(content)), nil
 }
 
 // UpdateProblemValidator handles PUT /problems/{problemId}/validators/{name}
 func (h *CoreServer) UpdateProblemValidator(ctx context.Context, request corev1.UpdateProblemValidatorRequestObject) (corev1.UpdateProblemValidatorResponseObject, error) {
-	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, validatorDir, request.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, validatorDir, request.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.UpdateProblemValidator200JSONResponse{Message: strPtr("Validator updated successfully")}, nil
@@ -427,7 +462,11 @@ func (h *CoreServer) ListProblemLibs(ctx context.Context, request corev1.ListPro
 
 // CreateProblemLib handles POST /problems/{problemId}/lib
 func (h *CoreServer) CreateProblemLib(ctx context.Context, request corev1.CreateProblemLibRequestObject) (corev1.CreateProblemLibResponseObject, error) {
-	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Params.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, libDir, request.Params.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.CreateProblemLib200JSONResponse{Message: strPtr("Library file created successfully")}, nil
@@ -439,12 +478,16 @@ func (h *CoreServer) GetProblemLib(ctx context.Context, request corev1.GetProble
 	if err != nil {
 		return nil, err
 	}
-	return corev1.GetProblemLib200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+	return corev1.GetProblemLib200TextResponse(string(content)), nil
 }
 
 // UpdateProblemLib handles PUT /problems/{problemId}/lib/{name}
 func (h *CoreServer) UpdateProblemLib(ctx context.Context, request corev1.UpdateProblemLibRequestObject) (corev1.UpdateProblemLibResponseObject, error) {
-	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, libDir, request.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.UpdateProblemLib200JSONResponse{Message: strPtr("Library file updated successfully")}, nil
@@ -578,7 +621,11 @@ func (h *CoreServer) ListProblemWorkshopSubmissions(ctx context.Context, request
 
 // CreateProblemWorkshopSubmission handles POST /problems/{problemId}/submissions
 func (h *CoreServer) CreateProblemWorkshopSubmission(ctx context.Context, request corev1.CreateProblemWorkshopSubmissionRequestObject) (corev1.CreateProblemWorkshopSubmissionResponseObject, error) {
-	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, solutionDir, request.Params.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, solutionDir, request.Params.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.CreateProblemWorkshopSubmission200JSONResponse{Message: strPtr("Author solution file created successfully")}, nil
@@ -590,12 +637,16 @@ func (h *CoreServer) GetProblemWorkshopSubmission(ctx context.Context, request c
 	if err != nil {
 		return nil, err
 	}
-	return corev1.GetProblemWorkshopSubmission200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+	return corev1.GetProblemWorkshopSubmission200TextResponse(string(content)), nil
 }
 
 // UpdateProblemWorkshopSubmission handles PUT /problems/{problemId}/submissions/{name}
 func (h *CoreServer) UpdateProblemWorkshopSubmission(ctx context.Context, request corev1.UpdateProblemWorkshopSubmissionRequestObject) (corev1.UpdateProblemWorkshopSubmissionResponseObject, error) {
-	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, solutionDir, request.Name, request.Body); err != nil {
+	content := ""
+	if request.Body != nil {
+		content = string(*request.Body)
+	}
+	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, solutionDir, request.Name, content); err != nil {
 		return nil, err
 	}
 	return corev1.UpdateProblemWorkshopSubmission200JSONResponse{Message: strPtr("Author solution file updated successfully")}, nil
@@ -870,12 +921,9 @@ func validateCollectionFileExtension(dir, name string) error {
 	return nil
 }
 
-func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader, actionErrMsg string) error {
+func (h *CoreServer) saveWorkshopCollectionBytes(ctx context.Context, problemID uuid.UUID, dir, name string, content []byte, actionErrMsg string) error {
 	if !h.workshopUC.IsInitialized(ctx, problemID) {
 		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
-	}
-	if body == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
 
 	cleanName, err := sanitizeFileName(name)
@@ -887,9 +935,18 @@ func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID u
 		return pkg.Wrap(pkg.ErrBadInput, err, err.Error())
 	}
 
-	content, err := io.ReadAll(body)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to read request body")
+	var maxLimit int64
+	switch dir {
+	case testDir:
+		maxLimit = MaxTestFileSize
+	case mediaDir:
+		maxLimit = MaxMediaFileSize
+	default:
+		maxLimit = MaxSourceFileSize
+	}
+
+	if int64(len(content)) > maxLimit {
+		return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, fmt.Sprintf("file size (%d bytes) exceeds maximum allowed limit of %d bytes", len(content), maxLimit))
 	}
 
 	user := middleware.GetUser(ctx)
@@ -903,6 +960,51 @@ func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID u
 	}
 
 	return nil
+}
+
+func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader, actionErrMsg string) error {
+	if body == nil {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
+	}
+
+	var maxLimit int64
+	switch dir {
+	case testDir:
+		maxLimit = MaxTestFileSize
+	case mediaDir:
+		maxLimit = MaxMediaFileSize
+	default:
+		maxLimit = MaxSourceFileSize
+	}
+
+	limitedReader := io.LimitReader(body, maxLimit+1)
+	content, err := io.ReadAll(limitedReader)
+	if err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "failed to read request body")
+	}
+	if int64(len(content)) > maxLimit {
+		return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, fmt.Sprintf("file size exceeds maximum allowed limit of %d bytes", maxLimit))
+	}
+
+	return h.saveWorkshopCollectionBytes(ctx, problemID, dir, name, content, actionErrMsg)
+}
+
+func (h *CoreServer) createWorkshopCollectionTextFile(ctx context.Context, problemID uuid.UUID, dir, name, content string) error {
+	if dir == checkerDir || dir == generatorDir || dir == interactorDir || dir == validatorDir {
+		existing, err := h.workshopUC.ListProblemFiles(ctx, problemID, dir)
+		if err == nil {
+			for _, f := range existing {
+				if !f.IsDirectory {
+					return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("a component file already exists in %s. Only one instance is allowed per problem.", dir))
+				}
+			}
+		}
+	}
+	return h.saveWorkshopCollectionBytes(ctx, problemID, dir, name, []byte(content), "failed to create file")
+}
+
+func (h *CoreServer) updateWorkshopCollectionTextFile(ctx context.Context, problemID uuid.UUID, dir, name, content string) error {
+	return h.saveWorkshopCollectionBytes(ctx, problemID, dir, name, []byte(content), "failed to update file")
 }
 
 func (h *CoreServer) createWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader) error {

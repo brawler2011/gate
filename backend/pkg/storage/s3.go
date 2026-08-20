@@ -127,21 +127,43 @@ func (s *S3Storage) DeleteFile(ctx context.Context, bucket, key string) error {
 	return nil
 }
 
-// ListFiles lists files in an S3 bucket with the given prefix
-func (s *S3Storage) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {
+// ListObjects lists objects with metadata in an S3 bucket with the given prefix
+func (s *S3Storage) ListObjects(ctx context.Context, bucket, prefix string) ([]ObjectInfo, error) {
 	result, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
 		Prefix: aws.String(prefix),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list files from S3: %w", err)
+		return nil, fmt.Errorf("failed to list objects from S3: %w", err)
 	}
 
-	keys := make([]string, 0, len(result.Contents))
+	objects := make([]ObjectInfo, 0, len(result.Contents))
 	for _, obj := range result.Contents {
 		if obj.Key != nil {
-			keys = append(keys, *obj.Key)
+			size := int64(0)
+			if obj.Size != nil {
+				size = *obj.Size
+			}
+			objects = append(objects, ObjectInfo{
+				Key:  *obj.Key,
+				Size: size,
+			})
 		}
+	}
+
+	return objects, nil
+}
+
+// ListFiles lists files in an S3 bucket with the given prefix
+func (s *S3Storage) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {
+	objects, err := s.ListObjects(ctx, bucket, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]string, len(objects))
+	for i, obj := range objects {
+		keys[i] = obj.Key
 	}
 
 	return keys, nil

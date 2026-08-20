@@ -21,19 +21,12 @@ import {useEffect, useState, useTransition} from "react";
 import useSWR from "swr";
 
 import {api} from "@/lib/api";
-import {
-  createWorkshopTestFile,
-  generateWorkshopTests,
-  getWorkshopTestFile,
-  testWorkshopSolution,
-  updateWorkshopTestFile,
-} from "@/lib/workshop";
 
 import {SubtasksTable} from "./SubtasksTable";
 import {TestRenumberModal} from "./TestRenumberModal";
 import {TestsListTable} from "./TestsListTable";
 import {
-  formatPaddedOrdinal
+  formatPaddedOrdinal,
 } from "./types";
 
 import type {
@@ -85,15 +78,21 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
       }
 
       const [_filesErr, filesRes] = await api.listProblemTests({problemId});
-      const existingFiles = (filesRes?.files?.map((f: { path?: string; name?: string }) => f.path || f.name || "") || []).map(
-        (p: string) => p.split("/").pop() || p
-      );
+      const fileSizeMap = new Map<string, number>();
+      const existingFiles = (filesRes?.files || []).map((f: { path?: string; name?: string; size?: number }) => {
+        const name = (f.path || f.name || "").split("/").pop() || "";
+        if (name && typeof f.size === "number") {
+          fileSizeMap.set(name, f.size);
+        }
+        return name;
+      }).filter(Boolean);
 
       // Fetch tests config
-      const [_configErr, configText] = await getWorkshopTestFile(problemId, "tests.json");
+      const [_configErr, configBlob] = await api.getProblemTestFile({problemId, name: "tests.json"});
       let configData: { groups?: Record<string, unknown>[]; tests?: Record<string, unknown>[] } = {};
-      if (!_configErr && configText) {
+      if (!_configErr && configBlob) {
         try {
+          const configText = await configBlob.text();
           configData = JSON.parse(configText);
         } catch {
           configData = {};
@@ -145,10 +144,12 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
       // Build TestItems
       const loadedTests: TestItem[] = sortedOrdinals.map((ord) => {
         const padded = formatPaddedOrdinal(ord);
+        const inName = `${padded}.in`;
+        const outName = `${padded}.out`;
         const rawT = rawTests.find((t: Record<string, unknown>) => t.ordinal === ord);
 
-        const hasIn = existingFiles.includes(`${padded}.in`);
-        const hasOut = existingFiles.includes(`${padded}.out`);
+        const hasIn = existingFiles.includes(inName);
+        const hasOut = existingFiles.includes(outName);
 
         const subtaskNames = loadedSubtasks
           .filter((st) => st.testIds.includes(`test-id-${ord}`))
@@ -157,10 +158,12 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
         return {
           id: `test-id-${ord}`,
           ordinal: ord,
-          filename: `${padded}.in`,
-          outFilename: `${padded}.out`,
+          filename: inName,
+          outFilename: outName,
           hasIn,
           hasOut,
+          inSize: fileSizeMap.get(inName),
+          outSize: fileSizeMap.get(outName),
           isSample: !!rawT?.is_sample,
           method: rawT?.method === "generated" ? "generated" : "manual",
           generatorCommand: (rawT?.generator as string) || "",
@@ -226,8 +229,9 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
     const outFilename = `${padded}.out`;
 
     // Automatically create empty .in and .out files for the manual test
-    await createWorkshopTestFile(problemId, inFilename, "");
-    await createWorkshopTestFile(problemId, outFilename, "");
+    const emptyBlob = new Blob([""], {type: "application/octet-stream"});
+    await api.createProblemTestFile({problemId, name: inFilename, requestBody: emptyBlob});
+    await api.createProblemTestFile({problemId, name: outFilename, requestBody: emptyBlob});
 
     const newTest: TestItem = {
       id: newId,
@@ -305,11 +309,13 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
         for (const t of tests) {
           if (t.method === "manual") {
             if (!t.hasIn) {
-              await createWorkshopTestFile(problemId, t.filename, "");
+              const emptyBlob = new Blob([""], {type: "application/octet-stream"});
+              await api.createProblemTestFile({problemId, name: t.filename, requestBody: emptyBlob});
               t.hasIn = true;
             }
             if (!t.hasOut) {
-              await createWorkshopTestFile(problemId, t.outFilename, "");
+              const emptyBlob = new Blob([""], {type: "application/octet-stream"});
+              await api.createProblemTestFile({problemId, name: t.outFilename, requestBody: emptyBlob});
               t.hasOut = true;
             }
           }
@@ -393,7 +399,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
           tests: payloadTests,
         };
 
-        const [err] = await updateWorkshopTestFile(problemId, "tests.json", JSON.stringify(testsConfig, null, 2));
+        const [err] = await api.updateProblemTestsConfig({problemId, requestBody: testsConfig});
         if (err) {
           notifications.show({
             title: "Ошибка сохранения",
@@ -440,7 +446,14 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
         const genName = parts[0];
         const genArgs = parts.slice(1);
 
-        const [genErr] = await generateWorkshopTests(problemId, genName, [t.ordinal], [genArgs]);
+        const [genErr] = await api.generateTests({
+          problemId,
+          requestBody: {
+            generator_name: genName,
+            test_numbers: [t.ordinal],
+            arguments: [genArgs],
+          },
+        });
         if (genErr) {
           notifications.show({
             title: `Ошибка генерации теста №${t.ordinal}`,
@@ -481,7 +494,12 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
     setIsBatchRunning(true);
     try {
       const solutionPath = solutions[0];
-      const [err, report] = await testWorkshopSolution(problemId, solutionPath);
+      const [err, report] = await api.testSolution({
+        problemId,
+        requestBody: {
+          solution_path: solutionPath,
+        },
+      });
 
       if (err || !report) {
         notifications.show({

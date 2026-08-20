@@ -1,11 +1,6 @@
 "use client";
 
 import {api} from "@/lib/api";
-import {
-  createWorkshopValidatorFile,
-  getWorkshopValidatorFile,
-  updateWorkshopValidatorFile,
-} from "@/lib/workshop";
 
 import {WorkshopSingleComponentTab} from "./WorkshopSingleComponentTab";
 
@@ -20,9 +15,9 @@ export const WorkshopValidatorsTab = (props: WorkshopFileTabProps): ReactNode =>
       componentTitle="Валидатор"
       defaultFileName="validator"
       listFiles={(problemId) => api.listProblemValidators({problemId})}
-      getFile={getWorkshopValidatorFile}
-      createFile={createWorkshopValidatorFile}
-      updateFile={updateWorkshopValidatorFile}
+      getFile={(problemId, name) => api.getProblemValidator({problemId, name})}
+      createFile={(problemId, name, requestBody) => api.createProblemValidator({problemId, name, requestBody})}
+      updateFile={(problemId, name, requestBody) => api.updateProblemValidator({problemId, name, requestBody})}
       deleteFile={(problemId, name) => api.deleteProblemValidator({problemId, name})}
     />
   );

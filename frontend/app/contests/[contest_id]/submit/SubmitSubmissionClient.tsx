@@ -5,9 +5,9 @@ import {useRouter} from "next/navigation";
 import {useState} from "react";
 
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
+import {api} from "@/lib/api";
 import {LANGUAGE_MAP} from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
-import {createSolution} from "@/lib/workshop";
 
 import classes from "./SubmitSubmissionClient.module.css";
 
@@ -48,12 +48,22 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
       return null;
     }
 
-    const [error, response] = await createSolution(
-      selectedProblemId,
-      contest.id,
-      languageCode,
-      submission,
-    );
+    const submissionData = submission.get("submission");
+    let submissionContent = "";
+    if (submissionData instanceof File) {
+      submissionContent = await submissionData.text();
+    } else if (typeof submissionData === "string") {
+      submissionContent = submissionData;
+    }
+
+    const [error, response] = await api.createSubmission({
+      problemId: selectedProblemId,
+      contestId: contest.id,
+      language: languageCode,
+      requestBody: {
+        submission: submissionContent,
+      },
+    });
 
     if (error) {
       console.error("Failed to create submission:", error);

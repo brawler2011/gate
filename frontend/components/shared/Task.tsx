@@ -19,13 +19,13 @@ import {Layout} from "@/components/shared";
 import {Footer} from "@/components/shared/Footer";
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
 import {RecentSubmissionsTable} from "@/components/submissions/RecentSubmissionsTable";
+import {api} from "@/lib/api";
 import {
   CONTEST_SIDEBAR_LEFT_WIDTH,
   CONTEST_SIDEBAR_RIGHT_WIDTH,
   LANGUAGE_MAP,
 } from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
-import {createSolution} from "@/lib/workshop";
 
 import type {
   ContestModel,
@@ -72,12 +72,22 @@ const Task = ({
       return null;
     }
 
-    const [error, response] = await createSolution(
+    const submissionData = submission.get("submission");
+    let submissionContent = "";
+    if (submissionData instanceof File) {
+      submissionContent = await submissionData.text();
+    } else if (typeof submissionData === "string") {
+      submissionContent = submissionData;
+    }
+
+    const [error, response] = await api.createSubmission({
       problemId,
       contestId,
-      languageCode,
-      submission,
-    );
+      language: languageCode,
+      requestBody: {
+        submission: submissionContent,
+      },
+    });
 
     if (error) {
       console.error("Failed to create submission:", error);

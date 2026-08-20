@@ -1,11 +1,6 @@
 "use client";
 
 import {api} from "@/lib/api";
-import {
-  createWorkshopCheckerFile,
-  getWorkshopCheckerFile,
-  updateWorkshopCheckerFile,
-} from "@/lib/workshop";
 
 import {WorkshopSingleComponentTab} from "./WorkshopSingleComponentTab";
 
@@ -20,9 +15,9 @@ export const WorkshopCheckersTab = (props: WorkshopFileTabProps): ReactNode => {
       componentTitle="Чекер"
       defaultFileName="checker"
       listFiles={(problemId) => api.listProblemCheckers({problemId})}
-      getFile={getWorkshopCheckerFile}
-      createFile={createWorkshopCheckerFile}
-      updateFile={updateWorkshopCheckerFile}
+      getFile={(problemId, name) => api.getProblemChecker({problemId, name})}
+      createFile={(problemId, name, requestBody) => api.createProblemChecker({problemId, name, requestBody})}
+      updateFile={(problemId, name, requestBody) => api.updateProblemChecker({problemId, name, requestBody})}
       deleteFile={(problemId, name) => api.deleteProblemChecker({problemId, name})}
     />
   );

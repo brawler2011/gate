@@ -1593,10 +1593,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Checker created successfully
@@ -1624,10 +1623,9 @@ paths:
         "200":
           description: Checker content
           content:
-            application/octet-stream:
+            text/plain:
               schema:
                 type: string
-                format: binary
     put:
       operationId: UpdateProblemChecker
       summary: Update checker file
@@ -1646,10 +1644,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Checker updated successfully
@@ -1716,10 +1713,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Generator created successfully
@@ -1747,10 +1743,9 @@ paths:
         "200":
           description: Generator content
           content:
-            application/octet-stream:
+            text/plain:
               schema:
                 type: string
-                format: binary
     put:
       operationId: UpdateProblemGenerator
       summary: Update generator file
@@ -1769,10 +1764,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Generator updated successfully
@@ -1839,10 +1833,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Interactor created successfully
@@ -1870,10 +1863,9 @@ paths:
         "200":
           description: Interactor content
           content:
-            application/octet-stream:
+            text/plain:
               schema:
                 type: string
-                format: binary
     put:
       operationId: UpdateProblemInteractor
       summary: Update interactor file
@@ -1892,10 +1884,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Interactor updated successfully
@@ -2084,10 +2075,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Library file created successfully
@@ -2115,10 +2105,9 @@ paths:
         "200":
           description: Library file content
           content:
-            application/octet-stream:
+            text/plain:
               schema:
                 type: string
-                format: binary
     put:
       operationId: UpdateProblemLib
       summary: Update library file
@@ -2137,10 +2126,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Library file updated successfully
@@ -2206,10 +2194,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Author solution file created successfully
@@ -2237,10 +2224,9 @@ paths:
         "200":
           description: Author solution file content
           content:
-            application/octet-stream:
+            text/plain:
               schema:
                 type: string
-                format: binary
     put:
       operationId: UpdateProblemWorkshopSubmission
       summary: Update author solution file
@@ -2259,10 +2245,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Author solution file updated successfully
@@ -2474,10 +2459,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Validator created successfully
@@ -2505,10 +2489,9 @@ paths:
         "200":
           description: Validator content
           content:
-            application/octet-stream:
+            text/plain:
               schema:
                 type: string
-                format: binary
     put:
       operationId: UpdateProblemValidator
       summary: Update validator file
@@ -2527,10 +2510,9 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          text/plain:
             schema:
               type: string
-              format: binary
       responses:
         "200":
           description: Validator updated successfully

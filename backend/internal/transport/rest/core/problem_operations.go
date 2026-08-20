@@ -30,10 +30,14 @@ func (h *CoreServer) ImportProblem(ctx context.Context, request corev1.ImportPro
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "expected 'package' field")
 	}
 
-	// Read file into memory
-	fileBytes, err := io.ReadAll(part)
+	// Read file into memory (limited to MaxPackageZipSize + 1)
+	limitedReader := io.LimitReader(part, MaxPackageZipSize+1)
+	fileBytes, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to read file")
+	}
+	if int64(len(fileBytes)) > MaxPackageZipSize {
+		return nil, pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "package zip exceeds maximum allowed size of 500MB")
 	}
 
 	// Import problem

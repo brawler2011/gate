@@ -28,9 +28,6 @@ import {useState, useRef, useTransition} from "react";
 import useSWR from "swr";
 
 import {api} from "@/lib/api";
-import {
-  uploadWorkshopMediaBinary,
-} from "@/lib/workshop";
 
 import classes from "./WorkshopFolderTab.module.css";
 
@@ -76,13 +73,15 @@ export const WorkshopMediaTab = ({
     }
 
     const file = uploadedFiles[0];
-    const formData = new FormData();
-    formData.append("problemId", problemId);
-    formData.append("name", file.name);
-    formData.append("file", file);
 
     startUploading(async () => {
-      const [err] = await uploadWorkshopMediaBinary(formData);
+      const arrayBuffer = await file.arrayBuffer();
+      const blob = new Blob([arrayBuffer], {type: file.type || "application/octet-stream"});
+      const [err] = await api.createProblemMediaFile({
+        problemId,
+        name: file.name,
+        requestBody: blob,
+      });
       if (err) {
         notifications.show({
           title: "Ошибка загрузки",

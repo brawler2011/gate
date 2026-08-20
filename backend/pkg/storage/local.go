@@ -105,8 +105,8 @@ func removeEmptyParents(dir, bucketDir, basePath string) {
 	}
 }
 
-// ListFiles lists all files in the bucket subdirectory matching prefix recursively
-func (s *LocalStorage) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {
+// ListObjects lists all files with metadata in the bucket subdirectory matching prefix recursively
+func (s *LocalStorage) ListObjects(ctx context.Context, bucket, prefix string) ([]ObjectInfo, error) {
 	bucketDir := filepath.Join(s.basePath, bucket)
 
 	if _, statErr := os.Stat(bucketDir); os.IsNotExist(statErr) {
@@ -114,7 +114,7 @@ func (s *LocalStorage) ListFiles(ctx context.Context, bucket, prefix string) ([]
 		return nil, nil
 	}
 
-	var files []string
+	var objects []ObjectInfo
 	err := filepath.WalkDir(bucketDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -137,15 +137,37 @@ func (s *LocalStorage) ListFiles(ctx context.Context, bucket, prefix string) ([]
 		// Normalize paths to forward slashes for unified key representation
 		key := filepath.ToSlash(rel)
 		if strings.HasPrefix(key, prefix) {
-			files = append(files, key)
+			size := int64(0)
+			if info, err := d.Info(); err == nil {
+				size = info.Size()
+			}
+			objects = append(objects, ObjectInfo{
+				Key:  key,
+				Size: size,
+			})
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list local files: %w", err)
+		return nil, fmt.Errorf("failed to list local objects: %w", err)
 	}
 
-	return files, nil
+	return objects, nil
+}
+
+// ListFiles lists all files in the bucket subdirectory matching prefix recursively
+func (s *LocalStorage) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {
+	objects, err := s.ListObjects(ctx, bucket, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]string, len(objects))
+	for i, obj := range objects {
+		keys[i] = obj.Key
+	}
+
+	return keys, nil
 }
 
 // GetPresignedURL returns a direct HTTP URL to download/view the file via the file serving endpoint

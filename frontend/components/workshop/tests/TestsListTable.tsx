@@ -55,7 +55,7 @@ export const TestsListTable = ({
 }: Props): ReactNode => {
   const [deletingTestId, setDeletingTestId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [previewFile, setPreviewFile] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<{name: string; size?: number} | null>(null);
   const [verdictModalData, setVerdictModalData] = useState<{
     title: string;
     verdictBadge?: { label: string; color: string };
@@ -295,7 +295,7 @@ export const TestsListTable = ({
                           color={test.hasIn ? "blue" : "gray"}
                           size="xs"
                           style={{cursor: "pointer"}}
-                          onClick={() => setPreviewFile(`${paddedOrd}.in`)}
+                          onClick={() => setPreviewFile({name: `${paddedOrd}.in`, size: test.inSize})}
                         >
                           {paddedOrd}.in {test.hasIn ? "✓" : "✗"}
                         </Badge>
@@ -305,7 +305,7 @@ export const TestsListTable = ({
                           color={test.hasOut ? "green" : "gray"}
                           size="xs"
                           style={{cursor: "pointer"}}
-                          onClick={() => setPreviewFile(`${paddedOrd}.out`)}
+                          onClick={() => setPreviewFile({name: `${paddedOrd}.out`, size: test.outSize})}
                         >
                           {paddedOrd}.out {test.hasOut ? "✓" : "✗"}
                         </Badge>
@@ -459,7 +459,8 @@ export const TestsListTable = ({
           opened={!!previewFile}
           onClose={() => setPreviewFile(null)}
           problemId={problemId}
-          filename={previewFile}
+          filename={previewFile.name}
+          fileSize={previewFile.size}
           onSaved={onSavedPreviewFile}
         />
       )}

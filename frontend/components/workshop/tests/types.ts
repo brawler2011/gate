@@ -5,6 +5,8 @@ export type TestItem = {
   outFilename: string;
   hasIn: boolean;
   hasOut: boolean;
+  inSize?: number;
+  outSize?: number;
   isSample: boolean;
   method: "manual" | "generated";
   generatorCommand?: string;

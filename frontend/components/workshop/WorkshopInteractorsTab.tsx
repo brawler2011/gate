@@ -1,11 +1,6 @@
 "use client";
 
 import {api} from "@/lib/api";
-import {
-  createWorkshopInteractorFile,
-  getWorkshopInteractorFile,
-  updateWorkshopInteractorFile,
-} from "@/lib/workshop";
 
 import {WorkshopSingleComponentTab} from "./WorkshopSingleComponentTab";
 
@@ -20,9 +15,9 @@ export const WorkshopInteractorsTab = (props: WorkshopFileTabProps): ReactNode =
       componentTitle="Интерактор"
       defaultFileName="interactor"
       listFiles={(problemId) => api.listProblemInteractors({problemId})}
-      getFile={getWorkshopInteractorFile}
-      createFile={createWorkshopInteractorFile}
-      updateFile={updateWorkshopInteractorFile}
+      getFile={(problemId, name) => api.getProblemInteractor({problemId, name})}
+      createFile={(problemId, name, requestBody) => api.createProblemInteractor({problemId, name, requestBody})}
+      updateFile={(problemId, name, requestBody) => api.updateProblemInteractor({problemId, name, requestBody})}
       deleteFile={(problemId, name) => api.deleteProblemInteractor({problemId, name})}
     />
   );
