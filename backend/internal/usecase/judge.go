@@ -171,6 +171,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	if targetPkg.PackageHash == "" {
 		readyPackage, err := uc.packagesRepo.GetReadyPackage(ctx, *submission.ProblemID)
 		if err != nil {
+			uc.markInternalError(ctx, submissionID, submission.Penalty, meta, fmt.Errorf("problem has no published version: %w", err))
 			return fmt.Errorf("problem has no published version")
 		}
 		targetPkg = readyPackage
@@ -178,6 +179,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 
 	pkg, err := uc.packageLoader.LoadPackage(ctx, submission.ProblemID.String(), targetPkg.PackageHash)
 	if err != nil {
+		uc.markInternalError(ctx, submissionID, submission.Penalty, meta, fmt.Errorf("failed to load problem package: %w", err))
 		return fmt.Errorf("failed to load problem package: %w", err)
 	}
 	defer pkg.Cleanup()
@@ -188,6 +190,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 
 	compiledComponents, err := uc.compileComponents(ctx, pkg.Format, *submission.ProblemID)
 	if err != nil {
+		uc.markInternalError(ctx, submissionID, submission.Penalty, meta, fmt.Errorf("failed to compile components: %w", err))
 		return fmt.Errorf("failed to compile components: %w", err)
 	}
 
@@ -203,20 +206,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 
 	verdict, err := strategy.Judge(ctx, submissionID, submission.Submission, submission.Language, meta)
 	if err != nil {
-		updateErr := uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
-			State:      models.GotRE,
-			Score:      0,
-			TimeStat:   0,
-			MemoryStat: 0,
-		})
-		if updateErr != nil {
-			uc.logger.Error("failed to update submission with error", "error", updateErr)
-		}
-
-		if pubErr := uc.eventPublisher.PublishCompleted(ctx, submissionID, models.GotRE, 0, 0, 0, submission.Penalty, meta); pubErr != nil {
-			uc.logger.Error("failed to publish completed event", "error", pubErr)
-		}
-
+		uc.markInternalError(ctx, submissionID, submission.Penalty, meta, fmt.Errorf("strategy judging failed: %w", err))
 		return fmt.Errorf("judging failed: %w", err)
 	}
 
@@ -265,6 +255,23 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	return nil
 }
 
+func (uc *JudgeUseCase) markInternalError(ctx context.Context, submissionID uuid.UUID, penalty int32, meta models.SubmissionEventMeta, err error) {
+	uc.logger.Error("judging failed with internal error", "submission_id", submissionID, "error", err)
+	updateErr := uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
+		State:      models.GotIE,
+		Score:      0,
+		TimeStat:   0,
+		MemoryStat: 0,
+	})
+	if updateErr != nil {
+		uc.logger.Error("failed to update submission with error", "error", updateErr)
+	}
+
+	if pubErr := uc.eventPublisher.PublishCompleted(ctx, submissionID, models.GotIE, 0, 0, 0, penalty, meta); pubErr != nil {
+		uc.logger.Error("failed to publish completed event", "error", pubErr)
+	}
+}
+
 func stateToVerdictString(s models.State) string {
 	switch s {
 	case models.Accepted:
@@ -281,6 +288,8 @@ func stateToVerdictString(s models.State) string {
 		return "Presentation Error"
 	case models.GotCE:
 		return "Compilation Error"
+	case models.GotIE:
+		return "Internal Error"
 	default:
 		return "Unknown"
 	}

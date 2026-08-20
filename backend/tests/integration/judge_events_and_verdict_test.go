@@ -65,6 +65,20 @@ func TestVerdictCalculation(t *testing.T) {
 		assert.Equal(t, models.GotTL, verdict.State)
 	})
 
+	t.Run("StandardVerdict_InternalError", func(t *testing.T) {
+		calculator := judge.NewVerdictCalculator("pass-fail", testProblem())
+
+		results := []judge.TestResult{
+			{TestNumber: 1, Verdict: "IE", Message: "Internal error reading test"},
+		}
+
+		verdict := calculator.Calculate(results)
+		assert.Equal(t, models.GotIE, verdict.State)
+		assert.Equal(t, int32(0), verdict.Score)
+		assert.NotNil(t, verdict.FailedTest)
+		assert.Equal(t, 1, *verdict.FailedTest)
+	})
+
 	t.Run("ScoringVerdict_PartialScore", func(t *testing.T) {
 		prob := testProblemWithGroups()
 		calculator := judge.NewVerdictCalculator("scoring", prob)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -69,10 +70,43 @@ func (g *GateFormat) GetLib(name string) ([]byte, error) {
 
 // GetTestInput reads the content of the specified test input file.
 func (g *GateFormat) GetTestInput(name string) ([]byte, error) {
-	return readFile(filepath.Join(g.Path, "tests", name))
+	candidates := []string{name}
+	ext := filepath.Ext(name)
+	stem := strings.TrimSuffix(name, ext)
+	if stem != "" && stem != name {
+		candidates = append(candidates, stem+".in", stem+".input")
+	} else {
+		candidates = append(candidates, name+".in", name+".input")
+	}
+
+	for _, cand := range candidates {
+		data, err := readFile(filepath.Join(g.Path, "tests", cand))
+		if err == nil {
+			return data, nil
+		}
+	}
+	return nil, fmt.Errorf("test input file not found for %s", name)
 }
 
 // GetTestOutput reads the content of the specified test output file.
 func (g *GateFormat) GetTestOutput(name string) ([]byte, error) {
-	return readFile(filepath.Join(g.Path, "tests", name))
+	var candidates []string
+	ext := filepath.Ext(name)
+	stem := strings.TrimSuffix(name, ext)
+
+	if ext == ".out" || ext == ".ans" || ext == ".a" || ext == ".output" {
+		candidates = append(candidates, name)
+	}
+	if stem != "" {
+		candidates = append(candidates, stem+".out", stem+".ans", stem+".a", stem+".output")
+	}
+	candidates = append(candidates, name+".out", name+".ans", name+".a", name+".output")
+
+	for _, cand := range candidates {
+		data, err := readFile(filepath.Join(g.Path, "tests", cand))
+		if err == nil {
+			return data, nil
+		}
+	}
+	return nil, fmt.Errorf("test output file not found for %s", name)
 }

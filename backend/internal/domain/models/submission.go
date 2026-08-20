@@ -35,6 +35,7 @@ const (
 	GotRE State = 104 // runtime error
 	GotPE State = 105 // presentation error
 	GotWA State = 106 // wrong answer
+	GotIE State = 107 // internal error
 
 	Accepted State = 200 // accepted
 )

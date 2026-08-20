@@ -77,18 +77,33 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 
 		input, err := s.getTestInput(ctx, tc.Test)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get input for test %d: %w", tc.TestIndex, err)
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get input for test %d: %v", tc.TestIndex, err),
+			})
+			break
 		}
 
 		answer, err := s.getTestAnswer(ctx, tc.Test, input)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get answer for test %d: %w", tc.TestIndex, err)
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get answer for test %d: %v", tc.TestIndex, err),
+			})
+			break
 		}
 
 		// Run solution
 		runRes, err := s.sandbox.Test(ctx, solExec, languageStr, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
 		if err != nil {
-			return nil, fmt.Errorf("failed to run solution for test %d: %w", tc.TestIndex, err)
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to run solution for test %d: %v", tc.TestIndex, err),
+			})
+			break
 		}
 
 		verdict := string(runRes.Status)
@@ -190,13 +205,12 @@ func (s *StandardStrategy) getTestInput(ctx context.Context, test gfmt.Test) ([]
 func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, input []byte) ([]byte, error) {
 	if test.Manual != "" {
 		data, err := s.pkg.GetTestOutput(test.Manual)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			return data, nil
 		}
-		return data, nil
 	}
 
-	// Generated test -> run correct solution
+	// Generated test or manual test without pre-computed answer -> run correct solution
 	var okSol string
 	for solFile, tag := range s.pkg.Problem.Solutions {
 		if tag == "OK" || tag == "Accepted" || tag == "main" {
@@ -205,7 +219,7 @@ func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, in
 		}
 	}
 	if okSol == "" {
-		return nil, fmt.Errorf("no correct solution found to generate answer")
+		return nil, fmt.Errorf("no test answer file or correct solution found to generate answer")
 	}
 
 	solExec, exists := s.compiledComponents["correct_sol"]
@@ -217,7 +231,7 @@ func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, in
 		lang := detectLanguage(filepath.Ext(okSol))
 		compiled, err := s.sandbox.Compile(ctx, data, lang, nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to compile correct solution %s: %w", okSol, err)
 		}
 		solExec = compiled
 		s.compiledComponents["correct_sol"] = solExec
@@ -225,10 +239,10 @@ func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, in
 
 	runRes, err := s.sandbox.Test(ctx, solExec, detectLanguage(filepath.Ext(okSol)), input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to run correct solution: %w", err)
 	}
 	if runRes.Status != sandbox.StatusOK {
-		return nil, fmt.Errorf("correct solution failed to run: %s", runRes.Status)
+		return nil, fmt.Errorf("correct solution failed to run: %s (stderr: %s)", runRes.Status, string(runRes.Stderr))
 	}
 	return runRes.Stdout, nil
 }
@@ -294,17 +308,32 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 
 		input, err := wrapper.getTestInput(ctx, tc.Test)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get input for test %d: %w", tc.TestIndex, err)
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get input for test %d: %v", tc.TestIndex, err),
+			})
+			break
 		}
 
 		answer, err := wrapper.getTestAnswer(ctx, tc.Test, input)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get answer for test %d: %w", tc.TestIndex, err)
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get answer for test %d: %v", tc.TestIndex, err),
+			})
+			break
 		}
 
 		runRes, err := s.sandbox.Test(ctx, solExec, languageStr, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
 		if err != nil {
-			return nil, fmt.Errorf("failed to run solution for test %d: %w", tc.TestIndex, err)
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to run solution for test %d: %v", tc.TestIndex, err),
+			})
+			break
 		}
 
 		verdict := string(runRes.Status)
@@ -398,12 +427,22 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 
 		input, err := wrapper.getTestInput(ctx, tc.Test)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get input for test %d: %w", tc.TestIndex, err)
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get input for test %d: %v", tc.TestIndex, err),
+			})
+			break
 		}
 
 		interactRes, err := s.sandbox.Interact(ctx, solExec, languageStr, interactorExec, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
 		if err != nil {
-			return nil, fmt.Errorf("failed to interact for test %d: %w", tc.TestIndex, err)
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to interact for test %d: %v", tc.TestIndex, err),
+			})
+			break
 		}
 
 		res := TestResult{

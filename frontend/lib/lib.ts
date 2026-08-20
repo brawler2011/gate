@@ -39,6 +39,8 @@ export const StateColor = (state?: number | string): string => {
       return "red"; // Presentation Error
     case 106:
       return "red"; // Wrong Answer
+    case 107:
+      return "purple"; // Internal Error
     case 200:
       return "green"; // Accepted
     default:
@@ -74,6 +76,9 @@ export const StateString = (state?: number | string, failedTest?: number | null)
       break;
     case 106:
       baseString = "Неправильный ответ";
+      break;
+    case 107:
+      baseString = "Ошибка тестирующей системы";
       break;
     case 200:
       return "Принято"; // Accepted - no failed test

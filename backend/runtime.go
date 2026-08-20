@@ -143,14 +143,14 @@ func runApp(envFile string) error {
 	logger.Info("successfully initialized repositories")
 
 	var store storage.Storage
-	if cfg.StorageType == "s3" {
+	if cfg.StorageType == "s3" || (cfg.StorageType != "local" && cfg.S3Endpoint != "") {
 		store = storage.NewS3Storage(storage.S3Config{
 			Endpoint:  cfg.S3Endpoint,
 			AccessKey: cfg.S3AccessKey,
 			SecretKey: cfg.S3SecretKey,
 			Region:    defaultS3Region,
 		})
-		logger.Info("successfully initialized S3 storage client")
+		logger.Info("successfully initialized S3 storage client", slog.String("endpoint", cfg.S3Endpoint))
 	} else {
 		store = storage.NewLocalStorage(cfg.LocalStoragePath)
 		logger.Info("successfully initialized Local filesystem storage client", slog.String("path", cfg.LocalStoragePath))

@@ -156,27 +156,13 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 	telemetry.RecordJudgeDuration(judgeCtx, duration.Seconds())
 
 	if err != nil {
-		telemetry.RecordNATSNak(judgeCtx)
-		telemetry.RecordJudgeRetry(judgeCtx)
 		logger.Error("judging failed",
 			"submission_id", event.Id,
 			"error", err,
 			"duration", duration,
 		)
-
-		// Check if we should retry
-		meta, metaErr := msg.Metadata()
-		if metaErr == nil && meta.NumDelivered < 3 {
-			// Retry with backoff
-			if err := msg.NakWithDelay(time.Duration(meta.NumDelivered) * 30 * time.Second); err != nil {
-				logger.Error("failed to nak with delay", "error", err)
-			}
-			return
-		}
-
-		// Max retries exceeded, terminate message
-		if err := msg.Term(); err != nil {
-			logger.Error("failed to terminate message", "error", err)
+		if ackErr := msg.Ack(); ackErr != nil {
+			logger.Error("failed to ack message after judging failure", "error", ackErr)
 		}
 		return
 	}

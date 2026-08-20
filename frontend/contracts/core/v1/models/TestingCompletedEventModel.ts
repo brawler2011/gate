@@ -48,6 +48,7 @@ export namespace TestingCompletedEventModel {
         '_104' = 104,
         '_105' = 105,
         '_106' = 106,
+        '_107' = 107,
         '_200' = 200,
     }
 }

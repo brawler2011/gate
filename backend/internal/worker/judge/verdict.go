@@ -71,8 +71,10 @@ func MapSandboxVerdict(verdict string) models.State {
 		return models.GotPE
 	case "CE", "Compilation Error":
 		return models.GotCE
+	case "IE", "FAIL", "FileError", "DangerousSyscall", "InternalError", "Internal Error":
+		return models.GotIE
 	default:
-		return models.GotRE // default to runtime error for unknown verdicts
+		return models.GotIE
 	}
 }
 
