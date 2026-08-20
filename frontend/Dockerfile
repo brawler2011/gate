@@ -1,19 +1,13 @@
-# Многоступенчатая сборка для оптимизации размера образа
-
-# Этап 1: Сборка приложения
-FROM oven/bun:1-alpine AS builder
+FROM oven/bun:canary-slim AS builder
 WORKDIR /app
 
-# Копируем файлы зависимостей и устанавливаем зависимости
 COPY package.json bun.lock ./
-# Кешируем зависимости bun для ускорения установки
-RUN --mount=type=cache,id=bun-cache,target=/root/.bun/install/cache \
-    bun install
 
-# Копируем остальные файлы
+RUN --mount=type=cache,id=bun-cache,target=/root/.bun/install/cache \
+  bun install
+
 COPY . .
 
-# Переменные окружения для сборки
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -29,28 +23,22 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_WEBSOCKET_URL
 ENV NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL
 
-# Собираем приложение с использованием кэша Next.js
 RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
-    bun run next build
+  bun run next build
 
-# Этап 2: Production образ
-# Очень важно!!! Использовать oven/bun:1-slim Не alpine! Bun не оптимизирован под alpine
-FROM oven/bun:1-slim AS runner
+FROM oven/bun:canary-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Создаем пользователя для безопасности
 RUN groupadd --system --gid 1001 nodejs && \
-    useradd --system --uid 1001 -g nodejs nextjs
+  useradd --system --uid 1001 -g nodejs nextjs
 
-# Копируем необходимые файлы из builder
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Меняем владельца файлов
 RUN chown -R nextjs:nodejs /app
 
 USER nextjs
@@ -60,5 +48,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Запускаем приложение
 CMD ["bun", "server.js"]

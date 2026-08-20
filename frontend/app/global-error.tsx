@@ -4,12 +4,12 @@ import Link from "next/link";
 
 import type {ReactNode} from "react";
 
-type GlobalErrorProps = {
+type Props = {
   error: Error & { digest?: string };
   reset: () => void;
 };
 
-const GlobalError = ({error, reset}: GlobalErrorProps): ReactNode => {
+const Page = ({error, reset}: Props): ReactNode => {
   return (
     <html lang="ru">
       <body>
@@ -41,11 +41,11 @@ const GlobalError = ({error, reset}: GlobalErrorProps): ReactNode => {
             <p style={{marginTop: 0, color: "#c6c6c6"}}>
               Попробуйте обновить страницу или вернуться на главную.
             </p>
-            {error.digest ? (
+            {error.digest && (
               <p style={{color: "#9c9c9c", fontSize: "0.9rem"}}>
                 ID ошибки: {error.digest}
               </p>
-            ) : null}
+            )}
             <div style={{display: "flex", gap: "12px", marginTop: "16px"}}>
               <button
                 type="button"
@@ -72,4 +72,4 @@ const GlobalError = ({error, reset}: GlobalErrorProps): ReactNode => {
   );
 };
 
-export default GlobalError;
+export default Page;
