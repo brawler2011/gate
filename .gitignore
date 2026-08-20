@@ -1,4 +1,7 @@
 .*
+!*.env.example
+!.env.example
+!**/.env.example
 !.github/
 .github/*
 !.github/workflows/
