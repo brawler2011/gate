@@ -1,9 +1,11 @@
 import {describe, it, expect} from "bun:test";
+
 import type {ScoreboardItemModel, ScoreboardProblemResultModel, ScoreboardProblemHeaderModel} from "../contracts/core/v1";
 
 // Logic mirror extracted from ContestMonitorTable.tsx for empirical verification
 
-export function computeCellDisplay(res?: ScoreboardProblemResultModel | null) {
+export const computeCellDisplay = (res?: ScoreboardProblemResultModel | null
+): {label: string | null, cssClass: string | null} => {
   if (!res) {
     return {label: null, cssClass: null};
   }
@@ -34,12 +36,12 @@ export function computeCellDisplay(res?: ScoreboardProblemResultModel | null) {
   }
 
   return {label: null, cssClass: null};
-}
+};
 
-export function computeProblemSummary(
+export const computeProblemSummary = (
   problems: ScoreboardProblemHeaderModel[],
   items: ScoreboardItemModel[]
-) {
+): { solvedCounts: Record<string, number>; attemptedCounts: Record<string, number> } => {
   const solvedCounts: Record<string, number> = {};
   const attemptedCounts: Record<string, number> = {};
 
@@ -60,16 +62,16 @@ export function computeProblemSummary(
   }
 
   return {solvedCounts, attemptedCounts};
-}
+};
 
-export function handleWsSubmission(
+export const handleWsSubmission = (
   prevItems: ScoreboardItemModel[],
   payload: {user_id: string; problem_id: string; state: number; created_at?: string},
   isFrozen: boolean,
   showRealMonitor: boolean,
   startTime?: string | null,
   penaltyPerAttempt: number = 20
-): ScoreboardItemModel[] {
+): ScoreboardItemModel[] => {
   if (payload.state === 1 || payload.state === 101) {
     return prevItems;
   }
@@ -91,11 +93,11 @@ export function handleWsSubmission(
       pIndex !== -1
         ? {...pResults[pIndex]}
         : {
-            problem_id: problemId,
-            solved: false,
-            failed_attempts: 0,
-            pending_attempts: 0,
-          };
+          problem_id: problemId,
+          solved: false,
+          failed_attempts: 0,
+          pending_attempts: 0,
+        };
 
     pResult.pending_attempts = (pResult.pending_attempts || 0) + 1;
 
@@ -134,11 +136,11 @@ export function handleWsSubmission(
     pIndex !== -1
       ? {...pResults[pIndex]}
       : {
-          problem_id: problemId,
-          solved: false,
-          failed_attempts: 0,
-          pending_attempts: 0,
-        };
+        problem_id: problemId,
+        solved: false,
+        failed_attempts: 0,
+        pending_attempts: 0,
+      };
 
   if (pResult.solved) {
     return prevItems;
@@ -217,7 +219,7 @@ export function handleWsSubmission(
   });
 
   return newItems;
-}
+};
 
 describe("Frontend Scoreboard Freeze Empirical Tests", () => {
   describe("1. Cell Display Text & Styling Matrix", () => {

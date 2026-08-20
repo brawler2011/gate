@@ -98,7 +98,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Nil(t, resp)
-		assert.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.NoPermission)
 		assert.Equal(t, 403, pkg.ToREST(err))
 		mockContests.AssertNotCalled(t, "GetContestScoreboard", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
@@ -246,7 +246,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Nil(t, resp)
-		assert.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.NoPermission)
 		assert.Equal(t, 403, pkg.ToREST(err))
 	})
 
@@ -304,7 +304,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Nil(t, resp)
-		assert.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.NoPermission)
 		assert.Equal(t, 403, pkg.ToREST(err))
 	})
 }

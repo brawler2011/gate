@@ -15,10 +15,11 @@ func TestContest_FreezeBoundaryAndStress(t *testing.T) {
 
 	startTime := time.Date(2026, 8, 19, 12, 0, 0, 0, time.UTC)
 	endTime := time.Date(2026, 8, 19, 17, 0, 0, 0, time.UTC) // 5 hour contest
-	freezeDuration := int32(60)                               // 1 hour freeze
+	freezeDuration := int32(60)                              // 1 hour freeze
 	freezeTime := endTime.Add(-60 * time.Minute)             // 16:00:00
 
 	t.Run("Auto Mode Exact Nanosecond Boundaries", func(t *testing.T) {
+		t.Parallel()
 		c := models.Contest{
 			StartTime: &startTime,
 			EndTime:   &endTime,
@@ -51,6 +52,8 @@ func TestContest_FreezeBoundaryAndStress(t *testing.T) {
 	})
 
 	t.Run("Manual Frozen Override Modes", func(t *testing.T) {
+		t.Parallel()
+
 		// Manual frozen with 0 duration
 		cFrozenZeroDur := models.Contest{
 			StartTime: &startTime,
@@ -80,6 +83,8 @@ func TestContest_FreezeBoundaryAndStress(t *testing.T) {
 	})
 
 	t.Run("Manual Unfrozen Override Modes", func(t *testing.T) {
+		t.Parallel()
+
 		// Unfrozen mode overrides timer even during freeze window and after end time
 		cUnfrozen := models.Contest{
 			StartTime: &startTime,
@@ -98,6 +103,8 @@ func TestContest_FreezeBoundaryAndStress(t *testing.T) {
 	})
 
 	t.Run("Auto Mode With Duration Exceeding Contest Duration", func(t *testing.T) {
+		t.Parallel()
+
 		// Contest is 5 hours (300 min), freeze duration is 400 min
 		// Freeze begins 100 min before contest start -> frozen throughout contest
 		cOverFreeze := models.Contest{
@@ -117,6 +124,8 @@ func TestContest_FreezeBoundaryAndStress(t *testing.T) {
 	})
 
 	t.Run("Type Support and Boundary Limits for Duration", func(t *testing.T) {
+		t.Parallel()
+
 		types := []interface{}{
 			int64(45),
 			int32(45),

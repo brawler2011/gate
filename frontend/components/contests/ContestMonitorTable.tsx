@@ -136,11 +136,11 @@ export const ContestMonitorTable = ({
               pIndex !== -1
                 ? {...pResults[pIndex]}
                 : {
-                    problem_id: problemId!,
-                    solved: false,
-                    failed_attempts: 0,
-                    pending_attempts: 0,
-                  };
+                  problem_id: problemId!,
+                  solved: false,
+                  failed_attempts: 0,
+                  pending_attempts: 0,
+                };
 
             pResult.pending_attempts = (pResult.pending_attempts || 0) + 1;
 
