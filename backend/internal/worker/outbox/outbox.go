@@ -7,6 +7,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -67,6 +68,8 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 		return
 	}
 
+	telemetry.RecordOutboxPending(int64(len(events)))
+
 	for _, event := range events {
 		w.processEvent(ctx, &event)
 	}
@@ -75,6 +78,8 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 func (w *OutboxWorker) processEvent(ctx context.Context, event *models.OutboxEvent) {
 	handlerCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), eventTimeoutSec*time.Second)
 	defer cancel()
+
+	telemetry.RecordOutboxLag(time.Since(event.CreatedAt).Seconds())
 
 	// Extract the W3C trace context stored in event.Headers so that the
 	// Outbox Worker continues the distributed trace from the original HTTP
@@ -85,6 +90,7 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *models.OutboxEve
 
 	err := w.dispatcher.Dispatch(handlerCtx, event.EventType, event.Payload)
 	if err != nil {
+		telemetry.RecordOutboxFailed(handlerCtx, 1)
 		slog.Error("failed to dispatch event", "event_id", event.Id, "error", err)
 		if markErr := w.outboxRepo.MarkAsFailed(handlerCtx, event.Id, err.Error()); markErr != nil {
 			slog.Error("failed to mark event as failed", "event_id", event.Id, "error", markErr)
@@ -92,6 +98,7 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *models.OutboxEve
 		return
 	}
 
+	telemetry.RecordOutboxDispatched(handlerCtx, 1)
 	if markErr := w.outboxRepo.MarkAsCompleted(handlerCtx, event.Id); markErr != nil {
 		slog.Error("failed to mark event as completed", "event_id", event.Id, "error", markErr)
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	"github.com/google/uuid"
 )
 
@@ -249,6 +250,10 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		}
 	}
 
+	verdictStr := stateToVerdictString(verdict.State)
+	langStr := languageToString(submission.Language)
+	telemetry.RecordJudgeSubmission(ctx, submission.ContestID.String(), submission.ProblemID.String(), langStr, verdictStr)
+
 	uc.logger.Info("judging completed",
 		"submission_id", submissionID,
 		"verdict", verdict.State,
@@ -258,6 +263,40 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	)
 
 	return nil
+}
+
+func stateToVerdictString(s models.State) string {
+	switch s {
+	case models.Accepted:
+		return "Accepted"
+	case models.GotWA:
+		return "Wrong Answer"
+	case models.GotTL:
+		return "Time Limit Exceeded"
+	case models.GotML:
+		return "Memory Limit Exceeded"
+	case models.GotRE:
+		return "Runtime Error"
+	case models.GotPE:
+		return "Presentation Error"
+	case models.GotCE:
+		return "Compilation Error"
+	default:
+		return "Unknown"
+	}
+}
+
+func languageToString(l models.LanguageName) string {
+	switch l {
+	case models.Golang:
+		return "Go"
+	case models.Cpp:
+		return "C++"
+	case models.Python:
+		return "Python"
+	default:
+		return fmt.Sprintf("Language(%d)", l)
+	}
 }
 
 func (uc *JudgeUseCase) compileComponents(ctx context.Context, g *gfmt.GateFormat, problemID uuid.UUID) (map[string]sandbox.Executable, error) {

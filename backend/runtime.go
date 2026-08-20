@@ -125,6 +125,9 @@ func runApp(envFile string) error {
 		return err
 	}
 	defer pool.Close()
+	if err := telemetry.RegisterPGXPoolMetrics(pool); err != nil {
+		logger.Warn("failed to register pgxpool metrics", slog.String("error", err.Error()))
+	}
 	logger.Info("successfully connected to postgres")
 
 	usersRepo := pg.NewUsersRepo(pool)
@@ -211,6 +214,9 @@ func runApp(envFile string) error {
 	if err := pkg.EnsureSubmissionsStream(context.Background(), natsJS); err != nil {
 		return fmt.Errorf("ensure submissions stream: %w", err)
 	}
+	if err := telemetry.RegisterNATSMetrics(natsJS); err != nil {
+		logger.Warn("failed to register nats metrics", slog.String("error", err.Error()))
+	}
 	logger.Info("SUBMISSIONS stream ready")
 
 	outboxDispatcher := outbox.NewEventDispatcher()
@@ -232,6 +238,7 @@ func runApp(envFile string) error {
 	if err != nil {
 		return fmt.Errorf("create judge worker: %w", err)
 	}
+	telemetry.SetJudgeActiveWorkers(int64(cfg.JudgeWorkerCount))
 
 	submissionDispatcher := outbox.NewEventDispatcher()
 	observerHub := wsobserver.NewHub(submissionsRingBufferSize)

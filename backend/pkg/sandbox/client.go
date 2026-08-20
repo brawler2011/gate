@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"time"
+
+	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	pb "github.com/criyle/go-judge/pb"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -48,10 +51,22 @@ func (c *Client) Exec(ctx context.Context, req *pb.Request) (*pb.Response, error
 	if c.grpcClient == nil {
 		return nil, fmt.Errorf("gRPC client is not initialized")
 	}
+	telemetry.IncSandboxActive()
+	defer telemetry.DecSandboxActive()
+
+	start := time.Now()
 	resp, err := c.grpcClient.Exec(ctx, req)
+	duration := time.Since(start)
 	if err != nil {
 		return nil, fmt.Errorf("gRPC Exec failed: %w", err)
 	}
+
+	if len(resp.GetResults()) > 0 {
+		for _, r := range resp.GetResults() {
+			telemetry.RecordSandboxExecution(ctx, "", safeInt64(r.GetMemory()), safeDuration(r.GetTime()).Milliseconds(), duration.Seconds())
+		}
+	}
+
 	return resp, nil
 }
 

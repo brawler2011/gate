@@ -71,6 +71,10 @@ func InitTelemetry(ctx context.Context, cfg Config) (ShutdownFunc, error) {
 		slog.Warn("failed to start runtime metrics collection", slog.String("error", err.Error()))
 	}
 
+	if err := initCustomMetrics(mp); err != nil {
+		slog.Warn("failed to initialize custom metrics", slog.String("error", err.Error()))
+	}
+
 	// 3. Initialize LoggerProvider & Composite slog Logger
 	lp, err := initLoggerProvider(ctx, cfg, res)
 	if err != nil {

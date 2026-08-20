@@ -146,14 +146,18 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 		return
 	}
 
-	logger.Info("processing submission", "submission_id", event.Id)
+	// Record queue wait duration
+	telemetry.RecordJudgeQueueWait(judgeCtx, time.Since(event.CreatedAt).Seconds())
 
 	// Judge the submission
 	startTime := time.Now()
 	err := w.judgeUC.JudgeSubmission(judgeCtx, event.Id)
 	duration := time.Since(startTime)
+	telemetry.RecordJudgeDuration(judgeCtx, duration.Seconds())
 
 	if err != nil {
+		telemetry.RecordNATSNak(judgeCtx)
+		telemetry.RecordJudgeRetry(judgeCtx)
 		logger.Error("judging failed",
 			"submission_id", event.Id,
 			"error", err,
@@ -183,6 +187,7 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 	)
 
 	// Acknowledge successful processing
+	telemetry.RecordNATSAck(judgeCtx)
 	if err := msg.Ack(); err != nil {
 		logger.Error("failed to ack message", "error", err)
 	}
