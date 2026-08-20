@@ -11,5 +11,8 @@
   "rules": {
     "exports": "error",
     "types": "error"
-  }
+  },
+  "entry": [ 
+    "tests/**/*.test.ts" 
+  ]
 }
