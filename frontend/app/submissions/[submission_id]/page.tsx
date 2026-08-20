@@ -18,8 +18,7 @@ import {DefaultLayout} from '@/components/shared';
 import {CodeBlock} from '@/components/shared/CodeBlock';
 import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
 import {SingleSubmissionRejudgeButton} from "@/components/submissions";
-import {api} from "@/lib/api";
-import {unwrapAndCache} from "@/lib/api2";
+import {api, unwrapAndCache} from "@/lib/api";
 import {getMyContestRole} from "@/lib/contest-role";
 import {
   LangNameToString,

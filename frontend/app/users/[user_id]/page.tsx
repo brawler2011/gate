@@ -8,8 +8,7 @@ import {
   UserContestsSection,
   UserContestsSkeleton,
 } from '@/components/users';
-import {api} from "@/lib/api";
-import {unwrapAndCache} from "@/lib/api2";
+import {api, unwrapAndCache} from "@/lib/api";
 import {parseId, parsePage} from "@/lib/lib2";
 
 import type {Metadata} from "next";

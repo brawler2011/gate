@@ -3,8 +3,7 @@ import {redirect} from "next/navigation";
 
 import {ContestMonitorTable} from "@/components/contests";
 import {DefaultLayout} from "@/components/shared";
-import {api} from "@/lib/api";
-import {unwrapAndCache} from "@/lib/api2";
+import {api, unwrapAndCache} from "@/lib/api";
 import {buildContestHeaderNav} from "@/lib/contest-header-nav";
 import {getMyContestRole} from "@/lib/contest-role";
 import {PermissionChecker} from "@/lib/permissions";

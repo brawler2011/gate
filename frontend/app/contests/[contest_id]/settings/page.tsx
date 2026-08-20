@@ -6,8 +6,7 @@ import {ParticipantsSection} from "@/components/contests/ParticipantsSection";
 import {ProblemsSection} from "@/components/contests/ProblemsSection";
 import {SettingsSection} from "@/components/contests/SettingsSection";
 import {DefaultLayout} from "@/components/shared";
-import {api} from "@/lib/api";
-import {unwrapAndCache} from "@/lib/api2";
+import {api, unwrapAndCache} from "@/lib/api";
 import {buildContestHeaderNav} from "@/lib/contest-header-nav";
 import {getMyContestRole} from "@/lib/contest-role";
 

@@ -5,8 +5,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
 import {DefaultLayout} from '@/components/shared';
-import {publicApi} from "@/lib/api";
-import {unwrapAndCache} from "@/lib/api2";
+import {publicApi, unwrapAndCache} from "@/lib/api";
 import {formatDate} from "@/lib/formatDate";
 
 import 'katex/dist/katex.min.css';
