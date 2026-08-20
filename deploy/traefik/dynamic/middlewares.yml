@@ -1,0 +1,46 @@
+http:
+  middlewares:
+    # Global security headers applied to all websecure routers
+    global-security-headers:
+      headers:
+        customResponseHeaders:
+          Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+          X-Frame-Options: "SAMEORIGIN"
+          X-Content-Type-Options: "nosniff"
+          X-XSS-Protection: "1; mode=block"
+          Referrer-Policy: "strict-origin-when-cross-origin"
+
+    # API middleware
+    gate-api-strip:
+      stripPrefix:
+        prefixes:
+          - "/api"
+
+    gate-api-ratelimit:
+      rateLimit:
+        average: 10
+        burst: 20
+
+    # IP allowlist to block external access (localhost only)
+    gate-block-ip:
+      ipAllowList:
+        sourceRange:
+          - "127.0.0.1/32"
+
+    # OTLP middleware
+    gate-otlp-strip:
+      stripPrefix:
+        prefixes:
+          - "/otlp"
+
+    gate-otlp-cors:
+      headers:
+        accessControlAllowMethods:
+          - "POST"
+          - "OPTIONS"
+          - "GET"
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 86400

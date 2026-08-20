@@ -16,12 +16,17 @@ entryPoints:
     http:
       tls:
         certResolver: letsencrypt
+      middlewares:
+        - global-security-headers@file
 
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
     network: traefik-network
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
 
 certificatesResolvers:
   letsencrypt:

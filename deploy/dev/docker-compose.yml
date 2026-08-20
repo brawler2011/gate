@@ -49,30 +49,21 @@ services:
       - "traefik.http.routers.gate-backend-dev.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-dev.tls=true"
       - "traefik.http.routers.gate-backend-dev.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-backend-dev.middlewares=gate-backend-dev-strip@docker,gate-backend-dev-headers@docker"
-      # StripPrefix middleware
-      - "traefik.http.middlewares.gate-backend-dev-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.gate-backend-dev.middlewares=gate-api-strip@file"
       # WS router (/ws)
       - "traefik.http.routers.gate-backend-dev-ws.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/ws`)"
       - "traefik.http.routers.gate-backend-dev-ws.service=gate-backend-dev-svc"
       - "traefik.http.routers.gate-backend-dev-ws.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-dev-ws.tls=true"
       - "traefik.http.routers.gate-backend-dev-ws.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-backend-dev-ws.middlewares=gate-backend-dev-headers@docker"
       # Health router (/health)
       - "traefik.http.routers.gate-backend-dev-health.rule=Host(`${DOMAIN_NAME}`) && Path(`/health`)"
       - "traefik.http.routers.gate-backend-dev-health.service=gate-backend-dev-svc"
       - "traefik.http.routers.gate-backend-dev-health.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-dev-health.tls=true"
       - "traefik.http.routers.gate-backend-dev-health.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-backend-dev-health.middlewares=gate-backend-dev-headers@docker"
       # Port configuration
       - "traefik.http.services.gate-backend-dev-svc.loadbalancer.server.port=8080"
-      # Security headers middleware
-      - "traefik.http.middlewares.gate-backend-dev-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains"
-      - "traefik.http.middlewares.gate-backend-dev-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
-      - "traefik.http.middlewares.gate-backend-dev-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
-      - "traefik.http.middlewares.gate-backend-dev-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
 
   backend-migrate:
     image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-dev}
@@ -119,12 +110,7 @@ services:
       - "traefik.http.routers.gate-frontend-dev.entrypoints=websecure"
       - "traefik.http.routers.gate-frontend-dev.tls=true"
       - "traefik.http.routers.gate-frontend-dev.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-frontend-dev.middlewares=gate-frontend-dev-headers@docker"
       - "traefik.http.services.gate-frontend-dev-svc.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.gate-frontend-dev-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains"
-      - "traefik.http.middlewares.gate-frontend-dev-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
-      - "traefik.http.middlewares.gate-frontend-dev-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
-      - "traefik.http.middlewares.gate-frontend-dev-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
 
   postgres:
     image: postgres:18-alpine
@@ -260,14 +246,7 @@ services:
       - "traefik.http.routers.gate-otlp-dev.entrypoints=websecure"
       - "traefik.http.routers.gate-otlp-dev.tls=true"
       - "traefik.http.routers.gate-otlp-dev.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-otlp-dev.middlewares=gate-otlp-dev-strip@docker,gate-otlp-dev-cors@docker"
-      # StripPrefix middleware
-      - "traefik.http.middlewares.gate-otlp-dev-strip.stripprefix.prefixes=/otlp"
-      # CORS middleware
-      - "traefik.http.middlewares.gate-otlp-dev-cors.headers.accesscontrolallowmethods=POST,OPTIONS,GET"
-      - "traefik.http.middlewares.gate-otlp-dev-cors.headers.accesscontrolallowheaders=*"
-      - "traefik.http.middlewares.gate-otlp-dev-cors.headers.accesscontrolalloworiginlist=*"
-      - "traefik.http.middlewares.gate-otlp-dev-cors.headers.accesscontrolmaxage=86400"
+      - "traefik.http.routers.gate-otlp-dev.middlewares=gate-otlp-strip@file,gate-otlp-cors@file"
       - "traefik.http.services.gate-otlp-dev-svc.loadbalancer.server.port=4318"
 
   tempo:

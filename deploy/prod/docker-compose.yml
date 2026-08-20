@@ -49,34 +49,21 @@ services:
       - "traefik.http.routers.gate-backend-prod.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-prod.tls=true"
       - "traefik.http.routers.gate-backend-prod.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-backend-prod.middlewares=gate-backend-prod-strip@docker,gate-backend-prod-headers@docker,gate-api-ratelimit@docker"
-      # StripPrefix middleware
-      - "traefik.http.middlewares.gate-backend-prod-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.gate-backend-prod.middlewares=gate-api-strip@file,gate-api-ratelimit@file"
       # WS router (/ws)
       - "traefik.http.routers.gate-backend-prod-ws.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/ws`)"
       - "traefik.http.routers.gate-backend-prod-ws.service=gate-backend-prod-svc"
       - "traefik.http.routers.gate-backend-prod-ws.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-prod-ws.tls=true"
       - "traefik.http.routers.gate-backend-prod-ws.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-backend-prod-ws.middlewares=gate-backend-prod-headers@docker"
       # Health router (/health)
       - "traefik.http.routers.gate-backend-prod-health.rule=Host(`${DOMAIN_NAME}`) && Path(`/health`)"
       - "traefik.http.routers.gate-backend-prod-health.service=gate-backend-prod-svc"
       - "traefik.http.routers.gate-backend-prod-health.entrypoints=websecure"
       - "traefik.http.routers.gate-backend-prod-health.tls=true"
       - "traefik.http.routers.gate-backend-prod-health.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-backend-prod-health.middlewares=gate-backend-prod-headers@docker"
       # Port configuration
       - "traefik.http.services.gate-backend-prod-svc.loadbalancer.server.port=8080"
-      # Security headers middleware
-      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains; preload"
-      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
-      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
-      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
-      - "traefik.http.middlewares.gate-backend-prod-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
-      # Rate limit middleware (10 req/s, burst 20)
-      - "traefik.http.middlewares.gate-api-ratelimit.ratelimit.average=10"
-      - "traefik.http.middlewares.gate-api-ratelimit.ratelimit.burst=20"
 
   backend-migrate:
     image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-prod}
@@ -139,20 +126,12 @@ services:
       - "traefik.http.routers.gate-frontend-prod.entrypoints=websecure"
       - "traefik.http.routers.gate-frontend-prod.tls=true"
       - "traefik.http.routers.gate-frontend-prod.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-frontend-prod.middlewares=gate-frontend-prod-headers@docker"
       - "traefik.http.services.gate-frontend-prod-svc.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.Strict-Transport-Security=max-age=31536000; includeSubDomains; preload"
-      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
-      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
-      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block"
-      - "traefik.http.middlewares.gate-frontend-prod-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
-      # IP Allow List middleware to return 403 Forbidden (localhost allowed, rest blocked)
-      - "traefik.http.middlewares.gate-block-ip.ipallowlist.sourcerange=127.0.0.1/32"
       # Malicious requests block router
       - "traefik.http.routers.gate-malicious-block.rule=Host(`${DOMAIN_NAME}`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\\.env|\\.git)`) || PathRegexp(`.*\\.php$$`))"
       - "traefik.http.routers.gate-malicious-block.entrypoints=websecure"
       - "traefik.http.routers.gate-malicious-block.tls=true"
-      - "traefik.http.routers.gate-malicious-block.middlewares=gate-block-ip@docker"
+      - "traefik.http.routers.gate-malicious-block.middlewares=gate-block-ip@file"
       - "traefik.http.routers.gate-malicious-block.service=gate-frontend-prod-svc"
 
   postgres:
@@ -340,14 +319,7 @@ services:
       - "traefik.http.routers.gate-otlp-prod.entrypoints=websecure"
       - "traefik.http.routers.gate-otlp-prod.tls=true"
       - "traefik.http.routers.gate-otlp-prod.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-otlp-prod.middlewares=gate-otlp-prod-strip@docker,gate-otlp-prod-cors@docker"
-      # StripPrefix middleware
-      - "traefik.http.middlewares.gate-otlp-prod-strip.stripprefix.prefixes=/otlp"
-      # CORS middleware
-      - "traefik.http.middlewares.gate-otlp-prod-cors.headers.accesscontrolallowmethods=POST,OPTIONS,GET"
-      - "traefik.http.middlewares.gate-otlp-prod-cors.headers.accesscontrolallowheaders=*"
-      - "traefik.http.middlewares.gate-otlp-prod-cors.headers.accesscontrolalloworiginlist=*"
-      - "traefik.http.middlewares.gate-otlp-prod-cors.headers.accesscontrolmaxage=86400"
+      - "traefik.http.routers.gate-otlp-prod.middlewares=gate-otlp-strip@file,gate-otlp-cors@file"
       - "traefik.http.services.gate-otlp-prod-svc.loadbalancer.server.port=4318"
 
   tempo:
