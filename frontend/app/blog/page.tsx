@@ -5,7 +5,7 @@ import {redirect} from "next/navigation";
 import {BlogList} from '@/components/blog';
 import {DefaultLayout} from '@/components/shared';
 import {api, unwrap} from "@/lib/api";
-import {parsePage} from "@/lib/lib2";
+import {parsePage} from "@/lib/lib";
 
 import type {Metadata} from "next";
 import type {ReactNode} from "react";

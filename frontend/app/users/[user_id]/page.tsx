@@ -9,7 +9,7 @@ import {
   UserContestsSkeleton,
 } from '@/components/users';
 import {api, unwrapAndCache} from "@/lib/api";
-import {parseId, parsePage} from "@/lib/lib2";
+import {parseId, parsePage} from "@/lib/lib";
 
 import type {Metadata} from "next";
 

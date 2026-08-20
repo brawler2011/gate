@@ -10,7 +10,7 @@ import {api, unwrapAndCache} from "@/lib/api";
 import {buildContestHeaderNav} from "@/lib/contest-header-nav";
 import {getMyContestRole} from "@/lib/contest-role";
 import {env} from "@/lib/env";
-import {parsePage} from "@/lib/lib2";
+import {parsePage} from "@/lib/lib";
 import {PermissionChecker} from "@/lib/permissions";
 
 import type {Metadata} from "next";

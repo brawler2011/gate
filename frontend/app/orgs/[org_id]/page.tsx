@@ -5,7 +5,7 @@ import {OrgContestsTab} from "@/components/orgs/OrgContestsTab";
 import {DefaultLayout} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrapAndCache} from "@/lib/api";
-import {parsePage} from "@/lib/lib2";
+import {parsePage} from "@/lib/lib";
 import {buildOrgHeaderNav} from "@/lib/org-header-nav";
 import {canManageOrgMembers} from "@/lib/org-permissions";
 

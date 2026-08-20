@@ -3,7 +3,7 @@ import {redirect} from "next/navigation";
 import {Suspense} from "react";
 
 import {AdminBlogsContent} from "@/components/admin";
-import {parsePage} from "@/lib/lib2";
+import {parsePage} from "@/lib/lib";
 
 import type {Metadata} from "next";
 import type {ReactNode} from "react";

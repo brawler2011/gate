@@ -2,7 +2,7 @@ import {redirect} from "next/navigation";
 import {Suspense} from "react";
 
 import {UsersContent, UsersContentSkeleton} from "@/components/users";
-import {parsePage} from "@/lib/lib2";
+import {parsePage} from "@/lib/lib";
 
 import type {Metadata} from "next";
 import type {ReactNode} from "react";
