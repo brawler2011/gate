@@ -14,7 +14,7 @@ import {useRouter} from "next/navigation";
 import {useState} from "react";
 
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
-import {formatDate} from "@/lib/formatDate";
+import {formatDate} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 import {DeleteBlogPostModal} from "./DeleteBlogPostModal";

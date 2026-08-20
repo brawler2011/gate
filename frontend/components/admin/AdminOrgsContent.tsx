@@ -22,7 +22,7 @@ import useSWR from "swr";
 import {NextPagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
-import {formatDate} from "@/lib/formatDate";
+import {formatDate} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 import {DeleteOrgModal} from "./DeleteOrgModal";

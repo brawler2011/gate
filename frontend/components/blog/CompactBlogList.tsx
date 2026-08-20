@@ -4,7 +4,7 @@ import {Stack, Text, Card, Title, Button, Group, Box} from "@mantine/core";
 import {IconChevronRight, IconNews} from "@tabler/icons-react";
 import Link from "next/link";
 
-import {formatDate} from "@/lib/formatDate";
+import {formatDate} from "@/lib/lib";
 
 import type {PostModel} from "@/contracts/core/v1";
 import type {ReactNode} from "react";

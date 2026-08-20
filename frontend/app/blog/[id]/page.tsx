@@ -6,7 +6,7 @@ import remarkMath from 'remark-math';
 
 import {DefaultLayout} from '@/components/shared';
 import {publicApi, unwrapAndCache} from "@/lib/api";
-import {formatDate} from "@/lib/formatDate";
+import {formatDate} from "@/lib/lib";
 
 import 'katex/dist/katex.min.css';
 import classes from "./styles.module.css";

@@ -6,7 +6,7 @@ import {DefaultLayout} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
 import {buildOrgHeaderNav} from "@/lib/org-header-nav";
-import {canManageOrgMembers} from "@/lib/org-permissions";
+import {canManageOrgMembers} from "@/lib/permissions";
 
 import type {Metadata} from "next";
 import type {ReactNode} from "react";

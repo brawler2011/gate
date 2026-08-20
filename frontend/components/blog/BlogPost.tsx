@@ -12,7 +12,7 @@ import {
 import NextImage from "next/image";
 import Link from "next/link";
 
-import {formatDate} from "@/lib/formatDate";
+import {formatDate} from "@/lib/lib";
 
 import classes from "./BlogPost.module.css";
 
