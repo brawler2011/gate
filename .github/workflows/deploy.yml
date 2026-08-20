@@ -118,6 +118,8 @@ jobs:
             NEXT_PUBLIC_BACKEND_API_URL=/api
             BACKEND_API_URL=http://gate-backend-${{ inputs.environment }}:8080
             NEXT_PUBLIC_WEBSOCKET_URL=wss://${{ inputs.domain_name }}/ws
+            NEXT_PUBLIC_OTEL_SERVICE_NAME=gate-frontend-browser
+            NEXT_PUBLIC_OTEL_EXPORTER_URL=https://${{ inputs.domain_name }}/otlp/v1/traces
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
