@@ -2,12 +2,10 @@ import {Alert, Container, Group, Paper, Stack} from "@mantine/core";
 import {IconAlertCircle} from "@tabler/icons-react";
 import {redirect} from "next/navigation";
 
-import {DefaultLayout} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {NextPagination} from "@/components/shared/Pagination";
 import {SubmissionsListClient} from "@/components/submissions";
 import {api, unwrapAndCache} from "@/lib/api";
-import {buildContestHeaderNav} from "@/lib/contest-header-nav";
 import {getMyContestRole} from "@/lib/contest-role";
 import {env} from "@/lib/env";
 import {parsePage} from "@/lib/lib";
@@ -84,19 +82,29 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
   const contestRole = user ? await getMyContestRole(contest_id) : null;
 
   const checker = contestData?.contest
-    ? new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null)
+    ? new PermissionChecker(
+      user,
+      contestRole?.role ?? null,
+      null,
+      contestRole?.permissionsMask ?? null,
+    )
     : null;
 
   if (contestData?.contest && checker) {
     const isManager = checker.canManageContest(contestData.contest);
-    const hasStarted = !contestData.contest.start_time || new Date(contestData.contest.start_time) <= new Date();
+    const hasStarted =
+      !contestData.contest.start_time ||
+      new Date(contestData.contest.start_time) <= new Date();
 
     if (!checker.canViewAllSubmissions(contestData.contest) || (!isManager && !hasStarted)) {
       redirect(`/contests/${contest_id}`);
     }
   }
 
-  const canRejudge = contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
+  const canRejudge =
+    contestData?.contest && checker
+      ? checker.canRejudgeSubmissions(contestData.contest)
+      : false;
 
   const [error, submissionsData] = await api.listContestSubmissions(parsedParams);
 
@@ -106,17 +114,15 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
 
   if (!submissionsData) {
     return (
-      <DefaultLayout>
-        <Container size="lg" py="xl">
-          <Alert
-            icon={<IconAlertCircle size="1rem" />}
-            title="Ошибка загрузки"
-            color="red"
-          >
-            Не удалось загрузить список решений. Попробуйте обновить страницу.
-          </Alert>
-        </Container>
-      </DefaultLayout>
+      <Container size="lg" py="xl">
+        <Alert
+          icon={<IconAlertCircle size="1rem" />}
+          title="Ошибка загрузки"
+          color="red"
+        >
+          Не удалось загрузить список решений. Попробуйте обновить страницу.
+        </Alert>
+      </Container>
     );
   }
 
@@ -132,75 +138,53 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
 
   const wsBaseUrl = env.getWebSocketUrl();
 
-  const contestHeaderNav = contestData?.contest
-    ? buildContestHeaderNav({
-      contest: contestData.contest,
-      user,
-      contestRole,
-      activeTab: "allsubmissions",
-    })
-    : undefined;
-
   return (
-    <DefaultLayout
-      headerSecondaryNavItems={contestHeaderNav}
-      headerOrganizationId={contestData?.contest.organization_id}
-      headerContest={
-        contestData?.contest
-          ? {
-            id: contestData.contest.id,
-            title: contestData.contest.title,
-          }
-          : undefined
-      }
-    >
-      <Container size="lg" pb="xl">
-        {contestData?.contest ? (
-          <Paper
-            withBorder
-            p="md"
-            w="100%"
-            shadow="sm"
-            radius="md"
-            style={{
-              backgroundColor:
-                "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))",
-              borderColor:
-                "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))",
-            }}
-          >
-            <Stack gap="md">
-              <SubmissionsListClient
-                initialSubmissions={submissionsData.submissions}
-                wsUrl={wsBaseUrl + "/submissions"}
-                since={submissionsData.since}
-                snapshotScope="all"
-                filter={{
-                  contestId: contest_id,
-                  userId: parsedParams.userId,
-                  problemId: parsedParams.problemId,
-                }}
-                pageSize={PAGE_SIZE}
-                page={parsedParams.page}
-                sortOrder={parsedParams.sortOrder}
-                canRejudge={canRejudge}
+    <Container size="lg" pb="xl">
+      {contestData?.contest ? (
+        <Paper
+          withBorder
+          p="md"
+          w="100%"
+          shadow="sm"
+          radius="md"
+          style={{
+            backgroundColor:
+              "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))",
+            borderColor:
+              "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))",
+          }}
+        >
+          <Stack gap="md">
+            <SubmissionsListClient
+              initialSubmissions={submissionsData.submissions}
+              wsUrl={wsBaseUrl + "/submissions"}
+              since={submissionsData.since}
+              snapshotScope="all"
+              filter={{
+                contestId: contest_id,
+                userId: parsedParams.userId,
+                problemId: parsedParams.problemId,
+              }}
+              pageSize={PAGE_SIZE}
+              page={parsedParams.page}
+              sortOrder={parsedParams.sortOrder}
+              canRejudge={canRejudge}
+            />
+            <Group justify="center">
+              <NextPagination
+                pagination={submissionsData.pagination}
+                baseUrl={`/contests/${contest_id}/submissions`}
+                queryParams={nextQueryParams}
               />
-              <Group justify="center">
-                <NextPagination
-                  pagination={submissionsData.pagination}
-                  baseUrl={`/contests/${contest_id}/submissions`}
-                  queryParams={nextQueryParams}
-                />
-              </Group>
-            </Stack>
-          </Paper>
-        ) : (
-          <ErrorDisplay
-            error={{status: 404, message: "Contest not found"}}
-          />
-        )}
-      </Container>
-    </DefaultLayout>
+            </Group>
+          </Stack>
+        </Paper>
+      ) : (
+        <ErrorDisplay
+          error={{status: 404, message: "Contest not found"}}
+        />
+      )}
+    </Container>
   );
 };
 

@@ -2,10 +2,8 @@ import {redirect} from "next/navigation";
 import {cache} from "react";
 
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {HeaderWithSession} from "@/components/shared/HeaderWithSession";
 import {Task} from "@/components/shared/Task";
 import {api, unwrapAndCache} from "@/lib/api";
-import {buildContestHeaderNav} from "@/lib/contest-header-nav";
 import {getMyContestRole} from "@/lib/contest-role";
 import {env} from "@/lib/env";
 import {numberToLetters} from "@/lib/lib";
@@ -17,7 +15,7 @@ import type {ReactNode} from "react";
 const getCachedContestProblem = cache(
   async (problemId: string, contestId: string) => {
     return api.getContestProblem({problemId, contestId});
-  }
+  },
 );
 
 type Props = {
@@ -32,7 +30,7 @@ export const generateMetadata = async (props: Props): Promise<Metadata> => {
 
   const [error, response] = await getCachedContestProblem(
     params.problem_id,
-    params.contest_id
+    params.contest_id,
   );
 
   if (error || !response) {
@@ -95,20 +93,20 @@ const Page = async (props: Props): Promise<ReactNode> => {
   // Get contest role for permissions
   const contestRole = user ? await getMyContestRole(params.contest_id) : null;
 
-  const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
+  const checker = new PermissionChecker(
+    user,
+    contestRole?.role ?? null,
+    null,
+    contestRole?.permissionsMask ?? null,
+  );
   const isManager = checker.canManageContest(contestResponse.contest);
-  const hasStarted = !contestResponse.contest.start_time || new Date(contestResponse.contest.start_time) <= new Date();
+  const hasStarted =
+    !contestResponse.contest.start_time ||
+    new Date(contestResponse.contest.start_time) <= new Date();
 
   if (!checker.canViewProblems(contestResponse.contest) || (!isManager && !hasStarted)) {
     redirect(`/contests/${params.contest_id}`);
   }
-
-  const contestHeaderNav = buildContestHeaderNav({
-    contest: contestResponse.contest,
-    user,
-    contestRole,
-    activeTab: "tasks",
-  });
 
   // Handle submissions - if null or error, use empty array
   // This can happen if user is not synced in backend DB yet
@@ -127,16 +125,6 @@ const Page = async (props: Props): Promise<ReactNode> => {
       problemId={params.problem_id}
       contestId={params.contest_id}
       user={user}
-      header={
-        <HeaderWithSession
-          secondaryNavItems={contestHeaderNav}
-          organizationId={contestResponse.contest.organization_id}
-          contest={{
-            id: contestResponse.contest.id,
-            title: contestResponse.contest.title,
-          }}
-        />
-      }
       wsUrl={wsUrl}
       since={submissionsResponse?.since}
       isManager={isManager}

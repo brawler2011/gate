@@ -21,6 +21,7 @@ import Link from "next/link";
 import {useRouter, useSearchParams} from "next/navigation";
 import {Suspense, useState, type ReactNode} from "react";
 
+import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
 
 const RegistrationPage = (): ReactNode => {
@@ -41,6 +42,7 @@ const RegistrationPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("return_to") || "/";
+  const {setUser} = useSession();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -54,14 +56,15 @@ const RegistrationPageContent = () => {
     setLoading(true);
 
     try {
-      const [err] = await api.register({
+      const [err, data] = await api.register({
         requestBody: {username, email, password},
       });
-      if (!err) {
+      if (!err && data) {
+        setUser(data.user);
         router.push(returnTo);
         router.refresh();
       } else {
-        setError(err.message || "Ошибка при регистрации");
+        setError(err?.message || "Ошибка при регистрации");
       }
     } catch {
       setError("Не удалось подключиться к серверу");

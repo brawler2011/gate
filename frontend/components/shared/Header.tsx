@@ -14,8 +14,8 @@ import {
   Image,
   Loader,
   Menu,
-  Popover,
   ScrollArea,
+  Skeleton,
   Stack,
   Title,
   useComputedColorScheme,
@@ -24,36 +24,19 @@ import {
 import {useDisclosure} from "@mantine/hooks";
 import {
   IconBuilding,
-  IconDeviceDesktop,
   IconLogout,
-  IconMail,
   IconMoon,
-  IconPuzzle,
-  IconSend,
-  IconSettings,
   IconSun,
-  IconTrophy,
   IconUser,
-  IconUsers,
-  IconUsersGroup,
-  IconNews,
-  IconFileText,
-  IconLayoutDashboard,
 } from "@tabler/icons-react";
 import cx from "clsx";
 import NextImage from "next/image";
 import Link from "next/link";
-import {usePathname} from "next/navigation";
-import { 
-  type ComponentType,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import {usePathname, useRouter} from "next/navigation";
+import {useState, type ReactNode} from "react";
 
-import {buildAdminHeaderNav} from "@/lib/admin-header-nav";
+import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
+import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
@@ -61,35 +44,6 @@ import classes from "./Header.module.css";
 import {LogoutLink} from "./LogoutLink";
 
 import type {UserModel} from "@/contracts/core/v1";
-import type {
-  HeaderSecondaryNavIcon,
-  HeaderSecondaryNavItem,
-} from "@/lib/contest-header-nav";
-import type {ReactNode} from "react";
-
-const NAV_ICON_MAP: Record<
-  HeaderSecondaryNavIcon,
-  ComponentType<{ size?: string | number }>
-> = {
-  dashboard: IconLayoutDashboard,
-  tasks: IconPuzzle,
-  submit: IconSend,
-  mysubmissions: IconUser,
-  allsubmissions: IconMail,
-  monitor: IconDeviceDesktop,
-  contests: IconTrophy,
-  problems: IconPuzzle,
-  teams: IconUsersGroup,
-  members: IconUsers,
-  settings: IconSettings,
-  users: IconUsers,
-  blogs: IconNews,
-  orgs: IconBuilding,
-  submissions: IconFileText,
-};
-
-const useIsomorphicLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export type HeaderOrganization = {
   id: string;
@@ -106,8 +60,11 @@ export type HeaderProblem = {
   title: string;
 };
 
-const Profile = ({user}: { user?: UserModel | null }) => {
+const Profile = ({user: propUser}: { user?: UserModel | null }) => {
   const pathname = usePathname();
+  const router = useRouter();
+  const {user: sessionUser, setUser, isLoading} = useSession();
+  const user = propUser !== undefined ? propUser : sessionUser;
   const [logoutLoading, setLogoutLoading] = useState(false);
 
   const getReturnUrl = () => {
@@ -125,9 +82,13 @@ const Profile = ({user}: { user?: UserModel | null }) => {
     setLogoutLoading(true);
     try {
       await api.logout();
-      window.location.href = "/auth/login";
+      setUser(null);
+      router.push("/auth/login");
+      router.refresh();
     } catch {
-      window.location.href = "/auth/login";
+      setUser(null);
+      router.push("/auth/login");
+      router.refresh();
     } finally {
       setLogoutLoading(false);
     }
@@ -139,6 +100,14 @@ const Profile = ({user}: { user?: UserModel | null }) => {
         <Center w={36} h={36}>
           <Loader size="xs" />
         </Center>
+      </Group>
+    );
+  }
+
+  if (isLoading && propUser === undefined && sessionUser === null) {
+    return (
+      <Group justify="flex-end">
+        <Skeleton circle height={36} />
       </Group>
     );
   }
@@ -209,220 +178,29 @@ const Profile = ({user}: { user?: UserModel | null }) => {
   );
 };
 
-const SecondaryNav = ({items}: { items: HeaderSecondaryNavItem[] }) => {
-  const pathname = usePathname();
-  const [visibleCount, setVisibleCount] = useState(items.length);
-  const [moreOpened, setMoreOpened] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const moreMeasureRef = useRef<HTMLButtonElement | null>(null);
-  const itemMeasureRefs = useRef<Array<HTMLSpanElement | null>>([]);
-
-  const recalculateVisibleCount = useCallback(() => {
-    if (items.length === 0) {
-      setVisibleCount(0);
-      return;
-    }
-
-    const containerWidth = containerRef.current?.clientWidth ?? 0;
-    if (containerWidth === 0) {
-      setVisibleCount(items.length);
-      return;
-    }
-
-    const itemWidths = items.map(
-      (_, index) => itemMeasureRefs.current[index]?.offsetWidth ?? 0,
-    );
-    if (itemWidths.some((width) => width === 0)) {
-      setVisibleCount(items.length);
-      return;
-    }
-
-    const gap = 8;
-    const totalWidth =
-      itemWidths.reduce((sum, width) => sum + width, 0) +
-      Math.max(0, itemWidths.length - 1) * gap;
-
-    if (totalWidth <= containerWidth) {
-      setVisibleCount(items.length);
-      return;
-    }
-
-    const moreWidth = moreMeasureRef.current?.offsetWidth ?? 72;
-    const availableWidth = containerWidth - moreWidth - gap;
-    let widthUsed = 0;
-    let nextVisibleCount = 0;
-
-    for (const width of itemWidths) {
-      const nextWidth = widthUsed + width + (nextVisibleCount > 0 ? gap : 0);
-      if (nextWidth > availableWidth) {
-        break;
-      }
-
-      widthUsed = nextWidth;
-      nextVisibleCount += 1;
-    }
-
-    setVisibleCount(Math.max(0, nextVisibleCount));
-  }, [items]);
-
-  useIsomorphicLayoutEffect(() => {
-    recalculateVisibleCount();
-  }, [recalculateVisibleCount]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    const observer = new ResizeObserver(() => {
-      recalculateVisibleCount();
-    });
-    observer.observe(container);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [recalculateVisibleCount]);
-
-  useEffect(() => {
-    if (!document.fonts?.ready) {
-      return;
-    }
-
-    let mounted = true;
-    document.fonts.ready.then(() => {
-      if (mounted) {
-        recalculateVisibleCount();
-      }
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [recalculateVisibleCount]);
-
-  useEffect(() => {
-    setMoreOpened(false);
-  }, [pathname]);
-
-  const visibleItems = items.slice(0, visibleCount);
-  const overflowItems = items.slice(visibleCount);
-
-  return (
-    <div className={classes.secondaryNavSection}>
-      <div className={classes.secondaryNavInner} ref={containerRef}>
-        <div className={classes.secondaryNavVisible}>
-          {visibleItems.map((item) => {
-            const Icon = item.icon ? NAV_ICON_MAP[item.icon] : undefined;
-
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={cx(
-                  classes.secondaryNavLink,
-                  item.active && classes.secondaryNavLinkActive,
-                )}
-              >
-                {Icon ? <Icon size={15} /> : null}
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-
-        {overflowItems.length > 0 && (
-          <Popover
-            opened={moreOpened}
-            onChange={setMoreOpened}
-            position="bottom-end"
-            withArrow
-            shadow="md"
-          >
-            <Popover.Target>
-              <button
-                type="button"
-                className={classes.secondaryMoreButton}
-                onClick={() => setMoreOpened((current) => !current)}
-                aria-haspopup="menu"
-                aria-expanded={moreOpened}
-                data-opened={moreOpened || undefined}
-              >
-                More
-              </button>
-            </Popover.Target>
-            <Popover.Dropdown p="xs">
-              <Stack gap={4}>
-                {overflowItems.map((item) => {
-                  const Icon = item.icon ? NAV_ICON_MAP[item.icon] : undefined;
-
-                  return (
-                    <Link
-                      key={item.key}
-                      href={item.href}
-                      className={cx(
-                        classes.secondaryNavPopoverLink,
-                        item.active && classes.secondaryNavPopoverLinkActive,
-                      )}
-                      onClick={() => setMoreOpened(false)}
-                    >
-                      {Icon ? <Icon size={15} /> : null}
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </Stack>
-            </Popover.Dropdown>
-          </Popover>
-        )}
-      </div>
-
-      <div className={classes.secondaryNavMeasure} aria-hidden>
-        {items.map((item, index) => {
-          const Icon = item.icon ? NAV_ICON_MAP[item.icon] : undefined;
-
-          return (
-            <span
-              key={`measure-${item.key}`}
-              ref={(node) => {
-                itemMeasureRefs.current[index] = node;
-              }}
-              className={classes.secondaryNavLink}
-            >
-              {Icon ? <Icon size={15} /> : null}
-              {item.label}
-            </span>
-          );
-        })}
-        <button
-          ref={moreMeasureRef}
-          type="button"
-          className={classes.secondaryMoreButton}
-        >
-          More
-        </button>
-      </div>
-    </div>
-  );
+export type HeaderProps = {
+  user?: UserModel | null;
+  secondaryNav?: ReactNode;
+  secondaryNavItems?: AdaptiveTabItem[];
+  organization?: HeaderOrganization;
+  contest?: HeaderContest;
+  problem?: HeaderProblem;
 };
 
-const Header = ({
-  user,
+export const Header = ({
+  user: propUser,
+  secondaryNav,
   secondaryNavItems,
   organization,
   contest,
   problem,
-}: {
-  user?: UserModel | null;
-  secondaryNavItems?: HeaderSecondaryNavItem[];
-  organization?: HeaderOrganization;
-  contest?: HeaderContest;
-  problem?: HeaderProblem;
-}): ReactNode => {
+}: HeaderProps): ReactNode => {
   const [drawerOpened, {toggle: toggleDrawer, close: closeDrawer}] =
     useDisclosure(false);
   const pathname = usePathname();
+  const {user: sessionUser} = useSession();
+  const user = propUser !== undefined ? propUser : sessionUser;
+
   const getReturnUrlDrawer = () => {
     if (!pathname || pathname === "/" || pathname.startsWith("/auth")) {
       return null;
@@ -438,9 +216,8 @@ const Header = ({
   const computedColorScheme = useComputedColorScheme("dark", {
     getInitialValueInEffect: true,
   });
-  const isAdminPath = pathname?.startsWith("/admin");
-  const finalSecondaryNavItems = secondaryNavItems || (isAdminPath ? buildAdminHeaderNav(pathname) : undefined);
-  const hasSecondaryNav = Boolean(finalSecondaryNavItems?.length);
+
+  const hasSecondaryNav = Boolean(secondaryNav || (secondaryNavItems && secondaryNavItems.length > 0));
 
   return (
     <>
@@ -572,9 +349,21 @@ const Header = ({
           </Group>
         </div>
 
-        {finalSecondaryNavItems && finalSecondaryNavItems.length > 0 && (
-          <SecondaryNav items={finalSecondaryNavItems} />
-        )}
+        {(() => {
+          if (secondaryNav) {
+            return (
+              <div className={classes.secondaryNavSection}>{secondaryNav}</div>
+            );
+          }
+          if (secondaryNavItems && secondaryNavItems.length > 0) {
+            return (
+              <div className={classes.secondaryNavSection}>
+                <AdaptiveTabs items={secondaryNavItems} />
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
 
       <Drawer
@@ -671,5 +460,3 @@ const Header = ({
     </>
   );
 };
-
-export {Header};

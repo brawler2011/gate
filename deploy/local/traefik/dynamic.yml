@@ -1,7 +1,7 @@
 http:
   routers:
     backend-api:
-      rule: "PathPrefix(`/api/`)"
+      rule: "PathPrefix(`/api`)"
       service: backend-service
       middlewares:
         - strip-api-prefix

@@ -1,0 +1,89 @@
+.navContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1920px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.tabList {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tabLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  text-decoration: none;
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-1));
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
+  padding: 5px var(--mantine-spacing-sm);
+  border-bottom: 2px solid transparent;
+  transition: border-color 120ms ease, color 120ms ease;
+  flex-shrink: 0;
+}
+
+.tabLink:hover {
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+  text-decoration: none;
+}
+
+.tabLinkActive {
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+  border-bottom-color: var(--mantine-color-blue-6);
+}
+
+.moreButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
+  white-space: nowrap;
+  height: auto;
+  padding: 5px var(--mantine-spacing-sm);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background-color: transparent;
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-1));
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+  flex-shrink: 0;
+}
+
+.moreButton:hover {
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+}
+
+.moreButton[data-opened] {
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+  border-bottom-color: var(--mantine-color-blue-6);
+}
+
+.menuItemActive {
+  background-color: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+  font-weight: 600;
+}
+
+@media (max-width: $mantine-breakpoint-sm) {
+  .navContainer {
+    padding-top: 2px;
+    padding-bottom: 4px;
+  }
+
+  .tabLink,
+  .moreButton {
+    font-size: 12px;
+  }
+}

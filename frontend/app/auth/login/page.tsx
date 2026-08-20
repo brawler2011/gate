@@ -21,6 +21,7 @@ import Link from "next/link";
 import {useRouter, useSearchParams} from "next/navigation";
 import {Suspense, useState, type ReactNode} from "react";
 
+import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
 
 const LoginPage = (): ReactNode => {
@@ -41,6 +42,7 @@ const LoginPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("return_to") || "/";
+  const {setUser} = useSession();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -53,14 +55,15 @@ const LoginPageContent = () => {
     setLoading(true);
 
     try {
-      const [err] = await api.login({
+      const [err, data] = await api.login({
         requestBody: {identifier, password},
       });
-      if (!err) {
+      if (!err && data) {
+        setUser(data.user);
         router.push(returnTo);
         router.refresh();
       } else {
-        setError(err.message || "Неверный логин или пароль");
+        setError(err?.message || "Неверный логин или пароль");
       }
     } catch {
       setError("Не удалось подключиться к серверу");

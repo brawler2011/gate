@@ -2,16 +2,14 @@ import {Container} from "@mantine/core";
 import {redirect} from "next/navigation";
 
 import {ContestMonitorTable} from "@/components/contests";
-import {DefaultLayout} from "@/components/shared";
 import {api, unwrapAndCache} from "@/lib/api";
-import {buildContestHeaderNav} from "@/lib/contest-header-nav";
 import {getMyContestRole} from "@/lib/contest-role";
 import {PermissionChecker} from "@/lib/permissions";
 
 import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-const metadata: Metadata = {
+export const metadata: Metadata = {
   title: "Положение",
 };
 
@@ -31,7 +29,12 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
 
   let isManager = false;
   if (contestResponse?.contest) {
-    const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
+    const checker = new PermissionChecker(
+      user,
+      contestRole?.role ?? null,
+      null,
+      contestRole?.permissionsMask ?? null,
+    );
     isManager = checker.canManageContest(contestResponse.contest);
     const hasStarted =
       !contestResponse.contest.start_time ||
@@ -42,41 +45,19 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
     }
   }
 
-  const contestHeaderNav = contestResponse?.contest
-    ? buildContestHeaderNav({
-      contest: contestResponse.contest,
-      user,
-      contestRole,
-      activeTab: "monitor",
-    })
-    : undefined;
-
   return (
-    <DefaultLayout
-      headerSecondaryNavItems={contestHeaderNav}
-      headerOrganizationId={contestResponse?.contest.organization_id}
-      headerContest={
-        contestResponse?.contest
-          ? {
-            id: contestResponse.contest.id,
-            title: contestResponse.contest.title,
-          }
-          : undefined
-      }
-    >
-      <Container size="lg" py="md">
-        {scoreboard && (
-          <ContestMonitorTable
-            contestId={contest_id}
-            initialScoreboard={scoreboard}
-            startTime={contestResponse?.contest.start_time}
-            endTime={contestResponse?.contest.end_time}
-            isManager={isManager}
-          />
-        )}
-      </Container>
-    </DefaultLayout>
+    <Container size="lg" py="md">
+      {scoreboard && (
+        <ContestMonitorTable
+          contestId={contest_id}
+          initialScoreboard={scoreboard}
+          startTime={contestResponse?.contest.start_time}
+          endTime={contestResponse?.contest.end_time}
+          isManager={isManager}
+        />
+      )}
+    </Container>
   );
 };
 
-export {Page as default, metadata};
+export default Page;

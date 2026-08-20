@@ -2,12 +2,9 @@ import {Container} from "@mantine/core";
 import {redirect} from "next/navigation";
 
 import {OrgContestsTab} from "@/components/orgs/OrgContestsTab";
-import {DefaultLayout} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrapAndCache} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {buildOrgHeaderNav} from "@/lib/org-header-nav";
-import {canManageOrgMembers} from "@/lib/permissions";
 
 import type {Metadata} from "next";
 import type {ReactNode} from "react";
@@ -28,12 +25,6 @@ const OrgPage = async ({params, searchParams}: Props): Promise<ReactNode> => {
   if (!currentPage) {
     redirect(`/orgs/${org_id}`);
   }
-  const showMembersTab = await canManageOrgMembers(org_id);
-  const orgHeaderNav = buildOrgHeaderNav({
-    orgId: org_id,
-    activeTab: "contests",
-    showMembersTab,
-  });
 
   const orgData = await unwrapAndCache(api.getOrganization)({id: org_id});
 
@@ -52,24 +43,19 @@ const OrgPage = async ({params, searchParams}: Props): Promise<ReactNode> => {
   const isAuthenticated = currentUser !== null;
 
   return (
-    <DefaultLayout
-      headerSecondaryNavItems={orgHeaderNav}
-      headerOrganization={{id: org.id, name: org.name}}
-    >
-      <Container size="lg" py="lg">
-        {contestsError ? (
-          <ErrorDisplay error={contestsError} />
-        ) : (
-          <OrgContestsTab
-            contests={contests}
-            pagination={contestsPagination}
-            org={org}
-            isAuthenticated={isAuthenticated}
-            search={search}
-          />
-        )}
-      </Container>
-    </DefaultLayout >
+    <Container size="lg" py="lg">
+      {contestsError ? (
+        <ErrorDisplay error={contestsError} />
+      ) : (
+        <OrgContestsTab
+          contests={contests}
+          pagination={contestsPagination}
+          org={org}
+          isAuthenticated={isAuthenticated}
+          search={search}
+        />
+      )}
+    </Container>
   );
 };
 

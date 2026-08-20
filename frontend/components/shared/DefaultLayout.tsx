@@ -1,19 +1,20 @@
-import {HeaderWithSession} from "@/components/shared/HeaderWithSession";
+import {Header} from "@/components/shared/Header";
 
 import {DefaultLayoutClient} from "./Layout";
 
+import type {AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 import type {
   HeaderContest,
   HeaderOrganization,
   HeaderProblem,
 } from "@/components/shared/Header";
-import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
 import type {AppShellProps} from "@mantine/core";
 import type {ReactNode} from "react";
 
-type DefaultLayoutProps = {
-  children: React.ReactNode;
-  headerSecondaryNavItems?: HeaderSecondaryNavItem[];
+export type DefaultLayoutProps = {
+  children: ReactNode;
+  headerSecondaryNav?: ReactNode;
+  headerSecondaryNavItems?: AdaptiveTabItem[];
   headerOrganizationId?: string;
   headerOrganization?: HeaderOrganization;
   headerContest?: HeaderContest;
@@ -28,8 +29,9 @@ type DefaultLayoutProps = {
 
 export const DefaultLayout = ({
   children,
+  headerSecondaryNav,
   headerSecondaryNavItems,
-  headerOrganizationId,
+  headerOrganizationId: _headerOrganizationId,
   headerOrganization,
   headerContest,
   headerProblem,
@@ -39,9 +41,9 @@ export const DefaultLayout = ({
     <DefaultLayoutClient
       {...props}
       header={
-        <HeaderWithSession
+        <Header
+          secondaryNav={headerSecondaryNav}
           secondaryNavItems={headerSecondaryNavItems}
-          organizationId={headerOrganizationId}
           organization={headerOrganization}
           contest={headerContest}
           problem={headerProblem}

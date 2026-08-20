@@ -4,7 +4,7 @@ import {api} from "@/lib/api";
 
 import ProblemPage from "./ProblemPage";
 
-import type {HeaderSecondaryNavItem} from "@/lib/contest-header-nav";
+import type {AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 import type {Metadata} from "next";
 
 const GENERAL_TAB = "general";
@@ -63,7 +63,7 @@ const buildProblemHeaderNav = (
   problemId: string,
   activeTab: string,
   searchParams: Record<string, string | string[] | undefined>,
-): HeaderSecondaryNavItem[] => {
+): AdaptiveTabItem[] => {
   const tabs: Array<{ key: string; label: string }> = [
     {key: GENERAL_TAB, label: "Общее"},
     {key: "statement", label: "Условие"},

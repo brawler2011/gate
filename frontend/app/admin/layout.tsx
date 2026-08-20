@@ -1,5 +1,6 @@
 import {redirect} from "next/navigation";
 
+import {AdminHeaderNav} from "@/components/admin";
 import {DefaultLayout} from "@/components/shared";
 import {api} from "@/lib/api";
 
@@ -14,7 +15,7 @@ const AdminLayout = async ({children}: { children: React.ReactNode }): Promise<R
   }
 
   return (
-    <DefaultLayout>
+    <DefaultLayout headerSecondaryNav={<AdminHeaderNav />}>
       {children}
     </DefaultLayout>
   );

@@ -6,10 +6,8 @@ import {OrgSettingsForm} from "@/components/orgs/OrgSettingsForm";
 import {OrgSettingsMobileNav} from "@/components/orgs/OrgSettingsMobileNav";
 import {ORG_SETTINGS_NAV_SECTIONS} from "@/components/orgs/OrgSettingsNavShared";
 import {OrgSettingsSidebarNav} from "@/components/orgs/OrgSettingsSidebarNav";
-import {DefaultLayout} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
-import {buildOrgHeaderNav} from "@/lib/org-header-nav";
 import {canManageOrgMembers} from "@/lib/permissions";
 
 import classes from "./styles.module.css";
@@ -43,11 +41,9 @@ const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode
       notFound();
     }
     return (
-      <DefaultLayout headerOrganizationId={org_id}>
-        <Container size="sm" py="lg">
-          <ErrorDisplay error={error} />
-        </Container>
-      </DefaultLayout>
+      <Container size="sm" py="lg">
+        <ErrorDisplay error={error} />
+      </Container>
     );
   }
   const org = data!.organization;
@@ -61,46 +57,36 @@ const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode
   const activeSection = (
     validSections.includes(section as Section) ? section : SECTIONS.SETTINGS
   ) as Section;
-  const orgHeaderNav = buildOrgHeaderNav({
-    orgId: org_id,
-    activeTab: "settings",
-    showMembersTab: canManage,
-  });
 
   return (
-    <DefaultLayout
-      headerSecondaryNavItems={orgHeaderNav}
-      headerOrganization={{id: org.id, name: org.name}}
-    >
-      <Container size="lg" py="lg">
-        <Stack gap="md">
-          <Box className={classes.manageLayout}>
-            <OrgSettingsSidebarNav
+    <Container size="lg" py="lg">
+      <Stack gap="md">
+        <Box className={classes.manageLayout}>
+          <OrgSettingsSidebarNav
+            orgId={org_id}
+            activeSection={activeSection}
+            sections={ORG_SETTINGS_NAV_SECTIONS}
+          />
+
+          <Box className={classes.manageContent}>
+            <OrgSettingsMobileNav
               orgId={org_id}
               activeSection={activeSection}
               sections={ORG_SETTINGS_NAV_SECTIONS}
             />
 
-            <Box className={classes.manageContent}>
-              <OrgSettingsMobileNav
-                orgId={org_id}
-                activeSection={activeSection}
-                sections={ORG_SETTINGS_NAV_SECTIONS}
-              />
-
-              <Box className={classes.contentPanel}>
-                {activeSection === SECTIONS.SETTINGS && (
-                  <OrgSettingsForm org={org} />
-                )}
-                {activeSection === SECTIONS.DANGER && (
-                  <OrgDangerZone orgId={org_id} orgName={org.name} />
-                )}
-              </Box>
+            <Box className={classes.contentPanel}>
+              {activeSection === SECTIONS.SETTINGS && (
+                <OrgSettingsForm org={org} />
+              )}
+              {activeSection === SECTIONS.DANGER && (
+                <OrgDangerZone orgId={org_id} orgName={org.name} />
+              )}
             </Box>
           </Box>
-        </Stack>
-      </Container>
-    </DefaultLayout>
+        </Box>
+      </Stack>
+    </Container>
   );
 };
 
