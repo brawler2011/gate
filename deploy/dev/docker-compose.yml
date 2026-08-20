@@ -17,6 +17,7 @@ services:
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${BACKEND_OTEL_ENDPOINT:-otel-collector:4317}
+      - OTEL_SERVICE_NAME=${BACKEND_OTEL_SERVICE_NAME:-gate-backend}
     networks:
       - gate-dev
       - traefik-network
