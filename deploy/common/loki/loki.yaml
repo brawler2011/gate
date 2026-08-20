@@ -5,11 +5,11 @@ server:
   grpc_listen_port: 9096
 
 common:
-  path_prefix: /var/loki
+  path_prefix: /loki
   storage:
     filesystem:
-      chunks_directory: /var/loki/chunks
-      rules_directory: /var/loki/rules
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
   replication_factor: 1
   ring:
     kvstore:
@@ -36,8 +36,8 @@ ruler:
   storage:
     type: local
     local:
-      directory: /var/loki/rules
-  rule_path: /var/loki/rules-temp
+      directory: /loki/rules
+  rule_path: /loki/rules-temp
   remote_write:
     enabled: false
 

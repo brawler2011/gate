@@ -394,7 +394,7 @@ services:
     command: ["-config.file=/etc/loki/local-config.yaml"]
     volumes:
       - ../common/loki/loki.yaml:/etc/loki/local-config.yaml:ro
-      - loki-data:/var/loki
+      - loki-data:/loki
     networks:
       - gate-prod
     deploy:
