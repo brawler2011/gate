@@ -27,8 +27,10 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -103,11 +105,19 @@ func runApp(envFile string) error {
 		return err
 	}
 
-	logger, err := newLogger(cfg.Env)
+	telShutdown, err := telemetry.InitTelemetry(context.Background(), telemetry.Config{
+		Endpoint:       cfg.OtelEndpoint,
+		ServiceName:    cfg.OtelServiceName,
+		ServiceVersion: cfg.OtelServiceVersion,
+		Environment:    cfg.Env,
+		Insecure:       cfg.OtelInsecure,
+		Enabled:        cfg.OtelEnabled,
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("init telemetry: %w", err)
 	}
-	slog.SetDefault(logger)
+
+	logger := slog.Default()
 
 	logger.Info("connecting to postgres")
 	pool, err := pkg.NewPostgresDB(cfg.GetPostgresDSN())
@@ -288,12 +298,19 @@ func runApp(envFile string) error {
 
 	publicServer := &http.Server{
 		Addr:              cfg.Address,
-		Handler:           publicMux,
+		Handler:           otelhttp.NewHandler(publicMux, "gate-backend"),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), serviceShutdownTimeout)
+		defer cancel()
+		if err := telShutdown(shutdownCtx); err != nil {
+			logger.Error("telemetry shutdown error", slog.String("error", err.Error()))
+		}
+	}()
 
 	services := []appService{
 		newService(

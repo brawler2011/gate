@@ -25,6 +25,7 @@ tasks:
     desc: "Generate SQLC queries"
     sources:
       - sqlc.yaml
+      - migrations/*.sql
       - internal/repository/pg/*.sql
     generates:
       - internal/repository/pg/sqlc/*.go

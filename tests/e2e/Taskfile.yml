@@ -1,0 +1,27 @@
+version: '3'
+
+tasks:
+  test:
+    desc: "Run all E2E Observability tests"
+    cmds:
+      - go test -v -count=1 ./...
+
+  test-tier1:
+    desc: "Run Tier 1 Feature Coverage tests"
+    cmds:
+      - go test -v -run "TestTier1" ./...
+
+  test-tier2:
+    desc: "Run Tier 2 Boundary & Corner Case tests"
+    cmds:
+      - go test -v -run "TestTier2" ./...
+
+  test-tier3:
+    desc: "Run Tier 3 Cross-Feature Combination tests"
+    cmds:
+      - go test -v -run "TestTier3" ./...
+
+  test-tier4:
+    desc: "Run Tier 4 Real-World Workload Scenario tests"
+    cmds:
+      - go test -v -run "TestTier4" ./...

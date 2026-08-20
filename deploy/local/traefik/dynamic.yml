@@ -8,6 +8,12 @@ http:
     backend-ws:
       rule: "PathPrefix(`/ws`)"
       service: backend-service
+    otlp-traces:
+      rule: "PathPrefix(`/otlp`)"
+      service: otel-collector-service
+      middlewares:
+        - strip-otlp-prefix
+        - otlp-cors
     frontend:
       rule: "PathPrefix(`/`)"
       service: frontend-service
@@ -22,9 +28,29 @@ http:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:3000"
+    otel-collector-service:
+      loadBalancer:
+        servers:
+          - url: "http://otel-collector:4318"
 
   middlewares:
     strip-api-prefix:
       stripPrefix:
         prefixes:
           - "/api"
+    strip-otlp-prefix:
+      stripPrefix:
+        prefixes:
+          - "/otlp"
+    otlp-cors:
+      headers:
+        accessControlAllowMethods:
+          - "POST"
+          - "OPTIONS"
+          - "GET"
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 86400
+        addVaryHeader: true

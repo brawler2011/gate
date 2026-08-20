@@ -45,6 +45,13 @@ type Config struct {
 	JudgeTempDir     string `env:"JUDGE_TEMP_DIR"`                     // defaults to os.TempDir()/judge at runtime
 	JudgeTimeout     int    `env:"JUDGE_TIMEOUT" env-default:"300000"` // milliseconds
 	JudgeMaxRetries  int    `env:"JUDGE_MAX_RETRIES" env-default:"3"`
+
+	// Telemetry configuration
+	OtelEndpoint       string `env:"OTEL_EXPORTER_OTLP_ENDPOINT" env-default:"localhost:4317"`
+	OtelServiceName    string `env:"OTEL_SERVICE_NAME" env-default:"gate-backend"`
+	OtelServiceVersion string `env:"OTEL_SERVICE_VERSION" env-default:"0.1.0"`
+	OtelInsecure       bool   `env:"OTEL_INSECURE" env-default:"true"`
+	OtelEnabled        bool   `env:"OTEL_ENABLED" env-default:"true"`
 }
 
 func (c *Config) GetPostgresDSN() string {

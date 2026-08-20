@@ -10,11 +10,19 @@ includes:
   contracts:
     taskfile: ./contracts/Taskfile.yml
     dir: ./contracts
+  e2e:
+    taskfile: ./tests/e2e/Taskfile.yml
+    dir: ./tests/e2e
 
 tasks:
   default:
     cmds:
       - task -a
+
+  test:e2e:
+    desc: "Run complete E2E Observability test suite across Tiers 1-4"
+    cmds:
+      - task: e2e:test
 
   gen:
     desc: "Generate all code (OpenAPI, SQLC, Mocks)"
@@ -38,4 +46,5 @@ tasks:
     cmds:
       - rm -rf backend/contracts/core/v1 backend/contracts/observer/v1
       - rm -rf frontend/contracts/core/v1 frontend/contracts/observer/v1
+
 

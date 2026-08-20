@@ -7,6 +7,8 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 const (
@@ -73,6 +75,13 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 func (w *OutboxWorker) processEvent(ctx context.Context, event *models.OutboxEvent) {
 	handlerCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), eventTimeoutSec*time.Second)
 	defer cancel()
+
+	// Extract the W3C trace context stored in event.Headers so that the
+	// Outbox Worker continues the distributed trace from the original HTTP
+	// request that created this outbox event.
+	if len(event.Headers) > 0 {
+		handlerCtx = otel.GetTextMapPropagator().Extract(handlerCtx, propagation.MapCarrier(event.Headers))
+	}
 
 	err := w.dispatcher.Dispatch(handlerCtx, event.EventType, event.Payload)
 	if err != nil {

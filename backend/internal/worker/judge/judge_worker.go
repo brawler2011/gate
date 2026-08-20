@@ -11,6 +11,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -129,8 +130,10 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logger *slog.Logger) {
 	const handlerTimeout = 5 * time.Minute
 
-	// Create context with timeout for judging
-	judgeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), handlerTimeout)
+	// Extract the W3C trace context propagated via NATS message headers.
+	// This links the judge worker span back to the original HTTP request trace.
+	traceCtx := telemetry.ExtractNATSHeader(context.WithoutCancel(ctx), msg.Headers())
+	judgeCtx, cancel := context.WithTimeout(traceCtx, handlerTimeout)
 	defer cancel()
 
 	// Parse event

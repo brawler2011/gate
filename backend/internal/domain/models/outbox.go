@@ -26,6 +26,7 @@ type OutboxEvent struct {
 	AggregateID  uuid.UUID         `json:"aggregate_id"`
 	EventType    OutboxEventType   `json:"event_type"`
 	Payload      []byte            `json:"payload"`
+	Headers      map[string]string `json:"headers"`
 	Status       OutboxEventStatus `json:"status"`
 	RetryCount   int32             `json:"retry_count"`
 	ErrorMessage *string           `json:"error_message,omitempty"`
@@ -37,8 +38,9 @@ type OutboxEvent struct {
 }
 
 type CreateOutboxEventParams struct {
-	Id          uuid.UUID       `json:"id"`
-	AggregateID uuid.UUID       `json:"aggregate_id"`
-	EventType   OutboxEventType `json:"event_type"`
-	Payload     []byte          `json:"payload"`
+	Id          uuid.UUID         `json:"id"`
+	AggregateID uuid.UUID         `json:"aggregate_id"`
+	EventType   OutboxEventType   `json:"event_type"`
+	Payload     []byte            `json:"payload"`
+	Headers     map[string]string `json:"headers"`
 }

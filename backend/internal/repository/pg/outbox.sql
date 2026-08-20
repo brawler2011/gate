@@ -1,6 +1,6 @@
 -- name: InsertEvent :exec
-INSERT INTO outbox_events (id, aggregate_id, event_type, payload)
-VALUES (sqlc.arg(id)::uuid, sqlc.arg(aggregate_id)::uuid, sqlc.arg(event_type), sqlc.arg(payload));
+INSERT INTO outbox_events (id, aggregate_id, event_type, payload, headers)
+VALUES (sqlc.arg(id)::uuid, sqlc.arg(aggregate_id)::uuid, sqlc.arg(event_type), sqlc.arg(payload), sqlc.arg(headers));
 
 -- name: PickEvents :many
 UPDATE outbox_events

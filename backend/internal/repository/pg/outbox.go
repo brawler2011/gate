@@ -2,6 +2,8 @@ package pg
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -28,11 +30,23 @@ func (r *OutboxRepo) WithTx(tx pgx.Tx) interfaces.OutboxRepo {
 }
 
 func (r *OutboxRepo) CreateEvent(ctx context.Context, event *models.CreateOutboxEventParams) error {
+	var headersBytes []byte
+	if len(event.Headers) > 0 {
+		var err error
+		headersBytes, err = json.Marshal(event.Headers)
+		if err != nil {
+			return fmt.Errorf("failed to marshal headers: %w", err)
+		}
+	} else {
+		headersBytes = []byte("{}")
+	}
+
 	err := r.queries.InsertEvent(ctx, sqlc.InsertEventParams{
 		ID:          event.Id,
 		AggregateID: event.AggregateID,
 		EventType:   event.EventType,
 		Payload:     event.Payload,
+		Headers:     headersBytes,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -99,11 +113,22 @@ func (r *OutboxRepo) DeleteOldEvents(ctx context.Context, retentionDays int32) e
 }
 
 func mapOutboxEvent(e sqlc.OutboxEvent) models.OutboxEvent {
+	var headers map[string]string
+	if len(e.Headers) > 0 {
+		if err := json.Unmarshal(e.Headers, &headers); err != nil {
+			headers = make(map[string]string)
+		}
+	}
+	if headers == nil {
+		headers = make(map[string]string)
+	}
+
 	return models.OutboxEvent{
 		Id:           e.ID,
 		AggregateID:  e.AggregateID,
 		EventType:    e.EventType,
 		Payload:      e.Payload,
+		Headers:      headers,
 		Status:       e.Status,
 		RetryCount:   e.RetryCount,
 		ErrorMessage: e.ErrorMessage,
@@ -113,3 +138,4 @@ func mapOutboxEvent(e sqlc.OutboxEvent) models.OutboxEvent {
 		DeadlineAt:   e.DeadlineAt,
 	}
 }
+

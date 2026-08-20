@@ -16,6 +16,7 @@ services:
       - S3_ENDPOINT=${S3_ENDPOINT}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-otel-collector:4317}
     networks:
       - gate-prod
       - traefik-network
@@ -299,6 +300,153 @@ services:
       - filer
     restart: always
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    container_name: gate-otel-collector-prod
+    hostname: otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ../common/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      tempo:
+        condition: service_started
+      victoriametrics:
+        condition: service_started
+      loki:
+        condition: service_started
+    networks:
+      - gate-prod
+      - traefik-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    labels:
+      - "traefik.enable=true"
+      # OTLP Ingestion Router (/otlp)
+      - "traefik.http.routers.gate-otlp-prod.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/otlp`)"
+      - "traefik.http.routers.gate-otlp-prod.service=gate-otlp-prod-svc"
+      - "traefik.http.routers.gate-otlp-prod.entrypoints=websecure"
+      - "traefik.http.routers.gate-otlp-prod.tls=true"
+      - "traefik.http.routers.gate-otlp-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.gate-otlp-prod.middlewares=gate-otlp-prod-strip@docker,gate-otlp-prod-cors@docker"
+      # StripPrefix middleware
+      - "traefik.http.middlewares.gate-otlp-prod-strip.stripprefix.prefixes=/otlp"
+      # CORS middleware
+      - "traefik.http.middlewares.gate-otlp-prod-cors.headers.accesscontrolallowmethods=POST,OPTIONS,GET"
+      - "traefik.http.middlewares.gate-otlp-prod-cors.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.gate-otlp-prod-cors.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.gate-otlp-prod-cors.headers.accesscontrolmaxage=86400"
+      - "traefik.http.services.gate-otlp-prod-svc.loadbalancer.server.port=4318"
+
+  tempo:
+    image: grafana/tempo:2.7.1
+    container_name: gate-tempo-prod
+    hostname: tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ../common/tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    networks:
+      - gate-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.112.0
+    container_name: gate-victoriametrics-prod
+    hostname: victoriametrics
+    restart: unless-stopped
+    command:
+      - "-storageDataPath=/vmetrics-data"
+      - "-retentionPeriod=14d"
+      - "-httpListenAddr=:8428"
+    volumes:
+      - victoriametrics-data:/vmetrics-data
+    networks:
+      - gate-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  loki:
+    image: grafana/loki:3.4.1
+    container_name: gate-loki-prod
+    hostname: loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ../common/loki/loki.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/var/loki
+    networks:
+      - gate-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: gate-grafana-prod
+    hostname: grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../common/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../common/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      victoriametrics:
+        condition: service_started
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+    networks:
+      - gate-prod
+      - traefik-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gate-grafana-prod.rule=Host(`grafana.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.gate-grafana-prod.service=gate-grafana-prod-svc"
+      - "traefik.http.routers.gate-grafana-prod.entrypoints=websecure"
+      - "traefik.http.routers.gate-grafana-prod.tls=true"
+      - "traefik.http.routers.gate-grafana-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.services.gate-grafana-prod-svc.loadbalancer.server.port=3000"
+
 volumes:
   postgres-data:
     name: gate-postgres-data-prod
@@ -312,6 +460,14 @@ volumes:
     name: gate-seaweedfs-volume-prod
   seaweedfs-filer:
     name: gate-seaweedfs-filer-prod
+  victoriametrics-data:
+    name: gate-victoriametrics-data-prod
+  tempo-data:
+    name: gate-tempo-data-prod
+  loki-data:
+    name: gate-loki-data-prod
+  grafana-data:
+    name: gate-grafana-data-prod
 
 networks:
   gate-prod:

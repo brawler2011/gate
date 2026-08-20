@@ -524,6 +524,7 @@ type OutboxEvent struct {
 	ProcessedAt  *time.Time               `json:"processed_at"`
 	LockedAt     *time.Time               `json:"locked_at"`
 	DeadlineAt   *time.Time               `json:"deadline_at"`
+	Headers      []byte                   `json:"headers"`
 }
 
 type Post struct {

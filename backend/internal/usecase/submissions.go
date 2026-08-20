@@ -10,6 +10,8 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type SubmissionsUseCase struct {
@@ -74,7 +76,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 			return err
 		}
 
-		eventParams, err := newOutboxEventParams(submission)
+		eventParams, err := newOutboxEventParams(ctx, submission)
 		if err != nil {
 			return err
 		}
@@ -93,7 +95,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 	return id, nil
 }
 
-func newOutboxEventParams(submission models.Submission) (*models.CreateOutboxEventParams, error) {
+func newOutboxEventParams(ctx context.Context, submission models.Submission) (*models.CreateOutboxEventParams, error) {
 	submissionCreatedEvent := models.SubmissionCreatedEvent{
 		SubmissionEventMeta: models.SubmissionEventMeta{
 			UserId:       submission.CreatedBy,
@@ -116,11 +118,17 @@ func newOutboxEventParams(submission models.Submission) (*models.CreateOutboxEve
 		return nil, fmt.Errorf("failed to marshal: %w", err)
 	}
 
+	// Inject the current W3C trace context into outbox headers so the
+	// Outbox Worker can continue the distributed trace asynchronously.
+	headers := make(map[string]string)
+	otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(headers))
+
 	eventParams := &models.CreateOutboxEventParams{
 		Id:          uuid.New(),
 		AggregateID: submission.ID,
 		EventType:   models.OutboxEventSubmissionCreated,
 		Payload:     payload,
+		Headers:     headers,
 	}
 
 	return eventParams, nil
@@ -185,7 +193,7 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 				return fmt.Errorf("failed to get submission %s for rejudge: %w", id, err)
 			}
 
-			eventParams, err := newOutboxEventParams(submission)
+			eventParams, err := newOutboxEventParams(ctx, submission)
 			if err != nil {
 				return fmt.Errorf("failed to create event params for submission %s: %w", id, err)
 			}

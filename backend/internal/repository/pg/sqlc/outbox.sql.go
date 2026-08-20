@@ -29,8 +29,8 @@ func (q *Queries) DeleteOldEvents(ctx context.Context, arg DeleteOldEventsParams
 }
 
 const insertEvent = `-- name: InsertEvent :exec
-INSERT INTO outbox_events (id, aggregate_id, event_type, payload)
-VALUES ($1::uuid, $2::uuid, $3, $4)
+INSERT INTO outbox_events (id, aggregate_id, event_type, payload, headers)
+VALUES ($1::uuid, $2::uuid, $3, $4, $5)
 `
 
 type InsertEventParams struct {
@@ -38,6 +38,7 @@ type InsertEventParams struct {
 	AggregateID uuid.UUID              `json:"aggregate_id"`
 	EventType   models.OutboxEventType `json:"event_type"`
 	Payload     []byte                 `json:"payload"`
+	Headers     []byte                 `json:"headers"`
 }
 
 func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error {
@@ -46,6 +47,7 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 		arg.AggregateID,
 		arg.EventType,
 		arg.Payload,
+		arg.Headers,
 	)
 	return err
 }
@@ -95,7 +97,7 @@ WHERE id IN (
     LIMIT $2::int
     FOR UPDATE SKIP LOCKED
 )
-RETURNING id, aggregate_id, event_type, payload, status, retry_count, error_message, created_at, processed_at, locked_at, deadline_at
+RETURNING id, aggregate_id, event_type, payload, status, retry_count, error_message, created_at, processed_at, locked_at, deadline_at, headers
 `
 
 type PickEventsParams struct {
@@ -124,6 +126,7 @@ func (q *Queries) PickEvents(ctx context.Context, arg PickEventsParams) ([]Outbo
 			&i.ProcessedAt,
 			&i.LockedAt,
 			&i.DeadlineAt,
+			&i.Headers,
 		); err != nil {
 			return nil, err
 		}
