@@ -387,16 +387,6 @@ func loadConfig(envFile string) (config.Config, error) {
 	return cfg, nil
 }
 
-func newLogger(env string) (*slog.Logger, error) {
-	switch env {
-	case "prod":
-		return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})), nil
-	case "dev", "local":
-		return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})), nil
-	default:
-		return nil, fmt.Errorf("invalid ENV %q: expected prod, dev, or local", env)
-	}
-}
 
 func newObserverMiddleware(usersUC interfaces.UsersUC, authUC interfaces.AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

@@ -2,7 +2,6 @@ package core_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -99,12 +98,13 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Nil(t, resp)
-		assert.True(t, errors.Is(err, pkg.NoPermission))
+		assert.ErrorIs(t, err, pkg.NoPermission)
 		assert.Equal(t, 403, pkg.ToREST(err))
 		mockContests.AssertNotCalled(t, "GetContestScoreboard", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("Participant Requesting Default unfrozen=false Receives Frozen Scoreboard", func(t *testing.T) {
+		t.Parallel()
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -143,6 +143,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 	})
 
 	t.Run("Moderator Requesting unfrozen=true Receives Live Scoreboard with is_frozen=true", func(t *testing.T) {
+		t.Parallel()
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -182,6 +183,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 	})
 
 	t.Run("Admin Requesting unfrozen=true Receives Live Scoreboard", func(t *testing.T) {
+		t.Parallel()
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -244,11 +246,12 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Nil(t, resp)
-		assert.True(t, errors.Is(err, pkg.NoPermission))
+		assert.ErrorIs(t, err, pkg.NoPermission)
 		assert.Equal(t, 403, pkg.ToREST(err))
 	})
 
 	t.Run("Contest Not Started - Contest Owner Allowed", func(t *testing.T) {
+		t.Parallel()
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -301,7 +304,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Nil(t, resp)
-		assert.True(t, errors.Is(err, pkg.NoPermission))
+		assert.ErrorIs(t, err, pkg.NoPermission)
 		assert.Equal(t, 403, pkg.ToREST(err))
 	})
 }
