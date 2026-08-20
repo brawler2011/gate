@@ -159,22 +159,6 @@ export const ProblemTitle = (position?: number, title?: string): string => {
 };
 
 /**
- * Get color for user role badge
- */
-export const getRoleColor = (role: string): string => {
-  switch (role?.toLowerCase()) {
-    case "admin":
-      return "red";
-    case "moderator":
-      return "blue";
-    case "user":
-      return "gray";
-    default:
-      return "gray";
-  }
-};
-
-/**
   * Parses page number.
   *
   * @param value Raw page number

@@ -3,9 +3,12 @@
 import {Badge, Select, Text} from "@mantine/core";
 import {useRouter, useSearchParams} from "next/navigation";
 
-import {getRoleColor} from "@/lib/lib";
-
 import type {ReactNode} from "react";
+
+const ROLE_OPTIONS = [
+  {value: "admin", label: "Admin", color: "red"},
+  {value: "user", label: "User", color: "gray"},
+] as const;
 
 export const UsersRoleFilter = (): ReactNode => {
   const router = useRouter();
@@ -30,26 +33,7 @@ export const UsersRoleFilter = (): ReactNode => {
     router.push(`/admin/users${query ? `?${query}` : ""}`);
   };
 
-  const getSelectedBadge = () => {
-    if (!currentRole) {
-      return null;
-    }
-    if (currentRole === "admin") {
-      return (
-        <Badge color="red" variant="filled">
-          Admin
-        </Badge>
-      );
-    }
-    if (currentRole === "user") {
-      return (
-        <Badge color="gray" variant="filled">
-          User
-        </Badge>
-      );
-    }
-    return null;
-  };
+  const selectedRole = ROLE_OPTIONS.find((r) => r.value === currentRole);
 
   return (
     <Select
@@ -58,22 +42,26 @@ export const UsersRoleFilter = (): ReactNode => {
       onChange={handleChange}
       data={[
         {value: "", label: "Все роли"},
-        {value: "admin", label: "Admin"},
-        {value: "user", label: "User"},
+        ...ROLE_OPTIONS,
       ]}
-      renderOption={({option}) =>
-        option.value === "" ? (
-          <Text style={{cursor: "pointer"}}>Все роли</Text>
-        ) : (
-          <Badge
-            color={getRoleColor(option.value)}
-            style={{cursor: "pointer"}}
-          >
-            {option.label}
+      renderOption={({option}) => {
+        const role = ROLE_OPTIONS.find((r) => r.value === option.value);
+        if (!role) {
+          return <Text style={{cursor: "pointer"}}>{option.label}</Text>;
+        }
+        return (
+          <Badge color={role.color} style={{cursor: "pointer"}}>
+            {role.label}
           </Badge>
-        )
+        );
+      }}
+      leftSection={
+        selectedRole ? (
+          <Badge color={selectedRole.color} variant="filled">
+            {selectedRole.label}
+          </Badge>
+        ) : null
       }
-      leftSection={getSelectedBadge()}
       leftSectionWidth={85}
       styles={{
         input: {

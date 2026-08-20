@@ -3,10 +3,14 @@
 import {Avatar, Badge, Group, Paper, Stack, Text, Title} from "@mantine/core";
 import {IconCalendar} from "@tabler/icons-react";
 
-import {getRoleColor} from "@/lib/lib";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type {ReactNode} from "react";
+
+const ROLE_COLORS: Record<string, string> = {
+  admin: "red",
+  moderator: "blue",
+};
 
 type ProfileHeaderProps = {
   username: string;
@@ -17,6 +21,7 @@ type ProfileHeaderProps = {
 
 export const ProfileHeader = (props: ProfileHeaderProps): ReactNode => {
   const showRole = props.role?.toLowerCase() !== "user";
+  const roleColor = ROLE_COLORS[props.role?.toLowerCase()] ?? "gray";
   const initials = props.username?.[0]?.toUpperCase() ?? "?";
 
   return (
@@ -30,7 +35,7 @@ export const ProfileHeader = (props: ProfileHeaderProps): ReactNode => {
             <Group gap="sm" align="center">
               <Title order={2}>@{props.username}</Title>
               {showRole && (
-                <Badge color={getRoleColor(props.role)} size="lg">
+                <Badge color={roleColor} size="lg">
                   {props.role}
                 </Badge>
               )}
