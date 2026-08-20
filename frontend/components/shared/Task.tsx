@@ -46,6 +46,7 @@ type PageProps = {
   header: React.ReactNode;
   wsUrl?: string;
   since?: number;
+  isManager?: boolean;
 };
 
 const Task = ({
@@ -59,6 +60,7 @@ const Task = ({
   header,
   wsUrl,
   since,
+  isManager,
 }: PageProps): ReactNode => {
   const onSubmit = async (
     submission: FormData,
@@ -169,6 +171,7 @@ const Task = ({
                     problem={task}
                     letter={numberToLetters(task.position)}
                     problemId={task.problem_id}
+                    isManager={isManager}
                   />
                 </Box>
               </Container>

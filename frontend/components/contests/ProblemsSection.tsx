@@ -18,7 +18,7 @@ import {
 } from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconPlus, IconRefresh, IconTrash} from "@tabler/icons-react";
+import {IconEdit, IconPlus, IconRefresh, IconTrash} from "@tabler/icons-react";
 import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
 
@@ -270,7 +270,7 @@ export const ProblemsSection = ({
                 <Table.Th>Название</Table.Th>
                 <Table.Th style={{width: 120}}>Время</Table.Th>
                 <Table.Th style={{width: 120}}>Память</Table.Th>
-                <Table.Th style={{width: 100}}>Действия</Table.Th>
+                <Table.Th style={{width: 130}}>Действия</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -297,6 +297,18 @@ export const ProblemsSection = ({
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">
+                      <Tooltip label="Редактировать задачу" withArrow>
+                        <ActionIcon
+                          color="gray"
+                          variant="subtle"
+                          component="a"
+                          href={`/problems/${problem.problem_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <IconEdit size={16} />
+                        </ActionIcon>
+                      </Tooltip>
                       <Tooltip label="Заменить пакет" withArrow>
                         <ActionIcon
                           color="blue"

@@ -106,6 +106,7 @@ const Contest = ({
             <ContestProblemsTable
               contestId={contest.id}
               problems={problems}
+              isManager={isManager}
             />
           )}
         </Container>

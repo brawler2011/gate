@@ -1,6 +1,7 @@
 "use client";
 
-import {Box, Table, Text} from "@mantine/core";
+import {ActionIcon, Box, Table, Text, Tooltip} from "@mantine/core";
+import {IconEdit} from "@tabler/icons-react";
 import {useRouter} from "next/navigation";
 
 import {CONTEST_CONTENT_MAX_WIDTH} from "@/lib/constants";
@@ -14,6 +15,7 @@ import type {ReactNode} from "react";
 type ContestProblemsTableProps = {
   contestId: string | number;
   problems: Array<ContestProblemListItemModel>;
+  isManager?: boolean;
 };
 
 const formatTimeLimit = (timeMs: number) => {
@@ -30,6 +32,7 @@ const formatMemoryLimit = (memoryKb: number) => {
 export const ContestProblemsTable = ({
   contestId,
   problems,
+  isManager,
 }: ContestProblemsTableProps): ReactNode => {
   const router = useRouter();
 
@@ -42,6 +45,9 @@ export const ContestProblemsTable = ({
               <Table.Th style={{textAlign: "center"}}>#</Table.Th>
               <Table.Th>Задача</Table.Th>
               <Table.Th style={{textAlign: "center"}}>Статус</Table.Th>
+              {isManager && (
+                <Table.Th style={{textAlign: "center", width: 80}}>Действия</Table.Th>
+              )}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody className={classes.tbody}>
@@ -69,6 +75,23 @@ export const ContestProblemsTable = ({
                   <Table.Td className={classes.scoreCell}>
                     -
                   </Table.Td>
+                  {isManager && (
+                    <Table.Td style={{textAlign: "center"}}>
+                      <Tooltip label="Редактировать задачу" withArrow>
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          component="a"
+                          href={`/problems/${problem.problem_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <IconEdit size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Table.Td>
+                  )}
                 </Table.Tr>
               );
             })}

@@ -140,6 +140,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
       }
       wsUrl={wsUrl}
       since={submissionsResponse?.since}
+      isManager={isManager}
     />
   );
 };

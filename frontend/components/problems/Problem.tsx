@@ -2,7 +2,7 @@
 
 import {ActionIcon, Box, Flex, Group, Paper, Stack, Text, Title, Tooltip} from "@mantine/core";
 import {useClipboard} from "@mantine/hooks";
-import {IconCheck, IconCopy} from "@tabler/icons-react";
+import {IconCheck, IconCopy, IconEdit} from "@tabler/icons-react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import {useEffect, useRef, type ReactNode} from "react";
@@ -34,6 +34,7 @@ type Props = {
 
   problemId?: string;
   letter?: string;
+  isManager?: boolean;
 };
 
 const prettifyTimeLimit = (time_limit: number) => {
@@ -189,7 +190,7 @@ const StatementContent = ({value, problemId}: { value: string; problemId?: strin
   );
 };
 
-const Problem = ({problem, letter, problemId}: Props): ReactNode => {
+const Problem = ({problem, letter, problemId, isManager}: Props): ReactNode => {
   letter = letter || "A";
   const activeProblemId = problemId || problem.id || problem.problem_id;
 
@@ -226,9 +227,26 @@ const Problem = ({problem, letter, problemId}: Props): ReactNode => {
   return (
     <Stack className="container" ref={ref} gap="md">
       <Stack align="center" gap={0} w="fit-content" mx="auto" mb="sm">
-        <Title order={2}>
-          {letter}. {problem.title}
-        </Title>
+        <Group gap="xs" align="center" justify="center">
+          <Title order={2}>
+            {letter}. {problem.title}
+          </Title>
+          {isManager && activeProblemId && (
+            <Tooltip label="Редактировать задачу" withArrow>
+              <ActionIcon
+                component="a"
+                href={`/problems/${activeProblemId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="subtle"
+                color="gray"
+                size="md"
+              >
+                <IconEdit size={18} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </Group>
         <Stack align="center" gap={0}>
           <Text>
             ограничение по времени: {prettifyTimeLimit(problem.time_limit)}
