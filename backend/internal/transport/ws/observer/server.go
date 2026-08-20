@@ -5,11 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	observerv1 "github.com/brawler2011/contracts/observer/v1"
-	"github.com/brawler2011/gate/backend/config"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/google/uuid"
@@ -24,19 +22,12 @@ type Observer struct {
 	hub      *Hub
 }
 
-func NewObserver(cfg *config.Config, hub *Hub, middleware func(http.Handler) http.Handler) *Observer {
+func NewObserver(hub *Hub, middleware func(http.Handler) http.Handler) *Observer {
 	mux := http.NewServeMux()
 
-	allowedOrigins := make(map[string]bool, 2)
-	for _, origin := range strings.Split(strings.TrimSpace(cfg.AllowedOrigins), ",") {
-		allowedOrigins[origin] = true
-	}
-
 	observer := &Observer{
-		upgrader: &websocket.Upgrader{
-			CheckOrigin: newCheckOrigin(allowedOrigins, cfg.Env),
-		},
-		hub: hub,
+		upgrader: &websocket.Upgrader{},
+		hub:      hub,
 	}
 
 	mux.HandleFunc("/ws/submissions", observer.HandleSubmissions)
@@ -47,19 +38,6 @@ func NewObserver(cfg *config.Config, hub *Hub, middleware func(http.Handler) htt
 
 func (s *Observer) Handler() http.Handler {
 	return s.handler
-}
-
-func newCheckOrigin(allowedOrigins map[string]bool, env string) func(r *http.Request) bool {
-	if env == "local" {
-		slog.Info("local environment, all origins allowed")
-		return func(r *http.Request) bool {
-			return true
-		}
-	}
-	return func(r *http.Request) bool {
-		origin := r.Header.Get("Origin")
-		return allowedOrigins[origin]
-	}
 }
 
 type SubmissionsFilter struct {

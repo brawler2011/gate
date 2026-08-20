@@ -6,7 +6,6 @@ type Config struct {
 	Env string `env:"ENV" env-default:"prod"`
 
 	Address        string `env:"ADDRESS" required:"true"`
-	AllowedOrigins string `env:"ALLOWED_ORIGINS" env-default:"http://localhost,http://127.0.0.1"`
 
 	PostgresDSN      string `env:"POSTGRES_DSN"`
 	PostgresUser     string `env:"POSTGRES_USER" env-default:"postgres"`

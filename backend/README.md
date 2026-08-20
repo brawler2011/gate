@@ -44,7 +44,6 @@ All configuration is read from environment variables (or a `.env` file passed vi
 # General
 ENV=dev                          # dev | local | prod
 ADDRESS=0.0.0.0:13000            # Main API listen address
-ALLOWED_ORIGINS=http://localhost,http://127.0.0.1
 
 # PostgreSQL
 POSTGRES_DSN=                    # Full DSN (overrides individual vars below)

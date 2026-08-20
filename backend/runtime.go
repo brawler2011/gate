@@ -259,7 +259,7 @@ func runApp(envFile string) error {
 		return fmt.Errorf("create submissions subscriber: %w", err)
 	}
 
-	observer := wsobserver.NewObserver(&cfg, observerHub, newObserverMiddleware(usersUC, authUC))
+	observer := wsobserver.NewObserver(observerHub, newObserverMiddleware(usersUC, authUC))
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
