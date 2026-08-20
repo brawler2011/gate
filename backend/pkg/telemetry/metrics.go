@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"os"
 	"runtime"
@@ -46,6 +47,13 @@ var (
 	judgeRetriesCounter     metric.Int64Counter
 )
 
+func safeUint64ToInt64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
+}
+
 func initCustomMetrics(mp metric.MeterProvider) error {
 	meter := mp.Meter("gate-telemetry")
 
@@ -55,70 +63,70 @@ func initCustomMetrics(mp metric.MeterProvider) error {
 	outboxDispatchedCounter, err = meter.Int64Counter("outbox_dispatched_events_total",
 		metric.WithDescription("Total outbox events dispatched"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create outbox_dispatched_events_total counter: %w", err)
 	}
 
 	outboxFailedCounter, err = meter.Int64Counter("outbox_events_failed_total",
 		metric.WithDescription("Total outbox events failed"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create outbox_events_failed_total counter: %w", err)
 	}
 
 	// NATS counters
 	natsAckCounter, err = meter.Int64Counter("nats_consumer_ack_total",
 		metric.WithDescription("Total NATS messages acknowledged"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create nats_consumer_ack_total counter: %w", err)
 	}
 
 	natsNakCounter, err = meter.Int64Counter("nats_consumer_nak_total",
 		metric.WithDescription("Total NATS messages not acknowledged / negatively acknowledged"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create nats_consumer_nak_total counter: %w", err)
 	}
 
 	// GoJudge histograms
 	gojudgeCallDuration, err = meter.Float64Histogram("gojudge_grpc_call_duration_seconds",
 		metric.WithDescription("Duration of gRPC calls to go-judge sandbox in seconds"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create gojudge_grpc_call_duration_seconds histogram: %w", err)
 	}
 
 	gojudgeMemoryBytes, err = meter.Int64Histogram("gojudge_sandbox_memory_bytes",
 		metric.WithDescription("Memory consumed in go-judge sandbox in bytes"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create gojudge_sandbox_memory_bytes histogram: %w", err)
 	}
 
 	gojudgeTimeMs, err = meter.Int64Histogram("gojudge_sandbox_time_ms",
 		metric.WithDescription("Execution time in go-judge sandbox in milliseconds"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create gojudge_sandbox_time_ms histogram: %w", err)
 	}
 
 	// Judge counters and histograms
 	judgeSubmissionsCounter, err = meter.Int64Counter("judge_submissions_total",
 		metric.WithDescription("Total submissions processed by judge"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create judge_submissions_total counter: %w", err)
 	}
 
 	judgeDurationHistogram, err = meter.Float64Histogram("judge_duration_seconds",
 		metric.WithDescription("Duration of judging submissions in seconds"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create judge_duration_seconds histogram: %w", err)
 	}
 
 	judgeQueueWaitHistogram, err = meter.Float64Histogram("judge_queue_wait_seconds",
 		metric.WithDescription("Time submission spent waiting in queue before judging in seconds"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create judge_queue_wait_seconds histogram: %w", err)
 	}
 
 	judgeRetriesCounter, err = meter.Int64Counter("judge_retries_total",
 		metric.WithDescription("Total retried judging attempts"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create judge_retries_total counter: %w", err)
 	}
 
 	// Observable gauges for system, outbox, sandbox, judge
@@ -149,99 +157,99 @@ func initCustomMetrics(mp metric.MeterProvider) error {
 	startTimeGauge, err = meter.Float64ObservableGauge("process_start_time_seconds",
 		metric.WithDescription("Process start time in unix seconds"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create process_start_time_seconds gauge: %w", err)
 	}
 	cpuSecondsGauge, err = meter.Float64ObservableGauge("process_cpu_seconds_total",
 		metric.WithDescription("Total user and system CPU time spent in seconds"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create process_cpu_seconds_total gauge: %w", err)
 	}
 	openFDsGauge, err = meter.Int64ObservableGauge("process_open_fds",
 		metric.WithDescription("Number of open file descriptors"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create process_open_fds gauge: %w", err)
 	}
 	maxFDsGauge, err = meter.Int64ObservableGauge("process_max_fds",
 		metric.WithDescription("Maximum open file descriptors limit"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create process_max_fds gauge: %w", err)
 	}
 	goroutinesGauge, err = meter.Int64ObservableGauge("go_goroutines",
 		metric.WithDescription("Number of goroutines that currently exist"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_goroutines gauge: %w", err)
 	}
 	threadsGauge, err = meter.Int64ObservableGauge("go_threads",
 		metric.WithDescription("Number of OS threads created"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_threads gauge: %w", err)
 	}
 	memAllocGauge, err = meter.Int64ObservableGauge("go_memstats_alloc_bytes",
 		metric.WithDescription("Number of bytes allocated and still in use"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_memstats_alloc_bytes gauge: %w", err)
 	}
 	memSysGauge, err = meter.Int64ObservableGauge("go_memstats_sys_bytes",
 		metric.WithDescription("Number of bytes obtained from system"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_memstats_sys_bytes gauge: %w", err)
 	}
 	memHeapInuse, err = meter.Int64ObservableGauge("go_memstats_heap_inuse_bytes",
 		metric.WithDescription("Number of heap bytes in use"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_memstats_heap_inuse_bytes gauge: %w", err)
 	}
 	memHeapIdle, err = meter.Int64ObservableGauge("go_memstats_heap_idle_bytes",
 		metric.WithDescription("Number of heap bytes idle"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_memstats_heap_idle_bytes gauge: %w", err)
 	}
 	memStackInuse, err = meter.Int64ObservableGauge("go_memstats_stack_inuse_bytes",
 		metric.WithDescription("Number of stack bytes in use"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_memstats_stack_inuse_bytes gauge: %w", err)
 	}
 	memMallocsGauge, err = meter.Int64ObservableGauge("go_memstats_mallocs_total",
 		metric.WithDescription("Total number of mallocs"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_memstats_mallocs_total gauge: %w", err)
 	}
 	memFreesGauge, err = meter.Int64ObservableGauge("go_memstats_frees_total",
 		metric.WithDescription("Total number of frees"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_memstats_frees_total gauge: %w", err)
 	}
 	gcCountGauge, err = meter.Int64ObservableGauge("go_gc_duration_seconds_count",
 		metric.WithDescription("Number of GC cycles completed"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_gc_duration_seconds_count gauge: %w", err)
 	}
 	gcSumGauge, err = meter.Float64ObservableGauge("go_gc_duration_seconds_sum",
 		metric.WithDescription("Total GC pause duration in seconds"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create go_gc_duration_seconds_sum gauge: %w", err)
 	}
 
 	outboxPendingGauge, err = meter.Int64ObservableGauge("outbox_pending_events_count",
 		metric.WithDescription("Pending events in outbox"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create outbox_pending_events_count gauge: %w", err)
 	}
 	outboxLagGauge, err = meter.Float64ObservableGauge("outbox_dispatch_lag_seconds",
 		metric.WithDescription("Outbox dispatch age lag in seconds"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create outbox_dispatch_lag_seconds gauge: %w", err)
 	}
 
 	gojudgeActiveGauge, err = meter.Int64ObservableGauge("gojudge_active_executions",
 		metric.WithDescription("Active parallel executions in sandbox"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create gojudge_active_executions gauge: %w", err)
 	}
 	judgeWorkersGauge, err = meter.Int64ObservableGauge("judge_active_workers",
 		metric.WithDescription("Number of active judge workers"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create judge_active_workers gauge: %w", err)
 	}
 
 	_, err = meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
@@ -260,7 +268,7 @@ func initCustomMetrics(mp metric.MeterProvider) error {
 		}
 		var rlimit syscall.Rlimit
 		if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlimit); err == nil {
-			o.ObserveInt64(maxFDsGauge, int64(rlimit.Cur))
+			o.ObserveInt64(maxFDsGauge, safeUint64ToInt64(rlimit.Cur))
 		}
 
 		// 2. Go runtime stats
@@ -269,14 +277,14 @@ func initCustomMetrics(mp metric.MeterProvider) error {
 
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
-		o.ObserveInt64(memAllocGauge, int64(m.Alloc))
-		o.ObserveInt64(memSysGauge, int64(m.Sys))
-		o.ObserveInt64(memHeapInuse, int64(m.HeapInuse))
-		o.ObserveInt64(memHeapIdle, int64(m.HeapIdle))
-		o.ObserveInt64(memStackInuse, int64(m.StackInuse))
-		o.ObserveInt64(memMallocsGauge, int64(m.Mallocs))
-		o.ObserveInt64(memFreesGauge, int64(m.Frees))
-		o.ObserveInt64(gcCountGauge, int64(m.NumGC))
+		o.ObserveInt64(memAllocGauge, safeUint64ToInt64(m.Alloc))
+		o.ObserveInt64(memSysGauge, safeUint64ToInt64(m.Sys))
+		o.ObserveInt64(memHeapInuse, safeUint64ToInt64(m.HeapInuse))
+		o.ObserveInt64(memHeapIdle, safeUint64ToInt64(m.HeapIdle))
+		o.ObserveInt64(memStackInuse, safeUint64ToInt64(m.StackInuse))
+		o.ObserveInt64(memMallocsGauge, safeUint64ToInt64(m.Mallocs))
+		o.ObserveInt64(memFreesGauge, safeUint64ToInt64(m.Frees))
+		o.ObserveInt64(gcCountGauge, safeUint64ToInt64(uint64(m.NumGC)))
 		o.ObserveFloat64(gcSumGauge, float64(m.PauseTotalNs)/1e9)
 
 		// 3. Outbox stats
@@ -291,8 +299,11 @@ func initCustomMetrics(mp metric.MeterProvider) error {
 	}, startTimeGauge, cpuSecondsGauge, openFDsGauge, maxFDsGauge, goroutinesGauge, threadsGauge,
 		memAllocGauge, memSysGauge, memHeapInuse, memHeapIdle, memStackInuse, memMallocsGauge, memFreesGauge,
 		gcCountGauge, gcSumGauge, outboxPendingGauge, outboxLagGauge, gojudgeActiveGauge, judgeWorkersGauge)
+	if err != nil {
+		return fmt.Errorf("register telemetry metrics callback: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 // RegisterPGXPoolMetrics registers PostgreSQL connection pool gauges.
@@ -302,25 +313,25 @@ func RegisterPGXPoolMetrics(pool *pgxpool.Pool) error {
 	connsGauge, err := meter.Int64ObservableGauge("pgxpool_connections_total",
 		metric.WithDescription("Number of connections in postgres pool"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create pgxpool_connections_total gauge: %w", err)
 	}
 
 	maxConnsGauge, err := meter.Int64ObservableGauge("pgxpool_max_conns",
 		metric.WithDescription("Maximum number of connections allowed in postgres pool"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create pgxpool_max_conns gauge: %w", err)
 	}
 
 	acquireWaitGauge, err := meter.Int64ObservableGauge("pgxpool_acquire_wait_total",
 		metric.WithDescription("Total number of times a connection was acquired"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create pgxpool_acquire_wait_total gauge: %w", err)
 	}
 
 	acquireWaitDurGauge, err := meter.Float64ObservableGauge("pgxpool_acquire_wait_duration_seconds_total",
 		metric.WithDescription("Total duration spent waiting for connections in seconds"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create pgxpool_acquire_wait_duration_seconds_total gauge: %w", err)
 	}
 
 	_, err = meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
@@ -332,8 +343,11 @@ func RegisterPGXPoolMetrics(pool *pgxpool.Pool) error {
 		o.ObserveFloat64(acquireWaitDurGauge, stat.AcquireDuration().Seconds())
 		return nil
 	}, connsGauge, maxConnsGauge, acquireWaitGauge, acquireWaitDurGauge)
+	if err != nil {
+		return fmt.Errorf("register pgxpool metrics callback: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 // RegisterNATSMetrics registers NATS JetStream stream and consumer gauges.
@@ -343,19 +357,19 @@ func RegisterNATSMetrics(js jetstream.JetStream) error {
 	streamMsgsGauge, err := meter.Int64ObservableGauge("nats_stream_messages",
 		metric.WithDescription("Number of messages in NATS stream"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create nats_stream_messages gauge: %w", err)
 	}
 
 	streamBytesGauge, err := meter.Int64ObservableGauge("nats_stream_bytes",
 		metric.WithDescription("Bytes in NATS stream"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create nats_stream_bytes gauge: %w", err)
 	}
 
 	consumerPendingGauge, err := meter.Int64ObservableGauge("nats_consumer_num_pending",
 		metric.WithDescription("Number of pending messages for consumer"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create nats_consumer_num_pending gauge: %w", err)
 	}
 
 	_, err = meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
@@ -363,8 +377,8 @@ func RegisterNATSMetrics(js jetstream.JetStream) error {
 		if err == nil && sInfo != nil {
 			info, err := sInfo.Info(ctx)
 			if err == nil && info != nil {
-				o.ObserveInt64(streamMsgsGauge, int64(info.State.Msgs), metric.WithAttributes(attribute.String("stream", "SUBMISSIONS")))
-				o.ObserveInt64(streamBytesGauge, int64(info.State.Bytes), metric.WithAttributes(attribute.String("stream", "SUBMISSIONS")))
+				o.ObserveInt64(streamMsgsGauge, safeUint64ToInt64(info.State.Msgs), metric.WithAttributes(attribute.String("stream", "SUBMISSIONS")))
+				o.ObserveInt64(streamBytesGauge, safeUint64ToInt64(info.State.Bytes), metric.WithAttributes(attribute.String("stream", "SUBMISSIONS")))
 			}
 		}
 
@@ -372,13 +386,16 @@ func RegisterNATSMetrics(js jetstream.JetStream) error {
 		if err == nil && c != nil {
 			info, err := c.Info(ctx)
 			if err == nil && info != nil {
-				o.ObserveInt64(consumerPendingGauge, int64(info.NumPending), metric.WithAttributes(attribute.String("consumer", "judge_consumer")))
+				o.ObserveInt64(consumerPendingGauge, safeUint64ToInt64(info.NumPending), metric.WithAttributes(attribute.String("consumer", "judge_consumer")))
 			}
 		}
 		return nil
 	}, streamMsgsGauge, streamBytesGauge, consumerPendingGauge)
+	if err != nil {
+		return fmt.Errorf("register nats metrics callback: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 // Outbox metric recording helpers
