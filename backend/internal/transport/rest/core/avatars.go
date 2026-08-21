@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// UploadAvatar handles POST /users/{id}/avatar
+// UploadAvatar handles POST /users/{username}/avatar
 func (h *CoreServer) UploadAvatar(ctx context.Context, request corev1.UploadAvatarRequestObject) (corev1.UploadAvatarResponseObject, error) {
 	// Parse multipart form to extract file
 	// The Body field contains a multipart.Reader
@@ -57,7 +57,7 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, request corev1.UploadAvat
 
 	// Upload avatar using use case
 	fileReader := bytes.NewReader(fileData)
-	imgIDStr, err := h.avatarsUC.UploadAvatar(ctx, request.Id, fileReader, filename, contentType)
+	imgIDStr, err := h.avatarsUC.UploadAvatar(ctx, request.Username, fileReader, filename, contentType)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to upload avatar")
 	}
@@ -74,10 +74,10 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, request corev1.UploadAvat
 	}, nil
 }
 
-// DeleteAvatar handles DELETE /users/{id}/avatar
+// DeleteAvatar handles DELETE /users/{username}/avatar
 func (h *CoreServer) DeleteAvatar(ctx context.Context, request corev1.DeleteAvatarRequestObject) (corev1.DeleteAvatarResponseObject, error) {
 	// Delete avatar using use case
-	err := h.avatarsUC.DeleteAvatar(ctx, request.Id)
+	err := h.avatarsUC.DeleteAvatar(ctx, request.Username)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to delete avatar")
 	}
@@ -85,10 +85,10 @@ func (h *CoreServer) DeleteAvatar(ctx context.Context, request corev1.DeleteAvat
 	return corev1.DeleteAvatar200Response{}, nil
 }
 
-// GetUserAvatar handles GET /users/{id}/avatar
+// GetUserAvatar handles GET /users/{username}/avatar
 func (h *CoreServer) GetUserAvatar(ctx context.Context, request corev1.GetUserAvatarRequestObject) (corev1.GetUserAvatarResponseObject, error) {
 	// Retrieve avatar using use case
-	avatarImg, err := h.avatarsUC.GetAvatar(ctx, request.Id, request.Params.IfNoneMatch)
+	avatarImg, err := h.avatarsUC.GetAvatar(ctx, request.Username, request.Params.IfNoneMatch)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotModified) {
 			var etag string

@@ -67,6 +67,14 @@ func mapUserToModel(user sqlc.User) models.User {
 	}
 }
 
+func (r *UsersRepo) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
+	user, err := r.queries.GetUserByUsername(ctx, username)
+	if err != nil {
+		return models.User{}, HandlePgErr(err)
+	}
+	return mapUserToModel(user), nil
+}
+
 func (r *UsersRepo) GetUserByUsernameOrEmail(ctx context.Context, identifier string) (models.User, error) {
 	user, err := r.queries.GetUserByUsernameOrEmail(ctx, identifier)
 	if err != nil {

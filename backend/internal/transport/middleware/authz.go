@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
@@ -55,11 +56,21 @@ func RequireSelfOrAdmin(idFieldNames ...string) AccessEvaluator {
 		if evalCtx.User.IsGuest() {
 			return pkg.ErrUnauthenticated
 		}
+		if evalCtx.User.IsAdmin() {
+			return nil
+		}
+		if targetUsername, err := extractStringFromRequest(evalCtx.Request, idFieldNames...); err == nil && targetUsername != "" {
+			cleanTarget := strings.ToLower(strings.TrimPrefix(targetUsername, "@"))
+			if cleanTarget == strings.ToLower(evalCtx.User.Username) {
+				return nil
+			}
+			return pkg.Wrap(pkg.NoPermission, nil, "can only modify your own resource")
+		}
 		targetUserID, err := extractUUIDFromRequest(evalCtx.Request, idFieldNames...)
 		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "user id is required for authorization")
+			return pkg.Wrap(pkg.ErrBadInput, err, "user identifier is required for authorization")
 		}
-		if targetUserID != evalCtx.User.Id && !evalCtx.User.IsAdmin() {
+		if targetUserID != evalCtx.User.Id {
 			return pkg.Wrap(pkg.NoPermission, nil, "can only modify your own resource")
 		}
 		return nil
@@ -179,9 +190,9 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ListUserSubmissions":  {RequireAuth, checkListUserSubmissionsAccess},
 		"ListWorkshopContests": {RequireAuth},
 		"GetSubmission":        {RequireAuth, checkGetSubmissionAccess},
-		"UploadAvatar":         {RequireAuth, RequireSelfOrAdmin("Id")},
-		"DeleteAvatar":         {RequireAuth, RequireSelfOrAdmin("Id")},
-		"UpdateUser":           {RequireAuth, RequireSelfOrAdmin("Id")},
+		"UploadAvatar":         {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
+		"DeleteAvatar":         {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
+		"UpdateUser":           {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
 
 		"ListAdminContests": {RequireAuth, RequireAdmin},
 		"CreatePost":        {RequireAuth, RequireAdmin},
@@ -320,12 +331,21 @@ func AuthzStrictMiddleware(permissionsUC interfaces.PermissionsUC, submissionsUC
 }
 
 func checkListUserContestsAccess(ctx context.Context, evalCtx *EvalContext) error {
+	if evalCtx.User.IsAdmin() {
+		return nil
+	}
+	if targetUsername, err := extractStringFromRequest(evalCtx.Request, "Username", "Id"); err == nil && targetUsername != "" {
+		cleanTarget := strings.ToLower(strings.TrimPrefix(targetUsername, "@"))
+		if cleanTarget == strings.ToLower(evalCtx.User.Username) {
+			return nil
+		}
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
+	}
 	targetUserID, err := extractUUIDFromRequest(evalCtx.Request, "Id")
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "user id is required for authorization")
+		return pkg.Wrap(pkg.ErrBadInput, err, "user identifier is required for authorization")
 	}
-
-	if targetUserID != evalCtx.User.Id && !evalCtx.User.IsAdmin() {
+	if targetUserID != evalCtx.User.Id {
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
 	}
 
@@ -338,11 +358,14 @@ func checkListUserSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) e
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid submissions request")
 	}
 
-	if req.UserId != evalCtx.User.Id && !evalCtx.User.IsAdmin() {
+	cleanTarget := strings.ToLower(strings.TrimPrefix(req.Username, "@"))
+	isSelf := cleanTarget == strings.ToLower(evalCtx.User.Username)
+
+	if !isSelf && !evalCtx.User.IsAdmin() {
 		return pkg.Wrap(pkg.NoPermission, nil, "only admins can view other users' submissions")
 	}
 
-	if req.UserId == evalCtx.User.Id && req.Params.ContestId != nil {
+	if isSelf && req.Params.ContestId != nil {
 		allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(
 			ctx,
 			*req.Params.ContestId,
@@ -569,4 +592,50 @@ func extractUUIDFromValue(v reflect.Value, fieldNames []string) (uuid.UUID, bool
 	}
 
 	return uuid.Nil, false, nil
+}
+
+func extractStringFromRequest(request interface{}, fieldNames ...string) (string, error) {
+	v := reflect.ValueOf(request)
+	if !v.IsValid() {
+		return "", fmt.Errorf("request is nil")
+	}
+
+	for v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return "", fmt.Errorf("request is nil")
+		}
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		return "", fmt.Errorf("request must be a struct")
+	}
+
+	for _, fieldName := range fieldNames {
+		field := v.FieldByName(fieldName)
+		if field.IsValid() && field.Kind() == reflect.String {
+			return field.String(), nil
+		}
+	}
+
+	params := v.FieldByName("Params")
+	if params.IsValid() {
+		p := params
+		for p.Kind() == reflect.Pointer {
+			if p.IsNil() {
+				break
+			}
+			p = p.Elem()
+		}
+		if p.Kind() == reflect.Struct {
+			for _, fieldName := range fieldNames {
+				field := p.FieldByName(fieldName)
+				if field.IsValid() && field.Kind() == reflect.String {
+					return field.String(), nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("string field not found")
 }

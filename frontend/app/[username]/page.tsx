@@ -1,55 +1,68 @@
 import {notFound, redirect} from "next/navigation";
 import {Suspense} from "react";
 
-import {DefaultLayout} from '@/components/shared';
+import {DefaultLayout} from "@/components/shared";
 import {
   ProfileContainer,
   ProfileHeader,
   UserContestsSection,
   UserContestsSkeleton,
-} from '@/components/users';
+} from "@/components/users";
 import {api, unwrapAndCache} from "@/lib/api";
-import {parseId, parsePage} from "@/lib/lib";
+import {parsePage} from "@/lib/lib";
 
 import type {Metadata} from "next";
 
 type Props = {
-  params: Promise<{ user_id: string }>;
+  params: Promise<{ username: string }>;
   searchParams: Promise<{ contestsPage?: string }>;
 };
 
 const getUser = unwrapAndCache(api.getUser);
 
-export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
-  const {user_id} = await params;
+const parseUsername = (raw: string): string | null => {
+  try {
+    const decoded = decodeURIComponent(raw);
+    if (!decoded.startsWith("@")) {
+      return null;
+    }
+    const clean = decoded.slice(1);
+    return clean.length > 0 ? clean : null;
+  } catch {
+    return null;
+  }
+};
 
-  const userId = parseId(user_id);
-  if (!userId) {
+export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
+  const {username} = await params;
+  const cleanUsername = parseUsername(username);
+
+  if (!cleanUsername) {
     notFound();
   }
 
-  const data = await getUser({id: userId});
+  const data = await getUser({username: cleanUsername});
 
   return {title: `${data.user.username}`};
 };
 
 const Page = async ({params, searchParams}: Props): Promise<JSX.Element> => {
-  const {user_id} = await params;
+  const {username} = await params;
   const {contestsPage} = await searchParams;
 
-  const userId = parseId(user_id);
-  if (!userId) {
+  const cleanUsername = parseUsername(username);
+  if (!cleanUsername) {
     notFound();
   }
 
   const page = parsePage(contestsPage);
   if (!page) {
-    redirect(`/users/${user_id}`);
+    redirect(`/@${cleanUsername}`);
   }
 
   const [[, me], userData] = await Promise.all([
     api.getMe(),
-    getUser({id: userId}),
+    getUser({username: cleanUsername}),
   ]);
   const currentUser = me?.user ?? null;
   const user = userData!.user;
@@ -61,10 +74,10 @@ const Page = async ({params, searchParams}: Props): Promise<JSX.Element> => {
           username={user.username}
           role={user.role}
           createdAt={user.createdAt}
-          isOwnProfile={currentUser?.id === user_id}
+          isOwnProfile={currentUser?.id === user.id}
         />
         <Suspense fallback={<UserContestsSkeleton />}>
-          <UserContestsSection userId={user_id} page={page} />
+          <UserContestsSection username={cleanUsername} page={page} />
         </Suspense>
       </ProfileContainer>
     </DefaultLayout>

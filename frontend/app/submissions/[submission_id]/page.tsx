@@ -73,7 +73,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
         <Text>{TimeBeautify(submission.created_at)}</Text>
       </TableTd>
       <TableTd ta="center">
-        <Link href={`/users/${submission.user_id}`} style={{color: 'inherit'}}>
+        <Link href={`/@${submission.username}`} style={{color: 'inherit'}}>
           <Text span td="underline">
             {submission.username}
           </Text>

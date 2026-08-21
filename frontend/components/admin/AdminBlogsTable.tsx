@@ -43,10 +43,10 @@ export const AdminBlogsTable = ({posts, onDeletePost, onEditPost}: AdminBlogsTab
     onEditPost(post);
   };
 
-  const handleAuthorClick = (e: React.MouseEvent, authorId: string) => {
+  const handleAuthorClick = (e: React.MouseEvent, authorUsername: string) => {
     e.stopPropagation();
-    if (authorId) {
-      router.push(`/users/${authorId}`);
+    if (authorUsername) {
+      router.push(`/@${authorUsername}`);
     }
   };
 
@@ -114,7 +114,7 @@ export const AdminBlogsTable = ({posts, onDeletePost, onEditPost}: AdminBlogsTab
                       tt="none"
                       size="sm"
                       className={classes.authorBadge}
-                      onClick={(e) => handleAuthorClick(e, post.author_id)}
+                      onClick={(e) => handleAuthorClick(e, post.author_username)}
                     >
                       {post.author_username}
                     </Badge>

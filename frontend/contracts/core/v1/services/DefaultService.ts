@@ -235,14 +235,14 @@ export class DefaultService {
      * @throws ApiError
      */
     public listUserContests({
-        id,
+        username,
         page,
         pageSize,
         search,
         sortBy,
         sortOrder,
     }: {
-        id: string,
+        username: string,
         page: number,
         pageSize: number,
         search?: string,
@@ -251,9 +251,9 @@ export class DefaultService {
     }): CancelablePromise<ListUserContestsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/user/{id}/contests',
+            url: '/users/{username}/contests',
             path: {
-                'id': id,
+                'username': username,
             },
             query: {
                 'page': page,
@@ -890,15 +890,15 @@ export class DefaultService {
      * @throws ApiError
      */
     public getUser({
-        id,
+        username,
     }: {
-        id: string,
+        username: string,
     }): CancelablePromise<GetUserResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/users/{id}',
+            url: '/users/{username}',
             path: {
-                'id': id,
+                'username': username,
             },
         });
     }
@@ -907,17 +907,17 @@ export class DefaultService {
      * @throws ApiError
      */
     public updateUser({
-        id,
+        username,
         requestBody,
     }: {
-        id: string,
+        username: string,
         requestBody: UpdateUserRequestModel,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'PATCH',
-            url: '/users/{id}',
+            url: '/users/{username}',
             path: {
-                'id': id,
+                'username': username,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -928,7 +928,7 @@ export class DefaultService {
      * @throws ApiError
      */
     public listUserSubmissions({
-        userId,
+        username,
         page,
         pageSize,
         contestId,
@@ -936,7 +936,7 @@ export class DefaultService {
         state,
         sortOrder,
     }: {
-        userId: string,
+        username: string,
         page: number,
         pageSize: number,
         contestId?: string,
@@ -946,9 +946,9 @@ export class DefaultService {
     }): CancelablePromise<ListSubmissionsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/users/{user_id}/submissions',
+            url: '/users/{username}/submissions',
             path: {
-                'user_id': userId,
+                'username': username,
             },
             query: {
                 'page': page,
@@ -981,22 +981,22 @@ export class DefaultService {
         });
     }
     /**
-     * Get user avatar by user ID
+     * Get user avatar by username
      * @returns string User avatar
      * @throws ApiError
      */
     public getUserAvatar({
-        id,
+        username,
         ifNoneMatch,
     }: {
-        id: string,
+        username: string,
         ifNoneMatch?: string,
     }): CancelablePromise<string> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/users/{id}/avatar',
+            url: '/users/{username}/avatar',
             path: {
-                'id': id,
+                'username': username,
             },
             headers: {
                 'If-None-Match': ifNoneMatch,
@@ -1015,10 +1015,10 @@ export class DefaultService {
      * @throws ApiError
      */
     public uploadAvatar({
-        id,
+        username,
         formData,
     }: {
-        id: string,
+        username: string,
         formData: {
             avatar?: Blob;
         },
@@ -1027,9 +1027,9 @@ export class DefaultService {
     }> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/users/{id}/avatar',
+            url: '/users/{username}/avatar',
             path: {
-                'id': id,
+                'username': username,
             },
             formData: formData,
             mediaType: 'multipart/form-data',
@@ -1041,15 +1041,15 @@ export class DefaultService {
      * @throws ApiError
      */
     public deleteAvatar({
-        id,
+        username,
     }: {
-        id: string,
+        username: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'DELETE',
-            url: '/users/{id}/avatar',
+            url: '/users/{username}/avatar',
             path: {
-                'id': id,
+                'username': username,
             },
         });
     }

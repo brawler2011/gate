@@ -1208,21 +1208,6 @@ type ListTeamProblemsParams struct {
 	PageSize *int32 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
-// ListUserContestsParams defines parameters for ListUserContests.
-type ListUserContestsParams struct {
-	Page      int32                            `form:"page" json:"page"`
-	PageSize  int32                            `form:"pageSize" json:"pageSize"`
-	Search    *string                          `form:"search,omitempty" json:"search,omitempty"`
-	SortBy    *ListUserContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
-	SortOrder *ListUserContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
-}
-
-// ListUserContestsParamsSortBy defines parameters for ListUserContests.
-type ListUserContestsParamsSortBy string
-
-// ListUserContestsParamsSortOrder defines parameters for ListUserContests.
-type ListUserContestsParamsSortOrder string
-
 // ListUsersParams defines parameters for ListUsers.
 type ListUsersParams struct {
 	Page     int32   `form:"page" json:"page"`
@@ -1240,6 +1225,21 @@ type GetUserAvatarParams struct {
 type UploadAvatarMultipartBody struct {
 	Avatar *openapi_types.File `json:"avatar,omitempty"`
 }
+
+// ListUserContestsParams defines parameters for ListUserContests.
+type ListUserContestsParams struct {
+	Page      int32                            `form:"page" json:"page"`
+	PageSize  int32                            `form:"pageSize" json:"pageSize"`
+	Search    *string                          `form:"search,omitempty" json:"search,omitempty"`
+	SortBy    *ListUserContestsParamsSortBy    `form:"sortBy,omitempty" json:"sortBy,omitempty"`
+	SortOrder *ListUserContestsParamsSortOrder `form:"sortOrder,omitempty" json:"sortOrder,omitempty"`
+}
+
+// ListUserContestsParamsSortBy defines parameters for ListUserContests.
+type ListUserContestsParamsSortBy string
+
+// ListUserContestsParamsSortOrder defines parameters for ListUserContests.
+type ListUserContestsParamsSortOrder string
 
 // ListUserSubmissionsParams defines parameters for ListUserSubmissions.
 type ListUserSubmissionsParams struct {
@@ -1849,9 +1849,6 @@ type ClientInterface interface {
 	// ListTeamProblems request
 	ListTeamProblems(ctx context.Context, id openapi_types.UUID, params *ListTeamProblemsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListUserContests request
-	ListUserContests(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListUsers request
 	ListUsers(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1862,24 +1859,27 @@ type ClientInterface interface {
 	GetMyDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUser request
-	GetUser(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetUser(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateUserWithBody request with any body
-	UpdateUserWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateUserWithBody(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateUser(ctx context.Context, id openapi_types.UUID, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateUser(ctx context.Context, username string, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteAvatar request
-	DeleteAvatar(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteAvatar(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUserAvatar request
-	GetUserAvatar(ctx context.Context, id openapi_types.UUID, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetUserAvatar(ctx context.Context, username string, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UploadAvatarWithBody request with any body
-	UploadAvatarWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UploadAvatarWithBody(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListUserContests request
+	ListUserContests(ctx context.Context, username string, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListUserSubmissions request
-	ListUserSubmissions(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListUserSubmissions(ctx context.Context, username string, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListWorkshopContests request
 	ListWorkshopContests(ctx context.Context, params *ListWorkshopContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3649,18 +3649,6 @@ func (c *Client) ListTeamProblems(ctx context.Context, id openapi_types.UUID, pa
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListUserContests(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListUserContestsRequest(c.Server, id, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) ListUsers(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListUsersRequest(c.Server, params)
 	if err != nil {
@@ -3697,8 +3685,8 @@ func (c *Client) GetMyDashboard(ctx context.Context, reqEditors ...RequestEditor
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetUser(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetUserRequest(c.Server, id)
+func (c *Client) GetUser(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetUserRequest(c.Server, username)
 	if err != nil {
 		return nil, err
 	}
@@ -3709,8 +3697,8 @@ func (c *Client) GetUser(ctx context.Context, id openapi_types.UUID, reqEditors 
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateUserWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateUserRequestWithBody(c.Server, id, contentType, body)
+func (c *Client) UpdateUserWithBody(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateUserRequestWithBody(c.Server, username, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3721,8 +3709,8 @@ func (c *Client) UpdateUserWithBody(ctx context.Context, id openapi_types.UUID, 
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateUser(ctx context.Context, id openapi_types.UUID, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateUserRequest(c.Server, id, body)
+func (c *Client) UpdateUser(ctx context.Context, username string, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateUserRequest(c.Server, username, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3733,8 +3721,8 @@ func (c *Client) UpdateUser(ctx context.Context, id openapi_types.UUID, body Upd
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteAvatar(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteAvatarRequest(c.Server, id)
+func (c *Client) DeleteAvatar(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteAvatarRequest(c.Server, username)
 	if err != nil {
 		return nil, err
 	}
@@ -3745,8 +3733,8 @@ func (c *Client) DeleteAvatar(ctx context.Context, id openapi_types.UUID, reqEdi
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetUserAvatar(ctx context.Context, id openapi_types.UUID, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetUserAvatarRequest(c.Server, id, params)
+func (c *Client) GetUserAvatar(ctx context.Context, username string, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetUserAvatarRequest(c.Server, username, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3757,8 +3745,8 @@ func (c *Client) GetUserAvatar(ctx context.Context, id openapi_types.UUID, param
 	return c.Client.Do(req)
 }
 
-func (c *Client) UploadAvatarWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUploadAvatarRequestWithBody(c.Server, id, contentType, body)
+func (c *Client) UploadAvatarWithBody(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUploadAvatarRequestWithBody(c.Server, username, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3769,8 +3757,20 @@ func (c *Client) UploadAvatarWithBody(ctx context.Context, id openapi_types.UUID
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListUserSubmissions(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListUserSubmissionsRequest(c.Server, userId, params)
+func (c *Client) ListUserContests(ctx context.Context, username string, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListUserContestsRequest(c.Server, username, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListUserSubmissions(ctx context.Context, username string, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListUserSubmissionsRequest(c.Server, username, params)
 	if err != nil {
 		return nil, err
 	}
@@ -10037,118 +10037,6 @@ func NewListTeamProblemsRequest(server string, id openapi_types.UUID, params *Li
 	return req, nil
 }
 
-// NewListUserContestsRequest generates requests for ListUserContests
-func NewListUserContestsRequest(server string, id openapi_types.UUID, params *ListUserContestsParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/user/%s/contests", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-		if params.Search != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "search", runtime.ParamLocationQuery, *params.Search); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.SortBy != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortBy", runtime.ParamLocationQuery, *params.SortBy); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.SortOrder != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewListUsersRequest generates requests for ListUsers
 func NewListUsersRequest(server string, params *ListUsersParams) (*http.Request, error) {
 	var err error
@@ -10293,12 +10181,12 @@ func NewGetMyDashboardRequest(server string) (*http.Request, error) {
 }
 
 // NewGetUserRequest generates requests for GetUser
-func NewGetUserRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+func NewGetUserRequest(server string, username string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
 	if err != nil {
 		return nil, err
 	}
@@ -10327,23 +10215,23 @@ func NewGetUserRequest(server string, id openapi_types.UUID) (*http.Request, err
 }
 
 // NewUpdateUserRequest calls the generic UpdateUser builder with application/json body
-func NewUpdateUserRequest(server string, id openapi_types.UUID, body UpdateUserJSONRequestBody) (*http.Request, error) {
+func NewUpdateUserRequest(server string, username string, body UpdateUserJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateUserRequestWithBody(server, id, "application/json", bodyReader)
+	return NewUpdateUserRequestWithBody(server, username, "application/json", bodyReader)
 }
 
 // NewUpdateUserRequestWithBody generates requests for UpdateUser with any type of body
-func NewUpdateUserRequestWithBody(server string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateUserRequestWithBody(server string, username string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
 	if err != nil {
 		return nil, err
 	}
@@ -10374,12 +10262,12 @@ func NewUpdateUserRequestWithBody(server string, id openapi_types.UUID, contentT
 }
 
 // NewDeleteAvatarRequest generates requests for DeleteAvatar
-func NewDeleteAvatarRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+func NewDeleteAvatarRequest(server string, username string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
 	if err != nil {
 		return nil, err
 	}
@@ -10408,12 +10296,12 @@ func NewDeleteAvatarRequest(server string, id openapi_types.UUID) (*http.Request
 }
 
 // NewGetUserAvatarRequest generates requests for GetUserAvatar
-func NewGetUserAvatarRequest(server string, id openapi_types.UUID, params *GetUserAvatarParams) (*http.Request, error) {
+func NewGetUserAvatarRequest(server string, username string, params *GetUserAvatarParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
 	if err != nil {
 		return nil, err
 	}
@@ -10457,12 +10345,12 @@ func NewGetUserAvatarRequest(server string, id openapi_types.UUID, params *GetUs
 }
 
 // NewUploadAvatarRequestWithBody generates requests for UploadAvatar with any type of body
-func NewUploadAvatarRequestWithBody(server string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+func NewUploadAvatarRequestWithBody(server string, username string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
 	if err != nil {
 		return nil, err
 	}
@@ -10492,13 +10380,125 @@ func NewUploadAvatarRequestWithBody(server string, id openapi_types.UUID, conten
 	return req, nil
 }
 
-// NewListUserSubmissionsRequest generates requests for ListUserSubmissions
-func NewListUserSubmissionsRequest(server string, userId openapi_types.UUID, params *ListUserSubmissionsParams) (*http.Request, error) {
+// NewListUserContestsRequest generates requests for ListUserContests
+func NewListUserContestsRequest(server string, username string, params *ListUserContestsParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "user_id", runtime.ParamLocationPath, userId)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/users/%s/contests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, params.Page); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		if params.Search != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "search", runtime.ParamLocationQuery, *params.Search); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortBy", runtime.ParamLocationQuery, *params.SortBy); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SortOrder != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "sortOrder", runtime.ParamLocationQuery, *params.SortOrder); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListUserSubmissionsRequest generates requests for ListUserSubmissions
+func NewListUserSubmissionsRequest(server string, username string, params *ListUserSubmissionsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
 	if err != nil {
 		return nil, err
 	}
@@ -11200,9 +11200,6 @@ type ClientWithResponsesInterface interface {
 	// ListTeamProblemsWithResponse request
 	ListTeamProblemsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListTeamProblemsParams, reqEditors ...RequestEditorFn) (*ListTeamProblemsResponse, error)
 
-	// ListUserContestsWithResponse request
-	ListUserContestsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*ListUserContestsResponse, error)
-
 	// ListUsersWithResponse request
 	ListUsersWithResponse(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error)
 
@@ -11213,24 +11210,27 @@ type ClientWithResponsesInterface interface {
 	GetMyDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMyDashboardResponse, error)
 
 	// GetUserWithResponse request
-	GetUserWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetUserResponse, error)
+	GetUserWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*GetUserResponse, error)
 
 	// UpdateUserWithBodyWithResponse request with any body
-	UpdateUserWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error)
+	UpdateUserWithBodyWithResponse(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error)
 
-	UpdateUserWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error)
+	UpdateUserWithResponse(ctx context.Context, username string, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error)
 
 	// DeleteAvatarWithResponse request
-	DeleteAvatarWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteAvatarResponse, error)
+	DeleteAvatarWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*DeleteAvatarResponse, error)
 
 	// GetUserAvatarWithResponse request
-	GetUserAvatarWithResponse(ctx context.Context, id openapi_types.UUID, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*GetUserAvatarResponse, error)
+	GetUserAvatarWithResponse(ctx context.Context, username string, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*GetUserAvatarResponse, error)
 
 	// UploadAvatarWithBodyWithResponse request with any body
-	UploadAvatarWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error)
+	UploadAvatarWithBodyWithResponse(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error)
+
+	// ListUserContestsWithResponse request
+	ListUserContestsWithResponse(ctx context.Context, username string, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*ListUserContestsResponse, error)
 
 	// ListUserSubmissionsWithResponse request
-	ListUserSubmissionsWithResponse(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*ListUserSubmissionsResponse, error)
+	ListUserSubmissionsWithResponse(ctx context.Context, username string, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*ListUserSubmissionsResponse, error)
 
 	// ListWorkshopContestsWithResponse request
 	ListWorkshopContestsWithResponse(ctx context.Context, params *ListWorkshopContestsParams, reqEditors ...RequestEditorFn) (*ListWorkshopContestsResponse, error)
@@ -13910,28 +13910,6 @@ func (r ListTeamProblemsResponse) StatusCode() int {
 	return 0
 }
 
-type ListUserContestsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *ListUserContestsResponseModel
-}
-
-// Status returns HTTPResponse.Status
-func (r ListUserContestsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListUserContestsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type ListUsersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -14103,6 +14081,28 @@ func (r UploadAvatarResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UploadAvatarResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListUserContestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListUserContestsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListUserContestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListUserContestsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -15451,15 +15451,6 @@ func (c *ClientWithResponses) ListTeamProblemsWithResponse(ctx context.Context, 
 	return ParseListTeamProblemsResponse(rsp)
 }
 
-// ListUserContestsWithResponse request returning *ListUserContestsResponse
-func (c *ClientWithResponses) ListUserContestsWithResponse(ctx context.Context, id openapi_types.UUID, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*ListUserContestsResponse, error) {
-	rsp, err := c.ListUserContests(ctx, id, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListUserContestsResponse(rsp)
-}
-
 // ListUsersWithResponse request returning *ListUsersResponse
 func (c *ClientWithResponses) ListUsersWithResponse(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error) {
 	rsp, err := c.ListUsers(ctx, params, reqEditors...)
@@ -15488,8 +15479,8 @@ func (c *ClientWithResponses) GetMyDashboardWithResponse(ctx context.Context, re
 }
 
 // GetUserWithResponse request returning *GetUserResponse
-func (c *ClientWithResponses) GetUserWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetUserResponse, error) {
-	rsp, err := c.GetUser(ctx, id, reqEditors...)
+func (c *ClientWithResponses) GetUserWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*GetUserResponse, error) {
+	rsp, err := c.GetUser(ctx, username, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -15497,16 +15488,16 @@ func (c *ClientWithResponses) GetUserWithResponse(ctx context.Context, id openap
 }
 
 // UpdateUserWithBodyWithResponse request with arbitrary body returning *UpdateUserResponse
-func (c *ClientWithResponses) UpdateUserWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error) {
-	rsp, err := c.UpdateUserWithBody(ctx, id, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateUserWithBodyWithResponse(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error) {
+	rsp, err := c.UpdateUserWithBody(ctx, username, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateUserResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateUserWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error) {
-	rsp, err := c.UpdateUser(ctx, id, body, reqEditors...)
+func (c *ClientWithResponses) UpdateUserWithResponse(ctx context.Context, username string, body UpdateUserJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateUserResponse, error) {
+	rsp, err := c.UpdateUser(ctx, username, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -15514,8 +15505,8 @@ func (c *ClientWithResponses) UpdateUserWithResponse(ctx context.Context, id ope
 }
 
 // DeleteAvatarWithResponse request returning *DeleteAvatarResponse
-func (c *ClientWithResponses) DeleteAvatarWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteAvatarResponse, error) {
-	rsp, err := c.DeleteAvatar(ctx, id, reqEditors...)
+func (c *ClientWithResponses) DeleteAvatarWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*DeleteAvatarResponse, error) {
+	rsp, err := c.DeleteAvatar(ctx, username, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -15523,8 +15514,8 @@ func (c *ClientWithResponses) DeleteAvatarWithResponse(ctx context.Context, id o
 }
 
 // GetUserAvatarWithResponse request returning *GetUserAvatarResponse
-func (c *ClientWithResponses) GetUserAvatarWithResponse(ctx context.Context, id openapi_types.UUID, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*GetUserAvatarResponse, error) {
-	rsp, err := c.GetUserAvatar(ctx, id, params, reqEditors...)
+func (c *ClientWithResponses) GetUserAvatarWithResponse(ctx context.Context, username string, params *GetUserAvatarParams, reqEditors ...RequestEditorFn) (*GetUserAvatarResponse, error) {
+	rsp, err := c.GetUserAvatar(ctx, username, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -15532,17 +15523,26 @@ func (c *ClientWithResponses) GetUserAvatarWithResponse(ctx context.Context, id 
 }
 
 // UploadAvatarWithBodyWithResponse request with arbitrary body returning *UploadAvatarResponse
-func (c *ClientWithResponses) UploadAvatarWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error) {
-	rsp, err := c.UploadAvatarWithBody(ctx, id, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UploadAvatarWithBodyWithResponse(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadAvatarResponse, error) {
+	rsp, err := c.UploadAvatarWithBody(ctx, username, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUploadAvatarResponse(rsp)
 }
 
+// ListUserContestsWithResponse request returning *ListUserContestsResponse
+func (c *ClientWithResponses) ListUserContestsWithResponse(ctx context.Context, username string, params *ListUserContestsParams, reqEditors ...RequestEditorFn) (*ListUserContestsResponse, error) {
+	rsp, err := c.ListUserContests(ctx, username, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListUserContestsResponse(rsp)
+}
+
 // ListUserSubmissionsWithResponse request returning *ListUserSubmissionsResponse
-func (c *ClientWithResponses) ListUserSubmissionsWithResponse(ctx context.Context, userId openapi_types.UUID, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*ListUserSubmissionsResponse, error) {
-	rsp, err := c.ListUserSubmissions(ctx, userId, params, reqEditors...)
+func (c *ClientWithResponses) ListUserSubmissionsWithResponse(ctx context.Context, username string, params *ListUserSubmissionsParams, reqEditors ...RequestEditorFn) (*ListUserSubmissionsResponse, error) {
+	rsp, err := c.ListUserSubmissions(ctx, username, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -18450,32 +18450,6 @@ func ParseListTeamProblemsResponse(rsp *http.Response) (*ListTeamProblemsRespons
 	return response, nil
 }
 
-// ParseListUserContestsResponse parses an HTTP response from a ListUserContestsWithResponse call
-func ParseListUserContestsResponse(rsp *http.Response) (*ListUserContestsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListUserContestsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ListUserContestsResponseModel
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseListUsersResponse parses an HTTP response from a ListUsersWithResponse call
 func ParseListUsersResponse(rsp *http.Response) (*ListUsersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -18663,6 +18637,32 @@ func ParseUploadAvatarResponse(rsp *http.Response) (*UploadAvatarResponse, error
 		var dest struct {
 			ImgId *openapi_types.UUID `json:"imgId,omitempty"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListUserContestsResponse parses an HTTP response from a ListUserContestsWithResponse call
+func ParseListUserContestsResponse(rsp *http.Response) (*ListUserContestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListUserContestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListUserContestsResponseModel
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -19094,9 +19094,6 @@ type ServerInterface interface {
 	// (GET /teams/{id}/problems)
 	ListTeamProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListTeamProblemsParams)
 
-	// (GET /user/{id}/contests)
-	ListUserContests(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListUserContestsParams)
-
 	// (GET /users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
 
@@ -19106,23 +19103,26 @@ type ServerInterface interface {
 	// (GET /users/me/dashboard)
 	GetMyDashboard(w http.ResponseWriter, r *http.Request)
 
-	// (GET /users/{id})
-	GetUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// (GET /users/{username})
+	GetUser(w http.ResponseWriter, r *http.Request, username string)
 
-	// (PATCH /users/{id})
-	UpdateUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// (PATCH /users/{username})
+	UpdateUser(w http.ResponseWriter, r *http.Request, username string)
 	// Delete user avatar
-	// (DELETE /users/{id}/avatar)
-	DeleteAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Get user avatar by user ID
-	// (GET /users/{id}/avatar)
-	GetUserAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUserAvatarParams)
+	// (DELETE /users/{username}/avatar)
+	DeleteAvatar(w http.ResponseWriter, r *http.Request, username string)
+	// Get user avatar by username
+	// (GET /users/{username}/avatar)
+	GetUserAvatar(w http.ResponseWriter, r *http.Request, username string, params GetUserAvatarParams)
 	// Upload user avatar
-	// (POST /users/{id}/avatar)
-	UploadAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// (POST /users/{username}/avatar)
+	UploadAvatar(w http.ResponseWriter, r *http.Request, username string)
 
-	// (GET /users/{user_id}/submissions)
-	ListUserSubmissions(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID, params ListUserSubmissionsParams)
+	// (GET /users/{username}/contests)
+	ListUserContests(w http.ResponseWriter, r *http.Request, username string, params ListUserContestsParams)
+
+	// (GET /users/{username}/submissions)
+	ListUserSubmissions(w http.ResponseWriter, r *http.Request, username string, params ListUserSubmissionsParams)
 
 	// (GET /workshop/contests)
 	ListWorkshopContests(w http.ResponseWriter, r *http.Request, params ListWorkshopContestsParams)
@@ -23716,88 +23716,6 @@ func (siw *ServerInterfaceWrapper) ListTeamProblems(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// ListUserContests operation middleware
-func (siw *ServerInterfaceWrapper) ListUserContests(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListUserContestsParams
-
-	// ------------- Required query parameter "page" -------------
-
-	if paramValue := r.URL.Query().Get("page"); paramValue != "" {
-
-	} else {
-		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "page"})
-		return
-	}
-
-	err = runtime.BindQueryParameter("form", true, true, "page", r.URL.Query(), &params.Page)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
-		return
-	}
-
-	// ------------- Required query parameter "pageSize" -------------
-
-	if paramValue := r.URL.Query().Get("pageSize"); paramValue != "" {
-
-	} else {
-		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageSize"})
-		return
-	}
-
-	err = runtime.BindQueryParameter("form", true, true, "pageSize", r.URL.Query(), &params.PageSize)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "search" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "search", r.URL.Query(), &params.Search)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "sortBy" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "sortBy", r.URL.Query(), &params.SortBy)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sortBy", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "sortOrder" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "sortOrder", r.URL.Query(), &params.SortOrder)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sortOrder", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListUserContests(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListUsers operation middleware
 func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Request) {
 
@@ -23896,17 +23814,17 @@ func (siw *ServerInterfaceWrapper) GetUser(w http.ResponseWriter, r *http.Reques
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "username" -------------
+	var username string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
 		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetUser(w, r, id)
+		siw.Handler.GetUser(w, r, username)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -23921,17 +23839,17 @@ func (siw *ServerInterfaceWrapper) UpdateUser(w http.ResponseWriter, r *http.Req
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "username" -------------
+	var username string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
 		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateUser(w, r, id)
+		siw.Handler.UpdateUser(w, r, username)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -23946,17 +23864,17 @@ func (siw *ServerInterfaceWrapper) DeleteAvatar(w http.ResponseWriter, r *http.R
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "username" -------------
+	var username string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
 		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteAvatar(w, r, id)
+		siw.Handler.DeleteAvatar(w, r, username)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -23971,12 +23889,12 @@ func (siw *ServerInterfaceWrapper) GetUserAvatar(w http.ResponseWriter, r *http.
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "username" -------------
+	var username string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
 		return
 	}
 
@@ -24005,7 +23923,7 @@ func (siw *ServerInterfaceWrapper) GetUserAvatar(w http.ResponseWriter, r *http.
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetUserAvatar(w, r, id, params)
+		siw.Handler.GetUserAvatar(w, r, username, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -24020,17 +23938,99 @@ func (siw *ServerInterfaceWrapper) UploadAvatar(w http.ResponseWriter, r *http.R
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "username" -------------
+	var username string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
 		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UploadAvatar(w, r, id)
+		siw.Handler.UploadAvatar(w, r, username)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListUserContests operation middleware
+func (siw *ServerInterfaceWrapper) ListUserContests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListUserContestsParams
+
+	// ------------- Required query parameter "page" -------------
+
+	if paramValue := r.URL.Query().Get("page"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "page"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "page", r.URL.Query(), &params.Page)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Required query parameter "pageSize" -------------
+
+	if paramValue := r.URL.Query().Get("pageSize"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pageSize"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "pageSize", r.URL.Query(), &params.PageSize)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "search" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "search", r.URL.Query(), &params.Search)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sortBy" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "sortBy", r.URL.Query(), &params.SortBy)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sortBy", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sortOrder" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "sortOrder", r.URL.Query(), &params.SortOrder)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sortOrder", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUserContests(w, r, username, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -24045,12 +24045,12 @@ func (siw *ServerInterfaceWrapper) ListUserSubmissions(w http.ResponseWriter, r 
 
 	var err error
 
-	// ------------- Path parameter "user_id" -------------
-	var userId openapi_types.UUID
+	// ------------- Path parameter "username" -------------
+	var username string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "user_id", r.PathValue("user_id"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
 		return
 	}
 
@@ -24120,7 +24120,7 @@ func (siw *ServerInterfaceWrapper) ListUserSubmissions(w http.ResponseWriter, r 
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListUserSubmissions(w, r, userId, params)
+		siw.Handler.ListUserSubmissions(w, r, username, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -24453,16 +24453,16 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("PATCH "+options.BaseURL+"/teams/{id}/members", wrapper.UpdateTeamMemberRole)
 	m.HandleFunc("POST "+options.BaseURL+"/teams/{id}/members", wrapper.AddTeamMember)
 	m.HandleFunc("GET "+options.BaseURL+"/teams/{id}/problems", wrapper.ListTeamProblems)
-	m.HandleFunc("GET "+options.BaseURL+"/user/{id}/contests", wrapper.ListUserContests)
 	m.HandleFunc("GET "+options.BaseURL+"/users", wrapper.ListUsers)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetMe)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me/dashboard", wrapper.GetMyDashboard)
-	m.HandleFunc("GET "+options.BaseURL+"/users/{id}", wrapper.GetUser)
-	m.HandleFunc("PATCH "+options.BaseURL+"/users/{id}", wrapper.UpdateUser)
-	m.HandleFunc("DELETE "+options.BaseURL+"/users/{id}/avatar", wrapper.DeleteAvatar)
-	m.HandleFunc("GET "+options.BaseURL+"/users/{id}/avatar", wrapper.GetUserAvatar)
-	m.HandleFunc("POST "+options.BaseURL+"/users/{id}/avatar", wrapper.UploadAvatar)
-	m.HandleFunc("GET "+options.BaseURL+"/users/{user_id}/submissions", wrapper.ListUserSubmissions)
+	m.HandleFunc("GET "+options.BaseURL+"/users/{username}", wrapper.GetUser)
+	m.HandleFunc("PATCH "+options.BaseURL+"/users/{username}", wrapper.UpdateUser)
+	m.HandleFunc("DELETE "+options.BaseURL+"/users/{username}/avatar", wrapper.DeleteAvatar)
+	m.HandleFunc("GET "+options.BaseURL+"/users/{username}/avatar", wrapper.GetUserAvatar)
+	m.HandleFunc("POST "+options.BaseURL+"/users/{username}/avatar", wrapper.UploadAvatar)
+	m.HandleFunc("GET "+options.BaseURL+"/users/{username}/contests", wrapper.ListUserContests)
+	m.HandleFunc("GET "+options.BaseURL+"/users/{username}/submissions", wrapper.ListUserSubmissions)
 	m.HandleFunc("GET "+options.BaseURL+"/workshop/contests", wrapper.ListWorkshopContests)
 
 	return m
@@ -26815,24 +26815,6 @@ func (response ListTeamProblems200JSONResponse) VisitListTeamProblemsResponse(w 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListUserContestsRequestObject struct {
-	Id     openapi_types.UUID `json:"id"`
-	Params ListUserContestsParams
-}
-
-type ListUserContestsResponseObject interface {
-	VisitListUserContestsResponse(w http.ResponseWriter) error
-}
-
-type ListUserContests200JSONResponse ListUserContestsResponseModel
-
-func (response ListUserContests200JSONResponse) VisitListUserContestsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type ListUsersRequestObject struct {
 	Params ListUsersParams
 }
@@ -26883,7 +26865,7 @@ func (response GetMyDashboard200JSONResponse) VisitGetMyDashboardResponse(w http
 }
 
 type GetUserRequestObject struct {
-	Id openapi_types.UUID `json:"id"`
+	Username string `json:"username"`
 }
 
 type GetUserResponseObject interface {
@@ -26900,8 +26882,8 @@ func (response GetUser200JSONResponse) VisitGetUserResponse(w http.ResponseWrite
 }
 
 type UpdateUserRequestObject struct {
-	Id   openapi_types.UUID `json:"id"`
-	Body *UpdateUserJSONRequestBody
+	Username string `json:"username"`
+	Body     *UpdateUserJSONRequestBody
 }
 
 type UpdateUserResponseObject interface {
@@ -26917,7 +26899,7 @@ func (response UpdateUser200Response) VisitUpdateUserResponse(w http.ResponseWri
 }
 
 type DeleteAvatarRequestObject struct {
-	Id openapi_types.UUID `json:"id"`
+	Username string `json:"username"`
 }
 
 type DeleteAvatarResponseObject interface {
@@ -26933,8 +26915,8 @@ func (response DeleteAvatar200Response) VisitDeleteAvatarResponse(w http.Respons
 }
 
 type GetUserAvatarRequestObject struct {
-	Id     openapi_types.UUID `json:"id"`
-	Params GetUserAvatarParams
+	Username string `json:"username"`
+	Params   GetUserAvatarParams
 }
 
 type GetUserAvatarResponseObject interface {
@@ -26999,8 +26981,8 @@ func (response GetUserAvatar404JSONResponse) VisitGetUserAvatarResponse(w http.R
 }
 
 type UploadAvatarRequestObject struct {
-	Id   openapi_types.UUID `json:"id"`
-	Body *multipart.Reader
+	Username string `json:"username"`
+	Body     *multipart.Reader
 }
 
 type UploadAvatarResponseObject interface {
@@ -27018,9 +27000,27 @@ func (response UploadAvatar200JSONResponse) VisitUploadAvatarResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListUserContestsRequestObject struct {
+	Username string `json:"username"`
+	Params   ListUserContestsParams
+}
+
+type ListUserContestsResponseObject interface {
+	VisitListUserContestsResponse(w http.ResponseWriter) error
+}
+
+type ListUserContests200JSONResponse ListUserContestsResponseModel
+
+func (response ListUserContests200JSONResponse) VisitListUserContestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListUserSubmissionsRequestObject struct {
-	UserId openapi_types.UUID `json:"user_id"`
-	Params ListUserSubmissionsParams
+	Username string `json:"username"`
+	Params   ListUserSubmissionsParams
 }
 
 type ListUserSubmissionsResponseObject interface {
@@ -27422,9 +27422,6 @@ type StrictServerInterface interface {
 	// (GET /teams/{id}/problems)
 	ListTeamProblems(ctx context.Context, request ListTeamProblemsRequestObject) (ListTeamProblemsResponseObject, error)
 
-	// (GET /user/{id}/contests)
-	ListUserContests(ctx context.Context, request ListUserContestsRequestObject) (ListUserContestsResponseObject, error)
-
 	// (GET /users)
 	ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error)
 
@@ -27434,22 +27431,25 @@ type StrictServerInterface interface {
 	// (GET /users/me/dashboard)
 	GetMyDashboard(ctx context.Context, request GetMyDashboardRequestObject) (GetMyDashboardResponseObject, error)
 
-	// (GET /users/{id})
+	// (GET /users/{username})
 	GetUser(ctx context.Context, request GetUserRequestObject) (GetUserResponseObject, error)
 
-	// (PATCH /users/{id})
+	// (PATCH /users/{username})
 	UpdateUser(ctx context.Context, request UpdateUserRequestObject) (UpdateUserResponseObject, error)
 	// Delete user avatar
-	// (DELETE /users/{id}/avatar)
+	// (DELETE /users/{username}/avatar)
 	DeleteAvatar(ctx context.Context, request DeleteAvatarRequestObject) (DeleteAvatarResponseObject, error)
-	// Get user avatar by user ID
-	// (GET /users/{id}/avatar)
+	// Get user avatar by username
+	// (GET /users/{username}/avatar)
 	GetUserAvatar(ctx context.Context, request GetUserAvatarRequestObject) (GetUserAvatarResponseObject, error)
 	// Upload user avatar
-	// (POST /users/{id}/avatar)
+	// (POST /users/{username}/avatar)
 	UploadAvatar(ctx context.Context, request UploadAvatarRequestObject) (UploadAvatarResponseObject, error)
 
-	// (GET /users/{user_id}/submissions)
+	// (GET /users/{username}/contests)
+	ListUserContests(ctx context.Context, request ListUserContestsRequestObject) (ListUserContestsResponseObject, error)
+
+	// (GET /users/{username}/submissions)
 	ListUserSubmissions(ctx context.Context, request ListUserSubmissionsRequestObject) (ListUserSubmissionsResponseObject, error)
 
 	// (GET /workshop/contests)
@@ -30926,33 +30926,6 @@ func (sh *strictHandler) ListTeamProblems(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// ListUserContests operation middleware
-func (sh *strictHandler) ListUserContests(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListUserContestsParams) {
-	var request ListUserContestsRequestObject
-
-	request.Id = id
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListUserContests(ctx, request.(ListUserContestsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListUserContests")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListUserContestsResponseObject); ok {
-		if err := validResponse.VisitListUserContestsResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // ListUsers operation middleware
 func (sh *strictHandler) ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams) {
 	var request ListUsersRequestObject
@@ -31028,10 +31001,10 @@ func (sh *strictHandler) GetMyDashboard(w http.ResponseWriter, r *http.Request) 
 }
 
 // GetUser operation middleware
-func (sh *strictHandler) GetUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (sh *strictHandler) GetUser(w http.ResponseWriter, r *http.Request, username string) {
 	var request GetUserRequestObject
 
-	request.Id = id
+	request.Username = username
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetUser(ctx, request.(GetUserRequestObject))
@@ -31054,10 +31027,10 @@ func (sh *strictHandler) GetUser(w http.ResponseWriter, r *http.Request, id open
 }
 
 // UpdateUser operation middleware
-func (sh *strictHandler) UpdateUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (sh *strictHandler) UpdateUser(w http.ResponseWriter, r *http.Request, username string) {
 	var request UpdateUserRequestObject
 
-	request.Id = id
+	request.Username = username
 
 	var body UpdateUserJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -31087,10 +31060,10 @@ func (sh *strictHandler) UpdateUser(w http.ResponseWriter, r *http.Request, id o
 }
 
 // DeleteAvatar operation middleware
-func (sh *strictHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (sh *strictHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request, username string) {
 	var request DeleteAvatarRequestObject
 
-	request.Id = id
+	request.Username = username
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.DeleteAvatar(ctx, request.(DeleteAvatarRequestObject))
@@ -31113,10 +31086,10 @@ func (sh *strictHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request, id
 }
 
 // GetUserAvatar operation middleware
-func (sh *strictHandler) GetUserAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetUserAvatarParams) {
+func (sh *strictHandler) GetUserAvatar(w http.ResponseWriter, r *http.Request, username string, params GetUserAvatarParams) {
 	var request GetUserAvatarRequestObject
 
-	request.Id = id
+	request.Username = username
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
@@ -31140,10 +31113,10 @@ func (sh *strictHandler) GetUserAvatar(w http.ResponseWriter, r *http.Request, i
 }
 
 // UploadAvatar operation middleware
-func (sh *strictHandler) UploadAvatar(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (sh *strictHandler) UploadAvatar(w http.ResponseWriter, r *http.Request, username string) {
 	var request UploadAvatarRequestObject
 
-	request.Id = id
+	request.Username = username
 
 	if reader, err := r.MultipartReader(); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode multipart body: %w", err))
@@ -31172,11 +31145,38 @@ func (sh *strictHandler) UploadAvatar(w http.ResponseWriter, r *http.Request, id
 	}
 }
 
+// ListUserContests operation middleware
+func (sh *strictHandler) ListUserContests(w http.ResponseWriter, r *http.Request, username string, params ListUserContestsParams) {
+	var request ListUserContestsRequestObject
+
+	request.Username = username
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListUserContests(ctx, request.(ListUserContestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUserContests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListUserContestsResponseObject); ok {
+		if err := validResponse.VisitListUserContestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListUserSubmissions operation middleware
-func (sh *strictHandler) ListUserSubmissions(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID, params ListUserSubmissionsParams) {
+func (sh *strictHandler) ListUserSubmissions(w http.ResponseWriter, r *http.Request, username string, params ListUserSubmissionsParams) {
 	var request ListUserSubmissionsRequestObject
 
-	request.UserId = userId
+	request.Username = username
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {

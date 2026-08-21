@@ -43,7 +43,7 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 	// 1. Upload Avatar
 	var imgID uuid.UUID
 	s.Run("UploadAvatar", func() {
-		resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, user.Id, contentType, body, func(ctx context.Context, req *http.Request) error {
+		resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, user.Username, contentType, body, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", user.Id.String())
 			return nil
 		})
@@ -57,7 +57,7 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 
 	// 2. Get User Profile and Check ImgId
 	s.Run("GetUserProfileWithImgId", func() {
-		resp, err := s.client.GetUserWithResponse(s.ctx, user.Id, func(ctx context.Context, req *http.Request) error {
+		resp, err := s.client.GetUserWithResponse(s.ctx, user.Username, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", user.Id.String())
 			return nil
 		})
@@ -70,7 +70,7 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 	// 3. Get Avatar Image
 	var etag string
 	s.Run("GetAvatarImage", func() {
-		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Id, &corev1.GetUserAvatarParams{})
+		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Username, &corev1.GetUserAvatarParams{})
 		s.Require().NoError(err)
 		s.Equal(http.StatusOK, resp.StatusCode())
 		s.Equal("image/png", resp.HTTPResponse.Header.Get("Content-Type"))
@@ -82,7 +82,7 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 
 	// 4. Get Avatar Image with If-None-Match (304 Not Modified)
 	s.Run("GetAvatarImage304", func() {
-		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Id, &corev1.GetUserAvatarParams{
+		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Username, &corev1.GetUserAvatarParams{
 			IfNoneMatch: &etag,
 		})
 		s.Require().NoError(err)
@@ -91,7 +91,7 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 
 	// 5. Delete Avatar
 	s.Run("DeleteAvatar", func() {
-		resp, err := s.client.DeleteAvatarWithResponse(s.ctx, user.Id, func(ctx context.Context, req *http.Request) error {
+		resp, err := s.client.DeleteAvatarWithResponse(s.ctx, user.Username, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", user.Id.String())
 			return nil
 		})
@@ -101,7 +101,7 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 
 	// 6. Get User Profile and Check ImgId is nil
 	s.Run("GetUserProfileWithImgIdNil", func() {
-		resp, err := s.client.GetUserWithResponse(s.ctx, user.Id, func(ctx context.Context, req *http.Request) error {
+		resp, err := s.client.GetUserWithResponse(s.ctx, user.Username, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", user.Id.String())
 			return nil
 		})
@@ -112,7 +112,7 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 
 	// 7. Get Avatar Image (404 Not Found)
 	s.Run("GetAvatarImage404", func() {
-		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Id, &corev1.GetUserAvatarParams{})
+		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Username, &corev1.GetUserAvatarParams{})
 		s.Require().NoError(err)
 		s.Equal(http.StatusNotFound, resp.StatusCode())
 	})
@@ -137,7 +137,7 @@ func (s *IntegrationTestSuite) TestUsers() {
 
 	// 3. GetUser
 	s.Run("GetUser", func() {
-		resp, err := s.client.GetUserWithResponse(s.ctx, user2.Id, func(ctx context.Context, req *http.Request) error {
+		resp, err := s.client.GetUserWithResponse(s.ctx, user2.Username, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", user1.Id.String())
 			return nil
 		})

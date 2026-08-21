@@ -33,11 +33,11 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
   const currentPage = page;
   const totalPages = Number(pagination.total) || 1;
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    setUpdatingId(userId);
+  const handleRoleChange = async (user: UserModel, newRole: string) => {
+    setUpdatingId(user.id);
     try {
       const [err] = await api.updateUser({
-        id: userId,
+        username: user.username,
         requestBody: {
           role: newRole as UpdateUserRequestModel.role,
         },
@@ -107,7 +107,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
                 if (target.closest('button') || target.closest('.mantine-Select-root') || target.closest('.mantine-ActionIcon-root')) {
                   return;
                 }
-                router.push(`/users/${user.id}`);
+                router.push(`/@${user.username}`);
               }}
               style={{cursor: "pointer"}}
             >
@@ -126,7 +126,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
                   ]}
                   onChange={(val) => {
                     if (val && val !== user.role) {
-                      handleRoleChange(user.id, val);
+                      handleRoleChange(user, val);
                     }
                   }}
                   style={{maxWidth: 150}}

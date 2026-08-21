@@ -16,7 +16,7 @@ SELECT COUNT(*)::int4
 FROM users
 WHERE (
         $1::text = ''
-        OR word_similarity(username, $1) > 0.1
+        OR word_similarity(LOWER(username), LOWER($1)) > 0.1
     )
     AND (
         $2::text = ''
@@ -102,7 +102,7 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
 FROM users
-WHERE username = $1
+WHERE LOWER(username) = LOWER($1)
 LIMIT 1
 `
 
@@ -125,7 +125,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
 SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
 FROM users
-WHERE username = $1 OR email = $1
+WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1)
 LIMIT 1
 `
 
@@ -150,14 +150,14 @@ SELECT id, username, role, email, avatar_url, created_at, updated_at, password_h
 FROM users
 WHERE (
         $1::text = ''
-        OR word_similarity(username, $1) > 0.1
+        OR word_similarity(LOWER(username), LOWER($1)) > 0.1
     )
     AND (
         $2::text = ''
         OR role::text = $2
     )
 ORDER BY CASE
-        WHEN $1 != '' THEN word_similarity(username, $1)
+        WHEN $1 != '' THEN word_similarity(LOWER(username), LOWER($1))
     END DESC NULLS LAST,
     created_at DESC
 LIMIT $4 OFFSET $3

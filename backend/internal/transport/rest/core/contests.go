@@ -239,10 +239,15 @@ func (h *CoreServer) ListUserContests(ctx context.Context, request corev1.ListUs
 		search = *request.Params.Search
 	}
 
+	user, err := h.usersUC.GetUserByUsername(ctx, request.Username)
+	if err != nil {
+		return nil, err
+	}
+
 	filter := models.UserContestsFilter{
 		Page:      request.Params.Page,
 		PageSize:  request.Params.PageSize,
-		UserId:    request.Id,
+		UserId:    user.Id,
 		Search:    search,
 		SortBy:    sortBy,
 		SortOrder: sortOrder,

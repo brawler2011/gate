@@ -2,6 +2,8 @@ package models
 
 import (
 	"errors"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg"
@@ -59,9 +61,39 @@ type CreateUserParams struct {
 	AvatarUrl    *string
 }
 
+var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,30}$`)
+
+var reservedUsernames = map[string]struct{}{
+	"admin":       {},
+	"api":         {},
+	"auth":        {},
+	"blog":        {},
+	"contests":    {},
+	"problems":    {},
+	"submissions": {},
+	"users":       {},
+	"orgs":        {},
+	"settings":    {},
+	"static":      {},
+	"login":       {},
+	"register":    {},
+	"dashboard":   {},
+	"me":          {},
+	"health":      {},
+	"leaderboard": {},
+	"docs":        {},
+	"help":        {},
+	"about":       {},
+	"support":     {},
+}
+
 func UsernameValidate(username string) error {
-	if !pkg.IsLengthBetween(username, 3, 70) {
-		return errors.New("username must be between 3 and 70 characters")
+	username = strings.TrimPrefix(username, "@")
+	if !usernameRegex.MatchString(username) {
+		return errors.New("username must be between 3 and 30 characters and contain only letters, numbers, and underscores")
+	}
+	if _, reserved := reservedUsernames[strings.ToLower(username)]; reserved {
+		return errors.New("username is reserved")
 	}
 	return nil
 }

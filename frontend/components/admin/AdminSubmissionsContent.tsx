@@ -347,9 +347,9 @@ export const AdminSubmissionsContent = ({
                         )}
                       </Table.Td>
                       <Table.Td>
-                        <Link href={`/users/${submission.user_id}`} style={{textDecoration: "none"}}>
+                        <Link href={`/@${submission.username}`} style={{textDecoration: "none"}}>
                           <Text c="blue" lineClamp={1}>
-                            {submission.username || submission.user_id.slice(0, 8)}
+                            {submission.username}
                           </Text>
                         </Link>
                       </Table.Td>

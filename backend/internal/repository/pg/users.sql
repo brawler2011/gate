@@ -25,13 +25,13 @@ LIMIT 1;
 -- name: GetUserByUsernameOrEmail :one
 SELECT *
 FROM users
-WHERE username = @identifier OR email = @identifier
+WHERE LOWER(username) = LOWER(@identifier) OR LOWER(email) = LOWER(@identifier)
 LIMIT 1;
 
 -- name: GetUserByUsername :one
 SELECT *
 FROM users
-WHERE username = @username
+WHERE LOWER(username) = LOWER(@username)
 LIMIT 1;
 
 -- name: ListUsers :many
@@ -39,14 +39,14 @@ SELECT *
 FROM users
 WHERE (
         @search::text = ''
-        OR word_similarity(username, @search) > 0.1
+        OR word_similarity(LOWER(username), LOWER(@search)) > 0.1
     )
     AND (
         sqlc.arg('role')::text = ''
         OR role::text = sqlc.arg('role')
     )
 ORDER BY CASE
-        WHEN @search != '' THEN word_similarity(username, @search)
+        WHEN @search != '' THEN word_similarity(LOWER(username), LOWER(@search))
     END DESC NULLS LAST,
     created_at DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
@@ -56,7 +56,7 @@ SELECT COUNT(*)::int4
 FROM users
 WHERE (
         @search::text = ''
-        OR word_similarity(username, @search) > 0.1
+        OR word_similarity(LOWER(username), LOWER(@search)) > 0.1
     )
     AND (
         sqlc.arg('role')::text = ''

@@ -10,7 +10,7 @@ import (
 )
 
 func (h *CoreServer) GetUser(ctx context.Context, request corev1.GetUserRequestObject) (corev1.GetUserResponseObject, error) {
-	user, err := h.usersUC.GetUserById(ctx, request.Id)
+	user, err := h.usersUC.GetUserByUsername(ctx, request.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,12 @@ func (h *CoreServer) ListUsers(ctx context.Context, request corev1.ListUsersRequ
 }
 
 func (h *CoreServer) ListUserSubmissions(ctx context.Context, request corev1.ListUserSubmissionsRequestObject) (corev1.ListUserSubmissionsResponseObject, error) {
-	filter := listUserSubmissionsParamsToFilter(request.UserId, request.Params)
+	user, err := h.usersUC.GetUserByUsername(ctx, request.Username)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := listUserSubmissionsParamsToFilter(user.Id, request.Params)
 
 	submissions, err := h.submissionsUC.ListSubmissions(ctx, filter)
 	if err != nil {
@@ -73,8 +78,13 @@ func (h *CoreServer) UpdateUser(ctx context.Context, request corev1.UpdateUserRe
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
 	}
 
+	user, err := h.usersUC.GetUserByUsername(ctx, request.Username)
+	if err != nil {
+		return nil, err
+	}
+
 	input := models.UpdateUserInput{
-		Id:       request.Id,
+		Id:       user.Id,
 		Username: request.Body.Username,
 		Email:    request.Body.Email,
 	}
@@ -83,7 +93,7 @@ func (h *CoreServer) UpdateUser(ctx context.Context, request corev1.UpdateUserRe
 		input.Role = &r
 	}
 
-	err := h.usersUC.UpdateUser(ctx, input)
+	err = h.usersUC.UpdateUser(ctx, input)
 	if err != nil {
 		return nil, err
 	}

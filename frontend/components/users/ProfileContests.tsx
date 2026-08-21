@@ -11,14 +11,14 @@ import type {ContestModel} from "@/contracts/core/v1";
 import type {ReactNode} from "react";
 
 type ProfileContestsProps = {
-  userId: string;
+  username: string;
   contests: ContestModel[];
   contestsPagination?: { page: number; total: number };
   contestsPage: number;
 };
 
 export const ProfileContests = ({
-  userId,
+  username,
   contests,
   contestsPagination,
   contestsPage,
@@ -72,7 +72,7 @@ export const ProfileContests = ({
               <Stack align="center" mt="md">
                 <NextPagination
                   pagination={{page: contestsPage, total: contestsPagination.total}}
-                  baseUrl={`/users/${userId}`}
+                  baseUrl={`/@${username}`}
                   queryParams={{contestsPage}}
                 />
               </Stack>

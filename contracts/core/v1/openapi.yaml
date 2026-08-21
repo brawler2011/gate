@@ -213,16 +213,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListContestsResponseModel"
-  /user/{id}/contests:
+  /users/{username}/contests:
     get:
       operationId: ListUserContests
       parameters:
-        - name: id
+        - name: username
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+          example: user123
         - name: page
           in: query
           required: true
@@ -969,16 +969,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListUsersResponseModel"
-  /users/{id}:
+  /users/{username}:
     get:
       operationId: GetUser
       parameters:
-        - name: id
+        - name: username
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+          example: user123
       responses:
         "200":
           description: OK
@@ -989,12 +989,12 @@ paths:
     patch:
       operationId: UpdateUser
       parameters:
-        - name: id
+        - name: username
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+          example: user123
       requestBody:
         required: true
         content:
@@ -1005,16 +1005,16 @@ paths:
         "200":
           description: OK
           content: {}
-  /users/{user_id}/submissions:
+  /users/{username}/submissions:
     get:
       operationId: ListUserSubmissions
       parameters:
-        - name: user_id
+        - name: username
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+          example: user123
         - name: page
           in: query
           required: true
@@ -1080,22 +1080,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetUserDashboardResponseModel"
-  /users/{id}/avatar:
+  /users/{username}/avatar:
     get:
       operationId: GetUserAvatar
-      summary: Get user avatar by user ID
+      summary: Get user avatar by username
       parameters:
         - name: If-None-Match
           in: header
           required: false
           schema:
             type: string
-        - name: id
+        - name: username
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+          example: user123
       responses:
         "200":
           description: User avatar
@@ -1127,12 +1127,12 @@ paths:
       operationId: UploadAvatar
       summary: Upload user avatar
       parameters:
-        - name: id
+        - name: username
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+          example: user123
       requestBody:
         required: true
         content:
@@ -1158,12 +1158,12 @@ paths:
       operationId: DeleteAvatar
       summary: Delete user avatar
       parameters:
-        - name: id
+        - name: username
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+          example: user123
       responses:
         "200":
           description: Avatar deleted successfully

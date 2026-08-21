@@ -80,7 +80,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 		s.Run("Non-owner and non-admin denied", func() {
 			contentType, body := newEmptyMultipartBody()
-			resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, targetUser.Id, contentType, bytes.NewReader(body), func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, targetUser.Username, contentType, bytes.NewReader(body), func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", otherUser.Id.String())
 				return nil
 			})
@@ -90,7 +90,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 		s.Run("Self request passes middleware", func() {
 			contentType, body := newEmptyMultipartBody()
-			resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, targetUser.Id, contentType, bytes.NewReader(body), func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, targetUser.Username, contentType, bytes.NewReader(body), func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", targetUser.Id.String())
 				return nil
 			})
@@ -101,7 +101,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 		s.Run("Admin request passes middleware", func() {
 			contentType, body := newEmptyMultipartBody()
-			resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, targetUser.Id, contentType, bytes.NewReader(body), func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, targetUser.Username, contentType, bytes.NewReader(body), func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", adminUser.Id.String())
 				return nil
 			})
@@ -164,7 +164,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Require().NoError(err)
 
 		s.Run("User cannot list another user submissions", func() {
-			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, anotherUser.Id, &corev1.ListUserSubmissionsParams{
+			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, anotherUser.Username, &corev1.ListUserSubmissionsParams{
 				Page:     1,
 				PageSize: 10,
 			}, func(ctx context.Context, req *http.Request) error {
@@ -176,7 +176,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 
 		s.Run("Admin can list another user submissions", func() {
-			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, anotherUser.Id, &corev1.ListUserSubmissionsParams{
+			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, anotherUser.Username, &corev1.ListUserSubmissionsParams{
 				Page:     1,
 				PageSize: 10,
 			}, func(ctx context.Context, req *http.Request) error {
@@ -189,7 +189,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 		s.Run("User can list own submissions when contest policy allows", func() {
 			contestID := openapi_types.UUID(allowedContestID)
-			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, requestUser.Id, &corev1.ListUserSubmissionsParams{
+			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, requestUser.Username, &corev1.ListUserSubmissionsParams{
 				Page:      1,
 				PageSize:  10,
 				ContestId: &contestID,
@@ -222,7 +222,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			s.Equal(int64(models.ContestPermissionGetContest), *roleResp.JSON200.PermissionsMask)
 
 			contestID := openapi_types.UUID(deniedContestID)
-			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, requestUser.Id, &corev1.ListUserSubmissionsParams{
+			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, requestUser.Username, &corev1.ListUserSubmissionsParams{
 				Page:      1,
 				PageSize:  10,
 				ContestId: &contestID,

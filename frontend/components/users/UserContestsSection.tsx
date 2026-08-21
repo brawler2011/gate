@@ -3,16 +3,16 @@ import {api} from "@/lib/api";
 import {ProfileContests} from "./ProfileContests";
 
 type UserContestsSectionProps = {
-  userId: string;
+  username: string;
   page: number;
 };
 
-export const UserContestsSection = async ({userId, page}: UserContestsSectionProps): Promise<JSX.Element> => {
-  const [, contestsData] = await api.listUserContests({id: userId, page, pageSize: 10});
+export const UserContestsSection = async ({username, page}: UserContestsSectionProps): Promise<JSX.Element> => {
+  const [, contestsData] = await api.listUserContests({username, page, pageSize: 10});
 
   return (
     <ProfileContests
-      userId={userId}
+      username={username}
       contests={contestsData?.contests ?? []}
       contestsPagination={contestsData?.pagination}
       contestsPage={page}

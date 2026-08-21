@@ -90,9 +90,11 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
     }
   };
 
-  const handleAuthorClick = (e: React.MouseEvent, authorId: string) => {
+  const handleAuthorClick = (e: React.MouseEvent, authorUsername?: string) => {
     e.stopPropagation();
-    router.push(`/users/${authorId}`);
+    if (authorUsername) {
+      router.push(`/@${authorUsername}`);
+    }
   };
 
   const handleDeleteClick = (e: React.MouseEvent, contest: ContestModel) => {
@@ -162,9 +164,9 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
                       tt="none"
                       size="sm"
                       className={classes.authorBadge}
-                      onClick={(e) => handleAuthorClick(e, contest.created_by)}
+                      onClick={(e) => handleAuthorClick(e, contest.owner?.username)}
                     >
-                      {contest.created_by.slice(0, 8)}
+                      {contest.owner?.username || contest.created_by.slice(0, 8)}
                     </Badge>
                   </Table.Td>
                   <Table.Td>

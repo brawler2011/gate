@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"strings"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -56,6 +57,11 @@ func (u *UsersUseCase) CreateUser(ctx context.Context, input models.CreateUserIn
 
 func (u *UsersUseCase) GetUserById(ctx context.Context, id uuid.UUID) (models.User, error) {
 	return u.usersRepo.GetUserById(ctx, id)
+}
+
+func (u *UsersUseCase) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
+	username = strings.TrimPrefix(username, "@")
+	return u.usersRepo.GetUserByUsername(ctx, username)
 }
 
 func (u *UsersUseCase) ListUsers(ctx context.Context, filter models.UsersListFilter) (models.UsersList, error) {

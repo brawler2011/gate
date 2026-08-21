@@ -134,7 +134,7 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
           <Menu.Dropdown>
             <Menu.Item
               component={Link}
-              href={`/users/${user.id}`}
+              href={`/@${user.username}`}
               leftSection={<IconUser size={16} />}
             >
               Профиль
@@ -418,7 +418,7 @@ export const Header = ({
               <Stack gap="sm">
                 <Button
                   component={Link}
-                  href={`/users/${user.id}`}
+                  href={`/@${user.username}`}
                   variant="light"
                   color={APP_COLORS.users}
                   leftSection={<IconUser size={20} />}

@@ -48,11 +48,17 @@ func (a AvatarImage) Etag() string {
 // UploadAvatar uploads a user's avatar to storage and updates the user record
 func (uc *AvatarsUseCase) UploadAvatar(
 	ctx context.Context,
-	userID uuid.UUID,
+	username string,
 	fileReader io.Reader,
 	filename string,
 	contentType string,
 ) (string, error) {
+	username = strings.TrimPrefix(username, "@")
+	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user: %w", err)
+	}
+
 	// Validate file extension
 	ext := strings.ToLower(filepath.Ext(filename))
 	allowedExts := map[string]bool{
@@ -71,14 +77,14 @@ func (uc *AvatarsUseCase) UploadAvatar(
 	key := imgID
 
 	// Upload to storage
-	err := uc.storage.UploadFile(ctx, uc.avatarBucket, key, fileReader, contentType)
+	err = uc.storage.UploadFile(ctx, uc.avatarBucket, key, fileReader, contentType)
 	if err != nil {
 		return "", fmt.Errorf("failed to upload avatar: %w", err)
 	}
 
 	// Update user record with avatar ID (stored in avatar_url column)
 	err = uc.usersRepo.UpdateUser(ctx, models.UpdateUserParams{
-		Id:        userID,
+		Id:        user.Id,
 		AvatarUrl: &imgID,
 	})
 	if err != nil {
@@ -91,9 +97,9 @@ func (uc *AvatarsUseCase) UploadAvatar(
 }
 
 // DeleteAvatar deletes a user's avatar from storage and updates the user record
-func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, userID uuid.UUID) error {
-	// Get user to find current avatar
-	user, err := uc.usersRepo.GetUserById(ctx, userID)
+func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) error {
+	username = strings.TrimPrefix(username, "@")
+	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return fmt.Errorf("failed to get user: %w", err)
 	}
@@ -111,7 +117,7 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, userID uuid.UUID) er
 	// Update user record to remove avatar URL
 	emptyURL := ""
 	err = uc.usersRepo.UpdateUser(ctx, models.UpdateUserParams{
-		Id:        userID,
+		Id:        user.Id,
 		AvatarUrl: &emptyURL,
 	})
 	if err != nil {
@@ -122,9 +128,9 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, userID uuid.UUID) er
 }
 
 // GetAvatar retrieves a user's avatar from storage
-func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, userID uuid.UUID, ifNoneMatch *string) (AvatarImage, error) {
-	// Get user to find current avatar key
-	user, err := uc.usersRepo.GetUserById(ctx, userID)
+func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNoneMatch *string) (AvatarImage, error) {
+	username = strings.TrimPrefix(username, "@")
+	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return AvatarImage{}, fmt.Errorf("failed to get user: %w", err)
 	}
