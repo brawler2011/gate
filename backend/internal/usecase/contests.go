@@ -33,7 +33,7 @@ func (uc *ContestsUseCase) CreateContest(
 		OwnerID:        c.OwnerID,
 		Visibility:     c.Visibility,
 		Title:          c.Title,
-		ShortName:      c.ShortName,
+		Login:          c.Login,
 		Description:    c.Description,
 		Settings:       c.Settings,
 		AccessPolicy:   c.AccessPolicy,
@@ -67,6 +67,26 @@ func (uc *ContestsUseCase) GetContest(ctx context.Context, id uuid.UUID) (models
 		return models.Contest{}, err
 	}
 	return contest, nil
+}
+
+func (uc *ContestsUseCase) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (models.Contest, error) {
+	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	if err != nil {
+		return models.Contest{}, err
+	}
+	return contest, nil
+}
+
+func (uc *ContestsUseCase) ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, page, pageSize int32) (*models.ContestsList, error) {
+	contests, total, err := uc.contestRepo.ListOrganizationContests(ctx, orgID, search, page, pageSize)
+	if err != nil {
+		return nil, pkg.Wrap(err, nil, "can't list organization contests from database")
+	}
+
+	return &models.ContestsList{
+		Contests:   contests,
+		Pagination: models.NewPagination(page, pageSize, total),
+	}, nil
 }
 
 func (uc *ContestsUseCase) ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error) {
@@ -502,6 +522,8 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, 
 
 	return &models.ScoreboardResponse{
 		ContestID:         contestID,
+		ContestLogin:      contest.Login,
+		OrganizationLogin: contest.OrganizationLogin,
 		PenaltyPerAttempt: penaltyPerAttempt,
 		IsFrozen:          isFrozen,
 		FreezeTime:        freezeTime,

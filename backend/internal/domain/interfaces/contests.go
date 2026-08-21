@@ -10,12 +10,15 @@ import (
 type ContestsRepo interface {
 	CreateContest(ctx context.Context, params *models.CreateContestParams) error
 	GetContest(ctx context.Context, id uuid.UUID) (models.Contest, error)
+	GetContestByLogin(ctx context.Context, orgID uuid.UUID, login string) (models.Contest, error)
+	GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (models.Contest, error)
 	UpdateContest(ctx context.Context, c models.ContestUpdateParams) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
 
 	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) ([]models.Contest, int32, error)
 	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) ([]models.Contest, int32, error)
 	ListUserContests(ctx context.Context, filter models.UserContestsFilter) ([]models.Contest, int32, error)
+	ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, page, pageSize int32) ([]models.Contest, int32, error)
 
 	CreateContestMember(ctx context.Context, c *models.CreateContestMemberParams) error
 	GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (models.ContestMember, error)
@@ -47,12 +50,14 @@ type ContestsRepo interface {
 type ContestsUC interface {
 	CreateContest(ctx context.Context, c *models.CreateContestInput) (uuid.UUID, error)
 	GetContest(ctx context.Context, id uuid.UUID) (models.Contest, error)
+	GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (models.Contest, error)
 	UpdateContest(ctx context.Context, c models.ContestUpdateInput) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
 
 	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error)
 	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error)
 	ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.ContestsList, error)
+	ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, page, pageSize int32) (*models.ContestsList, error)
 	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error)
 	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error)
 

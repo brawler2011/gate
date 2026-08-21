@@ -37,7 +37,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
 			Title:          "Unstarted Contest",
-			ShortName:      "unstarted-" + suffix,
+			Login:          "unstarted-" + suffix,
 			Description:    "Contest that has not started yet",
 			StartTime:      &futureStart,
 			EndTime:        &futureEnd,
@@ -61,7 +61,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		s.Require().NoError(err)
 
 		s.Run("Participant cannot view problem of unstarted contest", func() {
-			resp, err := s.client.GetContestProblemWithResponse(s.ctx, contestID, uuid.New(), func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.GetContestProblemWithResponse(s.ctx, org.Login, "unstarted-"+suffix, uuid.New(), func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", partUser.Id.String())
 				return nil
 			})
@@ -70,7 +70,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		})
 
 		s.Run("Moderator can view problem of unstarted contest", func() {
-			resp, err := s.client.GetContestProblemWithResponse(s.ctx, contestID, uuid.New(), func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.GetContestProblemWithResponse(s.ctx, org.Login, "unstarted-"+suffix, uuid.New(), func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", modUser.Id.String())
 				return nil
 			})
@@ -81,7 +81,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		})
 
 		s.Run("Owner can view problem of unstarted contest", func() {
-			resp, err := s.client.GetContestProblemWithResponse(s.ctx, contestID, uuid.New(), func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.GetContestProblemWithResponse(s.ctx, org.Login, "unstarted-"+suffix, uuid.New(), func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
 				return nil
 			})
@@ -91,7 +91,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		})
 
 		s.Run("Admin can view problem of unstarted contest", func() {
-			resp, err := s.client.GetContestProblemWithResponse(s.ctx, contestID, uuid.New(), func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.GetContestProblemWithResponse(s.ctx, org.Login, "unstarted-"+suffix, uuid.New(), func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", adminUser.Id.String())
 				return nil
 			})
@@ -112,7 +112,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
 			Title:          "Delete Target Contest",
-			ShortName:      "del-target-" + suffix,
+			Login:          "del-target-" + suffix,
 			Description:    "Contest deletion test",
 			Settings:       map[string]interface{}{},
 			AccessPolicy:   models.DefaultContestAccessPolicy(),
@@ -120,7 +120,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		s.Require().NoError(err)
 
 		s.Run("Regular non-owner user cannot delete contest", func() {
-			resp, err := s.client.DeleteContestWithResponse(s.ctx, contestID, func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.DeleteContestWithResponse(s.ctx, org.Login, "del-target-"+suffix, func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", otherUser.Id.String())
 				return nil
 			})
@@ -129,7 +129,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		})
 
 		s.Run("Contest Owner can delete contest", func() {
-			resp, err := s.client.DeleteContestWithResponse(s.ctx, contestID, func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.DeleteContestWithResponse(s.ctx, org.Login, "del-target-"+suffix, func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
 				return nil
 			})

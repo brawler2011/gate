@@ -31,7 +31,7 @@ import type {ReactNode} from "react";
 
 type AdminContestsTableProps = {
   contests: ContestModel[];
-  onDeleteContest: (contestId: string) => Promise<void>;
+  onDeleteContest: (contest: {id: string; organization_login: string; login: string}) => Promise<void>;
 };
 
 const getVisibilityDisplay = (visibility: string) => {
@@ -49,12 +49,12 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
 
   const handleRowClick = (contest: ContestModel) => {
-    router.push(`/${contest.organization_login}/contests/${contest.id}`);
+    router.push(`/${contest.organization_login}/contests/${contest.login}`);
   };
 
   const handleEditClick = (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
-    router.push(`/${contest.organization_login}/contests/${contest.id}/settings`);
+    router.push(`/${contest.organization_login}/contests/${contest.login}/settings`);
   };
 
   const handleSubmissionsClick = (e: React.MouseEvent, contestId: string) => {
@@ -64,14 +64,14 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
 
   const handleMonitorClick = (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
-    router.push(`/${contest.organization_login}/contests/${contest.id}/monitor`);
+    router.push(`/${contest.organization_login}/contests/${contest.login}/monitor`);
   };
 
-  const handleRejudgeContest = async (e: React.MouseEvent, contestId: string) => {
+  const handleRejudgeContest = async (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
-    setRejudgingId(contestId);
+    setRejudgingId(contest.id);
     try {
-      const [err] = await api.rejudgeContest({contestId});
+      const [err] = await api.rejudgeContest({orgLogin: contest.organization_login, contestLogin: contest.login});
       if (err) {
         notifications.show({
           title: "Ошибка",
@@ -110,7 +110,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
     
     setDeletingId(contestToDelete.id);
     try {
-      await onDeleteContest(contestToDelete.id);
+      await onDeleteContest(contestToDelete);
     } finally {
       setDeletingId(null);
       setContestToDelete(null);
@@ -200,7 +200,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
                           color="orange"
                           variant="subtle"
                           loading={rejudgingId === contest.id}
-                          onClick={(e) => handleRejudgeContest(e, contest.id)}
+                          onClick={(e) => handleRejudgeContest(e, contest)}
                         >
                           <IconRefresh size={16} />
                         </ActionIcon>

@@ -9,12 +9,14 @@ import React, {useState} from "react";
 import {api} from "@/lib/api";
 
 interface SingleSubmissionRejudgeButtonProps {
-  contestId: string;
+  orgLogin: string;
+  contestLogin: string;
   submissionId: string;
 }
 
 export const SingleSubmissionRejudgeButton = ({
-  contestId,
+  orgLogin,
+  contestLogin,
   submissionId,
 }: SingleSubmissionRejudgeButtonProps): React.ReactNode => {
   const [opened, setOpened] = useState(false);
@@ -24,7 +26,8 @@ export const SingleSubmissionRejudgeButton = ({
   const handleRejudge = async () => {
     setLoading(true);
     const [err] = await api.rejudgeSubmission({
-      contestId,
+      orgLogin,
+      contestLogin,
       submissionId,
     });
     setLoading(false);

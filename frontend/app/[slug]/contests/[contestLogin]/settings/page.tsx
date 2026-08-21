@@ -45,7 +45,7 @@ const NAV_SECTIONS = [
 ] as const;
 
 type Props = {
-  params: Promise<{ slug: string; contest_id: string }>;
+  params: Promise<{ slug: string; contestLogin: string }>;
   searchParams: Promise<{ section?: string }>;
 };
 
@@ -53,10 +53,10 @@ const ContestManagePage = async ({
   params,
   searchParams,
 }: Props): Promise<JSX.Element> => {
-  const {contest_id: contestId} = await params;
+  const {slug, contestLogin} = await params;
   const {section = "settings"} = await searchParams;
 
-  const response = await unwrapAndCache(api.getContest)({contestId});
+  const response = await unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin});
 
   const contest = response.contest;
   const problems: Array<ContestProblemListItemModel> = response.problems || [];
@@ -70,14 +70,12 @@ const ContestManagePage = async ({
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}}>
       <Box className={classes.manageLayout}>
         <SidebarNav
-          contestId={contestId}
           activeSection={activeSection}
           sections={NAV_SECTIONS}
         />
 
         <Box className={classes.manageContent}>
           <MobileNav
-            contestId={contestId}
             activeSection={activeSection}
             sections={NAV_SECTIONS}
           />
@@ -88,13 +86,13 @@ const ContestManagePage = async ({
             )}
             {activeSection === SECTIONS.PROBLEMS && (
               <ProblemsSection
-                contestId={contestId}
+                orgLogin={slug}
+                contestLogin={contestLogin}
                 initialProblems={problems}
-                orgLogin={contest.organization_login}
               />
             )}
             {activeSection === SECTIONS.PARTICIPANTS && (
-              <ParticipantsSection contestId={contestId} />
+              <ParticipantsSection orgLogin={slug} contestLogin={contestLogin} />
             )}
           </Box>
         </Box>
@@ -104,3 +102,4 @@ const ContestManagePage = async ({
 };
 
 export default ContestManagePage;
+

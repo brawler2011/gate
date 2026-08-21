@@ -41,11 +41,12 @@ const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
 /**
  * Get the current user's role in a specific contest
  * 
- * @param contestId - The UUID of the contest
+ * @param orgLogin - Organization login
+ * @param contestLogin - Contest login
  * @returns The user's role in the contest, or null if not a participant
  */
-export const getMyContestRole = cache(async (contestId: string): Promise<ContestRoleResponse> => {
-  const [error, response] = await api.getMyContestRole({contestId});
+export const getMyContestRole = cache(async (orgLogin: string, contestLogin: string): Promise<ContestRoleResponse> => {
+  const [error, response] = await api.getMyContestRole({orgLogin, contestLogin});
   if (error || !response) {
     // User is not a participant or not authenticated
     return null;

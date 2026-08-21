@@ -28,10 +28,15 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, request corev1.Create
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid language")
 	}
 
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.Params.OrganizationLogin, request.Params.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	solutionCreation := &models.SubmissionCreation{
 		UserId:    user.Id,
 		ProblemId: request.Params.ProblemId,
-		ContestId: request.Params.ContestId,
+		ContestId: contest.ID,
 		Language:  langName,
 		Solution:  req.Submission,
 		Penalty:   20,
@@ -115,12 +120,17 @@ func ListSolutionsResponseDTO(solutionsList *models.SubmissionsList) *corev1.Lis
 }
 
 func (h *CoreServer) RejudgeSubmission(ctx context.Context, request corev1.RejudgeSubmissionRequestObject) (corev1.RejudgeSubmissionResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	filter := models.RejudgeFilter{
-		ContestID:    request.ContestId,
+		ContestID:    contest.ID,
 		SubmissionID: &request.SubmissionId,
 	}
 
-	_, err := h.submissionsUC.RejudgeSubmissions(ctx, filter)
+	_, err = h.submissionsUC.RejudgeSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -129,12 +139,17 @@ func (h *CoreServer) RejudgeSubmission(ctx context.Context, request corev1.Rejud
 }
 
 func (h *CoreServer) RejudgeContestProblem(ctx context.Context, request corev1.RejudgeContestProblemRequestObject) (corev1.RejudgeContestProblemResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	filter := models.RejudgeFilter{
-		ContestID: request.ContestId,
+		ContestID: contest.ID,
 		ProblemID: &request.ProblemId,
 	}
 
-	_, err := h.submissionsUC.RejudgeSubmissions(ctx, filter)
+	_, err = h.submissionsUC.RejudgeSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -143,11 +158,16 @@ func (h *CoreServer) RejudgeContestProblem(ctx context.Context, request corev1.R
 }
 
 func (h *CoreServer) RejudgeContest(ctx context.Context, request corev1.RejudgeContestRequestObject) (corev1.RejudgeContestResponseObject, error) {
-	filter := models.RejudgeFilter{
-		ContestID: request.ContestId,
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
 	}
 
-	_, err := h.submissionsUC.RejudgeSubmissions(ctx, filter)
+	filter := models.RejudgeFilter{
+		ContestID: contest.ID,
+	}
+
+	_, err = h.submissionsUC.RejudgeSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

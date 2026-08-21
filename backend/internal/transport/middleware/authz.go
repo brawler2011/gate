@@ -27,6 +27,7 @@ type strictAuthzDependencies struct {
 	permissionsUC     interfaces.PermissionsUC
 	submissionsUC     interfaces.SubmissionsUC
 	organizationsRepo interfaces.OrganizationsRepo
+	contestsRepo      interfaces.ContestsRepo
 }
 
 // Parameterless Evaluators (Bare Function Pointers)
@@ -116,10 +117,28 @@ func RequireContestPermission(action models.ContestAction) AccessEvaluator {
 		if evalCtx.User.IsGuest() && action != models.ActionGetContest && action != models.ActionGetContestProblem {
 			return pkg.ErrUnauthenticated
 		}
-		contestID, err := extractUUIDFromRequest(evalCtx.Request, "ContestId", "Id")
-		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "contest id is required for authorization")
+		var contestID uuid.UUID
+		if contestLogin, err := extractStringFromRequest(evalCtx.Request, "ContestLogin"); err == nil && contestLogin != "" {
+			orgLogin, err := extractStringFromRequest(evalCtx.Request, "OrgLogin", "OrganizationLogin")
+			if err != nil || orgLogin == "" {
+				return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required for contest authorization")
+			}
+			if evalCtx.Deps.contestsRepo == nil {
+				return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
+			}
+			contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+			if err != nil {
+				return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
+			}
+			contestID = contest.ID
+		} else {
+			var err error
+			contestID, err = extractUUIDFromRequest(evalCtx.Request, "ContestId", "Id")
+			if err != nil {
+				return pkg.Wrap(pkg.ErrBadInput, err, "contest id is required for authorization")
+			}
 		}
+
 		allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, action)
 		if err != nil {
 			return err
@@ -175,7 +194,7 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 
 		"GetMe":            {RequireAuth},
 		"GetMyDashboard":   {RequireAuth},
-		"CreateContest":    {RequireAuth},
+		"CreateContest":    {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
 		"GetMyContestRole": {RequireAuth},
 
 		"ListOrganizations":        {RequireAuth},
@@ -186,6 +205,7 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ListOrganizationMembers":  {RequireAuth, RequireOrgPermission(models.ActionViewOrganization)},
 		"AddOrganizationMember":    {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
 		"RemoveOrganizationMember": {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
+		"ListOrganizationContests": {RequireAuth, RequireOrgPermission(models.ActionViewOrganization)},
 
 		"ListTeams":            {RequireAuth},
 		"CreateTeam":           {RequireAuth},
@@ -309,11 +329,12 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 }
 
 // AuthzStrictMiddleware validates operation access before strict handlers are called.
-func AuthzStrictMiddleware(permissionsUC interfaces.PermissionsUC, submissionsUC interfaces.SubmissionsUC, organizationsRepo interfaces.OrganizationsRepo) corev1.StrictMiddlewareFunc {
+func AuthzStrictMiddleware(permissionsUC interfaces.PermissionsUC, submissionsUC interfaces.SubmissionsUC, organizationsRepo interfaces.OrganizationsRepo, contestsRepo interfaces.ContestsRepo) corev1.StrictMiddlewareFunc {
 	deps := strictAuthzDependencies{
 		permissionsUC:     permissionsUC,
 		submissionsUC:     submissionsUC,
 		organizationsRepo: organizationsRepo,
+		contestsRepo:      contestsRepo,
 	}
 
 	return func(next corev1.StrictHandlerFunc, operationID string) corev1.StrictHandlerFunc {
@@ -399,9 +420,26 @@ func checkListUserSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) e
 }
 
 func checkListContestMembersAccess(ctx context.Context, evalCtx *EvalContext) error {
-	contestID, err := extractUUIDFromRequest(evalCtx.Request, "ContestId")
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "contest id is required for authorization")
+	var contestID uuid.UUID
+	if contestLogin, err := extractStringFromRequest(evalCtx.Request, "ContestLogin"); err == nil && contestLogin != "" {
+		orgLogin, err := extractStringFromRequest(evalCtx.Request, "OrgLogin", "OrganizationLogin")
+		if err != nil || orgLogin == "" {
+			return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required for contest authorization")
+		}
+		if evalCtx.Deps.contestsRepo == nil {
+			return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
+		}
+		contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+		if err != nil {
+			return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
+		}
+		contestID = contest.ID
+	} else {
+		var err error
+		contestID, err = extractUUIDFromRequest(evalCtx.Request, "ContestId")
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, "contest id is required for authorization")
+		}
 	}
 
 	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, models.ActionGetMonitor)
@@ -429,6 +467,14 @@ func checkListContestSubmissionsAccess(ctx context.Context, evalCtx *EvalContext
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid contest submissions request")
 	}
 
+	if evalCtx.Deps.contestsRepo == nil {
+		return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
+	}
+	contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, req.OrgLogin, req.ContestLogin)
+	if err != nil {
+		return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
+	}
+
 	action := models.ActionListUsersSubmissions
 	errMessage := "insufficient permission to list all contest submissions"
 
@@ -442,7 +488,7 @@ func checkListContestSubmissionsAccess(ctx context.Context, evalCtx *EvalContext
 		}
 	}
 
-	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, req.ContestId, evalCtx.User.Id, action)
+	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, action)
 	if err != nil {
 		return err
 	}

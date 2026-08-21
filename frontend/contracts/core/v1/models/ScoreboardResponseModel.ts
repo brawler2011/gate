@@ -6,6 +6,8 @@ import type { ScoreboardItemModel } from './ScoreboardItemModel';
 import type { ScoreboardProblemHeaderModel } from './ScoreboardProblemHeaderModel';
 export type ScoreboardResponseModel = {
     contest_id: string;
+    contest_login: string;
+    organization_login: string;
     penalty_per_attempt: number;
     /**
      * Whether the scoreboard is currently frozen

@@ -87,6 +87,7 @@ type SubmissionListItem struct {
 	ProblemTitle      string    `json:"problem_title"`
 	Position          int32     `json:"position"`
 	ContestID         uuid.UUID `json:"contest_id"`
+	ContestLogin      string    `json:"contest_login"`
 	ContestTitle      string    `json:"contest_title"`
 	OrganizationLogin string    `json:"organization_login"`
 	UpdatedAt         string    `json:"updated_at"`
@@ -108,6 +109,7 @@ type Submission struct {
 	ProblemTitle      string       `json:"problem_title"`
 	Position          *int32       `json:"position"`
 	ContestID         *uuid.UUID   `json:"contest_id"`
+	ContestLogin      string       `json:"contest_login"`
 	ContestTitle      string       `json:"contest_title"`
 	OrganizationLogin string       `json:"organization_login"`
 	UpdatedAt         time.Time    `json:"updated_at"`

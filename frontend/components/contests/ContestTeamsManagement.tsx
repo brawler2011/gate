@@ -37,11 +37,13 @@ const getRoleDisplay = (role: string) => {
 };
 
 interface ContestTeamsManagementProps {
-  contestId: string;
+  orgLogin: string;
+  contestLogin: string;
+  contestId?: string;
   orgId?: string;
 }
 
-export const ContestTeamsManagement = ({contestId, orgId}: ContestTeamsManagementProps): ReactNode => {
+export const ContestTeamsManagement = ({orgLogin, contestLogin, orgId}: ContestTeamsManagementProps): ReactNode => {
   const [teams, setTeams] = useState<corev1.ContestTeamModel[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,7 +68,7 @@ export const ContestTeamsManagement = ({contestId, orgId}: ContestTeamsManagemen
 
   const loadTeams = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listContestTeams({contestId});
+    const [error, response] = await api.listContestTeams({orgLogin, contestLogin});
     setLoading(false);
 
     if (error || !response) {
@@ -75,7 +77,7 @@ export const ContestTeamsManagement = ({contestId, orgId}: ContestTeamsManagemen
     }
 
     setTeams(response.teams);
-  }, [contestId]);
+  }, [orgLogin, contestLogin]);
 
   useEffect(() => {
     loadTeams();
@@ -114,7 +116,8 @@ export const ContestTeamsManagement = ({contestId, orgId}: ContestTeamsManagemen
 
     setAdding(true);
     const [error] = await api.createContestTeam({
-      contestId,
+      orgLogin,
+      contestLogin,
       teamId: selectedTeamId,
       role: "participant",
     });
@@ -145,7 +148,7 @@ export const ContestTeamsManagement = ({contestId, orgId}: ContestTeamsManagemen
 
   const handleDeleteTeam = async (teamId: string) => {
     setDeletingId(teamId);
-    const [error] = await api.deleteContestTeam({contestId, teamId});
+    const [error] = await api.deleteContestTeam({orgLogin, contestLogin, teamId});
     setDeletingId(null);
 
     if (error) {
@@ -184,7 +187,8 @@ export const ContestTeamsManagement = ({contestId, orgId}: ContestTeamsManagemen
     }
 
     const [error] = await api.updateContestTeam({
-      contestId,
+      orgLogin,
+      contestLogin,
       teamId: editingTeam.teamId,
       role: newRole,
     });

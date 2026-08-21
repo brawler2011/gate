@@ -181,7 +181,7 @@ func (s *IntegrationTestSuite) initApp() {
 	// Strict Handler
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, []corev1.StrictMiddlewareFunc{
-		middleware.AuthzStrictMiddleware(permissionsUC, submissionsUC, s.organizationsRepo),
+		middleware.AuthzStrictMiddleware(permissionsUC, submissionsUC, s.organizationsRepo, s.contestsRepo),
 	}, corev1.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			http.Error(w, err.Error(), http.StatusBadRequest)

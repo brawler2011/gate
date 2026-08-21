@@ -246,7 +246,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		OrganizationID: org.ID,
 		OwnerID:        &userID,
 		Title:          "E2E Contest",
-		ShortName:      "e2e-contest",
+		Login:          "e2e-contest",
 		Description:    "E2E Contest for judging flow",
 		Visibility:     models.ContestVisibilityPublic,
 		Settings:       make(map[string]interface{}),

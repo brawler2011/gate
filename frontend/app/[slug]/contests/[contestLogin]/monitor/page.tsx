@@ -13,18 +13,18 @@ export const metadata: Metadata = {
 };
 
 type PageProps = {
-  params: Promise<{ slug: string; contest_id: string }>;
+  params: Promise<{ slug: string; contestLogin: string }>;
 };
 
 const Page = async ({params}: PageProps): Promise<ReactNode> => {
-  const {slug, contest_id} = await params;
+  const {slug, contestLogin} = await params;
 
   // Fetch contest data and scoreboard
-  const contestResponse = await unwrapAndCache(api.getContest)({contestId: contest_id});
-  const scoreboard = await unwrapAndCache(api.getContestScoreboard)({contestId: contest_id});
+  const contestResponse = await unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin});
+  const scoreboard = await unwrapAndCache(api.getContestScoreboard)({orgLogin: slug, contestLogin});
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(contest_id) : null;
+  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
 
   let isManager = false;
   if (contestResponse?.contest) {
@@ -40,7 +40,7 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
       new Date(contestResponse.contest.start_time) <= new Date();
 
     if (!checker.canViewMonitor(contestResponse.contest) || (!isManager && !hasStarted)) {
-      redirect(`/${slug}/contests/${contest_id}`);
+      redirect(`/${slug}/contests/${contestLogin}`);
     }
   }
 
@@ -48,7 +48,9 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
     <Container size="lg" py="md">
       {scoreboard && (
         <ContestMonitorTable
-          contestId={contest_id}
+          contestId={contestResponse.contest.id}
+          orgLogin={slug}
+          contestLogin={contestLogin}
           initialScoreboard={scoreboard}
           startTime={contestResponse?.contest.start_time}
           endTime={contestResponse?.contest.end_time}

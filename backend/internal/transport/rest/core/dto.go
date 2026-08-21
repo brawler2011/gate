@@ -177,6 +177,7 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 
 	model := corev1.ContestModel{
 		Id:                     c.ID,
+		Login:                  c.Login,
 		OrganizationId:         c.OrganizationID,
 		OrganizationLogin:      c.OrganizationLogin,
 		Title:                  title,
@@ -366,6 +367,7 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 		Position: int32PtrToInt32(s.Position),
 
 		ContestId:         uuidPtrToUUID(s.ContestID),
+		ContestLogin:      s.ContestLogin,
 		ContestTitle:      s.ContestTitle,
 		OrganizationLogin: orgLogin,
 
@@ -400,6 +402,7 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 		Position: int32PtrToInt32(s.Position),
 
 		ContestId:         uuidPtrToUUID(s.ContestID),
+		ContestLogin:      s.ContestLogin,
 		ContestTitle:      s.ContestTitle,
 		OrganizationLogin: orgLogin,
 
@@ -665,6 +668,7 @@ func listProblemMembersDTO(members []models.ProblemMember, page, total int32) *c
 func DashboardContestDTO(c models.DashboardContest) corev1.DashboardContestModel {
 	return corev1.DashboardContestModel{
 		Id:                 c.ID,
+		Login:              c.Login,
 		Title:              c.Title,
 		OrganizationId:     c.OrganizationID,
 		OrganizationName:   c.OrganizationName,
@@ -749,6 +753,8 @@ func GetScoreboardResponseDTO(sb *models.ScoreboardResponse) *corev1.ScoreboardR
 
 	return &corev1.ScoreboardResponseModel{
 		ContestId:         sb.ContestID,
+		ContestLogin:      sb.ContestLogin,
+		OrganizationLogin: sb.OrganizationLogin,
 		PenaltyPerAttempt: sb.PenaltyPerAttempt,
 		IsFrozen:          sb.IsFrozen,
 		FreezeTime:        sb.FreezeTime,

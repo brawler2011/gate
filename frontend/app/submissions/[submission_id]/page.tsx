@@ -56,10 +56,17 @@ const Page = async (props: Props): Promise<ReactNode> => {
 
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
-  const contestRole = submission.contest_id ? await getMyContestRole(submission.contest_id) : null;
-  const contestData = submission.contest_id
-    ? await unwrapAndCache(api.getContest)({contestId: submission.contest_id})
-    : null;
+  const contestRole =
+    submission.organization_login && submission.contest_login
+      ? await getMyContestRole(submission.organization_login, submission.contest_login)
+      : null;
+  const contestData =
+    submission.organization_login && submission.contest_login
+      ? await unwrapAndCache(api.getContest)({
+          orgLogin: submission.organization_login,
+          contestLogin: submission.contest_login,
+        })
+      : null;
 
   const checker = contestData?.contest
     ? new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null)
@@ -80,7 +87,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
         </Link>
       </TableTd>
       <TableTd ta="center">
-        <Link href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`} style={{color: 'inherit'}}>
+        <Link href={submission.organization_login && submission.contest_login ? `/${submission.organization_login}/contests/${submission.contest_login}/problems/${submission.problem_id}` : `/problems/${submission.problem_id}`} style={{color: 'inherit'}}>
           <Text span td="underline">
             {ProblemTitle(submission.position, submission.problem_title)}
           </Text>
@@ -126,9 +133,10 @@ const Page = async (props: Props): Promise<ReactNode> => {
           <Stack align="flex-start" w="100%">
             <Group justify="space-between" align="center" w="100%">
               <Title order={2}>Код решения</Title>
-              {canRejudge && submission.contest_id && (
+              {canRejudge && submission.organization_login && submission.contest_login && (
                 <SingleSubmissionRejudgeButton
-                  contestId={submission.contest_id}
+                  orgLogin={submission.organization_login}
+                  contestLogin={submission.contest_login}
                   submissionId={submission.id}
                 />
               )}

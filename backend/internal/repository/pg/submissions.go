@@ -166,10 +166,14 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 	}
 
 	var contestTitle string
+	var contestLogin string
 	if row.ContestTitle != nil {
 		contestTitle = *row.ContestTitle
-	} else if row.ContestShortName != nil {
-		contestTitle = *row.ContestShortName
+	} else if row.ContestLogin != nil {
+		contestTitle = *row.ContestLogin
+	}
+	if row.ContestLogin != nil {
+		contestLogin = *row.ContestLogin
 	}
 
 	return models.Submission{
@@ -187,6 +191,7 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 		ProblemTitle: problemTitle,
 		Position:     position,
 		ContestID:         contestID,
+		ContestLogin:      contestLogin,
 		ContestTitle:      contestTitle,
 		OrganizationLogin: row.OrganizationLogin,
 		UpdatedAt:         row.UpdatedAt,
@@ -232,10 +237,14 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 	}
 
 	var contestTitle string
+	var contestLogin string
 	if row.ContestTitle != nil {
 		contestTitle = *row.ContestTitle
-	} else if row.ContestShortName != nil {
-		contestTitle = *row.ContestShortName
+	} else if row.ContestLogin != nil {
+		contestTitle = *row.ContestLogin
+	}
+	if row.ContestLogin != nil {
+		contestLogin = *row.ContestLogin
 	}
 
 	return models.Submission{
@@ -253,6 +262,7 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 		ProblemTitle:      problemTitle,
 		Position:          position,
 		ContestID:         contestID,
+		ContestLogin:      contestLogin,
 		ContestTitle:      contestTitle,
 		OrganizationLogin: row.OrganizationLogin,
 		UpdatedAt:         row.UpdatedAt,

@@ -84,7 +84,7 @@ type CreateContestParams struct {
 	OwnerID        *uuid.UUID
 	Visibility     ContestVisibility
 	Title          string
-	ShortName      string
+	Login          string
 	Description    string
 	Settings       map[string]interface{}
 	AccessPolicy   map[string]interface{}
@@ -96,7 +96,7 @@ type CreateContestInput struct {
 	OrganizationID uuid.UUID
 	OwnerID        *uuid.UUID
 	Title          string
-	ShortName      string
+	Login          string
 	Description    string
 	Visibility     ContestVisibility
 	Settings       map[string]interface{}
@@ -151,6 +151,7 @@ type PublicContestsFilter struct {
 
 type ContestUpdateInput struct {
 	ID           uuid.UUID
+	Login        *string
 	Title        *string
 	Description  *string
 	Visibility   *ContestVisibility
@@ -163,6 +164,7 @@ type ContestUpdateInput struct {
 
 type ContestUpdateParams struct {
 	ID           uuid.UUID
+	Login        *string
 	Title        *string
 	Description  *string
 	Visibility   *ContestVisibility
@@ -256,7 +258,7 @@ type Contest struct {
 	OwnerID           *uuid.UUID
 	Visibility        ContestVisibility
 	Title             string
-	ShortName         string
+	Login             string
 	Description       string
 	Settings          map[string]interface{} // JSONB for contest settings
 	AccessPolicy      map[string]interface{} // JSONB for access policies
@@ -301,6 +303,7 @@ type ContestMembersList struct {
 
 type DashboardContest struct {
 	ID                 uuid.UUID
+	Login              string
 	Title              string
 	StartTime          *time.Time
 	EndTime            *time.Time
@@ -443,6 +446,8 @@ type ScoreboardProblemHeader struct {
 
 type ScoreboardResponse struct {
 	ContestID         uuid.UUID                 `json:"contest_id"`
+	ContestLogin      string                    `json:"contest_login"`
+	OrganizationLogin string                    `json:"organization_login"`
 	PenaltyPerAttempt int32                     `json:"penalty_per_attempt"`
 	IsFrozen          bool                      `json:"is_frozen"`
 	FreezeTime        *time.Time                `json:"freeze_time,omitempty"`

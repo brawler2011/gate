@@ -60,7 +60,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 	})
 
 	s.Run("DeleteAvatar requires authentication", func() {
-		resp, err := s.client.DeleteAvatarWithResponse(s.ctx, target.Id)
+		resp, err := s.client.DeleteAvatarWithResponse(s.ctx, target.Username)
 		s.Require().NoError(err)
 		s.Equal(http.StatusUnauthorized, resp.StatusCode())
 	})
@@ -128,7 +128,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
 			Title:          "LUS Allowed Contest",
-			ShortName:      "lus-allowed-" + suffix,
+			Login:          "lus-allowed-" + suffix,
 			Description:    "contest for allowed own submissions",
 			Settings:       map[string]interface{}{},
 			AccessPolicy:   models.DefaultContestAccessPolicy(),
@@ -149,7 +149,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
 			Title:          "LUS Denied Contest",
-			ShortName:      "lus-denied-" + suffix,
+			Login:          "lus-denied-" + suffix,
 			Description:    "contest for denied own submissions",
 			Settings:       map[string]interface{}{},
 			AccessPolicy:   models.DefaultContestAccessPolicy(),
@@ -211,7 +211,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			)
 			s.Require().NoError(err)
 
-			roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, deniedContestID, func(ctx context.Context, req *http.Request) error {
+			roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "lus-denied-"+suffix, func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", requestUser.Id.String())
 				return nil
 			})
@@ -252,7 +252,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
 			Title:          "LCS Contest",
-			ShortName:      "lcs-contest-" + suffix,
+			Login:          "lcs-contest-" + suffix,
 			Description:    "contest for list contest submissions custom checks",
 			Settings:       map[string]interface{}{},
 			AccessPolicy:   models.DefaultContestAccessPolicy(),
@@ -274,7 +274,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Require().NoError(err)
 
 		s.Run("Participant cannot list all contest submissions", func() {
-			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, contestID, &corev1.ListContestSubmissionsParams{
+			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "lcs-contest-"+suffix, &corev1.ListContestSubmissionsParams{
 				Page:     1,
 				PageSize: 10,
 			}, func(ctx context.Context, req *http.Request) error {
@@ -287,7 +287,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 		s.Run("Participant own submissions branch passes middleware", func() {
 			selfID := openapi_types.UUID(participant.Id)
-			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, contestID, &corev1.ListContestSubmissionsParams{
+			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "lcs-contest-"+suffix, &corev1.ListContestSubmissionsParams{
 				Page:     0,
 				PageSize: 10,
 				UserId:   &selfID,
@@ -302,7 +302,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 		s.Run("Participant cannot list other user submissions", func() {
 			otherID := openapi_types.UUID(otherUser.Id)
-			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, contestID, &corev1.ListContestSubmissionsParams{
+			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "lcs-contest-"+suffix, &corev1.ListContestSubmissionsParams{
 				Page:     1,
 				PageSize: 10,
 				UserId:   &otherID,
@@ -315,7 +315,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 
 		s.Run("Moderator all submissions branch passes middleware", func() {
-			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, contestID, &corev1.ListContestSubmissionsParams{
+			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "lcs-contest-"+suffix, &corev1.ListContestSubmissionsParams{
 				Page:     0,
 				PageSize: 10,
 			}, func(ctx context.Context, req *http.Request) error {
@@ -343,7 +343,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
 			Title:          "Team Contest",
-			ShortName:      "team-contest-" + suffix,
+			Login:          "team-contest-" + suffix,
 			Description:    "private contest for authz",
 			Settings:       map[string]interface{}{},
 			AccessPolicy:   models.DefaultContestAccessPolicy(),
@@ -373,7 +373,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		err = s.contestsRepo.CreateContestTeam(s.ctx, contestID, teamID, models.ContestRoleParticipant)
 		s.Require().NoError(err)
 
-		resp, err := s.client.GetContestWithResponse(s.ctx, contestID, func(ctx context.Context, req *http.Request) error {
+		resp, err := s.client.GetContestWithResponse(s.ctx, org.Login, "team-contest-"+suffix, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", teamMember.Id.String())
 			return nil
 		})
@@ -397,7 +397,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
 			Title:          "Mixed Role Contest",
-			ShortName:      "mixed-role-" + suffix,
+			Login:          "mixed-role-" + suffix,
 			Description:    "contest for mixed direct+team role resolution",
 			Settings:       map[string]interface{}{},
 			AccessPolicy:   models.DefaultContestAccessPolicy(),
@@ -454,7 +454,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Require().NoError(err)
 		s.Equal(int64(models.ContestPermissionMaskModeratorDefault), teamMask)
 
-		roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, contestID, func(ctx context.Context, req *http.Request) error {
+		roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "mixed-role-"+suffix, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", mixedUser.Id.String())
 			return nil
 		})
@@ -466,7 +466,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Equal(int64(models.ContestPermissionMaskModeratorDefault), *roleResp.JSON200.PermissionsMask)
 
 		otherUserID := openapi_types.UUID(otherUser.Id)
-		resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, contestID, &corev1.ListContestSubmissionsParams{
+		resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "mixed-role-"+suffix, &corev1.ListContestSubmissionsParams{
 			Page:     0,
 			PageSize: 10,
 			UserId:   &otherUserID,
@@ -550,7 +550,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
 			Title:          "Policy Contest",
-			ShortName:      "policy-contest-" + suffix,
+			Login:          "policy-contest-" + suffix,
 			Description:    "contest with explicit policy",
 			Settings:       map[string]interface{}{},
 			AccessPolicy:   models.DefaultContestAccessPolicy(),
@@ -573,7 +573,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		)
 		s.Require().NoError(err)
 
-		resp, err := s.client.GetContestWithResponse(s.ctx, contestID, func(ctx context.Context, req *http.Request) error {
+		resp, err := s.client.GetContestWithResponse(s.ctx, org.Login, "policy-contest-"+suffix, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", participant.Id.String())
 			return nil
 		})

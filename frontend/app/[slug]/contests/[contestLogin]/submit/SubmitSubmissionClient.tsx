@@ -58,7 +58,8 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
 
     const [error, response] = await api.createSubmission({
       problemId: selectedProblemId,
-      contestId: contest.id,
+      organizationLogin: contest.organization_login,
+      contestLogin: contest.login,
       language: languageCode,
       requestBody: {
         submission: submissionContent,
@@ -77,7 +78,7 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
       setIsSubmitted(true);
       // Redirect to "Мои посылки" page after successful submission
       router.push(
-        `/${contest.organization_login}/contests/${contest.id}/mysubmissions?order=desc&userId=${user?.id}`,
+        `/${contest.organization_login}/contests/${contest.login}/mysubmissions?order=desc&userId=${user?.id}`,
       );
     }
 

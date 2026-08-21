@@ -13,7 +13,6 @@ type NavSection = {
 };
 
 interface MobileNavProps {
-  contestId: string;
   activeSection: string;
   sections: readonly NavSection[];
 }

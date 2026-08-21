@@ -17,6 +17,7 @@ export type SubmissionModel = {
     problem_title: string;
     position: number;
     contest_id: string;
+    contest_login: string;
     contest_title: string;
     organization_login?: string;
     updated_at: string;

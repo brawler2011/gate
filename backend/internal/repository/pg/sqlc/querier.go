@@ -63,7 +63,8 @@ type Querier interface {
 	DeleteSession(ctx context.Context, id uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
 	GetContestByID(ctx context.Context, id uuid.UUID) (GetContestByIDRow, error)
-	GetContestByShortName(ctx context.Context, arg GetContestByShortNameParams) (GetContestByShortNameRow, error)
+	GetContestByLogin(ctx context.Context, arg GetContestByLoginParams) (GetContestByLoginRow, error)
+	GetContestByOrgLoginAndContestLogin(ctx context.Context, arg GetContestByOrgLoginAndContestLoginParams) (GetContestByOrgLoginAndContestLoginRow, error)
 	GetContestMember(ctx context.Context, arg GetContestMemberParams) (ContestMember, error)
 	GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error)
 	GetContestProblemResult(ctx context.Context, arg GetContestProblemResultParams) (ContestProblemResult, error)

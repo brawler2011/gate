@@ -4,5 +4,6 @@
 /* eslint-disable */
 export type CreationResponseModel = {
     id: string;
+    login?: string;
 };
 

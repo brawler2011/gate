@@ -50,7 +50,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
 			Title:          "Private Contest " + suffix,
-			ShortName:      "priv-" + suffix,
+			Login:          "priv-" + suffix,
 			Description:    "Private contest description",
 			Settings:       map[string]interface{}{},
 			AccessPolicy:   models.DefaultContestAccessPolicy(),
@@ -58,7 +58,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		s.Require().NoError(err)
 
 		// Before adding team, teamMemberUser has empty role in private contest
-		roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, contestID, func(ctx context.Context, req *http.Request) error {
+		roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "priv-"+suffix, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", teamMemberUser.Id.String())
 			return nil
 		})
@@ -67,7 +67,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		s.Equal("", roleResp.JSON200.Role)
 
 		// Add team to contest with role "participant"
-		addTeamResp, err := s.client.CreateContestTeamWithResponse(s.ctx, contestID, &corev1.CreateContestTeamParams{
+		addTeamResp, err := s.client.CreateContestTeamWithResponse(s.ctx, org.Login, "priv-"+suffix, &corev1.CreateContestTeamParams{
 			TeamId: team.ID,
 			Role:   ptrString("participant"),
 		}, func(ctx context.Context, req *http.Request) error {
@@ -78,7 +78,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		s.Equal(http.StatusOK, addTeamResp.StatusCode())
 
 		// List contest teams
-		listTeamsResp, err := s.client.ListContestTeamsWithResponse(s.ctx, contestID, func(ctx context.Context, req *http.Request) error {
+		listTeamsResp, err := s.client.ListContestTeamsWithResponse(s.ctx, org.Login, "priv-"+suffix, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
 			return nil
 		})
@@ -88,7 +88,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		s.Equal(team.ID, listTeamsResp.JSON200.Teams[0].TeamId)
 
 		// Now teamMemberUser inherits role "participant" in contest
-		roleResp, err = s.client.GetMyContestRoleWithResponse(s.ctx, contestID, func(ctx context.Context, req *http.Request) error {
+		roleResp, err = s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "priv-"+suffix, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", teamMemberUser.Id.String())
 			return nil
 		})
@@ -97,7 +97,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		s.Equal("participant", roleResp.JSON200.Role)
 
 		// Remove team from contest
-		delTeamResp, err := s.client.DeleteContestTeamWithResponse(s.ctx, contestID, &corev1.DeleteContestTeamParams{
+		delTeamResp, err := s.client.DeleteContestTeamWithResponse(s.ctx, org.Login, "priv-"+suffix, &corev1.DeleteContestTeamParams{
 			TeamId: team.ID,
 		}, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
@@ -107,7 +107,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		s.Equal(http.StatusOK, delTeamResp.StatusCode())
 
 		// Access revoked
-		roleResp, err = s.client.GetMyContestRoleWithResponse(s.ctx, contestID, func(ctx context.Context, req *http.Request) error {
+		roleResp, err = s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "priv-"+suffix, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", teamMemberUser.Id.String())
 			return nil
 		})

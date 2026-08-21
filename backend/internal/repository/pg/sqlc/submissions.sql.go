@@ -120,7 +120,7 @@ SELECT s.id,
   cp.ordinal AS problem_ordinal,
   s.contest_id,
   c.title AS contest_title,
-  c.short_name AS contest_short_name,
+  c.login AS contest_login,
   c.visibility AS contest_visibility,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
@@ -153,7 +153,7 @@ type GetSubmissionRow struct {
 	ProblemOrdinal    *int32                `json:"problem_ordinal"`
 	ContestID         pgtype.UUID           `json:"contest_id"`
 	ContestTitle      *string               `json:"contest_title"`
-	ContestShortName  *string               `json:"contest_short_name"`
+	ContestLogin      *string               `json:"contest_login"`
 	ContestVisibility NullContestVisibility `json:"contest_visibility"`
 	OrganizationLogin string                `json:"organization_login"`
 	UpdatedAt         time.Time             `json:"updated_at"`
@@ -180,7 +180,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.ProblemOrdinal,
 		&i.ContestID,
 		&i.ContestTitle,
-		&i.ContestShortName,
+		&i.ContestLogin,
 		&i.ContestVisibility,
 		&i.OrganizationLogin,
 		&i.UpdatedAt,
@@ -205,7 +205,7 @@ SELECT s.id,
   cp.ordinal AS problem_ordinal,
   s.contest_id,
   c.title AS contest_title,
-  c.short_name AS contest_short_name,
+  c.login AS contest_login,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.created_at
@@ -273,7 +273,7 @@ type ListSubmissionsRow struct {
 	ProblemOrdinal    *int32              `json:"problem_ordinal"`
 	ContestID         pgtype.UUID         `json:"contest_id"`
 	ContestTitle      *string             `json:"contest_title"`
-	ContestShortName  *string             `json:"contest_short_name"`
+	ContestLogin      *string             `json:"contest_login"`
 	OrganizationLogin string              `json:"organization_login"`
 	UpdatedAt         time.Time           `json:"updated_at"`
 	CreatedAt         time.Time           `json:"created_at"`
@@ -314,7 +314,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.ProblemOrdinal,
 			&i.ContestID,
 			&i.ContestTitle,
-			&i.ContestShortName,
+			&i.ContestLogin,
 			&i.OrganizationLogin,
 			&i.UpdatedAt,
 			&i.CreatedAt,

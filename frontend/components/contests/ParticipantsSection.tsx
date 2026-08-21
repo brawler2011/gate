@@ -41,11 +41,13 @@ const getRoleDisplay = (role: string) => {
 };
 
 interface ParticipantsSectionProps {
-  contestId: string;
+  orgLogin: string;
+  contestLogin: string;
+  contestId?: string;
   orgId?: string;
 }
 
-export const ParticipantsSection = ({contestId, orgId}: ParticipantsSectionProps): ReactNode => {
+export const ParticipantsSection = ({orgLogin, contestLogin, contestId, orgId}: ParticipantsSectionProps): ReactNode => {
   const [activeTab, setActiveTab] = useState<string | null>("users");
   const [participants, setParticipants] = useState<corev1.ContestMemberModel[]>([]);
   const [page, setPage] = useState(1);
@@ -76,7 +78,7 @@ export const ParticipantsSection = ({contestId, orgId}: ParticipantsSectionProps
   // Load participants
   const loadParticipants = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listContestMembers({contestId, page, pageSize});
+    const [error, response] = await api.listContestMembers({orgLogin, contestLogin, page, pageSize});
     setLoading(false);
 
     if (error || !response) {
@@ -87,7 +89,7 @@ export const ParticipantsSection = ({contestId, orgId}: ParticipantsSectionProps
     setParticipants(response.members);
     const total = response?.pagination?.total || 0;
     setTotalPages(Math.ceil(total / pageSize));
-  }, [contestId, page]);
+  }, [orgLogin, contestLogin, page]);
 
   // Load participants on mount and when page changes
   useEffect(() => {
@@ -123,7 +125,7 @@ export const ParticipantsSection = ({contestId, orgId}: ParticipantsSectionProps
     }
 
     setAdding(true);
-    const [error] = await api.createContestMember({contestId, userId: selectedUserId});
+    const [error] = await api.createContestMember({orgLogin, contestLogin, userId: selectedUserId});
     setAdding(false);
 
     if (error) {
@@ -152,7 +154,7 @@ export const ParticipantsSection = ({contestId, orgId}: ParticipantsSectionProps
 
   const handleDeleteParticipant = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await api.deleteContestMember({contestId, userId});
+    const [error] = await api.deleteContestMember({orgLogin, contestLogin, userId});
     setDeletingId(null);
 
     if (error) {
@@ -192,7 +194,8 @@ export const ParticipantsSection = ({contestId, orgId}: ParticipantsSectionProps
     }
 
     const [error] = await api.updateContestMember({
-      contestId,
+      orgLogin,
+      contestLogin,
       userId: editingParticipant.userId,
       role: newRole,
     });
@@ -362,7 +365,7 @@ export const ParticipantsSection = ({contestId, orgId}: ParticipantsSectionProps
         </Tabs.Panel>
 
         <Tabs.Panel value="teams" pt="md">
-          <ContestTeamsManagement contestId={contestId} orgId={orgId} />
+          <ContestTeamsManagement orgLogin={orgLogin} contestLogin={contestLogin} contestId={contestId} orgId={orgId} />
         </Tabs.Panel>
       </Tabs>
 

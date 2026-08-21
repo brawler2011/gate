@@ -17,6 +17,8 @@ const RECENT_SUBMISSIONS_LIMIT = 5;
 
 type RecentSubmissionsTableProps = {
   submissions: SubmissionsListItemModel[];
+  orgLogin?: string;
+  contestLogin?: string;
   contestId: string;
   userId?: string;
   problemId?: string;
@@ -67,6 +69,8 @@ const StatusCell = ({submission}: StatusCellProps) => {
 
 export const RecentSubmissionsTable = ({
   submissions: initialSubmissions,
+  orgLogin,
+  contestLogin,
   contestId,
   userId,
   problemId,
@@ -82,6 +86,8 @@ export const RecentSubmissionsTable = ({
     initialSubmissions,
     snapshotScope: "mine",
     filter: {
+      orgLogin,
+      contestLogin,
       contestId,
       userId,
       problemId,

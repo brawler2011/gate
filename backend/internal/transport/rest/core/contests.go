@@ -2,7 +2,10 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"regexp"
+	"strings"
 	"time"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
@@ -12,6 +15,45 @@ import (
 	"github.com/google/uuid"
 )
 
+var nonAlphaNumRegex = regexp.MustCompile(`[^a-z0-9]+`)
+
+func slugifyContestTitle(title string) string {
+	slug := strings.ToLower(title)
+	slug = nonAlphaNumRegex.ReplaceAllString(slug, "-")
+	slug = strings.Trim(slug, "-")
+	if len(slug) < 3 {
+		slug = "contest-" + uuid.New().String()[:8]
+	}
+	if len(slug) > 64 {
+		slug = strings.TrimRight(slug[:64], "-")
+		if len(slug) < 3 {
+			slug = "contest-" + uuid.New().String()[:8]
+		}
+	}
+	return slug
+}
+
+func (h *CoreServer) generateUniqueContestLogin(ctx context.Context, orgLogin, title string) (string, error) {
+	baseSlug := slugifyContestTitle(title)
+	slug := baseSlug
+	suffix := 1
+
+	for {
+		_, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, slug)
+		if err != nil {
+			return slug, nil
+		}
+		suffix++
+		suffixStr := fmt.Sprintf("-%d", suffix)
+		maxBaseLen := 64 - len(suffixStr)
+		if len(baseSlug) > maxBaseLen {
+			slug = strings.TrimRight(baseSlug[:maxBaseLen], "-") + suffixStr
+		} else {
+			slug = baseSlug + suffixStr
+		}
+	}
+}
+
 func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateContestRequestObject) (corev1.CreateContestResponseObject, error) {
 	err := validateCreateContestParams(request.Params)
 	if err != nil {
@@ -20,25 +62,31 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 
 	user := middleware.GetUser(ctx)
 
-	var requestedOrgID *uuid.UUID
-	if request.Params.OrganizationId != nil {
-		requested := uuid.UUID(*request.Params.OrganizationId)
-		requestedOrgID = &requested
-	}
-
-	orgID, err := h.organizationsUC.ResolveUserOrganizationID(ctx, user.Id, requestedOrgID)
+	org, err := h.organizationsUC.GetOrganizationByLogin(ctx, request.OrgLogin, user.Id)
 	if err != nil {
-		return nil, err
+		return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
 	}
 
-	// Generate short_name from UUID to ensure uniqueness
-	shortName := "contest-" + uuid.New().String()[:8]
+	var login string
+	if request.Params.Login != nil && *request.Params.Login != "" {
+		login = strings.ToLower(*request.Params.Login)
+		existing, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, login)
+		if err == nil && existing.ID != uuid.Nil {
+			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "contest with this login already exists in organization")
+		}
+	} else {
+		generatedLogin, err := h.generateUniqueContestLogin(ctx, request.OrgLogin, request.Params.Title)
+		if err != nil {
+			return nil, err
+		}
+		login = generatedLogin
+	}
 
 	contestCreation := &models.CreateContestInput{
-		OrganizationID: orgID,
+		OrganizationID: org.ID,
 		OwnerID:        &user.Id,
 		Title:          request.Params.Title,
-		ShortName:      shortName,
+		Login:          login,
 		Description:    "",
 		Visibility:     models.ContestVisibilityPrivate,
 		Settings:       make(map[string]interface{}),
@@ -52,24 +100,49 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 		return nil, err
 	}
 
-	return corev1.CreateContest200JSONResponse{Id: contestID}, nil
+	return corev1.CreateContest200JSONResponse{Id: contestID, Login: &login}, nil
 }
 
-func (h *CoreServer) GetContest(ctx context.Context, request corev1.GetContestRequestObject) (corev1.GetContestResponseObject, error) {
-	contest, err := h.contestsUC.GetContest(ctx, request.ContestId)
+func (h *CoreServer) ListOrganizationContests(ctx context.Context, request corev1.ListOrganizationContestsRequestObject) (corev1.ListOrganizationContestsResponseObject, error) {
+	err := validateListContestsParams(request.Params.Page, request.Params.PageSize, request.Params.Search)
 	if err != nil {
 		return nil, err
 	}
 
 	user := middleware.GetUser(ctx)
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetContestProblem)
+	org, err := h.organizationsUC.GetOrganizationByLogin(ctx, request.OrgLogin, user.Id)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
+	}
+
+	search := ""
+	if request.Params.Search != nil {
+		search = *request.Params.Search
+	}
+
+	contestsList, err := h.contestsUC.ListOrganizationContests(ctx, org.ID, search, request.Params.Page, request.Params.PageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.ListOrganizationContests200JSONResponse(*ListContestsResponseDTO(contestsList)), nil
+}
+
+func (h *CoreServer) GetContest(ctx context.Context, request corev1.GetContestRequestObject) (corev1.GetContestResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	user := middleware.GetUser(ctx)
+	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionGetContestProblem)
 	if err != nil {
 		return nil, err
 	}
 
 	var ps []models.ContestProblem
 	if allowed {
-		ps, err = h.contestsUC.GetContestProblems(ctx, request.ContestId)
+		ps, err = h.contestsUC.GetContestProblems(ctx, contest.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -111,9 +184,21 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 		return nil, err
 	}
 
-	existingContest, err := h.contestsUC.GetContest(ctx, request.ContestId)
+	existingContest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
 	if err != nil {
 		return nil, err
+	}
+
+	var newLogin *string
+	if req.Login != nil && *req.Login != "" {
+		cleaned := strings.ToLower(*req.Login)
+		if cleaned != strings.ToLower(existingContest.Login) {
+			existing, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, cleaned)
+			if err == nil && existing.ID != uuid.Nil {
+				return nil, pkg.Wrap(pkg.ErrBadInput, nil, "contest with this login already exists in organization")
+			}
+			newLogin = &cleaned
+		}
 	}
 
 	settingsMap := make(map[string]interface{})
@@ -151,7 +236,8 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 	}
 
 	err = h.contestsUC.UpdateContest(ctx, models.ContestUpdateInput{
-		ID:           request.ContestId,
+		ID:           existingContest.ID,
+		Login:        newLogin,
 		Title:        req.Title,
 		Description:  req.Description,
 		Visibility:   req.Visibility,
@@ -169,7 +255,12 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 }
 
 func (h *CoreServer) DeleteContest(ctx context.Context, request corev1.DeleteContestRequestObject) (corev1.DeleteContestResponseObject, error) {
-	err := h.contestsUC.DeleteContest(ctx, request.ContestId)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.contestsUC.DeleteContest(ctx, contest.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -344,12 +435,17 @@ func (h *CoreServer) ListPublicContests(ctx context.Context, request corev1.List
 }
 
 func (h *CoreServer) CreateContestProblem(ctx context.Context, request corev1.CreateContestProblemRequestObject) (corev1.CreateContestProblemResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	pkgID := uuid.Nil
 	if request.Params.PackageId != nil {
 		pkgID = *request.Params.PackageId
 	}
-	err := h.contestsUC.CreateContestProblem(ctx, models.ContestProblemCreation{
-		ContestId: request.ContestId,
+	err = h.contestsUC.CreateContestProblem(ctx, models.ContestProblemCreation{
+		ContestId: contest.ID,
 		ProblemId: request.Params.ProblemId,
 		PackageId: pkgID,
 	})
@@ -361,8 +457,13 @@ func (h *CoreServer) CreateContestProblem(ctx context.Context, request corev1.Cr
 }
 
 func (h *CoreServer) GetContestProblem(ctx context.Context, request corev1.GetContestProblemRequestObject) (corev1.GetContestProblemResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	p, err := h.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
-		ContestId: request.ContestId,
+		ContestId: contest.ID,
 		ProblemId: request.ProblemId,
 	})
 	if err != nil {
@@ -392,9 +493,13 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, request corev1.GetCo
 }
 
 func (h *CoreServer) DeleteContestProblem(ctx context.Context, request corev1.DeleteContestProblemRequestObject) (corev1.DeleteContestProblemResponseObject, error) {
-	// Delete the problem
-	err := h.contestsUC.DeleteContestProblem(ctx, models.ContestProblemDeletion{
-		ContestId: request.ContestId,
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.contestsUC.DeleteContestProblem(ctx, models.ContestProblemDeletion{
+		ContestId: contest.ID,
 		ProblemId: request.ProblemId,
 	})
 	if err != nil {
@@ -405,8 +510,13 @@ func (h *CoreServer) DeleteContestProblem(ctx context.Context, request corev1.De
 }
 
 func (h *CoreServer) CreateContestMember(ctx context.Context, request corev1.CreateContestMemberRequestObject) (corev1.CreateContestMemberResponseObject, error) {
-	err := h.contestsUC.CreateParticipant(ctx, models.ParticipantCreation{
-		ContestId: request.ContestId,
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.contestsUC.CreateParticipant(ctx, models.ParticipantCreation{
+		ContestId: contest.ID,
 		UserId:    request.Params.UserId,
 	})
 	if err != nil {
@@ -417,8 +527,13 @@ func (h *CoreServer) CreateContestMember(ctx context.Context, request corev1.Cre
 }
 
 func (h *CoreServer) DeleteContestMember(ctx context.Context, request corev1.DeleteContestMemberRequestObject) (corev1.DeleteContestMemberResponseObject, error) {
-	err := h.contestsUC.DeleteParticipant(ctx, models.ParticipantDeletion{
-		ContestId: request.ContestId,
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.contestsUC.DeleteParticipant(ctx, models.ParticipantDeletion{
+		ContestId: contest.ID,
 		UserId:    request.Params.UserId,
 	})
 	if err != nil {
@@ -429,6 +544,11 @@ func (h *CoreServer) DeleteContestMember(ctx context.Context, request corev1.Del
 }
 
 func (h *CoreServer) UpdateContestMember(ctx context.Context, request corev1.UpdateContestMemberRequestObject) (corev1.UpdateContestMemberResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	user := middleware.GetUser(ctx)
 
 	userId, err := uuid.Parse(request.Params.UserId.String())
@@ -446,8 +566,7 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, request corev1.Upd
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
 	}
 
-	// Call usecase to update the member
-	err = h.contestsUC.UpdateContestMember(ctx, request.ContestId, userId, request.Params.Role)
+	err = h.contestsUC.UpdateContestMember(ctx, contest.ID, userId, request.Params.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -456,10 +575,15 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, request corev1.Upd
 }
 
 func (h *CoreServer) ListContestMembers(ctx context.Context, request corev1.ListContestMembersRequestObject) (corev1.ListContestMembersResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	participantsList, err := h.contestsUC.ListParticipants(ctx, models.ParticipantsFilter{
 		Page:      request.Params.Page,
 		PageSize:  request.Params.PageSize,
-		ContestId: request.ContestId,
+		ContestId: contest.ID,
 	})
 	if err != nil {
 		return nil, err
@@ -472,7 +596,7 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, request corev1.List
 
 	for i, user := range participantsList.Members {
 		resp.Members[i] = corev1.ContestMemberModel{
-			ContestId:   request.ContestId,
+			ContestId:   contest.ID,
 			ContestRole: user.ContestRole,
 			UserId:      user.UserID,
 			Username:    user.Username,
@@ -486,9 +610,14 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, request corev1.List
 }
 
 func (h *CoreServer) GetMyContestRole(ctx context.Context, request corev1.GetMyContestRoleRequestObject) (corev1.GetMyContestRoleResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	user := middleware.GetUser(ctx)
 
-	contestRole, permissionsMask, err := h.permissionsUC.GetEffectiveContestRole(ctx, request.ContestId, user.Id)
+	contestRole, permissionsMask, err := h.permissionsUC.GetEffectiveContestRole(ctx, contest.ID, user.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -506,6 +635,11 @@ func (h *CoreServer) GetMyContestRole(ctx context.Context, request corev1.GetMyC
 }
 
 func (h *CoreServer) ListContestSubmissions(ctx context.Context, request corev1.ListContestSubmissionsRequestObject) (corev1.ListContestSubmissionsResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	filterUserId := request.Params.UserId
 
 	var order *int32
@@ -532,7 +666,7 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, request corev1.
 	}
 
 	submissionsList, err := h.submissionsUC.ListSubmissions(ctx, models.SubmissionsFilter{
-		ContestId: &request.ContestId,
+		ContestId: &contest.ID,
 		Page:      request.Params.Page,
 		PageSize:  request.Params.PageSize,
 		UserId:    filterUserId,
@@ -560,13 +694,13 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, request corev1.
 }
 
 func (h *CoreServer) GetContestScoreboard(ctx context.Context, request corev1.GetContestScoreboardRequestObject) (corev1.GetContestScoreboardResponseObject, error) {
-	contest, err := h.contestsUC.GetContest(ctx, request.ContestId)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
 	user := middleware.GetUser(ctx)
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionGetMonitor)
+	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionGetMonitor)
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +717,7 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, request corev1.Ge
 	unfrozen := false
 	if request.Params.Unfrozen != nil && *request.Params.Unfrozen {
 		unfrozen = true
-		canManage, err := h.permissionsUC.HasContestPermission(ctx, request.ContestId, user.Id, models.ActionManageContest)
+		canManage, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
 		if err != nil {
 			return nil, err
 		}
@@ -592,7 +726,7 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, request corev1.Ge
 		}
 	}
 
-	sb, err := h.contestsUC.GetContestScoreboard(ctx, request.ContestId, user.Id, unfrozen)
+	sb, err := h.contestsUC.GetContestScoreboard(ctx, contest.ID, user.Id, unfrozen)
 	if err != nil {
 		return nil, err
 	}
@@ -601,9 +735,14 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, request corev1.Ge
 }
 
 func (h *CoreServer) ListContestTeams(ctx context.Context, request corev1.ListContestTeamsRequestObject) (corev1.ListContestTeamsResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	user := middleware.GetUser(ctx)
 
-	teams, err := h.contestsUC.GetContestTeams(ctx, request.ContestId, user.Id)
+	teams, err := h.contestsUC.GetContestTeams(ctx, contest.ID, user.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -612,6 +751,11 @@ func (h *CoreServer) ListContestTeams(ctx context.Context, request corev1.ListCo
 }
 
 func (h *CoreServer) CreateContestTeam(ctx context.Context, request corev1.CreateContestTeamRequestObject) (corev1.CreateContestTeamResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	user := middleware.GetUser(ctx)
 
 	role := models.ContestRoleParticipant
@@ -619,7 +763,7 @@ func (h *CoreServer) CreateContestTeam(ctx context.Context, request corev1.Creat
 		role = models.ContestRole(*request.Params.Role)
 	}
 
-	err := h.contestsUC.CreateContestTeam(ctx, request.ContestId, request.Params.TeamId, user.Id, role)
+	err = h.contestsUC.CreateContestTeam(ctx, contest.ID, request.Params.TeamId, user.Id, role)
 	if err != nil {
 		return nil, err
 	}
@@ -628,9 +772,14 @@ func (h *CoreServer) CreateContestTeam(ctx context.Context, request corev1.Creat
 }
 
 func (h *CoreServer) UpdateContestTeam(ctx context.Context, request corev1.UpdateContestTeamRequestObject) (corev1.UpdateContestTeamResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	user := middleware.GetUser(ctx)
 
-	err := h.contestsUC.UpdateContestTeamRole(ctx, request.ContestId, request.Params.TeamId, user.Id, models.ContestRole(request.Params.Role))
+	err = h.contestsUC.UpdateContestTeamRole(ctx, contest.ID, request.Params.TeamId, user.Id, models.ContestRole(request.Params.Role))
 	if err != nil {
 		return nil, err
 	}
@@ -639,13 +788,19 @@ func (h *CoreServer) UpdateContestTeam(ctx context.Context, request corev1.Updat
 }
 
 func (h *CoreServer) DeleteContestTeam(ctx context.Context, request corev1.DeleteContestTeamRequestObject) (corev1.DeleteContestTeamResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
 	user := middleware.GetUser(ctx)
 
-	err := h.contestsUC.DeleteContestTeam(ctx, request.ContestId, request.Params.TeamId, user.Id)
+	err = h.contestsUC.DeleteContestTeam(ctx, contest.ID, request.Params.TeamId, user.Id)
 	if err != nil {
 		return nil, err
 	}
 
 	return corev1.DeleteContestTeam200Response{}, nil
 }
+
 

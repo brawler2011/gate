@@ -20,15 +20,15 @@ import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
 type Props = {
-  params: Promise<{ slug: string; contest_id: string }>;
+  params: Promise<{ slug: string; contestLogin: string }>;
 };
 
 export const generateMetadata = async ({
   params,
 }: Props): Promise<Metadata> => {
-  const {contest_id} = await params;
+  const {slug, contestLogin} = await params;
 
-  const [error, response] = await api.getContest({contestId: contest_id});
+  const [error, response] = await api.getContest({orgLogin: slug, contestLogin});
   if (error || !response) {
     return {
       title: "Ошибка загрузки контеста",
@@ -83,7 +83,7 @@ const Contest = ({
       )}
       {!showCountdown && problems.length > 0 && (
         <ContestProblemsTable
-          contestId={contest.id}
+          contestLogin={contest.login}
           orgLogin={orgLogin}
           problems={problems}
           isManager={isManager}
@@ -94,12 +94,12 @@ const Contest = ({
 };
 
 const Page = async ({params}: Props): Promise<ReactNode> => {
-  const {slug, contest_id} = await params;
-  const response = await unwrapAndCache(api.getContest)({contestId: contest_id});
+  const {slug, contestLogin} = await params;
+  const response = await unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin});
 
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(contest_id) : null;
+  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
 
   const checker = new PermissionChecker(
     user,

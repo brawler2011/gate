@@ -13,7 +13,6 @@ type NavSection = {
 };
 
 interface SidebarNavProps {
-  contestId: string;
   activeSection: string;
   sections: readonly NavSection[];
 }

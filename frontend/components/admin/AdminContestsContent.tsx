@@ -46,8 +46,8 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
   const contests = data?.contests || [];
   const pagination = data?.pagination || {total: 0, page: page};
 
-  const handleDeleteContest = async (contestId: string) => {
-    const [err] = await api.deleteContest({contestId});
+  const handleDeleteContest = async (contest: {id: string; organization_login: string; login: string}) => {
+    const [err] = await api.deleteContest({orgLogin: contest.organization_login, contestLogin: contest.login});
     
     if (err) {
       console.error("Error deleting contest:", err);

@@ -18,7 +18,8 @@ interface SubmissionsListClientProps {
   since?: number;
   snapshotScope?: "all" | "mine";
   filter: {
-    contestId?: string;
+    orgLogin?: string;
+    contestLogin?: string;
     userId?: string;
     problemId?: string;
   };
@@ -62,7 +63,7 @@ export const SubmissionsListClient = ({
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
 
   const handleRejudgeConfirm = async () => {
-    if (!modalState || !filter.contestId) {
+    if (!modalState || !filter.orgLogin || !filter.contestLogin) {
       return;
     }
 
@@ -72,17 +73,20 @@ export const SubmissionsListClient = ({
     if (modalState.type === "submission") {
       setRejudgingId(modalState.id);
       [err] = await api.rejudgeSubmission({
-        contestId: filter.contestId,
+        orgLogin: filter.orgLogin,
+        contestLogin: filter.contestLogin,
         submissionId: modalState.id,
       });
     } else if (modalState.type === "problem") {
       [err] = await api.rejudgeContestProblem({
-        contestId: filter.contestId,
+        orgLogin: filter.orgLogin,
+        contestLogin: filter.contestLogin,
         problemId: modalState.problemId,
       });
     } else if (modalState.type === "all") {
       [err] = await api.rejudgeContest({
-        contestId: filter.contestId,
+        orgLogin: filter.orgLogin,
+        contestLogin: filter.contestLogin,
       });
     }
 
@@ -121,7 +125,7 @@ export const SubmissionsListClient = ({
 
   return (
     <>
-      {canRejudge && filter.contestId && (
+      {canRejudge && filter.orgLogin && filter.contestLogin && (
         <Group justify="flex-end" mb="xs">
           {filter.problemId && (
             <Button

@@ -26,7 +26,7 @@ func (s *IntegrationTestSuite) TestListContests() {
 		OrganizationID: org.ID,
 		OwnerID:        &user.Id,
 		Title:          "Test Contest",
-		ShortName:      "test-contest",
+		Login:          "test-contest",
 		Description:    "A test contest",
 		Visibility:     models.ContestVisibilityPublic,
 		Settings:       make(map[string]interface{}),

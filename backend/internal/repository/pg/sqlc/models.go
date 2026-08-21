@@ -450,7 +450,7 @@ type Contest struct {
 	OwnerID        pgtype.UUID              `json:"owner_id"`
 	Visibility     models.ContestVisibility `json:"visibility"`
 	Title          string                   `json:"title"`
-	ShortName      string                   `json:"short_name"`
+	Login          string                   `json:"login"`
 	Description    string                   `json:"description"`
 	Settings       []byte                   `json:"settings"`
 	AccessPolicy   []byte                   `json:"access_policy"`

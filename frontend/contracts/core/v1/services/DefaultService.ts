@@ -180,26 +180,6 @@ export class DefaultService {
         });
     }
     /**
-     * @returns CreationResponseModel OK
-     * @throws ApiError
-     */
-    public createContest({
-        title,
-        organizationId,
-    }: {
-        title: string,
-        organizationId?: string,
-    }): CancelablePromise<CreationResponseModel> {
-        return this.httpRequest.request({
-            method: 'POST',
-            url: '/contests',
-            query: {
-                'title': title,
-                'organization_id': organizationId,
-            },
-        });
-    }
-    /**
      * @returns ListContestsResponseModel OK
      * @throws ApiError
      */
@@ -327,19 +307,75 @@ export class DefaultService {
         });
     }
     /**
+     * @returns CreationResponseModel OK
+     * @throws ApiError
+     */
+    public createContest({
+        orgLogin,
+        title,
+        login,
+    }: {
+        orgLogin: string,
+        title: string,
+        login?: string,
+    }): CancelablePromise<CreationResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests',
+            path: {
+                'org_login': orgLogin,
+            },
+            query: {
+                'title': title,
+                'login': login,
+            },
+        });
+    }
+    /**
+     * @returns ListContestsResponseModel OK
+     * @throws ApiError
+     */
+    public listOrganizationContests({
+        orgLogin,
+        page,
+        pageSize,
+        search,
+    }: {
+        orgLogin: string,
+        page: number,
+        pageSize: number,
+        search?: string,
+    }): CancelablePromise<ListContestsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{org_login}/contests',
+            path: {
+                'org_login': orgLogin,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'search': search,
+            },
+        });
+    }
+    /**
      * @returns GetContestResponseModel OK
      * @throws ApiError
      */
     public getContest({
-        contestId,
+        orgLogin,
+        contestLogin,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
     }): CancelablePromise<GetContestResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/contests/{contest_id}',
+            url: '/organizations/{org_login}/contests/{contest_login}',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
         });
     }
@@ -348,15 +384,18 @@ export class DefaultService {
      * @throws ApiError
      */
     public deleteContest({
-        contestId,
+        orgLogin,
+        contestLogin,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'DELETE',
-            url: '/contests/{contest_id}',
+            url: '/organizations/{org_login}/contests/{contest_login}',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
         });
     }
@@ -365,17 +404,20 @@ export class DefaultService {
      * @throws ApiError
      */
     public updateContest({
-        contestId,
+        orgLogin,
+        contestLogin,
         requestBody,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         requestBody: UpdateContestRequestModel,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'PATCH',
-            url: '/contests/{contest_id}',
+            url: '/organizations/{org_login}/contests/{contest_login}',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -386,19 +428,22 @@ export class DefaultService {
      * @throws ApiError
      */
     public createContestProblem({
-        contestId,
+        orgLogin,
+        contestLogin,
         problemId,
         packageId,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         problemId: string,
         packageId?: string,
     }): CancelablePromise<CreationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/contests/{contest_id}/problems',
+            url: '/organizations/{org_login}/contests/{contest_login}/problems',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'problem_id': problemId,
@@ -411,18 +456,21 @@ export class DefaultService {
      * @throws ApiError
      */
     public getContestProblem({
+        orgLogin,
+        contestLogin,
         problemId,
-        contestId,
     }: {
+        orgLogin: string,
+        contestLogin: string,
         problemId: string,
-        contestId: string,
     }): CancelablePromise<GetContestProblemResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/contests/{contest_id}/problems/{problem_id}',
+            url: '/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}',
             path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
                 'problem_id': problemId,
-                'contest_id': contestId,
             },
         });
     }
@@ -431,18 +479,21 @@ export class DefaultService {
      * @throws ApiError
      */
     public deleteContestProblem({
+        orgLogin,
+        contestLogin,
         problemId,
-        contestId,
     }: {
+        orgLogin: string,
+        contestLogin: string,
         problemId: string,
-        contestId: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'DELETE',
-            url: '/contests/{contest_id}/problems/{problem_id}',
+            url: '/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}',
             path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
                 'problem_id': problemId,
-                'contest_id': contestId,
             },
         });
     }
@@ -451,19 +502,22 @@ export class DefaultService {
      * @throws ApiError
      */
     public listContestMembers({
-        contestId,
+        orgLogin,
+        contestLogin,
         page,
         pageSize,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         page: number,
         pageSize: number,
     }): CancelablePromise<ListContestMembersResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/contests/{contest_id}/members',
+            url: '/organizations/{org_login}/contests/{contest_login}/members',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'page': page,
@@ -476,17 +530,20 @@ export class DefaultService {
      * @throws ApiError
      */
     public createContestMember({
-        contestId,
+        orgLogin,
+        contestLogin,
         userId,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         userId: string,
     }): CancelablePromise<CreationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/contests/{contest_id}/members',
+            url: '/organizations/{org_login}/contests/{contest_login}/members',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'user_id': userId,
@@ -499,16 +556,19 @@ export class DefaultService {
      */
     public deleteContestMember({
         userId,
-        contestId,
+        orgLogin,
+        contestLogin,
     }: {
         userId: string,
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'DELETE',
-            url: '/contests/{contest_id}/members',
+            url: '/organizations/{org_login}/contests/{contest_login}/members',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'user_id': userId,
@@ -520,19 +580,22 @@ export class DefaultService {
      * @throws ApiError
      */
     public updateContestMember({
-        contestId,
+        orgLogin,
+        contestLogin,
         userId,
         role,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         userId: string,
         role: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'PATCH',
-            url: '/contests/{contest_id}/members',
+            url: '/organizations/{org_login}/contests/{contest_login}/members',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'user_id': userId,
@@ -545,15 +608,18 @@ export class DefaultService {
      * @throws ApiError
      */
     public listContestTeams({
-        contestId,
+        orgLogin,
+        contestLogin,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
     }): CancelablePromise<ListContestTeamsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/contests/{contest_id}/teams',
+            url: '/organizations/{org_login}/contests/{contest_login}/teams',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
         });
     }
@@ -562,19 +628,22 @@ export class DefaultService {
      * @throws ApiError
      */
     public createContestTeam({
-        contestId,
+        orgLogin,
+        contestLogin,
         teamId,
         role = 'participant',
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         teamId: string,
         role?: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/contests/{contest_id}/teams',
+            url: '/organizations/{org_login}/contests/{contest_login}/teams',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'team_id': teamId,
@@ -587,17 +656,20 @@ export class DefaultService {
      * @throws ApiError
      */
     public deleteContestTeam({
-        contestId,
+        orgLogin,
+        contestLogin,
         teamId,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         teamId: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'DELETE',
-            url: '/contests/{contest_id}/teams',
+            url: '/organizations/{org_login}/contests/{contest_login}/teams',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'team_id': teamId,
@@ -609,19 +681,22 @@ export class DefaultService {
      * @throws ApiError
      */
     public updateContestTeam({
-        contestId,
+        orgLogin,
+        contestLogin,
         teamId,
         role,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         teamId: string,
         role: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'PATCH',
-            url: '/contests/{contest_id}/teams',
+            url: '/organizations/{org_login}/contests/{contest_login}/teams',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'team_id': teamId,
@@ -634,15 +709,18 @@ export class DefaultService {
      * @throws ApiError
      */
     public getMyContestRole({
-        contestId,
+        orgLogin,
+        contestLogin,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
     }): CancelablePromise<GetMyContestRoleResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/contests/{contest_id}/my-role',
+            url: '/organizations/{org_login}/contests/{contest_login}/my-role',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
         });
     }
@@ -651,7 +729,8 @@ export class DefaultService {
      * @throws ApiError
      */
     public listContestSubmissions({
-        contestId,
+        orgLogin,
+        contestLogin,
         page,
         pageSize,
         userId,
@@ -660,7 +739,8 @@ export class DefaultService {
         sortOrder,
         language,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         page: number,
         pageSize: number,
         userId?: string,
@@ -671,9 +751,10 @@ export class DefaultService {
     }): CancelablePromise<ListSubmissionsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/contests/{contest_id}/submissions',
+            url: '/organizations/{org_login}/contests/{contest_login}/submissions',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'page': page,
@@ -691,17 +772,20 @@ export class DefaultService {
      * @throws ApiError
      */
     public rejudgeSubmission({
-        contestId,
+        orgLogin,
+        contestLogin,
         submissionId,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         submissionId: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/contests/{contest_id}/submissions/{submission_id}/rejudge',
+            url: '/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
                 'submission_id': submissionId,
             },
         });
@@ -711,17 +795,20 @@ export class DefaultService {
      * @throws ApiError
      */
     public rejudgeContestProblem({
-        contestId,
+        orgLogin,
+        contestLogin,
         problemId,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         problemId: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/contests/{contest_id}/problems/{problem_id}/rejudge',
+            url: '/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
                 'problem_id': problemId,
             },
         });
@@ -731,15 +818,18 @@ export class DefaultService {
      * @throws ApiError
      */
     public rejudgeContest({
-        contestId,
+        orgLogin,
+        contestLogin,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/contests/{contest_id}/rejudge',
+            url: '/organizations/{org_login}/contests/{contest_login}/rejudge',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
         });
     }
@@ -748,10 +838,12 @@ export class DefaultService {
      * @throws ApiError
      */
     public getContestScoreboard({
-        contestId,
+        orgLogin,
+        contestLogin,
         unfrozen,
     }: {
-        contestId: string,
+        orgLogin: string,
+        contestLogin: string,
         /**
          * Whether to return unfrozen scoreboard (managers only)
          */
@@ -759,9 +851,10 @@ export class DefaultService {
     }): CancelablePromise<ScoreboardResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/contests/{contest_id}/scoreboard',
+            url: '/organizations/{org_login}/contests/{contest_login}/scoreboard',
             path: {
-                'contest_id': contestId,
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
             },
             query: {
                 'unfrozen': unfrozen,
@@ -774,12 +867,14 @@ export class DefaultService {
      */
     public createSubmission({
         problemId,
-        contestId,
+        organizationLogin,
+        contestLogin,
         language,
         requestBody,
     }: {
         problemId: string,
-        contestId: string,
+        organizationLogin: string,
+        contestLogin: string,
         language: number,
         requestBody: CreateSubmissionRequestModel,
     }): CancelablePromise<CreationResponseModel> {
@@ -788,7 +883,8 @@ export class DefaultService {
             url: '/submissions',
             query: {
                 'problem_id': problemId,
-                'contest_id': contestId,
+                'organization_login': organizationLogin,
+                'contest_login': contestLogin,
                 'language': language,
             },
             body: requestBody,

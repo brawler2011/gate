@@ -110,11 +110,15 @@ export const AdminSubmissionsContent = ({
 
   const handleRejudge = async (e: React.MouseEvent, submission: SubmissionModel) => {
     e.stopPropagation();
+    if (!submission.organization_login || !submission.contest_login) {
+      return;
+    }
     setRejudgingId(submission.id);
     try {
       const [err] = await api.rejudgeSubmission({
         submissionId: submission.id,
-        contestId: submission.contest_id,
+        orgLogin: submission.organization_login,
+        contestLogin: submission.contest_login,
       });
 
       if (err) {
@@ -343,17 +347,17 @@ export const AdminSubmissionsContent = ({
                         </Link>
                       </Table.Td>
                       <Table.Td>
-                        {submission.contest_id ? (
+                        {submission.contest_login ? (
                           <Link
                             href={
                               submission.organization_login
-                                ? `/${submission.organization_login}/contests/${submission.contest_id}`
-                                : `/contests/${submission.contest_id}`
+                                ? `/${submission.organization_login}/contests/${submission.contest_login}`
+                                : `/contests/${submission.contest_login}`
                             }
                             style={{textDecoration: "none"}}
                           >
                             <Text c="blue" lineClamp={1}>
-                              {submission.contest_title || submission.contest_id.slice(0, 8)}
+                              {submission.contest_title || submission.contest_login}
                             </Text>
                           </Link>
                         ) : (

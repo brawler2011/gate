@@ -49,17 +49,20 @@ export const CreateContestModal = ({
 
     setLoading(true);
     try {
+      const selectedOrg = orgs.find((o) => o.id === orgId);
+      if (!selectedOrg) {
+        return;
+      }
       const [error, response] = await api.createContest({
+        orgLogin: selectedOrg.login,
         title: title.trim() || "New Contest",
-        organizationId: orgId,
       });
       if (error) {
         throw new Error(error.message);
       }
-      const selectedOrg = orgs.find((o) => o.id === orgId);
-      const orgSlug = selectedOrg?.login || selectedOrg?.id || "org";
+      const orgSlug = selectedOrg.login;
       onClose();
-      router.push(`/${orgSlug}/contests/${response.id}`);
+      router.push(`/${orgSlug}/contests/${response.login}`);
     } catch (err) {
       notifications.show({
         title: "Ошибка",

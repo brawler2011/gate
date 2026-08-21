@@ -25,6 +25,18 @@ const (
 	maxArchiveSize  = 10 * 1024 * 1024 // 10 MB
 )
 
+var contestLoginRegex = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+
+func validateContestLogin(login string) error {
+	if len(login) < 3 || len(login) > 64 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "contest login must be between 3 and 64 characters")
+	}
+	if !contestLoginRegex.MatchString(login) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "contest login must contain only lowercase alphanumeric characters and hyphens, and cannot start or end with a hyphen")
+	}
+	return nil
+}
+
 func validateCreateContestParams(params corev1.CreateContestParams) error {
 	if params.Title == "" {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
@@ -33,6 +45,12 @@ func validateCreateContestParams(params corev1.CreateContestParams) error {
 	titleLength := utf8.RuneCountInString(params.Title)
 	if titleLength < 3 || titleLength > 64 {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "title must be between 3 and 64 characters")
+	}
+
+	if params.Login != nil && *params.Login != "" {
+		if err := validateContestLogin(*params.Login); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -52,6 +70,12 @@ func checkLength(s string, min, max int) bool {
 }
 
 func validateUpdateContestRequest(params corev1.UpdateContestRequestModel) error {
+	if params.Login != nil {
+		if err := validateContestLogin(*params.Login); err != nil {
+			return err
+		}
+	}
+
 	if params.Title != nil && !checkLength(*params.Title, 3, 64) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "title must be between 3 and 64 characters")
 	}

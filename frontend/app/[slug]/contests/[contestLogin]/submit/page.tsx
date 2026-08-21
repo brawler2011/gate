@@ -14,17 +14,17 @@ export const metadata: Metadata = {
 };
 
 type PageProps = {
-  params: Promise<{ slug: string; contest_id: string }>;
+  params: Promise<{ slug: string; contestLogin: string }>;
 };
 
 const Page = async ({params}: PageProps): Promise<ReactNode> => {
-  const {slug, contest_id} = await params;
+  const {slug, contestLogin} = await params;
 
-  const response = await unwrapAndCache(api.getContest)({contestId: contest_id});
+  const response = await unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin});
 
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(contest_id) : null;
+  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
 
   const checker = new PermissionChecker(
     user,
@@ -38,7 +38,7 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
     new Date(response.contest.start_time) <= new Date();
 
   if (!checker.canSubmitSolution(response.contest) || (!isManager && !hasStarted)) {
-    redirect(`/${slug}/contests/${contest_id}`);
+    redirect(`/${slug}/contests/${contestLogin}`);
   }
 
   return (

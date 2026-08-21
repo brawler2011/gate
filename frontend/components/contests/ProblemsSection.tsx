@@ -30,15 +30,16 @@ import type * as corev1 from "@/contracts/core/v1";
 import type {ReactNode} from "react";
 
 interface ProblemsSectionProps {
-  contestId: string;
+  orgLogin: string;
+  contestLogin: string;
+  contestId?: string;
   initialProblems: Array<corev1.ContestProblemListItemModel>;
-  orgLogin?: string;
 }
 
 export const ProblemsSection = ({
-  contestId,
-  initialProblems,
   orgLogin,
+  contestLogin,
+  initialProblems,
 }: ProblemsSectionProps): ReactNode => {
   const router = useRouter();
   const [problems, setProblems] = useState(initialProblems);
@@ -94,7 +95,7 @@ export const ProblemsSection = ({
     }
 
     setAdding(true);
-    const [error] = await api.createContestProblem({contestId, problemId: selectedProblemId});
+    const [error] = await api.createContestProblem({orgLogin, contestLogin, problemId: selectedProblemId});
     setAdding(false);
 
     if (error) {
@@ -123,7 +124,7 @@ export const ProblemsSection = ({
 
   const handleDeleteProblem = async (problemId: string) => {
     setDeletingId(problemId);
-    const [error] = await api.deleteContestProblem({contestId, problemId});
+    const [error] = await api.deleteContestProblem({orgLogin, contestLogin, problemId});
     setDeletingId(null);
 
     if (error) {
@@ -185,7 +186,8 @@ export const ProblemsSection = ({
 
     setReplacing(true);
     const [error] = await api.createContestProblem({
-      contestId,
+      orgLogin,
+      contestLogin,
       problemId: replaceTarget.problemId,
       packageId: selectedPackageId,
     });

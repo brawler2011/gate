@@ -4,6 +4,7 @@
 /* eslint-disable */
 export type DashboardContestModel = {
     id: string;
+    login: string;
     title: string;
     organization_id: string;
     organization_name: string;

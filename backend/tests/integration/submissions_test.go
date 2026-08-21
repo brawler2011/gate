@@ -48,7 +48,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		OrganizationID: contestOrg.ID,
 		OwnerID:        &admin.Id,
 		Title:          "Submission Contest",
-		ShortName:      "submission-contest",
+		Login:          "submission-contest",
 		Description:    "A test contest for submissions",
 		Visibility:     models.ContestVisibilityPublic,
 		Settings:       make(map[string]interface{}),
@@ -90,9 +90,10 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		// It's done asynchronously by the outbox worker
 
 		resp, err := s.client.CreateSubmissionWithResponse(s.ctx, &corev1.CreateSubmissionParams{
-			ProblemId: problemID,
-			ContestId: contestID,
-			Language:  30, // Python
+			ProblemId:         problemID,
+			OrganizationLogin: contestOrg.Login,
+			ContestLogin:      "submission-contest",
+			Language:          30, // Python
 		}, corev1.CreateSubmissionJSONRequestBody{
 			Submission: "print('hello')",
 		}, func(ctx context.Context, req *http.Request) error {

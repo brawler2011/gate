@@ -28,25 +28,26 @@ interface SearchParams {
 }
 
 interface PageProps {
-  params: Promise<{ slug: string; contest_id: string }>;
+  params: Promise<{ slug: string; contestLogin: string }>;
   searchParams: Promise<SearchParams>;
 }
 
 const PAGE_SIZE = 20;
 
 const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
-  const {slug, contest_id} = await params;
+  const {slug, contestLogin} = await params;
   const queryParams = await searchParams;
 
   const page = parsePage(queryParams.page);
   if (!page) {
-    redirect(`/${slug}/contests/${contest_id}/mysubmissions`);
+    redirect(`/${slug}/contests/${contestLogin}/mysubmissions`);
   }
 
   const parsedParams: {
     page: number;
     pageSize: number;
-    contestId: string;
+    orgLogin: string;
+    contestLogin: string;
     userId?: string;
     problemId?: string;
     state?: number;
@@ -55,7 +56,8 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
   } = {
     page,
     pageSize: PAGE_SIZE,
-    contestId: contest_id,
+    orgLogin: slug,
+    contestLogin,
   };
 
   if (queryParams.userId) {
@@ -106,11 +108,11 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
 
   const wsBaseUrl = env.getWebSocketUrl();
 
-  const contestData = await unwrapAndCache(api.getContest)({contestId: contest_id});
+  const contestData = await unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin});
 
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(contest_id) : null;
+  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
 
   if (contestData?.contest) {
     const checker = new PermissionChecker(
@@ -125,7 +127,7 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
       new Date(contestData.contest.start_time) <= new Date();
 
     if (!checker.canViewMySubmissions(contestData.contest) || (!isManager && !hasStarted)) {
-      redirect(`/${slug}/contests/${contest_id}`);
+      redirect(`/${slug}/contests/${contestLogin}`);
     }
   }
 
@@ -152,7 +154,8 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
               since={submissionsData.since}
               snapshotScope="mine"
               filter={{
-                contestId: contest_id,
+                orgLogin: slug,
+                contestLogin,
                 userId: parsedParams.userId,
                 problemId: parsedParams.problemId,
               }}
@@ -163,7 +166,7 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
             <Group justify="center">
               <NextPagination
                 pagination={submissionsData.pagination}
-                baseUrl={`/${slug}/contests/${contest_id}/mysubmissions`}
+                baseUrl={`/${slug}/contests/${contestLogin}/mysubmissions`}
                 queryParams={nextQueryParams}
               />
             </Group>

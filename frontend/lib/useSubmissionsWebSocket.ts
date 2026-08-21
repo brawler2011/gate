@@ -39,6 +39,8 @@ export interface UseSubmissionsWebSocketOptions {
   initialSubmissions: SubmissionsListItemModel[];
   snapshotScope: 'all' | 'mine';
   filter: {
+    orgLogin?: string;
+    contestLogin?: string;
     contestId?: string;
     userId?: string;
     problemId?: string;
@@ -48,7 +50,9 @@ export interface UseSubmissionsWebSocketOptions {
 }
 
 type SnapshotParams = {
-  contestId: string;
+  orgLogin?: string;
+  contestLogin?: string;
+  contestId?: string;
   page: number;
   pageSize: number;
   userId?: string;
@@ -65,12 +69,14 @@ const hasSince = (data: MySubmissionsData): data is NonNullable<MySubmissionsDat
 };
 
 const toSnapshotParams = (filter: UseSubmissionsWebSocketOptions['filter'], pageSize: number): SnapshotParams | null => {
-  if (!filter.contestId) {
+  if (!filter.orgLogin || !filter.contestLogin) {
     return null;
   }
   return {
     page: 1,
     pageSize,
+    orgLogin: filter.orgLogin,
+    contestLogin: filter.contestLogin,
     contestId: filter.contestId,
     userId: filter.userId,
     problemId: filter.problemId,
@@ -142,6 +148,7 @@ const buildSubmissionFromCreated = (payload: MessageSubmissionCreated): Submissi
     problem_title: payload.problem_title ?? '',
     position: payload.position ?? 0,
     contest_id: payload.contest_id ?? '',
+    contest_login: payload.contest_id ?? '',
     contest_title: payload.contest_title ?? '',
     updated_at: payload.created_at ?? new Date().toISOString(),
     created_at: payload.created_at ?? new Date().toISOString(),
@@ -165,6 +172,7 @@ const buildSubmissionFromCompleted = (payload: MessageSubmissionCompleted): Subm
     problem_title: payload.problem_title ?? '',
     position: payload.position ?? 0,
     contest_id: payload.contest_id ?? '',
+    contest_login: payload.contest_id ?? '',
     contest_title: payload.contest_title ?? '',
     updated_at: now,
     created_at: payload.created_at ?? now,
@@ -182,7 +190,7 @@ export const useSubmissionsWebSocket = ({
   enabled,
 }: UseSubmissionsWebSocketOptions): UseSubmissionsWebSocketReturn => {
   // Calculate filterKey first - used for initialization and change detection
-  const filterKey = `${filter.contestId}-${filter.userId}-${filter.problemId}`;
+  const filterKey = `${filter.orgLogin}-${filter.contestLogin}-${filter.contestId}-${filter.userId}-${filter.problemId}`;
   
   const [submissions, setSubmissions] = useState<SubmissionWithProgress[]>(
     () => initialSubmissions.map(s => ({...s}))
@@ -349,20 +357,22 @@ export const useSubmissionsWebSocket = ({
       url.searchParams.set('userId', filter.userId);
     }
     return url.toString();
-  }, [wsUrl, sinceState, filter.contestId, filter.userId]);
+  }, [wsUrl, sinceState, filter.orgLogin, filter.contestLogin, filter.contestId, filter.userId]);
 
   const connectionKey = useMemo(
-    () => `${wsUrl}|${sinceState ?? 0}|${filter.contestId ?? ''}|${filter.userId ?? ''}`,
-    [wsUrl, sinceState, filter.contestId, filter.userId],
+    () => `${wsUrl}|${sinceState ?? 0}|${filter.orgLogin ?? ''}|${filter.contestLogin ?? ''}|${filter.contestId ?? ''}|${filter.userId ?? ''}`,
+    [wsUrl, sinceState, filter.orgLogin, filter.contestLogin, filter.contestId, filter.userId],
   );
 
+  const orgLogin = filter.orgLogin;
+  const contestLogin = filter.contestLogin;
   const contestId = filter.contestId;
   const userId = filter.userId;
   const problemId = filter.problemId;
 
   const resyncSnapshot = useCallback(async () => {
-    const params = toSnapshotParams({contestId, userId, problemId}, pageSize);
-    if (!params) {
+    const params = toSnapshotParams({orgLogin, contestLogin, contestId, userId, problemId}, pageSize);
+    if (!params || !params.orgLogin || !params.contestLogin) {
       return;
     }
 
@@ -375,15 +385,26 @@ export const useSubmissionsWebSocket = ({
 
     if (snapshotScope === 'mine') {
       [error, data] = await api.listContestSubmissions({
+        orgLogin: params.orgLogin,
+        contestLogin: params.contestLogin,
         userId: userId!,
-        contestId: params.contestId!,
         problemId: params.problemId,
         page: 1,
         pageSize,
         sortOrder: 'desc',
       });
     } else {
-      [error, data] = await api.listContestSubmissions(params);
+      [error, data] = await api.listContestSubmissions({
+        orgLogin: params.orgLogin,
+        contestLogin: params.contestLogin,
+        problemId: params.problemId,
+        userId: params.userId,
+        state: params.state,
+        sortOrder: params.sortOrder,
+        language: params.language,
+        page: params.page,
+        pageSize: params.pageSize,
+      });
     }
 
     if (error || !data || !data.submissions) {
@@ -394,7 +415,7 @@ export const useSubmissionsWebSocket = ({
     setSinceState(hasSince(data) ? data.since ?? 0 : 0);
     setFatalConnectionError(false);
     setConnectionError(false);
-  }, [contestId, userId, problemId, pageSize, snapshotScope]);
+  }, [orgLogin, contestLogin, contestId, userId, problemId, pageSize, snapshotScope]);
 
   // Handle incoming WebSocket message
   const handleMessage = useCallback((event: MessageEvent) => {

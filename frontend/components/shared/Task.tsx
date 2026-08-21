@@ -75,7 +75,8 @@ const Task = ({
 
     const [error, response] = await api.createSubmission({
       problemId,
-      contestId,
+      organizationLogin: contest.organization_login,
+      contestLogin: contest.login,
       language: languageCode,
       requestBody: {
         submission: submissionContent,
@@ -111,49 +112,46 @@ const Task = ({
             p="md"
             withBorder
             bg="var(--mantine-color-gray-light)"
-            style={{width: "100%"}}
+            style={{
+              maxHeight: "calc(100vh - 120px)",
+              overflowY: "auto",
+              position: "sticky",
+              top: "80px",
+            }}
           >
-            <Stack w="100%" gap="xs">
-              <Link
-                href={`/${contest.organization_login}/contests/${contest.id}`}
-                style={{textDecoration: "none"}}
-              >
-                <Title
-                  c="var(--mantine-color-text)"
-                  order={4}
-                  ta="center"
-                  style={{cursor: "pointer"}}
-                >
-                  {contest.title}
-                </Title>
-              </Link>
-              <Stack gap={2}>
-                {tasks.map((item) => {
-                  const isActive = item.problem_id === task.problem_id;
+            <Stack gap="sm">
+              <Title order={5} c="dimmed">
+                Задачи
+              </Title>
+              <Stack gap="xs">
+                {tasks.map((t, index) => {
+                  const letter = numberToLetters(t.position);
+                  const isCurrent = t.problem_id === problemId;
+                  const isActive = isCurrent;
+
                   return (
                     <NavLink
-                      key={item.problem_id}
+                      key={t.problem_id || index}
                       component={Link}
-                      href={`/${contest.organization_login}/contests/${contest.id}/problems/${item.problem_id}`}
-                      label={`${numberToLetters(item.position)}. ${item.title}`}
+                      href={`/${contest.organization_login}/contests/${contest.login}/problems/${t.problem_id}`}
+                      label={`${letter}. ${t.title}`}
                       active={isActive}
-                      c="var(--mantine-color-text)"
                       styles={{
                         root: {
-                          paddingLeft: 8,
-                          paddingRight: 8,
                           borderRadius: "var(--mantine-radius-sm)",
                           fontWeight: isActive ? 600 : 400,
                           backgroundColor: isActive
-                            ? "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))"
+                            ? "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))"
                             : "transparent",
+                          color: isActive
+                            ? "light-dark(var(--mantine-color-dark-9), var(--mantine-color-gray-0))"
+                            : "light-dark(var(--mantine-color-dark-6), var(--mantine-color-gray-3))",
                           "&:hover": {
                             backgroundColor: isActive
                               ? "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))"
                               : "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))",
                           },
                         },
-                        label: {fontSize: "0.875rem"},
                       }}
                     />
                   );
@@ -197,6 +195,8 @@ const Task = ({
 
             <RecentSubmissionsTable
               submissions={submissions}
+              orgLogin={contest.organization_login}
+              contestLogin={contest.login}
               contestId={contest.id}
               userId={user?.id}
               problemId={problemId}

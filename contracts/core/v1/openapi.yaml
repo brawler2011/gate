@@ -137,28 +137,6 @@ paths:
         "200":
           description: OK
           content: {}
-  /contests:
-    post:
-      operationId: CreateContest
-      parameters:
-        - name: title
-          in: query
-          required: true
-          schema:
-            type: string
-          example: Contest 1
-        - name: organization_id
-          in: query
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CreationResponseModel"
   /admin/contests:
     get:
       operationId: ListAdminContests
@@ -366,16 +344,82 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListContestsResponseModel"
-  /contests/{contest_id}:
-    get:
-      operationId: GetContest
+  /organizations/{org_login}/contests:
+    post:
+      operationId: CreateContest
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: title
+          in: query
+          required: true
+          schema:
+            type: string
+          example: Contest 1
+        - name: login
+          in: query
+          required: false
+          schema:
+            type: string
+          example: contest-1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreationResponseModel"
+    get:
+      operationId: ListOrganizationContests
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 1
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+          example: Contest
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListContestsResponseModel"
+  /organizations/{org_login}/contests/{contest_login}:
+    get:
+      operationId: GetContest
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -386,24 +430,32 @@ paths:
     delete:
       operationId: DeleteContest
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
     patch:
       operationId: UpdateContest
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -413,16 +465,20 @@ paths:
       responses:
         "200":
           description: OK
-  /contests/{contest_id}/problems:
+  /organizations/{org_login}/contests/{contest_login}/problems:
     post:
       operationId: CreateContestProblem
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: problem_id
           in: query
           required: true
@@ -442,17 +498,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreationResponseModel"
-  /contests/{contest_id}/problems/{problem_id}:
+  /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}:
     get:
       operationId: GetContestProblem
       parameters:
-        - name: problem_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
-        - name: contest_id
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: problem_id
           in: path
           required: true
           schema:
@@ -468,13 +528,17 @@ paths:
     delete:
       operationId: DeleteContestProblem
       parameters:
-        - name: problem_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
-        - name: contest_id
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: problem_id
           in: path
           required: true
           schema:
@@ -483,16 +547,20 @@ paths:
       responses:
         "200":
           description: OK
-  /contests/{contest_id}/members:
+  /organizations/{org_login}/contests/{contest_login}/members:
     get:
       operationId: ListContestMembers
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           required: true
@@ -517,12 +585,16 @@ paths:
     post:
       operationId: CreateContestMember
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: user_id
           in: query
           required: true
@@ -545,24 +617,32 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
     patch:
       operationId: UpdateContestMember
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: user_id
           in: query
           required: true
@@ -577,16 +657,20 @@ paths:
       responses:
         "200":
           description: OK
-  /contests/{contest_id}/teams:
+  /organizations/{org_login}/contests/{contest_login}/teams:
     get:
       operationId: ListContestTeams
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -597,12 +681,16 @@ paths:
     post:
       operationId: CreateContestTeam
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: team_id
           in: query
           required: true
@@ -621,12 +709,16 @@ paths:
     delete:
       operationId: DeleteContestTeam
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: team_id
           in: query
           required: true
@@ -639,12 +731,16 @@ paths:
     patch:
       operationId: UpdateContestTeam
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: team_id
           in: query
           required: true
@@ -660,16 +756,20 @@ paths:
         "200":
           description: OK
 
-  /contests/{contest_id}/my-role:
+  /organizations/{org_login}/contests/{contest_login}/my-role:
     get:
       operationId: GetMyContestRole
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -677,16 +777,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetMyContestRoleResponseModel"
-  /contests/{contest_id}/submissions:
+  /organizations/{org_login}/contests/{contest_login}/submissions:
     get:
       operationId: ListContestSubmissions
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: page
           in: query
           required: true
@@ -738,16 +842,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListSubmissionsResponseModel"
-  /contests/{contest_id}/submissions/{submission_id}/rejudge:
+  /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge:
     post:
       operationId: RejudgeSubmission
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: submission_id
           in: path
           required: true
@@ -757,16 +865,20 @@ paths:
       responses:
         "200":
           description: OK
-  /contests/{contest_id}/problems/{problem_id}/rejudge:
+  /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge:
     post:
       operationId: RejudgeContestProblem
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: problem_id
           in: path
           required: true
@@ -776,29 +888,37 @@ paths:
       responses:
         "200":
           description: OK
-  /contests/{contest_id}/rejudge:
+  /organizations/{org_login}/contests/{contest_login}/rejudge:
     post:
       operationId: RejudgeContest
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
-  /contests/{contest_id}/scoreboard:
+  /organizations/{org_login}/contests/{contest_login}/scoreboard:
     get:
       operationId: GetContestScoreboard
       parameters:
-        - name: contest_id
+        - name: org_login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
         - name: unfrozen
           in: query
           required: false
@@ -822,12 +942,16 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: contest_id
+        - name: organization_login
           in: query
           required: true
           schema:
             type: string
-            format: uuid
+        - name: contest_login
+          in: query
+          required: true
+          schema:
+            type: string
         - name: language
           in: query
           required: true
@@ -3409,6 +3533,8 @@ components:
         id:
           type: string
           format: uuid
+        login:
+          type: string
     UpdateUserRequestModel:
       type: object
       properties:
@@ -3654,6 +3780,7 @@ components:
       type: object
       required:
         - id
+        - login
         - organization_id
         - organization_login
         - title
@@ -3670,6 +3797,9 @@ components:
         id:
           type: string
           format: uuid
+        login:
+          type: string
+          example: contest-1
         organization_id:
           type: string
           format: uuid
@@ -3823,6 +3953,9 @@ components:
     UpdateContestRequestModel:
       type: object
       properties:
+        login:
+          type: string
+          example: contest-1
         title:
           type: string
           example: Test contest
@@ -3900,6 +4033,7 @@ components:
         - problem_title
         - position
         - contest_id
+        - contest_login
         - contest_title
         - updated_at
         - created_at
@@ -3950,6 +4084,9 @@ components:
         contest_id:
           type: string
           format: uuid
+        contest_login:
+          type: string
+          example: contest-1
         contest_title:
           type: string
           example: Contest title
@@ -3979,6 +4116,7 @@ components:
         - problem_title
         - position
         - contest_id
+        - contest_login
         - contest_title
         - updated_at
         - created_at
@@ -4032,6 +4170,9 @@ components:
         contest_id:
           type: string
           format: uuid
+        contest_login:
+          type: string
+          example: contest-1
         contest_title:
           type: string
           example: Contest title
@@ -4054,6 +4195,7 @@ components:
       type: object
       required:
         - id
+        - login
         - title
         - organization_id
         - organization_name
@@ -4064,6 +4206,9 @@ components:
         id:
           type: string
           format: uuid
+        login:
+          type: string
+          example: contest-1
         title:
           type: string
         organization_id:
@@ -4330,6 +4475,8 @@ components:
       type: object
       required:
         - contest_id
+        - contest_login
+        - organization_login
         - penalty_per_attempt
         - is_frozen
         - problems
@@ -4338,6 +4485,12 @@ components:
         contest_id:
           type: string
           format: uuid
+        contest_login:
+          type: string
+          example: contest-1
+        organization_login:
+          type: string
+          example: yandex
         penalty_per_attempt:
           type: integer
           format: int32

@@ -13,7 +13,7 @@ import type {ContestProblemListItemModel} from "@/contracts/core/v1";
 import type {ReactNode} from "react";
 
 type ContestProblemsTableProps = {
-  contestId: string | number;
+  contestLogin: string;
   orgLogin: string;
   problems: Array<ContestProblemListItemModel>;
   isManager?: boolean;
@@ -31,7 +31,7 @@ const formatMemoryLimit = (memoryKb: number) => {
 };
 
 export const ContestProblemsTable = ({
-  contestId,
+  contestLogin,
   orgLogin,
   problems,
   isManager,
@@ -54,7 +54,7 @@ export const ContestProblemsTable = ({
           </Table.Thead>
           <Table.Tbody className={classes.tbody}>
             {problems.map((problem) => {
-              const problemUrl = `/${orgLogin}/contests/${contestId}/problems/${
+              const problemUrl = `/${orgLogin}/contests/${contestLogin}/problems/${
                 problem.problem_id || ""
               }`;
 

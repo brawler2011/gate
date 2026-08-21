@@ -12,15 +12,15 @@ import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
 const getCachedContestProblem = cache(
-  async (problemId: string, contestId: string) => {
-    return api.getContestProblem({problemId, contestId});
+  async (orgLogin: string, contestLogin: string, problemId: string) => {
+    return api.getContestProblem({orgLogin, contestLogin, problemId});
   },
 );
 
 type Props = {
   params: Promise<{
     slug: string;
-    contest_id: string;
+    contestLogin: string;
     problem_id: string;
   }>;
 };
@@ -29,8 +29,9 @@ export const generateMetadata = async (props: Props): Promise<Metadata> => {
   const params = await props.params;
 
   const [error, response] = await getCachedContestProblem(
+    params.slug,
+    params.contestLogin,
     params.problem_id,
-    params.contest_id,
   );
 
   if (error || !response) {
@@ -60,13 +61,14 @@ const Page = async (props: Props): Promise<ReactNode> => {
     contestResponse,
     [, submissionsResponse],
   ] = await Promise.all([
-    getCachedContestProblem(params.problem_id, params.contest_id),
-    unwrapAndCache(api.getContest)({contestId: params.contest_id}),
+    getCachedContestProblem(params.slug, params.contestLogin, params.problem_id),
+    unwrapAndCache(api.getContest)({orgLogin: params.slug, contestLogin: params.contestLogin}),
     // Only fetch user's own submissions if authenticated
     user
       ? api.listContestSubmissions({
+        orgLogin: params.slug,
+        contestLogin: params.contestLogin,
         userId: user.id,
-        contestId: params.contest_id,
         problemId: params.problem_id,
         page: 1,
         pageSize: 5,
@@ -91,7 +93,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
   }
 
   // Get contest role for permissions
-  const contestRole = user ? await getMyContestRole(params.contest_id) : null;
+  const contestRole = user ? await getMyContestRole(params.slug, params.contestLogin) : null;
 
   const checker = new PermissionChecker(
     user,
@@ -105,7 +107,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
     new Date(contestResponse.contest.start_time) <= new Date();
 
   if (!checker.canViewProblems(contestResponse.contest) || (!isManager && !hasStarted)) {
-    redirect(`/${params.slug}/contests/${params.contest_id}`);
+    redirect(`/${params.slug}/contests/${params.contestLogin}`);
   }
 
   // Handle submissions - if null or error, use empty array
@@ -123,7 +125,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
       tasks={contestResponse.problems || []}
       submissions={submissions}
       problemId={params.problem_id}
-      contestId={params.contest_id}
+      contestId={contestResponse.contest.id}
       user={user}
       wsUrl={wsUrl}
       since={submissionsResponse?.since}

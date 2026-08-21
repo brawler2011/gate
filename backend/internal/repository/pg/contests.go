@@ -69,7 +69,7 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *models.CreateC
 		OwnerID:        uuidPtrToNullUUID(params.OwnerID),
 		Visibility:     params.Visibility,
 		Title:          params.Title,
-		ShortName:      params.ShortName,
+		Login:          params.Login,
 		Description:    params.Description,
 		Settings:       settingsJSON,
 		AccessPolicy:   accessPolicyJSON,
@@ -88,6 +88,28 @@ func (r *ContestsRepo) GetContest(ctx context.Context, id uuid.UUID) (models.Con
 		return models.Contest{}, HandlePgErr(err)
 	}
 	return mapGetContestByIDRow(contest), nil
+}
+
+func (r *ContestsRepo) GetContestByLogin(ctx context.Context, orgID uuid.UUID, login string) (models.Contest, error) {
+	contest, err := r.queries.GetContestByLogin(ctx, sqlc.GetContestByLoginParams{
+		OrganizationID: orgID,
+		Lower:          login,
+	})
+	if err != nil {
+		return models.Contest{}, HandlePgErr(err)
+	}
+	return mapGetContestByLoginRow(contest), nil
+}
+
+func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (models.Contest, error) {
+	contest, err := r.queries.GetContestByOrgLoginAndContestLogin(ctx, sqlc.GetContestByOrgLoginAndContestLoginParams{
+		Lower:   orgLogin,
+		Lower_2: contestLogin,
+	})
+	if err != nil {
+		return models.Contest{}, HandlePgErr(err)
+	}
+	return mapGetContestByOrgLoginAndContestLoginRow(contest), nil
 }
 
 func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdateParams) error {
@@ -109,6 +131,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdate
 
 	err = r.queries.UpdateContest(ctx, sqlc.UpdateContestParams{
 		ID:           c.ID,
+		Login:        c.Login,
 		Title:        c.Title,
 		Description:  c.Description,
 		Visibility:   stringToNullContestVisibility(c.Visibility),
@@ -130,6 +153,35 @@ func (r *ContestsRepo) DeleteContest(ctx context.Context, id uuid.UUID) error {
 		return HandlePgErr(err)
 	}
 	return nil
+}
+
+func (r *ContestsRepo) ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, page, pageSize int32) ([]models.Contest, int32, error) {
+	rows, err := r.queries.ListContests(ctx, sqlc.ListContestsParams{
+		OrganizationID: orgID,
+		Column2:        search,
+		Column3:        "",
+		Limit:          pageSize,
+		Offset:         Offset(page, pageSize),
+	})
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
+	}
+
+	count, err := r.queries.CountContests(ctx, sqlc.CountContestsParams{
+		OrganizationID: orgID,
+		Column2:        search,
+		Column3:        "",
+	})
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
+	}
+
+	contests := make([]models.Contest, len(rows))
+	for i, row := range rows {
+		contests[i] = mapListContestsRow(row)
+	}
+
+	return contests, safeInt32(count), nil
 }
 
 func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) ([]models.Contest, int32, error) {
@@ -538,7 +590,7 @@ func mapContestFields(
 	ownerID pgtype.UUID,
 	visibility models.ContestVisibility,
 	title string,
-	shortName string,
+	login string,
 	description string,
 	settingsBytes []byte,
 	accessPolicyBytes []byte,
@@ -564,7 +616,7 @@ func mapContestFields(
 		OwnerID:           pgUUIDToUUIDPtr(ownerID),
 		Visibility:        visibility,
 		Title:             title,
-		ShortName:         shortName,
+		Login:             login,
 		Description:       description,
 		Settings:          settings,
 		AccessPolicy:      accessPolicy,
@@ -576,19 +628,31 @@ func mapContestFields(
 }
 
 func mapGetContestByIDRow(c sqlc.GetContestByIDRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.ShortName, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+}
+
+func mapGetContestByLoginRow(c sqlc.GetContestByLoginRow) models.Contest {
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+}
+
+func mapGetContestByOrgLoginAndContestLoginRow(c sqlc.GetContestByOrgLoginAndContestLoginRow) models.Contest {
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+}
+
+func mapListContestsRow(c sqlc.ListContestsRow) models.Contest {
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapListAllContestsRow(c sqlc.ListAllContestsRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.ShortName, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapListUserAccessibleContestsRow(c sqlc.ListUserAccessibleContestsRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.ShortName, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapListUserAccessibleContestsByOrgRow(c sqlc.ListUserAccessibleContestsByOrgRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.ShortName, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapGetContestProblemRow(c sqlc.GetContestProblemRow) models.ContestProblem {
@@ -744,6 +808,7 @@ func mapDashboardContest(row sqlc.ListDashboardContestsRow) models.DashboardCont
 
 	return models.DashboardContest{
 		ID:                 row.ContestID,
+		Login:              row.ContestLogin,
 		Title:              row.ContestTitle,
 		StartTime:          startTime,
 		EndTime:            endTime,

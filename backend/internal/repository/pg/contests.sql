@@ -1,7 +1,7 @@
 -- Contests queries (new schema with Organizations)
 
 -- name: CreateContest :one
-INSERT INTO contests (id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time)
+INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, settings, access_policy, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
@@ -11,11 +11,17 @@ FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.id = $1;
 
--- name: GetContestByShortName :one
+-- name: GetContestByLogin :one
 SELECT c.*, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
-WHERE c.organization_id = $1 AND c.short_name = $2;
+WHERE c.organization_id = $1 AND LOWER(c.login) = LOWER($2);
+
+-- name: GetContestByOrgLoginAndContestLogin :one
+SELECT c.*, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
+WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2);
 
 -- name: ListContests :many
 SELECT c.*, o.login as org_login, o.name as org_name
@@ -49,7 +55,8 @@ WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
 
 -- name: UpdateContest :exec
 UPDATE contests
-SET title = COALESCE(sqlc.narg('title'), title),
+SET login = COALESCE(sqlc.narg('login'), login),
+    title = COALESCE(sqlc.narg('title'), title),
     description = COALESCE(sqlc.narg('description'), description),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
     settings = COALESCE(sqlc.narg('settings'), settings),
@@ -150,6 +157,7 @@ LIMIT $3 OFFSET $4;
 -- name: ListDashboardContests :many
 SELECT 
     c.id as contest_id,
+    c.login as contest_login,
     c.title as contest_title,
     c.start_time as contest_start_time,
     c.end_time as contest_end_time,

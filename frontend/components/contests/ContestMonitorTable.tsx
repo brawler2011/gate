@@ -21,6 +21,8 @@ import type {SubmissionsMessage, MessageSubmissionCompleted} from "@/contracts/o
 
 interface ContestMonitorTableProps {
   contestId: string;
+  orgLogin: string;
+  contestLogin: string;
   initialScoreboard: ScoreboardResponseModel;
   startTime?: string | null;
   endTime?: string | null;
@@ -45,6 +47,8 @@ const getProblemLetter = (ordinal: number, shortName?: string): string => {
 
 export const ContestMonitorTable = ({
   contestId,
+  orgLogin,
+  contestLogin,
   initialScoreboard,
   startTime,
   endTime,
@@ -64,7 +68,8 @@ export const ContestMonitorTable = ({
     setShowRealMonitor(checked);
     setLoadingScoreboard(true);
     const [err, res] = await api.getContestScoreboard({
-      contestId,
+      orgLogin,
+      contestLogin,
       unfrozen: checked,
     });
     setLoadingScoreboard(false);

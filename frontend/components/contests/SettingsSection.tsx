@@ -162,7 +162,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       freeze_duration_minutes: freezeDuration,
       freeze_status: values.freeze_status as corev1.UpdateContestRequestModel.freeze_status,
     };
-    const [error] = await api.updateContest({contestId: contest.id, requestBody: payload});
+    const [error] = await api.updateContest({orgLogin: contest.organization_login, contestLogin: contest.login, requestBody: payload});
     setSaving(false);
 
     if (error) {
