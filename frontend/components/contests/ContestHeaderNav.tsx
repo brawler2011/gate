@@ -16,21 +16,24 @@ import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTa
 import {useSession} from "@/contexts/SessionContext";
 import {PermissionChecker, type ContestRoleResponse} from "@/lib/permissions";
 
-import type {ContestModel} from "@/contracts/core/v1";
+import type {ContestModel, UserModel} from "@/contracts/core/v1";
 
 export type ContestHeaderNavProps = {
   contest: ContestModel;
   contestRole?: ContestRoleResponse | null;
   orgLogin?: string;
+  user?: UserModel | null;
 };
 
 export const ContestHeaderNav = ({
   contest,
   contestRole,
   orgLogin,
+  user: propUser,
 }: ContestHeaderNavProps): ReactNode => {
   const pathname = usePathname();
-  const {user} = useSession();
+  const {user: sessionUser} = useSession();
+  const user = propUser !== undefined ? propUser : sessionUser;
 
   const org = orgLogin || contest.organization_login;
   const contestBase = `/${org}/${contest.login}`;

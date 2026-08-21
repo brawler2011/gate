@@ -1,6 +1,6 @@
 "use client";
 
-import {usePathname, useSearchParams} from "next/navigation";
+import {usePathname} from "next/navigation";
 import {type ReactNode} from "react";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
@@ -38,7 +38,6 @@ export const ProblemHeaderNav = ({
   problemId,
 }: ProblemHeaderNavProps): ReactNode => {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const getActiveTabKey = (): string => {
     if (!pathname) {
@@ -66,14 +65,6 @@ export const ProblemHeaderNav = ({
     })),
   ];
 
-  const params = new URLSearchParams();
-  searchParams.forEach((value, key) => {
-    if (key !== "tab" && key !== "file") {
-      params.append(key, value);
-    }
-  });
-  const queryString = params.toString();
-
   const items: AdaptiveTabItem[] = tabs.map((tab) => {
     const path =
       tab.key === GENERAL_TAB
@@ -82,7 +73,7 @@ export const ProblemHeaderNav = ({
     return {
       key: tab.key,
       label: tab.label,
-      href: queryString ? `${path}?${queryString}` : path,
+      href: path,
       active: tab.key === activeTab,
     };
   });

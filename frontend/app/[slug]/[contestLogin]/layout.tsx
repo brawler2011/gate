@@ -36,6 +36,7 @@ const ContestLayout = async ({
           contest={response.contest}
           contestRole={contestRole}
           orgLogin={org.login}
+          user={me?.user ?? null}
         />
       }
     >
