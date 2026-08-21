@@ -17,8 +17,37 @@ import (
 
 var nonAlphaNumRegex = regexp.MustCompile(`[^a-z0-9]+`)
 
+var cyrillicToLatinMap = map[rune]string{
+	'а': "a", 'б': "b", 'в': "v", 'г': "g", 'д': "d", 'е': "e", 'ё': "yo",
+	'ж': "zh", 'з': "z", 'и': "i", 'й': "j", 'к': "k", 'л': "l", 'м': "m",
+	'н': "n", 'о': "o", 'п': "p", 'р': "r", 'с': "s", 'т': "t", 'у': "u",
+	'ф': "f", 'х': "kh", 'ц': "ts", 'ч': "ch", 'ш': "sh", 'щ': "shch",
+	'ъ': "", 'ы': "y", 'ь': "", 'э': "e", 'ю': "yu", 'я': "ya",
+	'А': "a", 'Б': "b", 'В': "v", 'Г': "g", 'Д': "d", 'Е': "e", 'Ё': "yo",
+	'Ж': "zh", 'З': "z", 'И': "i", 'Й': "j", 'К': "k", 'Л': "l", 'М': "m",
+	'Н': "n", 'О': "o", 'П': "p", 'Р': "r", 'С': "s", 'Т': "t", 'У': "u",
+	'Ф': "f", 'Х': "kh", 'Ц': "ts", 'Ч': "ch", 'Ш': "sh", 'Щ': "shch",
+	'Ъ': "", 'Ы': "y", 'Ь': "", 'Э': "e", 'Ю': "yu", 'Я': "ya",
+	'і': "i", 'І': "i", 'ї': "yi", 'Ї': "yi", 'є': "ye", 'Є': "ye", 'ґ': "g", 'Ґ': "g",
+	'ў': "u", 'Ў': "u",
+}
+
+func transliterateCyrillic(s string) string {
+	var sb strings.Builder
+	sb.Grow(len(s))
+	for _, r := range s {
+		if tr, ok := cyrillicToLatinMap[r]; ok {
+			sb.WriteString(tr)
+		} else {
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
+}
+
 func slugifyContestTitle(title string) string {
-	slug := strings.ToLower(title)
+	transliterated := transliterateCyrillic(title)
+	slug := strings.ToLower(transliterated)
 	slug = nonAlphaNumRegex.ReplaceAllString(slug, "-")
 	slug = strings.Trim(slug, "-")
 	if len(slug) < 3 {
@@ -33,15 +62,15 @@ func slugifyContestTitle(title string) string {
 	return slug
 }
 
-func (h *CoreServer) generateUniqueContestLogin(ctx context.Context, orgLogin, title string) (string, error) {
+func (h *CoreServer) generateUniqueContestLogin(ctx context.Context, orgLogin, title string) string {
 	baseSlug := slugifyContestTitle(title)
 	slug := baseSlug
 	suffix := 1
 
 	for {
-		_, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, slug)
-		if err != nil {
-			return slug, nil
+		existing, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, slug)
+		if err != nil || existing.ID == uuid.Nil {
+			return slug
 		}
 		suffix++
 		suffixStr := fmt.Sprintf("-%d", suffix)
@@ -75,11 +104,7 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "contest with this login already exists in organization")
 		}
 	} else {
-		generatedLogin, err := h.generateUniqueContestLogin(ctx, request.OrgLogin, request.Params.Title)
-		if err != nil {
-			return nil, err
-		}
-		login = generatedLogin
+		login = h.generateUniqueContestLogin(ctx, request.OrgLogin, request.Params.Title)
 	}
 
 	contestCreation := &models.CreateContestInput{

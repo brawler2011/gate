@@ -27,12 +27,14 @@ export const CreateContestModal = ({
 }: Props): ReactNode => {
   const router = useRouter();
   const [title, setTitle] = useState("New Contest");
+  const [login, setLogin] = useState("");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (opened) {
       setTitle("New Contest");
+      setLogin("");
       const orgIds = new Set(orgs.map((o) => o.id));
       const validDefault =
         defaultOrgId && orgIds.has(defaultOrgId) ? defaultOrgId : null;
@@ -56,6 +58,7 @@ export const CreateContestModal = ({
       const [error, response] = await api.createContest({
         orgLogin: selectedOrg.login,
         title: title.trim() || "New Contest",
+        login: login.trim() || undefined,
       });
       if (error) {
         throw new Error(error.message);
@@ -93,6 +96,12 @@ export const CreateContestModal = ({
           onFocus={(e) => e.currentTarget.select()}
           required
           data-autofocus
+        />
+        <TextInput
+          label="Логин / URL (необязательно)"
+          placeholder="Оставьте пустым для автогенерации"
+          value={login}
+          onChange={(e) => setLogin(e.currentTarget.value)}
         />
         {!lockOrganization && (
           <Select

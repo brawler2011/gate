@@ -538,7 +538,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 	s.Run("Contest persisted mask denies participant", func() {
 		suffix := uuid.NewString()[:8]
 		owner := s.createUser("authz_policy_owner_"+suffix, models.UserRoleUser)
-		participant := s.createUser("authz_policy_participant_"+suffix, models.UserRoleUser)
+		participant := s.createUser("authz_pol_part_"+suffix, models.UserRoleUser)
 
 		org := s.createOrganization("authz-policy-org-"+suffix, "Authz Policy Org", owner.Id)
 		contestID := uuid.New()

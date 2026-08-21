@@ -102,4 +102,3 @@ const ContestManagePage = async ({
 };
 
 export default ContestManagePage;
-

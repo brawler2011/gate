@@ -49,7 +49,7 @@ const Task = ({
   task,
   submissions,
   problemId,
-  contestId,
+  contestId: _contestId,
   user,
   wsUrl,
   since,

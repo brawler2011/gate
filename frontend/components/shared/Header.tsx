@@ -53,6 +53,7 @@ export type HeaderOrganization = {
 
 export type HeaderContest = {
   id: string;
+  login?: string;
   title: string;
 };
 
@@ -277,7 +278,7 @@ export const Header = ({
                       <div className={classes.organizationCrumb}>
                         <span className={classes.organizationSlash}>/</span>
                         <Link
-                          href={`/${organization.login || organization.id}/contests/${contest.id}`}
+                          href={`/${organization.login || organization.id}/contests/${contest.login || contest.id}`}
                           className={classes.organizationLink}
                           title={contest.title}
                         >

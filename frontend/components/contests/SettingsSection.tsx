@@ -115,6 +115,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
   } | null>(null);
 
   const form = useForm<{
+    login: string;
     title: string;
     description: string;
     visibility: string;
@@ -127,6 +128,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     freeze_status: corev1.UpdateContestRequestModel.freeze_status;
   }>({
     initialValues: {
+      login: contest.login || "",
       title: contest.title,
       description: contest.description,
       visibility: contest.visibility,
@@ -139,6 +141,19 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       freeze_status: (contest.freeze_status as corev1.UpdateContestRequestModel.freeze_status) || "auto",
     },
     validate: {
+      login: (value) => {
+        const trimmed = value.trim();
+        if (!trimmed) {
+          return "Логин контеста обязателен";
+        }
+        if (trimmed.length < 3 || trimmed.length > 64) {
+          return "Логин должен быть от 3 до 64 символов";
+        }
+        if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(trimmed)) {
+          return "Логин может содержать только строчные буквы, цифры и дефисы (без дефисов по краям)";
+        }
+        return null;
+      },
       freeze_duration_minutes: (value) =>
         value !== "" && value !== undefined && value !== null && Number(value) < 0
           ? "Длительность заморозки не может быть отрицательной"
@@ -155,14 +170,20 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
         ? Number(values.freeze_duration_minutes)
         : null;
 
+    const newLogin = values.login.trim();
     const payload: corev1.UpdateContestRequestModel = {
       ...values,
+      login: newLogin !== contest.login ? newLogin : undefined,
       start_time: values.start_time ? new Date(values.start_time).toISOString() : null,
       end_time: values.end_time ? new Date(values.end_time).toISOString() : null,
       freeze_duration_minutes: freezeDuration,
       freeze_status: values.freeze_status as corev1.UpdateContestRequestModel.freeze_status,
     };
-    const [error] = await api.updateContest({orgLogin: contest.organization_login, contestLogin: contest.login, requestBody: payload});
+    const [error] = await api.updateContest({
+      orgLogin: contest.organization_login,
+      contestLogin: contest.login,
+      requestBody: payload,
+    });
     setSaving(false);
 
     if (error) {
@@ -183,8 +204,12 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       type: "success",
       message: "Настройки контеста обновлены",
     });
-    
-    router.refresh();
+
+    if (newLogin && newLogin !== contest.login) {
+      router.push(`/${contest.organization_login}/contests/${newLogin}/settings`);
+    } else {
+      router.refresh();
+    }
   };
 
   return (
@@ -196,6 +221,14 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             placeholder="Введите название контеста"
             required
             {...form.getInputProps("title")}
+          />
+
+          <TextInput
+            label="Логин (URL)"
+            placeholder="Введите уникальный идентификатор контеста"
+            description={`Ссылка: /${contest.organization_login}/contests/${form.values.login || contest.login}`}
+            required
+            {...form.getInputProps("login")}
           />
 
           <TextInput

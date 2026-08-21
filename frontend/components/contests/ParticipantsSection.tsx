@@ -47,7 +47,12 @@ interface ParticipantsSectionProps {
   orgId?: string;
 }
 
-export const ParticipantsSection = ({orgLogin, contestLogin, contestId, orgId}: ParticipantsSectionProps): ReactNode => {
+export const ParticipantsSection = ({
+  orgLogin,
+  contestLogin,
+  contestId,
+  orgId,
+}: ParticipantsSectionProps): ReactNode => {
   const [activeTab, setActiveTab] = useState<string | null>("users");
   const [participants, setParticipants] = useState<corev1.ContestMemberModel[]>([]);
   const [page, setPage] = useState(1);

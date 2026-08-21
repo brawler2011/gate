@@ -63,9 +63,9 @@ const Page = async (props: Props): Promise<ReactNode> => {
   const contestData =
     submission.organization_login && submission.contest_login
       ? await unwrapAndCache(api.getContest)({
-          orgLogin: submission.organization_login,
-          contestLogin: submission.contest_login,
-        })
+        orgLogin: submission.organization_login,
+        contestLogin: submission.contest_login,
+      })
       : null;
 
   const checker = contestData?.contest

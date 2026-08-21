@@ -35,7 +35,7 @@ export const ContestsTable = ({contests, showCreatedAt = true}: ContestsTablePro
           {contests.map((contest: ContestModel) => (
             <Table.Tr
               key={contest.id}
-              onClick={() => router.push(`/${contest.organization_login}/${contest.id}`)}
+              onClick={() => router.push(`/${contest.organization_login}/contests/${contest.login}`)}
             >
               <Table.Td>
                 <Text className={classes.titleCell} lineClamp={1}>

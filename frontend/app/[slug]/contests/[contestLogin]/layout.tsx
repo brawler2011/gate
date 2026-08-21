@@ -25,7 +25,11 @@ const ContestLayout = async ({
 
   return (
     <DefaultLayout
-      headerContest={{id: response.contest.id, title: response.contest.title}}
+      headerContest={{
+        id: response.contest.id,
+        login: response.contest.login,
+        title: response.contest.title,
+      }}
       headerOrganization={{id: org.id, login: org.login, name: org.name}}
       headerSecondaryNav={
         <ContestHeaderNav
