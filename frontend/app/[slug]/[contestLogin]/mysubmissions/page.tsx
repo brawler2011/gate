@@ -14,7 +14,7 @@ import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
 export const metadata: Metadata = {
-  title: "Посылки",
+  title: "Мои посылки",
   description: "",
 };
 
@@ -32,7 +32,7 @@ interface PageProps {
   searchParams: Promise<SearchParams>;
 }
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 20;
 
 const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
   const {slug, contestLogin} = await params;
@@ -40,7 +40,7 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
 
   const page = parsePage(queryParams.page);
   if (!page) {
-    redirect(`/${slug}/contests/${contestLogin}/submissions`);
+    redirect(`/${slug}/${contestLogin}/mysubmissions`);
   }
 
   const parsedParams: {
@@ -76,37 +76,6 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
     parsedParams.language = Number(queryParams.language);
   }
 
-  const contestData = await unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin});
-
-  const [, me] = await api.getMe();
-  const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
-
-  const checker = contestData?.contest
-    ? new PermissionChecker(
-      user,
-      contestRole?.role ?? null,
-      null,
-      contestRole?.permissionsMask ?? null,
-    )
-    : null;
-
-  if (contestData?.contest && checker) {
-    const isManager = checker.canManageContest(contestData.contest);
-    const hasStarted =
-      !contestData.contest.start_time ||
-      new Date(contestData.contest.start_time) <= new Date();
-
-    if (!checker.canViewAllSubmissions(contestData.contest) || (!isManager && !hasStarted)) {
-      redirect(`/${slug}/contests/${contestLogin}`);
-    }
-  }
-
-  const canRejudge =
-    contestData?.contest && checker
-      ? checker.canRejudgeSubmissions(contestData.contest)
-      : false;
-
   const [error, submissionsData] = await api.listContestSubmissions(parsedParams);
 
   if (error) {
@@ -139,6 +108,29 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
 
   const wsBaseUrl = env.getWebSocketUrl();
 
+  const contestData = await unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin});
+
+  const [, me] = await api.getMe();
+  const user = me?.user ?? null;
+  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
+
+  if (contestData?.contest) {
+    const checker = new PermissionChecker(
+      user,
+      contestRole?.role ?? null,
+      null,
+      contestRole?.permissionsMask ?? null,
+    );
+    const isManager = checker.canManageContest(contestData.contest);
+    const hasStarted =
+      !contestData.contest.start_time ||
+      new Date(contestData.contest.start_time) <= new Date();
+
+    if (!checker.canViewMySubmissions(contestData.contest) || (!isManager && !hasStarted)) {
+      redirect(`/${slug}/${contestLogin}`);
+    }
+  }
+
   return (
     <Container size="lg" pb="xl">
       {contestData?.contest ? (
@@ -160,7 +152,7 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
               initialSubmissions={submissionsData.submissions}
               wsUrl={wsBaseUrl + "/submissions"}
               since={submissionsData.since}
-              snapshotScope="all"
+              snapshotScope="mine"
               filter={{
                 orgLogin: slug,
                 contestLogin,
@@ -170,12 +162,11 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
               pageSize={PAGE_SIZE}
               page={parsedParams.page}
               sortOrder={parsedParams.sortOrder}
-              canRejudge={canRejudge}
             />
             <Group justify="center">
               <NextPagination
                 pagination={submissionsData.pagination}
-                baseUrl={`/${slug}/contests/${contestLogin}/submissions`}
+                baseUrl={`/${slug}/${contestLogin}/mysubmissions`}
                 queryParams={nextQueryParams}
               />
             </Group>

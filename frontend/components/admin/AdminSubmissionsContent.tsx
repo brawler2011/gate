@@ -351,8 +351,8 @@ export const AdminSubmissionsContent = ({
                           <Link
                             href={
                               submission.organization_login
-                                ? `/${submission.organization_login}/contests/${submission.contest_login}`
-                                : `/contests/${submission.contest_login}`
+                                ? `/${submission.organization_login}/${submission.contest_login}`
+                                : `/${submission.contest_login}`
                             }
                             style={{textDecoration: "none"}}
                           >

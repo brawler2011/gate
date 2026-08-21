@@ -25,7 +25,24 @@ const (
 	maxArchiveSize  = 10 * 1024 * 1024 // 10 MB
 )
 
-var contestLoginRegex = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+var (
+	contestLoginRegex     = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+	reservedContestLogins = map[string]struct{}{
+		"problems":      {},
+		"teams":         {},
+		"members":       {},
+		"settings":      {},
+		"submit":        {},
+		"mysubmissions": {},
+		"submissions":   {},
+		"monitor":       {},
+	}
+)
+
+func isReservedContestLogin(login string) bool {
+	_, isReserved := reservedContestLogins[login]
+	return isReserved
+}
 
 func validateContestLogin(login string) error {
 	if len(login) < 3 || len(login) > 64 {
@@ -33,6 +50,9 @@ func validateContestLogin(login string) error {
 	}
 	if !contestLoginRegex.MatchString(login) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "contest login must contain only lowercase alphanumeric characters and hyphens, and cannot start or end with a hyphen")
+	}
+	if isReservedContestLogin(login) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("contest login '%s' is reserved", login))
 	}
 	return nil
 }

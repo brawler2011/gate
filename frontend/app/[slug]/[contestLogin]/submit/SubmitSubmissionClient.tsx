@@ -78,7 +78,7 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
       setIsSubmitted(true);
       // Redirect to "Мои посылки" page after successful submission
       router.push(
-        `/${contest.organization_login}/contests/${contest.login}/mysubmissions?order=desc&userId=${user?.id}`,
+        `/${contest.organization_login}/${contest.login}/mysubmissions?order=desc&userId=${user?.id}`,
       );
     }
 

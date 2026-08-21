@@ -133,7 +133,7 @@ const Task = ({
                     <NavLink
                       key={t.problem_id || index}
                       component={Link}
-                      href={`/${contest.organization_login}/contests/${contest.login}/problems/${letter}`}
+                      href={`/${contest.organization_login}/${contest.login}/${letter}`}
                       label={`${letter}. ${t.title}`}
                       active={isActive}
                       styles={{

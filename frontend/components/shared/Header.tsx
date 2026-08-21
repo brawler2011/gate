@@ -278,7 +278,7 @@ export const Header = ({
                       <div className={classes.organizationCrumb}>
                         <span className={classes.organizationSlash}>/</span>
                         <Link
-                          href={`/${organization.login || organization.id}/contests/${contest.login || contest.id}`}
+                          href={`/${organization.login || organization.id}/${contest.login || contest.id}`}
                           className={classes.organizationLink}
                           title={contest.title}
                         >

@@ -65,6 +65,14 @@ func TestValidateContestLogin(t *testing.T) {
 		"invalid--double-hyphen", // double hyphen
 		"UPPERCASE",              // uppercase
 		"with spaces",            // spaces
+		"problems",               // reserved
+		"teams",                  // reserved
+		"members",                // reserved
+		"settings",               // reserved
+		"submit",                 // reserved
+		"mysubmissions",          // reserved
+		"submissions",            // reserved
+		"monitor",                // reserved
 	}
 
 	for _, login := range invalidLogins {

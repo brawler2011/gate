@@ -18,6 +18,17 @@ type Props = {
   lockOrganization?: boolean;
 };
 
+const RESERVED_CONTEST_LOGINS = new Set([
+  "problems",
+  "teams",
+  "members",
+  "settings",
+  "submit",
+  "mysubmissions",
+  "submissions",
+  "monitor",
+]);
+
 export const CreateContestModal = ({
   opened,
   onClose,
@@ -49,6 +60,16 @@ export const CreateContestModal = ({
       return;
     }
 
+    const trimmedLogin = login.trim();
+    if (trimmedLogin && RESERVED_CONTEST_LOGINS.has(trimmedLogin)) {
+      notifications.show({
+        title: "Ошибка",
+        message: `Логин '${trimmedLogin}' зарезервирован`,
+        color: "red",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const selectedOrg = orgs.find((o) => o.id === orgId);
@@ -58,14 +79,14 @@ export const CreateContestModal = ({
       const [error, response] = await api.createContest({
         orgLogin: selectedOrg.login,
         title: title.trim() || "New Contest",
-        login: login.trim() || undefined,
+        login: trimmedLogin || undefined,
       });
       if (error) {
         throw new Error(error.message);
       }
       const orgSlug = selectedOrg.login;
       onClose();
-      router.push(`/${orgSlug}/contests/${response.login}`);
+      router.push(`/${orgSlug}/${response.login}`);
     } catch (err) {
       notifications.show({
         title: "Ошибка",

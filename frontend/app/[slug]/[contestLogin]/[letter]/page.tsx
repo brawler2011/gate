@@ -161,7 +161,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
     new Date(contestResponse.contest.start_time) <= new Date();
 
   if (!checker.canViewProblems(contestResponse.contest) || (!isManager && !hasStarted)) {
-    redirect(`/${params.slug}/contests/${params.contestLogin}`);
+    redirect(`/${params.slug}/${params.contestLogin}`);
   }
 
   // Handle submissions - if null or error, use empty array

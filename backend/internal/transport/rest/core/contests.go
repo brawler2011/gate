@@ -68,9 +68,11 @@ func (h *CoreServer) generateUniqueContestLogin(ctx context.Context, orgLogin, t
 	suffix := 1
 
 	for {
-		existing, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, slug)
-		if err != nil || existing.ID == uuid.Nil {
-			return slug
+		if !isReservedContestLogin(slug) {
+			existing, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, slug)
+			if err != nil || existing.ID == uuid.Nil {
+				return slug
+			}
 		}
 		suffix++
 		suffixStr := fmt.Sprintf("-%d", suffix)

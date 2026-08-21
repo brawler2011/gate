@@ -106,6 +106,17 @@ const toLocalDatetimeString = (dateStr: string | null | undefined): string => {
   )}:${pad(date.getMinutes())}`;
 };
 
+const RESERVED_CONTEST_LOGINS = new Set([
+  "problems",
+  "teams",
+  "members",
+  "settings",
+  "submit",
+  "mysubmissions",
+  "submissions",
+  "monitor",
+]);
+
 export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -151,6 +162,9 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
         }
         if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(trimmed)) {
           return "Логин может содержать только строчные буквы, цифры и дефисы (без дефисов по краям)";
+        }
+        if (RESERVED_CONTEST_LOGINS.has(trimmed)) {
+          return `Логин '${trimmed}' зарезервирован`;
         }
         return null;
       },
@@ -206,7 +220,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     });
 
     if (newLogin && newLogin !== contest.login) {
-      router.push(`/${contest.organization_login}/contests/${newLogin}/settings`);
+      router.push(`/${contest.organization_login}/${newLogin}/settings`);
     } else {
       router.refresh();
     }
@@ -226,7 +240,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
           <TextInput
             label="Логин (URL)"
             placeholder="Введите уникальный идентификатор контеста"
-            description={`Ссылка: /${contest.organization_login}/contests/${form.values.login || contest.login}`}
+            description={`Ссылка: /${contest.organization_login}/${form.values.login || contest.login}`}
             required
             {...form.getInputProps("login")}
           />

@@ -132,8 +132,8 @@ const SubmissionRow = ({
             <Link
               href={
                 submission.organization_login && submission.contest_login
-                  ? `/${submission.organization_login}/contests/${submission.contest_login}/problems/${numberToLetters(submission.position)}`
-                  : `/contests/${submission.contest_login}/problems/${numberToLetters(submission.position)}`
+                  ? `/${submission.organization_login}/${submission.contest_login}/${numberToLetters(submission.position)}`
+                  : `/${submission.contest_login}/${numberToLetters(submission.position)}`
               }
               style={{color: 'inherit'}}
             >

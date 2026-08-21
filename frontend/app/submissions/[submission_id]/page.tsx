@@ -88,7 +88,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
         </Link>
       </TableTd>
       <TableTd ta="center">
-        <Link href={submission.organization_login && submission.contest_login ? `/${submission.organization_login}/contests/${submission.contest_login}/problems/${numberToLetters(submission.position)}` : `/problems/${submission.problem_id}`} style={{color: 'inherit'}}>
+        <Link href={submission.organization_login && submission.contest_login ? `/${submission.organization_login}/${submission.contest_login}/${numberToLetters(submission.position)}` : `/problems/${submission.problem_id}`} style={{color: 'inherit'}}>
           <Text span td="underline">
             {ProblemTitle(submission.position, submission.problem_title)}
           </Text>

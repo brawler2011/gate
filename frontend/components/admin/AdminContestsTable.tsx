@@ -49,12 +49,12 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
 
   const handleRowClick = (contest: ContestModel) => {
-    router.push(`/${contest.organization_login}/contests/${contest.login}`);
+    router.push(`/${contest.organization_login}/${contest.login}`);
   };
 
   const handleEditClick = (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
-    router.push(`/${contest.organization_login}/contests/${contest.login}/settings`);
+    router.push(`/${contest.organization_login}/${contest.login}/settings`);
   };
 
   const handleSubmissionsClick = (e: React.MouseEvent, contestId: string) => {
@@ -64,7 +64,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
 
   const handleMonitorClick = (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
-    router.push(`/${contest.organization_login}/contests/${contest.login}/monitor`);
+    router.push(`/${contest.organization_login}/${contest.login}/monitor`);
   };
 
   const handleRejudgeContest = async (e: React.MouseEvent, contest: ContestModel) => {

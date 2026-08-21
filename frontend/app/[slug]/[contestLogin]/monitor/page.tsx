@@ -40,7 +40,7 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
       new Date(contestResponse.contest.start_time) <= new Date();
 
     if (!checker.canViewMonitor(contestResponse.contest) || (!isManager && !hasStarted)) {
-      redirect(`/${slug}/contests/${contestLogin}`);
+      redirect(`/${slug}/${contestLogin}`);
     }
   }
 

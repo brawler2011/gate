@@ -38,7 +38,7 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
     new Date(response.contest.start_time) <= new Date();
 
   if (!checker.canSubmitSolution(response.contest) || (!isManager && !hasStarted)) {
-    redirect(`/${slug}/contests/${contestLogin}`);
+    redirect(`/${slug}/${contestLogin}`);
   }
 
   return (

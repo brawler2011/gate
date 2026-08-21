@@ -32,7 +32,7 @@ export const ContestHeaderNav = ({
   const {user} = useSession();
 
   const org = orgLogin || contest.organization_login;
-  const contestBase = `/${org}/contests/${contest.login}`;
+  const contestBase = `/${org}/${contest.login}`;
 
   const checker = new PermissionChecker(
     user,
@@ -45,19 +45,19 @@ export const ContestHeaderNav = ({
     if (!pathname) {
       return "tasks";
     }
-    if (pathname.includes(`/contests/${contest.login}/submit`)) {
+    if (pathname.startsWith(`${contestBase}/submit`)) {
       return "submit";
     }
-    if (pathname.includes(`/contests/${contest.login}/mysubmissions`)) {
+    if (pathname.startsWith(`${contestBase}/mysubmissions`)) {
       return "mysubmissions";
     }
-    if (pathname.includes(`/contests/${contest.login}/submissions`)) {
+    if (pathname.startsWith(`${contestBase}/submissions`)) {
       return "allsubmissions";
     }
-    if (pathname.includes(`/contests/${contest.login}/monitor`)) {
+    if (pathname.startsWith(`${contestBase}/monitor`)) {
       return "monitor";
     }
-    if (pathname.includes(`/contests/${contest.login}/settings`)) {
+    if (pathname.startsWith(`${contestBase}/settings`)) {
       return "settings";
     }
     return "tasks";

@@ -54,7 +54,7 @@ export const ContestProblemsTable = ({
           </Table.Thead>
           <Table.Tbody className={classes.tbody}>
             {problems.map((problem) => {
-              const problemUrl = `/${orgLogin}/contests/${contestLogin}/problems/${numberToLetters(problem.position)}`;
+              const problemUrl = `/${orgLogin}/${contestLogin}/${numberToLetters(problem.position)}`;
 
               return (
                 <Table.Tr

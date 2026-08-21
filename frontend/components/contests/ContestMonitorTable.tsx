@@ -374,7 +374,7 @@ export const ContestMonitorTable = ({
                   <Table.Th key={p.problem_id} className={classes.thCenter} style={{width: "70px"}}>
                     <Tooltip label={p.title} withArrow>
                       <Link
-                        href={`/${orgLogin}/contests/${contestLogin}/problems/${letter}`}
+                        href={`/${orgLogin}/${contestLogin}/${letter}`}
                         style={{color: "inherit", textDecoration: "none"}}
                       >
                         <span>{letter}</span>
