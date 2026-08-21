@@ -46,6 +46,8 @@ func (r *SubmissionsRepo) CreateSubmission(ctx context.Context, creation *models
 		Source:    creation.Solution,
 		Language:  creation.Language,
 		Penalty:   int32(creation.Penalty),
+		State:     creation.State,
+		BanReason: creation.BanReason,
 	})
 	if err != nil {
 		return uuid.Nil, HandlePgErr(err)
@@ -71,6 +73,30 @@ func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, up
 		FailedTest:  update.FailedTest,
 		TestDetails: detailsBytes,
 		ID:          id,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *SubmissionsRepo) BlockSubmission(ctx context.Context, id uuid.UUID, reason *string) error {
+	err := r.queries.BlockSubmission(ctx, sqlc.BlockSubmissionParams{
+		ID:        id,
+		BanReason: reason,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *SubmissionsRepo) BlockUserProblemSubmissions(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error {
+	err := r.queries.BlockUserProblemSubmissions(ctx, sqlc.BlockUserProblemSubmissionsParams{
+		ContestID: contestID,
+		OwnerID:   userID,
+		ProblemID: problemID,
+		BanReason: reason,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -210,6 +236,7 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 		Language:          row.Language,
 		FailedTest:        row.FailedTest,
 		TestDetails:       testDetails,
+		BanReason:         row.BanReason,
 		ProblemID:         problemID,
 		ProblemTitle:      problemTitle,
 		Position:          position,
@@ -282,6 +309,7 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 		MemoryStat:        row.MemoryStat,
 		Language:          row.Language,
 		FailedTest:        row.FailedTest,
+		BanReason:         row.BanReason,
 		ProblemID:         problemID,
 		ProblemTitle:      problemTitle,
 		Position:          position,
@@ -299,6 +327,6 @@ func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter mode
 		ContestID:    filter.ContestID,
 		ProblemID:    nullableUUIDToPgtype(filter.ProblemID),
 		SubmissionID: nullableUUIDToPgtype(filter.SubmissionID),
+		OwnerID:      nullableUUIDToPgtype(filter.UserID),
 	})
 }
-

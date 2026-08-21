@@ -73,4 +73,3 @@ const Page = async (props: Props): Promise<ReactNode> => {
 };
 
 export {Page as default, metadata};
-

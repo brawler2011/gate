@@ -59,9 +59,10 @@ func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmis
 	user := middleware.GetUser(ctx)
 	canViewDetails := false
 
-	if user.IsAdmin() {
+	switch {
+	case user.IsAdmin():
 		canViewDetails = true
-	} else if submission.ContestID != nil {
+	case submission.ContestID != nil:
 		allowed, err := h.permissionsUC.HasContestPermission(
 			ctx,
 			*submission.ContestID,
@@ -71,10 +72,8 @@ func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmis
 		if err == nil && allowed {
 			canViewDetails = true
 		}
-	} else {
-		if submission.CreatedBy != nil && *submission.CreatedBy == user.Id {
-			canViewDetails = true
-		}
+	case submission.CreatedBy != nil && *submission.CreatedBy == user.Id:
+		canViewDetails = true
 	}
 
 	if !canViewDetails {
@@ -82,6 +81,39 @@ func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmis
 	}
 
 	return corev1.GetSubmission200JSONResponse{Submission: SolutionDTO(submission)}, nil
+}
+
+func (h *CoreServer) BlockSubmission(ctx context.Context, request corev1.BlockSubmissionRequestObject) (corev1.BlockSubmissionResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var reason *string
+	if request.Body != nil && request.Body.Reason != nil {
+		reason = request.Body.Reason
+	}
+
+	err = h.submissionsUC.BlockSubmission(ctx, contest.ID, request.SubmissionId, reason)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.BlockSubmission200Response{}, nil
+}
+
+func (h *CoreServer) UnblockSubmission(ctx context.Context, request corev1.UnblockSubmissionRequestObject) (corev1.UnblockSubmissionResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.submissionsUC.UnblockSubmission(ctx, contest.ID, request.SubmissionId)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.UnblockSubmission200Response{}, nil
 }
 
 func (h *CoreServer) ListSubmissions(ctx context.Context, request corev1.ListSubmissionsRequestObject) (corev1.ListSubmissionsResponseObject, error) {

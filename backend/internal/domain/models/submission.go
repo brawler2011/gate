@@ -38,6 +38,8 @@ const (
 	GotIE State = 107 // internal error
 
 	Accepted State = 200 // accepted
+
+	Disqualified State = 300 // disqualified / blocked
 )
 
 type TestDetailItem struct {
@@ -80,6 +82,8 @@ type SubmissionCreation struct {
 	UserId    uuid.UUID
 	Language  LanguageName
 	Penalty   int32
+	State     *State
+	BanReason *string
 }
 
 type SubmissionsFilter struct {
@@ -97,6 +101,7 @@ type RejudgeFilter struct {
 	ContestID    uuid.UUID
 	ProblemID    *uuid.UUID
 	SubmissionID *uuid.UUID
+	UserID       *uuid.UUID
 }
 
 type SubmissionListItem struct {
@@ -110,6 +115,7 @@ type SubmissionListItem struct {
 	MemoryStat        int32     `json:"memory_stat"`
 	Language          int32     `json:"language"`
 	FailedTest        *int32    `json:"failed_test,omitempty"`
+	BanReason         *string   `json:"ban_reason,omitempty"`
 	ProblemID         uuid.UUID `json:"problem_id"`
 	ProblemTitle      string    `json:"problem_title"`
 	Position          int32     `json:"position"`
@@ -134,6 +140,7 @@ type Submission struct {
 	Language          LanguageName           `json:"language"`
 	FailedTest        *int32                 `json:"failed_test,omitempty"`
 	TestDetails       *SubmissionTestDetails `json:"test_details,omitempty"`
+	BanReason         *string                `json:"ban_reason,omitempty"`
 	ProblemID         *uuid.UUID             `json:"problem_id"`
 	ProblemTitle      string                 `json:"problem_title"`
 	Position          *int32                 `json:"position"`

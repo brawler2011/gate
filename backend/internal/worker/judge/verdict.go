@@ -34,7 +34,6 @@ var (
 	cppLineRegex     = regexp.MustCompile(`(?i)(?:foo\.cc|solution\.cpp|\.cpp|\.cc|\.cxx|\.h|\.hpp):(\d+):(?:\d+:)?\s*(?:error|fatal error|runtime error|warning|note):?`)
 	pythonLineRegex  = regexp.MustCompile(`(?i)(?:File\s+["'][^"']*["'],\s+line\s+(\d+)|line\s+(\d+))`)
 	goLineRegex      = regexp.MustCompile(`(?i)(?:foo\.go|\.go|main\.go):(\d+):(?:\d+:)?`)
-	javaLineRegex    = regexp.MustCompile(`(?i)(?:Main\.java|\.java):(\d+):\s*error:?`)
 	genericLineRegex = regexp.MustCompile(`(?i)(?:line|строка|:)\s*(\d+)`)
 )
 
@@ -61,7 +60,7 @@ func ParseErrorLine(lang models.LanguageName, text string) *int32 {
 
 	for i := 1; i < len(match); i++ {
 		if match[i] != "" {
-			if lineNum, err := strconv.Atoi(match[i]); err == nil && lineNum > 0 {
+			if lineNum, err := strconv.ParseInt(match[i], 10, 32); err == nil && lineNum > 0 {
 				res := int32(lineNum)
 				return &res
 			}

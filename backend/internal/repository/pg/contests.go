@@ -8,6 +8,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -50,6 +51,13 @@ func NewContestsRepo(db *pgxpool.Pool) *ContestsRepo {
 	return &ContestsRepo{
 		queries: sqlc.New(db),
 		db:      db,
+	}
+}
+
+func (r *ContestsRepo) WithTx(tx pgx.Tx) interfaces.ContestsRepo {
+	return &ContestsRepo{
+		queries: sqlc.New(tx),
+		db:      r.db,
 	}
 }
 
@@ -927,6 +935,91 @@ func (r *ContestsRepo) GetSubmissionsForScoreboard(ctx context.Context, contestI
 		}
 	}
 	return subs, nil
+}
+
+func (r *ContestsRepo) CreateContestUserProblemBlock(ctx context.Context, params *models.CreateContestUserProblemBlockParams) error {
+	var createdBy pgtype.UUID
+	if params.CreatedBy != nil {
+		createdBy = pgtype.UUID{Bytes: *params.CreatedBy, Valid: true}
+	}
+
+	err := r.queries.CreateContestUserProblemBlock(ctx, sqlc.CreateContestUserProblemBlockParams{
+		ContestID: params.ContestID,
+		UserID:    params.UserID,
+		ProblemID: params.ProblemID,
+		Reason:    params.Reason,
+		CreatedBy: createdBy,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *ContestsRepo) DeleteContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) error {
+	err := r.queries.DeleteContestUserProblemBlock(ctx, sqlc.DeleteContestUserProblemBlockParams{
+		ContestID: contestID,
+		UserID:    userID,
+		ProblemID: problemID,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *ContestsRepo) GetContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestUserProblemBlock, error) {
+	row, err := r.queries.GetContestUserProblemBlock(ctx, sqlc.GetContestUserProblemBlockParams{
+		ContestID: contestID,
+		UserID:    userID,
+		ProblemID: problemID,
+	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	var createdBy *uuid.UUID
+	if row.CreatedBy.Valid {
+		cb := uuid.UUID(row.CreatedBy.Bytes)
+		createdBy = &cb
+	}
+
+	return &models.ContestUserProblemBlock{
+		ContestID: row.ContestID,
+		UserID:    row.UserID,
+		ProblemID: row.ProblemID,
+		Reason:    row.Reason,
+		CreatedBy: createdBy,
+		CreatedAt: row.CreatedAt,
+	}, nil
+}
+
+func (r *ContestsRepo) ListContestUserProblemBlocks(ctx context.Context, contestID uuid.UUID, userID *uuid.UUID) ([]models.ContestUserProblemBlock, error) {
+	rows, err := r.queries.ListContestUserProblemBlocks(ctx, sqlc.ListContestUserProblemBlocksParams{
+		ContestID: contestID,
+		UserID:    nullableUUIDToPgtype(userID),
+	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	blocks := make([]models.ContestUserProblemBlock, len(rows))
+	for i, row := range rows {
+		var createdBy *uuid.UUID
+		if row.CreatedBy.Valid {
+			cb := uuid.UUID(row.CreatedBy.Bytes)
+			createdBy = &cb
+		}
+		blocks[i] = models.ContestUserProblemBlock{
+			ContestID: row.ContestID,
+			UserID:    row.UserID,
+			ProblemID: row.ProblemID,
+			Reason:    row.Reason,
+			CreatedBy: createdBy,
+			CreatedAt: row.CreatedAt,
+		}
+	}
+	return blocks, nil
 }
 
 

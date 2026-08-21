@@ -39,14 +39,14 @@ const CodeBlock = ({code, language, highlightLine}: CodeBlockProps): ReactNode =
         const isHighlighted = highlightLine !== undefined && highlightLine !== null && lineNumber === highlightLine;
         return isHighlighted
           ? {
-              style: {
-                backgroundColor: 'rgba(255, 0, 0, 0.18)',
-                display: 'block',
-                borderLeft: '4px solid #fa5252',
-                paddingLeft: '6px',
-                marginLeft: '-10px',
-              },
-            }
+            style: {
+              backgroundColor: 'rgba(255, 0, 0, 0.18)',
+              display: 'block',
+              borderLeft: '4px solid #fa5252',
+              paddingLeft: '6px',
+              marginLeft: '-10px',
+            },
+          }
           : {style: {display: 'block'}};
       }}
     >

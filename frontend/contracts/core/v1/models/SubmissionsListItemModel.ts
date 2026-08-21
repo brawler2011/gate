@@ -20,6 +20,7 @@ export type SubmissionsListItemModel = {
     contest_login: string;
     contest_title: string;
     organization_login?: string;
+    ban_reason?: string | null;
     updated_at: string;
     created_at: string;
 };

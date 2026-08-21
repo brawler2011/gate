@@ -358,7 +358,8 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 	}
 
 	return corev1.SubmissionsListItemModel{
-		Id: s.ID,
+		Id:     s.ID,
+		UserId: uuidPtrToUUID(s.CreatedBy),
 
 		Username: s.Username,
 
@@ -379,6 +380,7 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 		ContestLogin:      s.ContestLogin,
 		ContestTitle:      s.ContestTitle,
 		OrganizationLogin: orgLogin,
+		BanReason:         s.BanReason,
 
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
@@ -431,7 +433,8 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 	}
 
 	return corev1.SubmissionModel{
-		Id: s.ID,
+		Id:     s.ID,
+		UserId: uuidPtrToUUID(s.CreatedBy),
 
 		Username: s.Username,
 
@@ -455,6 +458,7 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 		ContestLogin:      s.ContestLogin,
 		ContestTitle:      s.ContestTitle,
 		OrganizationLogin: orgLogin,
+		BanReason:         s.BanReason,
 
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,

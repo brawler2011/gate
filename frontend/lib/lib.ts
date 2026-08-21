@@ -65,6 +65,8 @@ export const StateColor = (state?: number | string): string => {
       return "purple"; // Internal Error
     case 200:
       return "green"; // Accepted
+    case 300:
+      return "red"; // Disqualified
     default:
       return "gray";
   }
@@ -104,6 +106,8 @@ export const StateString = (state?: number | string, failedTest?: number | null)
       break;
     case 200:
       return "Принято"; // Accepted - no failed test
+    case 300:
+      return "Дисквалифицировано";
     default:
       return "Неизвестно";
   }
@@ -117,7 +121,7 @@ export const StateString = (state?: number | string, failedTest?: number | null)
 };
 
 /**
- * Short Codeforces-style verdict representation (e.g., WA5, TLE50, AC, CE, RE)
+ * Short Codeforces-style verdict representation (e.g., WA5, TLE50, AC, CE, RE, DQ)
  */
 export const ShortVerdictString = (state?: number | string, failedTest?: number | null): string => {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
@@ -142,6 +146,8 @@ export const ShortVerdictString = (state?: number | string, failedTest?: number 
       return "IE";
     case 200:
       return "AC";
+    case 300:
+      return "DQ";
     default:
       return "—";
   }

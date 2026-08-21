@@ -834,4 +834,78 @@ func (h *CoreServer) DeleteContestTeam(ctx context.Context, request corev1.Delet
 	return corev1.DeleteContestTeam200Response{}, nil
 }
 
+func (h *CoreServer) BlockProblemForUser(ctx context.Context, request corev1.BlockProblemForUserRequestObject) (corev1.BlockProblemForUserResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	user := middleware.GetUser(ctx)
+
+	var reason *string
+	if request.Body != nil && request.Body.Reason != nil {
+		reason = request.Body.Reason
+	}
+
+	err = h.contestsUC.BlockProblemForUser(ctx, contest.ID, request.UserId, request.ProblemId, reason, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.BlockProblemForUser200Response{}, nil
+}
+
+func (h *CoreServer) UnblockProblemForUser(ctx context.Context, request corev1.UnblockProblemForUserRequestObject) (corev1.UnblockProblemForUserResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	rejudgeSubmissions := request.Params.RejudgeSubmissions != nil && *request.Params.RejudgeSubmissions
+
+	err = h.contestsUC.UnblockProblemForUser(ctx, contest.ID, request.UserId, request.ProblemId, rejudgeSubmissions)
+	if err != nil {
+		return nil, err
+	}
+
+	if rejudgeSubmissions {
+		filter := models.RejudgeFilter{
+			ContestID: contest.ID,
+			ProblemID: &request.ProblemId,
+			UserID:    &request.UserId,
+		}
+		_, err = h.submissionsUC.RejudgeSubmissions(ctx, filter)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return corev1.UnblockProblemForUser200Response{}, nil
+}
+
+func (h *CoreServer) GetProblemBlockStatusForUser(ctx context.Context, request corev1.GetProblemBlockStatusForUserRequestObject) (corev1.GetProblemBlockStatusForUserResponseObject, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := h.contestsUC.GetProblemBlockStatusForUser(ctx, contest.ID, request.UserId, request.ProblemId)
+	if err != nil {
+		return nil, err
+	}
+
+	if block == nil {
+		return corev1.GetProblemBlockStatusForUser200JSONResponse{
+			IsBlocked: false,
+		}, nil
+	}
+
+	createdAt := block.CreatedAt
+	return corev1.GetProblemBlockStatusForUser200JSONResponse{
+		IsBlocked: true,
+		Reason:    block.Reason,
+		CreatedAt: &createdAt,
+	}, nil
+}
+
 

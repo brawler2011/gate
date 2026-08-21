@@ -11,6 +11,8 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AuthResponseModel } from './models/AuthResponseModel';
+export type { BlockProblemRequestModel } from './models/BlockProblemRequestModel';
+export type { BlockSubmissionRequestModel } from './models/BlockSubmissionRequestModel';
 export type { CompileResult } from './models/CompileResult';
 export type { ContestMemberModel } from './models/ContestMemberModel';
 export { ContestModel } from './models/ContestModel';
@@ -58,6 +60,7 @@ export type { OrganizationModel } from './models/OrganizationModel';
 export type { PaginationModel } from './models/PaginationModel';
 export type { PostModel } from './models/PostModel';
 export type { PostPatchRequestModel } from './models/PostPatchRequestModel';
+export type { ProblemBlockStatusResponseModel } from './models/ProblemBlockStatusResponseModel';
 export type { ProblemLimits } from './models/ProblemLimits';
 export type { ProblemMemberModel } from './models/ProblemMemberModel';
 export type { ProblemModel } from './models/ProblemModel';

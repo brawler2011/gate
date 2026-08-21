@@ -4,7 +4,12 @@ import {
   ActionIcon,
   Group,
   Loader,
+  Menu,
+  MenuDropdown,
+  MenuItem,
+  MenuTarget,
   Table,
+  TableScrollContainer,
   TableTbody,
   TableTd,
   TableTh,
@@ -13,9 +18,13 @@ import {
   Text,
   Tooltip,
   Transition,
-  TableScrollContainer,
 } from "@mantine/core";
-import {IconRefresh} from "@tabler/icons-react";
+import {
+  IconBan,
+  IconDots,
+  IconLockOpen,
+  IconRefresh,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import React, {useEffect, useState, type ReactNode} from "react";
 
@@ -28,18 +37,22 @@ import {
   StateString,
   TimeBeautify,
 } from "@/lib/lib";
-import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 
+import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
+import {
+  SubmissionSanctionsModal,
+  type SanctionActionType,
+} from "./SubmissionSanctionsModal";
 import styles from "./SubmissionsList.module.css";
 
 import type {SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";
 
 interface SubmissionsListProps {
-    submissions: SubmissionWithProgress[];
-    highlightedIds?: Set<string>;
-    canRejudge?: boolean;
-    onRejudgeSubmission?: (submissionId: string) => Promise<void>;
-    rejudgingId?: string | null;
+  submissions: SubmissionWithProgress[];
+  highlightedIds?: Set<string>;
+  canRejudge?: boolean;
+  onRejudgeSubmission?: (submissionId: string) => Promise<void>;
+  rejudgingId?: string | null;
 }
 
 interface VerdictCellProps {
@@ -94,13 +107,14 @@ const VerdictCell = ({submission, onOpenDetails}: VerdictCellProps) => {
 };
 
 interface SubmissionRowProps {
-    submission: SubmissionWithProgress;
-    isHighlighted: boolean;
-    isNew: boolean;
-    canRejudge?: boolean;
-    onRejudgeSubmission?: (submissionId: string) => Promise<void>;
-    rejudgingId?: string | null;
-    onOpenDetails: (submissionId: string) => void;
+  submission: SubmissionWithProgress;
+  isHighlighted: boolean;
+  isNew: boolean;
+  canRejudge?: boolean;
+  onRejudgeSubmission?: (submissionId: string) => Promise<void>;
+  rejudgingId?: string | null;
+  onOpenDetails: (submissionId: string) => void;
+  onOpenSanctionModal?: (action: SanctionActionType, sub: SubmissionWithProgress) => void;
 }
 
 const SubmissionRow = ({
@@ -111,6 +125,7 @@ const SubmissionRow = ({
   onRejudgeSubmission,
   rejudgingId,
   onOpenDetails,
+  onOpenSanctionModal,
 }: SubmissionRowProps) => {
   const [mounted, setMounted] = useState(!isNew);
 
@@ -198,6 +213,50 @@ const SubmissionRow = ({
                   </ActionIcon>
                 </Tooltip>
               )}
+              {canRejudge && submission.organization_login && submission.contest_login && (
+                <Menu shadow="md" width={220} position="bottom-end">
+                  <MenuTarget>
+                    <Tooltip label="Модерация и санкции">
+                      <ActionIcon size="sm" variant="subtle" color="gray">
+                        <IconDots size="1rem" />
+                      </ActionIcon>
+                    </Tooltip>
+                  </MenuTarget>
+                  <MenuDropdown>
+                    {submission.state === 300 ? (
+                      <MenuItem
+                        color="blue"
+                        leftSection={<IconLockOpen size={14} />}
+                        onClick={() => onOpenSanctionModal?.("unblock_submission", submission)}
+                      >
+                        Разблокировать посылку
+                      </MenuItem>
+                    ) : (
+                      <MenuItem
+                        color="red"
+                        leftSection={<IconBan size={14} />}
+                        onClick={() => onOpenSanctionModal?.("block_submission", submission)}
+                      >
+                        Заблокировать посылку (DQ)
+                      </MenuItem>
+                    )}
+                    <MenuItem
+                      color="red"
+                      leftSection={<IconBan size={14} />}
+                      onClick={() => onOpenSanctionModal?.("block_problem", submission)}
+                    >
+                      Заблокировать задачу
+                    </MenuItem>
+                    <MenuItem
+                      color="teal"
+                      leftSection={<IconLockOpen size={14} />}
+                      onClick={() => onOpenSanctionModal?.("unblock_problem", submission)}
+                    >
+                      Разблокировать задачу
+                    </MenuItem>
+                  </MenuDropdown>
+                </Menu>
+              )}
             </Group>
           </TableTd>
         </TableTr>
@@ -214,6 +273,10 @@ const SubmissionsList = ({
   rejudgingId,
 }: SubmissionsListProps): ReactNode => {
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [sanctionState, setSanctionState] = useState<{
+    actionType: SanctionActionType;
+    submission: SubmissionWithProgress;
+  } | null>(null);
 
   return (
     <>
@@ -242,6 +305,9 @@ const SubmissionsList = ({
                 onRejudgeSubmission={onRejudgeSubmission}
                 rejudgingId={rejudgingId}
                 onOpenDetails={(id) => setSelectedSubmissionId(id)}
+                onOpenSanctionModal={(actionType, sub) =>
+                  setSanctionState({actionType, submission: sub})
+                }
               />
             ))}
           </TableTbody>
@@ -260,6 +326,18 @@ const SubmissionsList = ({
         canRejudge={canRejudge}
         onRejudge={onRejudgeSubmission}
         isRejudging={Boolean(rejudgingId && rejudgingId === selectedSubmissionId)}
+      />
+
+      <SubmissionSanctionsModal
+        actionType={sanctionState?.actionType ?? null}
+        onClose={() => setSanctionState(null)}
+        orgLogin={sanctionState?.submission.organization_login}
+        contestLogin={sanctionState?.submission.contest_login}
+        submissionId={sanctionState?.submission.id}
+        userId={sanctionState?.submission.user_id}
+        problemId={sanctionState?.submission.problem_id}
+        username={sanctionState?.submission.username}
+        problemTitle={sanctionState?.submission.problem_title}
       />
     </>
   );

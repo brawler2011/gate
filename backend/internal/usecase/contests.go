@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"time"
 
@@ -12,14 +13,21 @@ import (
 )
 
 type ContestsUseCase struct {
-	contestRepo interfaces.ContestsRepo
+	contestRepo     interfaces.ContestsRepo
+	submissionsRepo interfaces.SubmissionsRepo
 }
 
 func NewContestsUseCase(
 	contestRepo interfaces.ContestsRepo,
+	submissionsRepo ...interfaces.SubmissionsRepo,
 ) *ContestsUseCase {
+	var subRepo interfaces.SubmissionsRepo
+	if len(submissionsRepo) > 0 {
+		subRepo = submissionsRepo[0]
+	}
 	return &ContestsUseCase{
-		contestRepo: contestRepo,
+		contestRepo:     contestRepo,
+		submissionsRepo: subRepo,
 	}
 }
 
@@ -295,7 +303,7 @@ func (uc *ContestsUseCase) ProcessSubmissionResult(ctx context.Context, submissi
 			}
 			break
 		} else if sub.State == models.GotTL || sub.State == models.GotML ||
-			sub.State == models.GotRE || sub.State == models.GotPE || sub.State == models.GotWA {
+			sub.State == models.GotRE || sub.State == models.GotPE || sub.State == models.GotWA || sub.State == models.Disqualified {
 			failedAttempts++
 		}
 	}
@@ -463,7 +471,7 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, 
 						timeMinutes = &zero
 					}
 				} else if sub.State == models.GotTL || sub.State == models.GotML ||
-					sub.State == models.GotRE || sub.State == models.GotPE || sub.State == models.GotWA {
+					sub.State == models.GotRE || sub.State == models.GotPE || sub.State == models.GotWA || sub.State == models.Disqualified {
 					failedAttempts++
 				}
 			}
@@ -582,5 +590,83 @@ func (uc *ContestsUseCase) DeleteContestTeam(
 	contestID, teamID, requestUserID uuid.UUID,
 ) error {
 	return uc.contestRepo.DeleteContestTeam(ctx, contestID, teamID)
+}
+
+func (uc *ContestsUseCase) BlockProblemForUser(
+	ctx context.Context,
+	contestID, userID, problemID uuid.UUID,
+	reason *string,
+	operatorID uuid.UUID,
+) error {
+	_, err := uc.GetContest(ctx, contestID)
+	if err != nil {
+		return err
+	}
+
+	err = uc.contestRepo.CreateContestUserProblemBlock(ctx, &models.CreateContestUserProblemBlockParams{
+		ContestID: contestID,
+		UserID:    userID,
+		ProblemID: problemID,
+		Reason:    reason,
+		CreatedBy: &operatorID,
+	})
+	if err != nil {
+		return err
+	}
+
+	if uc.submissionsRepo != nil {
+		err = uc.submissionsRepo.BlockUserProblemSubmissions(ctx, contestID, userID, problemID, reason)
+		if err != nil {
+			return err
+		}
+	}
+
+	dummySub := &models.Submission{
+		ContestID: &contestID,
+		CreatedBy: &userID,
+		ProblemID: &problemID,
+	}
+	_ = uc.ProcessSubmissionResult(ctx, dummySub)
+
+	return nil
+}
+
+func (uc *ContestsUseCase) UnblockProblemForUser(
+	ctx context.Context,
+	contestID, userID, problemID uuid.UUID,
+	rejudgeSubmissions bool,
+) error {
+	_, err := uc.GetContest(ctx, contestID)
+	if err != nil {
+		return err
+	}
+
+	err = uc.contestRepo.DeleteContestUserProblemBlock(ctx, contestID, userID, problemID)
+	if err != nil {
+		return err
+	}
+
+	dummySub := &models.Submission{
+		ContestID: &contestID,
+		CreatedBy: &userID,
+		ProblemID: &problemID,
+	}
+	_ = uc.ProcessSubmissionResult(ctx, dummySub)
+
+	return nil
+}
+
+func (uc *ContestsUseCase) GetProblemBlockStatusForUser(
+	ctx context.Context,
+	contestID, userID, problemID uuid.UUID,
+) (*models.ContestUserProblemBlock, error) {
+	block, err := uc.contestRepo.GetContestUserProblemBlock(ctx, contestID, userID, problemID)
+	if err != nil {
+		if errors.Is(err, pkg.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return block, nil
 }
 

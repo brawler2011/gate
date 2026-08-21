@@ -143,6 +143,16 @@ type AuthResponseModel struct {
 	User      UserModel          `json:"user"`
 }
 
+// BlockProblemRequestModel defines model for BlockProblemRequestModel.
+type BlockProblemRequestModel struct {
+	Reason *string `json:"reason,omitempty"`
+}
+
+// BlockSubmissionRequestModel defines model for BlockSubmissionRequestModel.
+type BlockSubmissionRequestModel struct {
+	Reason *string `json:"reason,omitempty"`
+}
+
 // CompileResult defines model for CompileResult.
 type CompileResult struct {
 	CompileError *string `json:"compile_error,omitempty"`
@@ -492,6 +502,13 @@ type PostModel struct {
 	UpdatedAt      time.Time          `json:"updated_at"`
 }
 
+// ProblemBlockStatusResponseModel defines model for ProblemBlockStatusResponseModel.
+type ProblemBlockStatusResponseModel struct {
+	CreatedAt *time.Time `json:"created_at"`
+	IsBlocked bool       `json:"is_blocked"`
+	Reason    *string    `json:"reason"`
+}
+
 // ProblemLimits defines model for ProblemLimits.
 type ProblemLimits struct {
 	MaxScore      *int   `json:"max_score"`
@@ -635,6 +652,7 @@ type ScoreboardResponseModel struct {
 
 // SubmissionModel defines model for SubmissionModel.
 type SubmissionModel struct {
+	BanReason         *string                     `json:"ban_reason"`
 	ContestId         openapi_types.UUID          `json:"contest_id"`
 	ContestLogin      string                      `json:"contest_login"`
 	ContestTitle      string                      `json:"contest_title"`
@@ -668,6 +686,7 @@ type SubmissionTestDetailsModel struct {
 
 // SubmissionsListItemModel defines model for SubmissionsListItemModel.
 type SubmissionsListItemModel struct {
+	BanReason         *string            `json:"ban_reason"`
 	ContestId         openapi_types.UUID `json:"contest_id"`
 	ContestLogin      string             `json:"contest_login"`
 	ContestTitle      string             `json:"contest_title"`
@@ -941,6 +960,11 @@ type UpdateContestMemberParams struct {
 // CreateContestMemberParams defines parameters for CreateContestMember.
 type CreateContestMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+}
+
+// UnblockProblemForUserParams defines parameters for UnblockProblemForUser.
+type UnblockProblemForUserParams struct {
+	RejudgeSubmissions *bool `form:"rejudge_submissions,omitempty" json:"rejudge_submissions,omitempty"`
 }
 
 // CreateContestProblemParams defines parameters for CreateContestProblem.
@@ -1347,6 +1371,12 @@ type UpdateOrganizationJSONRequestBody = UpdateOrganizationRequestModel
 // UpdateContestJSONRequestBody defines body for UpdateContest for application/json ContentType.
 type UpdateContestJSONRequestBody = UpdateContestRequestModel
 
+// BlockProblemForUserJSONRequestBody defines body for BlockProblemForUser for application/json ContentType.
+type BlockProblemForUserJSONRequestBody = BlockProblemRequestModel
+
+// BlockSubmissionJSONRequestBody defines body for BlockSubmission for application/json ContentType.
+type BlockSubmissionJSONRequestBody = BlockSubmissionRequestModel
+
 // CreatePostMultipartRequestBody defines body for CreatePost for multipart/form-data ContentType.
 type CreatePostMultipartRequestBody CreatePostMultipartBody
 
@@ -1578,6 +1608,17 @@ type ClientInterface interface {
 	// GetMyContestRole request
 	GetMyContestRole(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// UnblockProblemForUser request
+	UnblockProblemForUser(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, params *UnblockProblemForUserParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProblemBlockStatusForUser request
+	GetProblemBlockStatusForUser(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// BlockProblemForUserWithBody request with any body
+	BlockProblemForUserWithBody(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	BlockProblemForUser(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, body BlockProblemForUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateContestProblem request
 	CreateContestProblem(ctx context.Context, orgLogin string, contestLogin string, params *CreateContestProblemParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1599,8 +1640,16 @@ type ClientInterface interface {
 	// ListContestSubmissions request
 	ListContestSubmissions(ctx context.Context, orgLogin string, contestLogin string, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// BlockSubmissionWithBody request with any body
+	BlockSubmissionWithBody(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	BlockSubmission(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, body BlockSubmissionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RejudgeSubmission request
 	RejudgeSubmission(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UnblockSubmission request
+	UnblockSubmission(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteContestTeam request
 	DeleteContestTeam(ctx context.Context, orgLogin string, contestLogin string, params *DeleteContestTeamParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2289,6 +2338,54 @@ func (c *Client) GetMyContestRole(ctx context.Context, orgLogin string, contestL
 	return c.Client.Do(req)
 }
 
+func (c *Client) UnblockProblemForUser(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, params *UnblockProblemForUserParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnblockProblemForUserRequest(c.Server, orgLogin, contestLogin, userId, problemId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProblemBlockStatusForUser(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProblemBlockStatusForUserRequest(c.Server, orgLogin, contestLogin, userId, problemId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) BlockProblemForUserWithBody(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBlockProblemForUserRequestWithBody(c.Server, orgLogin, contestLogin, userId, problemId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) BlockProblemForUser(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, body BlockProblemForUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBlockProblemForUserRequest(c.Server, orgLogin, contestLogin, userId, problemId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) CreateContestProblem(ctx context.Context, orgLogin string, contestLogin string, params *CreateContestProblemParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateContestProblemRequest(c.Server, orgLogin, contestLogin, params)
 	if err != nil {
@@ -2373,8 +2470,44 @@ func (c *Client) ListContestSubmissions(ctx context.Context, orgLogin string, co
 	return c.Client.Do(req)
 }
 
+func (c *Client) BlockSubmissionWithBody(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBlockSubmissionRequestWithBody(c.Server, orgLogin, contestLogin, submissionId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) BlockSubmission(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, body BlockSubmissionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBlockSubmissionRequest(c.Server, orgLogin, contestLogin, submissionId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) RejudgeSubmission(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRejudgeSubmissionRequest(c.Server, orgLogin, contestLogin, submissionId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UnblockSubmission(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUnblockSubmissionRequest(c.Server, orgLogin, contestLogin, submissionId)
 	if err != nil {
 		return nil, err
 	}
@@ -5169,6 +5302,206 @@ func NewGetMyContestRoleRequest(server string, orgLogin string, contestLogin str
 	return req, nil
 }
 
+// NewUnblockProblemForUserRequest generates requests for UnblockProblemForUser
+func NewUnblockProblemForUserRequest(server string, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, params *UnblockProblemForUserParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "user_id", runtime.ParamLocationPath, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam3 string
+
+	pathParam3, err = runtime.StyleParamWithLocation("simple", false, "problem_id", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/participants/%s/problems/%s/block", pathParam0, pathParam1, pathParam2, pathParam3)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.RejudgeSubmissions != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "rejudge_submissions", runtime.ParamLocationQuery, *params.RejudgeSubmissions); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetProblemBlockStatusForUserRequest generates requests for GetProblemBlockStatusForUser
+func NewGetProblemBlockStatusForUserRequest(server string, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "user_id", runtime.ParamLocationPath, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam3 string
+
+	pathParam3, err = runtime.StyleParamWithLocation("simple", false, "problem_id", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/participants/%s/problems/%s/block", pathParam0, pathParam1, pathParam2, pathParam3)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewBlockProblemForUserRequest calls the generic BlockProblemForUser builder with application/json body
+func NewBlockProblemForUserRequest(server string, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, body BlockProblemForUserJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewBlockProblemForUserRequestWithBody(server, orgLogin, contestLogin, userId, problemId, "application/json", bodyReader)
+}
+
+// NewBlockProblemForUserRequestWithBody generates requests for BlockProblemForUser with any type of body
+func NewBlockProblemForUserRequestWithBody(server string, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "user_id", runtime.ParamLocationPath, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam3 string
+
+	pathParam3, err = runtime.StyleParamWithLocation("simple", false, "problem_id", runtime.ParamLocationPath, problemId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/participants/%s/problems/%s/block", pathParam0, pathParam1, pathParam2, pathParam3)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewCreateContestProblemRequest generates requests for CreateContestProblem
 func NewCreateContestProblemRequest(server string, orgLogin string, contestLogin string, params *CreateContestProblemParams) (*http.Request, error) {
 	var err error
@@ -5643,6 +5976,67 @@ func NewListContestSubmissionsRequest(server string, orgLogin string, contestLog
 	return req, nil
 }
 
+// NewBlockSubmissionRequest calls the generic BlockSubmission builder with application/json body
+func NewBlockSubmissionRequest(server string, orgLogin string, contestLogin string, submissionId openapi_types.UUID, body BlockSubmissionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewBlockSubmissionRequestWithBody(server, orgLogin, contestLogin, submissionId, "application/json", bodyReader)
+}
+
+// NewBlockSubmissionRequestWithBody generates requests for BlockSubmission with any type of body
+func NewBlockSubmissionRequestWithBody(server string, orgLogin string, contestLogin string, submissionId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "submission_id", runtime.ParamLocationPath, submissionId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/submissions/%s/block", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewRejudgeSubmissionRequest generates requests for RejudgeSubmission
 func NewRejudgeSubmissionRequest(server string, orgLogin string, contestLogin string, submissionId openapi_types.UUID) (*http.Request, error) {
 	var err error
@@ -5674,6 +6068,54 @@ func NewRejudgeSubmissionRequest(server string, orgLogin string, contestLogin st
 	}
 
 	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/submissions/%s/rejudge", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUnblockSubmissionRequest generates requests for UnblockSubmission
+func NewUnblockSubmissionRequest(server string, orgLogin string, contestLogin string, submissionId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "submission_id", runtime.ParamLocationPath, submissionId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/submissions/%s/unblock", pathParam0, pathParam1, pathParam2)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -11199,6 +11641,17 @@ type ClientWithResponsesInterface interface {
 	// GetMyContestRoleWithResponse request
 	GetMyContestRoleWithResponse(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*GetMyContestRoleResponse, error)
 
+	// UnblockProblemForUserWithResponse request
+	UnblockProblemForUserWithResponse(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, params *UnblockProblemForUserParams, reqEditors ...RequestEditorFn) (*UnblockProblemForUserResponse, error)
+
+	// GetProblemBlockStatusForUserWithResponse request
+	GetProblemBlockStatusForUserWithResponse(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemBlockStatusForUserResponse, error)
+
+	// BlockProblemForUserWithBodyWithResponse request with any body
+	BlockProblemForUserWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*BlockProblemForUserResponse, error)
+
+	BlockProblemForUserWithResponse(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, body BlockProblemForUserJSONRequestBody, reqEditors ...RequestEditorFn) (*BlockProblemForUserResponse, error)
+
 	// CreateContestProblemWithResponse request
 	CreateContestProblemWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *CreateContestProblemParams, reqEditors ...RequestEditorFn) (*CreateContestProblemResponse, error)
 
@@ -11220,8 +11673,16 @@ type ClientWithResponsesInterface interface {
 	// ListContestSubmissionsWithResponse request
 	ListContestSubmissionsWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*ListContestSubmissionsResponse, error)
 
+	// BlockSubmissionWithBodyWithResponse request with any body
+	BlockSubmissionWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*BlockSubmissionResponse, error)
+
+	BlockSubmissionWithResponse(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, body BlockSubmissionJSONRequestBody, reqEditors ...RequestEditorFn) (*BlockSubmissionResponse, error)
+
 	// RejudgeSubmissionWithResponse request
 	RejudgeSubmissionWithResponse(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeSubmissionResponse, error)
+
+	// UnblockSubmissionWithResponse request
+	UnblockSubmissionWithResponse(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*UnblockSubmissionResponse, error)
 
 	// DeleteContestTeamWithResponse request
 	DeleteContestTeamWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *DeleteContestTeamParams, reqEditors ...RequestEditorFn) (*DeleteContestTeamResponse, error)
@@ -12093,6 +12554,70 @@ func (r GetMyContestRoleResponse) StatusCode() int {
 	return 0
 }
 
+type UnblockProblemForUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UnblockProblemForUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UnblockProblemForUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProblemBlockStatusForUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ProblemBlockStatusResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProblemBlockStatusForUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProblemBlockStatusForUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type BlockProblemForUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r BlockProblemForUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r BlockProblemForUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type CreateContestProblemResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -12244,6 +12769,27 @@ func (r ListContestSubmissionsResponse) StatusCode() int {
 	return 0
 }
 
+type BlockSubmissionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r BlockSubmissionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r BlockSubmissionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type RejudgeSubmissionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -12259,6 +12805,27 @@ func (r RejudgeSubmissionResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r RejudgeSubmissionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UnblockSubmissionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r UnblockSubmissionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UnblockSubmissionResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -14761,6 +15328,41 @@ func (c *ClientWithResponses) GetMyContestRoleWithResponse(ctx context.Context, 
 	return ParseGetMyContestRoleResponse(rsp)
 }
 
+// UnblockProblemForUserWithResponse request returning *UnblockProblemForUserResponse
+func (c *ClientWithResponses) UnblockProblemForUserWithResponse(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, params *UnblockProblemForUserParams, reqEditors ...RequestEditorFn) (*UnblockProblemForUserResponse, error) {
+	rsp, err := c.UnblockProblemForUser(ctx, orgLogin, contestLogin, userId, problemId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnblockProblemForUserResponse(rsp)
+}
+
+// GetProblemBlockStatusForUserWithResponse request returning *GetProblemBlockStatusForUserResponse
+func (c *ClientWithResponses) GetProblemBlockStatusForUserWithResponse(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetProblemBlockStatusForUserResponse, error) {
+	rsp, err := c.GetProblemBlockStatusForUser(ctx, orgLogin, contestLogin, userId, problemId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProblemBlockStatusForUserResponse(rsp)
+}
+
+// BlockProblemForUserWithBodyWithResponse request with arbitrary body returning *BlockProblemForUserResponse
+func (c *ClientWithResponses) BlockProblemForUserWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*BlockProblemForUserResponse, error) {
+	rsp, err := c.BlockProblemForUserWithBody(ctx, orgLogin, contestLogin, userId, problemId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBlockProblemForUserResponse(rsp)
+}
+
+func (c *ClientWithResponses) BlockProblemForUserWithResponse(ctx context.Context, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, body BlockProblemForUserJSONRequestBody, reqEditors ...RequestEditorFn) (*BlockProblemForUserResponse, error) {
+	rsp, err := c.BlockProblemForUser(ctx, orgLogin, contestLogin, userId, problemId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBlockProblemForUserResponse(rsp)
+}
+
 // CreateContestProblemWithResponse request returning *CreateContestProblemResponse
 func (c *ClientWithResponses) CreateContestProblemWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *CreateContestProblemParams, reqEditors ...RequestEditorFn) (*CreateContestProblemResponse, error) {
 	rsp, err := c.CreateContestProblem(ctx, orgLogin, contestLogin, params, reqEditors...)
@@ -14824,6 +15426,23 @@ func (c *ClientWithResponses) ListContestSubmissionsWithResponse(ctx context.Con
 	return ParseListContestSubmissionsResponse(rsp)
 }
 
+// BlockSubmissionWithBodyWithResponse request with arbitrary body returning *BlockSubmissionResponse
+func (c *ClientWithResponses) BlockSubmissionWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*BlockSubmissionResponse, error) {
+	rsp, err := c.BlockSubmissionWithBody(ctx, orgLogin, contestLogin, submissionId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBlockSubmissionResponse(rsp)
+}
+
+func (c *ClientWithResponses) BlockSubmissionWithResponse(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, body BlockSubmissionJSONRequestBody, reqEditors ...RequestEditorFn) (*BlockSubmissionResponse, error) {
+	rsp, err := c.BlockSubmission(ctx, orgLogin, contestLogin, submissionId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBlockSubmissionResponse(rsp)
+}
+
 // RejudgeSubmissionWithResponse request returning *RejudgeSubmissionResponse
 func (c *ClientWithResponses) RejudgeSubmissionWithResponse(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejudgeSubmissionResponse, error) {
 	rsp, err := c.RejudgeSubmission(ctx, orgLogin, contestLogin, submissionId, reqEditors...)
@@ -14831,6 +15450,15 @@ func (c *ClientWithResponses) RejudgeSubmissionWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseRejudgeSubmissionResponse(rsp)
+}
+
+// UnblockSubmissionWithResponse request returning *UnblockSubmissionResponse
+func (c *ClientWithResponses) UnblockSubmissionWithResponse(ctx context.Context, orgLogin string, contestLogin string, submissionId openapi_types.UUID, reqEditors ...RequestEditorFn) (*UnblockSubmissionResponse, error) {
+	rsp, err := c.UnblockSubmission(ctx, orgLogin, contestLogin, submissionId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUnblockSubmissionResponse(rsp)
 }
 
 // DeleteContestTeamWithResponse request returning *DeleteContestTeamResponse
@@ -16461,6 +17089,64 @@ func ParseGetMyContestRoleResponse(rsp *http.Response) (*GetMyContestRoleRespons
 	return response, nil
 }
 
+// ParseUnblockProblemForUserResponse parses an HTTP response from a UnblockProblemForUserWithResponse call
+func ParseUnblockProblemForUserResponse(rsp *http.Response) (*UnblockProblemForUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UnblockProblemForUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseGetProblemBlockStatusForUserResponse parses an HTTP response from a GetProblemBlockStatusForUserWithResponse call
+func ParseGetProblemBlockStatusForUserResponse(rsp *http.Response) (*GetProblemBlockStatusForUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProblemBlockStatusForUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProblemBlockStatusResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseBlockProblemForUserResponse parses an HTTP response from a BlockProblemForUserWithResponse call
+func ParseBlockProblemForUserResponse(rsp *http.Response) (*BlockProblemForUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &BlockProblemForUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseCreateContestProblemResponse parses an HTTP response from a CreateContestProblemWithResponse call
 func ParseCreateContestProblemResponse(rsp *http.Response) (*CreateContestProblemResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -16613,6 +17299,22 @@ func ParseListContestSubmissionsResponse(rsp *http.Response) (*ListContestSubmis
 	return response, nil
 }
 
+// ParseBlockSubmissionResponse parses an HTTP response from a BlockSubmissionWithResponse call
+func ParseBlockSubmissionResponse(rsp *http.Response) (*BlockSubmissionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &BlockSubmissionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseRejudgeSubmissionResponse parses an HTTP response from a RejudgeSubmissionWithResponse call
 func ParseRejudgeSubmissionResponse(rsp *http.Response) (*RejudgeSubmissionResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -16622,6 +17324,22 @@ func ParseRejudgeSubmissionResponse(rsp *http.Response) (*RejudgeSubmissionRespo
 	}
 
 	response := &RejudgeSubmissionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseUnblockSubmissionResponse parses an HTTP response from a UnblockSubmissionWithResponse call
+func ParseUnblockSubmissionResponse(rsp *http.Response) (*UnblockSubmissionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UnblockSubmissionResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -19195,6 +19913,15 @@ type ServerInterface interface {
 	// (GET /organizations/{org_login}/contests/{contest_login}/my-role)
 	GetMyContestRole(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string)
 
+	// (DELETE /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block)
+	UnblockProblemForUser(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, params UnblockProblemForUserParams)
+
+	// (GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block)
+	GetProblemBlockStatusForUser(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID)
+
+	// (POST /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block)
+	BlockProblemForUser(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID)
+
 	// (POST /organizations/{org_login}/contests/{contest_login}/problems)
 	CreateContestProblem(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params CreateContestProblemParams)
 
@@ -19216,8 +19943,14 @@ type ServerInterface interface {
 	// (GET /organizations/{org_login}/contests/{contest_login}/submissions)
 	ListContestSubmissions(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params ListContestSubmissionsParams)
 
+	// (POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block)
+	BlockSubmission(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, submissionId openapi_types.UUID)
+
 	// (POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge)
 	RejudgeSubmission(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, submissionId openapi_types.UUID)
+
+	// (POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock)
+	UnblockSubmission(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, submissionId openapi_types.UUID)
 
 	// (DELETE /organizations/{org_login}/contests/{contest_login}/teams)
 	DeleteContestTeam(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params DeleteContestTeamParams)
@@ -20510,6 +21243,173 @@ func (siw *ServerInterfaceWrapper) GetMyContestRole(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// UnblockProblemForUser operation middleware
+func (siw *ServerInterfaceWrapper) UnblockProblemForUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "user_id" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_id", r.PathValue("user_id"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "problem_id" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problem_id", r.PathValue("problem_id"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problem_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UnblockProblemForUserParams
+
+	// ------------- Optional query parameter "rejudge_submissions" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "rejudge_submissions", r.URL.Query(), &params.RejudgeSubmissions)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "rejudge_submissions", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnblockProblemForUser(w, r, orgLogin, contestLogin, userId, problemId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProblemBlockStatusForUser operation middleware
+func (siw *ServerInterfaceWrapper) GetProblemBlockStatusForUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "user_id" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_id", r.PathValue("user_id"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "problem_id" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problem_id", r.PathValue("problem_id"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problem_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblemBlockStatusForUser(w, r, orgLogin, contestLogin, userId, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BlockProblemForUser operation middleware
+func (siw *ServerInterfaceWrapper) BlockProblemForUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "user_id" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_id", r.PathValue("user_id"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "problem_id" -------------
+	var problemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problem_id", r.PathValue("problem_id"), &problemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problem_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BlockProblemForUser(w, r, orgLogin, contestLogin, userId, problemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateContestProblem operation middleware
 func (siw *ServerInterfaceWrapper) CreateContestProblem(w http.ResponseWriter, r *http.Request) {
 
@@ -20885,6 +21785,49 @@ func (siw *ServerInterfaceWrapper) ListContestSubmissions(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// BlockSubmission operation middleware
+func (siw *ServerInterfaceWrapper) BlockSubmission(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "submission_id" -------------
+	var submissionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "submission_id", r.PathValue("submission_id"), &submissionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "submission_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BlockSubmission(w, r, orgLogin, contestLogin, submissionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RejudgeSubmission operation middleware
 func (siw *ServerInterfaceWrapper) RejudgeSubmission(w http.ResponseWriter, r *http.Request) {
 
@@ -20919,6 +21862,49 @@ func (siw *ServerInterfaceWrapper) RejudgeSubmission(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RejudgeSubmission(w, r, orgLogin, contestLogin, submissionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnblockSubmission operation middleware
+func (siw *ServerInterfaceWrapper) UnblockSubmission(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "submission_id" -------------
+	var submissionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "submission_id", r.PathValue("submission_id"), &submissionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "submission_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnblockSubmission(w, r, orgLogin, contestLogin, submissionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -25031,6 +26017,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("PATCH "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/members", wrapper.UpdateContestMember)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/members", wrapper.CreateContestMember)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/my-role", wrapper.GetMyContestRole)
+	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block", wrapper.UnblockProblemForUser)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block", wrapper.GetProblemBlockStatusForUser)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block", wrapper.BlockProblemForUser)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems", wrapper.CreateContestProblem)
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}", wrapper.DeleteContestProblem)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}", wrapper.GetContestProblem)
@@ -25038,7 +26027,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/rejudge", wrapper.RejudgeContest)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/scoreboard", wrapper.GetContestScoreboard)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/submissions", wrapper.ListContestSubmissions)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block", wrapper.BlockSubmission)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge", wrapper.RejudgeSubmission)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock", wrapper.UnblockSubmission)
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/teams", wrapper.DeleteContestTeam)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/teams", wrapper.ListContestTeams)
 	m.HandleFunc("PATCH "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/teams", wrapper.UpdateContestTeam)
@@ -25560,6 +26551,66 @@ func (response GetMyContestRole200JSONResponse) VisitGetMyContestRoleResponse(w 
 	return json.NewEncoder(w).Encode(response)
 }
 
+type UnblockProblemForUserRequestObject struct {
+	OrgLogin     string             `json:"org_login"`
+	ContestLogin string             `json:"contest_login"`
+	UserId       openapi_types.UUID `json:"user_id"`
+	ProblemId    openapi_types.UUID `json:"problem_id"`
+	Params       UnblockProblemForUserParams
+}
+
+type UnblockProblemForUserResponseObject interface {
+	VisitUnblockProblemForUserResponse(w http.ResponseWriter) error
+}
+
+type UnblockProblemForUser200Response struct {
+}
+
+func (response UnblockProblemForUser200Response) VisitUnblockProblemForUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type GetProblemBlockStatusForUserRequestObject struct {
+	OrgLogin     string             `json:"org_login"`
+	ContestLogin string             `json:"contest_login"`
+	UserId       openapi_types.UUID `json:"user_id"`
+	ProblemId    openapi_types.UUID `json:"problem_id"`
+}
+
+type GetProblemBlockStatusForUserResponseObject interface {
+	VisitGetProblemBlockStatusForUserResponse(w http.ResponseWriter) error
+}
+
+type GetProblemBlockStatusForUser200JSONResponse ProblemBlockStatusResponseModel
+
+func (response GetProblemBlockStatusForUser200JSONResponse) VisitGetProblemBlockStatusForUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type BlockProblemForUserRequestObject struct {
+	OrgLogin     string             `json:"org_login"`
+	ContestLogin string             `json:"contest_login"`
+	UserId       openapi_types.UUID `json:"user_id"`
+	ProblemId    openapi_types.UUID `json:"problem_id"`
+	Body         *BlockProblemForUserJSONRequestBody
+}
+
+type BlockProblemForUserResponseObject interface {
+	VisitBlockProblemForUserResponse(w http.ResponseWriter) error
+}
+
+type BlockProblemForUser200Response struct {
+}
+
+func (response BlockProblemForUser200Response) VisitBlockProblemForUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
 type CreateContestProblemRequestObject struct {
 	OrgLogin     string `json:"org_login"`
 	ContestLogin string `json:"contest_login"`
@@ -25689,6 +26740,25 @@ func (response ListContestSubmissions200JSONResponse) VisitListContestSubmission
 	return json.NewEncoder(w).Encode(response)
 }
 
+type BlockSubmissionRequestObject struct {
+	OrgLogin     string             `json:"org_login"`
+	ContestLogin string             `json:"contest_login"`
+	SubmissionId openapi_types.UUID `json:"submission_id"`
+	Body         *BlockSubmissionJSONRequestBody
+}
+
+type BlockSubmissionResponseObject interface {
+	VisitBlockSubmissionResponse(w http.ResponseWriter) error
+}
+
+type BlockSubmission200Response struct {
+}
+
+func (response BlockSubmission200Response) VisitBlockSubmissionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
 type RejudgeSubmissionRequestObject struct {
 	OrgLogin     string             `json:"org_login"`
 	ContestLogin string             `json:"contest_login"`
@@ -25703,6 +26773,24 @@ type RejudgeSubmission200Response struct {
 }
 
 func (response RejudgeSubmission200Response) VisitRejudgeSubmissionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type UnblockSubmissionRequestObject struct {
+	OrgLogin     string             `json:"org_login"`
+	ContestLogin string             `json:"contest_login"`
+	SubmissionId openapi_types.UUID `json:"submission_id"`
+}
+
+type UnblockSubmissionResponseObject interface {
+	VisitUnblockSubmissionResponse(w http.ResponseWriter) error
+}
+
+type UnblockSubmission200Response struct {
+}
+
+func (response UnblockSubmission200Response) VisitUnblockSubmissionResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
 }
@@ -27844,6 +28932,15 @@ type StrictServerInterface interface {
 	// (GET /organizations/{org_login}/contests/{contest_login}/my-role)
 	GetMyContestRole(ctx context.Context, request GetMyContestRoleRequestObject) (GetMyContestRoleResponseObject, error)
 
+	// (DELETE /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block)
+	UnblockProblemForUser(ctx context.Context, request UnblockProblemForUserRequestObject) (UnblockProblemForUserResponseObject, error)
+
+	// (GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block)
+	GetProblemBlockStatusForUser(ctx context.Context, request GetProblemBlockStatusForUserRequestObject) (GetProblemBlockStatusForUserResponseObject, error)
+
+	// (POST /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block)
+	BlockProblemForUser(ctx context.Context, request BlockProblemForUserRequestObject) (BlockProblemForUserResponseObject, error)
+
 	// (POST /organizations/{org_login}/contests/{contest_login}/problems)
 	CreateContestProblem(ctx context.Context, request CreateContestProblemRequestObject) (CreateContestProblemResponseObject, error)
 
@@ -27865,8 +28962,14 @@ type StrictServerInterface interface {
 	// (GET /organizations/{org_login}/contests/{contest_login}/submissions)
 	ListContestSubmissions(ctx context.Context, request ListContestSubmissionsRequestObject) (ListContestSubmissionsResponseObject, error)
 
+	// (POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block)
+	BlockSubmission(ctx context.Context, request BlockSubmissionRequestObject) (BlockSubmissionResponseObject, error)
+
 	// (POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge)
 	RejudgeSubmission(ctx context.Context, request RejudgeSubmissionRequestObject) (RejudgeSubmissionResponseObject, error)
+
+	// (POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock)
+	UnblockSubmission(ctx context.Context, request UnblockSubmissionRequestObject) (UnblockSubmissionResponseObject, error)
 
 	// (DELETE /organizations/{org_login}/contests/{contest_login}/teams)
 	DeleteContestTeam(ctx context.Context, request DeleteContestTeamRequestObject) (DeleteContestTeamResponseObject, error)
@@ -28863,6 +29966,101 @@ func (sh *strictHandler) GetMyContestRole(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// UnblockProblemForUser operation middleware
+func (sh *strictHandler) UnblockProblemForUser(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID, params UnblockProblemForUserParams) {
+	var request UnblockProblemForUserRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.UserId = userId
+	request.ProblemId = problemId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnblockProblemForUser(ctx, request.(UnblockProblemForUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnblockProblemForUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnblockProblemForUserResponseObject); ok {
+		if err := validResponse.VisitUnblockProblemForUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblemBlockStatusForUser operation middleware
+func (sh *strictHandler) GetProblemBlockStatusForUser(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID) {
+	var request GetProblemBlockStatusForUserRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.UserId = userId
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblemBlockStatusForUser(ctx, request.(GetProblemBlockStatusForUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblemBlockStatusForUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemBlockStatusForUserResponseObject); ok {
+		if err := validResponse.VisitGetProblemBlockStatusForUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BlockProblemForUser operation middleware
+func (sh *strictHandler) BlockProblemForUser(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, userId openapi_types.UUID, problemId openapi_types.UUID) {
+	var request BlockProblemForUserRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.UserId = userId
+	request.ProblemId = problemId
+
+	var body BlockProblemForUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BlockProblemForUser(ctx, request.(BlockProblemForUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BlockProblemForUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BlockProblemForUserResponseObject); ok {
+		if err := validResponse.VisitBlockProblemForUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateContestProblem operation middleware
 func (sh *strictHandler) CreateContestProblem(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params CreateContestProblemParams) {
 	var request CreateContestProblemRequestObject
@@ -29058,6 +30256,41 @@ func (sh *strictHandler) ListContestSubmissions(w http.ResponseWriter, r *http.R
 	}
 }
 
+// BlockSubmission operation middleware
+func (sh *strictHandler) BlockSubmission(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, submissionId openapi_types.UUID) {
+	var request BlockSubmissionRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.SubmissionId = submissionId
+
+	var body BlockSubmissionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BlockSubmission(ctx, request.(BlockSubmissionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BlockSubmission")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BlockSubmissionResponseObject); ok {
+		if err := validResponse.VisitBlockSubmissionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RejudgeSubmission operation middleware
 func (sh *strictHandler) RejudgeSubmission(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, submissionId openapi_types.UUID) {
 	var request RejudgeSubmissionRequestObject
@@ -29079,6 +30312,34 @@ func (sh *strictHandler) RejudgeSubmission(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RejudgeSubmissionResponseObject); ok {
 		if err := validResponse.VisitRejudgeSubmissionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnblockSubmission operation middleware
+func (sh *strictHandler) UnblockSubmission(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, submissionId openapi_types.UUID) {
+	var request UnblockSubmissionRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.SubmissionId = submissionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnblockSubmission(ctx, request.(UnblockSubmissionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnblockSubmission")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnblockSubmissionResponseObject); ok {
+		if err := validResponse.VisitUnblockSubmissionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

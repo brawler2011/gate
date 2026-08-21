@@ -61,6 +61,24 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 		if err != nil {
 			return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "problem does not belong to contest")
 		}
+
+		block, err := uc.contestsUC.GetProblemBlockStatusForUser(ctx, creation.ContestId, creation.UserId, creation.ProblemId)
+		if err == nil && block != nil {
+			dqState := models.Disqualified
+			creation.State = &dqState
+			creation.BanReason = block.Reason
+
+			id, err := uc.submissionsRepo.CreateSubmission(ctx, creation)
+			if err != nil {
+				return uuid.Nil, err
+			}
+
+			submission, err := uc.submissionsRepo.GetSubmission(ctx, id)
+			if err == nil && uc.contestsUC != nil {
+				_ = uc.contestsUC.ProcessSubmissionResult(ctx, &submission)
+			}
+			return id, nil
+		}
 	}
 
 	var id uuid.UUID
@@ -93,6 +111,38 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 	}
 
 	return id, nil
+}
+
+func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, submissionID uuid.UUID, reason *string) error {
+	sub, err := uc.submissionsRepo.GetSubmission(ctx, submissionID)
+	if err != nil {
+		return err
+	}
+
+	if contestID != uuid.Nil && sub.ContestID != nil && *sub.ContestID != contestID {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "submission does not belong to specified contest")
+	}
+
+	if err := uc.submissionsRepo.BlockSubmission(ctx, submissionID, reason); err != nil {
+		return err
+	}
+
+	sub.State = models.Disqualified
+	sub.BanReason = reason
+	if uc.contestsUC != nil {
+		_ = uc.contestsUC.ProcessSubmissionResult(ctx, &sub)
+	}
+
+	return nil
+}
+
+func (uc *SubmissionsUseCase) UnblockSubmission(ctx context.Context, contestID, submissionID uuid.UUID) error {
+	filter := models.RejudgeFilter{
+		ContestID:    contestID,
+		SubmissionID: &submissionID,
+	}
+	_, err := uc.RejudgeSubmissions(ctx, filter)
+	return err
 }
 
 func newOutboxEventParams(ctx context.Context, submission models.Submission) (*models.CreateOutboxEventParams, error) {
