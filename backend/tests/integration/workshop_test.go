@@ -268,7 +268,7 @@ func workshopGoJudgeDockerfileContext() (string, string, error) {
 		return "", "", fmt.Errorf("failed to resolve workshop_test.go path")
 	}
 
-	buildContext := filepath.Join(filepath.Dir(thisFile), "../../pkg/sandbox")
+	buildContext := filepath.Join(filepath.Dir(thisFile), "../../../deploy/common/judge")
 	return buildContext, "Dockerfile", nil
 }
 

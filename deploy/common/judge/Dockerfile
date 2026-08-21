@@ -2,7 +2,7 @@ FROM criyle/go-judge:v1.11.3 AS gojudge
 
 FROM debian:bookworm-slim
 
-# Install the exact same compilers as HydroJudge
+# Install compilers and runtimes
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     gcc \

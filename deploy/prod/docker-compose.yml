@@ -204,14 +204,10 @@ services:
           memory: 128M
 
   go-judge:
-    build:
-      context: ../local
-      dockerfile: Dockerfile.go-judge
-    image: gate-go-judge-prod:latest
+    image: ghcr.io/brawler2011/gate-go-judge:${IMAGE_TAG:-prod}
     container_name: gate-go-judge-prod
     hostname: go-judge
     restart: unless-stopped
-    pull_policy: build
     command:
       - "-enable-grpc"
       - "-grpc-addr=0.0.0.0:5051"

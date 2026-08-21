@@ -54,9 +54,9 @@ services:
 
   go-judge:
     build:
-      context: .
-      dockerfile: Dockerfile.go-judge
-    image: gate-go-judge-local:latest
+      context: ../common/judge
+      dockerfile: Dockerfile
+    image: ghcr.io/brawler2011/gate-go-judge:latest
     container_name: gate-go-judge-local
     hostname: go-judge
     restart: unless-stopped

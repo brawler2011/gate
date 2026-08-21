@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -22,11 +23,17 @@ func TestIntegrationSandbox(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Spin up go-judge container using testcontainers-go and the local Dockerfile
+	_, thisFile, _, ok := runtime.Caller(0)
+	judgeContext := "../../../deploy/common/judge"
+	if ok {
+		judgeContext = filepath.Join(filepath.Dir(thisFile), "../../../deploy/common/judge")
+	}
+
+	// Spin up go-judge container using testcontainers-go and the unified Dockerfile
 	t.Log("Starting go-judge container...")
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:    ".",
+			Context:    judgeContext,
 			Dockerfile: "Dockerfile",
 			KeepImage:  true,
 		},
