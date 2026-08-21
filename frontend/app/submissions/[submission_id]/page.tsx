@@ -56,7 +56,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
   const canRejudge = contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
 
   return (
-    <DefaultLayout>
+    <DefaultLayout headerUser={user}>
       <Container size="lg" pt="md" pb="xl" px={{base: 'xs', sm: 'md'}}>
         <Stack gap="lg" align="flex-start" w="100%">
           <Title order={2}>

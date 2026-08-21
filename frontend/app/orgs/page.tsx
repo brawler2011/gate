@@ -15,13 +15,13 @@ const OrgsPage = async (): Promise<ReactNode> => {
   const user = me?.user ?? null;
   const [error, data] = await api.listOrganizations({page: 1, pageSize: 50});
   if (error) {
-    return <DefaultLayout><Container size="lg" py="lg"><ErrorDisplay error={error} /></Container></DefaultLayout>;
+    return <DefaultLayout headerUser={user}><Container size="lg" py="lg"><ErrorDisplay error={error} /></Container></DefaultLayout>;
   }
 
   const orgs = data!.organizations;
 
   return (
-    <DefaultLayout>
+    <DefaultLayout headerUser={user}>
       <Container size="lg" py="lg">
         <Stack gap="md">
           <Group justify="space-between" align="flex-end">

@@ -8,11 +8,13 @@ import type {
   HeaderOrganization,
   HeaderProblem,
 } from "@/components/shared/Header";
+import type {UserModel} from "@/contracts/core/v1";
 import type {AppShellProps} from "@mantine/core";
 import type {ReactNode} from "react";
 
 export type DefaultLayoutProps = {
   children: ReactNode;
+  headerUser?: UserModel | null;
   headerSecondaryNav?: ReactNode;
   headerSecondaryNavItems?: AdaptiveTabItem[];
   headerOrganizationId?: string;
@@ -29,6 +31,7 @@ export type DefaultLayoutProps = {
 
 export const DefaultLayout = ({
   children,
+  headerUser,
   headerSecondaryNav,
   headerSecondaryNavItems,
   headerOrganizationId: _headerOrganizationId,
@@ -42,6 +45,7 @@ export const DefaultLayout = ({
       {...props}
       header={
         <Header
+          user={headerUser}
           secondaryNav={headerSecondaryNav}
           secondaryNavItems={headerSecondaryNavItems}
           organization={headerOrganization}

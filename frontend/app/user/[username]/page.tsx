@@ -66,7 +66,7 @@ const Page = async ({params, searchParams}: Props): Promise<ReactNode> => {
   const user = userData.user;
 
   return (
-    <DefaultLayout>
+    <DefaultLayout headerUser={currentUser}>
       <ProfileContainer>
         <ProfileHeader
           username={user.username}

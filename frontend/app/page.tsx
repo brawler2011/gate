@@ -42,7 +42,7 @@ const Page = async (): Promise<ReactNode> => {
     const blogPosts = blogData?.posts || [];
 
     return (
-      <DefaultLayout>
+      <DefaultLayout headerUser={me?.user ?? null}>
         <Container size="lg" py="xl">
           <Grid gutter="xl">
             <GridCol span={{base: 12, md: 8}}>
@@ -84,7 +84,7 @@ const Page = async (): Promise<ReactNode> => {
   const blogPosts = blogData?.posts || [];
   
   return (
-    <DefaultLayout>
+    <DefaultLayout headerUser={null}>
       <Container size="md" py="xl">
         <Stack gap="xl">
           <Stack gap="md">

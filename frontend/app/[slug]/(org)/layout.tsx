@@ -28,11 +28,13 @@ const OrgLayout = async ({
     return children;
   }
 
+  const [, me] = await api.getMe();
   const org = orgData.organization;
   const showMembersTab = await canManageOrgMembers(org.login);
 
   return (
     <DefaultLayout
+      headerUser={me?.user ?? null}
       headerOrganization={{id: org.id, login: org.login, name: org.name}}
       headerSecondaryNav={
         <OrgHeaderNav

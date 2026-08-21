@@ -30,14 +30,16 @@ const ProblemLayout = async ({children, params}: Props): Promise<ReactNode> => {
   const [
     [problemError, problemResponse],
     [, orgResponse],
+    [, meResponse],
   ] = await Promise.all([
     api.getProblem({id: problem_id}),
     api.getOrganization({login: slug}),
+    api.getMe(),
   ]);
 
   if (problemError) {
     return (
-      <DefaultLayout>
+      <DefaultLayout headerUser={meResponse?.user ?? null}>
         <ErrorDisplay error={problemError} />
       </DefaultLayout>
     );
@@ -47,6 +49,7 @@ const ProblemLayout = async ({children, params}: Props): Promise<ReactNode> => {
 
   return (
     <DefaultLayout
+      headerUser={meResponse?.user ?? null}
       headerSecondaryNav={<ProblemHeaderNav slug={slug} problemId={problem_id} />}
       headerOrganization={org ? {id: org.id, login: org.login, name: org.name} : undefined}
       headerProblem={

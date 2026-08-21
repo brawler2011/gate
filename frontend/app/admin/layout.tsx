@@ -15,7 +15,7 @@ const AdminLayout = async ({children}: { children: React.ReactNode }): Promise<R
   }
 
   return (
-    <DefaultLayout headerSecondaryNav={<AdminHeaderNav />}>
+    <DefaultLayout headerUser={user} headerSecondaryNav={<AdminHeaderNav />}>
       {children}
     </DefaultLayout>
   );

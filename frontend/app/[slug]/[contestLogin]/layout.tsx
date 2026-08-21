@@ -25,6 +25,7 @@ const ContestLayout = async ({
 
   return (
     <DefaultLayout
+      headerUser={me?.user ?? null}
       headerContest={{
         id: response.contest.id,
         login: response.contest.login,
