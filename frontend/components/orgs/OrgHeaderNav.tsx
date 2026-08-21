@@ -13,12 +13,12 @@ import {type ReactNode} from "react";
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 
 export type OrgHeaderNavProps = {
-  orgId: string;
+  orgLogin: string;
   showMembersTab?: boolean;
 };
 
 export const OrgHeaderNav = ({
-  orgId,
+  orgLogin,
   showMembersTab = false,
 }: OrgHeaderNavProps): ReactNode => {
   const pathname = usePathname();
@@ -27,16 +27,16 @@ export const OrgHeaderNav = ({
     if (!pathname) {
       return "contests";
     }
-    if (pathname.includes(`/orgs/${orgId}/problems`)) {
+    if (pathname.includes(`/${orgLogin}/problems`)) {
       return "problems";
     }
-    if (pathname.includes(`/orgs/${orgId}/teams`)) {
+    if (pathname.includes(`/${orgLogin}/teams`)) {
       return "teams";
     }
-    if (pathname.includes(`/orgs/${orgId}/members`)) {
+    if (pathname.includes(`/${orgLogin}/members`)) {
       return "members";
     }
-    if (pathname.includes(`/orgs/${orgId}/settings`)) {
+    if (pathname.includes(`/${orgLogin}/settings`)) {
       return "settings";
     }
     return "contests";
@@ -48,21 +48,21 @@ export const OrgHeaderNav = ({
     {
       key: "contests",
       label: "Контесты",
-      href: `/orgs/${orgId}`,
+      href: `/${orgLogin}`,
       icon: IconTrophy,
       active: activeTab === "contests",
     },
     {
       key: "problems",
       label: "Задачи",
-      href: `/orgs/${orgId}/problems`,
+      href: `/${orgLogin}/problems`,
       icon: IconPuzzle,
       active: activeTab === "problems",
     },
     {
       key: "teams",
       label: "Команды",
-      href: `/orgs/${orgId}/teams`,
+      href: `/${orgLogin}/teams`,
       icon: IconUsersGroup,
       active: activeTab === "teams",
     },
@@ -72,7 +72,7 @@ export const OrgHeaderNav = ({
     items.push({
       key: "members",
       label: "Участники",
-      href: `/orgs/${orgId}/members`,
+      href: `/${orgLogin}/members`,
       icon: IconUsers,
       active: activeTab === "members",
     });
@@ -81,7 +81,7 @@ export const OrgHeaderNav = ({
   items.push({
     key: "settings",
     label: "Настройки",
-    href: `/orgs/${orgId}/settings`,
+    href: `/${orgLogin}/settings`,
     icon: IconSettings,
     active: activeTab === "settings",
   });

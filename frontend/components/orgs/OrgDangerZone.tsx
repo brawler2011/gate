@@ -11,9 +11,9 @@ import {api} from '@/lib/api';
 
 import type {ReactNode} from "react";
 
-type Props = { orgId: string; orgName: string };
+type Props = { orgLogin: string; orgName: string };
 
-export const OrgDangerZone = ({orgId, orgName}: Props): ReactNode => {
+export const OrgDangerZone = ({orgLogin, orgName}: Props): ReactNode => {
   const [opened, {open, close}] = useDisclosure(false);
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,7 @@ export const OrgDangerZone = ({orgId, orgName}: Props): ReactNode => {
 
   const handleDelete = async () => {
     setLoading(true);
-    const [error] = await api.deleteOrganization({id: orgId});
+    const [error] = await api.deleteOrganization({login: orgLogin});
     setLoading(false);
     if (error) {
       notifications.show({title: 'Ошибка', message: error.message, color: 'red'});

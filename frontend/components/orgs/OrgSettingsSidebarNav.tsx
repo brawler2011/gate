@@ -12,13 +12,13 @@ import {
 import type {ReactNode} from "react";
 
 interface OrgSettingsSidebarNavProps {
-  orgId: string;
+  orgLogin: string;
   activeSection: string;
   sections: readonly OrgSettingsNavSection[];
 }
 
 export const OrgSettingsSidebarNav = ({
-  orgId,
+  orgLogin,
   activeSection,
   sections,
 }: OrgSettingsSidebarNavProps): ReactNode => {
@@ -39,7 +39,7 @@ export const OrgSettingsSidebarNav = ({
             <Button
               key={section.key}
               component={Link}
-              href={`/orgs/${orgId}/settings?section=${section.key}`}
+              href={`/${orgLogin}/settings?section=${section.key}`}
               style={{textDecoration: "none"}}
               variant="transparent"
               size="sm"

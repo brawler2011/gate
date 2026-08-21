@@ -34,13 +34,18 @@ type OrganizationsUC interface {
 	GetOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID) (*models.Organization, error)
 	ListOrganizations(ctx context.Context, filter *models.OrganizationFilter, userID uuid.UUID) (*models.OrganizationList, error)
 	UpdateOrganization(ctx context.Context, orgID, userID uuid.UUID, input *models.UpdateOrganizationInput) error
+	UpdateOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID, input *models.UpdateOrganizationInput) error
 	DeleteOrganization(ctx context.Context, orgID, userID uuid.UUID) error
+	DeleteOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID) error
 
 	// Member management
 	AddMember(ctx context.Context, input *models.AddOrganizationMemberInput, requestUserID uuid.UUID) error
+	AddMemberByLogin(ctx context.Context, login string, input *models.AddOrganizationMemberInput, requestUserID uuid.UUID) error
 	ListMembers(ctx context.Context, orgID, requestUserID uuid.UUID) ([]models.OrganizationMember, error)
+	ListMembersByLogin(ctx context.Context, login string, requestUserID uuid.UUID) ([]models.OrganizationMember, error)
 	UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role models.OrganizationRole, requestUserID uuid.UUID) error
 	RemoveMember(ctx context.Context, orgID, userID, requestUserID uuid.UUID) error
+	RemoveMemberByLogin(ctx context.Context, login string, userID, requestUserID uuid.UUID) error
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.Organization, error)
 	ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, error)
 }

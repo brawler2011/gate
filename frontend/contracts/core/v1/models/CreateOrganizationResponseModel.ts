@@ -2,9 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type UpdateOrganizationRequestModel = {
-    login?: string;
-    name?: string;
-    description?: string;
+export type CreateOrganizationResponseModel = {
+    id: string;
+    login: string;
 };
 

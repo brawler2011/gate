@@ -1,9 +1,9 @@
 import {Container} from "@mantine/core";
-import {redirect} from "next/navigation";
+import {notFound, redirect} from "next/navigation";
 
 import {OrgTeamsTab} from "@/components/orgs/OrgTeamsTab";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {api} from "@/lib/api";
+import {api, unwrapAndCache} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
 import {canManageOrgMembers} from "@/lib/permissions";
 
@@ -15,21 +15,37 @@ export const metadata: Metadata = {
 };
 
 type Props = {
-  params: Promise<{ org_id: string }>;
+  params: Promise<{ slug: string }>;
   searchParams: Promise<{ page?: string }>;
 };
 
+const getOrganization = unwrapAndCache(api.getOrganization);
+
 const OrgTeamsPage = async ({params, searchParams}: Props): Promise<ReactNode> => {
-  const {org_id} = await params;
+  const {slug} = await params;
+  let decoded = "";
+  try {
+    decoded = decodeURIComponent(slug);
+  } catch {
+    notFound();
+  }
+
+  if (decoded.startsWith("@")) {
+    notFound();
+  }
+
   const {page} = await searchParams;
   const currentPage = parsePage(page);
   if (!currentPage) {
-    redirect(`/orgs/${org_id}/teams`);
+    redirect(`/${decoded}/teams`);
   }
 
-  const showMembersTab = await canManageOrgMembers(org_id);
+  const orgData = await getOrganization({login: decoded});
+  const org = orgData.organization;
+
+  const showMembersTab = await canManageOrgMembers(org.login);
   const [teamsError, teamsData] = await api.listTeams({
-    organizationId: org_id,
+    organizationId: org.id,
     page: currentPage,
     pageSize: 20,
   });
@@ -41,7 +57,12 @@ const OrgTeamsPage = async ({params, searchParams}: Props): Promise<ReactNode> =
       {teamsError ? (
         <ErrorDisplay error={teamsError} />
       ) : (
-        <OrgTeamsTab teams={teams} orgId={org_id} canManage={showMembersTab} />
+        <OrgTeamsTab
+          teams={teams}
+          orgLogin={org.login}
+          orgId={org.id}
+          canManage={showMembersTab}
+        />
       )}
     </Container>
   );

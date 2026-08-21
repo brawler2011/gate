@@ -4,6 +4,7 @@
 /* eslint-disable */
 export type OrganizationModel = {
     id: string;
+    login: string;
     name: string;
     description?: string;
     created_at: string;

@@ -112,7 +112,7 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
 
     setDeletingId(orgToDelete.id);
     try {
-      const [err] = await api.deleteOrganization({id: orgToDelete.id});
+      const [err] = await api.deleteOrganization({login: orgToDelete.login});
       if (err) {
         notifications.show({
           title: "Ошибка",
@@ -201,7 +201,7 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
                   {orgs.map((org: OrganizationModel) => (
                     <Table.Tr
                       key={org.id}
-                      onClick={() => router.push(`/orgs/${org.id}`)}
+                      onClick={() => router.push(`/${org.login}`)}
                     >
                       <Table.Td>
                         <Text className={classes.titleCell} lineClamp={1}>

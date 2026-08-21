@@ -9,7 +9,7 @@ RETURNING *;
 SELECT * FROM organizations WHERE id = $1;
 
 -- name: GetOrganizationByLogin :one
-SELECT * FROM organizations WHERE login = $1;
+SELECT * FROM organizations WHERE LOWER(login) = LOWER($1);
 
 -- name: ListOrganizations :many
 SELECT * FROM organizations
@@ -23,7 +23,8 @@ WHERE ($1::text = '' OR name ILIKE '%' || $1 || '%');
 
 -- name: UpdateOrganization :exec
 UPDATE organizations
-SET name = COALESCE(sqlc.narg('name'), name),
+SET login = COALESCE(sqlc.narg('login'), login),
+    name = COALESCE(sqlc.narg('name'), name),
     description = COALESCE(sqlc.narg('description'), description),
     avatar_url = COALESCE(sqlc.narg('avatar_url'), avatar_url)
 WHERE id = $1;

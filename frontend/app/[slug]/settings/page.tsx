@@ -23,7 +23,7 @@ import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
 type Props = {
-  params: Promise<{ org_id: string }>;
+  params: Promise<{ slug: string }>;
   searchParams: Promise<{ section?: string }>;
 };
 
@@ -32,10 +32,21 @@ export const metadata: Metadata = {
 };
 
 const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode> => {
-  const {org_id} = await params;
+  const {slug} = await params;
+  let decoded = "";
+  try {
+    decoded = decodeURIComponent(slug);
+  } catch {
+    notFound();
+  }
+
+  if (decoded.startsWith("@")) {
+    notFound();
+  }
+
   const {section = "settings"} = await searchParams;
 
-  const [error, data] = await api.getOrganization({id: org_id});
+  const [error, data] = await api.getOrganization({login: decoded});
   if (error) {
     if (error.status === 404) {
       notFound();
@@ -48,7 +59,7 @@ const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode
   }
   const org = data!.organization;
 
-  const canManage = await canManageOrgMembers(org_id);
+  const canManage = await canManageOrgMembers(org.login);
   if (!canManage) {
     notFound();
   }
@@ -63,14 +74,14 @@ const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode
       <Stack gap="md">
         <Box className={classes.manageLayout}>
           <OrgSettingsSidebarNav
-            orgId={org_id}
+            orgLogin={org.login}
             activeSection={activeSection}
             sections={ORG_SETTINGS_NAV_SECTIONS}
           />
 
           <Box className={classes.manageContent}>
             <OrgSettingsMobileNav
-              orgId={org_id}
+              orgLogin={org.login}
               activeSection={activeSection}
               sections={ORG_SETTINGS_NAV_SECTIONS}
             />
@@ -80,7 +91,7 @@ const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode
                 <OrgSettingsForm org={org} />
               )}
               {activeSection === SECTIONS.DANGER && (
-                <OrgDangerZone orgId={org_id} orgName={org.name} />
+                <OrgDangerZone orgLogin={org.login} orgName={org.name} />
               )}
             </Box>
           </Box>

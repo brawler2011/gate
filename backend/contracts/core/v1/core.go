@@ -229,6 +229,12 @@ type ContestTeamModel struct {
 	TeamSlug        string             `json:"team_slug"`
 }
 
+// CreateOrganizationResponseModel defines model for CreateOrganizationResponseModel.
+type CreateOrganizationResponseModel struct {
+	Id    openapi_types.UUID `json:"id"`
+	Login string             `json:"login"`
+}
+
 // CreateSubmissionRequestModel defines model for CreateSubmissionRequestModel.
 type CreateSubmissionRequestModel struct {
 	Submission string `json:"submission"`
@@ -444,6 +450,7 @@ type OrganizationModel struct {
 	CreatedAt   time.Time          `json:"created_at"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
+	Login       string             `json:"login"`
 	Name        string             `json:"name"`
 	UpdatedAt   time.Time          `json:"updated_at"`
 }
@@ -724,6 +731,7 @@ type UpdateContestRequestModelFreezeStatus string
 // UpdateOrganizationRequestModel defines model for UpdateOrganizationRequestModel.
 type UpdateOrganizationRequestModel struct {
 	Description *string `json:"description,omitempty"`
+	Login       *string `json:"login,omitempty"`
 	Name        *string `json:"name,omitempty"`
 }
 
@@ -902,7 +910,8 @@ type ListOrganizationsParams struct {
 
 // CreateOrganizationParams defines parameters for CreateOrganization.
 type CreateOrganizationParams struct {
-	Name string `form:"name" json:"name"`
+	Name  string  `form:"name" json:"name"`
+	Login *string `form:"login,omitempty" json:"login,omitempty"`
 }
 
 // RemoveOrganizationMemberParams defines parameters for RemoveOrganizationMember.
@@ -1527,24 +1536,24 @@ type ClientInterface interface {
 	CreateOrganization(ctx context.Context, params *CreateOrganizationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteOrganization request
-	DeleteOrganization(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteOrganization(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetOrganization request
-	GetOrganization(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetOrganization(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateOrganizationWithBody request with any body
-	UpdateOrganizationWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateOrganizationWithBody(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateOrganization(ctx context.Context, id openapi_types.UUID, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateOrganization(ctx context.Context, login string, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RemoveOrganizationMember request
-	RemoveOrganizationMember(ctx context.Context, id openapi_types.UUID, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	RemoveOrganizationMember(ctx context.Context, login string, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListOrganizationMembers request
-	ListOrganizationMembers(ctx context.Context, id openapi_types.UUID, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListOrganizationMembers(ctx context.Context, login string, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AddOrganizationMember request
-	AddOrganizationMember(ctx context.Context, id openapi_types.UUID, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	AddOrganizationMember(ctx context.Context, login string, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListPosts request
 	ListPosts(ctx context.Context, params *ListPostsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2269,8 +2278,8 @@ func (c *Client) CreateOrganization(ctx context.Context, params *CreateOrganizat
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteOrganization(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteOrganizationRequest(c.Server, id)
+func (c *Client) DeleteOrganization(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteOrganizationRequest(c.Server, login)
 	if err != nil {
 		return nil, err
 	}
@@ -2281,8 +2290,8 @@ func (c *Client) DeleteOrganization(ctx context.Context, id openapi_types.UUID, 
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetOrganization(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetOrganizationRequest(c.Server, id)
+func (c *Client) GetOrganization(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOrganizationRequest(c.Server, login)
 	if err != nil {
 		return nil, err
 	}
@@ -2293,8 +2302,8 @@ func (c *Client) GetOrganization(ctx context.Context, id openapi_types.UUID, req
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateOrganizationWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateOrganizationRequestWithBody(c.Server, id, contentType, body)
+func (c *Client) UpdateOrganizationWithBody(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateOrganizationRequestWithBody(c.Server, login, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2305,8 +2314,8 @@ func (c *Client) UpdateOrganizationWithBody(ctx context.Context, id openapi_type
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateOrganization(ctx context.Context, id openapi_types.UUID, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateOrganizationRequest(c.Server, id, body)
+func (c *Client) UpdateOrganization(ctx context.Context, login string, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateOrganizationRequest(c.Server, login, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2317,8 +2326,8 @@ func (c *Client) UpdateOrganization(ctx context.Context, id openapi_types.UUID, 
 	return c.Client.Do(req)
 }
 
-func (c *Client) RemoveOrganizationMember(ctx context.Context, id openapi_types.UUID, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRemoveOrganizationMemberRequest(c.Server, id, params)
+func (c *Client) RemoveOrganizationMember(ctx context.Context, login string, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRemoveOrganizationMemberRequest(c.Server, login, params)
 	if err != nil {
 		return nil, err
 	}
@@ -2329,8 +2338,8 @@ func (c *Client) RemoveOrganizationMember(ctx context.Context, id openapi_types.
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListOrganizationMembers(ctx context.Context, id openapi_types.UUID, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListOrganizationMembersRequest(c.Server, id, params)
+func (c *Client) ListOrganizationMembers(ctx context.Context, login string, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListOrganizationMembersRequest(c.Server, login, params)
 	if err != nil {
 		return nil, err
 	}
@@ -2341,8 +2350,8 @@ func (c *Client) ListOrganizationMembers(ctx context.Context, id openapi_types.U
 	return c.Client.Do(req)
 }
 
-func (c *Client) AddOrganizationMember(ctx context.Context, id openapi_types.UUID, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewAddOrganizationMemberRequest(c.Server, id, params)
+func (c *Client) AddOrganizationMember(ctx context.Context, login string, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddOrganizationMemberRequest(c.Server, login, params)
 	if err != nil {
 		return nil, err
 	}
@@ -5308,6 +5317,22 @@ func NewCreateOrganizationRequest(server string, params *CreateOrganizationParam
 			}
 		}
 
+		if params.Login != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "login", runtime.ParamLocationQuery, *params.Login); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
 		queryURL.RawQuery = queryValues.Encode()
 	}
 
@@ -5320,12 +5345,12 @@ func NewCreateOrganizationRequest(server string, params *CreateOrganizationParam
 }
 
 // NewDeleteOrganizationRequest generates requests for DeleteOrganization
-func NewDeleteOrganizationRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+func NewDeleteOrganizationRequest(server string, login string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
 	if err != nil {
 		return nil, err
 	}
@@ -5354,12 +5379,12 @@ func NewDeleteOrganizationRequest(server string, id openapi_types.UUID) (*http.R
 }
 
 // NewGetOrganizationRequest generates requests for GetOrganization
-func NewGetOrganizationRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+func NewGetOrganizationRequest(server string, login string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
 	if err != nil {
 		return nil, err
 	}
@@ -5388,23 +5413,23 @@ func NewGetOrganizationRequest(server string, id openapi_types.UUID) (*http.Requ
 }
 
 // NewUpdateOrganizationRequest calls the generic UpdateOrganization builder with application/json body
-func NewUpdateOrganizationRequest(server string, id openapi_types.UUID, body UpdateOrganizationJSONRequestBody) (*http.Request, error) {
+func NewUpdateOrganizationRequest(server string, login string, body UpdateOrganizationJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateOrganizationRequestWithBody(server, id, "application/json", bodyReader)
+	return NewUpdateOrganizationRequestWithBody(server, login, "application/json", bodyReader)
 }
 
 // NewUpdateOrganizationRequestWithBody generates requests for UpdateOrganization with any type of body
-func NewUpdateOrganizationRequestWithBody(server string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+func NewUpdateOrganizationRequestWithBody(server string, login string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
 	if err != nil {
 		return nil, err
 	}
@@ -5435,12 +5460,12 @@ func NewUpdateOrganizationRequestWithBody(server string, id openapi_types.UUID, 
 }
 
 // NewRemoveOrganizationMemberRequest generates requests for RemoveOrganizationMember
-func NewRemoveOrganizationMemberRequest(server string, id openapi_types.UUID, params *RemoveOrganizationMemberParams) (*http.Request, error) {
+func NewRemoveOrganizationMemberRequest(server string, login string, params *RemoveOrganizationMemberParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
 	if err != nil {
 		return nil, err
 	}
@@ -5487,12 +5512,12 @@ func NewRemoveOrganizationMemberRequest(server string, id openapi_types.UUID, pa
 }
 
 // NewListOrganizationMembersRequest generates requests for ListOrganizationMembers
-func NewListOrganizationMembersRequest(server string, id openapi_types.UUID, params *ListOrganizationMembersParams) (*http.Request, error) {
+func NewListOrganizationMembersRequest(server string, login string, params *ListOrganizationMembersParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
 	if err != nil {
 		return nil, err
 	}
@@ -5551,12 +5576,12 @@ func NewListOrganizationMembersRequest(server string, id openapi_types.UUID, par
 }
 
 // NewAddOrganizationMemberRequest generates requests for AddOrganizationMember
-func NewAddOrganizationMemberRequest(server string, id openapi_types.UUID, params *AddOrganizationMemberParams) (*http.Request, error) {
+func NewAddOrganizationMemberRequest(server string, login string, params *AddOrganizationMemberParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
 	if err != nil {
 		return nil, err
 	}
@@ -10878,24 +10903,24 @@ type ClientWithResponsesInterface interface {
 	CreateOrganizationWithResponse(ctx context.Context, params *CreateOrganizationParams, reqEditors ...RequestEditorFn) (*CreateOrganizationResponse, error)
 
 	// DeleteOrganizationWithResponse request
-	DeleteOrganizationWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteOrganizationResponse, error)
+	DeleteOrganizationWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*DeleteOrganizationResponse, error)
 
 	// GetOrganizationWithResponse request
-	GetOrganizationWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetOrganizationResponse, error)
+	GetOrganizationWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*GetOrganizationResponse, error)
 
 	// UpdateOrganizationWithBodyWithResponse request with any body
-	UpdateOrganizationWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateOrganizationResponse, error)
+	UpdateOrganizationWithBodyWithResponse(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateOrganizationResponse, error)
 
-	UpdateOrganizationWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateOrganizationResponse, error)
+	UpdateOrganizationWithResponse(ctx context.Context, login string, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateOrganizationResponse, error)
 
 	// RemoveOrganizationMemberWithResponse request
-	RemoveOrganizationMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*RemoveOrganizationMemberResponse, error)
+	RemoveOrganizationMemberWithResponse(ctx context.Context, login string, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*RemoveOrganizationMemberResponse, error)
 
 	// ListOrganizationMembersWithResponse request
-	ListOrganizationMembersWithResponse(ctx context.Context, id openapi_types.UUID, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*ListOrganizationMembersResponse, error)
+	ListOrganizationMembersWithResponse(ctx context.Context, login string, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*ListOrganizationMembersResponse, error)
 
 	// AddOrganizationMemberWithResponse request
-	AddOrganizationMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*AddOrganizationMemberResponse, error)
+	AddOrganizationMemberWithResponse(ctx context.Context, login string, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*AddOrganizationMemberResponse, error)
 
 	// ListPostsWithResponse request
 	ListPostsWithResponse(ctx context.Context, params *ListPostsParams, reqEditors ...RequestEditorFn) (*ListPostsResponse, error)
@@ -11843,7 +11868,7 @@ func (r ListOrganizationsResponse) StatusCode() int {
 type CreateOrganizationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *CreationResponseModel
+	JSON200      *CreateOrganizationResponseModel
 }
 
 // Status returns HTTPResponse.Status
@@ -14439,8 +14464,8 @@ func (c *ClientWithResponses) CreateOrganizationWithResponse(ctx context.Context
 }
 
 // DeleteOrganizationWithResponse request returning *DeleteOrganizationResponse
-func (c *ClientWithResponses) DeleteOrganizationWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteOrganizationResponse, error) {
-	rsp, err := c.DeleteOrganization(ctx, id, reqEditors...)
+func (c *ClientWithResponses) DeleteOrganizationWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*DeleteOrganizationResponse, error) {
+	rsp, err := c.DeleteOrganization(ctx, login, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -14448,8 +14473,8 @@ func (c *ClientWithResponses) DeleteOrganizationWithResponse(ctx context.Context
 }
 
 // GetOrganizationWithResponse request returning *GetOrganizationResponse
-func (c *ClientWithResponses) GetOrganizationWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetOrganizationResponse, error) {
-	rsp, err := c.GetOrganization(ctx, id, reqEditors...)
+func (c *ClientWithResponses) GetOrganizationWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*GetOrganizationResponse, error) {
+	rsp, err := c.GetOrganization(ctx, login, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -14457,16 +14482,16 @@ func (c *ClientWithResponses) GetOrganizationWithResponse(ctx context.Context, i
 }
 
 // UpdateOrganizationWithBodyWithResponse request with arbitrary body returning *UpdateOrganizationResponse
-func (c *ClientWithResponses) UpdateOrganizationWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateOrganizationResponse, error) {
-	rsp, err := c.UpdateOrganizationWithBody(ctx, id, contentType, body, reqEditors...)
+func (c *ClientWithResponses) UpdateOrganizationWithBodyWithResponse(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateOrganizationResponse, error) {
+	rsp, err := c.UpdateOrganizationWithBody(ctx, login, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseUpdateOrganizationResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateOrganizationWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateOrganizationResponse, error) {
-	rsp, err := c.UpdateOrganization(ctx, id, body, reqEditors...)
+func (c *ClientWithResponses) UpdateOrganizationWithResponse(ctx context.Context, login string, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateOrganizationResponse, error) {
+	rsp, err := c.UpdateOrganization(ctx, login, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -14474,8 +14499,8 @@ func (c *ClientWithResponses) UpdateOrganizationWithResponse(ctx context.Context
 }
 
 // RemoveOrganizationMemberWithResponse request returning *RemoveOrganizationMemberResponse
-func (c *ClientWithResponses) RemoveOrganizationMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*RemoveOrganizationMemberResponse, error) {
-	rsp, err := c.RemoveOrganizationMember(ctx, id, params, reqEditors...)
+func (c *ClientWithResponses) RemoveOrganizationMemberWithResponse(ctx context.Context, login string, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*RemoveOrganizationMemberResponse, error) {
+	rsp, err := c.RemoveOrganizationMember(ctx, login, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -14483,8 +14508,8 @@ func (c *ClientWithResponses) RemoveOrganizationMemberWithResponse(ctx context.C
 }
 
 // ListOrganizationMembersWithResponse request returning *ListOrganizationMembersResponse
-func (c *ClientWithResponses) ListOrganizationMembersWithResponse(ctx context.Context, id openapi_types.UUID, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*ListOrganizationMembersResponse, error) {
-	rsp, err := c.ListOrganizationMembers(ctx, id, params, reqEditors...)
+func (c *ClientWithResponses) ListOrganizationMembersWithResponse(ctx context.Context, login string, params *ListOrganizationMembersParams, reqEditors ...RequestEditorFn) (*ListOrganizationMembersResponse, error) {
+	rsp, err := c.ListOrganizationMembers(ctx, login, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -14492,8 +14517,8 @@ func (c *ClientWithResponses) ListOrganizationMembersWithResponse(ctx context.Co
 }
 
 // AddOrganizationMemberWithResponse request returning *AddOrganizationMemberResponse
-func (c *ClientWithResponses) AddOrganizationMemberWithResponse(ctx context.Context, id openapi_types.UUID, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*AddOrganizationMemberResponse, error) {
-	rsp, err := c.AddOrganizationMember(ctx, id, params, reqEditors...)
+func (c *ClientWithResponses) AddOrganizationMemberWithResponse(ctx context.Context, login string, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*AddOrganizationMemberResponse, error) {
+	rsp, err := c.AddOrganizationMember(ctx, login, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -16181,7 +16206,7 @@ func ParseCreateOrganizationResponse(rsp *http.Response) (*CreateOrganizationRes
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest CreationResponseModel
+		var dest CreateOrganizationResponseModel
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -18815,23 +18840,23 @@ type ServerInterface interface {
 	// (POST /organizations)
 	CreateOrganization(w http.ResponseWriter, r *http.Request, params CreateOrganizationParams)
 	// Delete organization
-	// (DELETE /organizations/{id})
-	DeleteOrganization(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Get organization by ID
-	// (GET /organizations/{id})
-	GetOrganization(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// (DELETE /organizations/{login})
+	DeleteOrganization(w http.ResponseWriter, r *http.Request, login string)
+	// Get organization by login
+	// (GET /organizations/{login})
+	GetOrganization(w http.ResponseWriter, r *http.Request, login string)
 	// Update organization
-	// (PATCH /organizations/{id})
-	UpdateOrganization(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// (PATCH /organizations/{login})
+	UpdateOrganization(w http.ResponseWriter, r *http.Request, login string)
 	// Remove member from organization
-	// (DELETE /organizations/{id}/members)
-	RemoveOrganizationMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params RemoveOrganizationMemberParams)
+	// (DELETE /organizations/{login}/members)
+	RemoveOrganizationMember(w http.ResponseWriter, r *http.Request, login string, params RemoveOrganizationMemberParams)
 	// List organization members
-	// (GET /organizations/{id}/members)
-	ListOrganizationMembers(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListOrganizationMembersParams)
+	// (GET /organizations/{login}/members)
+	ListOrganizationMembers(w http.ResponseWriter, r *http.Request, login string, params ListOrganizationMembersParams)
 	// Add member to organization
-	// (POST /organizations/{id}/members)
-	AddOrganizationMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params AddOrganizationMemberParams)
+	// (POST /organizations/{login}/members)
+	AddOrganizationMember(w http.ResponseWriter, r *http.Request, login string, params AddOrganizationMemberParams)
 	// Get a list of posts
 	// (GET /posts)
 	ListPosts(w http.ResponseWriter, r *http.Request, params ListPostsParams)
@@ -20235,6 +20260,14 @@ func (siw *ServerInterfaceWrapper) CreateOrganization(w http.ResponseWriter, r *
 		return
 	}
 
+	// ------------- Optional query parameter "login" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "login", r.URL.Query(), &params.Login)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateOrganization(w, r, params)
 	}))
@@ -20251,17 +20284,17 @@ func (siw *ServerInterfaceWrapper) DeleteOrganization(w http.ResponseWriter, r *
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "login" -------------
+	var login string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
 		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteOrganization(w, r, id)
+		siw.Handler.DeleteOrganization(w, r, login)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20276,17 +20309,17 @@ func (siw *ServerInterfaceWrapper) GetOrganization(w http.ResponseWriter, r *htt
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "login" -------------
+	var login string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
 		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOrganization(w, r, id)
+		siw.Handler.GetOrganization(w, r, login)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20301,17 +20334,17 @@ func (siw *ServerInterfaceWrapper) UpdateOrganization(w http.ResponseWriter, r *
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "login" -------------
+	var login string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
 		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateOrganization(w, r, id)
+		siw.Handler.UpdateOrganization(w, r, login)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20326,12 +20359,12 @@ func (siw *ServerInterfaceWrapper) RemoveOrganizationMember(w http.ResponseWrite
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "login" -------------
+	var login string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
 		return
 	}
 
@@ -20354,7 +20387,7 @@ func (siw *ServerInterfaceWrapper) RemoveOrganizationMember(w http.ResponseWrite
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RemoveOrganizationMember(w, r, id, params)
+		siw.Handler.RemoveOrganizationMember(w, r, login, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20369,12 +20402,12 @@ func (siw *ServerInterfaceWrapper) ListOrganizationMembers(w http.ResponseWriter
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "login" -------------
+	var login string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
 		return
 	}
 
@@ -20412,7 +20445,7 @@ func (siw *ServerInterfaceWrapper) ListOrganizationMembers(w http.ResponseWriter
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListOrganizationMembers(w, r, id, params)
+		siw.Handler.ListOrganizationMembers(w, r, login, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -20427,12 +20460,12 @@ func (siw *ServerInterfaceWrapper) AddOrganizationMember(w http.ResponseWriter, 
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
+	// ------------- Path parameter "login" -------------
+	var login string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
 		return
 	}
 
@@ -20470,7 +20503,7 @@ func (siw *ServerInterfaceWrapper) AddOrganizationMember(w http.ResponseWriter, 
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.AddOrganizationMember(w, r, id, params)
+		siw.Handler.AddOrganizationMember(w, r, login, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -24360,12 +24393,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/languages", wrapper.GetLanguages)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations", wrapper.ListOrganizations)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations", wrapper.CreateOrganization)
-	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{id}", wrapper.DeleteOrganization)
-	m.HandleFunc("GET "+options.BaseURL+"/organizations/{id}", wrapper.GetOrganization)
-	m.HandleFunc("PATCH "+options.BaseURL+"/organizations/{id}", wrapper.UpdateOrganization)
-	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{id}/members", wrapper.RemoveOrganizationMember)
-	m.HandleFunc("GET "+options.BaseURL+"/organizations/{id}/members", wrapper.ListOrganizationMembers)
-	m.HandleFunc("POST "+options.BaseURL+"/organizations/{id}/members", wrapper.AddOrganizationMember)
+	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{login}", wrapper.DeleteOrganization)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{login}", wrapper.GetOrganization)
+	m.HandleFunc("PATCH "+options.BaseURL+"/organizations/{login}", wrapper.UpdateOrganization)
+	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{login}/members", wrapper.RemoveOrganizationMember)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{login}/members", wrapper.ListOrganizationMembers)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{login}/members", wrapper.AddOrganizationMember)
 	m.HandleFunc("GET "+options.BaseURL+"/posts", wrapper.ListPosts)
 	m.HandleFunc("POST "+options.BaseURL+"/posts", wrapper.CreatePost)
 	m.HandleFunc("DELETE "+options.BaseURL+"/posts/{id}", wrapper.DeletePostById)
@@ -24952,7 +24985,7 @@ type CreateOrganizationResponseObject interface {
 	VisitCreateOrganizationResponse(w http.ResponseWriter) error
 }
 
-type CreateOrganization200JSONResponse CreationResponseModel
+type CreateOrganization200JSONResponse CreateOrganizationResponseModel
 
 func (response CreateOrganization200JSONResponse) VisitCreateOrganizationResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -24962,7 +24995,7 @@ func (response CreateOrganization200JSONResponse) VisitCreateOrganizationRespons
 }
 
 type DeleteOrganizationRequestObject struct {
-	Id openapi_types.UUID `json:"id"`
+	Login string `json:"login"`
 }
 
 type DeleteOrganizationResponseObject interface {
@@ -24978,7 +25011,7 @@ func (response DeleteOrganization200Response) VisitDeleteOrganizationResponse(w 
 }
 
 type GetOrganizationRequestObject struct {
-	Id openapi_types.UUID `json:"id"`
+	Login string `json:"login"`
 }
 
 type GetOrganizationResponseObject interface {
@@ -24995,8 +25028,8 @@ func (response GetOrganization200JSONResponse) VisitGetOrganizationResponse(w ht
 }
 
 type UpdateOrganizationRequestObject struct {
-	Id   openapi_types.UUID `json:"id"`
-	Body *UpdateOrganizationJSONRequestBody
+	Login string `json:"login"`
+	Body  *UpdateOrganizationJSONRequestBody
 }
 
 type UpdateOrganizationResponseObject interface {
@@ -25012,7 +25045,7 @@ func (response UpdateOrganization200Response) VisitUpdateOrganizationResponse(w 
 }
 
 type RemoveOrganizationMemberRequestObject struct {
-	Id     openapi_types.UUID `json:"id"`
+	Login  string `json:"login"`
 	Params RemoveOrganizationMemberParams
 }
 
@@ -25029,7 +25062,7 @@ func (response RemoveOrganizationMember200Response) VisitRemoveOrganizationMembe
 }
 
 type ListOrganizationMembersRequestObject struct {
-	Id     openapi_types.UUID `json:"id"`
+	Login  string `json:"login"`
 	Params ListOrganizationMembersParams
 }
 
@@ -25047,7 +25080,7 @@ func (response ListOrganizationMembers200JSONResponse) VisitListOrganizationMemb
 }
 
 type AddOrganizationMemberRequestObject struct {
-	Id     openapi_types.UUID `json:"id"`
+	Login  string `json:"login"`
 	Params AddOrganizationMemberParams
 }
 
@@ -27143,22 +27176,22 @@ type StrictServerInterface interface {
 	// (POST /organizations)
 	CreateOrganization(ctx context.Context, request CreateOrganizationRequestObject) (CreateOrganizationResponseObject, error)
 	// Delete organization
-	// (DELETE /organizations/{id})
+	// (DELETE /organizations/{login})
 	DeleteOrganization(ctx context.Context, request DeleteOrganizationRequestObject) (DeleteOrganizationResponseObject, error)
-	// Get organization by ID
-	// (GET /organizations/{id})
+	// Get organization by login
+	// (GET /organizations/{login})
 	GetOrganization(ctx context.Context, request GetOrganizationRequestObject) (GetOrganizationResponseObject, error)
 	// Update organization
-	// (PATCH /organizations/{id})
+	// (PATCH /organizations/{login})
 	UpdateOrganization(ctx context.Context, request UpdateOrganizationRequestObject) (UpdateOrganizationResponseObject, error)
 	// Remove member from organization
-	// (DELETE /organizations/{id}/members)
+	// (DELETE /organizations/{login}/members)
 	RemoveOrganizationMember(ctx context.Context, request RemoveOrganizationMemberRequestObject) (RemoveOrganizationMemberResponseObject, error)
 	// List organization members
-	// (GET /organizations/{id}/members)
+	// (GET /organizations/{login}/members)
 	ListOrganizationMembers(ctx context.Context, request ListOrganizationMembersRequestObject) (ListOrganizationMembersResponseObject, error)
 	// Add member to organization
-	// (POST /organizations/{id}/members)
+	// (POST /organizations/{login}/members)
 	AddOrganizationMember(ctx context.Context, request AddOrganizationMemberRequestObject) (AddOrganizationMemberResponseObject, error)
 	// Get a list of posts
 	// (GET /posts)
@@ -28265,10 +28298,10 @@ func (sh *strictHandler) CreateOrganization(w http.ResponseWriter, r *http.Reque
 }
 
 // DeleteOrganization operation middleware
-func (sh *strictHandler) DeleteOrganization(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (sh *strictHandler) DeleteOrganization(w http.ResponseWriter, r *http.Request, login string) {
 	var request DeleteOrganizationRequestObject
 
-	request.Id = id
+	request.Login = login
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.DeleteOrganization(ctx, request.(DeleteOrganizationRequestObject))
@@ -28291,10 +28324,10 @@ func (sh *strictHandler) DeleteOrganization(w http.ResponseWriter, r *http.Reque
 }
 
 // GetOrganization operation middleware
-func (sh *strictHandler) GetOrganization(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (sh *strictHandler) GetOrganization(w http.ResponseWriter, r *http.Request, login string) {
 	var request GetOrganizationRequestObject
 
-	request.Id = id
+	request.Login = login
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetOrganization(ctx, request.(GetOrganizationRequestObject))
@@ -28317,10 +28350,10 @@ func (sh *strictHandler) GetOrganization(w http.ResponseWriter, r *http.Request,
 }
 
 // UpdateOrganization operation middleware
-func (sh *strictHandler) UpdateOrganization(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (sh *strictHandler) UpdateOrganization(w http.ResponseWriter, r *http.Request, login string) {
 	var request UpdateOrganizationRequestObject
 
-	request.Id = id
+	request.Login = login
 
 	var body UpdateOrganizationJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -28350,10 +28383,10 @@ func (sh *strictHandler) UpdateOrganization(w http.ResponseWriter, r *http.Reque
 }
 
 // RemoveOrganizationMember operation middleware
-func (sh *strictHandler) RemoveOrganizationMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params RemoveOrganizationMemberParams) {
+func (sh *strictHandler) RemoveOrganizationMember(w http.ResponseWriter, r *http.Request, login string, params RemoveOrganizationMemberParams) {
 	var request RemoveOrganizationMemberRequestObject
 
-	request.Id = id
+	request.Login = login
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
@@ -28377,10 +28410,10 @@ func (sh *strictHandler) RemoveOrganizationMember(w http.ResponseWriter, r *http
 }
 
 // ListOrganizationMembers operation middleware
-func (sh *strictHandler) ListOrganizationMembers(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params ListOrganizationMembersParams) {
+func (sh *strictHandler) ListOrganizationMembers(w http.ResponseWriter, r *http.Request, login string, params ListOrganizationMembersParams) {
 	var request ListOrganizationMembersRequestObject
 
-	request.Id = id
+	request.Login = login
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
@@ -28404,10 +28437,10 @@ func (sh *strictHandler) ListOrganizationMembers(w http.ResponseWriter, r *http.
 }
 
 // AddOrganizationMember operation middleware
-func (sh *strictHandler) AddOrganizationMember(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params AddOrganizationMemberParams) {
+func (sh *strictHandler) AddOrganizationMember(w http.ResponseWriter, r *http.Request, login string, params AddOrganizationMemberParams) {
 	var request AddOrganizationMemberRequestObject
 
-	request.Id = id
+	request.Login = login
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {

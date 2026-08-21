@@ -5,6 +5,7 @@
 import type { AuthResponseModel } from '../models/AuthResponseModel';
 import type { CompileResult } from '../models/CompileResult';
 import type { CreatedPost } from '../models/CreatedPost';
+import type { CreateOrganizationResponseModel } from '../models/CreateOrganizationResponseModel';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
 import type { CreationResponseModel } from '../models/CreationResponseModel';
 import type { GetContestProblemResponseModel } from '../models/GetContestProblemResponseModel';
@@ -2472,37 +2473,40 @@ export class DefaultService {
     }
     /**
      * Create a new organization
-     * @returns CreationResponseModel Organization created successfully
+     * @returns CreateOrganizationResponseModel Organization created successfully
      * @throws ApiError
      */
     public createOrganization({
         name,
+        login,
     }: {
         name: string,
-    }): CancelablePromise<CreationResponseModel> {
+        login?: string,
+    }): CancelablePromise<CreateOrganizationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/organizations',
             query: {
                 'name': name,
+                'login': login,
             },
         });
     }
     /**
-     * Get organization by ID
+     * Get organization by login
      * @returns GetOrganizationResponseModel Organization details
      * @throws ApiError
      */
     public getOrganization({
-        id,
+        login,
     }: {
-        id: string,
+        login: string,
     }): CancelablePromise<GetOrganizationResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/organizations/{id}',
+            url: '/organizations/{login}',
             path: {
-                'id': id,
+                'login': login,
             },
         });
     }
@@ -2512,17 +2516,17 @@ export class DefaultService {
      * @throws ApiError
      */
     public updateOrganization({
-        id,
+        login,
         requestBody,
     }: {
-        id: string,
+        login: string,
         requestBody: UpdateOrganizationRequestModel,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'PATCH',
-            url: '/organizations/{id}',
+            url: '/organizations/{login}',
             path: {
-                'id': id,
+                'login': login,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -2534,15 +2538,15 @@ export class DefaultService {
      * @throws ApiError
      */
     public deleteOrganization({
-        id,
+        login,
     }: {
-        id: string,
+        login: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'DELETE',
-            url: '/organizations/{id}',
+            url: '/organizations/{login}',
             path: {
-                'id': id,
+                'login': login,
             },
         });
     }
@@ -2552,19 +2556,19 @@ export class DefaultService {
      * @throws ApiError
      */
     public listOrganizationMembers({
-        id,
+        login,
         page,
         pageSize,
     }: {
-        id: string,
+        login: string,
         page: number,
         pageSize: number,
     }): CancelablePromise<ListOrganizationMembersResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/organizations/{id}/members',
+            url: '/organizations/{login}/members',
             path: {
-                'id': id,
+                'login': login,
             },
             query: {
                 'page': page,
@@ -2578,19 +2582,19 @@ export class DefaultService {
      * @throws ApiError
      */
     public addOrganizationMember({
-        id,
+        login,
         userId,
         role,
     }: {
-        id: string,
+        login: string,
         userId: string,
         role: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/organizations/{id}/members',
+            url: '/organizations/{login}/members',
             path: {
-                'id': id,
+                'login': login,
             },
             query: {
                 'user_id': userId,
@@ -2604,17 +2608,17 @@ export class DefaultService {
      * @throws ApiError
      */
     public removeOrganizationMember({
-        id,
+        login,
         userId,
     }: {
-        id: string,
+        login: string,
         userId: string,
     }): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'DELETE',
-            url: '/organizations/{id}/members',
+            url: '/organizations/{login}/members',
             path: {
-                'id': id,
+                'login': login,
             },
             query: {
                 'user_id': userId,

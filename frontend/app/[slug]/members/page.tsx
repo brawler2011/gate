@@ -8,7 +8,7 @@ import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
 type Props = {
-  params: Promise<{ org_id: string }>;
+  params: Promise<{ slug: string }>;
 };
 
 export const metadata: Metadata = {
@@ -16,16 +16,26 @@ export const metadata: Metadata = {
 };
 
 const OrgMembersPage = async ({params}: Props): Promise<ReactNode> => {
-  const {org_id} = await params;
+  const {slug} = await params;
+  let decoded = "";
+  try {
+    decoded = decodeURIComponent(slug);
+  } catch {
+    notFound();
+  }
 
-  const canManage = await canManageOrgMembers(org_id);
+  if (decoded.startsWith("@")) {
+    notFound();
+  }
+
+  const canManage = await canManageOrgMembers(decoded);
   if (!canManage) {
     notFound();
   }
 
   return (
     <Container size="lg" py="lg">
-      <OrgMembersManagement orgId={org_id} />
+      <OrgMembersManagement orgLogin={decoded} />
     </Container>
   );
 };

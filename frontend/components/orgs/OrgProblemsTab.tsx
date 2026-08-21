@@ -95,7 +95,7 @@ export const OrgProblemsTab = ({
         <Stack align="center">
           <NextPagination
             pagination={pagination}
-            baseUrl={`/orgs/${org.id}/problems`}
+            baseUrl={`/${org.login}/problems`}
           />
         </Stack>
       )}

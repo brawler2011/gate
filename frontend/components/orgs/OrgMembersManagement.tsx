@@ -35,9 +35,9 @@ const getRoleDisplay = (role: string) => {
   );
 };
 
-type Props = { orgId: string };
+type Props = { orgLogin: string };
 
-export const OrgMembersManagement = ({orgId}: Props): ReactNode => {
+export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
   const [members, setMembers] = useState<OrganizationMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,12 +58,12 @@ export const OrgMembersManagement = ({orgId}: Props): ReactNode => {
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
-    const [, data] = await api.listOrganizationMembers({id: orgId, page: 1, pageSize: 100});
+    const [, data] = await api.listOrganizationMembers({login: orgLogin, page: 1, pageSize: 100});
     setLoading(false);
     if (data) {
       setMembers(data.members);
     }
-  }, [orgId]);
+  }, [orgLogin]);
 
   useEffect(() => {
     loadMembers();
@@ -89,7 +89,7 @@ export const OrgMembersManagement = ({orgId}: Props): ReactNode => {
     }
     setAdding(true);
     const [error] = await api.addOrganizationMember({
-      id: orgId,
+      login: orgLogin,
       userId: selectedUserId,
       role: selectedRole as "owner" | "admin" | "member",
     });
@@ -111,7 +111,7 @@ export const OrgMembersManagement = ({orgId}: Props): ReactNode => {
 
   const handleRemove = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await api.removeOrganizationMember({id: orgId, userId});
+    const [error] = await api.removeOrganizationMember({login: orgLogin, userId});
     setDeletingId(null);
     if (error) {
       notifications.show({

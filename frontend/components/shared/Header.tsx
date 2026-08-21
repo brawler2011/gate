@@ -47,6 +47,7 @@ import type {UserModel} from "@/contracts/core/v1";
 
 export type HeaderOrganization = {
   id: string;
+  login?: string;
   name: string;
 };
 
@@ -263,7 +264,7 @@ export const Header = ({
                 {organization ? (
                   <>
                     <Link
-                      href={`/orgs/${organization.id}`}
+                      href={`/${organization.login || organization.id}`}
                       className={classes.brandTitleLink}
                       title={organization.name}
                     >

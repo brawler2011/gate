@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 	"unicode/utf8"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
@@ -186,6 +188,49 @@ func validateListOrganizationsParams(page, pageSize int32, search *string) error
 	return nil
 }
 
+var (
+	orgLoginRegex     = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$`)
+	reservedOrgLogins = map[string]struct{}{
+		"admin":       {},
+		"auth":        {},
+		"blog":        {},
+		"contests":    {},
+		"orgs":        {},
+		"problems":    {},
+		"submissions": {},
+		"api":         {},
+		"users":       {},
+		"settings":    {},
+		"profile":     {},
+		"login":       {},
+		"register":    {},
+		"dashboard":   {},
+		"workshop":    {},
+		"static":      {},
+		"_next":       {},
+		"favicon.ico": {},
+		"robots.txt":  {},
+		"sitemap.xml": {},
+	}
+)
+
+func validateOrgLogin(login string) error {
+	normalized := strings.ToLower(strings.TrimSpace(login))
+	if strings.HasPrefix(normalized, "@") {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "organization login cannot start with '@'")
+	}
+	if len(normalized) < 3 || len(normalized) > 32 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "organization login must be between 3 and 32 characters")
+	}
+	if !orgLoginRegex.MatchString(normalized) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "organization login must contain only lowercase latin letters, numbers, and hyphens, and cannot start or end with a hyphen")
+	}
+	if _, isReserved := reservedOrgLogins[normalized]; isReserved {
+		return pkg.Wrap(pkg.ErrBadInput, nil, fmt.Sprintf("organization login '%s' is reserved", normalized))
+	}
+	return nil
+}
+
 func validateCreateOrganizationParams(name string) error {
 	if !checkLength(name, 3, 64) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "name must be between 3 and 64 characters")
@@ -195,6 +240,12 @@ func validateCreateOrganizationParams(name string) error {
 }
 
 func validateUpdateOrganizationRequest(params corev1.UpdateOrganizationRequestModel) error {
+	if params.Login != nil {
+		if err := validateOrgLogin(*params.Login); err != nil {
+			return err
+		}
+	}
+
 	if params.Name != nil && !checkLength(*params.Name, 3, 64) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "name must be between 3 and 64 characters")
 	}

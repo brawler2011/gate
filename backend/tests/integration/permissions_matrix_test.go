@@ -146,7 +146,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		}
 
 		s.Run("Non-member cannot update organization", func() {
-			resp, err := s.client.UpdateOrganizationWithResponse(s.ctx, org.ID, updateBody, func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.UpdateOrganizationWithResponse(s.ctx, org.Login, updateBody, func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", otherUser.Id.String())
 				return nil
 			})
@@ -155,7 +155,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		})
 
 		s.Run("Org Owner can update organization", func() {
-			resp, err := s.client.UpdateOrganizationWithResponse(s.ctx, org.ID, updateBody, func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.UpdateOrganizationWithResponse(s.ctx, org.Login, updateBody, func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
 				return nil
 			})
@@ -164,7 +164,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		})
 
 		s.Run("Non-owner cannot delete organization", func() {
-			resp, err := s.client.DeleteOrganizationWithResponse(s.ctx, org.ID, func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.DeleteOrganizationWithResponse(s.ctx, org.Login, func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", otherUser.Id.String())
 				return nil
 			})
@@ -173,7 +173,7 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		})
 
 		s.Run("Org Owner can delete organization", func() {
-			resp, err := s.client.DeleteOrganizationWithResponse(s.ctx, org.ID, func(ctx context.Context, req *http.Request) error {
+			resp, err := s.client.DeleteOrganizationWithResponse(s.ctx, org.Login, func(ctx context.Context, req *http.Request) error {
 				req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
 				return nil
 			})

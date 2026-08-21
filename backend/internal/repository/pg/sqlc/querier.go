@@ -71,7 +71,7 @@ type Querier interface {
 	GetContestTeam(ctx context.Context, arg GetContestTeamParams) (ContestTeam, error)
 	GetLatestUserOrganizationID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organization, error)
-	GetOrganizationByLogin(ctx context.Context, login string) (Organization, error)
+	GetOrganizationByLogin(ctx context.Context, lower string) (Organization, error)
 	GetOrganizationMember(ctx context.Context, arg GetOrganizationMemberParams) (OrganizationMember, error)
 	GetPostByID(ctx context.Context, id uuid.UUID) (Post, error)
 	GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemByIDRow, error)

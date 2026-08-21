@@ -396,7 +396,7 @@ export class PermissionChecker {
   }
 }
 
-export const canManageOrgMembers = async (orgId: string): Promise<boolean> => {
+export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> => {
   const [, me] = await api.getMe();
   const currentUser = me?.user ?? null;
   if (!currentUser) {
@@ -408,7 +408,7 @@ export const canManageOrgMembers = async (orgId: string): Promise<boolean> => {
 
   let page = 1;
   while (page <= 10) {
-    const [error, data] = await api.listOrganizationMembers({id: orgId, page, pageSize: 100});
+    const [error, data] = await api.listOrganizationMembers({login: orgLogin, page, pageSize: 100});
     if (error || !data || !data.members) {
       return false;
     }

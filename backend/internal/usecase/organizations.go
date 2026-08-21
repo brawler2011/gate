@@ -143,6 +143,14 @@ func (uc *OrganizationsUseCase) UpdateOrganization(ctx context.Context, orgID, u
 	return uc.repo.UpdateOrganization(ctx, orgID, input)
 }
 
+func (uc *OrganizationsUseCase) UpdateOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID, input *models.UpdateOrganizationInput) error {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
+	if err != nil {
+		return err
+	}
+	return uc.UpdateOrganization(ctx, org.ID, userID, input)
+}
+
 func (uc *OrganizationsUseCase) DeleteOrganization(ctx context.Context, orgID, userID uuid.UUID) error {
 	// Check permissions - only owners can delete
 	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, orgID, userID, models.ActionDeleteOrganization)
@@ -154,6 +162,14 @@ func (uc *OrganizationsUseCase) DeleteOrganization(ctx context.Context, orgID, u
 	}
 
 	return uc.repo.DeleteOrganization(ctx, orgID)
+}
+
+func (uc *OrganizationsUseCase) DeleteOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID) error {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
+	if err != nil {
+		return err
+	}
+	return uc.DeleteOrganization(ctx, org.ID, userID)
 }
 
 // Member management
@@ -177,6 +193,15 @@ func (uc *OrganizationsUseCase) AddMember(ctx context.Context, input *models.Add
 	return uc.repo.AddMember(ctx, input.OrganizationID, input.UserID, input.Role)
 }
 
+func (uc *OrganizationsUseCase) AddMemberByLogin(ctx context.Context, login string, input *models.AddOrganizationMemberInput, requestUserID uuid.UUID) error {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
+	if err != nil {
+		return err
+	}
+	input.OrganizationID = org.ID
+	return uc.AddMember(ctx, input, requestUserID)
+}
+
 func (uc *OrganizationsUseCase) ListMembers(ctx context.Context, orgID, requestUserID uuid.UUID) ([]models.OrganizationMember, error) {
 	user, err := uc.usersRepo.GetUserById(ctx, requestUserID)
 	if err != nil {
@@ -194,6 +219,14 @@ func (uc *OrganizationsUseCase) ListMembers(ctx context.Context, orgID, requestU
 	}
 
 	return uc.repo.ListMembers(ctx, orgID)
+}
+
+func (uc *OrganizationsUseCase) ListMembersByLogin(ctx context.Context, login string, requestUserID uuid.UUID) ([]models.OrganizationMember, error) {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
+	if err != nil {
+		return nil, err
+	}
+	return uc.ListMembers(ctx, org.ID, requestUserID)
 }
 
 func (uc *OrganizationsUseCase) UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role models.OrganizationRole, requestUserID uuid.UUID) error {
@@ -220,6 +253,14 @@ func (uc *OrganizationsUseCase) RemoveMember(ctx context.Context, orgID, userID,
 	}
 
 	return uc.repo.RemoveMember(ctx, orgID, userID)
+}
+
+func (uc *OrganizationsUseCase) RemoveMemberByLogin(ctx context.Context, login string, userID, requestUserID uuid.UUID) error {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
+	if err != nil {
+		return err
+	}
+	return uc.RemoveMember(ctx, org.ID, userID, requestUserID)
 }
 
 func (uc *OrganizationsUseCase) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.Organization, error) {

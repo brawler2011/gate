@@ -123,11 +123,11 @@ func (q *Queries) GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organi
 }
 
 const getOrganizationByLogin = `-- name: GetOrganizationByLogin :one
-SELECT id, login, name, description, avatar_url, created_at, updated_at FROM organizations WHERE login = $1
+SELECT id, login, name, description, avatar_url, created_at, updated_at FROM organizations WHERE LOWER(login) = LOWER($1)
 `
 
-func (q *Queries) GetOrganizationByLogin(ctx context.Context, login string) (Organization, error) {
-	row := q.db.QueryRow(ctx, getOrganizationByLogin, login)
+func (q *Queries) GetOrganizationByLogin(ctx context.Context, lower string) (Organization, error) {
+	row := q.db.QueryRow(ctx, getOrganizationByLogin, lower)
 	var i Organization
 	err := row.Scan(
 		&i.ID,
@@ -320,14 +320,16 @@ func (q *Queries) RemoveOrganizationMember(ctx context.Context, arg RemoveOrgani
 
 const updateOrganization = `-- name: UpdateOrganization :exec
 UPDATE organizations
-SET name = COALESCE($2, name),
-    description = COALESCE($3, description),
-    avatar_url = COALESCE($4, avatar_url)
+SET login = COALESCE($2, login),
+    name = COALESCE($3, name),
+    description = COALESCE($4, description),
+    avatar_url = COALESCE($5, avatar_url)
 WHERE id = $1
 `
 
 type UpdateOrganizationParams struct {
 	ID          uuid.UUID `json:"id"`
+	Login       *string   `json:"login"`
 	Name        *string   `json:"name"`
 	Description *string   `json:"description"`
 	AvatarUrl   *string   `json:"avatar_url"`
@@ -336,6 +338,7 @@ type UpdateOrganizationParams struct {
 func (q *Queries) UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error {
 	_, err := q.db.Exec(ctx, updateOrganization,
 		arg.ID,
+		arg.Login,
 		arg.Name,
 		arg.Description,
 		arg.AvatarUrl,

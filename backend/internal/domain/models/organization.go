@@ -47,6 +47,7 @@ type CreateOrganizationInput struct {
 
 // UpdateOrganizationInput is the input for updating an organization
 type UpdateOrganizationInput struct {
+	Login       *string
 	Name        *string
 	Description *string
 	AvatarURL   *string

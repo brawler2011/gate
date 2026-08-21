@@ -11,7 +11,7 @@ type Props = { org: OrganizationModel };
 
 export const OrgCard = ({org}: Props): ReactNode => {
   return (
-    <Card component={Link} href={`/orgs/${org.id}`} withBorder radius="md" padding="md">
+    <Card component={Link} href={`/${org.login}`} withBorder radius="md" padding="md">
       <Group mb="xs" gap="xs">
         <IconBuilding size={18} color="var(--mantine-color-teal-6)" />
         <Title order={5} lineClamp={1}>{org.name}</Title>

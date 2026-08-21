@@ -18,6 +18,7 @@ export type { ContestProblemListItemModel } from './models/ContestProblemListIte
 export type { ContestProblemModel } from './models/ContestProblemModel';
 export type { ContestTeamModel } from './models/ContestTeamModel';
 export type { CreatedPost } from './models/CreatedPost';
+export type { CreateOrganizationResponseModel } from './models/CreateOrganizationResponseModel';
 export type { CreateSubmissionRequestModel } from './models/CreateSubmissionRequestModel';
 export type { CreationResponseModel } from './models/CreationResponseModel';
 export type { DashboardContestModel } from './models/DashboardContestModel';

@@ -12,7 +12,7 @@ import {api} from "@/lib/api";
 import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-type Props = { params: Promise<{ org_id: string; team_id: string }> };
+type Props = { params: Promise<{ slug: string; team_id: string }> };
 
 export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
   const {team_id} = await params;
@@ -24,7 +24,18 @@ export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
 };
 
 const TeamPage = async ({params}: Props): Promise<ReactNode> => {
-  const {org_id, team_id} = await params;
+  const {slug, team_id} = await params;
+  let decoded = "";
+  try {
+    decoded = decodeURIComponent(slug);
+  } catch {
+    notFound();
+  }
+
+  if (decoded.startsWith("@")) {
+    notFound();
+  }
+
   const [error, data] = await api.getTeam({id: team_id});
   if (error) {
     if (error.status === 404) {
@@ -41,7 +52,7 @@ const TeamPage = async ({params}: Props): Promise<ReactNode> => {
   return (
     <Container size="md" py="lg">
       <Stack gap="xl">
-        <LinkAnchor href={`/orgs/${org_id}`} size="sm">
+        <LinkAnchor href={`/${decoded}`} size="sm">
           <IconArrowLeft size={14} style={{marginRight: 4}} />
           Назад к организации
         </LinkAnchor>

@@ -57,9 +57,9 @@ export const OrgContestsTab = ({
         params.delete("search");
       }
 
-      router.push(`/orgs/${org.id}?${params.toString()}`);
+      router.push(`/${org.login}?${params.toString()}`);
     },
-    [org.id, router, searchParams],
+    [org.login, router, searchParams],
   );
 
   useEffect(() => {
@@ -119,7 +119,7 @@ export const OrgContestsTab = ({
         <Center>
           <NextPagination
             pagination={pagination}
-            baseUrl={`/orgs/${org.id}`}
+            baseUrl={`/${org.login}`}
             queryParams={{search}}
           />
         </Center>

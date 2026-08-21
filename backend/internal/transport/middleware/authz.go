@@ -24,8 +24,9 @@ type EvalContext struct {
 type AccessEvaluator func(ctx context.Context, evalCtx *EvalContext) error
 
 type strictAuthzDependencies struct {
-	permissionsUC interfaces.PermissionsUC
-	submissionsUC interfaces.SubmissionsUC
+	permissionsUC     interfaces.PermissionsUC
+	submissionsUC     interfaces.SubmissionsUC
+	organizationsRepo interfaces.OrganizationsRepo
 }
 
 // Parameterless Evaluators (Bare Function Pointers)
@@ -82,9 +83,22 @@ func RequireOrgPermission(action models.OrgAction) AccessEvaluator {
 		if evalCtx.User.IsGuest() {
 			return pkg.ErrUnauthenticated
 		}
-		orgID, err := extractUUIDFromRequest(evalCtx.Request, "OrganizationId", "OrgId", "Id")
-		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "organization id is required for authorization")
+		var orgID uuid.UUID
+		if targetLogin, err := extractStringFromRequest(evalCtx.Request, "Login", "OrgLogin"); err == nil && targetLogin != "" {
+			if evalCtx.Deps.organizationsRepo == nil {
+				return pkg.Wrap(pkg.ErrInternal, nil, "organizations repository dependency is missing")
+			}
+			org, err := evalCtx.Deps.organizationsRepo.GetOrganizationByLogin(ctx, targetLogin)
+			if err != nil {
+				return pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
+			}
+			orgID = org.ID
+		} else {
+			var err error
+			orgID, err = extractUUIDFromRequest(evalCtx.Request, "OrganizationId", "OrgId", "Id")
+			if err != nil {
+				return pkg.Wrap(pkg.ErrBadInput, err, "organization identifier is required for authorization")
+			}
 		}
 		allowed, err := evalCtx.Deps.permissionsUC.HasOrganizationPermission(ctx, orgID, evalCtx.User.Id, action)
 		if err != nil {
@@ -295,10 +309,11 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 }
 
 // AuthzStrictMiddleware validates operation access before strict handlers are called.
-func AuthzStrictMiddleware(permissionsUC interfaces.PermissionsUC, submissionsUC interfaces.SubmissionsUC) corev1.StrictMiddlewareFunc {
+func AuthzStrictMiddleware(permissionsUC interfaces.PermissionsUC, submissionsUC interfaces.SubmissionsUC, organizationsRepo interfaces.OrganizationsRepo) corev1.StrictMiddlewareFunc {
 	deps := strictAuthzDependencies{
-		permissionsUC: permissionsUC,
-		submissionsUC: submissionsUC,
+		permissionsUC:     permissionsUC,
+		submissionsUC:     submissionsUC,
+		organizationsRepo: organizationsRepo,
 	}
 
 	return func(next corev1.StrictHandlerFunc, operationID string) corev1.StrictHandlerFunc {

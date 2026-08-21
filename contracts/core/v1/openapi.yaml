@@ -2706,24 +2706,28 @@ paths:
           required: true
           schema:
             type: string
+        - name: login
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: Organization created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
-  /organizations/{id}:
+                $ref: "#/components/schemas/CreateOrganizationResponseModel"
+  /organizations/{login}:
     get:
       operationId: GetOrganization
-      summary: Get organization by ID
+      summary: Get organization by login
       parameters:
-        - name: id
+        - name: login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         "200":
           description: Organization details
@@ -2735,12 +2739,11 @@ paths:
       operationId: UpdateOrganization
       summary: Update organization
       parameters:
-        - name: id
+        - name: login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         required: true
         content:
@@ -2754,26 +2757,24 @@ paths:
       operationId: DeleteOrganization
       summary: Delete organization
       parameters:
-        - name: id
+        - name: login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
       responses:
         "200":
           description: Organization deleted successfully
-  /organizations/{id}/members:
+  /organizations/{login}/members:
     get:
       operationId: ListOrganizationMembers
       summary: List organization members
       parameters:
-        - name: id
+        - name: login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
         - name: page
           in: query
           required: true
@@ -2799,12 +2800,11 @@ paths:
       operationId: AddOrganizationMember
       summary: Add member to organization
       parameters:
-        - name: id
+        - name: login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
         - name: user_id
           in: query
           required: true
@@ -2823,12 +2823,11 @@ paths:
       operationId: RemoveOrganizationMember
       summary: Remove member from organization
       parameters:
-        - name: id
+        - name: login
           in: path
           required: true
           schema:
             type: string
-            format: uuid
         - name: user_id
           in: query
           required: true
@@ -4695,10 +4694,22 @@ components:
           format: int64
         message:
           type: string
+    CreateOrganizationResponseModel:
+      type: object
+      required:
+        - id
+        - login
+      properties:
+        id:
+          type: string
+          format: uuid
+        login:
+          type: string
     OrganizationModel:
       type: object
       required:
         - id
+        - login
         - name
         - created_at
         - updated_at
@@ -4706,6 +4717,8 @@ components:
         id:
           type: string
           format: uuid
+        login:
+          type: string
         name:
           type: string
         description:
@@ -4738,6 +4751,8 @@ components:
     UpdateOrganizationRequestModel:
       type: object
       properties:
+        login:
+          type: string
         name:
           type: string
         description:

@@ -467,6 +467,7 @@ func organizationDTO(o models.Organization) corev1.OrganizationModel {
 
 	return corev1.OrganizationModel{
 		Id:          o.ID,
+		Login:       o.Login,
 		Name:        o.Name,
 		Description: &description,
 		CreatedAt:   o.CreatedAt,

@@ -80,6 +80,9 @@ func (r *OrganizationsRepo) GetOrganizationByID(ctx context.Context, id uuid.UUI
 func (r *OrganizationsRepo) GetOrganizationByLogin(ctx context.Context, login string) (*models.Organization, error) {
 	org, err := r.q.GetOrganizationByLogin(ctx, login)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+			return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
+		}
 		return nil, fmt.Errorf("failed to get organization by login: %w", err)
 	}
 
@@ -144,6 +147,9 @@ func (r *OrganizationsRepo) UpdateOrganization(ctx context.Context, id uuid.UUID
 		ID: id,
 	}
 
+	if input.Login != nil {
+		params.Login = input.Login
+	}
 	if input.Name != nil {
 		params.Name = input.Name
 	}

@@ -286,7 +286,7 @@ func runApp(envFile string) error {
 	)
 
 	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, []corev1.StrictMiddlewareFunc{
-		middleware.AuthzStrictMiddleware(permissionsUC, submissionsUC),
+		middleware.AuthzStrictMiddleware(permissionsUC, submissionsUC, orgsRepo),
 	}, corev1.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			http.Error(w, err.Error(), http.StatusBadRequest)

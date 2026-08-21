@@ -12,13 +12,13 @@ import {
 import type {ReactNode} from "react";
 
 interface OrgSettingsMobileNavProps {
-  orgId: string;
+  orgLogin: string;
   activeSection: string;
   sections: readonly OrgSettingsNavSection[];
 }
 
 export const OrgSettingsMobileNav = ({
-  orgId,
+  orgLogin,
   activeSection,
   sections,
 }: OrgSettingsMobileNavProps): ReactNode => {
@@ -33,7 +33,7 @@ export const OrgSettingsMobileNav = ({
             <Button
               key={section.key}
               component={Link}
-              href={`/orgs/${orgId}/settings?section=${section.key}`}
+              href={`/${orgLogin}/settings?section=${section.key}`}
               style={{textDecoration: "none"}}
               variant="transparent"
               size="xs"

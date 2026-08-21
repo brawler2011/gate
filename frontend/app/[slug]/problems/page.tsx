@@ -1,5 +1,5 @@
 import {Container} from "@mantine/core";
-import {redirect} from "next/navigation";
+import {notFound, redirect} from "next/navigation";
 
 import {OrgProblemsTab} from "@/components/orgs/OrgProblemsTab";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
@@ -10,7 +10,7 @@ import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
 type Props = {
-  params: Promise<{ org_id: string }>;
+  params: Promise<{ slug: string }>;
   searchParams: Promise<{ page?: string }>;
 };
 
@@ -18,21 +18,34 @@ export const metadata: Metadata = {
   title: "Задачи",
 };
 
+const getOrganization = unwrapAndCache(api.getOrganization);
+
 const OrgProblemsPage = async ({params, searchParams}: Props): Promise<ReactNode> => {
-  const {org_id} = await params;
+  const {slug} = await params;
+  let decoded = "";
+  try {
+    decoded = decodeURIComponent(slug);
+  } catch {
+    notFound();
+  }
+
+  if (decoded.startsWith("@")) {
+    notFound();
+  }
+
   const {page} = await searchParams;
   const currentPage = parsePage(page);
   if (!currentPage) {
-    redirect(`/orgs/${org_id}/problems`);
+    redirect(`/${decoded}/problems`);
   }
 
-  const orgData = await unwrapAndCache(api.getOrganization)({id: org_id});
+  const orgData = await getOrganization({login: decoded});
 
   const [
     [problemsError, problemsData],
     [, me],
   ] = await Promise.all([
-    api.listProblems({page: currentPage, pageSize: 20, organizationId: org_id}),
+    api.listProblems({page: currentPage, pageSize: 20, organizationId: orgData.organization.id}),
     api.getMe(),
   ]);
 

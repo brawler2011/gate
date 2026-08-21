@@ -12,11 +12,12 @@ import type {ReactNode} from "react";
 
 type Props = {
   teams: TeamModel[];
+  orgLogin: string;
   orgId: string;
   canManage?: boolean;
 };
 
-export const OrgTeamsTab = ({teams, orgId, canManage = true}: Props): ReactNode => {
+export const OrgTeamsTab = ({teams, orgLogin, orgId, canManage = true}: Props): ReactNode => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredTeams = teams.filter((t) =>
@@ -57,7 +58,7 @@ export const OrgTeamsTab = ({teams, orgId, canManage = true}: Props): ReactNode 
             {filteredTeams.map((t) => (
               <Table.Tr key={t.id}>
                 <Table.Td>
-                  <Anchor component={Link} href={`/orgs/${orgId}/teams/${t.id}`} size="sm" fw={500}>
+                  <Anchor component={Link} href={`/${orgLogin}/teams/${t.id}`} size="sm" fw={500}>
                     {t.name}
                   </Anchor>
                 </Table.Td>
