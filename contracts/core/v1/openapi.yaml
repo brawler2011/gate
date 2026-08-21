@@ -3789,6 +3789,7 @@ components:
         - monitor_scope
         - submissions_list_scope
         - submissions_review_scope
+        - submission_details_scope
         - freeze_status
         - created_by
         - created_at
@@ -3817,6 +3818,8 @@ components:
         submissions_list_scope:
           type: string
         submissions_review_scope:
+          type: string
+        submission_details_scope:
           type: string
         freeze_duration_minutes:
           type: integer
@@ -3973,6 +3976,9 @@ components:
         submissions_review_scope:
           type: string
           example: admin
+        submission_details_scope:
+          type: string
+          example: moderator
         freeze_duration_minutes:
           type: integer
           format: int32
@@ -4071,6 +4077,11 @@ components:
           type: integer
           format: int32
           example: 1
+        failed_test:
+          type: integer
+          format: int32
+          nullable: true
+          example: 5
         problem_id:
           type: string
           format: uuid
@@ -4099,6 +4110,79 @@ components:
         created_at:
           type: string
           format: date-time
+    TestDetailItemModel:
+      type: object
+      required:
+        - test_index
+        - verdict
+        - time_ms
+        - memory_kb
+      properties:
+        test_index:
+          type: integer
+          format: int32
+          example: 1
+        verdict:
+          type: string
+          example: OK
+        time_ms:
+          type: integer
+          format: int32
+          example: 15
+        memory_kb:
+          type: integer
+          format: int32
+          example: 2048
+    FailedTestDetailModel:
+      type: object
+      required:
+        - test_index
+        - input
+        - output
+        - answer
+        - checker_output
+        - error_message
+        - is_truncated
+      properties:
+        test_index:
+          type: integer
+          format: int32
+          example: 5
+        input:
+          type: string
+          example: "5\n1 2 3 4 5"
+        output:
+          type: string
+          example: "14"
+        answer:
+          type: string
+          example: "15"
+        checker_output:
+          type: string
+          example: "wrong answer: expected 15, got 14"
+        error_message:
+          type: string
+          example: ""
+        is_truncated:
+          type: boolean
+          example: false
+    SubmissionTestDetailsModel:
+      type: object
+      properties:
+        compiler_output:
+          type: string
+          nullable: true
+        error_line:
+          type: integer
+          format: int32
+          nullable: true
+          example: 12
+        tests:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestDetailItemModel"
+        failed_test_details:
+          $ref: "#/components/schemas/FailedTestDetailModel"
     SubmissionModel:
       type: object
       required:
@@ -4157,6 +4241,13 @@ components:
           type: integer
           format: int32
           example: 1
+        failed_test:
+          type: integer
+          format: int32
+          nullable: true
+          example: 5
+        test_details:
+          $ref: "#/components/schemas/SubmissionTestDetailsModel"
         problem_id:
           type: string
           format: uuid

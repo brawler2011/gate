@@ -182,6 +182,7 @@ type ContestModel struct {
 	OrganizationLogin      string                   `json:"organization_login"`
 	Owner                  *UserModel               `json:"owner,omitempty"`
 	StartTime              *time.Time               `json:"start_time"`
+	SubmissionDetailsScope string                   `json:"submission_details_scope"`
 	SubmissionsListScope   string                   `json:"submissions_list_scope"`
 	SubmissionsReviewScope string                   `json:"submissions_review_scope"`
 	Title                  string                   `json:"title"`
@@ -283,6 +284,17 @@ type DashboardProblemModel struct {
 // Error defines model for Error.
 type Error struct {
 	Error *string `json:"error,omitempty"`
+}
+
+// FailedTestDetailModel defines model for FailedTestDetailModel.
+type FailedTestDetailModel struct {
+	Answer        string `json:"answer"`
+	CheckerOutput string `json:"checker_output"`
+	ErrorMessage  string `json:"error_message"`
+	Input         string `json:"input"`
+	IsTruncated   bool   `json:"is_truncated"`
+	Output        string `json:"output"`
+	TestIndex     int32  `json:"test_index"`
 }
 
 // FileEntry defines model for FileEntry.
@@ -623,25 +635,35 @@ type ScoreboardResponseModel struct {
 
 // SubmissionModel defines model for SubmissionModel.
 type SubmissionModel struct {
-	ContestId         openapi_types.UUID `json:"contest_id"`
-	ContestLogin      string             `json:"contest_login"`
-	ContestTitle      string             `json:"contest_title"`
-	CreatedAt         time.Time          `json:"created_at"`
-	Id                openapi_types.UUID `json:"id"`
-	Language          int32              `json:"language"`
-	MemoryStat        int32              `json:"memory_stat"`
-	OrganizationLogin *string            `json:"organization_login,omitempty"`
-	Penalty           int32              `json:"penalty"`
-	Position          int32              `json:"position"`
-	ProblemId         openapi_types.UUID `json:"problem_id"`
-	ProblemTitle      string             `json:"problem_title"`
-	Score             int32              `json:"score"`
-	State             int32              `json:"state"`
-	Submission        string             `json:"submission"`
-	TimeStat          int32              `json:"time_stat"`
-	UpdatedAt         time.Time          `json:"updated_at"`
-	UserId            openapi_types.UUID `json:"user_id"`
-	Username          string             `json:"username"`
+	ContestId         openapi_types.UUID          `json:"contest_id"`
+	ContestLogin      string                      `json:"contest_login"`
+	ContestTitle      string                      `json:"contest_title"`
+	CreatedAt         time.Time                   `json:"created_at"`
+	FailedTest        *int32                      `json:"failed_test"`
+	Id                openapi_types.UUID          `json:"id"`
+	Language          int32                       `json:"language"`
+	MemoryStat        int32                       `json:"memory_stat"`
+	OrganizationLogin *string                     `json:"organization_login,omitempty"`
+	Penalty           int32                       `json:"penalty"`
+	Position          int32                       `json:"position"`
+	ProblemId         openapi_types.UUID          `json:"problem_id"`
+	ProblemTitle      string                      `json:"problem_title"`
+	Score             int32                       `json:"score"`
+	State             int32                       `json:"state"`
+	Submission        string                      `json:"submission"`
+	TestDetails       *SubmissionTestDetailsModel `json:"test_details,omitempty"`
+	TimeStat          int32                       `json:"time_stat"`
+	UpdatedAt         time.Time                   `json:"updated_at"`
+	UserId            openapi_types.UUID          `json:"user_id"`
+	Username          string                      `json:"username"`
+}
+
+// SubmissionTestDetailsModel defines model for SubmissionTestDetailsModel.
+type SubmissionTestDetailsModel struct {
+	CompilerOutput    *string                `json:"compiler_output"`
+	ErrorLine         *int32                 `json:"error_line"`
+	FailedTestDetails *FailedTestDetailModel `json:"failed_test_details,omitempty"`
+	Tests             *[]TestDetailItemModel `json:"tests,omitempty"`
 }
 
 // SubmissionsListItemModel defines model for SubmissionsListItemModel.
@@ -650,6 +672,7 @@ type SubmissionsListItemModel struct {
 	ContestLogin      string             `json:"contest_login"`
 	ContestTitle      string             `json:"contest_title"`
 	CreatedAt         time.Time          `json:"created_at"`
+	FailedTest        *int32             `json:"failed_test"`
 	Id                openapi_types.UUID `json:"id"`
 	Language          int32              `json:"language"`
 	MemoryStat        int32              `json:"memory_stat"`
@@ -697,6 +720,14 @@ type TeamModel struct {
 	UpdatedAt      time.Time          `json:"updated_at"`
 }
 
+// TestDetailItemModel defines model for TestDetailItemModel.
+type TestDetailItemModel struct {
+	MemoryKb  int32  `json:"memory_kb"`
+	TestIndex int32  `json:"test_index"`
+	TimeMs    int32  `json:"time_ms"`
+	Verdict   string `json:"verdict"`
+}
+
 // TestReport defines model for TestReport.
 type TestReport struct {
 	FailedTests *int          `json:"failed_tests,omitempty"`
@@ -735,6 +766,7 @@ type UpdateContestRequestModel struct {
 	Login                  *string                                `json:"login,omitempty"`
 	MonitorScope           *string                                `json:"monitor_scope,omitempty"`
 	StartTime              *time.Time                             `json:"start_time"`
+	SubmissionDetailsScope *string                                `json:"submission_details_scope,omitempty"`
 	SubmissionsListScope   *string                                `json:"submissions_list_scope,omitempty"`
 	SubmissionsReviewScope *string                                `json:"submissions_review_scope,omitempty"`
 	Title                  *string                                `json:"title,omitempty"`

@@ -24,8 +24,9 @@ import {useState} from "react";
 import useSWR from "swr";
 
 import {NextPagination} from '@/components/shared/Pagination';
+import {SubmissionDetailsModal} from '@/components/submissions';
 import {api} from "@/lib/api";
-import {LangString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
+import {LangString, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 
@@ -53,6 +54,7 @@ export const AdminSubmissionsContent = ({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
 
   // Filter input states
   const [selectedState, setSelectedState] = useState<string>(state || "all");
@@ -326,11 +328,14 @@ export const AdminSubmissionsContent = ({
                   {submissions.map((submission: SubmissionModel) => (
                     <Table.Tr key={submission.id}>
                       <Table.Td>
-                        <Link href={`/submissions/${submission.id}`} style={{textDecoration: "none"}}>
-                          <Text c="blue" fw={500}>
-                            {submission.id.slice(0, 8)}...
-                          </Text>
-                        </Link>
+                        <Text
+                          c="blue"
+                          fw={500}
+                          style={{cursor: "pointer"}}
+                          onClick={() => setSelectedSubmissionId(submission.id)}
+                        >
+                          {submission.id.slice(0, 8)}...
+                        </Text>
                       </Table.Td>
                       <Table.Td>
                         <Link
@@ -377,9 +382,16 @@ export const AdminSubmissionsContent = ({
                         </Badge>
                       </Table.Td>
                       <Table.Td>
-                        <Text c={StateColor(submission.state)} fw={500}>
-                          {StateString(submission.state)}
-                        </Text>
+                        <Tooltip label={StateString(submission.state, submission.failed_test)} withArrow>
+                          <Text
+                            c={StateColor(submission.state)}
+                            fw={600}
+                            style={{cursor: "pointer"}}
+                            onClick={() => setSelectedSubmissionId(submission.id)}
+                          >
+                            {ShortVerdictString(submission.state, submission.failed_test)}
+                          </Text>
+                        </Tooltip>
                       </Table.Td>
                       <Table.Td>
                         <Text className={classes.dateCell}>
@@ -419,6 +431,12 @@ export const AdminSubmissionsContent = ({
           </>
         )}
       </Stack>
+
+      <SubmissionDetailsModal
+        submissionId={selectedSubmissionId}
+        opened={Boolean(selectedSubmissionId)}
+        onClose={() => setSelectedSubmissionId(null)}
+      />
     </Container>
   );
 };

@@ -2,6 +2,8 @@ package pg
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -52,12 +54,23 @@ func (r *SubmissionsRepo) CreateSubmission(ctx context.Context, creation *models
 }
 
 func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
+	var detailsBytes []byte
+	if update.TestDetails != nil {
+		var err error
+		detailsBytes, err = json.Marshal(update.TestDetails)
+		if err != nil {
+			return fmt.Errorf("marshal test details: %w", err)
+		}
+	}
+
 	err := r.queries.UpdateSubmission(ctx, sqlc.UpdateSubmissionParams{
-		State:      update.State,
-		Score:      int32(update.Score),
-		TimeStat:   int32(update.TimeStat),
-		MemoryStat: int32(update.MemoryStat),
-		ID:         id,
+		State:       update.State,
+		Score:       int32(update.Score),
+		TimeStat:    int32(update.TimeStat),
+		MemoryStat:  int32(update.MemoryStat),
+		FailedTest:  update.FailedTest,
+		TestDetails: detailsBytes,
+		ID:          id,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -176,20 +189,30 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 		contestLogin = *row.ContestLogin
 	}
 
+	var testDetails *models.SubmissionTestDetails
+	if len(row.TestDetails) > 0 {
+		var td models.SubmissionTestDetails
+		if err := json.Unmarshal(row.TestDetails, &td); err == nil {
+			testDetails = &td
+		}
+	}
+
 	return models.Submission{
-		ID:           row.ID,
-		CreatedBy:    createdBy,
-		Username:     username,
-		Submission:   row.Source,
-		State:        row.State,
-		Score:        row.Score,
-		Penalty:      row.Penalty,
-		TimeStat:     row.TimeStat,
-		MemoryStat:   row.MemoryStat,
-		Language:     row.Language,
-		ProblemID:    problemID,
-		ProblemTitle: problemTitle,
-		Position:     position,
+		ID:                row.ID,
+		CreatedBy:         createdBy,
+		Username:          username,
+		Submission:        row.Source,
+		State:             row.State,
+		Score:             row.Score,
+		Penalty:           row.Penalty,
+		TimeStat:          row.TimeStat,
+		MemoryStat:        row.MemoryStat,
+		Language:          row.Language,
+		FailedTest:        row.FailedTest,
+		TestDetails:       testDetails,
+		ProblemID:         problemID,
+		ProblemTitle:      problemTitle,
+		Position:          position,
 		ContestID:         contestID,
 		ContestLogin:      contestLogin,
 		ContestTitle:      contestTitle,
@@ -258,6 +281,7 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 		TimeStat:          row.TimeStat,
 		MemoryStat:        row.MemoryStat,
 		Language:          row.Language,
+		FailedTest:        row.FailedTest,
 		ProblemID:         problemID,
 		ProblemTitle:      problemTitle,
 		Position:          position,

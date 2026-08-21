@@ -114,6 +114,8 @@ SELECT s.id,
   s.time_stat,
   s.memory_stat,
   s.language,
+  s.failed_test,
+  s.test_details,
   s.problem_id,
   p.title AS problem_title,
   p.short_name AS problem_short_name,
@@ -147,6 +149,8 @@ type GetSubmissionRow struct {
 	TimeStat          int32                 `json:"time_stat"`
 	MemoryStat        int32                 `json:"memory_stat"`
 	Language          models.LanguageName   `json:"language"`
+	FailedTest        *int32                `json:"failed_test"`
+	TestDetails       []byte                `json:"test_details"`
 	ProblemID         pgtype.UUID           `json:"problem_id"`
 	ProblemTitle      *string               `json:"problem_title"`
 	ProblemShortName  *string               `json:"problem_short_name"`
@@ -174,6 +178,8 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.TimeStat,
 		&i.MemoryStat,
 		&i.Language,
+		&i.FailedTest,
+		&i.TestDetails,
 		&i.ProblemID,
 		&i.ProblemTitle,
 		&i.ProblemShortName,
@@ -199,6 +205,7 @@ SELECT s.id,
   s.time_stat,
   s.memory_stat,
   s.language,
+  s.failed_test,
   s.problem_id,
   p.title AS problem_title,
   p.short_name AS problem_short_name,
@@ -267,6 +274,7 @@ type ListSubmissionsRow struct {
 	TimeStat          int32               `json:"time_stat"`
 	MemoryStat        int32               `json:"memory_stat"`
 	Language          models.LanguageName `json:"language"`
+	FailedTest        *int32              `json:"failed_test"`
 	ProblemID         pgtype.UUID         `json:"problem_id"`
 	ProblemTitle      *string             `json:"problem_title"`
 	ProblemShortName  *string             `json:"problem_short_name"`
@@ -308,6 +316,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.TimeStat,
 			&i.MemoryStat,
 			&i.Language,
+			&i.FailedTest,
 			&i.ProblemID,
 			&i.ProblemTitle,
 			&i.ProblemShortName,
@@ -335,6 +344,8 @@ SET state = 1,
   score = 0,
   time_stat = 0,
   memory_stat = 0,
+  failed_test = NULL,
+  test_details = NULL,
   updated_at = NOW()
 WHERE contest_id = $1::uuid
   AND (
@@ -379,16 +390,20 @@ UPDATE submissions
 SET state = $1,
   score = $2,
   time_stat = $3,
-  memory_stat = $4
-WHERE id = $5::uuid
+  memory_stat = $4,
+  failed_test = $5,
+  test_details = $6
+WHERE id = $7::uuid
 `
 
 type UpdateSubmissionParams struct {
-	State      models.State `json:"state"`
-	Score      int32        `json:"score"`
-	TimeStat   int32        `json:"time_stat"`
-	MemoryStat int32        `json:"memory_stat"`
-	ID         uuid.UUID    `json:"id"`
+	State       models.State `json:"state"`
+	Score       int32        `json:"score"`
+	TimeStat    int32        `json:"time_stat"`
+	MemoryStat  int32        `json:"memory_stat"`
+	FailedTest  *int32       `json:"failed_test"`
+	TestDetails []byte       `json:"test_details"`
+	ID          uuid.UUID    `json:"id"`
 }
 
 func (q *Queries) UpdateSubmission(ctx context.Context, arg UpdateSubmissionParams) error {
@@ -397,6 +412,8 @@ func (q *Queries) UpdateSubmission(ctx context.Context, arg UpdateSubmissionPara
 		arg.Score,
 		arg.TimeStat,
 		arg.MemoryStat,
+		arg.FailedTest,
+		arg.TestDetails,
 		arg.ID,
 	)
 	return err

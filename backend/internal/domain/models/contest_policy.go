@@ -8,6 +8,7 @@ var contestActionPolicyKeys = map[ContestAction]string{
 	ActionListOwnSubmissions:     "list_own_submissions",
 	ActionGetOwnSubmission:       "get_own_submission",
 	ActionGetOtherUserSubmission: "get_other_user_submission",
+	ActionGetSubmissionDetails:   "get_submission_details",
 	ActionCreateSubmission:       "create_submission",
 }
 
@@ -20,6 +21,7 @@ var contestActionPermissionBits = map[ContestAction]ContestPermissionMask{
 	ActionListOwnSubmissions:     ContestPermissionListOwnSubmissions,
 	ActionGetOwnSubmission:       ContestPermissionGetOwnSubmission,
 	ActionGetOtherUserSubmission: ContestPermissionGetOtherUserSubmission,
+	ActionGetSubmissionDetails:   ContestPermissionGetSubmissionDetails,
 	ActionCreateSubmission:       ContestPermissionCreateSubmission,
 }
 
@@ -144,6 +146,16 @@ func (c *Contest) PermissionMaskForRole(role ContestRole) (ContestPermissionMask
 				}
 			}
 		}
+
+		if rawSubmissionDetailsScope, ok := c.Settings["submission_details_scope"]; ok {
+			if detailsScopeStr, ok := rawSubmissionDetailsScope.(string); ok && detailsScopeStr != "" {
+				if RoleGraterOrEquals(role, ContestRole(detailsScopeStr)) {
+					mask |= ContestPermissionGetSubmissionDetails
+				} else {
+					mask &^= ContestPermissionGetSubmissionDetails
+				}
+			}
+		}
 	}
 
 	return mask, hasConfiguredPermission
@@ -158,6 +170,7 @@ func DefaultContestAccessPolicy() map[string]interface{} {
 		"list_own_submissions":      true,
 		"get_own_submission":        true,
 		"get_other_user_submission": true,
+		"get_submission_details":    true,
 		"create_submission":         true,
 	}
 
@@ -169,6 +182,7 @@ func DefaultContestAccessPolicy() map[string]interface{} {
 		"list_own_submissions":      true,
 		"get_own_submission":        true,
 		"get_other_user_submission": true,
+		"get_submission_details":    true,
 		"create_submission":         true,
 	}
 
@@ -180,6 +194,7 @@ func DefaultContestAccessPolicy() map[string]interface{} {
 		"list_own_submissions":      true,
 		"get_own_submission":        true,
 		"get_other_user_submission": false,
+		"get_submission_details":    false,
 		"create_submission":         true,
 	}
 

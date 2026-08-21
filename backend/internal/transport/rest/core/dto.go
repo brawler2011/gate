@@ -172,6 +172,13 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		}
 	}
 
+	submissionDetailsScope := "moderator"
+	if rawSubmissionDetailsScope, ok := c.Settings["submission_details_scope"]; ok {
+		if parsedSubmissionDetailsScope, ok := rawSubmissionDetailsScope.(string); ok && parsedSubmissionDetailsScope != "" {
+			submissionDetailsScope = parsedSubmissionDetailsScope
+		}
+	}
+
 	freezeDurationMinutes := c.GetFreezeDurationMinutes()
 	freezeStatus := corev1.ContestModelFreezeStatus(c.GetFreezeStatus())
 
@@ -186,6 +193,7 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		MonitorScope:           monitorScope,
 		SubmissionsListScope:   submissionsListScope,
 		SubmissionsReviewScope: submissionsReviewScope,
+		SubmissionDetailsScope: submissionDetailsScope,
 		FreezeDurationMinutes:  freezeDurationMinutes,
 		FreezeStatus:           freezeStatus,
 		CreatedBy:              createdBy,
@@ -360,6 +368,7 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 		TimeStat:   s.TimeStat,
 		MemoryStat: s.MemoryStat,
 		Language:   s.Language,
+		FailedTest: s.FailedTest,
 
 		ProblemId:    uuidPtrToUUID(s.ProblemID),
 		ProblemTitle: s.ProblemTitle,
@@ -376,6 +385,45 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 	}
 }
 
+func SubmissionTestDetailsDTO(td *models.SubmissionTestDetails) *corev1.SubmissionTestDetailsModel {
+	if td == nil {
+		return nil
+	}
+
+	var tests []corev1.TestDetailItemModel
+	if td.Tests != nil {
+		tests = make([]corev1.TestDetailItemModel, len(td.Tests))
+		for i, t := range td.Tests {
+			tests[i] = corev1.TestDetailItemModel{
+				TestIndex: t.TestIndex,
+				Verdict:   t.Verdict,
+				TimeMs:    t.TimeMs,
+				MemoryKb:  t.MemoryKb,
+			}
+		}
+	}
+
+	var failedTestDetails *corev1.FailedTestDetailModel
+	if td.FailedTestDetails != nil {
+		failedTestDetails = &corev1.FailedTestDetailModel{
+			TestIndex:     td.FailedTestDetails.TestIndex,
+			Input:         td.FailedTestDetails.Input,
+			Output:        td.FailedTestDetails.Output,
+			Answer:        td.FailedTestDetails.Answer,
+			CheckerOutput: td.FailedTestDetails.CheckerOutput,
+			ErrorMessage:  td.FailedTestDetails.ErrorMessage,
+			IsTruncated:   td.FailedTestDetails.IsTruncated,
+		}
+	}
+
+	return &corev1.SubmissionTestDetailsModel{
+		CompilerOutput:    td.CompilerOutput,
+		ErrorLine:         td.ErrorLine,
+		Tests:             &tests,
+		FailedTestDetails: failedTestDetails,
+	}
+}
+
 func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 	var orgLogin *string
 	if s.OrganizationLogin != "" {
@@ -389,12 +437,14 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 
 		Submission: s.Submission,
 
-		State:      s.State,
-		Score:      s.Score,
-		Penalty:    s.Penalty,
-		TimeStat:   s.TimeStat,
-		MemoryStat: s.MemoryStat,
-		Language:   s.Language,
+		State:       s.State,
+		Score:       s.Score,
+		Penalty:     s.Penalty,
+		TimeStat:    s.TimeStat,
+		MemoryStat:  s.MemoryStat,
+		Language:    s.Language,
+		FailedTest:  s.FailedTest,
+		TestDetails: SubmissionTestDetailsDTO(s.TestDetails),
 
 		ProblemId:    uuidPtrToUUID(s.ProblemID),
 		ProblemTitle: s.ProblemTitle,

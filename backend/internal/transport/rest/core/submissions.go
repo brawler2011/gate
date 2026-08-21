@@ -56,6 +56,31 @@ func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmis
 		return nil, err
 	}
 
+	user := middleware.GetUser(ctx)
+	canViewDetails := false
+
+	if user.IsAdmin() {
+		canViewDetails = true
+	} else if submission.ContestID != nil {
+		allowed, err := h.permissionsUC.HasContestPermission(
+			ctx,
+			*submission.ContestID,
+			user.Id,
+			models.ActionGetSubmissionDetails,
+		)
+		if err == nil && allowed {
+			canViewDetails = true
+		}
+	} else {
+		if submission.CreatedBy != nil && *submission.CreatedBy == user.Id {
+			canViewDetails = true
+		}
+	}
+
+	if !canViewDetails {
+		submission.TestDetails = nil
+	}
+
 	return corev1.GetSubmission200JSONResponse{Submission: SolutionDTO(submission)}, nil
 }
 

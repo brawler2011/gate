@@ -42,6 +42,7 @@ const (
 	ContestPermissionListOwnSubmissions
 	ContestPermissionGetOwnSubmission
 	ContestPermissionGetOtherUserSubmission
+	ContestPermissionGetSubmissionDetails
 	ContestPermissionCreateSubmission
 )
 
@@ -57,6 +58,7 @@ const (
 		ContestPermissionListOwnSubmissions |
 		ContestPermissionGetOwnSubmission |
 		ContestPermissionGetOtherUserSubmission |
+		ContestPermissionGetSubmissionDetails |
 		ContestPermissionCreateSubmission
 	ContestPermissionMaskOwnerDefault = ContestPermissionMaskModeratorDefault
 )

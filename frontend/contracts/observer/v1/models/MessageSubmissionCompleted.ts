@@ -10,5 +10,6 @@ export type MessageSubmissionCompleted = (SubmissionEventMeta & {
     penalty: number;
     time_stat: number;
     memory_stat: number;
+    failed_test?: number | null;
 });
 

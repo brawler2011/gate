@@ -10,6 +10,7 @@ export type UpdateContestRequestModel = {
     monitor_scope?: string;
     submissions_list_scope?: string;
     submissions_review_scope?: string;
+    submission_details_scope?: string;
     /**
      * Freeze duration in minutes before contest end
      */

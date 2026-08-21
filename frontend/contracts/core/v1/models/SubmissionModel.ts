@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { SubmissionTestDetailsModel } from './SubmissionTestDetailsModel';
 export type SubmissionModel = {
     id: string;
     user_id: string;
@@ -13,6 +14,8 @@ export type SubmissionModel = {
     time_stat: number;
     memory_stat: number;
     language: number;
+    failed_test?: number | null;
+    test_details?: SubmissionTestDetailsModel;
     problem_id: string;
     problem_title: string;
     position: number;

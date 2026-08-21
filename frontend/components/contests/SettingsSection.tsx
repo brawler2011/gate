@@ -133,6 +133,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     monitor_scope: string;
     submissions_list_scope: string;
     submissions_review_scope: string;
+    submission_details_scope: string;
     start_time: string;
     end_time: string;
     freeze_duration_minutes: number | string | undefined | null;
@@ -146,6 +147,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       monitor_scope: contest.monitor_scope,
       submissions_list_scope: contest.submissions_list_scope,
       submissions_review_scope: contest.submissions_review_scope,
+      submission_details_scope: contest.submission_details_scope || "moderator",
       start_time: toLocalDatetimeString(contest.start_time),
       end_time: toLocalDatetimeString(contest.end_time),
       freeze_duration_minutes: contest.freeze_duration_minutes ?? "",
@@ -309,6 +311,14 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             value={form.values.submissions_review_scope}
             onChange={(value) => form.setFieldValue('submissions_review_scope', value)}
             options={SCOPE_OPTIONS}
+          />
+
+          <CustomSelect
+            label="Просмотр деталей и тестов посылок"
+            value={form.values.submission_details_scope}
+            onChange={(value) => form.setFieldValue('submission_details_scope', value)}
+            options={SCOPE_OPTIONS}
+            description="Определяет, кто может видеть подробный протокол тестирования, входные/выходные данные упавшего теста и лог ошибок"
           />
 
           <Button type="submit" loading={saving} fullWidth color={APP_COLORS.contests}>

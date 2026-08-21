@@ -50,12 +50,18 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 	// Compile user solution
 	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
 	if err != nil {
+		compilerOutput := err.Error()
+		errorLine := ParseErrorLine(language, compilerOutput)
 		return &FinalVerdict{
 			State:     models.GotCE,
 			Score:     0,
 			MaxTime:   0,
 			MaxMemory: 0,
 			Message:   fmt.Sprintf("Compilation failed: %v", err),
+			TestDetails: &models.SubmissionTestDetails{
+				CompilerOutput: &compilerOutput,
+				ErrorLine:      errorLine,
+			},
 		}, nil
 	}
 
@@ -91,6 +97,7 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
 				Message:    fmt.Sprintf("Failed to get answer for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
 			})
 			break
 		}
@@ -102,6 +109,8 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
 				Message:    fmt.Sprintf("Failed to run solution for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
+				Answer:     string(answer),
 			})
 			break
 		}
@@ -109,6 +118,7 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 		verdict := string(runRes.Status)
 		message := string(runRes.Stderr)
 		var checkerScore *float64
+		var checkerOutput string
 
 		if runRes.Status == sandbox.StatusOK {
 			if hasChecker {
@@ -119,6 +129,7 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 				} else {
 					verdict = string(chkRes.Status)
 					message = chkRes.Message
+					checkerOutput = chkRes.Message
 					checkerScore = chkRes.Score
 				}
 			} else {
@@ -132,13 +143,23 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 			}
 		}
 
+		var errorLine *int32
+		if verdict == "RE" || verdict == "Runtime Error" || len(message) > 0 {
+			errorLine = ParseErrorLine(language, message)
+		}
+
 		res := TestResult{
-			TestNumber: tc.TestIndex,
-			Verdict:    verdict,
-			Score:      checkerScore,
-			Time:       runRes.Time.Nanoseconds(),
-			Memory:     runRes.Memory,
-			Message:    message,
+			TestNumber:    tc.TestIndex,
+			Verdict:       verdict,
+			Score:         checkerScore,
+			Time:          runRes.Time.Nanoseconds(),
+			Memory:        runRes.Memory,
+			Message:       message,
+			Input:         string(input),
+			Output:        string(runRes.Stdout),
+			Answer:        string(answer),
+			CheckerOutput: checkerOutput,
+			ErrorLine:     errorLine,
 		}
 		results = append(results, res)
 
@@ -273,12 +294,18 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 
 	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
 	if err != nil {
+		compilerOutput := err.Error()
+		errorLine := ParseErrorLine(language, compilerOutput)
 		return &FinalVerdict{
 			State:     models.GotCE,
 			Score:     0,
 			MaxTime:   0,
 			MaxMemory: 0,
 			Message:   fmt.Sprintf("Compilation failed: %v", err),
+			TestDetails: &models.SubmissionTestDetails{
+				CompilerOutput: &compilerOutput,
+				ErrorLine:      errorLine,
+			},
 		}, nil
 	}
 
@@ -322,6 +349,7 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
 				Message:    fmt.Sprintf("Failed to get answer for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
 			})
 			break
 		}
@@ -332,6 +360,8 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
 				Message:    fmt.Sprintf("Failed to run solution for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
+				Answer:     string(answer),
 			})
 			break
 		}
@@ -339,6 +369,7 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 		verdict := string(runRes.Status)
 		message := string(runRes.Stderr)
 		var checkerScore *float64
+		var checkerOutput string
 
 		if runRes.Status == sandbox.StatusOK {
 			chkRes, err := s.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
@@ -348,17 +379,28 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 			} else {
 				verdict = string(chkRes.Status)
 				message = chkRes.Message
+				checkerOutput = chkRes.Message
 				checkerScore = chkRes.Score
 			}
 		}
 
+		var errorLine *int32
+		if verdict == "RE" || verdict == "Runtime Error" || len(message) > 0 {
+			errorLine = ParseErrorLine(language, message)
+		}
+
 		res := TestResult{
-			TestNumber: tc.TestIndex,
-			Verdict:    verdict,
-			Score:      checkerScore,
-			Time:       runRes.Time.Nanoseconds(),
-			Memory:     runRes.Memory,
-			Message:    message,
+			TestNumber:    tc.TestIndex,
+			Verdict:       verdict,
+			Score:         checkerScore,
+			Time:          runRes.Time.Nanoseconds(),
+			Memory:        runRes.Memory,
+			Message:       message,
+			Input:         string(input),
+			Output:        string(runRes.Stdout),
+			Answer:        string(answer),
+			CheckerOutput: checkerOutput,
+			ErrorLine:     errorLine,
 		}
 		results = append(results, res)
 	}
@@ -393,12 +435,18 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 
 	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
 	if err != nil {
+		compilerOutput := err.Error()
+		errorLine := ParseErrorLine(language, compilerOutput)
 		return &FinalVerdict{
 			State:     models.GotCE,
 			Score:     0,
 			MaxTime:   0,
 			MaxMemory: 0,
 			Message:   fmt.Sprintf("Compilation failed: %v", err),
+			TestDetails: &models.SubmissionTestDetails{
+				CompilerOutput: &compilerOutput,
+				ErrorLine:      errorLine,
+			},
 		}, nil
 	}
 
@@ -441,17 +489,27 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
 				Message:    fmt.Sprintf("Failed to interact for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
 			})
 			break
 		}
 
+		var errorLine *int32
+		if interactRes.Status == sandbox.StatusRE || len(interactRes.SolutionResult.Stderr) > 0 {
+			errorLine = ParseErrorLine(language, string(interactRes.SolutionResult.Stderr))
+		}
+
 		res := TestResult{
-			TestNumber: tc.TestIndex,
-			Verdict:    string(interactRes.Status),
-			Score:      interactRes.Score,
-			Time:       interactRes.SolutionResult.Time.Nanoseconds(),
-			Memory:     interactRes.SolutionResult.Memory,
-			Message:    interactRes.Message,
+			TestNumber:    tc.TestIndex,
+			Verdict:       string(interactRes.Status),
+			Score:         interactRes.Score,
+			Time:          interactRes.SolutionResult.Time.Nanoseconds(),
+			Memory:        interactRes.SolutionResult.Memory,
+			Message:       interactRes.Message,
+			Input:         string(input),
+			Output:        string(interactRes.SolutionResult.Stdout),
+			CheckerOutput: interactRes.Message,
+			ErrorLine:     errorLine,
 		}
 		results = append(results, res)
 	}

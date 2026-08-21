@@ -40,11 +40,37 @@ const (
 	Accepted State = 200 // accepted
 )
 
+type TestDetailItem struct {
+	TestIndex int32  `json:"test_index"`
+	Verdict   string `json:"verdict"`
+	TimeMs    int32  `json:"time_ms"`
+	MemoryKb  int32  `json:"memory_kb"`
+}
+
+type FailedTestDetail struct {
+	TestIndex     int32  `json:"test_index"`
+	Input         string `json:"input"`
+	Output        string `json:"output"`
+	Answer        string `json:"answer"`
+	CheckerOutput string `json:"checker_output"`
+	ErrorMessage  string `json:"error_message"`
+	IsTruncated   bool   `json:"is_truncated"`
+}
+
+type SubmissionTestDetails struct {
+	CompilerOutput    *string           `json:"compiler_output,omitempty"`
+	ErrorLine         *int32            `json:"error_line,omitempty"`
+	Tests             []TestDetailItem  `json:"tests,omitempty"`
+	FailedTestDetails *FailedTestDetail `json:"failed_test_details,omitempty"`
+}
+
 type SubmissionUpdate struct {
-	State      State
-	Score      int32
-	TimeStat   int32
-	MemoryStat int32
+	State       State
+	Score       int32
+	TimeStat    int32
+	MemoryStat  int32
+	FailedTest  *int32
+	TestDetails *SubmissionTestDetails
 }
 
 type SubmissionCreation struct {
@@ -83,6 +109,7 @@ type SubmissionListItem struct {
 	TimeStat          int32     `json:"time_stat"`
 	MemoryStat        int32     `json:"memory_stat"`
 	Language          int32     `json:"language"`
+	FailedTest        *int32    `json:"failed_test,omitempty"`
 	ProblemID         uuid.UUID `json:"problem_id"`
 	ProblemTitle      string    `json:"problem_title"`
 	Position          int32     `json:"position"`
@@ -95,25 +122,27 @@ type SubmissionListItem struct {
 }
 
 type Submission struct {
-	ID                uuid.UUID    `json:"id"`
-	CreatedBy         *uuid.UUID   `json:"created_by"`
-	Username          string       `json:"username"`
-	Submission        string       `json:"submission"`
-	State             State        `json:"state"`
-	Score             int32        `json:"score"`
-	Penalty           int32        `json:"penalty"`
-	TimeStat          int32        `json:"time_stat"`
-	MemoryStat        int32        `json:"memory_stat"`
-	Language          LanguageName `json:"language"`
-	ProblemID         *uuid.UUID   `json:"problem_id"`
-	ProblemTitle      string       `json:"problem_title"`
-	Position          *int32       `json:"position"`
-	ContestID         *uuid.UUID   `json:"contest_id"`
-	ContestLogin      string       `json:"contest_login"`
-	ContestTitle      string       `json:"contest_title"`
-	OrganizationLogin string       `json:"organization_login"`
-	UpdatedAt         time.Time    `json:"updated_at"`
-	CreatedAt         time.Time    `json:"created_at"`
+	ID                uuid.UUID              `json:"id"`
+	CreatedBy         *uuid.UUID             `json:"created_by"`
+	Username          string                 `json:"username"`
+	Submission        string                 `json:"submission"`
+	State             State                  `json:"state"`
+	Score             int32                  `json:"score"`
+	Penalty           int32                  `json:"penalty"`
+	TimeStat          int32                  `json:"time_stat"`
+	MemoryStat        int32                  `json:"memory_stat"`
+	Language          LanguageName           `json:"language"`
+	FailedTest        *int32                 `json:"failed_test,omitempty"`
+	TestDetails       *SubmissionTestDetails `json:"test_details,omitempty"`
+	ProblemID         *uuid.UUID             `json:"problem_id"`
+	ProblemTitle      string                 `json:"problem_title"`
+	Position          *int32                 `json:"position"`
+	ContestID         *uuid.UUID             `json:"contest_id"`
+	ContestLogin      string                 `json:"contest_login"`
+	ContestTitle      string                 `json:"contest_title"`
+	OrganizationLogin string                 `json:"organization_login"`
+	UpdatedAt         time.Time              `json:"updated_at"`
+	CreatedAt         time.Time              `json:"created_at"`
 }
 
 type SubmissionsList struct {
@@ -189,4 +218,5 @@ type SubmissionCompletedEvent struct {
 	Penalty    int32     `json:"penalty"`
 	TimeStat   int32     `json:"time_stat"`
 	MemoryStat int32     `json:"memory_stat"`
+	FailedTest *int32    `json:"failed_test,omitempty"`
 }

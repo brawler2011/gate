@@ -248,6 +248,10 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 		settingsMap["submissions_review_scope"] = *req.SubmissionsReviewScope
 		hasSettingsUpdate = true
 	}
+	if req.SubmissionDetailsScope != nil {
+		settingsMap["submission_details_scope"] = *req.SubmissionDetailsScope
+		hasSettingsUpdate = true
+	}
 	if req.FreezeDurationMinutes != nil {
 		settingsMap["freeze_duration_minutes"] = *req.FreezeDurationMinutes
 		hasSettingsUpdate = true

@@ -210,11 +210,19 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		return fmt.Errorf("judging failed: %w", err)
 	}
 
+	var failedTest *int32
+	if verdict.FailedTest != nil {
+		ft := safeInt32(*verdict.FailedTest)
+		failedTest = &ft
+	}
+
 	err = uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
-		State:      verdict.State,
-		Score:      verdict.Score,
-		TimeStat:   verdict.MaxTime,
-		MemoryStat: verdict.MaxMemory,
+		State:       verdict.State,
+		Score:       verdict.Score,
+		TimeStat:    verdict.MaxTime,
+		MemoryStat:  verdict.MaxMemory,
+		FailedTest:  failedTest,
+		TestDetails: verdict.TestDetails,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update submission: %w", err)
@@ -228,6 +236,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		verdict.MaxTime,
 		verdict.MaxMemory,
 		submission.Penalty,
+		failedTest,
 		meta,
 	); err != nil {
 		uc.logger.Error("failed to publish completed event", "error", err)
@@ -250,6 +259,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		"score", verdict.Score,
 		"time", verdict.MaxTime,
 		"memory", verdict.MaxMemory,
+		"failed_test", failedTest,
 	)
 
 	return nil
@@ -267,7 +277,7 @@ func (uc *JudgeUseCase) markInternalError(ctx context.Context, submissionID uuid
 		uc.logger.Error("failed to update submission with error", "error", updateErr)
 	}
 
-	if pubErr := uc.eventPublisher.PublishCompleted(ctx, submissionID, models.GotIE, 0, 0, 0, penalty, meta); pubErr != nil {
+	if pubErr := uc.eventPublisher.PublishCompleted(ctx, submissionID, models.GotIE, 0, 0, 0, penalty, nil, meta); pubErr != nil {
 		uc.logger.Error("failed to publish completed event", "error", pubErr)
 	}
 }

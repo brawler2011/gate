@@ -32,6 +32,7 @@ const (
 	ActionListOwnSubmissions     ContestAction = "list_own_submissions"
 	ActionGetOwnSubmission       ContestAction = "get_own_submission"
 	ActionGetOtherUserSubmission ContestAction = "get_other_user_submission"
+	ActionGetSubmissionDetails   ContestAction = "get_submission_details"
 	ActionCreateSubmission       ContestAction = "create_submission"
 )
 
@@ -53,5 +54,6 @@ type ContestPermissions struct {
 	ListOwnSubmissions     bool
 	GetOtherUserSubmission bool
 	GetOwnSubmission       bool
+	GetSubmissionDetails   bool
 	CreateSubmission       bool
 }

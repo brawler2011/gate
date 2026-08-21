@@ -168,6 +168,7 @@ const buildSubmissionFromCompleted = (payload: MessageSubmissionCompleted): Subm
     time_stat: payload.time_stat,
     memory_stat: payload.memory_stat,
     language: payload.language ?? 0,
+    failed_test: payload.failed_test,
     problem_id: payload.problem_id ?? '',
     problem_title: payload.problem_title ?? '',
     position: payload.position ?? 0,

@@ -97,6 +97,7 @@ const ContestPermissionMasks = {
   GetOwnSubmission: 1 << 5,
   GetOtherUserSubmission: 1 << 6,
   CreateSubmission: 1 << 7,
+  GetSubmissionDetails: 1 << 8,
 } as const;
 
 export class PermissionChecker {
@@ -254,6 +255,23 @@ export class PermissionChecker {
     }
 
     const requiredScope = (contest.submissions_list_scope ?? "moderator") as ContestScope;
+    return hasRequiredRole(this.contestRole, requiredScope);
+  }
+
+  canViewSubmissionDetails(contest: ContestModel): boolean {
+    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
+      return true;
+    }
+
+    if (this.permissionsMask !== null) {
+      return (this.permissionsMask & ContestPermissionMasks.GetSubmissionDetails) !== 0;
+    }
+
+    if (!this.contestRole) {
+      return false;
+    }
+
+    const requiredScope = (contest.submission_details_scope ?? "moderator") as ContestScope;
     return hasRequiredRole(this.contestRole, requiredScope);
   }
 

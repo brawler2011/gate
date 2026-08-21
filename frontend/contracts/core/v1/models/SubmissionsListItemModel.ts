@@ -12,6 +12,7 @@ export type SubmissionsListItemModel = {
     time_stat: number;
     memory_stat: number;
     language: number;
+    failed_test?: number | null;
     problem_id: string;
     problem_title: string;
     position: number;

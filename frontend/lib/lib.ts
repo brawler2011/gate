@@ -117,6 +117,37 @@ export const StateString = (state?: number | string, failedTest?: number | null)
 };
 
 /**
+ * Short Codeforces-style verdict representation (e.g., WA5, TLE50, AC, CE, RE)
+ */
+export const ShortVerdictString = (state?: number | string, failedTest?: number | null): string => {
+  const stateNum = typeof state === "string" ? parseInt(state) : state;
+  const testSuffix = failedTest !== null && failedTest !== undefined && failedTest > 0 ? `${failedTest}` : "";
+
+  switch (stateNum) {
+    case 1:
+      return "Тестируется";
+    case 101:
+      return "CE";
+    case 102:
+      return `TLE${testSuffix}`;
+    case 103:
+      return `MLE${testSuffix}`;
+    case 104:
+      return `RE${testSuffix}`;
+    case 105:
+      return `PE${testSuffix}`;
+    case 106:
+      return `WA${testSuffix}`;
+    case 107:
+      return "IE";
+    case 200:
+      return "AC";
+    default:
+      return "—";
+  }
+};
+
+/**
  * Format ISO timestamp to readable format
  */
 export const TimeBeautify = (timestamp?: string): string => {

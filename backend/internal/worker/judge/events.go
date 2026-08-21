@@ -125,6 +125,7 @@ func (ep *EventPublisher) PublishCompleted(
 	timeStat int32,
 	memoryStat int32,
 	penalty int32,
+	failedTest *int32,
 	meta models.SubmissionEventMeta,
 ) error {
 	event := models.SubmissionCompletedEvent{
@@ -135,6 +136,7 @@ func (ep *EventPublisher) PublishCompleted(
 		Penalty:             penalty,
 		TimeStat:            timeStat,
 		MemoryStat:          memoryStat,
+		FailedTest:          failedTest,
 	}
 
 	payload, err := json.Marshal(event)

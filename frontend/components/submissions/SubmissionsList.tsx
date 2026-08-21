@@ -19,7 +19,16 @@ import {IconRefresh} from "@tabler/icons-react";
 import Link from "next/link";
 import React, {useEffect, useState, type ReactNode} from "react";
 
-import {LangString, numberToLetters, ProblemTitle, StateColor, StateString, TimeBeautify} from "@/lib/lib";
+import {
+  LangString,
+  numberToLetters,
+  ProblemTitle,
+  ShortVerdictString,
+  StateColor,
+  StateString,
+  TimeBeautify,
+} from "@/lib/lib";
+import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 
 import styles from "./SubmissionsList.module.css";
 
@@ -35,10 +44,11 @@ interface SubmissionsListProps {
 
 interface VerdictCellProps {
     submission: SubmissionWithProgress;
+    onOpenDetails?: () => void;
 }
 
-const VerdictCell = ({submission}: VerdictCellProps) => {
-  const {state, progress} = submission;
+const VerdictCell = ({submission, onOpenDetails}: VerdictCellProps) => {
+  const {state, progress, failed_test} = submission;
 
   // State 1 = Saved (in queue, not yet testing)
   if (state === 1 && !progress) {
@@ -66,11 +76,20 @@ const VerdictCell = ({submission}: VerdictCellProps) => {
   }
 
   // Final verdict
-  const stateString = StateString(state);
+  const shortVerdict = ShortVerdictString(state, failed_test);
+  const fullVerdict = StateString(state, failed_test);
+
   return (
-    <Text c={StateColor(state)} fw={500}>
-      {stateString === "UK" ? state : stateString}
-    </Text>
+    <Tooltip label={fullVerdict} withArrow>
+      <Text
+        c={StateColor(state)}
+        fw={600}
+        style={{cursor: onOpenDetails ? "pointer" : "default"}}
+        onClick={onOpenDetails}
+      >
+        {shortVerdict}
+      </Text>
+    </Tooltip>
   );
 };
 
@@ -81,6 +100,7 @@ interface SubmissionRowProps {
     canRejudge?: boolean;
     onRejudgeSubmission?: (submissionId: string) => Promise<void>;
     rejudgingId?: string | null;
+    onOpenDetails: (submissionId: string) => void;
 }
 
 const SubmissionRow = ({
@@ -90,6 +110,7 @@ const SubmissionRow = ({
   canRejudge,
   onRejudgeSubmission,
   rejudgingId,
+  onOpenDetails,
 }: SubmissionRowProps) => {
   const [mounted, setMounted] = useState(!isNew);
 
@@ -146,7 +167,7 @@ const SubmissionRow = ({
             <Text>{LangString(submission.language)}</Text>
           </TableTd>
           <TableTd ta="center" className={styles.colVerdict}>
-            <VerdictCell submission={submission} />
+            <VerdictCell submission={submission} onOpenDetails={() => onOpenDetails(submission.id)} />
           </TableTd>
           <TableTd ta="center">
             <Text>{submission.time_stat} ms</Text>
@@ -156,9 +177,14 @@ const SubmissionRow = ({
           </TableTd>
           <TableTd ta="center">
             <Group gap="xs" justify="center" wrap="nowrap">
-              <Link href={`/submissions/${submission.id}`} style={{color: 'inherit'}}>
-                <Text span td="underline">Посмотреть</Text>
-              </Link>
+              <Text
+                span
+                td="underline"
+                style={{cursor: "pointer"}}
+                onClick={() => onOpenDetails(submission.id)}
+              >
+                Детали
+              </Text>
               {canRejudge && (
                 <Tooltip label="Перетестировать посылку">
                   <ActionIcon
@@ -187,6 +213,8 @@ const SubmissionsList = ({
   onRejudgeSubmission,
   rejudgingId,
 }: SubmissionsListProps): ReactNode => {
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+
   return (
     <>
       <TableScrollContainer minWidth={800}>
@@ -213,6 +241,7 @@ const SubmissionsList = ({
                 canRejudge={canRejudge}
                 onRejudgeSubmission={onRejudgeSubmission}
                 rejudgingId={rejudgingId}
+                onOpenDetails={(id) => setSelectedSubmissionId(id)}
               />
             ))}
           </TableTbody>
@@ -223,6 +252,15 @@ const SubmissionsList = ({
           Посылок нет
         </Text>
       )}
+
+      <SubmissionDetailsModal
+        submissionId={selectedSubmissionId}
+        opened={Boolean(selectedSubmissionId)}
+        onClose={() => setSelectedSubmissionId(null)}
+        canRejudge={canRejudge}
+        onRejudge={onRejudgeSubmission}
+        isRejudging={Boolean(rejudgingId && rejudgingId === selectedSubmissionId)}
+      />
     </>
   );
 };

@@ -17,9 +17,10 @@ SyntaxHighlighter.registerLanguage('python', python);
 interface CodeBlockProps {
     code: string;
     language: string;
+    highlightLine?: number | null;
 }
 
-const CodeBlock = ({code, language}: CodeBlockProps): ReactNode => {
+const CodeBlock = ({code, language, highlightLine}: CodeBlockProps): ReactNode => {
   const [theme, setTheme] = useState(oneDark);
   const colorScheme = useComputedColorScheme('dark', {getInitialValueInEffect: true});
 
@@ -31,9 +32,23 @@ const CodeBlock = ({code, language}: CodeBlockProps): ReactNode => {
     <SyntaxHighlighter
       language={language}
       style={theme}
-      customStyle={{width: "100%"}}
+      customStyle={{width: "100%", margin: 0, borderRadius: 'var(--mantine-radius-sm)'}}
       showLineNumbers
       wrapLines
+      lineProps={(lineNumber: number) => {
+        const isHighlighted = highlightLine !== undefined && highlightLine !== null && lineNumber === highlightLine;
+        return isHighlighted
+          ? {
+              style: {
+                backgroundColor: 'rgba(255, 0, 0, 0.18)',
+                display: 'block',
+                borderLeft: '4px solid #fa5252',
+                paddingLeft: '6px',
+                marginLeft: '-10px',
+              },
+            }
+          : {style: {display: 'block'}};
+      }}
     >
       {code.trim()}
     </SyntaxHighlighter>

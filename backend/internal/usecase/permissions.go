@@ -125,6 +125,8 @@ func (uc *PermissionsUseCase) HasContestPermission(
 		return uc.canGetOwnSubmission(cc), nil
 	case models.ActionGetOtherUserSubmission:
 		return uc.canViewOtherSubmission(cc), nil
+	case models.ActionGetSubmissionDetails:
+		return uc.canViewSubmissionDetails(cc), nil
 	case models.ActionCreateSubmission:
 		return uc.canSubmit(cc), nil
 	default:
@@ -240,6 +242,17 @@ func (uc *PermissionsUseCase) canViewOtherSubmission(cc *contestContext) bool {
 	}
 
 	return models.HasContestActionPermission(cc.contestPermissions, models.ActionGetOtherUserSubmission)
+}
+
+func (uc *PermissionsUseCase) canViewSubmissionDetails(cc *contestContext) bool {
+	if cc.isAdmin || cc.isOwner {
+		return true
+	}
+	if cc.contestRole == nil {
+		return false
+	}
+
+	return models.HasContestActionPermission(cc.contestPermissions, models.ActionGetSubmissionDetails)
 }
 
 func (uc *PermissionsUseCase) canSubmit(cc *contestContext) bool {
@@ -382,6 +395,7 @@ func (uc *PermissionsUseCase) GetContestPermissions(
 		ListOwnSubmissions:     uc.canListOwnSubmissions(cc),
 		GetOtherUserSubmission: uc.canViewOtherSubmission(cc),
 		GetOwnSubmission:       uc.canGetOwnSubmission(cc),
+		GetSubmissionDetails:   uc.canViewSubmissionDetails(cc),
 		CreateSubmission:       uc.canSubmit(cc),
 	}, nil
 }

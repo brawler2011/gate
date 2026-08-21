@@ -60,6 +60,7 @@ type MessageSubmissionCompleted struct {
 	ContestId    *openapi_types.UUID `json:"contest_id,omitempty"`
 	ContestTitle *string             `json:"contest_title,omitempty"`
 	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	FailedTest   *int32              `json:"failed_test"`
 	Id           openapi_types.UUID  `json:"id"`
 	Language     *int32              `json:"language,omitempty"`
 	MemoryStat   int32               `json:"memory_stat"`

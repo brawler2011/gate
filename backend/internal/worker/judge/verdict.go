@@ -3,6 +3,8 @@ package judge
 import (
 	"fmt"
 	"math"
+	"regexp"
+	"strconv"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
@@ -19,25 +21,82 @@ func safeInt32[T ~int | ~int64 | ~float64](v T) int32 {
 	return int32(v)
 }
 
+const maxTestDetailSize = 128 * 1024 // 128 KB
+
+func truncateDetailString(s string) (string, bool) {
+	if len(s) > maxTestDetailSize {
+		return s[:maxTestDetailSize], true
+	}
+	return s, false
+}
+
+var (
+	cppLineRegex     = regexp.MustCompile(`(?i)(?:foo\.cc|solution\.cpp|\.cpp|\.cc|\.cxx|\.h|\.hpp):(\d+):(?:\d+:)?\s*(?:error|fatal error|runtime error|warning|note):?`)
+	pythonLineRegex  = regexp.MustCompile(`(?i)(?:File\s+["'][^"']*["'],\s+line\s+(\d+)|line\s+(\d+))`)
+	goLineRegex      = regexp.MustCompile(`(?i)(?:foo\.go|\.go|main\.go):(\d+):(?:\d+:)?`)
+	javaLineRegex    = regexp.MustCompile(`(?i)(?:Main\.java|\.java):(\d+):\s*error:?`)
+	genericLineRegex = regexp.MustCompile(`(?i)(?:line|строка|:)\s*(\d+)`)
+)
+
+func ParseErrorLine(lang models.LanguageName, text string) *int32 {
+	if text == "" {
+		return nil
+	}
+
+	var match []string
+	switch lang {
+	case models.Cpp:
+		match = cppLineRegex.FindStringSubmatch(text)
+	case models.Python:
+		match = pythonLineRegex.FindStringSubmatch(text)
+	case models.Golang:
+		match = goLineRegex.FindStringSubmatch(text)
+	default:
+		match = cppLineRegex.FindStringSubmatch(text)
+	}
+
+	if len(match) == 0 {
+		match = genericLineRegex.FindStringSubmatch(text)
+	}
+
+	for i := 1; i < len(match); i++ {
+		if match[i] != "" {
+			if lineNum, err := strconv.Atoi(match[i]); err == nil && lineNum > 0 {
+				res := int32(lineNum)
+				return &res
+			}
+		}
+	}
+
+	return nil
+}
+
 // TestResult represents the result of a single test
 type TestResult struct {
-	TestNumber int
-	Verdict    string
-	Score      *float64
-	Time       int64 // nanoseconds
-	Memory     int64 // bytes
-	Message    string
-	Error      string
+	TestNumber    int
+	Verdict       string
+	Score         *float64
+	Time          int64 // nanoseconds
+	Memory        int64 // bytes
+	Message       string
+	Error         string
+	Input         string
+	Output        string
+	Answer        string
+	CheckerOutput string
+	IsTruncated   bool
+	ErrorLine     *int32
 }
 
 // FinalVerdict represents the final judging result
 type FinalVerdict struct {
-	State      models.State
-	Score      int32
-	MaxTime    int32 // milliseconds
-	MaxMemory  int32 // megabytes
-	Message    string
-	FailedTest *int // test number where it failed (for fail-fast)
+	State       models.State
+	Score       int32
+	MaxTime     int32 // milliseconds
+	MaxMemory   int32 // megabytes
+	Message     string
+	FailedTest  *int // test number where it failed (for fail-fast)
+	TestDetails *models.SubmissionTestDetails
 }
 
 // VerdictCalculator calculates final verdict from test results
@@ -78,6 +137,57 @@ func MapSandboxVerdict(verdict string) models.State {
 	}
 }
 
+func buildSubmissionTestDetails(results []TestResult) *models.SubmissionTestDetails {
+	if len(results) == 0 {
+		return nil
+	}
+
+	testItems := make([]models.TestDetailItem, 0, len(results))
+	var failedTestDetails *models.FailedTestDetail
+	var errorLine *int32
+
+	for _, result := range results {
+		timeMs := safeInt32(result.Time / 1_000_000)
+		memoryKb := safeInt32(result.Memory / 1024)
+
+		testItems = append(testItems, models.TestDetailItem{
+			TestIndex: safeInt32(result.TestNumber),
+			Verdict:   result.Verdict,
+			TimeMs:    timeMs,
+			MemoryKb:  memoryKb,
+		})
+
+		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" && failedTestDetails == nil {
+			inStr, inTrunc := truncateDetailString(result.Input)
+			outStr, outTrunc := truncateDetailString(result.Output)
+			ansStr, ansTrunc := truncateDetailString(result.Answer)
+			chkStr, chkTrunc := truncateDetailString(result.CheckerOutput)
+			errStr, errTrunc := truncateDetailString(result.Message)
+
+			isTruncated := result.IsTruncated || inTrunc || outTrunc || ansTrunc || chkTrunc || errTrunc
+
+			failedTestDetails = &models.FailedTestDetail{
+				TestIndex:     safeInt32(result.TestNumber),
+				Input:         inStr,
+				Output:        outStr,
+				Answer:        ansStr,
+				CheckerOutput: chkStr,
+				ErrorMessage:  errStr,
+				IsTruncated:   isTruncated,
+			}
+			if result.ErrorLine != nil {
+				errorLine = result.ErrorLine
+			}
+		}
+	}
+
+	return &models.SubmissionTestDetails{
+		ErrorLine:         errorLine,
+		Tests:             testItems,
+		FailedTestDetails: failedTestDetails,
+	}
+}
+
 // CalculateStandardVerdict calculates verdict for standard (pass-fail) problems
 func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *FinalVerdict {
 	var maxTime int64
@@ -94,22 +204,24 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" {
 			testNum := result.TestNumber
 			return &FinalVerdict{
-				State:      MapSandboxVerdict(result.Verdict),
-				Score:      0,
-				MaxTime:    safeInt32(maxTime / 1_000_000),     // convert ns to ms
-				MaxMemory:  safeInt32(maxMemory / 1024 / 1024), // convert bytes to MB
-				Message:    fmt.Sprintf("Failed on test %d: %s", result.TestNumber, result.Message),
-				FailedTest: &testNum,
+				State:       MapSandboxVerdict(result.Verdict),
+				Score:       0,
+				MaxTime:     safeInt32(maxTime / 1_000_000),     // convert ns to ms
+				MaxMemory:   safeInt32(maxMemory / 1024 / 1024), // convert bytes to MB
+				Message:     fmt.Sprintf("Failed on test %d: %s", result.TestNumber, result.Message),
+				FailedTest:  &testNum,
+				TestDetails: buildSubmissionTestDetails(results),
 			}
 		}
 	}
 
 	return &FinalVerdict{
-		State:     models.Accepted,
-		Score:     100,
-		MaxTime:   safeInt32(maxTime / 1_000_000),
-		MaxMemory: safeInt32(maxMemory / 1024 / 1024),
-		Message:   "All tests passed",
+		State:       models.Accepted,
+		Score:       100,
+		MaxTime:     safeInt32(maxTime / 1_000_000),
+		MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
+		Message:     "All tests passed",
+		TestDetails: buildSubmissionTestDetails(results),
 	}
 }
 
@@ -148,11 +260,12 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 	}
 
 	return &FinalVerdict{
-		State:     models.Accepted, // scoring problems always "Accepted" with a score
-		Score:     normalizedScore,
-		MaxTime:   safeInt32(maxTime / 1_000_000),
-		MaxMemory: safeInt32(maxMemory / 1024 / 1024),
-		Message:   fmt.Sprintf("Score: %d/%d points", int(totalScore), maxPossibleScore),
+		State:       models.Accepted, // scoring problems always "Accepted" with a score
+		Score:       normalizedScore,
+		MaxTime:     safeInt32(maxTime / 1_000_000),
+		MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
+		Message:     fmt.Sprintf("Score: %d/%d points", int(totalScore), maxPossibleScore),
+		TestDetails: buildSubmissionTestDetails(results),
 	}
 }
 
@@ -238,12 +351,13 @@ func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *
 		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" && result.Score == nil {
 			testNum := result.TestNumber
 			return &FinalVerdict{
-				State:      MapSandboxVerdict(result.Verdict),
-				Score:      0,
-				MaxTime:    safeInt32(maxTime / 1_000_000),
-				MaxMemory:  safeInt32(maxMemory / 1024 / 1024),
-				Message:    fmt.Sprintf("Failed on test %d: %s", result.TestNumber, result.Message),
-				FailedTest: &testNum,
+				State:       MapSandboxVerdict(result.Verdict),
+				Score:       0,
+				MaxTime:     safeInt32(maxTime / 1_000_000),
+				MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
+				Message:     fmt.Sprintf("Failed on test %d: %s", result.TestNumber, result.Message),
+				FailedTest:  &testNum,
+				TestDetails: buildSubmissionTestDetails(results),
 			}
 		}
 	}
@@ -251,20 +365,22 @@ func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *
 	if hasScore && len(results) > 0 {
 		avgScore := totalScore / float64(len(results))
 		return &FinalVerdict{
-			State:     models.Accepted,
-			Score:     safeInt32(avgScore),
-			MaxTime:   safeInt32(maxTime / 1_000_000),
-			MaxMemory: safeInt32(maxMemory / 1024 / 1024),
-			Message:   fmt.Sprintf("Score: %.1f points", avgScore),
+			State:       models.Accepted,
+			Score:       safeInt32(avgScore),
+			MaxTime:     safeInt32(maxTime / 1_000_000),
+			MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
+			Message:     fmt.Sprintf("Score: %.1f points", avgScore),
+			TestDetails: buildSubmissionTestDetails(results),
 		}
 	}
 
 	return &FinalVerdict{
-		State:     models.Accepted,
-		Score:     100,
-		MaxTime:   safeInt32(maxTime / 1_000_000),
-		MaxMemory: safeInt32(maxMemory / 1024 / 1024),
-		Message:   "All tests passed",
+		State:       models.Accepted,
+		Score:       100,
+		MaxTime:     safeInt32(maxTime / 1_000_000),
+		MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
+		Message:     "All tests passed",
+		TestDetails: buildSubmissionTestDetails(results),
 	}
 }
 

@@ -589,19 +589,21 @@ type Session struct {
 }
 
 type Submission struct {
-	ID         uuid.UUID           `json:"id"`
-	ContestID  pgtype.UUID         `json:"contest_id"`
-	ProblemID  pgtype.UUID         `json:"problem_id"`
-	OwnerID    pgtype.UUID         `json:"owner_id"`
-	Source     string              `json:"source"`
-	Language   models.LanguageName `json:"language"`
-	State      models.State        `json:"state"`
-	Score      int32               `json:"score"`
-	Penalty    int32               `json:"penalty"`
-	TimeStat   int32               `json:"time_stat"`
-	MemoryStat int32               `json:"memory_stat"`
-	CreatedAt  time.Time           `json:"created_at"`
-	UpdatedAt  time.Time           `json:"updated_at"`
+	ID          uuid.UUID           `json:"id"`
+	ContestID   pgtype.UUID         `json:"contest_id"`
+	ProblemID   pgtype.UUID         `json:"problem_id"`
+	OwnerID     pgtype.UUID         `json:"owner_id"`
+	Source      string              `json:"source"`
+	Language    models.LanguageName `json:"language"`
+	State       models.State        `json:"state"`
+	Score       int32               `json:"score"`
+	Penalty     int32               `json:"penalty"`
+	TimeStat    int32               `json:"time_stat"`
+	MemoryStat  int32               `json:"memory_stat"`
+	CreatedAt   time.Time           `json:"created_at"`
+	UpdatedAt   time.Time           `json:"updated_at"`
+	FailedTest  *int32              `json:"failed_test"`
+	TestDetails []byte              `json:"test_details"`
 }
 
 type Team struct {

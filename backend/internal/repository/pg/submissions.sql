@@ -28,6 +28,8 @@ SELECT s.id,
   s.time_stat,
   s.memory_stat,
   s.language,
+  s.failed_test,
+  s.test_details,
   s.problem_id,
   p.title AS problem_title,
   p.short_name AS problem_short_name,
@@ -54,7 +56,9 @@ UPDATE submissions
 SET state = @state,
   score = @score,
   time_stat = @time_stat,
-  memory_stat = @memory_stat
+  memory_stat = @memory_stat,
+  failed_test = @failed_test,
+  test_details = @test_details
 WHERE id = @id::uuid;
 
 -- Submission listing
@@ -68,6 +72,7 @@ SELECT s.id,
   s.time_stat,
   s.memory_stat,
   s.language,
+  s.failed_test,
   s.problem_id,
   p.title AS problem_title,
   p.short_name AS problem_short_name,
@@ -144,6 +149,8 @@ SET state = 1,
   score = 0,
   time_stat = 0,
   memory_stat = 0,
+  failed_test = NULL,
+  test_details = NULL,
   updated_at = NOW()
 WHERE contest_id = @contest_id::uuid
   AND (
