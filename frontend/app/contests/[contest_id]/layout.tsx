@@ -1,7 +1,7 @@
 import {ContestHeaderNav} from "@/components/contests";
 import {DefaultLayout} from "@/components/shared";
 import {api, unwrapAndCache} from "@/lib/api";
-import {getMyContestRole} from "@/lib/contest-role";
+import {getMyContestRole} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 

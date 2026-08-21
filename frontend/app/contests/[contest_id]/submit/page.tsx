@@ -2,8 +2,7 @@ import {Container} from "@mantine/core";
 import {redirect} from "next/navigation";
 
 import {api, unwrapAndCache} from "@/lib/api";
-import {getMyContestRole} from "@/lib/contest-role";
-import {PermissionChecker} from "@/lib/permissions";
+import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
 import {SubmitSubmissionClient} from "./SubmitSubmissionClient";
 

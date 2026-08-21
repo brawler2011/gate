@@ -8,8 +8,7 @@ import {
 
 import {ContestCountdown} from "@/components/contests/ContestCountdown";
 import {api, unwrapAndCache} from "@/lib/api";
-import {getMyContestRole} from "@/lib/contest-role";
-import {PermissionChecker} from "@/lib/permissions";
+import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
 import {ContestProblemsTable} from "./ContestProblemsTable";
 

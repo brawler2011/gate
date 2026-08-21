@@ -4,10 +4,9 @@ import {cache} from "react";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {Task} from "@/components/shared/Task";
 import {api, unwrapAndCache} from "@/lib/api";
-import {getMyContestRole} from "@/lib/contest-role";
 import {env} from "@/lib/env";
 import {numberToLetters} from "@/lib/lib";
-import {PermissionChecker} from "@/lib/permissions";
+import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
 import type {Metadata} from "next";
 import type {ReactNode} from "react";

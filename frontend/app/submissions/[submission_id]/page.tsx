@@ -19,7 +19,7 @@ import {CodeBlock} from '@/components/shared/CodeBlock';
 import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
 import {SingleSubmissionRejudgeButton} from "@/components/submissions";
 import {api, unwrapAndCache} from "@/lib/api";
-import {getMyContestRole} from "@/lib/contest-role";
+import {getMyContestRole} from "@/lib/permissions";
 import {
   LangNameToString,
   LangString,

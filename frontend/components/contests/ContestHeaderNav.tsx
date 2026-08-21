@@ -13,10 +13,9 @@ import {type ReactNode} from "react";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 import {useSession} from "@/contexts/SessionContext";
-import {PermissionChecker} from "@/lib/permissions";
+import {PermissionChecker, type ContestRoleResponse} from "@/lib/permissions";
 
 import type {ContestModel} from "@/contracts/core/v1";
-import type {ContestRoleResponse} from "@/lib/contest-role";
 
 export type ContestHeaderNavProps = {
   contest: ContestModel;
