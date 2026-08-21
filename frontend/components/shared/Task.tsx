@@ -176,35 +176,37 @@ const Task = ({
           </Container>
         </Box>
 
-        {/* Right Sidebar - скрыт на мобилках */}
-        <Box
-          visibleFrom="sm"
-          style={{width: CONTEST_SIDEBAR_RIGHT_WIDTH}}
-        >
-          <Stack gap="md">
-            <Paper
-              shadow="sm"
-              radius="md"
-              p="md"
-              withBorder
-              bg="var(--mantine-color-gray-light)"
-              style={{width: "100%"}}
-            >
-              <CreateSubmissionForm onSubmit={onSubmit} />
-            </Paper>
+        {/* Right Sidebar - скрыт на мобилках и для неавторизованных пользователей */}
+        {user && (
+          <Box
+            visibleFrom="sm"
+            style={{width: CONTEST_SIDEBAR_RIGHT_WIDTH}}
+          >
+            <Stack gap="md">
+              <Paper
+                shadow="sm"
+                radius="md"
+                p="md"
+                withBorder
+                bg="var(--mantine-color-gray-light)"
+                style={{width: "100%"}}
+              >
+                <CreateSubmissionForm onSubmit={onSubmit} />
+              </Paper>
 
-            <RecentSubmissionsTable
-              submissions={submissions}
-              orgLogin={contest.organization_login}
-              contestLogin={contest.login}
-              contestId={contest.id}
-              userId={user?.id}
-              problemId={problemId}
-              wsUrl={wsUrl}
-              since={since}
-            />
-          </Stack>
-        </Box>
+              <RecentSubmissionsTable
+                submissions={submissions}
+                orgLogin={contest.organization_login}
+                contestLogin={contest.login}
+                contestId={contest.id}
+                userId={user.id}
+                problemId={problemId}
+                wsUrl={wsUrl}
+                since={since}
+              />
+            </Stack>
+          </Box>
+        )}
       </Box>
     </Box>
   );
