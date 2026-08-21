@@ -330,6 +330,51 @@ func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c models.Contes
 	return nil
 }
 
+func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []models.ContestProblemReorderItem) error {
+	var q *sqlc.Queries
+	var commit func() error
+
+	if r.db != nil {
+		tx, err := r.db.Begin(ctx)
+		if err != nil {
+			return HandlePgErr(err)
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+		q = r.queries.WithTx(tx)
+		commit = func() error { return tx.Commit(ctx) }
+	} else {
+		q = r.queries
+		commit = func() error { return nil }
+	}
+
+	// Step 1: Temporarily assign large ordinals to avoid UNIQUE (contest_id, ordinal) constraint violations
+	for i, p := range problems {
+		tempOrdinal := int32(10000 + i)
+		err := q.UpdateContestProblemOrdinal(ctx, sqlc.UpdateContestProblemOrdinalParams{
+			ContestID: contestId,
+			ProblemID: p.ProblemID,
+			Ordinal:   tempOrdinal,
+		})
+		if err != nil {
+			return HandlePgErr(err)
+		}
+	}
+
+	// Step 2: Assign final ordinals
+	for _, p := range problems {
+		err := q.UpdateContestProblemOrdinal(ctx, sqlc.UpdateContestProblemOrdinalParams{
+			ContestID: contestId,
+			ProblemID: p.ProblemID,
+			Ordinal:   p.Position,
+		})
+		if err != nil {
+			return HandlePgErr(err)
+		}
+	}
+
+	return commit()
+}
+
 func (r *ContestsRepo) GetContestProblem(ctx context.Context, c models.ContestProblemGet) (models.ContestProblem, error) {
 	row, err := r.queries.GetContestProblem(ctx, sqlc.GetContestProblemParams{
 		ContestID: c.ContestId,

@@ -189,6 +189,11 @@ type ContestProblemDeletion struct {
 	ProblemId uuid.UUID
 }
 
+type ContestProblemReorderItem struct {
+	ProblemID uuid.UUID `json:"problem_id"`
+	Position  int32     `json:"position"`
+}
+
 type ParticipantCreation struct {
 	ContestId uuid.UUID
 	UserId    uuid.UUID

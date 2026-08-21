@@ -498,6 +498,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreationResponseModel"
+  /organizations/{org_login}/contests/{contest_login}/problems/reorder:
+    put:
+      operationId: ReorderContestProblems
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderContestProblemsRequestModel"
+      responses:
+        "200":
+          description: OK
   /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}:
     get:
       operationId: GetContestProblem
@@ -4176,6 +4199,27 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ContestProblemListItemModel"
+    ReorderContestProblemsRequestModel:
+      type: object
+      required:
+        - problems
+      properties:
+        problems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContestProblemReorderItemModel"
+    ContestProblemReorderItemModel:
+      type: object
+      required:
+        - problem_id
+        - position
+      properties:
+        problem_id:
+          type: string
+          format: uuid
+        position:
+          type: integer
+          format: int32
     UpdateProblemRequestModel:
       type: object
       properties:

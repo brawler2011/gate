@@ -5,8 +5,8 @@ import {
   Autocomplete,
   Badge,
   Button,
-  Card,
   Center,
+  Divider,
   Group,
   Loader,
   Modal,
@@ -18,13 +18,23 @@ import {
 } from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconEdit, IconPlus, IconRefresh, IconTrash} from "@tabler/icons-react";
+import {
+  IconDeviceFloppy,
+  IconEdit,
+  IconGripVertical,
+  IconPlus,
+  IconRefresh,
+  IconRotate2,
+  IconTrash,
+} from "@tabler/icons-react";
 import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
 
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
+
+import classes from "./ProblemsSection.module.css";
 
 import type * as corev1 from "@/contracts/core/v1";
 import type {ReactNode} from "react";
@@ -36,6 +46,24 @@ interface ProblemsSectionProps {
   initialProblems: Array<corev1.ContestProblemListItemModel>;
 }
 
+const checkHasChanges = (
+  current: corev1.ContestProblemListItemModel[],
+  saved: corev1.ContestProblemListItemModel[],
+): boolean => {
+  if (current.length !== saved.length) {
+    return true;
+  }
+  for (let i = 0; i < current.length; i++) {
+    if (
+      current[i].problem_id !== saved[i].problem_id ||
+      current[i].position !== saved[i].position
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const ProblemsSection = ({
   orgLogin,
   contestLogin,
@@ -43,6 +71,13 @@ export const ProblemsSection = ({
 }: ProblemsSectionProps): ReactNode => {
   const router = useRouter();
   const [problems, setProblems] = useState(initialProblems);
+  const [savedProblems, setSavedProblems] = useState(initialProblems);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<corev1.ProblemsListItemModel[]>([]);
@@ -65,6 +100,8 @@ export const ProblemsSection = ({
 
   useEffect(() => {
     setProblems(initialProblems);
+    setSavedProblems(initialProblems);
+    setHasUnsavedChanges(false);
   }, [initialProblems]);
 
   useEffect(() => {
@@ -149,6 +186,110 @@ export const ProblemsSection = ({
     router.refresh();
   };
 
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData("text/plain", `${index}`);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const updated = [...problems];
+    const [moved] = updated.splice(draggedIndex, 1);
+    updated.splice(targetIndex, 0, moved);
+
+    const reindexed = updated.map((item, idx) => ({
+      ...item,
+      position: idx + 1,
+    }));
+
+    setProblems(reindexed);
+    setHasUnsavedChanges(checkHasChanges(reindexed, savedProblems));
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleRecalculatePositions = () => {
+    const reindexed = problems.map((item, idx) => ({
+      ...item,
+      position: idx + 1,
+    }));
+    setProblems(reindexed);
+    const changed = checkHasChanges(reindexed, savedProblems);
+    setHasUnsavedChanges(changed);
+
+    if (changed) {
+      notifications.show({
+        title: "Позиции пересчитаны",
+        message: `Позиции перенумерованы (1..${reindexed.length}). Не забудьте сохранить порядок.`,
+        color: "blue",
+      });
+    } else {
+      notifications.show({
+        title: "Позиции в порядке",
+        message: "Все позиции уже идут последовательно без пропусков.",
+        color: "gray",
+      });
+    }
+  };
+
+  const handleSaveOrder = async () => {
+    setSavingOrder(true);
+    const [error] = await api.reorderContestProblems({
+      orgLogin,
+      contestLogin,
+      requestBody: {
+        problems: problems.map((p) => ({
+          problem_id: p.problem_id,
+          position: p.position,
+        })),
+      },
+    });
+    setSavingOrder(false);
+
+    if (error) {
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось сохранить порядок задач",
+        color: "red",
+      });
+      return;
+    }
+
+    setSavedProblems(problems);
+    setHasUnsavedChanges(false);
+    notifications.show({
+      title: "Успешно",
+      message: "Порядок задач сохранён",
+      color: "green",
+    });
+    router.refresh();
+  };
+
+  const handleResetOrder = () => {
+    setProblems(savedProblems);
+    setHasUnsavedChanges(false);
+  };
+
   const openReplacePackageModal = async (problemId: string, title: string) => {
     setReplaceTarget({problemId, title});
     setSelectedPackageId(null);
@@ -221,38 +362,79 @@ export const ProblemsSection = ({
     <>
       <Stack gap="md">
         {/* Add Problem Form */}
-        <Card withBorder padding="md">
-          <Stack gap="sm">
-            <Text size="sm" fw={500}>
-              Добавить задачу
-            </Text>
-            <Group gap="sm">
-              <Autocomplete
-                placeholder="Поиск среди ваших задач..."
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onOptionSubmit={(value) => {
-                  setSelectedProblemId(value);
-                  const selected = searchResults.find((p) => p.id === value);
-                  if (selected) {
-                    setSearchQuery(selected.title);
-                  }
-                }}
-                data={autocompleteData}
-                rightSection={searching && <Loader size="xs" />}
-                style={{flex: 1}}
-              />
-              <Button
-                onClick={handleAddProblem}
-                disabled={!selectedProblemId || adding}
-                loading={adding}
-                leftSection={<IconPlus size={16} />}
-              >
-                Добавить
-              </Button>
-            </Group>
-          </Stack>
-        </Card>
+        <Stack gap="xs">
+          <Text size="sm" fw={500}>
+            Добавить задачу
+          </Text>
+          <Group gap="sm">
+            <Autocomplete
+              placeholder="Поиск среди ваших задач..."
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onOptionSubmit={(value) => {
+                setSelectedProblemId(value);
+                const selected = searchResults.find((p) => p.id === value);
+                if (selected) {
+                  setSearchQuery(selected.title);
+                }
+              }}
+              data={autocompleteData}
+              rightSection={searching && <Loader size="xs" />}
+              style={{flex: 1}}
+            />
+            <Button
+              onClick={handleAddProblem}
+              disabled={!selectedProblemId || adding}
+              loading={adding}
+              leftSection={<IconPlus size={16} />}
+            >
+              Добавить
+            </Button>
+          </Group>
+        </Stack>
+
+        <Divider />
+
+        {/* Problems Header & Controls */}
+        <Group justify="space-between" align="center" wrap="wrap" gap="sm">
+          <Text size="sm" fw={500}>
+            Задачи контеста {problems.length > 0 && `(${problems.length})`}
+          </Text>
+          <Group gap="xs">
+            <Button
+              variant="default"
+              size="xs"
+              leftSection={<IconRefresh size={14} />}
+              onClick={handleRecalculatePositions}
+              disabled={problems.length === 0}
+            >
+              Пересчитать позиции
+            </Button>
+            {hasUnsavedChanges && (
+              <>
+                <Button
+                  variant="subtle"
+                  color="gray"
+                  size="xs"
+                  leftSection={<IconRotate2 size={14} />}
+                  onClick={handleResetOrder}
+                  disabled={savingOrder}
+                >
+                  Сбросить
+                </Button>
+                <Button
+                  color="blue"
+                  size="xs"
+                  leftSection={<IconDeviceFloppy size={14} />}
+                  onClick={handleSaveOrder}
+                  loading={savingOrder}
+                >
+                  Сохранить порядок
+                </Button>
+              </>
+            )}
+          </Group>
+        </Group>
 
         {/* Problems List */}
         {problems.length === 0 ? (
@@ -270,6 +452,7 @@ export const ProblemsSection = ({
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
+                <Table.Th style={{width: 36}} />
                 <Table.Th style={{width: 60}}>№</Table.Th>
                 <Table.Th>Название</Table.Th>
                 <Table.Th style={{width: 120}}>Время</Table.Th>
@@ -278,8 +461,26 @@ export const ProblemsSection = ({
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {problems.map((problem) => (
-                <Table.Tr key={problem.problem_id}>
+              {problems.map((problem, index) => (
+                <Table.Tr
+                  key={problem.problem_id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  onDrop={(e) => handleDrop(e, index)}
+                  className={`
+                    ${draggedIndex === index ? classes.rowDragging : ""}
+                    ${dragOverIndex === index && draggedIndex !== index ? classes.rowDragOver : ""}
+                  `}
+                >
+                  <Table.Td style={{width: 36, paddingLeft: 8, paddingRight: 4}}>
+                    <Tooltip label="Перетащите для изменения порядка" withArrow>
+                      <div className={classes.dragHandle}>
+                        <IconGripVertical size={16} />
+                      </div>
+                    </Tooltip>
+                  </Table.Td>
                   <Table.Td>
                     <Badge variant="light" color="blue">
                       {numberToLetters(problem.position)}

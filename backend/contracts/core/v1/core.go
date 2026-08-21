@@ -261,6 +261,12 @@ type ContestProblemModel struct {
 	UpdatedAt        time.Time            `json:"updated_at"`
 }
 
+// ContestProblemReorderItemModel defines model for ContestProblemReorderItemModel.
+type ContestProblemReorderItemModel struct {
+	Position  int32              `json:"position"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
+}
+
 // ContestTeamModel defines model for ContestTeamModel.
 type ContestTeamModel struct {
 	ContestId       openapi_types.UUID `json:"contest_id"`
@@ -642,6 +648,11 @@ type RegisterRequestModel struct {
 	Email    openapi_types.Email `json:"email"`
 	Password string              `json:"password"`
 	Username string              `json:"username"`
+}
+
+// ReorderContestProblemsRequestModel defines model for ReorderContestProblemsRequestModel.
+type ReorderContestProblemsRequestModel struct {
+	Problems []ContestProblemReorderItemModel `json:"problems"`
 }
 
 // ScoreboardItemModel defines model for ScoreboardItemModel.
@@ -1431,6 +1442,9 @@ type CreateContestDraftJSONRequestBody = CreateContestDraftRequestModel
 // BlockProblemForUserJSONRequestBody defines body for BlockProblemForUser for application/json ContentType.
 type BlockProblemForUserJSONRequestBody = BlockProblemRequestModel
 
+// ReorderContestProblemsJSONRequestBody defines body for ReorderContestProblems for application/json ContentType.
+type ReorderContestProblemsJSONRequestBody = ReorderContestProblemsRequestModel
+
 // BlockSubmissionJSONRequestBody defines body for BlockSubmission for application/json ContentType.
 type BlockSubmissionJSONRequestBody = BlockSubmissionRequestModel
 
@@ -1689,6 +1703,11 @@ type ClientInterface interface {
 
 	// CreateContestProblem request
 	CreateContestProblem(ctx context.Context, orgLogin string, contestLogin string, params *CreateContestProblemParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReorderContestProblemsWithBody request with any body
+	ReorderContestProblemsWithBody(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ReorderContestProblems(ctx context.Context, orgLogin string, contestLogin string, body ReorderContestProblemsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteContestProblem request
 	DeleteContestProblem(ctx context.Context, orgLogin string, contestLogin string, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2504,6 +2523,30 @@ func (c *Client) BlockProblemForUser(ctx context.Context, orgLogin string, conte
 
 func (c *Client) CreateContestProblem(ctx context.Context, orgLogin string, contestLogin string, params *CreateContestProblemParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateContestProblemRequest(c.Server, orgLogin, contestLogin, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ReorderContestProblemsWithBody(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReorderContestProblemsRequestWithBody(c.Server, orgLogin, contestLogin, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ReorderContestProblems(ctx context.Context, orgLogin string, contestLogin string, body ReorderContestProblemsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReorderContestProblemsRequest(c.Server, orgLogin, contestLogin, body)
 	if err != nil {
 		return nil, err
 	}
@@ -5870,6 +5913,60 @@ func NewCreateContestProblemRequest(server string, orgLogin string, contestLogin
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewReorderContestProblemsRequest calls the generic ReorderContestProblems builder with application/json body
+func NewReorderContestProblemsRequest(server string, orgLogin string, contestLogin string, body ReorderContestProblemsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewReorderContestProblemsRequestWithBody(server, orgLogin, contestLogin, "application/json", bodyReader)
+}
+
+// NewReorderContestProblemsRequestWithBody generates requests for ReorderContestProblems with any type of body
+func NewReorderContestProblemsRequestWithBody(server string, orgLogin string, contestLogin string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/problems/reorder", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -11963,6 +12060,11 @@ type ClientWithResponsesInterface interface {
 	// CreateContestProblemWithResponse request
 	CreateContestProblemWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *CreateContestProblemParams, reqEditors ...RequestEditorFn) (*CreateContestProblemResponse, error)
 
+	// ReorderContestProblemsWithBodyWithResponse request with any body
+	ReorderContestProblemsWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReorderContestProblemsResponse, error)
+
+	ReorderContestProblemsWithResponse(ctx context.Context, orgLogin string, contestLogin string, body ReorderContestProblemsJSONRequestBody, reqEditors ...RequestEditorFn) (*ReorderContestProblemsResponse, error)
+
 	// DeleteContestProblemWithResponse request
 	DeleteContestProblemWithResponse(ctx context.Context, orgLogin string, contestLogin string, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteContestProblemResponse, error)
 
@@ -13007,6 +13109,27 @@ func (r CreateContestProblemResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r CreateContestProblemResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ReorderContestProblemsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r ReorderContestProblemsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ReorderContestProblemsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -15780,6 +15903,23 @@ func (c *ClientWithResponses) CreateContestProblemWithResponse(ctx context.Conte
 	return ParseCreateContestProblemResponse(rsp)
 }
 
+// ReorderContestProblemsWithBodyWithResponse request with arbitrary body returning *ReorderContestProblemsResponse
+func (c *ClientWithResponses) ReorderContestProblemsWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReorderContestProblemsResponse, error) {
+	rsp, err := c.ReorderContestProblemsWithBody(ctx, orgLogin, contestLogin, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReorderContestProblemsResponse(rsp)
+}
+
+func (c *ClientWithResponses) ReorderContestProblemsWithResponse(ctx context.Context, orgLogin string, contestLogin string, body ReorderContestProblemsJSONRequestBody, reqEditors ...RequestEditorFn) (*ReorderContestProblemsResponse, error) {
+	rsp, err := c.ReorderContestProblems(ctx, orgLogin, contestLogin, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReorderContestProblemsResponse(rsp)
+}
+
 // DeleteContestProblemWithResponse request returning *DeleteContestProblemResponse
 func (c *ClientWithResponses) DeleteContestProblemWithResponse(ctx context.Context, orgLogin string, contestLogin string, problemId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteContestProblemResponse, error) {
 	rsp, err := c.DeleteContestProblem(ctx, orgLogin, contestLogin, problemId, reqEditors...)
@@ -17644,6 +17784,22 @@ func ParseCreateContestProblemResponse(rsp *http.Response) (*CreateContestProble
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseReorderContestProblemsResponse parses an HTTP response from a ReorderContestProblemsWithResponse call
+func ParseReorderContestProblemsResponse(rsp *http.Response) (*ReorderContestProblemsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ReorderContestProblemsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -20410,6 +20566,9 @@ type ServerInterface interface {
 	// (POST /organizations/{org_login}/contests/{contest_login}/problems)
 	CreateContestProblem(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params CreateContestProblemParams)
 
+	// (PUT /organizations/{org_login}/contests/{contest_login}/problems/reorder)
+	ReorderContestProblems(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string)
+
 	// (DELETE /organizations/{org_login}/contests/{contest_login}/problems/{problem_id})
 	DeleteContestProblem(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, problemId openapi_types.UUID)
 
@@ -22076,6 +22235,40 @@ func (siw *ServerInterfaceWrapper) CreateContestProblem(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateContestProblem(w, r, orgLogin, contestLogin, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReorderContestProblems operation middleware
+func (siw *ServerInterfaceWrapper) ReorderContestProblems(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReorderContestProblems(w, r, orgLogin, contestLogin)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -26639,6 +26832,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block", wrapper.GetProblemBlockStatusForUser)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block", wrapper.BlockProblemForUser)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems", wrapper.CreateContestProblem)
+	m.HandleFunc("PUT "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems/reorder", wrapper.ReorderContestProblems)
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}", wrapper.DeleteContestProblem)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}", wrapper.GetContestProblem)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge", wrapper.RejudgeContestProblem)
@@ -27302,6 +27496,24 @@ func (response CreateContestProblem200JSONResponse) VisitCreateContestProblemRes
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type ReorderContestProblemsRequestObject struct {
+	OrgLogin     string `json:"org_login"`
+	ContestLogin string `json:"contest_login"`
+	Body         *ReorderContestProblemsJSONRequestBody
+}
+
+type ReorderContestProblemsResponseObject interface {
+	VisitReorderContestProblemsResponse(w http.ResponseWriter) error
+}
+
+type ReorderContestProblems200Response struct {
+}
+
+func (response ReorderContestProblems200Response) VisitReorderContestProblemsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
 }
 
 type DeleteContestProblemRequestObject struct {
@@ -29627,6 +29839,9 @@ type StrictServerInterface interface {
 	// (POST /organizations/{org_login}/contests/{contest_login}/problems)
 	CreateContestProblem(ctx context.Context, request CreateContestProblemRequestObject) (CreateContestProblemResponseObject, error)
 
+	// (PUT /organizations/{org_login}/contests/{contest_login}/problems/reorder)
+	ReorderContestProblems(ctx context.Context, request ReorderContestProblemsRequestObject) (ReorderContestProblemsResponseObject, error)
+
 	// (DELETE /organizations/{org_login}/contests/{contest_login}/problems/{problem_id})
 	DeleteContestProblem(ctx context.Context, request DeleteContestProblemRequestObject) (DeleteContestProblemResponseObject, error)
 
@@ -30855,6 +31070,40 @@ func (sh *strictHandler) CreateContestProblem(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateContestProblemResponseObject); ok {
 		if err := validResponse.VisitCreateContestProblemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReorderContestProblems operation middleware
+func (sh *strictHandler) ReorderContestProblems(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string) {
+	var request ReorderContestProblemsRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+
+	var body ReorderContestProblemsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReorderContestProblems(ctx, request.(ReorderContestProblemsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReorderContestProblems")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReorderContestProblemsResponseObject); ok {
+		if err := validResponse.VisitReorderContestProblemsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

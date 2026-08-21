@@ -564,6 +564,32 @@ func (h *CoreServer) DeleteContestProblem(ctx context.Context, request corev1.De
 	return corev1.DeleteContestProblem200Response{}, nil
 }
 
+func (h *CoreServer) ReorderContestProblems(ctx context.Context, request corev1.ReorderContestProblemsRequestObject) (corev1.ReorderContestProblemsResponseObject, error) {
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+	}
+
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	reorderItems := make([]models.ContestProblemReorderItem, len(request.Body.Problems))
+	for i, item := range request.Body.Problems {
+		reorderItems[i] = models.ContestProblemReorderItem{
+			ProblemID: item.ProblemId,
+			Position:  item.Position,
+		}
+	}
+
+	err = h.contestsUC.ReorderContestProblems(ctx, contest.ID, reorderItems)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.ReorderContestProblems200Response{}, nil
+}
+
 func (h *CoreServer) CreateContestMember(ctx context.Context, request corev1.CreateContestMemberRequestObject) (corev1.CreateContestMemberResponseObject, error) {
 	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
 	if err != nil {

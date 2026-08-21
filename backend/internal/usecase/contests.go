@@ -177,6 +177,10 @@ func (uc *ContestsUseCase) DeleteContestProblem(ctx context.Context, c models.Co
 	return uc.contestRepo.DeleteContestProblem(ctx, c)
 }
 
+func (uc *ContestsUseCase) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []models.ContestProblemReorderItem) error {
+	return uc.contestRepo.ReorderContestProblems(ctx, contestId, problems)
+}
+
 func (uc *ContestsUseCase) CreateParticipant(ctx context.Context, c models.ParticipantCreation) error {
 	if uc.orgsRepo != nil {
 		contest, err := uc.contestRepo.GetContest(ctx, c.ContestId)

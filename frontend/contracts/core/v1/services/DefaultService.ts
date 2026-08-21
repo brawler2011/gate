@@ -43,6 +43,7 @@ import type { ProblemBlockStatusResponseModel } from '../models/ProblemBlockStat
 import type { ProblemLimits } from '../models/ProblemLimits';
 import type { ProblemStatement } from '../models/ProblemStatement';
 import type { RegisterRequestModel } from '../models/RegisterRequestModel';
+import type { ReorderContestProblemsRequestModel } from '../models/ReorderContestProblemsRequestModel';
 import type { ScoreboardResponseModel } from '../models/ScoreboardResponseModel';
 import type { SupportedLanguagesResponse } from '../models/SupportedLanguagesResponse';
 import type { TestReport } from '../models/TestReport';
@@ -454,6 +455,30 @@ export class DefaultService {
                 'problem_id': problemId,
                 'package_id': packageId,
             },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public reorderContestProblems({
+        orgLogin,
+        contestLogin,
+        requestBody,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        requestBody: ReorderContestProblemsRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/organizations/{org_login}/contests/{contest_login}/problems/reorder',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**

@@ -32,6 +32,7 @@ type ContestsRepo interface {
 	GetContestProblem(ctx context.Context, c models.ContestProblemGet) (models.ContestProblem, error)
 	UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error
 	DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error
+	ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []models.ContestProblemReorderItem) error
 
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]models.ContestProblem, error)
 	GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]models.ContestTeam, error)
@@ -84,6 +85,7 @@ type ContestsUC interface {
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]models.ContestProblem, error)
 	UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error
 	DeleteContestProblem(ctx context.Context, c models.ContestProblemDeletion) error
+	ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []models.ContestProblemReorderItem) error
 
 	ProcessSubmissionResult(ctx context.Context, submission *models.Submission) error
 	GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*models.ScoreboardResponse, error)

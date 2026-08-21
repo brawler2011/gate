@@ -241,6 +241,7 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"CreateContestProblem":   {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 		"GetContestProblem":      {RequireContestPermission(models.ActionGetContestProblem)},
 		"DeleteContestProblem":   {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"ReorderContestProblems": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 		"CreateContestMember":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 		"UpdateContestMember":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 		"DeleteContestMember":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
