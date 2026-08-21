@@ -10,7 +10,7 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-const OrgOrUserLayout = async ({
+const OrgLayout = async ({
   children,
   params,
 }: Props): Promise<ReactNode> => {
@@ -19,11 +19,6 @@ const OrgOrUserLayout = async ({
   try {
     decoded = decodeURIComponent(slug);
   } catch {
-    return children;
-  }
-
-  // If user profile route (starts with '@'), do not wrap in organization layout
-  if (decoded.startsWith("@")) {
     return children;
   }
 
@@ -51,4 +46,4 @@ const OrgOrUserLayout = async ({
   );
 };
 
-export default OrgOrUserLayout;
+export default OrgLayout;
