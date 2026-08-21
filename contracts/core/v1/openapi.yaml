@@ -1139,18 +1139,6 @@ paths:
             type: integer
             format: int32
           example: 20
-        - name: problemId
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uuid
-        - name: userId
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uuid
       responses:
         "200":
           description: OK
@@ -5665,17 +5653,8 @@ components:
     CreateContestDraftRequestModel:
       type: object
       required:
-        - problem_id
-        - language
         - code
       properties:
-        problem_id:
-          type: string
-          format: uuid
-        language:
-          type: integer
-          format: int32
-          example: 10
         code:
           type: string
     ContestDraftModel:
@@ -5684,8 +5663,6 @@ components:
         - id
         - user_id
         - contest_id
-        - problem_id
-        - language
         - code
         - created_at
         - updated_at
@@ -5701,18 +5678,6 @@ components:
         contest_id:
           type: string
           format: uuid
-        problem_id:
-          type: string
-          format: uuid
-        problem_title:
-          type: string
-        position:
-          type: integer
-          format: int32
-        language:
-          type: integer
-          format: int32
-          example: 10
         code:
           type: string
         created_at:

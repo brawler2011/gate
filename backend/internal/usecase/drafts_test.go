@@ -29,8 +29,6 @@ func (m *mockDraftsRepo) CreateDraft(ctx context.Context, creation *models.Conte
 		ID:        id,
 		ContestID: creation.ContestID,
 		UserID:    creation.UserID,
-		ProblemID: creation.ProblemID,
-		Language:  creation.Language,
 		Code:      creation.Code,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -46,10 +44,10 @@ func (m *mockDraftsRepo) GetDraft(ctx context.Context, id uuid.UUID) (models.Con
 	return draft, nil
 }
 
-func (m *mockDraftsRepo) GetDraftsCountByProblem(ctx context.Context, contestID, userID, problemID uuid.UUID) (int64, error) {
+func (m *mockDraftsRepo) GetDraftsCount(ctx context.Context, contestID, userID uuid.UUID) (int64, error) {
 	var count int64
 	for _, d := range m.drafts {
-		if d.ContestID == contestID && d.UserID == userID && d.ProblemID == problemID {
+		if d.ContestID == contestID && d.UserID == userID {
 			count++
 		}
 	}
@@ -62,10 +60,7 @@ func (m *mockDraftsRepo) ListDrafts(ctx context.Context, filter models.ContestDr
 		if d.ContestID != filter.ContestID {
 			continue
 		}
-		if filter.UserID != nil && d.UserID != *filter.UserID {
-			continue
-		}
-		if filter.ProblemID != nil && d.ProblemID != *filter.ProblemID {
+		if d.UserID != filter.UserID {
 			continue
 		}
 		result = append(result, d)
@@ -92,7 +87,6 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 
 	contestID := uuid.New()
 	userID := uuid.New()
-	problemID := uuid.New()
 
 	ctx := context.Background()
 
@@ -100,8 +94,6 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 	_, err := uc.CreateDraft(ctx, &models.ContestDraftCreation{
 		ContestID: contestID,
 		UserID:    userID,
-		ProblemID: problemID,
-		Language:  models.Cpp,
 		Code:      "",
 	})
 	if err == nil {
@@ -113,34 +105,19 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 	_, err = uc.CreateDraft(ctx, &models.ContestDraftCreation{
 		ContestID: contestID,
 		UserID:    userID,
-		ProblemID: problemID,
-		Language:  models.Cpp,
 		Code:      largeCode,
 	})
 	if err == nil {
 		t.Fatal("expected error on code size > 64KB, got nil")
 	}
-
-	// 3. Invalid language
-	_, err = uc.CreateDraft(ctx, &models.ContestDraftCreation{
-		ContestID: contestID,
-		UserID:    userID,
-		ProblemID: problemID,
-		Language:  999,
-		Code:      "print(1)",
-	})
-	if err == nil {
-		t.Fatal("expected error on invalid language, got nil")
-	}
 }
 
-func TestDraftsUseCase_LimitPerProblem(t *testing.T) {
+func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 	repo := newMockDraftsRepo()
 	uc := NewDraftsUseCase(repo, nil, nil, nil)
 
 	contestID := uuid.New()
 	userID := uuid.New()
-	problemID := uuid.New()
 	ctx := context.Background()
 
 	// Fill 50 drafts
@@ -148,8 +125,6 @@ func TestDraftsUseCase_LimitPerProblem(t *testing.T) {
 		_, err := repo.CreateDraft(ctx, &models.ContestDraftCreation{
 			ContestID: contestID,
 			UserID:    userID,
-			ProblemID: problemID,
-			Language:  models.Python,
 			Code:      "code",
 		})
 		if err != nil {
@@ -161,8 +136,6 @@ func TestDraftsUseCase_LimitPerProblem(t *testing.T) {
 	_, err := uc.CreateDraft(ctx, &models.ContestDraftCreation{
 		ContestID: contestID,
 		UserID:    userID,
-		ProblemID: problemID,
-		Language:  models.Python,
 		Code:      "code 51",
 	})
 	if err == nil {
@@ -177,14 +150,11 @@ func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 	authorID := uuid.New()
 	otherUserID := uuid.New()
 	contestID := uuid.New()
-	problemID := uuid.New()
 	ctx := context.Background()
 
 	draftID, err := repo.CreateDraft(ctx, &models.ContestDraftCreation{
 		ContestID: contestID,
 		UserID:    authorID,
-		ProblemID: problemID,
-		Language:  models.Golang,
 		Code:      "package main",
 	})
 	if err != nil {
@@ -207,8 +177,6 @@ func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 	draftID2, _ := repo.CreateDraft(ctx, &models.ContestDraftCreation{
 		ContestID: contestID,
 		UserID:    authorID,
-		ProblemID: problemID,
-		Language:  models.Golang,
 		Code:      "package main",
 	})
 	err = uc.DeleteDraft(ctx, draftID2, authorID, false)

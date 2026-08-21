@@ -823,24 +823,15 @@ func ContestDraftDTO(draft models.ContestDraft) corev1.ContestDraftModel {
 		u := draft.Username
 		username = &u
 	}
-	var problemTitle *string
-	if draft.ProblemTitle != "" {
-		pt := draft.ProblemTitle
-		problemTitle = &pt
-	}
 
 	return corev1.ContestDraftModel{
-		Id:           draft.ID,
-		UserId:       draft.UserID,
-		Username:     username,
-		ContestId:    draft.ContestID,
-		ProblemId:    draft.ProblemID,
-		ProblemTitle: problemTitle,
-		Position:     draft.Position,
-		Language:     int32(draft.Language),
-		Code:         draft.Code,
-		CreatedAt:    draft.CreatedAt,
-		UpdatedAt:    draft.UpdatedAt,
+		Id:        draft.ID,
+		UserId:    draft.UserID,
+		Username:  username,
+		ContestId: draft.ContestID,
+		Code:      draft.Code,
+		CreatedAt: draft.CreatedAt,
+		UpdatedAt: draft.UpdatedAt,
 	}
 }
 

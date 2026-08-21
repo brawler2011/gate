@@ -164,17 +164,13 @@ type CompileResult struct {
 
 // ContestDraftModel defines model for ContestDraftModel.
 type ContestDraftModel struct {
-	Code         string             `json:"code"`
-	ContestId    openapi_types.UUID `json:"contest_id"`
-	CreatedAt    time.Time          `json:"created_at"`
-	Id           openapi_types.UUID `json:"id"`
-	Language     int32              `json:"language"`
-	Position     *int32             `json:"position,omitempty"`
-	ProblemId    openapi_types.UUID `json:"problem_id"`
-	ProblemTitle *string            `json:"problem_title,omitempty"`
-	UpdatedAt    time.Time          `json:"updated_at"`
-	UserId       openapi_types.UUID `json:"user_id"`
-	Username     *string            `json:"username,omitempty"`
+	Code      string             `json:"code"`
+	ContestId openapi_types.UUID `json:"contest_id"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+	UpdatedAt time.Time          `json:"updated_at"`
+	UserId    openapi_types.UUID `json:"user_id"`
+	Username  *string            `json:"username,omitempty"`
 }
 
 // ContestMemberModel defines model for ContestMemberModel.
@@ -259,9 +255,7 @@ type ContestTeamModel struct {
 
 // CreateContestDraftRequestModel defines model for CreateContestDraftRequestModel.
 type CreateContestDraftRequestModel struct {
-	Code      string             `json:"code"`
-	Language  int32              `json:"language"`
-	ProblemId openapi_types.UUID `json:"problem_id"`
+	Code string `json:"code"`
 }
 
 // CreateOrganizationResponseModel defines model for CreateOrganizationResponseModel.
@@ -970,10 +964,8 @@ type CreateContestParams struct {
 
 // ListContestDraftsParams defines parameters for ListContestDrafts.
 type ListContestDraftsParams struct {
-	Page      *int32              `form:"page,omitempty" json:"page,omitempty"`
-	PageSize  *int32              `form:"pageSize,omitempty" json:"pageSize,omitempty"`
-	ProblemId *openapi_types.UUID `form:"problemId,omitempty" json:"problemId,omitempty"`
-	UserId    *openapi_types.UUID `form:"userId,omitempty" json:"userId,omitempty"`
+	Page     *int32 `form:"page,omitempty" json:"page,omitempty"`
+	PageSize *int32 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
 // DeleteContestMemberParams defines parameters for DeleteContestMember.
@@ -5154,38 +5146,6 @@ func NewListContestDraftsRequest(server string, orgLogin string, contestLogin st
 		if params.PageSize != nil {
 
 			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, *params.PageSize); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.ProblemId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "problemId", runtime.ParamLocationQuery, *params.ProblemId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.UserId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "userId", runtime.ParamLocationQuery, *params.UserId); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -21509,22 +21469,6 @@ func (siw *ServerInterfaceWrapper) ListContestDrafts(w http.ResponseWriter, r *h
 	err = runtime.BindQueryParameter("form", true, false, "pageSize", r.URL.Query(), &params.PageSize)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "problemId" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "problemId", r.URL.Query(), &params.ProblemId)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "userId" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "userId", r.URL.Query(), &params.UserId)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
 		return
 	}
 

@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	maxDraftCodeSize    = 64 * 1024 // 64 KB
-	maxDraftsPerProblem = 50
+	maxDraftCodeSize = 64 * 1024 // 64 KB
+	maxDraftsPerUser = 50
 )
 
 type DraftsUseCase struct {
@@ -41,33 +41,19 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *models.Conte
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid draft code size")
 	}
 
-	if err := models.LanguageNameValid(creation.Language); err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid language")
-	}
-
 	if uc.contestsUC != nil && creation.ContestID != uuid.Nil {
 		_, err := uc.contestsUC.GetContest(ctx, creation.ContestID)
 		if err != nil {
 			return uuid.Nil, err
 		}
-
-		if creation.ProblemID != uuid.Nil {
-			_, err = uc.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
-				ContestId: creation.ContestID,
-				ProblemId: creation.ProblemID,
-			})
-			if err != nil {
-				return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "problem does not belong to contest")
-			}
-		}
 	}
 
-	count, err := uc.draftsRepo.GetDraftsCountByProblem(ctx, creation.ContestID, creation.UserID, creation.ProblemID)
+	count, err := uc.draftsRepo.GetDraftsCount(ctx, creation.ContestID, creation.UserID)
 	if err != nil {
 		return uuid.Nil, err
 	}
-	if count >= maxDraftsPerProblem {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "maximum number of drafts reached for this problem (limit: 50)")
+	if count >= maxDraftsPerUser {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "maximum number of drafts reached (limit: 50)")
 	}
 
 	return uc.draftsRepo.CreateDraft(ctx, creation)

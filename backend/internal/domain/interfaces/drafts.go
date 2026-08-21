@@ -11,7 +11,7 @@ import (
 type DraftsRepo interface {
 	CreateDraft(ctx context.Context, creation *models.ContestDraftCreation) (uuid.UUID, error)
 	GetDraft(ctx context.Context, id uuid.UUID) (models.ContestDraft, error)
-	GetDraftsCountByProblem(ctx context.Context, contestID, userID, problemID uuid.UUID) (int64, error)
+	GetDraftsCount(ctx context.Context, contestID, userID uuid.UUID) (int64, error)
 	ListDrafts(ctx context.Context, filter models.ContestDraftsFilter) ([]models.ContestDraft, int32, error)
 	DeleteDraft(ctx context.Context, id uuid.UUID) error
 	WithTx(tx pgx.Tx) DraftsRepo

@@ -3,8 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type CreateContestDraftRequestModel = {
-    problem_id: string;
-    language: number;
     code: string;
 };
 

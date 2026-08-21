@@ -80,7 +80,7 @@ type Querier interface {
 	GetContestTeam(ctx context.Context, arg GetContestTeamParams) (ContestTeam, error)
 	GetContestUserProblemBlock(ctx context.Context, arg GetContestUserProblemBlockParams) (ContestUserProblemBlock, error)
 	GetDraft(ctx context.Context, id uuid.UUID) (GetDraftRow, error)
-	GetDraftsCountByProblem(ctx context.Context, arg GetDraftsCountByProblemParams) (int64, error)
+	GetDraftsCount(ctx context.Context, arg GetDraftsCountParams) (int64, error)
 	GetLatestUserOrganizationID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organization, error)
 	GetOrganizationByLogin(ctx context.Context, lower string) (Organization, error)

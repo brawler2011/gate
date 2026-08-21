@@ -9,7 +9,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/google/uuid"
 )
 
 func (h *CoreServer) CreateContestDraft(ctx context.Context, request corev1.CreateContestDraftRequestObject) (corev1.CreateContestDraftResponseObject, error) {
@@ -44,8 +43,6 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, request corev1.Crea
 	draftCreation := &models.ContestDraftCreation{
 		ContestID: contest.ID,
 		UserID:    user.Id,
-		ProblemID: req.ProblemId,
-		Language:  models.LanguageName(req.Language),
 		Code:      req.Code,
 	}
 
@@ -54,7 +51,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, request corev1.Crea
 		return nil, err
 	}
 
-	slog.Info("contest draft created", "draft_id", draftID, "user_id", user.Id, "contest_id", contest.ID, "problem_id", req.ProblemId)
+	slog.Info("contest draft created", "draft_id", draftID, "user_id", user.Id, "contest_id", contest.ID)
 
 	return corev1.CreateContestDraft200JSONResponse{Id: draftID}, nil
 }
@@ -65,26 +62,6 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, request corev1.ListC
 	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
 	if err != nil {
 		return nil, err
-	}
-
-	isManager := false
-	if user.IsAdmin() {
-		isManager = true
-	} else {
-		allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
-		if err == nil && allowed {
-			isManager = true
-		}
-	}
-
-	var filterUserID *uuid.UUID
-	if isManager {
-		// Manager can filter by participant or view all
-		filterUserID = request.Params.UserId
-	} else {
-		// Regular user can only view their own drafts
-		uid := user.Id
-		filterUserID = &uid
 	}
 
 	var page int32 = 1
@@ -99,8 +76,7 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, request corev1.ListC
 
 	draftsList, err := h.draftsUC.ListDrafts(ctx, models.ContestDraftsFilter{
 		ContestID: contest.ID,
-		UserID:    filterUserID,
-		ProblemID: request.Params.ProblemId,
+		UserID:    user.Id,
 		Page:      page,
 		PageSize:  pageSize,
 	})

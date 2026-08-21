@@ -31,8 +31,6 @@ func (r *DraftsRepo) CreateDraft(ctx context.Context, creation *models.ContestDr
 	id, err := r.queries.CreateDraft(ctx, sqlc.CreateDraftParams{
 		ContestID: creation.ContestID,
 		UserID:    creation.UserID,
-		ProblemID: creation.ProblemID,
-		Language:  creation.Language,
 		Code:      creation.Code,
 	})
 	if err != nil {
@@ -52,31 +50,21 @@ func (r *DraftsRepo) GetDraft(ctx context.Context, id uuid.UUID) (models.Contest
 		username = *row.Username
 	}
 
-	var problemTitle string
-	if row.ProblemTitle != nil {
-		problemTitle = *row.ProblemTitle
-	}
-
 	return models.ContestDraft{
-		ID:           row.ID,
-		ContestID:    row.ContestID,
-		UserID:       row.UserID,
-		Username:     username,
-		ProblemID:    row.ProblemID,
-		ProblemTitle: problemTitle,
-		Position:     row.Position,
-		Language:     row.Language,
-		Code:         row.Code,
-		CreatedAt:    row.CreatedAt,
-		UpdatedAt:    row.UpdatedAt,
+		ID:        row.ID,
+		ContestID: row.ContestID,
+		UserID:    row.UserID,
+		Username:  username,
+		Code:      row.Code,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
 	}, nil
 }
 
-func (r *DraftsRepo) GetDraftsCountByProblem(ctx context.Context, contestID, userID, problemID uuid.UUID) (int64, error) {
-	count, err := r.queries.GetDraftsCountByProblem(ctx, sqlc.GetDraftsCountByProblemParams{
+func (r *DraftsRepo) GetDraftsCount(ctx context.Context, contestID, userID uuid.UUID) (int64, error) {
+	count, err := r.queries.GetDraftsCount(ctx, sqlc.GetDraftsCountParams{
 		ContestID: contestID,
 		UserID:    userID,
-		ProblemID: problemID,
 	})
 	if err != nil {
 		return 0, HandlePgErr(err)
@@ -87,8 +75,7 @@ func (r *DraftsRepo) GetDraftsCountByProblem(ctx context.Context, contestID, use
 func (r *DraftsRepo) ListDrafts(ctx context.Context, filter models.ContestDraftsFilter) ([]models.ContestDraft, int32, error) {
 	totalCount, err := r.queries.CountDrafts(ctx, sqlc.CountDraftsParams{
 		ContestID: filter.ContestID,
-		UserID:    nullableUUIDToPgtype(filter.UserID),
-		ProblemID: nullableUUIDToPgtype(filter.ProblemID),
+		UserID:    filter.UserID,
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
@@ -96,8 +83,7 @@ func (r *DraftsRepo) ListDrafts(ctx context.Context, filter models.ContestDrafts
 
 	rows, err := r.queries.ListDrafts(ctx, sqlc.ListDraftsParams{
 		ContestID: filter.ContestID,
-		UserID:    nullableUUIDToPgtype(filter.UserID),
-		ProblemID: nullableUUIDToPgtype(filter.ProblemID),
+		UserID:    filter.UserID,
 		OffsetVal: Offset(filter.Page, filter.PageSize),
 		LimitVal:  filter.PageSize,
 	})
@@ -112,23 +98,14 @@ func (r *DraftsRepo) ListDrafts(ctx context.Context, filter models.ContestDrafts
 			username = *row.Username
 		}
 
-		var problemTitle string
-		if row.ProblemTitle != nil {
-			problemTitle = *row.ProblemTitle
-		}
-
 		drafts = append(drafts, models.ContestDraft{
-			ID:           row.ID,
-			ContestID:    row.ContestID,
-			UserID:       row.UserID,
-			Username:     username,
-			ProblemID:    row.ProblemID,
-			ProblemTitle: problemTitle,
-			Position:     row.Position,
-			Language:     row.Language,
-			Code:         row.Code,
-			CreatedAt:    row.CreatedAt,
-			UpdatedAt:    row.UpdatedAt,
+			ID:        row.ID,
+			ContestID: row.ContestID,
+			UserID:    row.UserID,
+			Username:  username,
+			Code:      row.Code,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
 		})
 	}
 

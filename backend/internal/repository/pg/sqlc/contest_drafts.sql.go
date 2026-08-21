@@ -9,27 +9,23 @@ import (
 	"context"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countDrafts = `-- name: CountDrafts :one
 SELECT COUNT(*)
 FROM contest_drafts cd
 WHERE cd.contest_id = $1::uuid
-  AND ($2::uuid IS NULL OR cd.user_id = $2::uuid)
-  AND ($3::uuid IS NULL OR cd.problem_id = $3::uuid)
+  AND cd.user_id = $2::uuid
 `
 
 type CountDraftsParams struct {
-	ContestID uuid.UUID   `json:"contest_id"`
-	UserID    pgtype.UUID `json:"user_id"`
-	ProblemID pgtype.UUID `json:"problem_id"`
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) CountDrafts(ctx context.Context, arg CountDraftsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countDrafts, arg.ContestID, arg.UserID, arg.ProblemID)
+	row := q.db.QueryRow(ctx, countDrafts, arg.ContestID, arg.UserID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -39,35 +35,23 @@ const createDraft = `-- name: CreateDraft :one
 INSERT INTO contest_drafts (
     contest_id,
     user_id,
-    problem_id,
-    language,
     code
 ) VALUES (
     $1::uuid,
     $2::uuid,
-    $3::uuid,
-    $4,
-    $5
+    $3
 )
 RETURNING id
 `
 
 type CreateDraftParams struct {
-	ContestID uuid.UUID           `json:"contest_id"`
-	UserID    uuid.UUID           `json:"user_id"`
-	ProblemID uuid.UUID           `json:"problem_id"`
-	Language  models.LanguageName `json:"language"`
-	Code      string              `json:"code"`
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Code      string    `json:"code"`
 }
 
 func (q *Queries) CreateDraft(ctx context.Context, arg CreateDraftParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, createDraft,
-		arg.ContestID,
-		arg.UserID,
-		arg.ProblemID,
-		arg.Language,
-		arg.Code,
-	)
+	row := q.db.QueryRow(ctx, createDraft, arg.ContestID, arg.UserID, arg.Code)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -88,32 +72,22 @@ SELECT cd.id,
     cd.contest_id,
     cd.user_id,
     u.username,
-    cd.problem_id,
-    p.title AS problem_title,
-    cp.ordinal AS position,
-    cd.language,
     cd.code,
     cd.created_at,
     cd.updated_at
 FROM contest_drafts cd
     LEFT JOIN users u ON cd.user_id = u.id
-    LEFT JOIN problems p ON cd.problem_id = p.id
-    LEFT JOIN contest_problems cp ON cp.contest_id = cd.contest_id AND cp.problem_id = cd.problem_id
 WHERE cd.id = $1::uuid
 `
 
 type GetDraftRow struct {
-	ID           uuid.UUID           `json:"id"`
-	ContestID    uuid.UUID           `json:"contest_id"`
-	UserID       uuid.UUID           `json:"user_id"`
-	Username     *string             `json:"username"`
-	ProblemID    uuid.UUID           `json:"problem_id"`
-	ProblemTitle *string             `json:"problem_title"`
-	Position     *int32              `json:"position"`
-	Language     models.LanguageName `json:"language"`
-	Code         string              `json:"code"`
-	CreatedAt    time.Time           `json:"created_at"`
-	UpdatedAt    time.Time           `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Username  *string   `json:"username"`
+	Code      string    `json:"code"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (q *Queries) GetDraft(ctx context.Context, id uuid.UUID) (GetDraftRow, error) {
@@ -124,10 +98,6 @@ func (q *Queries) GetDraft(ctx context.Context, id uuid.UUID) (GetDraftRow, erro
 		&i.ContestID,
 		&i.UserID,
 		&i.Username,
-		&i.ProblemID,
-		&i.ProblemTitle,
-		&i.Position,
-		&i.Language,
 		&i.Code,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -135,22 +105,20 @@ func (q *Queries) GetDraft(ctx context.Context, id uuid.UUID) (GetDraftRow, erro
 	return i, err
 }
 
-const getDraftsCountByProblem = `-- name: GetDraftsCountByProblem :one
+const getDraftsCount = `-- name: GetDraftsCount :one
 SELECT COUNT(*)
 FROM contest_drafts
 WHERE contest_id = $1::uuid
   AND user_id = $2::uuid
-  AND problem_id = $3::uuid
 `
 
-type GetDraftsCountByProblemParams struct {
+type GetDraftsCountParams struct {
 	ContestID uuid.UUID `json:"contest_id"`
 	UserID    uuid.UUID `json:"user_id"`
-	ProblemID uuid.UUID `json:"problem_id"`
 }
 
-func (q *Queries) GetDraftsCountByProblem(ctx context.Context, arg GetDraftsCountByProblemParams) (int64, error) {
-	row := q.db.QueryRow(ctx, getDraftsCountByProblem, arg.ContestID, arg.UserID, arg.ProblemID)
+func (q *Queries) GetDraftsCount(ctx context.Context, arg GetDraftsCountParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getDraftsCount, arg.ContestID, arg.UserID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -161,51 +129,38 @@ SELECT cd.id,
     cd.contest_id,
     cd.user_id,
     u.username,
-    cd.problem_id,
-    p.title AS problem_title,
-    cp.ordinal AS position,
-    cd.language,
     cd.code,
     cd.created_at,
     cd.updated_at
 FROM contest_drafts cd
     LEFT JOIN users u ON cd.user_id = u.id
-    LEFT JOIN problems p ON cd.problem_id = p.id
-    LEFT JOIN contest_problems cp ON cp.contest_id = cd.contest_id AND cp.problem_id = cd.problem_id
 WHERE cd.contest_id = $1::uuid
-  AND ($2::uuid IS NULL OR cd.user_id = $2::uuid)
-  AND ($3::uuid IS NULL OR cd.problem_id = $3::uuid)
+  AND cd.user_id = $2::uuid
 ORDER BY cd.created_at DESC
-LIMIT $5 OFFSET $4
+LIMIT $4 OFFSET $3
 `
 
 type ListDraftsParams struct {
-	ContestID uuid.UUID   `json:"contest_id"`
-	UserID    pgtype.UUID `json:"user_id"`
-	ProblemID pgtype.UUID `json:"problem_id"`
-	OffsetVal int32       `json:"offset_val"`
-	LimitVal  int32       `json:"limit_val"`
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	OffsetVal int32     `json:"offset_val"`
+	LimitVal  int32     `json:"limit_val"`
 }
 
 type ListDraftsRow struct {
-	ID           uuid.UUID           `json:"id"`
-	ContestID    uuid.UUID           `json:"contest_id"`
-	UserID       uuid.UUID           `json:"user_id"`
-	Username     *string             `json:"username"`
-	ProblemID    uuid.UUID           `json:"problem_id"`
-	ProblemTitle *string             `json:"problem_title"`
-	Position     *int32              `json:"position"`
-	Language     models.LanguageName `json:"language"`
-	Code         string              `json:"code"`
-	CreatedAt    time.Time           `json:"created_at"`
-	UpdatedAt    time.Time           `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Username  *string   `json:"username"`
+	Code      string    `json:"code"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (q *Queries) ListDrafts(ctx context.Context, arg ListDraftsParams) ([]ListDraftsRow, error) {
 	rows, err := q.db.Query(ctx, listDrafts,
 		arg.ContestID,
 		arg.UserID,
-		arg.ProblemID,
 		arg.OffsetVal,
 		arg.LimitVal,
 	)
@@ -221,10 +176,6 @@ func (q *Queries) ListDrafts(ctx context.Context, arg ListDraftsParams) ([]ListD
 			&i.ContestID,
 			&i.UserID,
 			&i.Username,
-			&i.ProblemID,
-			&i.ProblemTitle,
-			&i.Position,
-			&i.Language,
 			&i.Code,
 			&i.CreatedAt,
 			&i.UpdatedAt,

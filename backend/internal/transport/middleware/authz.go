@@ -529,16 +529,6 @@ func checkListContestDraftsAccess(ctx context.Context, evalCtx *EvalContext) err
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
 	}
 
-	if req.Params.UserId != nil && *req.Params.UserId != evalCtx.User.Id {
-		managerAllowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, models.ActionManageContest)
-		if err != nil {
-			return err
-		}
-		if !managerAllowed {
-			return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view other users' drafts")
-		}
-	}
-
 	return nil
 }
 

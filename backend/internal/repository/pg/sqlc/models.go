@@ -461,14 +461,12 @@ type Contest struct {
 }
 
 type ContestDraft struct {
-	ID        uuid.UUID           `json:"id"`
-	ContestID uuid.UUID           `json:"contest_id"`
-	UserID    uuid.UUID           `json:"user_id"`
-	ProblemID uuid.UUID           `json:"problem_id"`
-	Language  models.LanguageName `json:"language"`
-	Code      string              `json:"code"`
-	CreatedAt time.Time           `json:"created_at"`
-	UpdatedAt time.Time           `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Code      string    `json:"code"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type ContestMember struct {

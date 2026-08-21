@@ -17,12 +17,10 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ slug: string; contestLogin: string }>;
-  searchParams: Promise<{ problemId?: string; userId?: string }>;
 };
 
-const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
+const Page = async ({params}: PageProps): Promise<ReactNode> => {
   const {slug, contestLogin} = await params;
-  const queryParams = await searchParams;
 
   const [contestResponse, [, me]] = await Promise.all([
     unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin}),
@@ -60,33 +58,22 @@ const Page = async ({params, searchParams}: PageProps): Promise<ReactNode> => {
     ? new Date(contestResponse.contest.end_time) <= new Date()
     : false;
 
-  const [membersResponse, draftsResponse] = await Promise.all([
-    isManager
-      ? api.listContestMembers({orgLogin: slug, contestLogin, page: 1, pageSize: 100})
-      : Promise.resolve([null, null] as const),
-    api.listContestDrafts({
-      orgLogin: slug,
-      contestLogin,
-      page: 1,
-      pageSize: 50,
-      userId: queryParams.userId || (isManager ? undefined : user.id),
-      problemId: queryParams.problemId,
-    }),
-  ]);
+  const [, draftsResponse] = await api.listContestDrafts({
+    orgLogin: slug,
+    contestLogin,
+    page: 1,
+    pageSize: 50,
+  });
 
-  const members = membersResponse?.[1]?.members || [];
-  const initialDrafts = draftsResponse?.[1]?.drafts || [];
+  const initialDrafts = draftsResponse?.drafts || [];
 
   return (
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}} pt="md">
       <DraftsClient
         contest={contestResponse.contest}
-        problems={contestResponse.problems || []}
-        user={user}
         isManager={isManager}
         isContestEnded={isContestEnded}
         initialDrafts={initialDrafts}
-        members={members}
       />
     </Container>
   );

@@ -1036,15 +1036,11 @@ export class DefaultService {
         contestLogin,
         page,
         pageSize,
-        problemId,
-        userId,
     }: {
         orgLogin: string,
         contestLogin: string,
         page?: number,
         pageSize?: number,
-        problemId?: string,
-        userId?: string,
     }): CancelablePromise<ListContestDraftsResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
@@ -1056,8 +1052,6 @@ export class DefaultService {
             query: {
                 'page': page,
                 'pageSize': pageSize,
-                'problemId': problemId,
-                'userId': userId,
             },
         });
     }
