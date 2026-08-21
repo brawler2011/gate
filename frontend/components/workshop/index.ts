@@ -1,5 +1,6 @@
 export * from './CreateContestModal';
 export * from './CreateProblemModal';
+export * from './ProblemHeaderNav';
 export * from './WorkshopCheckersTab';
 export * from './WorkshopCollectionTab';
 export * from './WorkshopEditor';
