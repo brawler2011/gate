@@ -865,6 +865,159 @@ paths:
       responses:
         "200":
           description: OK
+  /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block:
+    post:
+      operationId: BlockSubmission
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: submission_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlockSubmissionRequestModel"
+      responses:
+        "200":
+          description: OK
+  /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock:
+    post:
+      operationId: UnblockSubmission
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: submission_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+  /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block:
+    post:
+      operationId: BlockProblemForUser
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: problem_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlockProblemRequestModel"
+      responses:
+        "200":
+          description: OK
+    delete:
+      operationId: UnblockProblemForUser
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: problem_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: rejudge_submissions
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: OK
+    get:
+      operationId: GetProblemBlockStatusForUser
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: problem_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemBlockStatusResponseModel"
   /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge:
     post:
       operationId: RejudgeContestProblem
@@ -4200,6 +4353,9 @@ components:
         organization_login:
           type: string
           example: yandex
+        ban_reason:
+          type: string
+          nullable: true
         updated_at:
           type: string
           format: date-time
@@ -4365,6 +4521,9 @@ components:
           example: Contest title
         organization_login:
           type: string
+        ban_reason:
+          type: string
+          nullable: true
         updated_at:
           type: string
           format: date-time
@@ -4378,6 +4537,32 @@ components:
       properties:
         submission:
           $ref: "#/components/schemas/SubmissionModel"
+    BlockSubmissionRequestModel:
+      type: object
+      properties:
+        reason:
+          type: string
+          example: Cheating detected
+    BlockProblemRequestModel:
+      type: object
+      properties:
+        reason:
+          type: string
+          example: Cheating detected on this problem
+    ProblemBlockStatusResponseModel:
+      type: object
+      required:
+        - is_blocked
+      properties:
+        is_blocked:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
     DashboardContestModel:
       type: object
       required:

@@ -3,6 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AuthResponseModel } from '../models/AuthResponseModel';
+import type { BlockProblemRequestModel } from '../models/BlockProblemRequestModel';
+import type { BlockSubmissionRequestModel } from '../models/BlockSubmissionRequestModel';
 import type { CompileResult } from '../models/CompileResult';
 import type { CreateContestDraftRequestModel } from '../models/CreateContestDraftRequestModel';
 import type { CreatedPost } from '../models/CreatedPost';
@@ -37,6 +39,7 @@ import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
 import type { LoginRequestModel } from '../models/LoginRequestModel';
 import type { MessageResponse } from '../models/MessageResponse';
 import type { PostModel } from '../models/PostModel';
+import type { ProblemBlockStatusResponseModel } from '../models/ProblemBlockStatusResponseModel';
 import type { ProblemLimits } from '../models/ProblemLimits';
 import type { ProblemStatement } from '../models/ProblemStatement';
 import type { RegisterRequestModel } from '../models/RegisterRequestModel';
@@ -789,6 +792,143 @@ export class DefaultService {
                 'org_login': orgLogin,
                 'contest_login': contestLogin,
                 'submission_id': submissionId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public blockSubmission({
+        orgLogin,
+        contestLogin,
+        submissionId,
+        requestBody,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        submissionId: string,
+        requestBody?: BlockSubmissionRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'submission_id': submissionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public unblockSubmission({
+        orgLogin,
+        contestLogin,
+        submissionId,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        submissionId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'submission_id': submissionId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public blockProblemForUser({
+        orgLogin,
+        contestLogin,
+        userId,
+        problemId,
+        requestBody,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        userId: string,
+        problemId: string,
+        requestBody?: BlockProblemRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'user_id': userId,
+                'problem_id': problemId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public unblockProblemForUser({
+        orgLogin,
+        contestLogin,
+        userId,
+        problemId,
+        rejudgeSubmissions = false,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        userId: string,
+        problemId: string,
+        rejudgeSubmissions?: boolean,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'user_id': userId,
+                'problem_id': problemId,
+            },
+            query: {
+                'rejudge_submissions': rejudgeSubmissions,
+            },
+        });
+    }
+    /**
+     * @returns ProblemBlockStatusResponseModel OK
+     * @throws ApiError
+     */
+    public getProblemBlockStatusForUser({
+        orgLogin,
+        contestLogin,
+        userId,
+        problemId,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        userId: string,
+        problemId: string,
+    }): CancelablePromise<ProblemBlockStatusResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'user_id': userId,
+                'problem_id': problemId,
             },
         });
     }

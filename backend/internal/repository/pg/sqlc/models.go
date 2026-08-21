@@ -506,6 +506,15 @@ type ContestTeam struct {
 	PermissionsMask int64              `json:"permissions_mask"`
 }
 
+type ContestUserProblemBlock struct {
+	ContestID uuid.UUID   `json:"contest_id"`
+	UserID    uuid.UUID   `json:"user_id"`
+	ProblemID uuid.UUID   `json:"problem_id"`
+	Reason    *string     `json:"reason"`
+	CreatedBy pgtype.UUID `json:"created_by"`
+	CreatedAt time.Time   `json:"created_at"`
+}
+
 type Organization struct {
 	ID          uuid.UUID `json:"id"`
 	Login       string    `json:"login"`
@@ -615,6 +624,7 @@ type Submission struct {
 	UpdatedAt   time.Time           `json:"updated_at"`
 	FailedTest  *int32              `json:"failed_test"`
 	TestDetails []byte              `json:"test_details"`
+	BanReason   *string             `json:"ban_reason"`
 }
 
 type Team struct {

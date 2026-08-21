@@ -14,6 +14,53 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const blockSubmission = `-- name: BlockSubmission :exec
+UPDATE submissions
+SET state = 300,
+  score = 0,
+  ban_reason = $1,
+  updated_at = NOW()
+WHERE id = $2::uuid
+`
+
+type BlockSubmissionParams struct {
+	BanReason *string   `json:"ban_reason"`
+	ID        uuid.UUID `json:"id"`
+}
+
+func (q *Queries) BlockSubmission(ctx context.Context, arg BlockSubmissionParams) error {
+	_, err := q.db.Exec(ctx, blockSubmission, arg.BanReason, arg.ID)
+	return err
+}
+
+const blockUserProblemSubmissions = `-- name: BlockUserProblemSubmissions :exec
+UPDATE submissions
+SET state = 300,
+  score = 0,
+  ban_reason = $1,
+  updated_at = NOW()
+WHERE contest_id = $2::uuid
+  AND owner_id = $3::uuid
+  AND problem_id = $4::uuid
+`
+
+type BlockUserProblemSubmissionsParams struct {
+	BanReason *string   `json:"ban_reason"`
+	ContestID uuid.UUID `json:"contest_id"`
+	OwnerID   uuid.UUID `json:"owner_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+}
+
+func (q *Queries) BlockUserProblemSubmissions(ctx context.Context, arg BlockUserProblemSubmissionsParams) error {
+	_, err := q.db.Exec(ctx, blockUserProblemSubmissions,
+		arg.BanReason,
+		arg.ContestID,
+		arg.OwnerID,
+		arg.ProblemID,
+	)
+	return err
+}
+
 const countSubmissions = `-- name: CountSubmissions :one
 SELECT COUNT(*)
 FROM submissions s
@@ -67,7 +114,9 @@ INSERT INTO submissions (
     owner_id,
     source,
     language,
-    penalty
+    penalty,
+    state,
+    ban_reason
   )
 VALUES (
     $1::uuid,
@@ -75,7 +124,9 @@ VALUES (
     $3::uuid,
     $4,
     $5,
-    $6
+    $6,
+    COALESCE($7::integer, 1),
+    $8
   )
 RETURNING id
 `
@@ -87,6 +138,8 @@ type CreateSubmissionParams struct {
 	Source    string              `json:"source"`
 	Language  models.LanguageName `json:"language"`
 	Penalty   int32               `json:"penalty"`
+	State     *int32              `json:"state"`
+	BanReason *string             `json:"ban_reason"`
 }
 
 func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (uuid.UUID, error) {
@@ -97,6 +150,8 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 		arg.Source,
 		arg.Language,
 		arg.Penalty,
+		arg.State,
+		arg.BanReason,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -116,6 +171,7 @@ SELECT s.id,
   s.language,
   s.failed_test,
   s.test_details,
+  s.ban_reason,
   s.problem_id,
   p.title AS problem_title,
   p.short_name AS problem_short_name,
@@ -151,6 +207,7 @@ type GetSubmissionRow struct {
 	Language          models.LanguageName   `json:"language"`
 	FailedTest        *int32                `json:"failed_test"`
 	TestDetails       []byte                `json:"test_details"`
+	BanReason         *string               `json:"ban_reason"`
 	ProblemID         pgtype.UUID           `json:"problem_id"`
 	ProblemTitle      *string               `json:"problem_title"`
 	ProblemShortName  *string               `json:"problem_short_name"`
@@ -180,6 +237,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.Language,
 		&i.FailedTest,
 		&i.TestDetails,
+		&i.BanReason,
 		&i.ProblemID,
 		&i.ProblemTitle,
 		&i.ProblemShortName,
@@ -206,6 +264,7 @@ SELECT s.id,
   s.memory_stat,
   s.language,
   s.failed_test,
+  s.ban_reason,
   s.problem_id,
   p.title AS problem_title,
   p.short_name AS problem_short_name,
@@ -275,6 +334,7 @@ type ListSubmissionsRow struct {
 	MemoryStat        int32               `json:"memory_stat"`
 	Language          models.LanguageName `json:"language"`
 	FailedTest        *int32              `json:"failed_test"`
+	BanReason         *string             `json:"ban_reason"`
 	ProblemID         pgtype.UUID         `json:"problem_id"`
 	ProblemTitle      *string             `json:"problem_title"`
 	ProblemShortName  *string             `json:"problem_short_name"`
@@ -317,6 +377,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.MemoryStat,
 			&i.Language,
 			&i.FailedTest,
+			&i.BanReason,
 			&i.ProblemID,
 			&i.ProblemTitle,
 			&i.ProblemShortName,
@@ -346,6 +407,7 @@ SET state = 1,
   memory_stat = 0,
   failed_test = NULL,
   test_details = NULL,
+  ban_reason = NULL,
   updated_at = NOW()
 WHERE contest_id = $1::uuid
   AND (
@@ -356,6 +418,10 @@ WHERE contest_id = $1::uuid
     $3::uuid IS NULL
     OR id = $3::uuid
   )
+  AND (
+    $4::uuid IS NULL
+    OR owner_id = $4::uuid
+  )
 RETURNING id
 `
 
@@ -363,10 +429,16 @@ type ResetSubmissionsStateParams struct {
 	ContestID    uuid.UUID   `json:"contest_id"`
 	ProblemID    pgtype.UUID `json:"problem_id"`
 	SubmissionID pgtype.UUID `json:"submission_id"`
+	OwnerID      pgtype.UUID `json:"owner_id"`
 }
 
 func (q *Queries) ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, resetSubmissionsState, arg.ContestID, arg.ProblemID, arg.SubmissionID)
+	rows, err := q.db.Query(ctx, resetSubmissionsState,
+		arg.ContestID,
+		arg.ProblemID,
+		arg.SubmissionID,
+		arg.OwnerID,
+	)
 	if err != nil {
 		return nil, err
 	}

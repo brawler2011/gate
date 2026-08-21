@@ -183,12 +183,58 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 	return i, err
 }
 
+const createContestUserProblemBlock = `-- name: CreateContestUserProblemBlock :exec
+INSERT INTO contest_user_problem_blocks (contest_id, user_id, problem_id, reason, created_by)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (contest_id, user_id, problem_id)
+DO UPDATE SET
+    reason = EXCLUDED.reason,
+    created_by = EXCLUDED.created_by,
+    created_at = NOW()
+`
+
+type CreateContestUserProblemBlockParams struct {
+	ContestID uuid.UUID   `json:"contest_id"`
+	UserID    uuid.UUID   `json:"user_id"`
+	ProblemID uuid.UUID   `json:"problem_id"`
+	Reason    *string     `json:"reason"`
+	CreatedBy pgtype.UUID `json:"created_by"`
+}
+
+// Contest User Problem Blocks
+func (q *Queries) CreateContestUserProblemBlock(ctx context.Context, arg CreateContestUserProblemBlockParams) error {
+	_, err := q.db.Exec(ctx, createContestUserProblemBlock,
+		arg.ContestID,
+		arg.UserID,
+		arg.ProblemID,
+		arg.Reason,
+		arg.CreatedBy,
+	)
+	return err
+}
+
 const deleteContest = `-- name: DeleteContest :exec
 DELETE FROM contests WHERE id = $1
 `
 
 func (q *Queries) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteContest, id)
+	return err
+}
+
+const deleteContestUserProblemBlock = `-- name: DeleteContestUserProblemBlock :exec
+DELETE FROM contest_user_problem_blocks
+WHERE contest_id = $1 AND user_id = $2 AND problem_id = $3
+`
+
+type DeleteContestUserProblemBlockParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+}
+
+func (q *Queries) DeleteContestUserProblemBlock(ctx context.Context, arg DeleteContestUserProblemBlockParams) error {
+	_, err := q.db.Exec(ctx, deleteContestUserProblemBlock, arg.ContestID, arg.UserID, arg.ProblemID)
 	return err
 }
 
@@ -488,6 +534,32 @@ func (q *Queries) GetContestScoreboardFromStandings(ctx context.Context, contest
 	return items, nil
 }
 
+const getContestUserProblemBlock = `-- name: GetContestUserProblemBlock :one
+SELECT contest_id, user_id, problem_id, reason, created_by, created_at
+FROM contest_user_problem_blocks
+WHERE contest_id = $1 AND user_id = $2 AND problem_id = $3
+`
+
+type GetContestUserProblemBlockParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+}
+
+func (q *Queries) GetContestUserProblemBlock(ctx context.Context, arg GetContestUserProblemBlockParams) (ContestUserProblemBlock, error) {
+	row := q.db.QueryRow(ctx, getContestUserProblemBlock, arg.ContestID, arg.UserID, arg.ProblemID)
+	var i ContestUserProblemBlock
+	err := row.Scan(
+		&i.ContestID,
+		&i.UserID,
+		&i.ProblemID,
+		&i.Reason,
+		&i.CreatedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getSubmissionsForScoreboard = `-- name: GetSubmissionsForScoreboard :many
 SELECT state, created_at
 FROM submissions
@@ -688,6 +760,44 @@ func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) 
 			&i.ShortName,
 			&i.Visibility,
 			&i.PackageUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listContestUserProblemBlocks = `-- name: ListContestUserProblemBlocks :many
+SELECT contest_id, user_id, problem_id, reason, created_by, created_at
+FROM contest_user_problem_blocks
+WHERE contest_id = $1 AND ($2::uuid IS NULL OR user_id = $2::uuid)
+`
+
+type ListContestUserProblemBlocksParams struct {
+	ContestID uuid.UUID   `json:"contest_id"`
+	UserID    pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) ListContestUserProblemBlocks(ctx context.Context, arg ListContestUserProblemBlocksParams) ([]ContestUserProblemBlock, error) {
+	rows, err := q.db.Query(ctx, listContestUserProblemBlocks, arg.ContestID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ContestUserProblemBlock{}
+	for rows.Next() {
+		var i ContestUserProblemBlock
+		if err := rows.Scan(
+			&i.ContestID,
+			&i.UserID,
+			&i.ProblemID,
+			&i.Reason,
+			&i.CreatedBy,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

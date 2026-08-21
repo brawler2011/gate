@@ -5,7 +5,9 @@ INSERT INTO submissions (
     owner_id,
     source,
     language,
-    penalty
+    penalty,
+    state,
+    ban_reason
   )
 VALUES (
     @contest_id::uuid,
@@ -13,7 +15,9 @@ VALUES (
     @owner_id::uuid,
     @source,
     @language,
-    @penalty
+    @penalty,
+    COALESCE(sqlc.narg('state')::integer, 1),
+    sqlc.narg('ban_reason')
   )
 RETURNING id;
 
@@ -30,6 +34,7 @@ SELECT s.id,
   s.language,
   s.failed_test,
   s.test_details,
+  s.ban_reason,
   s.problem_id,
   p.title AS problem_title,
   p.short_name AS problem_short_name,
@@ -61,6 +66,24 @@ SET state = @state,
   test_details = @test_details
 WHERE id = @id::uuid;
 
+-- name: BlockSubmission :exec
+UPDATE submissions
+SET state = 300,
+  score = 0,
+  ban_reason = @ban_reason,
+  updated_at = NOW()
+WHERE id = @id::uuid;
+
+-- name: BlockUserProblemSubmissions :exec
+UPDATE submissions
+SET state = 300,
+  score = 0,
+  ban_reason = @ban_reason,
+  updated_at = NOW()
+WHERE contest_id = @contest_id::uuid
+  AND owner_id = @owner_id::uuid
+  AND problem_id = @problem_id::uuid;
+
 -- Submission listing
 -- name: ListSubmissions :many
 SELECT s.id,
@@ -73,6 +96,7 @@ SELECT s.id,
   s.memory_stat,
   s.language,
   s.failed_test,
+  s.ban_reason,
   s.problem_id,
   p.title AS problem_title,
   p.short_name AS problem_short_name,
@@ -151,6 +175,7 @@ SET state = 1,
   memory_stat = 0,
   failed_test = NULL,
   test_details = NULL,
+  ban_reason = NULL,
   updated_at = NOW()
 WHERE contest_id = @contest_id::uuid
   AND (
@@ -160,6 +185,10 @@ WHERE contest_id = @contest_id::uuid
   AND (
     sqlc.narg('submission_id')::uuid IS NULL
     OR id = sqlc.narg('submission_id')::uuid
+  )
+  AND (
+    sqlc.narg('owner_id')::uuid IS NULL
+    OR owner_id = sqlc.narg('owner_id')::uuid
   )
 RETURNING id;
 

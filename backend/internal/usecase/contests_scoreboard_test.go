@@ -57,6 +57,29 @@ func (m *ContestsRepoMock) GetSubmissionsForScoreboard(ctx context.Context, cont
 	return args.Get(0).([]models.SubmissionForScoreboard), args.Error(1) //nolint:wrapcheck
 }
 
+func (m *ContestsRepoMock) CreateContestUserProblemBlock(ctx context.Context, params *models.CreateContestUserProblemBlockParams) error {
+	args := m.Called(ctx, params)
+	return args.Error(0) //nolint:wrapcheck
+}
+
+func (m *ContestsRepoMock) DeleteContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) error {
+	args := m.Called(ctx, contestID, userID, problemID)
+	return args.Error(0) //nolint:wrapcheck
+}
+
+func (m *ContestsRepoMock) GetContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestUserProblemBlock, error) {
+	args := m.Called(ctx, contestID, userID, problemID)
+	if res := args.Get(0); res != nil {
+		return res.(*models.ContestUserProblemBlock), args.Error(1) //nolint:wrapcheck
+	}
+	return nil, args.Error(1) //nolint:wrapcheck
+}
+
+func (m *ContestsRepoMock) ListContestUserProblemBlocks(ctx context.Context, contestID uuid.UUID, userID *uuid.UUID) ([]models.ContestUserProblemBlock, error) {
+	args := m.Called(ctx, contestID, userID)
+	return args.Get(0).([]models.ContestUserProblemBlock), args.Error(1) //nolint:wrapcheck
+}
+
 func TestProcessSubmissionResult_Rules(t *testing.T) {
 	ctx := context.Background()
 
@@ -551,5 +574,72 @@ func TestGetContestScoreboard_ManualUnfrozenOverride(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.False(t, sb.IsFrozen)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestProcessSubmissionResult_DisqualifiedCountsAsFailedAttempt(t *testing.T) {
+	ctx := context.Background()
+
+	contestID := uuid.New()
+	userID := uuid.New()
+	problemID := uuid.New()
+	startTime := time.Now().Add(-1 * time.Hour)
+	endTime := time.Now().Add(2 * time.Hour)
+
+	mockRepo := new(ContestsRepoMock)
+	uc := usecase.NewContestsUseCase(mockRepo)
+
+	mockRepo.On("GetContestMember", mock.Anything, &models.ContestPermissionGet{
+		ContestId: contestID,
+		UserId:    userID,
+	}).Return(models.ContestMember{
+		ContestID:   contestID,
+		UserID:      userID,
+		ContestRole: models.ContestRoleParticipant,
+	}, nil)
+
+	mockRepo.On("GetContest", mock.Anything, contestID).Return(models.Contest{
+		ID:        contestID,
+		StartTime: &startTime,
+		EndTime:   &endTime,
+		Settings: map[string]interface{}{
+			"penalty_per_attempt": 20,
+		},
+	}, nil)
+
+	// Submissions: 1 Disqualified submission, followed by 1 Accepted submission
+	subDQ := models.SubmissionForScoreboard{
+		State:     models.Disqualified,
+		CreatedAt: startTime.Add(10 * time.Minute),
+	}
+	subAC := models.SubmissionForScoreboard{
+		State:     models.Accepted,
+		CreatedAt: startTime.Add(25 * time.Minute),
+	}
+
+	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userID, problemID).
+		Return([]models.SubmissionForScoreboard{subDQ, subAC}, nil)
+
+	timeMins := int32(25)
+	firstAC := subAC.CreatedAt
+	mockRepo.On("UpsertContestProblemResult", mock.Anything, &models.UpsertContestProblemResultParams{
+		ContestID:      contestID,
+		UserID:         userID,
+		ProblemID:      problemID,
+		Solved:         true,
+		FailedAttempts: 1, // 1 Disqualified counts as 1 failed attempt
+		FirstACTime:    &firstAC,
+		TimeMinutes:    &timeMins,
+	}).Return(nil)
+
+	err := uc.ProcessSubmissionResult(ctx, &models.Submission{
+		ContestID: &contestID,
+		CreatedBy: &userID,
+		ProblemID: &problemID,
+		State:     models.Accepted,
+		CreatedAt: subAC.CreatedAt,
+	})
+	require.NoError(t, err)
+
 	mockRepo.AssertExpectations(t)
 }

@@ -222,4 +222,29 @@ FROM submissions
 WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3
 ORDER BY created_at ASC;
 
+-- Contest User Problem Blocks
+-- name: CreateContestUserProblemBlock :exec
+INSERT INTO contest_user_problem_blocks (contest_id, user_id, problem_id, reason, created_by)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (contest_id, user_id, problem_id)
+DO UPDATE SET
+    reason = EXCLUDED.reason,
+    created_by = EXCLUDED.created_by,
+    created_at = NOW();
+
+-- name: DeleteContestUserProblemBlock :exec
+DELETE FROM contest_user_problem_blocks
+WHERE contest_id = $1 AND user_id = $2 AND problem_id = $3;
+
+-- name: GetContestUserProblemBlock :one
+SELECT contest_id, user_id, problem_id, reason, created_by, created_at
+FROM contest_user_problem_blocks
+WHERE contest_id = $1 AND user_id = $2 AND problem_id = $3;
+
+-- name: ListContestUserProblemBlocks :many
+SELECT contest_id, user_id, problem_id, reason, created_by, created_at
+FROM contest_user_problem_blocks
+WHERE contest_id = $1 AND (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id')::uuid);
+
+
 

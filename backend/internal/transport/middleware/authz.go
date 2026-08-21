@@ -251,12 +251,17 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"DeleteContestTeam":      {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 		"ListContestSubmissions": {RequireAuth, checkListContestSubmissionsAccess},
 		"CreateSubmission":       {RequireAuth, RequireContestPermission(models.ActionCreateSubmission)},
-		"ListContestDrafts":      {RequireAuth, checkListContestDraftsAccess},
-		"CreateContestDraft":    {RequireAuth, RequireContestPermission(models.ActionGetContest)},
-		"DeleteContestDraft":    {RequireAuth, RequireContestPermission(models.ActionGetContest)},
-		"RejudgeSubmission":     {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"RejudgeContestProblem": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"RejudgeContest":        {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"ListContestDrafts":            {RequireAuth, checkListContestDraftsAccess},
+		"CreateContestDraft":           {RequireAuth, RequireContestPermission(models.ActionGetContest)},
+		"DeleteContestDraft":           {RequireAuth, RequireContestPermission(models.ActionGetContest)},
+		"RejudgeSubmission":            {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"RejudgeContestProblem":        {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"RejudgeContest":               {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"BlockSubmission":              {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"UnblockSubmission":            {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"BlockProblemForUser":          {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"UnblockProblemForUser":        {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"GetProblemBlockStatusForUser": {RequireAuth, checkGetProblemBlockStatusAccess},
 
 		"GetProblem":           {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
 		"GetProblemLimits":     {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
@@ -573,6 +578,19 @@ func checkGetSubmissionAccess(ctx context.Context, evalCtx *EvalContext) error {
 	}
 
 	return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
+}
+
+func checkGetProblemBlockStatusAccess(ctx context.Context, evalCtx *EvalContext) error {
+	if evalCtx.User.IsAdmin() {
+		return nil
+	}
+
+	targetUserID, err := extractUUIDFromRequest(evalCtx.Request, "UserId")
+	if err == nil && targetUserID == evalCtx.User.Id {
+		return nil
+	}
+
+	return RequireContestPermission(models.ActionManageContest)(ctx, evalCtx)
 }
 
 func asListContestSubmissionsRequestObject(request interface{}) (corev1.ListContestSubmissionsRequestObject, error) {

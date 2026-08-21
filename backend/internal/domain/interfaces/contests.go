@@ -5,6 +5,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type ContestsRepo interface {
@@ -45,6 +46,12 @@ type ContestsRepo interface {
 	GetContestProblemResult(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestProblemResult, error)
 	GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]models.ContestProblemResult, map[uuid.UUID]string, error)
 	GetSubmissionsForScoreboard(ctx context.Context, contestID, userID, problemID uuid.UUID) ([]models.SubmissionForScoreboard, error)
+
+	CreateContestUserProblemBlock(ctx context.Context, params *models.CreateContestUserProblemBlockParams) error
+	DeleteContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) error
+	GetContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestUserProblemBlock, error)
+	ListContestUserProblemBlocks(ctx context.Context, contestID uuid.UUID, userID *uuid.UUID) ([]models.ContestUserProblemBlock, error)
+	WithTx(tx pgx.Tx) ContestsRepo
 }
 
 type ContestsUC interface {
@@ -80,5 +87,9 @@ type ContestsUC interface {
 
 	ProcessSubmissionResult(ctx context.Context, submission *models.Submission) error
 	GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*models.ScoreboardResponse, error)
+
+	BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string, operatorID uuid.UUID) error
+	UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error
+	GetProblemBlockStatusForUser(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestUserProblemBlock, error)
 }
 

@@ -253,6 +253,23 @@ type CreateContestMemberParams struct {
 	Role      ContestRole
 }
 
+type ContestUserProblemBlock struct {
+	ContestID uuid.UUID  `json:"contest_id"`
+	UserID    uuid.UUID  `json:"user_id"`
+	ProblemID uuid.UUID  `json:"problem_id"`
+	Reason    *string    `json:"reason,omitempty"`
+	CreatedBy *uuid.UUID `json:"created_by,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+type CreateContestUserProblemBlockParams struct {
+	ContestID uuid.UUID
+	UserID    uuid.UUID
+	ProblemID uuid.UUID
+	Reason    *string
+	CreatedBy *uuid.UUID
+}
+
 type Contest struct {
 	ID                uuid.UUID
 	OrganizationID    uuid.UUID

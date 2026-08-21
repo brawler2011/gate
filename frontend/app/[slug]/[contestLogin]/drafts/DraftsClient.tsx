@@ -15,7 +15,6 @@ import {
   Stack,
   Switch,
   Text,
-  Title,
   Tooltip,
 } from "@mantine/core";
 import {
@@ -244,15 +243,9 @@ export const DraftsClient = ({
     isPending;
 
   return (
-    <Stack gap="lg">
+    <Stack>
       <Box>
         <Group justify="space-between" align="flex-start" wrap="wrap">
-          <div>
-            <Title order={2}>Черновики решений</Title>
-            <Text c="dimmed" size="sm">
-              Сохраняйте рабочие версии кода задач. Черновики доступны только вам и жюри контеста.
-            </Text>
-          </div>
           {isContestEnded && (
             <Badge color="orange" size="lg" variant="light">
               Контест завершен (только чтение)

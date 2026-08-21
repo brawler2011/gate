@@ -27,11 +27,13 @@ import {notifications} from "@mantine/notifications";
 import {
   IconAlertCircle,
   IconAlertTriangle,
+  IconBan,
   IconCheck,
   IconCopy,
   IconDownload,
   IconFileCode,
   IconInfoCircle,
+  IconLockOpen,
   IconRefresh,
 } from "@tabler/icons-react";
 import Link from "next/link";
@@ -48,6 +50,11 @@ import {
   StateString,
   TimeBeautify,
 } from "@/lib/lib";
+
+import {
+  SubmissionSanctionsModal,
+  type SanctionActionType,
+} from "./SubmissionSanctionsModal";
 
 import type {SubmissionModel} from "@/contracts/core/v1";
 
@@ -164,6 +171,7 @@ export const SubmissionDetailsContent = ({
   isRejudging,
 }: SubmissionDetailsContentProps): ReactNode => {
   const [copiedCode, setCopiedCode] = useState(false);
+  const [sanctionAction, setSanctionAction] = useState<SanctionActionType | null>(null);
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(submission.submission);
@@ -268,24 +276,85 @@ export const SubmissionDetailsContent = ({
           </Box>
         </SimpleGrid>
 
-        {canRejudge && onRejudge && (
+        {canRejudge && (
           <>
             <Divider my="sm" />
-            <Group justify="flex-end">
-              <Button
-                variant="light"
-                color="orange"
-                size="xs"
-                leftSection={<IconRefresh size={14} />}
-                loading={isRejudging}
-                onClick={() => onRejudge(submission.id)}
-              >
-                Перетестировать посылку
-              </Button>
+            <Group justify="flex-end" gap="xs" wrap="wrap">
+              {onRejudge && (
+                <Button
+                  variant="light"
+                  color="orange"
+                  size="xs"
+                  leftSection={<IconRefresh size={14} />}
+                  loading={isRejudging}
+                  onClick={() => onRejudge(submission.id)}
+                >
+                  Перетестировать
+                </Button>
+              )}
+
+              {submission.organization_login && submission.contest_login && (
+                <>
+                  {submission.state === 300 ? (
+                    <Button
+                      variant="outline"
+                      color="blue"
+                      size="xs"
+                      leftSection={<IconLockOpen size={14} />}
+                      onClick={() => setSanctionAction("unblock_submission")}
+                    >
+                      Разблокировать посылку
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      color="red"
+                      size="xs"
+                      leftSection={<IconBan size={14} />}
+                      onClick={() => setSanctionAction("block_submission")}
+                    >
+                      Заблокировать посылку
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    color="red"
+                    size="xs"
+                    leftSection={<IconBan size={14} />}
+                    onClick={() => setSanctionAction("block_problem")}
+                  >
+                    Заблокировать задачу
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    color="teal"
+                    size="xs"
+                    leftSection={<IconLockOpen size={14} />}
+                    onClick={() => setSanctionAction("unblock_problem")}
+                  >
+                    Разблокировать задачу
+                  </Button>
+                </>
+              )}
             </Group>
           </>
         )}
       </Card>
+
+      {/* Ban reason alert if disqualified */}
+      {submission.ban_reason && (
+        <Alert
+          icon={<IconAlertTriangle size={18} />}
+          title="Причина дисквалификации (DQ)"
+          color="red"
+          variant="light"
+          radius="md"
+        >
+          <Text size="sm">{submission.ban_reason}</Text>
+        </Alert>
+      )}
 
       {/* Compiler output / Compilation error */}
       {compilerOutput && (
@@ -492,6 +561,18 @@ export const SubmissionDetailsContent = ({
           highlightLine={errorLine}
         />
       </Card>
+
+      <SubmissionSanctionsModal
+        actionType={sanctionAction}
+        onClose={() => setSanctionAction(null)}
+        orgLogin={submission.organization_login}
+        contestLogin={submission.contest_login}
+        submissionId={submission.id}
+        userId={submission.user_id}
+        problemId={submission.problem_id}
+        username={submission.username}
+        problemTitle={submission.problem_title}
+      />
     </Stack>
   );
 };
