@@ -68,7 +68,7 @@ export const DashboardContestsList = ({contests}: DashboardContestsListProps): R
               cursor: "pointer",
               transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
             }}
-            onClick={() => router.push(`/${contest.organization_login}/contests/${contest.id}`)}
+            onClick={() => router.push(`/${contest.organization_login}/contests/${contest.login}`)}
             onMouseEnter={(e) => {
               const el = e.currentTarget;
               el.style.transform = "translateY(-2px)";
