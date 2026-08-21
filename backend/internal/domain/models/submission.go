@@ -60,6 +60,9 @@ type FailedTestDetail struct {
 }
 
 type SubmissionTestDetails struct {
+	TimeStat          *int32            `json:"time_stat,omitempty"`
+	MemoryStat        *int32            `json:"memory_stat,omitempty"`
+	FailedTest        *int32            `json:"failed_test,omitempty"`
 	CompilerOutput    *string           `json:"compiler_output,omitempty"`
 	ErrorLine         *int32            `json:"error_line,omitempty"`
 	Tests             []TestDetailItem  `json:"tests,omitempty"`

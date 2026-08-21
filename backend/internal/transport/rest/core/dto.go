@@ -150,33 +150,22 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 
 	// Convert visibility
 	visibility := string(c.Visibility)
+	settings := c.TypedSettings()
 	monitorScope := "moderator"
+	if settings.MonitorScope != "" {
+		monitorScope = settings.MonitorScope
+	}
 	submissionsListScope := "moderator"
+	if settings.SubmissionsListScope != "" {
+		submissionsListScope = settings.SubmissionsListScope
+	}
 	submissionsReviewScope := "moderator"
-
-	if rawMonitorScope, ok := c.Settings["monitor_scope"]; ok {
-		if parsedMonitorScope, ok := rawMonitorScope.(string); ok && parsedMonitorScope != "" {
-			monitorScope = parsedMonitorScope
-		}
+	if settings.SubmissionsReviewScope != "" {
+		submissionsReviewScope = settings.SubmissionsReviewScope
 	}
-
-	if rawSubmissionsListScope, ok := c.Settings["submissions_list_scope"]; ok {
-		if parsedSubmissionsListScope, ok := rawSubmissionsListScope.(string); ok && parsedSubmissionsListScope != "" {
-			submissionsListScope = parsedSubmissionsListScope
-		}
-	}
-
-	if rawSubmissionsReviewScope, ok := c.Settings["submissions_review_scope"]; ok {
-		if parsedSubmissionsReviewScope, ok := rawSubmissionsReviewScope.(string); ok && parsedSubmissionsReviewScope != "" {
-			submissionsReviewScope = parsedSubmissionsReviewScope
-		}
-	}
-
 	submissionDetailsScope := "moderator"
-	if rawSubmissionDetailsScope, ok := c.Settings["submission_details_scope"]; ok {
-		if parsedSubmissionDetailsScope, ok := rawSubmissionDetailsScope.(string); ok && parsedSubmissionDetailsScope != "" {
-			submissionDetailsScope = parsedSubmissionDetailsScope
-		}
+	if settings.SubmissionDetailsScope != "" {
+		submissionDetailsScope = settings.SubmissionDetailsScope
 	}
 
 	freezeDurationMinutes := c.GetFreezeDurationMinutes()

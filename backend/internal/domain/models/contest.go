@@ -334,68 +334,160 @@ type DashboardContest struct {
 	LastSubmissionTime *time.Time
 }
 
-func (c *Contest) GetPenaltyPerAttempt() int32 {
-	if c.Settings != nil {
-		if raw, ok := c.Settings["penalty_per_attempt"]; ok {
-			switch v := raw.(type) {
-			case float64:
-				if v > math.MaxInt32 || v < math.MinInt32 {
-					return 20
-				}
-				return int32(v)
-			case int32:
-				return v
-			case int:
-				if v > math.MaxInt32 || v < math.MinInt32 {
-					return 20
-				}
-				return int32(v)
-			}
+type ContestSettings struct {
+	PenaltyPerAttempt      int32  `json:"penalty_per_attempt,omitempty"`
+	FreezeDurationMinutes  *int32 `json:"freeze_duration_minutes,omitempty"`
+	FreezeStatus           string `json:"freeze_status,omitempty"`
+	MonitorScope           string `json:"monitor_scope,omitempty"`
+	SubmissionsListScope   string `json:"submissions_list_scope,omitempty"`
+	SubmissionsReviewScope string `json:"submissions_review_scope,omitempty"`
+	SubmissionDetailsScope string `json:"submission_details_scope,omitempty"`
+	ShowVerdicts           *bool  `json:"show_verdicts,omitempty"`
+	ShowTestDetails        *bool  `json:"show_test_details,omitempty"`
+	AllowClarifications    *bool  `json:"allow_clarifications,omitempty"`
+}
+
+func (s ContestSettings) GetPenaltyPerAttempt() int32 {
+	if s.PenaltyPerAttempt <= 0 {
+		return 20
+	}
+	return s.PenaltyPerAttempt
+}
+
+func (s ContestSettings) GetFreezeDurationMinutes() *int32 {
+	if s.FreezeDurationMinutes == nil || *s.FreezeDurationMinutes <= 0 {
+		return nil
+	}
+	return s.FreezeDurationMinutes
+}
+
+func (s ContestSettings) GetFreezeStatus() string {
+	switch s.FreezeStatus {
+	case FreezeStatusFrozen, FreezeStatusUnfrozen, FreezeStatusAuto:
+		return s.FreezeStatus
+	default:
+		return FreezeStatusAuto
+	}
+}
+
+func parseFlexibleInt32(v interface{}, defaultVal int32) int32 {
+	switch n := v.(type) {
+	case float64:
+		if n > math.MaxInt32 || n < math.MinInt32 {
+			return defaultVal
+		}
+		return int32(n)
+	case int:
+		if n > math.MaxInt32 || n < math.MinInt32 {
+			return defaultVal
+		}
+		return int32(n)
+	case int32:
+		return n
+	case int64:
+		if n > math.MaxInt32 || n < math.MinInt32 {
+			return defaultVal
+		}
+		return int32(n)
+	default:
+		return defaultVal
+	}
+}
+
+func parseFlexibleInt32Ptr(v interface{}) *int32 {
+	if v == nil {
+		return nil
+	}
+	switch n := v.(type) {
+	case float64:
+		if n > math.MaxInt32 || n < math.MinInt32 {
+			return nil
+		}
+		res := int32(n)
+		return &res
+	case int:
+		if n > math.MaxInt32 || n < math.MinInt32 {
+			return nil
+		}
+		res := int32(n)
+		return &res
+	case int32:
+		res := n
+		return &res
+	case int64:
+		if n > math.MaxInt32 || n < math.MinInt32 {
+			return nil
+		}
+		res := int32(n)
+		return &res
+	default:
+		return nil
+	}
+}
+
+func MapToContestSettings(m map[string]interface{}) ContestSettings {
+	var s ContestSettings
+	if m == nil {
+		return s
+	}
+
+	if raw, ok := m["penalty_per_attempt"]; ok && raw != nil {
+		s.PenaltyPerAttempt = parseFlexibleInt32(raw, 20)
+	} else {
+		s.PenaltyPerAttempt = 20
+	}
+
+	if raw, ok := m["freeze_duration_minutes"]; ok && raw != nil {
+		s.FreezeDurationMinutes = parseFlexibleInt32Ptr(raw)
+	}
+
+	if raw, ok := m["freeze_status"]; ok && raw != nil {
+		if str, ok := raw.(string); ok {
+			s.FreezeStatus = str
 		}
 	}
-	return 20
+
+	if raw, ok := m["monitor_scope"]; ok && raw != nil {
+		if str, ok := raw.(string); ok {
+			s.MonitorScope = str
+		}
+	}
+
+	if raw, ok := m["submissions_list_scope"]; ok && raw != nil {
+		if str, ok := raw.(string); ok {
+			s.SubmissionsListScope = str
+		}
+	}
+
+	if raw, ok := m["submissions_review_scope"]; ok && raw != nil {
+		if str, ok := raw.(string); ok {
+			s.SubmissionsReviewScope = str
+		}
+	}
+
+	if raw, ok := m["submission_details_scope"]; ok && raw != nil {
+		if str, ok := raw.(string); ok {
+			s.SubmissionDetailsScope = str
+		}
+	}
+
+	return s
+}
+
+func (c *Contest) TypedSettings() ContestSettings {
+	return MapToContestSettings(c.Settings)
+}
+
+func (c *Contest) GetPenaltyPerAttempt() int32 {
+	return c.TypedSettings().GetPenaltyPerAttempt()
 }
 
 func (c *Contest) GetFreezeDurationMinutes() *int32 {
-	if c.Settings != nil {
-		if raw, ok := c.Settings["freeze_duration_minutes"]; ok && raw != nil {
-			switch v := raw.(type) {
-			case float64:
-				if v >= math.MinInt32 && v <= math.MaxInt32 {
-					res := int32(v)
-					return &res
-				}
-			case int32:
-				res := v
-				return &res
-			case int:
-				if v >= math.MinInt32 && v <= math.MaxInt32 {
-					res := int32(v)
-					return &res
-				}
-			case int64:
-				if v >= math.MinInt32 && v <= math.MaxInt32 {
-					res := int32(v)
-					return &res
-				}
-			}
-		}
-	}
-	return nil
+	return c.TypedSettings().GetFreezeDurationMinutes()
 }
 
 func (c *Contest) GetFreezeStatus() string {
-	if c.Settings != nil {
-		if raw, ok := c.Settings["freeze_status"]; ok && raw != nil {
-			if str, ok := raw.(string); ok && str != "" {
-				switch str {
-				case FreezeStatusAuto, FreezeStatusFrozen, FreezeStatusUnfrozen:
-					return str
-				}
-			}
-		}
-	}
-	return FreezeStatusAuto
+	return c.TypedSettings().GetFreezeStatus()
 }
 
 func (c *Contest) GetFreezeTime() *time.Time {

@@ -166,10 +166,10 @@ SELECT s.id,
   s.state,
   s.score,
   s.penalty,
-  s.time_stat,
-  s.memory_stat,
+  COALESCE((s.test_details->>'time_stat')::integer, 0)::integer AS time_stat,
+  COALESCE((s.test_details->>'memory_stat')::integer, 0)::integer AS memory_stat,
   s.language,
-  s.failed_test,
+  (s.test_details->>'failed_test')::integer AS failed_test,
   s.test_details,
   s.ban_reason,
   s.problem_id,
@@ -205,7 +205,7 @@ type GetSubmissionRow struct {
 	TimeStat          int32                 `json:"time_stat"`
 	MemoryStat        int32                 `json:"memory_stat"`
 	Language          models.LanguageName   `json:"language"`
-	FailedTest        *int32                `json:"failed_test"`
+	FailedTest        int32                 `json:"failed_test"`
 	TestDetails       []byte                `json:"test_details"`
 	BanReason         *string               `json:"ban_reason"`
 	ProblemID         pgtype.UUID           `json:"problem_id"`
@@ -260,10 +260,10 @@ SELECT s.id,
   s.state,
   s.score,
   s.penalty,
-  s.time_stat,
-  s.memory_stat,
+  COALESCE((s.test_details->>'time_stat')::integer, 0)::integer AS time_stat,
+  COALESCE((s.test_details->>'memory_stat')::integer, 0)::integer AS memory_stat,
   s.language,
-  s.failed_test,
+  (s.test_details->>'failed_test')::integer AS failed_test,
   s.ban_reason,
   s.problem_id,
   p.title AS problem_title,
@@ -333,7 +333,7 @@ type ListSubmissionsRow struct {
 	TimeStat          int32               `json:"time_stat"`
 	MemoryStat        int32               `json:"memory_stat"`
 	Language          models.LanguageName `json:"language"`
-	FailedTest        *int32              `json:"failed_test"`
+	FailedTest        int32               `json:"failed_test"`
 	BanReason         *string             `json:"ban_reason"`
 	ProblemID         pgtype.UUID         `json:"problem_id"`
 	ProblemTitle      *string             `json:"problem_title"`
@@ -403,9 +403,6 @@ const resetSubmissionsState = `-- name: ResetSubmissionsState :many
 UPDATE submissions
 SET state = 1,
   score = 0,
-  time_stat = 0,
-  memory_stat = 0,
-  failed_test = NULL,
   test_details = NULL,
   ban_reason = NULL,
   updated_at = NOW()
@@ -461,19 +458,13 @@ const updateSubmission = `-- name: UpdateSubmission :exec
 UPDATE submissions
 SET state = $1,
   score = $2,
-  time_stat = $3,
-  memory_stat = $4,
-  failed_test = $5,
-  test_details = $6
-WHERE id = $7::uuid
+  test_details = $3
+WHERE id = $4::uuid
 `
 
 type UpdateSubmissionParams struct {
 	State       models.State `json:"state"`
 	Score       int32        `json:"score"`
-	TimeStat    int32        `json:"time_stat"`
-	MemoryStat  int32        `json:"memory_stat"`
-	FailedTest  *int32       `json:"failed_test"`
 	TestDetails []byte       `json:"test_details"`
 	ID          uuid.UUID    `json:"id"`
 }
@@ -482,9 +473,6 @@ func (q *Queries) UpdateSubmission(ctx context.Context, arg UpdateSubmissionPara
 	_, err := q.db.Exec(ctx, updateSubmission,
 		arg.State,
 		arg.Score,
-		arg.TimeStat,
-		arg.MemoryStat,
-		arg.FailedTest,
 		arg.TestDetails,
 		arg.ID,
 	)

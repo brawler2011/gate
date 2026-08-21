@@ -126,35 +126,28 @@ func (c *Contest) PermissionMaskForRole(role ContestRole) (ContestPermissionMask
 		hasConfiguredPermission = true
 	}
 
-	if len(c.Settings) > 0 {
-		if rawMonitorScope, ok := c.Settings["monitor_scope"]; ok {
-			if monitorScopeStr, ok := rawMonitorScope.(string); ok && monitorScopeStr != "" {
-				if RoleGraterOrEquals(role, ContestRole(monitorScopeStr)) {
-					mask |= ContestPermissionGetMonitor
-				} else {
-					mask &^= ContestPermissionGetMonitor
-				}
-			}
+	settings := c.TypedSettings()
+	if settings.MonitorScope != "" {
+		if RoleGraterOrEquals(role, ContestRole(settings.MonitorScope)) {
+			mask |= ContestPermissionGetMonitor
+		} else {
+			mask &^= ContestPermissionGetMonitor
 		}
+	}
 
-		if rawSubmissionsListScope, ok := c.Settings["submissions_list_scope"]; ok {
-			if submissionsScopeStr, ok := rawSubmissionsListScope.(string); ok && submissionsScopeStr != "" {
-				if RoleGraterOrEquals(role, ContestRole(submissionsScopeStr)) {
-					mask |= ContestPermissionListUsersSubmissions
-				} else {
-					mask &^= ContestPermissionListUsersSubmissions
-				}
-			}
+	if settings.SubmissionsListScope != "" {
+		if RoleGraterOrEquals(role, ContestRole(settings.SubmissionsListScope)) {
+			mask |= ContestPermissionListUsersSubmissions
+		} else {
+			mask &^= ContestPermissionListUsersSubmissions
 		}
+	}
 
-		if rawSubmissionDetailsScope, ok := c.Settings["submission_details_scope"]; ok {
-			if detailsScopeStr, ok := rawSubmissionDetailsScope.(string); ok && detailsScopeStr != "" {
-				if RoleGraterOrEquals(role, ContestRole(detailsScopeStr)) {
-					mask |= ContestPermissionGetSubmissionDetails
-				} else {
-					mask &^= ContestPermissionGetSubmissionDetails
-				}
-			}
+	if settings.SubmissionDetailsScope != "" {
+		if RoleGraterOrEquals(role, ContestRole(settings.SubmissionDetailsScope)) {
+			mask |= ContestPermissionGetSubmissionDetails
+		} else {
+			mask &^= ContestPermissionGetSubmissionDetails
 		}
 	}
 

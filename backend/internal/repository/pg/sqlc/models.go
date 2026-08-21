@@ -616,11 +616,8 @@ type Submission struct {
 	State       models.State        `json:"state"`
 	Score       int32               `json:"score"`
 	Penalty     int32               `json:"penalty"`
-	TimeStat    int32               `json:"time_stat"`
-	MemoryStat  int32               `json:"memory_stat"`
 	CreatedAt   time.Time           `json:"created_at"`
 	UpdatedAt   time.Time           `json:"updated_at"`
-	FailedTest  *int32              `json:"failed_test"`
 	TestDetails []byte              `json:"test_details"`
 	BanReason   *string             `json:"ban_reason"`
 }

@@ -57,20 +57,30 @@ func (r *SubmissionsRepo) CreateSubmission(ctx context.Context, creation *models
 
 func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
 	var detailsBytes []byte
-	if update.TestDetails != nil {
-		var err error
-		detailsBytes, err = json.Marshal(update.TestDetails)
-		if err != nil {
-			return fmt.Errorf("marshal test details: %w", err)
-		}
+
+	testDetails := update.TestDetails
+	if testDetails == nil {
+		testDetails = &models.SubmissionTestDetails{}
+	}
+	if update.TimeStat > 0 {
+		testDetails.TimeStat = &update.TimeStat
+	}
+	if update.MemoryStat > 0 {
+		testDetails.MemoryStat = &update.MemoryStat
+	}
+	if update.FailedTest != nil {
+		testDetails.FailedTest = update.FailedTest
 	}
 
-	err := r.queries.UpdateSubmission(ctx, sqlc.UpdateSubmissionParams{
+	var err error
+	detailsBytes, err = json.Marshal(testDetails)
+	if err != nil {
+		return fmt.Errorf("marshal test details: %w", err)
+	}
+
+	err = r.queries.UpdateSubmission(ctx, sqlc.UpdateSubmissionParams{
 		State:       update.State,
 		Score:       int32(update.Score),
-		TimeStat:    int32(update.TimeStat),
-		MemoryStat:  int32(update.MemoryStat),
-		FailedTest:  update.FailedTest,
 		TestDetails: detailsBytes,
 		ID:          id,
 	})
@@ -223,6 +233,12 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 		}
 	}
 
+	var failedTest *int32
+	if row.FailedTest > 0 {
+		ft := row.FailedTest
+		failedTest = &ft
+	}
+
 	return models.Submission{
 		ID:                row.ID,
 		CreatedBy:         createdBy,
@@ -234,7 +250,7 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 		TimeStat:          row.TimeStat,
 		MemoryStat:        row.MemoryStat,
 		Language:          row.Language,
-		FailedTest:        row.FailedTest,
+		FailedTest:        failedTest,
 		TestDetails:       testDetails,
 		BanReason:         row.BanReason,
 		ProblemID:         problemID,
@@ -297,6 +313,12 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 		contestLogin = *row.ContestLogin
 	}
 
+	var failedTest *int32
+	if row.FailedTest > 0 {
+		ft := row.FailedTest
+		failedTest = &ft
+	}
+
 	return models.Submission{
 		ID:                row.ID,
 		CreatedBy:         createdBy,
@@ -308,7 +330,7 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 		TimeStat:          row.TimeStat,
 		MemoryStat:        row.MemoryStat,
 		Language:          row.Language,
-		FailedTest:        row.FailedTest,
+		FailedTest:        failedTest,
 		BanReason:         row.BanReason,
 		ProblemID:         problemID,
 		ProblemTitle:      problemTitle,
