@@ -14,10 +14,9 @@ import type {ReactNode} from "react";
 
 type ContestsTableProps = {
   contests: ContestModel[];
-  showCreatedAt?: boolean;
 };
 
-export const ContestsTable = ({contests, showCreatedAt = true}: ContestsTableProps): ReactNode => {
+export const ContestsTable = ({contests}: ContestsTableProps): ReactNode => {
   const router = useRouter();
 
   return (
@@ -28,7 +27,7 @@ export const ContestsTable = ({contests, showCreatedAt = true}: ContestsTablePro
             <Table.Th style={{width: "40%"}}>Название</Table.Th>
             <Table.Th style={{width: "20%"}}>Участники</Table.Th>
             <Table.Th style={{width: "20%"}}>Задачи</Table.Th>
-            {showCreatedAt && <Table.Th style={{width: "20%"}}>Дата создания</Table.Th>}
+            <Table.Th style={{width: "20%"}}>Дата создания</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody className={classes.tbody}>
@@ -48,13 +47,11 @@ export const ContestsTable = ({contests, showCreatedAt = true}: ContestsTablePro
               <Table.Td>
                 <Text className={classes.metaCell}>0</Text>
               </Table.Td>
-              {showCreatedAt && (
-                <Table.Td>
-                  <Text className={classes.metaCell}>
-                    {new Date(contest.created_at).toLocaleDateString("ru-RU")}
-                  </Text>
-                </Table.Td>
-              )}
+              <Table.Td>
+                <Text className={classes.metaCell}>
+                  {new Date(contest.created_at).toLocaleDateString("ru-RU")}
+                </Text>
+              </Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>

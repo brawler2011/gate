@@ -40,13 +40,6 @@ const formatTimeMinutes = (timeMinutes?: number | null): string => {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 };
 
-const getProblemLetter = (ordinal: number, shortName?: string): string => {
-  if (shortName && shortName.length <= 3) {
-    return shortName;
-  }
-  return String.fromCharCode(65 + (ordinal - 1));
-};
-
 export const ContestMonitorTable = ({
   contestId,
   orgLogin,

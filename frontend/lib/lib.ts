@@ -40,7 +40,6 @@ export const lettersToNumber = (str?: string | null): number => {
   return result;
 };
 
-
 /**
  * Get color for submission state
  */
