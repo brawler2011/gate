@@ -2,9 +2,9 @@ version: '3'
 
 tasks:
   dev:
-    desc: "Run Next.js dev server"
+    desc: "Run Next.js dev server with Infisical local env"
     cmds:
-      - bun dev
+      - infisical run --env=local -- bun dev
 
   build:
     desc: "Build production bundle"

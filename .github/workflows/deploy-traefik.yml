@@ -1,0 +1,43 @@
+name: Deploy Traefik
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_dir:
+        description: 'Target directory on VPS'
+        required: true
+        default: '~/gate/deploy/traefik'
+
+jobs:
+  deploy:
+    name: Deploy Traefik Ingress
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Copy Traefik configuration to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "deploy/traefik/*"
+          strip_components: 2
+          target: "${{ inputs.deploy_dir }}"
+          overwrite: true
+
+      - name: Start Traefik via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ inputs.deploy_dir }}
+            touch acme.json && chmod 600 acme.json
+            docker compose pull --ignore-buildable
+            docker compose up -d --remove-orphans
+            docker image prune -f

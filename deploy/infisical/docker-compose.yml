@@ -1,0 +1,70 @@
+services:
+  infisical:
+    image: infisical/infisical:latest
+    container_name: infisical-core
+    restart: unless-stopped
+    depends_on:
+      infisical-db:
+        condition: service_healthy
+      infisical-redis:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+      - DB_CONNECTION_URI=postgres://${POSTGRES_USER:-infisical}:${POSTGRES_PASSWORD}@infisical-db:5432/${POSTGRES_DB:-infisical}?sslmode=disable
+      - REDIS_URL=redis://infisical-redis:6379
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - SITE_URL=https://infisical.${DOMAIN_NAME}
+      - TELEMETRY_ENABLED=false
+    networks:
+      - infisical-network
+      - traefik-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.infisical.rule=Host(`infisical.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.infisical.service=infisical-svc"
+      - "traefik.http.routers.infisical.entrypoints=websecure"
+      - "traefik.http.routers.infisical.tls=true"
+      - "traefik.http.routers.infisical.tls.certresolver=letsencrypt"
+      - "traefik.http.services.infisical-svc.loadbalancer.server.port=8080"
+
+  infisical-db:
+    image: postgres:16-alpine
+    container_name: infisical-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-infisical}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-infisical}
+    volumes:
+      - infisical-db-data:/var/lib/postgresql/data
+    networks:
+      - infisical-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-infisical} -d ${POSTGRES_DB:-infisical}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  infisical-redis:
+    image: redis:7-alpine
+    container_name: infisical-redis
+    restart: unless-stopped
+    volumes:
+      - infisical-redis-data:/data
+    networks:
+      - infisical-network
+
+volumes:
+  infisical-db-data:
+    name: infisical-db-data
+  infisical-redis-data:
+    name: infisical-redis-data
+
+networks:
+  infisical-network:
+    name: infisical-network
+    driver: bridge
+  traefik-network:
+    name: traefik-network
+    external: true

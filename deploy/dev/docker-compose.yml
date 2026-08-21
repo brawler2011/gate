@@ -4,8 +4,6 @@ services:
     container_name: gate-backend-dev
     hostname: backend
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - ADDRESS=${BACKEND_ADDRESS}
       - PRIVATE_ADDRESS=${BACKEND_PRIVATE_ADDRESS}
@@ -71,8 +69,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env
     environment:
       - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_APP_DB}?sslmode=disable
     networks:
@@ -117,8 +113,6 @@ services:
     container_name: gate-postgres-dev
     hostname: postgres
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

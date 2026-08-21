@@ -108,18 +108,43 @@ jobs:
           tags: |
             type=raw,value=${{ inputs.environment }}
 
+      - name: Install Infisical CLI
+        if: ${{ secrets.INFISICAL_CLIENT_ID != '' }}
+        run: |
+          curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | sudo -E bash
+          sudo apt-get install -y infisical
+
+      - name: Set Frontend build arguments
+        env:
+          INFISICAL_API_URL: ${{ secrets.INFISICAL_API_URL || 'https://infisical.steins.ru' }}
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+        run: |
+          if [ -n "${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}" ]; then
+            echo "Fetching frontend build configuration from Infisical..."
+            infisical export --project-id=${{ secrets.INFISICAL_PROJECT_ID }} --env=${{ inputs.environment }} --format=dotenv-export >> $GITHUB_ENV
+          else
+            echo "Using fallback default build configuration..."
+            echo "NEXT_PUBLIC_APP_URL=https://${{ inputs.domain_name }}" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_BACKEND_API_URL=/api" >> $GITHUB_ENV
+            echo "BACKEND_API_URL=http://gate-backend-${{ inputs.environment }}:8080" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_WEBSOCKET_URL=wss://${{ inputs.domain_name }}/ws" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_OTEL_SERVICE_NAME=gate-frontend-browser" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_OTEL_EXPORTER_URL=https://${{ inputs.domain_name }}/otlp/v1/traces" >> $GITHUB_ENV
+          fi
+
       - name: Build and push Frontend image
         uses: docker/build-push-action@v7
         with:
           context: ./frontend
           file: frontend/Dockerfile
           build-args: |
-            NEXT_PUBLIC_APP_URL=https://${{ inputs.domain_name }}
-            NEXT_PUBLIC_BACKEND_API_URL=/api
-            BACKEND_API_URL=http://gate-backend-${{ inputs.environment }}:8080
-            NEXT_PUBLIC_WEBSOCKET_URL=wss://${{ inputs.domain_name }}/ws
-            NEXT_PUBLIC_OTEL_SERVICE_NAME=gate-frontend-browser
-            NEXT_PUBLIC_OTEL_EXPORTER_URL=https://${{ inputs.domain_name }}/otlp/v1/traces
+            NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_BACKEND_API_URL=${{ env.NEXT_PUBLIC_BACKEND_API_URL }}
+            BACKEND_API_URL=${{ env.BACKEND_API_URL }}
+            NEXT_PUBLIC_WEBSOCKET_URL=${{ env.NEXT_PUBLIC_WEBSOCKET_URL }}
+            NEXT_PUBLIC_OTEL_SERVICE_NAME=${{ env.NEXT_PUBLIC_OTEL_SERVICE_NAME }}
+            NEXT_PUBLIC_OTEL_EXPORTER_URL=${{ env.NEXT_PUBLIC_OTEL_EXPORTER_URL }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -137,15 +162,39 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INFISICAL_API_URL: ${{ secrets.INFISICAL_API_URL || 'https://infisical.steins.ru' }}
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_PROJECT_ID }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          envs: GITHUB_TOKEN
+          envs: GITHUB_TOKEN,INFISICAL_API_URL,INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID
           script: |
             cd ${{ inputs.deploy_dir }}
             echo "$GITHUB_TOKEN" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-            DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose pull --ignore-buildable
-            DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose up -d
+
+            if [ -n "${INFISICAL_CLIENT_ID}" ]; then
+              if ! command -v infisical &> /dev/null; then
+                echo "Installing Infisical CLI on VPS..."
+                curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | sudo -E bash
+                sudo apt-get install -y infisical
+              fi
+
+              echo "Starting containers with in-memory secrets injection from Infisical..."
+              infisical run \
+                --projectId=${INFISICAL_PROJECT_ID} \
+                --env=${{ inputs.environment }} \
+                --domain=${INFISICAL_API_URL} \
+                --client-id=${INFISICAL_CLIENT_ID} \
+                --client-secret=${INFISICAL_CLIENT_SECRET} \
+                -- docker compose up -d --pull always --remove-orphans
+            else
+              echo "Starting containers with existing environment..."
+              DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose pull --ignore-buildable
+              DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose up -d
+            fi
+
             docker image prune -f

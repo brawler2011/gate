@@ -47,4 +47,20 @@ tasks:
       - rm -rf backend/contracts/core/v1 backend/contracts/observer/v1
       - rm -rf frontend/contracts/core/v1 frontend/contracts/observer/v1
 
+  env:login:
+    desc: "Login to Infisical self-hosted instance"
+    cmds:
+      - infisical login --domain={{.INFISICAL_DOMAIN | default "https://infisical.steins.ru"}}
+
+  env:link:
+    desc: "Link repository to Infisical project"
+    cmds:
+      - infisical link --domain={{.INFISICAL_DOMAIN | default "https://infisical.steins.ru"}}
+
+  env:export:
+    desc: "Export environment variables (e.g. task env:export -- dev)"
+    cmds:
+      - infisical export --env={{.CLI_ARGS | default "local"}}
+
+
 

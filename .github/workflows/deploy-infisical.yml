@@ -1,0 +1,70 @@
+name: Deploy Infisical
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain_name:
+        description: 'Base domain name (e.g. steins.ru -> infisical.steins.ru)'
+        required: true
+        default: 'steins.ru'
+      deploy_dir:
+        description: 'Target directory on VPS'
+        required: true
+        default: '~/gate/deploy/infisical'
+
+jobs:
+  deploy:
+    name: Deploy Infisical Stack
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Copy Infisical compose file to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "deploy/infisical/docker-compose.yml"
+          strip_components: 2
+          target: "${{ inputs.deploy_dir }}"
+          overwrite: true
+
+      - name: Start Infisical via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          DOMAIN_NAME: ${{ inputs.domain_name }}
+          POSTGRES_USER: ${{ secrets.INFISICAL_DB_USER || 'infisical' }}
+          POSTGRES_PASSWORD: ${{ secrets.INFISICAL_DB_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.INFISICAL_DB_NAME || 'infisical' }}
+          ENCRYPTION_KEY: ${{ secrets.INFISICAL_ENCRYPTION_KEY }}
+          AUTH_SECRET: ${{ secrets.INFISICAL_AUTH_SECRET }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: DOMAIN_NAME,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,ENCRYPTION_KEY,AUTH_SECRET
+          script: |
+            cd ${{ inputs.deploy_dir }}
+
+            # Start containers with in-memory environment variables (no .env file written to disk)
+            DOMAIN_NAME="${DOMAIN_NAME}" \
+            POSTGRES_USER="${POSTGRES_USER}" \
+            POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+            POSTGRES_DB="${POSTGRES_DB}" \
+            ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
+            AUTH_SECRET="${AUTH_SECRET}" \
+            docker compose pull --ignore-buildable
+
+            DOMAIN_NAME="${DOMAIN_NAME}" \
+            POSTGRES_USER="${POSTGRES_USER}" \
+            POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+            POSTGRES_DB="${POSTGRES_DB}" \
+            ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
+            AUTH_SECRET="${AUTH_SECRET}" \
+            docker compose up -d --remove-orphans
+
+            docker image prune -f
