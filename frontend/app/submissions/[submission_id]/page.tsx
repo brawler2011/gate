@@ -19,7 +19,6 @@ import {CodeBlock} from '@/components/shared/CodeBlock';
 import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
 import {SingleSubmissionRejudgeButton} from "@/components/submissions";
 import {api, unwrapAndCache} from "@/lib/api";
-import {getMyContestRole} from "@/lib/permissions";
 import {
   LangNameToString,
   LangString,
@@ -28,7 +27,7 @@ import {
   StateString,
   TimeBeautify,
 } from "@/lib/lib";
-import {PermissionChecker} from "@/lib/permissions";
+import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
 import type {Metadata} from "next";
 import type {ReactNode} from "react";
