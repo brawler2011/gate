@@ -19,7 +19,6 @@ interface MobileNavProps {
 }
 
 export const MobileNav = ({
-  contestId,
   activeSection,
   sections,
 }: MobileNavProps): ReactNode => {
@@ -31,7 +30,7 @@ export const MobileNav = ({
           return (
             <Link
               key={section.key}
-              href={`/contests/${contestId}/settings?section=${section.key}`}
+              href={`?section=${section.key}`}
               style={{textDecoration: "none"}}
             >
               <Button

@@ -5,7 +5,8 @@
 import type { ProblemSampleModel } from './ProblemSampleModel';
 export type ProblemModel = {
     id: string;
-    organization_id?: string;
+    organization_id: string;
+    organization_login: string;
     created_by: string;
     visibility: string;
     title: string;

@@ -46,7 +46,7 @@ export const ProfileContests = ({
                 {contests.map((contest) => (
                   <Table.Tr key={contest.id}>
                     <Table.Td>
-                      <Anchor component={Link} href={`/contests/${contest.id}`} size="sm">
+                      <Anchor component={Link} href={`/${contest.organization_login}/contests/${contest.id}`} size="sm">
                         {contest.title}
                       </Anchor>
                     </Table.Td>

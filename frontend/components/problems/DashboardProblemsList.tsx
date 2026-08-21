@@ -45,7 +45,7 @@ export const DashboardProblemsList = ({problems}: DashboardProblemsListProps): R
             cursor: "pointer",
             transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
           }}
-          onClick={() => router.push(`/problems/${problem.id}`)}
+          onClick={() => router.push(`/${problem.organization_login}/problems/${problem.id}`)}
           onMouseEnter={(e) => {
             const el = e.currentTarget;
             el.style.transform = "translateY(-2px)";
@@ -98,7 +98,7 @@ export const DashboardProblemsList = ({problems}: DashboardProblemsListProps): R
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                router.push(`/problems/${problem.id}`);
+                router.push(`/${problem.organization_login}/problems/${problem.id}`);
               }}
               style={{flexShrink: 0}}
             >

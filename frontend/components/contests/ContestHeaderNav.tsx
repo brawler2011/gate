@@ -20,14 +20,19 @@ import type {ContestModel} from "@/contracts/core/v1";
 export type ContestHeaderNavProps = {
   contest: ContestModel;
   contestRole?: ContestRoleResponse | null;
+  orgLogin?: string;
 };
 
 export const ContestHeaderNav = ({
   contest,
   contestRole,
+  orgLogin,
 }: ContestHeaderNavProps): ReactNode => {
   const pathname = usePathname();
   const {user} = useSession();
+
+  const org = orgLogin || contest.organization_login;
+  const contestBase = `/${org}/contests/${contest.id}`;
 
   const checker = new PermissionChecker(
     user,
@@ -65,7 +70,7 @@ export const ContestHeaderNav = ({
     items.push({
       key: "tasks",
       label: "Задачи",
-      href: `/contests/${contest.id}`,
+      href: contestBase,
       icon: IconPuzzle,
       active: activeTab === "tasks",
     });
@@ -75,7 +80,7 @@ export const ContestHeaderNav = ({
     items.push({
       key: "submit",
       label: "Послать решение",
-      href: `/contests/${contest.id}/submit`,
+      href: `${contestBase}/submit`,
       icon: IconSend,
       active: activeTab === "submit",
     });
@@ -85,7 +90,7 @@ export const ContestHeaderNav = ({
     items.push({
       key: "mysubmissions",
       label: "Мои посылки",
-      href: `/contests/${contest.id}/mysubmissions?order=desc&userId=${user.id}`,
+      href: `${contestBase}/mysubmissions?order=desc&userId=${user.id}`,
       icon: IconUser,
       active: activeTab === "mysubmissions",
     });
@@ -95,7 +100,7 @@ export const ContestHeaderNav = ({
     items.push({
       key: "allsubmissions",
       label: "Все посылки",
-      href: `/contests/${contest.id}/submissions?order=desc`,
+      href: `${contestBase}/submissions?order=desc`,
       icon: IconMail,
       active: activeTab === "allsubmissions",
     });
@@ -105,7 +110,7 @@ export const ContestHeaderNav = ({
     items.push({
       key: "monitor",
       label: "Монитор",
-      href: `/contests/${contest.id}/monitor`,
+      href: `${contestBase}/monitor`,
       icon: IconDeviceDesktop,
       active: activeTab === "monitor",
     });
@@ -115,7 +120,7 @@ export const ContestHeaderNav = ({
     items.push({
       key: "settings",
       label: "Настройки",
-      href: `/contests/${contest.id}/settings`,
+      href: `${contestBase}/settings`,
       icon: IconSettings,
       active: activeTab === "settings",
     });

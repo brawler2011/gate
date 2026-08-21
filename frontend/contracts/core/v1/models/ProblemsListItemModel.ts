@@ -4,6 +4,8 @@
 /* eslint-disable */
 export type ProblemsListItemModel = {
     id: string;
+    organization_id: string;
+    organization_login: string;
     title: string;
     visibility?: string;
     memory_limit: number;

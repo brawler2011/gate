@@ -122,14 +122,17 @@ SELECT s.id,
   c.title AS contest_title,
   c.short_name AS contest_short_name,
   c.visibility AS contest_visibility,
+  COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problems p ON s.problem_id = p.id
+  LEFT JOIN organizations op ON p.organization_id = op.id
   LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
   LEFT JOIN contests c ON s.contest_id = c.id
+  LEFT JOIN organizations oc ON c.organization_id = oc.id
 WHERE s.id = $1::uuid
 `
 
@@ -152,6 +155,7 @@ type GetSubmissionRow struct {
 	ContestTitle      *string               `json:"contest_title"`
 	ContestShortName  *string               `json:"contest_short_name"`
 	ContestVisibility NullContestVisibility `json:"contest_visibility"`
+	OrganizationLogin string                `json:"organization_login"`
 	UpdatedAt         time.Time             `json:"updated_at"`
 	CreatedAt         time.Time             `json:"created_at"`
 }
@@ -178,6 +182,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.ContestTitle,
 		&i.ContestShortName,
 		&i.ContestVisibility,
+		&i.OrganizationLogin,
 		&i.UpdatedAt,
 		&i.CreatedAt,
 	)
@@ -201,14 +206,17 @@ SELECT s.id,
   s.contest_id,
   c.title AS contest_title,
   c.short_name AS contest_short_name,
+  COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problems p ON s.problem_id = p.id
+  LEFT JOIN organizations op ON p.organization_id = op.id
   LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
   LEFT JOIN contests c ON s.contest_id = c.id
+  LEFT JOIN organizations oc ON c.organization_id = oc.id
 WHERE (
     $1::uuid IS NULL
     OR s.contest_id = $1::uuid
@@ -250,24 +258,25 @@ type ListSubmissionsParams struct {
 }
 
 type ListSubmissionsRow struct {
-	ID               uuid.UUID           `json:"id"`
-	OwnerID          pgtype.UUID         `json:"owner_id"`
-	Username         *string             `json:"username"`
-	State            models.State        `json:"state"`
-	Score            int32               `json:"score"`
-	Penalty          int32               `json:"penalty"`
-	TimeStat         int32               `json:"time_stat"`
-	MemoryStat       int32               `json:"memory_stat"`
-	Language         models.LanguageName `json:"language"`
-	ProblemID        pgtype.UUID         `json:"problem_id"`
-	ProblemTitle     *string             `json:"problem_title"`
-	ProblemShortName *string             `json:"problem_short_name"`
-	ProblemOrdinal   *int32              `json:"problem_ordinal"`
-	ContestID        pgtype.UUID         `json:"contest_id"`
-	ContestTitle     *string             `json:"contest_title"`
-	ContestShortName *string             `json:"contest_short_name"`
-	UpdatedAt        time.Time           `json:"updated_at"`
-	CreatedAt        time.Time           `json:"created_at"`
+	ID                uuid.UUID           `json:"id"`
+	OwnerID           pgtype.UUID         `json:"owner_id"`
+	Username          *string             `json:"username"`
+	State             models.State        `json:"state"`
+	Score             int32               `json:"score"`
+	Penalty           int32               `json:"penalty"`
+	TimeStat          int32               `json:"time_stat"`
+	MemoryStat        int32               `json:"memory_stat"`
+	Language          models.LanguageName `json:"language"`
+	ProblemID         pgtype.UUID         `json:"problem_id"`
+	ProblemTitle      *string             `json:"problem_title"`
+	ProblemShortName  *string             `json:"problem_short_name"`
+	ProblemOrdinal    *int32              `json:"problem_ordinal"`
+	ContestID         pgtype.UUID         `json:"contest_id"`
+	ContestTitle      *string             `json:"contest_title"`
+	ContestShortName  *string             `json:"contest_short_name"`
+	OrganizationLogin string              `json:"organization_login"`
+	UpdatedAt         time.Time           `json:"updated_at"`
+	CreatedAt         time.Time           `json:"created_at"`
 }
 
 // Submission listing
@@ -306,6 +315,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.ContestID,
 			&i.ContestTitle,
 			&i.ContestShortName,
+			&i.OrganizationLogin,
 			&i.UpdatedAt,
 			&i.CreatedAt,
 		); err != nil {

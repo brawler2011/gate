@@ -36,14 +36,17 @@ SELECT s.id,
   c.title AS contest_title,
   c.short_name AS contest_short_name,
   c.visibility AS contest_visibility,
+  COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problems p ON s.problem_id = p.id
+  LEFT JOIN organizations op ON p.organization_id = op.id
   LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
   LEFT JOIN contests c ON s.contest_id = c.id
+  LEFT JOIN organizations oc ON c.organization_id = oc.id
 WHERE s.id = @id::uuid;
 
 -- name: UpdateSubmission :exec
@@ -72,14 +75,17 @@ SELECT s.id,
   s.contest_id,
   c.title AS contest_title,
   c.short_name AS contest_short_name,
+  COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problems p ON s.problem_id = p.id
+  LEFT JOIN organizations op ON p.organization_id = op.id
   LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
   LEFT JOIN contests c ON s.contest_id = c.id
+  LEFT JOIN organizations oc ON c.organization_id = oc.id
 WHERE (
     sqlc.narg('contest_id')::uuid IS NULL
     OR s.contest_id = sqlc.narg('contest_id')::uuid

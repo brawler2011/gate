@@ -177,7 +177,8 @@ type ContestModel struct {
 	FreezeStatus           ContestModelFreezeStatus `json:"freeze_status"`
 	Id                     openapi_types.UUID       `json:"id"`
 	MonitorScope           string                   `json:"monitor_scope"`
-	OrganizationId         *openapi_types.UUID      `json:"organization_id,omitempty"`
+	OrganizationId         openapi_types.UUID       `json:"organization_id"`
+	OrganizationLogin      string                   `json:"organization_login"`
 	Owner                  *UserModel               `json:"owner,omitempty"`
 	StartTime              *time.Time               `json:"start_time"`
 	SubmissionsListScope   string                   `json:"submissions_list_scope"`
@@ -257,6 +258,7 @@ type DashboardContestModel struct {
 	Id                 openapi_types.UUID `json:"id"`
 	LastSubmissionTime *time.Time         `json:"last_submission_time"`
 	OrganizationId     openapi_types.UUID `json:"organization_id"`
+	OrganizationLogin  string             `json:"organization_login"`
 	OrganizationName   string             `json:"organization_name"`
 	StartTime          *time.Time         `json:"start_time"`
 	Title              string             `json:"title"`
@@ -265,13 +267,14 @@ type DashboardContestModel struct {
 
 // DashboardProblemModel defines model for DashboardProblemModel.
 type DashboardProblemModel struct {
-	Id               openapi_types.UUID `json:"id"`
-	MemoryLimit      int32              `json:"memory_limit"`
-	OrganizationId   openapi_types.UUID `json:"organization_id"`
-	OrganizationName string             `json:"organization_name"`
-	TimeLimit        int32              `json:"time_limit"`
-	Title            string             `json:"title"`
-	UpdatedAt        time.Time          `json:"updated_at"`
+	Id                openapi_types.UUID `json:"id"`
+	MemoryLimit       int32              `json:"memory_limit"`
+	OrganizationId    openapi_types.UUID `json:"organization_id"`
+	OrganizationLogin string             `json:"organization_login"`
+	OrganizationName  string             `json:"organization_name"`
+	TimeLimit         int32              `json:"time_limit"`
+	Title             string             `json:"title"`
+	UpdatedAt         time.Time          `json:"updated_at"`
 }
 
 // Error defines model for Error.
@@ -493,28 +496,29 @@ type ProblemMemberModel struct {
 
 // ProblemModel defines model for ProblemModel.
 type ProblemModel struct {
-	CreatedAt        time.Time            `json:"created_at"`
-	CreatedBy        openapi_types.UUID   `json:"created_by"`
-	Id               openapi_types.UUID   `json:"id"`
-	InputFormat      string               `json:"input_format"`
-	InputFormatHtml  string               `json:"input_format_html"`
-	IsPrivate        *bool                `json:"is_private,omitempty"`
-	IsTemplate       bool                 `json:"is_template"`
-	Legend           string               `json:"legend"`
-	LegendHtml       string               `json:"legend_html"`
-	MemoryLimit      int32                `json:"memory_limit"`
-	Notes            string               `json:"notes"`
-	NotesHtml        string               `json:"notes_html"`
-	OrganizationId   *openapi_types.UUID  `json:"organization_id,omitempty"`
-	OutputFormat     string               `json:"output_format"`
-	OutputFormatHtml string               `json:"output_format_html"`
-	Samples          []ProblemSampleModel `json:"samples"`
-	Scoring          string               `json:"scoring"`
-	ScoringHtml      string               `json:"scoring_html"`
-	TimeLimit        int32                `json:"time_limit"`
-	Title            string               `json:"title"`
-	UpdatedAt        time.Time            `json:"updated_at"`
-	Visibility       string               `json:"visibility"`
+	CreatedAt         time.Time            `json:"created_at"`
+	CreatedBy         openapi_types.UUID   `json:"created_by"`
+	Id                openapi_types.UUID   `json:"id"`
+	InputFormat       string               `json:"input_format"`
+	InputFormatHtml   string               `json:"input_format_html"`
+	IsPrivate         *bool                `json:"is_private,omitempty"`
+	IsTemplate        bool                 `json:"is_template"`
+	Legend            string               `json:"legend"`
+	LegendHtml        string               `json:"legend_html"`
+	MemoryLimit       int32                `json:"memory_limit"`
+	Notes             string               `json:"notes"`
+	NotesHtml         string               `json:"notes_html"`
+	OrganizationId    openapi_types.UUID   `json:"organization_id"`
+	OrganizationLogin string               `json:"organization_login"`
+	OutputFormat      string               `json:"output_format"`
+	OutputFormatHtml  string               `json:"output_format_html"`
+	Samples           []ProblemSampleModel `json:"samples"`
+	Scoring           string               `json:"scoring"`
+	ScoringHtml       string               `json:"scoring_html"`
+	TimeLimit         int32                `json:"time_limit"`
+	Title             string               `json:"title"`
+	UpdatedAt         time.Time            `json:"updated_at"`
+	Visibility        string               `json:"visibility"`
 }
 
 // ProblemSampleModel defines model for ProblemSampleModel.
@@ -548,14 +552,16 @@ type ProblemTeamModel struct {
 
 // ProblemsListItemModel defines model for ProblemsListItemModel.
 type ProblemsListItemModel struct {
-	CreatedAt   time.Time          `json:"created_at"`
-	Id          openapi_types.UUID `json:"id"`
-	IsTemplate  bool               `json:"is_template"`
-	MemoryLimit int32              `json:"memory_limit"`
-	TimeLimit   int32              `json:"time_limit"`
-	Title       string             `json:"title"`
-	UpdatedAt   time.Time          `json:"updated_at"`
-	Visibility  *string            `json:"visibility,omitempty"`
+	CreatedAt         time.Time          `json:"created_at"`
+	Id                openapi_types.UUID `json:"id"`
+	IsTemplate        bool               `json:"is_template"`
+	MemoryLimit       int32              `json:"memory_limit"`
+	OrganizationId    openapi_types.UUID `json:"organization_id"`
+	OrganizationLogin string             `json:"organization_login"`
+	TimeLimit         int32              `json:"time_limit"`
+	Title             string             `json:"title"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	Visibility        *string            `json:"visibility,omitempty"`
 }
 
 // RegisterRequestModel defines model for RegisterRequestModel.
@@ -612,43 +618,45 @@ type ScoreboardResponseModel struct {
 
 // SubmissionModel defines model for SubmissionModel.
 type SubmissionModel struct {
-	ContestId    openapi_types.UUID `json:"contest_id"`
-	ContestTitle string             `json:"contest_title"`
-	CreatedAt    time.Time          `json:"created_at"`
-	Id           openapi_types.UUID `json:"id"`
-	Language     int32              `json:"language"`
-	MemoryStat   int32              `json:"memory_stat"`
-	Penalty      int32              `json:"penalty"`
-	Position     int32              `json:"position"`
-	ProblemId    openapi_types.UUID `json:"problem_id"`
-	ProblemTitle string             `json:"problem_title"`
-	Score        int32              `json:"score"`
-	State        int32              `json:"state"`
-	Submission   string             `json:"submission"`
-	TimeStat     int32              `json:"time_stat"`
-	UpdatedAt    time.Time          `json:"updated_at"`
-	UserId       openapi_types.UUID `json:"user_id"`
-	Username     string             `json:"username"`
+	ContestId         openapi_types.UUID `json:"contest_id"`
+	ContestTitle      string             `json:"contest_title"`
+	CreatedAt         time.Time          `json:"created_at"`
+	Id                openapi_types.UUID `json:"id"`
+	Language          int32              `json:"language"`
+	MemoryStat        int32              `json:"memory_stat"`
+	OrganizationLogin *string            `json:"organization_login,omitempty"`
+	Penalty           int32              `json:"penalty"`
+	Position          int32              `json:"position"`
+	ProblemId         openapi_types.UUID `json:"problem_id"`
+	ProblemTitle      string             `json:"problem_title"`
+	Score             int32              `json:"score"`
+	State             int32              `json:"state"`
+	Submission        string             `json:"submission"`
+	TimeStat          int32              `json:"time_stat"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	UserId            openapi_types.UUID `json:"user_id"`
+	Username          string             `json:"username"`
 }
 
 // SubmissionsListItemModel defines model for SubmissionsListItemModel.
 type SubmissionsListItemModel struct {
-	ContestId    openapi_types.UUID `json:"contest_id"`
-	ContestTitle string             `json:"contest_title"`
-	CreatedAt    time.Time          `json:"created_at"`
-	Id           openapi_types.UUID `json:"id"`
-	Language     int32              `json:"language"`
-	MemoryStat   int32              `json:"memory_stat"`
-	Penalty      int32              `json:"penalty"`
-	Position     int32              `json:"position"`
-	ProblemId    openapi_types.UUID `json:"problem_id"`
-	ProblemTitle string             `json:"problem_title"`
-	Score        int32              `json:"score"`
-	State        int32              `json:"state"`
-	TimeStat     int32              `json:"time_stat"`
-	UpdatedAt    time.Time          `json:"updated_at"`
-	UserId       openapi_types.UUID `json:"user_id"`
-	Username     string             `json:"username"`
+	ContestId         openapi_types.UUID `json:"contest_id"`
+	ContestTitle      string             `json:"contest_title"`
+	CreatedAt         time.Time          `json:"created_at"`
+	Id                openapi_types.UUID `json:"id"`
+	Language          int32              `json:"language"`
+	MemoryStat        int32              `json:"memory_stat"`
+	OrganizationLogin *string            `json:"organization_login,omitempty"`
+	Penalty           int32              `json:"penalty"`
+	Position          int32              `json:"position"`
+	ProblemId         openapi_types.UUID `json:"problem_id"`
+	ProblemTitle      string             `json:"problem_title"`
+	Score             int32              `json:"score"`
+	State             int32              `json:"state"`
+	TimeStat          int32              `json:"time_stat"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	UserId            openapi_types.UUID `json:"user_id"`
+	Username          string             `json:"username"`
 }
 
 // SupportedLanguage defines model for SupportedLanguage.

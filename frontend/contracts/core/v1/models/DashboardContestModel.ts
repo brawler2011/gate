@@ -7,6 +7,7 @@ export type DashboardContestModel = {
     title: string;
     organization_id: string;
     organization_name: string;
+    organization_login: string;
     user_role: string;
     last_submission_time?: string | null;
     start_time?: string | null;

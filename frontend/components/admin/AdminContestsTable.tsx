@@ -48,13 +48,13 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
 
-  const handleRowClick = (contestId: string) => {
-    router.push(`/contests/${contestId}`);
+  const handleRowClick = (contest: ContestModel) => {
+    router.push(`/${contest.organization_login}/contests/${contest.id}`);
   };
 
-  const handleEditClick = (e: React.MouseEvent, contestId: string) => {
+  const handleEditClick = (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
-    router.push(`/contests/${contestId}/settings`);
+    router.push(`/${contest.organization_login}/contests/${contest.id}/settings`);
   };
 
   const handleSubmissionsClick = (e: React.MouseEvent, contestId: string) => {
@@ -62,9 +62,9 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
     router.push(`/admin/submissions?contestId=${contestId}`);
   };
 
-  const handleMonitorClick = (e: React.MouseEvent, contestId: string) => {
+  const handleMonitorClick = (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
-    router.push(`/contests/${contestId}/monitor`);
+    router.push(`/${contest.organization_login}/contests/${contest.id}/monitor`);
   };
 
   const handleRejudgeContest = async (e: React.MouseEvent, contestId: string) => {
@@ -137,7 +137,8 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
               return (
                 <Table.Tr
                   key={contest.id}
-                  onClick={() => handleRowClick(contest.id)}
+                  className={classes.clickableRow}
+                  onClick={() => handleRowClick(contest)}
                 >
                   <Table.Td>
                     <Text className={classes.titleCell} lineClamp={1}>
@@ -189,7 +190,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
                         <ActionIcon
                           color="teal"
                           variant="subtle"
-                          onClick={(e) => handleMonitorClick(e, contest.id)}
+                          onClick={(e) => handleMonitorClick(e, contest)}
                         >
                           <IconDeviceDesktop size={16} />
                         </ActionIcon>
@@ -208,7 +209,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
                         <ActionIcon
                           color="blue"
                           variant="subtle"
-                          onClick={(e) => handleEditClick(e, contest.id)}
+                          onClick={(e) => handleEditClick(e, contest)}
                         >
                           <IconEdit size={16} />
                         </ActionIcon>

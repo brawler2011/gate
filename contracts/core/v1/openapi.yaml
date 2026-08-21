@@ -3449,6 +3449,8 @@ components:
       type: object
       required:
         - id
+        - organization_id
+        - organization_login
         - created_by
         - visibility
         - title
@@ -3475,6 +3477,8 @@ components:
         organization_id:
           type: string
           format: uuid
+        organization_login:
+          type: string
         created_by:
           type: string
           format: uuid
@@ -3531,6 +3535,8 @@ components:
       type: object
       required:
         - id
+        - organization_id
+        - organization_login
         - title
         - memory_limit
         - time_limit
@@ -3541,6 +3547,11 @@ components:
         id:
           type: string
           format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        organization_login:
+          type: string
         title:
           type: string
         visibility:
@@ -3643,6 +3654,8 @@ components:
       type: object
       required:
         - id
+        - organization_id
+        - organization_login
         - title
         - description
         - visibility
@@ -3660,6 +3673,8 @@ components:
         organization_id:
           type: string
           format: uuid
+        organization_login:
+          type: string
         title:
           type: string
           example: Test contest
@@ -3938,6 +3953,9 @@ components:
         contest_title:
           type: string
           example: Contest title
+        organization_login:
+          type: string
+          example: yandex
         updated_at:
           type: string
           format: date-time
@@ -4017,6 +4035,8 @@ components:
         contest_title:
           type: string
           example: Contest title
+        organization_login:
+          type: string
         updated_at:
           type: string
           format: date-time
@@ -4037,6 +4057,7 @@ components:
         - title
         - organization_id
         - organization_name
+        - organization_login
         - user_role
         - created_at
       properties:
@@ -4049,6 +4070,8 @@ components:
           type: string
           format: uuid
         organization_name:
+          type: string
+        organization_login:
           type: string
         user_role:
           type: string
@@ -4074,6 +4097,7 @@ components:
         - title
         - organization_id
         - organization_name
+        - organization_login
         - time_limit
         - memory_limit
         - updated_at
@@ -4087,6 +4111,8 @@ components:
           type: string
           format: uuid
         organization_name:
+          type: string
+        organization_login:
           type: string
         time_limit:
           type: integer

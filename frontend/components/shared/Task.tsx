@@ -115,7 +115,7 @@ const Task = ({
           >
             <Stack w="100%" gap="xs">
               <Link
-                href={`/contests/${contest.id}`}
+                href={`/${contest.organization_login}/contests/${contest.id}`}
                 style={{textDecoration: "none"}}
               >
                 <Title
@@ -134,7 +134,7 @@ const Task = ({
                     <NavLink
                       key={item.problem_id}
                       component={Link}
-                      href={`/contests/${contest.id}/problems/${item.problem_id}`}
+                      href={`/${contest.organization_login}/contests/${contest.id}/problems/${item.problem_id}`}
                       label={`${numberToLetters(item.position)}. ${item.title}`}
                       active={isActive}
                       c="var(--mantine-color-text)"
@@ -172,6 +172,7 @@ const Task = ({
                 letter={numberToLetters(task.position)}
                 problemId={task.problem_id}
                 isManager={isManager}
+                orgLogin={contest.organization_login}
               />
             </Box>
           </Container>

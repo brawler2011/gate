@@ -100,9 +100,11 @@ export const CreateProblemModal = ({
       }
 
       const problemId = createResponse.id;
+      const selectedOrg = orgs.find((o) => o.id === orgId);
+      const orgSlug = selectedOrg?.login || selectedOrg?.id || "org";
 
       onClose();
-      router.push(`/problems/${problemId}`);
+      router.push(`/${orgSlug}/problems/${problemId}`);
     } catch (err) {
       notifications.show({
         title: "Ошибка",

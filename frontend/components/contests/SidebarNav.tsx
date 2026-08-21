@@ -19,7 +19,6 @@ interface SidebarNavProps {
 }
 
 export const SidebarNav = ({
-  contestId,
   activeSection,
   sections,
 }: SidebarNavProps): ReactNode => {
@@ -37,7 +36,7 @@ export const SidebarNav = ({
           return (
             <Link
               key={section.key}
-              href={`/contests/${contestId}/settings?section=${section.key}`}
+              href={`?section=${section.key}`}
               style={{textDecoration: "none"}}
             >
               <Button

@@ -6,18 +6,25 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: GetContestByID :one
-SELECT * FROM contests WHERE id = $1;
+SELECT c.*, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
+WHERE c.id = $1;
 
 -- name: GetContestByShortName :one
-SELECT * FROM contests
-WHERE organization_id = $1 AND short_name = $2;
+SELECT c.*, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
+WHERE c.organization_id = $1 AND c.short_name = $2;
 
 -- name: ListContests :many
-SELECT * FROM contests
-WHERE organization_id = $1
-  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR visibility = $3::contest_visibility)
-ORDER BY created_at DESC
+SELECT c.*, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
+WHERE c.organization_id = $1
+  AND ($2::text = '' OR c.title ILIKE '%' || $2 || '%')
+  AND ($3::text = '' OR c.visibility = $3::contest_visibility)
+ORDER BY c.created_at DESC
 LIMIT $4 OFFSET $5;
 
 -- name: CountContests :one
@@ -27,7 +34,9 @@ WHERE organization_id = $1
   AND ($3::text = '' OR visibility = $3::contest_visibility);
 
 -- name: ListAllContests :many
-SELECT c.* FROM contests c
+SELECT c.*, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
 WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR c.visibility = $2::contest_visibility)
 ORDER BY c.created_at DESC
@@ -122,13 +131,17 @@ SELECT user_has_contest_access($1, $2) as has_access;
 SELECT user_is_contest_moderator($1, $2) as is_moderator;
 
 -- name: ListUserAccessibleContests :many
-SELECT c.* FROM contests c
+SELECT c.*, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
 WHERE user_has_contest_access($1, c.id)
 ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: ListUserAccessibleContestsByOrg :many
-SELECT c.* FROM contests c
+SELECT c.*, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
 WHERE user_has_contest_access($1, c.id)
   AND c.organization_id = $2
 ORDER BY c.created_at DESC
@@ -143,6 +156,7 @@ SELECT
     c.created_at as contest_created_at,
     o.id as org_id,
     o.name as org_name,
+    o.login as org_login,
     COALESCE(
         (SELECT cm.role::text FROM contest_members cm WHERE cm.contest_id = c.id AND cm.user_id = $1),
         CASE WHEN EXISTS(

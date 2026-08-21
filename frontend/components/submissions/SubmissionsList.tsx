@@ -129,7 +129,14 @@ const SubmissionRow = ({
             </Link>
           </TableTd>
           <TableTd ta="center">
-            <Link href={`/contests/${submission.contest_id}/problems/${submission.problem_id}`} style={{color: 'inherit'}}>
+            <Link
+              href={
+                submission.organization_login
+                  ? `/${submission.organization_login}/contests/${submission.contest_id}/problems/${submission.problem_id}`
+                  : `/contests/${submission.contest_id}/problems/${submission.problem_id}`
+              }
+              style={{color: 'inherit'}}
+            >
               <Text span td="underline">
                 {ProblemTitle(submission.position, submission.problem_title)}
               </Text>

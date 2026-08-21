@@ -150,12 +150,17 @@ func (q *Queries) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 }
 
 const getProblemByID = `-- name: GetProblemByID :one
-SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb, is_template FROM problems WHERE id = $1
+SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
+FROM problems p
+JOIN organizations o ON p.organization_id = o.id
+WHERE p.id = $1
 `
 
 type GetProblemByIDRow struct {
 	ID             uuid.UUID         `json:"id"`
 	OrganizationID uuid.UUID         `json:"organization_id"`
+	OrgLogin       string            `json:"org_login"`
+	OrgName        string            `json:"org_name"`
 	OwnerID        pgtype.UUID       `json:"owner_id"`
 	Visibility     ProblemVisibility `json:"visibility"`
 	Title          string            `json:"title"`
@@ -173,6 +178,8 @@ func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemB
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
+		&i.OrgLogin,
+		&i.OrgName,
 		&i.OwnerID,
 		&i.Visibility,
 		&i.Title,
@@ -187,8 +194,10 @@ func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemB
 }
 
 const getProblemByShortName = `-- name: GetProblemByShortName :one
-SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb, is_template FROM problems
-WHERE organization_id = $1 AND short_name = $2
+SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
+FROM problems p
+JOIN organizations o ON p.organization_id = o.id
+WHERE p.organization_id = $1 AND short_name = $2
 `
 
 type GetProblemByShortNameParams struct {
@@ -199,6 +208,8 @@ type GetProblemByShortNameParams struct {
 type GetProblemByShortNameRow struct {
 	ID             uuid.UUID         `json:"id"`
 	OrganizationID uuid.UUID         `json:"organization_id"`
+	OrgLogin       string            `json:"org_login"`
+	OrgName        string            `json:"org_name"`
 	OwnerID        pgtype.UUID       `json:"owner_id"`
 	Visibility     ProblemVisibility `json:"visibility"`
 	Title          string            `json:"title"`
@@ -216,6 +227,8 @@ func (q *Queries) GetProblemByShortName(ctx context.Context, arg GetProblemBySho
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
+		&i.OrgLogin,
+		&i.OrgName,
 		&i.OwnerID,
 		&i.Visibility,
 		&i.Title,
@@ -263,7 +276,9 @@ func (q *Queries) GetProblemMember(ctx context.Context, arg GetProblemMemberPara
 }
 
 const listAllProblems = `-- name: ListAllProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template FROM problems p
+SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
+FROM problems p
+JOIN organizations o ON p.organization_id = o.id
 WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR p.visibility = $2::problem_visibility)
   AND ($5::boolean IS NULL OR p.is_template = $5::boolean)
@@ -282,6 +297,8 @@ type ListAllProblemsParams struct {
 type ListAllProblemsRow struct {
 	ID             uuid.UUID         `json:"id"`
 	OrganizationID uuid.UUID         `json:"organization_id"`
+	OrgLogin       string            `json:"org_login"`
+	OrgName        string            `json:"org_name"`
 	OwnerID        pgtype.UUID       `json:"owner_id"`
 	Visibility     ProblemVisibility `json:"visibility"`
 	Title          string            `json:"title"`
@@ -311,6 +328,8 @@ func (q *Queries) ListAllProblems(ctx context.Context, arg ListAllProblemsParams
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
+			&i.OrgLogin,
+			&i.OrgName,
 			&i.OwnerID,
 			&i.Visibility,
 			&i.Title,
@@ -339,7 +358,8 @@ SELECT
     p.memory_limit_mb,
     p.updated_at,
     o.id as org_id,
-    o.name as org_name
+    o.name as org_name,
+    o.login as org_login
 FROM problems p
 JOIN organizations o ON p.organization_id = o.id
 LEFT JOIN problem_members pm ON p.id = pm.problem_id
@@ -362,6 +382,7 @@ type ListDashboardProblemsRow struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 	OrgID         uuid.UUID `json:"org_id"`
 	OrgName       string    `json:"org_name"`
+	OrgLogin      string    `json:"org_login"`
 }
 
 func (q *Queries) ListDashboardProblems(ctx context.Context, arg ListDashboardProblemsParams) ([]ListDashboardProblemsRow, error) {
@@ -381,6 +402,7 @@ func (q *Queries) ListDashboardProblems(ctx context.Context, arg ListDashboardPr
 			&i.UpdatedAt,
 			&i.OrgID,
 			&i.OrgName,
+			&i.OrgLogin,
 		); err != nil {
 			return nil, err
 		}
@@ -437,12 +459,14 @@ func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) (
 }
 
 const listProblems = `-- name: ListProblems :many
-SELECT id, organization_id, owner_id, visibility, title, short_name, created_at, updated_at, time_limit_ms, memory_limit_mb, is_template FROM problems
-WHERE organization_id = $1
-  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR visibility = $3::problem_visibility)
-  AND ($6::boolean IS NULL OR is_template = $6::boolean)
-ORDER BY created_at DESC
+SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
+FROM problems p
+JOIN organizations o ON p.organization_id = o.id
+WHERE p.organization_id = $1
+  AND ($2::text = '' OR p.title ILIKE '%' || $2 || '%')
+  AND ($3::text = '' OR p.visibility = $3::problem_visibility)
+  AND ($6::boolean IS NULL OR p.is_template = $6::boolean)
+ORDER BY p.created_at DESC
 LIMIT $4 OFFSET $5
 `
 
@@ -458,6 +482,8 @@ type ListProblemsParams struct {
 type ListProblemsRow struct {
 	ID             uuid.UUID         `json:"id"`
 	OrganizationID uuid.UUID         `json:"organization_id"`
+	OrgLogin       string            `json:"org_login"`
+	OrgName        string            `json:"org_name"`
 	OwnerID        pgtype.UUID       `json:"owner_id"`
 	Visibility     ProblemVisibility `json:"visibility"`
 	Title          string            `json:"title"`
@@ -488,6 +514,8 @@ func (q *Queries) ListProblems(ctx context.Context, arg ListProblemsParams) ([]L
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
+			&i.OrgLogin,
+			&i.OrgName,
 			&i.OwnerID,
 			&i.Visibility,
 			&i.Title,
@@ -509,7 +537,9 @@ func (q *Queries) ListProblems(ctx context.Context, arg ListProblemsParams) ([]L
 }
 
 const listUserAccessibleProblems = `-- name: ListUserAccessibleProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template FROM problems p
+SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
+FROM problems p
+JOIN organizations o ON p.organization_id = o.id
 WHERE user_has_problem_access($1, p.id)
 ORDER BY p.created_at DESC
 LIMIT $2 OFFSET $3
@@ -524,6 +554,8 @@ type ListUserAccessibleProblemsParams struct {
 type ListUserAccessibleProblemsRow struct {
 	ID             uuid.UUID         `json:"id"`
 	OrganizationID uuid.UUID         `json:"organization_id"`
+	OrgLogin       string            `json:"org_login"`
+	OrgName        string            `json:"org_name"`
 	OwnerID        pgtype.UUID       `json:"owner_id"`
 	Visibility     ProblemVisibility `json:"visibility"`
 	Title          string            `json:"title"`
@@ -547,6 +579,8 @@ func (q *Queries) ListUserAccessibleProblems(ctx context.Context, arg ListUserAc
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
+			&i.OrgLogin,
+			&i.OrgName,
 			&i.OwnerID,
 			&i.Visibility,
 			&i.Title,

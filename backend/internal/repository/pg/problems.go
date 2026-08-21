@@ -271,49 +271,52 @@ func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
 
 func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) models.Problem {
 	return models.Problem{
-		ID:             p.ID,
-		OrganizationID: p.OrganizationID,
-		OwnerID:        pgUUIDToUUIDPtr(p.OwnerID),
-		Visibility:     string(p.Visibility),
-		Title:          p.Title,
-		ShortName:      p.ShortName,
-		TimeLimitMs:    int(p.TimeLimitMs),
-		MemoryLimitMb:  int(p.MemoryLimitMb),
-		IsTemplate:     p.IsTemplate,
-		CreatedAt:      p.CreatedAt,
-		UpdatedAt:      p.UpdatedAt,
+		ID:                p.ID,
+		OrganizationID:    p.OrganizationID,
+		OrganizationLogin: p.OrgLogin,
+		OwnerID:           pgUUIDToUUIDPtr(p.OwnerID),
+		Visibility:        string(p.Visibility),
+		Title:             p.Title,
+		ShortName:         p.ShortName,
+		TimeLimitMs:       int(p.TimeLimitMs),
+		MemoryLimitMb:     int(p.MemoryLimitMb),
+		IsTemplate:        p.IsTemplate,
+		CreatedAt:         p.CreatedAt,
+		UpdatedAt:         p.UpdatedAt,
 	}
 }
 
 func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) models.Problem {
 	return models.Problem{
-		ID:             p.ID,
-		OrganizationID: p.OrganizationID,
-		OwnerID:        pgUUIDToUUIDPtr(p.OwnerID),
-		Visibility:     string(p.Visibility),
-		Title:          p.Title,
-		ShortName:      p.ShortName,
-		TimeLimitMs:    int(p.TimeLimitMs),
-		MemoryLimitMb:  int(p.MemoryLimitMb),
-		IsTemplate:     p.IsTemplate,
-		CreatedAt:      p.CreatedAt,
-		UpdatedAt:      p.UpdatedAt,
+		ID:                p.ID,
+		OrganizationID:    p.OrganizationID,
+		OrganizationLogin: p.OrgLogin,
+		OwnerID:           pgUUIDToUUIDPtr(p.OwnerID),
+		Visibility:        string(p.Visibility),
+		Title:             p.Title,
+		ShortName:         p.ShortName,
+		TimeLimitMs:       int(p.TimeLimitMs),
+		MemoryLimitMb:     int(p.MemoryLimitMb),
+		IsTemplate:        p.IsTemplate,
+		CreatedAt:         p.CreatedAt,
+		UpdatedAt:         p.UpdatedAt,
 	}
 }
 
 func mapListProblemsRow(p sqlc.ListProblemsRow) models.Problem {
 	return models.Problem{
-		ID:             p.ID,
-		OrganizationID: p.OrganizationID,
-		OwnerID:        pgUUIDToUUIDPtr(p.OwnerID),
-		Visibility:     string(p.Visibility),
-		Title:          p.Title,
-		ShortName:      p.ShortName,
-		TimeLimitMs:    int(p.TimeLimitMs),
-		MemoryLimitMb:  int(p.MemoryLimitMb),
-		IsTemplate:     p.IsTemplate,
-		CreatedAt:      p.CreatedAt,
-		UpdatedAt:      p.UpdatedAt,
+		ID:                p.ID,
+		OrganizationID:    p.OrganizationID,
+		OrganizationLogin: p.OrgLogin,
+		OwnerID:           pgUUIDToUUIDPtr(p.OwnerID),
+		Visibility:        string(p.Visibility),
+		Title:             p.Title,
+		ShortName:         p.ShortName,
+		TimeLimitMs:       int(p.TimeLimitMs),
+		MemoryLimitMb:     int(p.MemoryLimitMb),
+		IsTemplate:        p.IsTemplate,
+		CreatedAt:         p.CreatedAt,
+		UpdatedAt:         p.UpdatedAt,
 	}
 }
 
@@ -415,13 +418,14 @@ func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UU
 
 func mapDashboardProblem(row sqlc.ListDashboardProblemsRow) models.DashboardProblem {
 	return models.DashboardProblem{
-		ID:               row.ProblemID,
-		Title:            row.ProblemTitle,
-		OrganizationID:   row.OrgID,
-		OrganizationName: row.OrgName,
-		TimeLimitMs:      int(row.TimeLimitMs),
-		MemoryLimitMb:    int(row.MemoryLimitMb),
-		UpdatedAt:        row.UpdatedAt,
+		ID:                row.ProblemID,
+		Title:             row.ProblemTitle,
+		OrganizationID:    row.OrgID,
+		OrganizationName:  row.OrgName,
+		OrganizationLogin: row.OrgLogin,
+		TimeLimitMs:       int(row.TimeLimitMs),
+		MemoryLimitMb:     int(row.MemoryLimitMb),
+		UpdatedAt:         row.UpdatedAt,
 	}
 }
 

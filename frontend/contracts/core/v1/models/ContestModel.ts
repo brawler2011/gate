@@ -5,7 +5,8 @@
 import type { UserModel } from './UserModel';
 export type ContestModel = {
     id: string;
-    organization_id?: string;
+    organization_id: string;
+    organization_login: string;
     title: string;
     description: string;
     visibility: string;

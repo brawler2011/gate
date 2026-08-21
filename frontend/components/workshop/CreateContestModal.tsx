@@ -56,11 +56,10 @@ export const CreateContestModal = ({
       if (error) {
         throw new Error(error.message);
       }
-      if (!response?.id) {
-        throw new Error("Не получен ID контеста");
-      }
+      const selectedOrg = orgs.find((o) => o.id === orgId);
+      const orgSlug = selectedOrg?.login || selectedOrg?.id || "org";
       onClose();
-      router.push(`/contests/${response.id}`);
+      router.push(`/${orgSlug}/contests/${response.id}`);
     } catch (err) {
       notifications.show({
         title: "Ошибка",

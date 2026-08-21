@@ -74,42 +74,44 @@ type RejudgeFilter struct {
 }
 
 type SubmissionListItem struct {
-	ID           uuid.UUID `json:"id"`
-	UserID       uuid.UUID `json:"user_id"`
-	Username     string    `json:"username"`
-	State        State     `json:"state"`
-	Score        int32     `json:"score"`
-	Penalty      int32     `json:"penalty"`
-	TimeStat     int32     `json:"time_stat"`
-	MemoryStat   int32     `json:"memory_stat"`
-	Language     int32     `json:"language"`
-	ProblemID    uuid.UUID `json:"problem_id"`
-	ProblemTitle string    `json:"problem_title"`
-	Position     int32     `json:"position"`
-	ContestID    uuid.UUID `json:"contest_id"`
-	ContestTitle string    `json:"contest_title"`
-	UpdatedAt    string    `json:"updated_at"`
-	CreatedAt    string    `json:"created_at"`
+	ID                uuid.UUID `json:"id"`
+	UserID            uuid.UUID `json:"user_id"`
+	Username          string    `json:"username"`
+	State             State     `json:"state"`
+	Score             int32     `json:"score"`
+	Penalty           int32     `json:"penalty"`
+	TimeStat          int32     `json:"time_stat"`
+	MemoryStat        int32     `json:"memory_stat"`
+	Language          int32     `json:"language"`
+	ProblemID         uuid.UUID `json:"problem_id"`
+	ProblemTitle      string    `json:"problem_title"`
+	Position          int32     `json:"position"`
+	ContestID         uuid.UUID `json:"contest_id"`
+	ContestTitle      string    `json:"contest_title"`
+	OrganizationLogin string    `json:"organization_login"`
+	UpdatedAt         string    `json:"updated_at"`
+	CreatedAt         string    `json:"created_at"`
 }
 
 type Submission struct {
-	ID           uuid.UUID    `json:"id"`
-	CreatedBy    *uuid.UUID   `json:"created_by"`
-	Username     string       `json:"username"`
-	Submission   string       `json:"submission"`
-	State        State        `json:"state"`
-	Score        int32        `json:"score"`
-	Penalty      int32        `json:"penalty"`
-	TimeStat     int32        `json:"time_stat"`
-	MemoryStat   int32        `json:"memory_stat"`
-	Language     LanguageName `json:"language"`
-	ProblemID    *uuid.UUID   `json:"problem_id"`
-	ProblemTitle string       `json:"problem_title"`
-	Position     *int32       `json:"position"`
-	ContestID    *uuid.UUID   `json:"contest_id"`
-	ContestTitle string       `json:"contest_title"`
-	UpdatedAt    time.Time    `json:"updated_at"`
-	CreatedAt    time.Time    `json:"created_at"`
+	ID                uuid.UUID    `json:"id"`
+	CreatedBy         *uuid.UUID   `json:"created_by"`
+	Username          string       `json:"username"`
+	Submission        string       `json:"submission"`
+	State             State        `json:"state"`
+	Score             int32        `json:"score"`
+	Penalty           int32        `json:"penalty"`
+	TimeStat          int32        `json:"time_stat"`
+	MemoryStat        int32        `json:"memory_stat"`
+	Language          LanguageName `json:"language"`
+	ProblemID         *uuid.UUID   `json:"problem_id"`
+	ProblemTitle      string       `json:"problem_title"`
+	Position          *int32       `json:"position"`
+	ContestID         *uuid.UUID   `json:"contest_id"`
+	ContestTitle      string       `json:"contest_title"`
+	OrganizationLogin string       `json:"organization_login"`
+	UpdatedAt         time.Time    `json:"updated_at"`
+	CreatedAt         time.Time    `json:"created_at"`
 }
 
 type SubmissionsList struct {

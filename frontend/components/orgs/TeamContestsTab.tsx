@@ -74,7 +74,7 @@ export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
               <Table.Td>
                 <Text
                   component={Link}
-                  href={`/contests/${c.id}`}
+                  href={`/${c.organization_login}/contests/${c.id}`}
                   size="sm"
                   fw={500}
                   c="blue"

@@ -329,7 +329,14 @@ export const AdminSubmissionsContent = ({
                         </Link>
                       </Table.Td>
                       <Table.Td>
-                        <Link href={`/problems/${submission.problem_id}`} style={{textDecoration: "none"}}>
+                        <Link
+                          href={
+                            submission.organization_login
+                              ? `/${submission.organization_login}/problems/${submission.problem_id}`
+                              : `/problems/${submission.problem_id}`
+                          }
+                          style={{textDecoration: "none"}}
+                        >
                           <Text c="blue" lineClamp={1}>
                             {submission.problem_title || submission.problem_id.slice(0, 8)}
                           </Text>
@@ -337,7 +344,14 @@ export const AdminSubmissionsContent = ({
                       </Table.Td>
                       <Table.Td>
                         {submission.contest_id ? (
-                          <Link href={`/contests/${submission.contest_id}`} style={{textDecoration: "none"}}>
+                          <Link
+                            href={
+                              submission.organization_login
+                                ? `/${submission.organization_login}/contests/${submission.contest_id}`
+                                : `/contests/${submission.contest_id}`
+                            }
+                            style={{textDecoration: "none"}}
+                          >
                             <Text c="blue" lineClamp={1}>
                               {submission.contest_title || submission.contest_id.slice(0, 8)}
                             </Text>

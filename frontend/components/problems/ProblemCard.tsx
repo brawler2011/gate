@@ -22,7 +22,7 @@ export const ProblemCard = ({problem, showEditButton}: Props): ReactNode => {
 
   return (
     <Link
-      href={`/problems/${problem.id}`}
+      href={`/${problem.organization_login}/problems/${problem.id}`}
       style={{
         textDecoration: "none",
         display: "block",
@@ -59,7 +59,7 @@ export const ProblemCard = ({problem, showEditButton}: Props): ReactNode => {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  router.push(`/problems/${problem.id}`);
+                  router.push(`/${problem.organization_login}/problems/${problem.id}`);
                 }}
                 style={{flexShrink: 0}}
               >

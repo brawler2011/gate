@@ -7,6 +7,7 @@ export type DashboardProblemModel = {
     title: string;
     organization_id: string;
     organization_name: string;
+    organization_login: string;
     time_limit: number;
     memory_limit: number;
     updated_at: string;

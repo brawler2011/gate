@@ -277,7 +277,7 @@ export const Header = ({
                       <div className={classes.organizationCrumb}>
                         <span className={classes.organizationSlash}>/</span>
                         <Link
-                          href={`/contests/${contest.id}`}
+                          href={`/${organization.login || organization.id}/contests/${contest.id}`}
                           className={classes.organizationLink}
                           title={contest.title}
                         >
@@ -289,7 +289,7 @@ export const Header = ({
                       <div className={classes.organizationCrumb}>
                         <span className={classes.organizationSlash}>/</span>
                         <Link
-                          href={`/problems/${problem.id}`}
+                          href={`/${organization.login || organization.id}/problems/${problem.id}`}
                           className={classes.organizationLink}
                           title={problem.title}
                         >

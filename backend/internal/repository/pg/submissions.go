@@ -186,10 +186,11 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 		ProblemID:    problemID,
 		ProblemTitle: problemTitle,
 		Position:     position,
-		ContestID:    contestID,
-		ContestTitle: contestTitle,
-		UpdatedAt:    row.UpdatedAt,
-		CreatedAt:    row.CreatedAt,
+		ContestID:         contestID,
+		ContestTitle:      contestTitle,
+		OrganizationLogin: row.OrganizationLogin,
+		UpdatedAt:         row.UpdatedAt,
+		CreatedAt:         row.CreatedAt,
 	}
 }
 
@@ -238,23 +239,24 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 	}
 
 	return models.Submission{
-		ID:           row.ID,
-		CreatedBy:    createdBy,
-		Username:     username,
-		Submission:   "",
-		State:        row.State,
-		Score:        row.Score,
-		Penalty:      row.Penalty,
-		TimeStat:     row.TimeStat,
-		MemoryStat:   row.MemoryStat,
-		Language:     row.Language,
-		ProblemID:    problemID,
-		ProblemTitle: problemTitle,
-		Position:     position,
-		ContestID:    contestID,
-		ContestTitle: contestTitle,
-		UpdatedAt:    row.UpdatedAt,
-		CreatedAt:    row.CreatedAt,
+		ID:                row.ID,
+		CreatedBy:         createdBy,
+		Username:          username,
+		Submission:        "",
+		State:             row.State,
+		Score:             row.Score,
+		Penalty:           row.Penalty,
+		TimeStat:          row.TimeStat,
+		MemoryStat:        row.MemoryStat,
+		Language:          row.Language,
+		ProblemID:         problemID,
+		ProblemTitle:      problemTitle,
+		Position:          position,
+		ContestID:         contestID,
+		ContestTitle:      contestTitle,
+		OrganizationLogin: row.OrganizationLogin,
+		UpdatedAt:         row.UpdatedAt,
+		CreatedAt:         row.CreatedAt,
 	}
 }
 

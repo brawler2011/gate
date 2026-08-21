@@ -198,7 +198,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
                   {problems.map((problem: ProblemsListItemModel) => (
                     <Table.Tr
                       key={problem.id}
-                      onClick={() => router.push(`/problems/${problem.id}`)}
+                      onClick={() => router.push(`/${problem.organization_login}/problems/${problem.id}`)}
                     >
                       <Table.Td>
                         <Text className={classes.titleCell} lineClamp={1}>

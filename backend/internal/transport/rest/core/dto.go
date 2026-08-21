@@ -177,7 +177,8 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 
 	model := corev1.ContestModel{
 		Id:                     c.ID,
-		OrganizationId:         &c.OrganizationID,
+		OrganizationId:         c.OrganizationID,
+		OrganizationLogin:      c.OrganizationLogin,
 		Title:                  title,
 		Description:            c.Description,
 		Visibility:             visibility,
@@ -254,14 +255,16 @@ func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
 	title := p.Title
 
 	return corev1.ProblemsListItemModel{
-		Id:          p.ID,
-		Title:       title,
-		Visibility:  &p.Visibility,
-		MemoryLimit: safeInt32(p.MemoryLimitMb),
-		TimeLimit:   safeInt32(p.TimeLimitMs),
-		IsTemplate:  p.IsTemplate,
-		CreatedAt:   p.CreatedAt,
-		UpdatedAt:   p.UpdatedAt,
+		Id:                p.ID,
+		OrganizationId:    p.OrganizationID,
+		OrganizationLogin: p.OrganizationLogin,
+		Title:             title,
+		Visibility:        &p.Visibility,
+		MemoryLimit:       safeInt32(p.MemoryLimitMb),
+		TimeLimit:         safeInt32(p.TimeLimitMs),
+		IsTemplate:        p.IsTemplate,
+		CreatedAt:         p.CreatedAt,
+		UpdatedAt:         p.UpdatedAt,
 	}
 }
 
@@ -303,13 +306,14 @@ func ProblemDTO(p models.Problem, statement *models.Statement, samples []corev1.
 	}
 
 	return &corev1.ProblemModel{
-		Id:             p.ID,
-		OrganizationId: &p.OrganizationID,
-		Title:          title,
-		Visibility:     p.Visibility,
-		CreatedBy:      createdBy,
-		TimeLimit:      safeInt32(p.TimeLimitMs),
-		MemoryLimit:    safeInt32(p.MemoryLimitMb),
+		Id:                p.ID,
+		OrganizationId:    p.OrganizationID,
+		OrganizationLogin: p.OrganizationLogin,
+		Title:             title,
+		Visibility:        p.Visibility,
+		CreatedBy:         createdBy,
+		TimeLimit:         safeInt32(p.TimeLimitMs),
+		MemoryLimit:       safeInt32(p.MemoryLimitMb),
 
 		Legend:       legend,
 		InputFormat:  inputFormat,
@@ -339,6 +343,11 @@ func statementField(statement *models.Statement, getter func(models.Statement) s
 }
 
 func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel {
+	var orgLogin *string
+	if s.OrganizationLogin != "" {
+		orgLogin = &s.OrganizationLogin
+	}
+
 	return corev1.SubmissionsListItemModel{
 		Id: s.ID,
 
@@ -356,8 +365,9 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 
 		Position: int32PtrToInt32(s.Position),
 
-		ContestId:    uuidPtrToUUID(s.ContestID),
-		ContestTitle: s.ContestTitle,
+		ContestId:         uuidPtrToUUID(s.ContestID),
+		ContestTitle:      s.ContestTitle,
+		OrganizationLogin: orgLogin,
 
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
@@ -365,6 +375,11 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 }
 
 func SolutionDTO(s models.Submission) corev1.SubmissionModel {
+	var orgLogin *string
+	if s.OrganizationLogin != "" {
+		orgLogin = &s.OrganizationLogin
+	}
+
 	return corev1.SubmissionModel{
 		Id: s.ID,
 
@@ -384,8 +399,9 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 
 		Position: int32PtrToInt32(s.Position),
 
-		ContestId:    uuidPtrToUUID(s.ContestID),
-		ContestTitle: s.ContestTitle,
+		ContestId:         uuidPtrToUUID(s.ContestID),
+		ContestTitle:      s.ContestTitle,
+		OrganizationLogin: orgLogin,
 
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
@@ -652,6 +668,7 @@ func DashboardContestDTO(c models.DashboardContest) corev1.DashboardContestModel
 		Title:              c.Title,
 		OrganizationId:     c.OrganizationID,
 		OrganizationName:   c.OrganizationName,
+		OrganizationLogin:  c.OrganizationLogin,
 		UserRole:           c.UserRole,
 		StartTime:          c.StartTime,
 		EndTime:            c.EndTime,
@@ -662,13 +679,14 @@ func DashboardContestDTO(c models.DashboardContest) corev1.DashboardContestModel
 
 func DashboardProblemDTO(p models.DashboardProblem) corev1.DashboardProblemModel {
 	return corev1.DashboardProblemModel{
-		Id:               p.ID,
-		Title:            p.Title,
-		OrganizationId:   p.OrganizationID,
-		OrganizationName: p.OrganizationName,
-		TimeLimit:        safeInt32(p.TimeLimitMs),
-		MemoryLimit:      safeInt32(p.MemoryLimitMb),
-		UpdatedAt:        p.UpdatedAt,
+		Id:                p.ID,
+		Title:             p.Title,
+		OrganizationId:    p.OrganizationID,
+		OrganizationName:  p.OrganizationName,
+		OrganizationLogin: p.OrganizationLogin,
+		TimeLimit:         safeInt32(p.TimeLimitMs),
+		MemoryLimit:       safeInt32(p.MemoryLimitMb),
+		UpdatedAt:         p.UpdatedAt,
 	}
 }
 

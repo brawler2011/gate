@@ -32,11 +32,13 @@ import type {ReactNode} from "react";
 interface ProblemsSectionProps {
   contestId: string;
   initialProblems: Array<corev1.ContestProblemListItemModel>;
+  orgLogin?: string;
 }
 
 export const ProblemsSection = ({
   contestId,
   initialProblems,
+  orgLogin,
 }: ProblemsSectionProps): ReactNode => {
   const router = useRouter();
   const [problems, setProblems] = useState(initialProblems);
@@ -302,7 +304,7 @@ export const ProblemsSection = ({
                           color="gray"
                           variant="subtle"
                           component="a"
-                          href={`/problems/${problem.problem_id}`}
+                          href={orgLogin ? `/${orgLogin}/problems/${problem.problem_id}` : `/problems/${problem.problem_id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >

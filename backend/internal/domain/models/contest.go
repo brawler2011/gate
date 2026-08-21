@@ -250,19 +250,20 @@ type CreateContestMemberParams struct {
 }
 
 type Contest struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	OwnerID        *uuid.UUID
-	Visibility     ContestVisibility
-	Title          string
-	ShortName      string
-	Description    string
-	Settings       map[string]interface{} // JSONB for contest settings
-	AccessPolicy   map[string]interface{} // JSONB for access policies
-	StartTime      *time.Time
-	EndTime        *time.Time
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                uuid.UUID
+	OrganizationID    uuid.UUID
+	OrganizationLogin string
+	OwnerID           *uuid.UUID
+	Visibility        ContestVisibility
+	Title             string
+	ShortName         string
+	Description       string
+	Settings          map[string]interface{} // JSONB for contest settings
+	AccessPolicy      map[string]interface{} // JSONB for access policies
+	StartTime         *time.Time
+	EndTime           *time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 type ContestsList struct {
@@ -306,6 +307,7 @@ type DashboardContest struct {
 	CreatedAt          time.Time
 	OrganizationID     uuid.UUID
 	OrganizationName   string
+	OrganizationLogin  string
 	UserRole           string
 	LastSubmissionTime *time.Time
 }

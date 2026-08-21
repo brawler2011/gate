@@ -193,12 +193,33 @@ func (q *Queries) DeleteContest(ctx context.Context, id uuid.UUID) error {
 }
 
 const getContestByID = `-- name: GetContestByID :one
-SELECT id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests WHERE id = $1
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
+WHERE c.id = $1
 `
 
-func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (Contest, error) {
+type GetContestByIDRow struct {
+	ID             uuid.UUID                `json:"id"`
+	OrganizationID uuid.UUID                `json:"organization_id"`
+	OwnerID        pgtype.UUID              `json:"owner_id"`
+	Visibility     models.ContestVisibility `json:"visibility"`
+	Title          string                   `json:"title"`
+	ShortName      string                   `json:"short_name"`
+	Description    string                   `json:"description"`
+	Settings       []byte                   `json:"settings"`
+	AccessPolicy   []byte                   `json:"access_policy"`
+	StartTime      pgtype.Timestamptz       `json:"start_time"`
+	EndTime        pgtype.Timestamptz       `json:"end_time"`
+	CreatedAt      time.Time                `json:"created_at"`
+	UpdatedAt      time.Time                `json:"updated_at"`
+	OrgLogin       string                   `json:"org_login"`
+	OrgName        string                   `json:"org_name"`
+}
+
+func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestByIDRow, error) {
 	row := q.db.QueryRow(ctx, getContestByID, id)
-	var i Contest
+	var i GetContestByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -213,13 +234,17 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (Contest, er
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrgLogin,
+		&i.OrgName,
 	)
 	return i, err
 }
 
 const getContestByShortName = `-- name: GetContestByShortName :one
-SELECT id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests
-WHERE organization_id = $1 AND short_name = $2
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
+WHERE c.organization_id = $1 AND c.short_name = $2
 `
 
 type GetContestByShortNameParams struct {
@@ -227,9 +252,27 @@ type GetContestByShortNameParams struct {
 	ShortName      string    `json:"short_name"`
 }
 
-func (q *Queries) GetContestByShortName(ctx context.Context, arg GetContestByShortNameParams) (Contest, error) {
+type GetContestByShortNameRow struct {
+	ID             uuid.UUID                `json:"id"`
+	OrganizationID uuid.UUID                `json:"organization_id"`
+	OwnerID        pgtype.UUID              `json:"owner_id"`
+	Visibility     models.ContestVisibility `json:"visibility"`
+	Title          string                   `json:"title"`
+	ShortName      string                   `json:"short_name"`
+	Description    string                   `json:"description"`
+	Settings       []byte                   `json:"settings"`
+	AccessPolicy   []byte                   `json:"access_policy"`
+	StartTime      pgtype.Timestamptz       `json:"start_time"`
+	EndTime        pgtype.Timestamptz       `json:"end_time"`
+	CreatedAt      time.Time                `json:"created_at"`
+	UpdatedAt      time.Time                `json:"updated_at"`
+	OrgLogin       string                   `json:"org_login"`
+	OrgName        string                   `json:"org_name"`
+}
+
+func (q *Queries) GetContestByShortName(ctx context.Context, arg GetContestByShortNameParams) (GetContestByShortNameRow, error) {
 	row := q.db.QueryRow(ctx, getContestByShortName, arg.OrganizationID, arg.ShortName)
-	var i Contest
+	var i GetContestByShortNameRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -244,6 +287,8 @@ func (q *Queries) GetContestByShortName(ctx context.Context, arg GetContestBySho
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OrgLogin,
+		&i.OrgName,
 	)
 	return i, err
 }
@@ -429,7 +474,9 @@ func (q *Queries) GetSubmissionsForScoreboard(ctx context.Context, arg GetSubmis
 }
 
 const listAllContests = `-- name: ListAllContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
 WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR c.visibility = $2::contest_visibility)
 ORDER BY c.created_at DESC
@@ -443,7 +490,25 @@ type ListAllContestsParams struct {
 	Offset  int32  `json:"offset"`
 }
 
-func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]Contest, error) {
+type ListAllContestsRow struct {
+	ID             uuid.UUID                `json:"id"`
+	OrganizationID uuid.UUID                `json:"organization_id"`
+	OwnerID        pgtype.UUID              `json:"owner_id"`
+	Visibility     models.ContestVisibility `json:"visibility"`
+	Title          string                   `json:"title"`
+	ShortName      string                   `json:"short_name"`
+	Description    string                   `json:"description"`
+	Settings       []byte                   `json:"settings"`
+	AccessPolicy   []byte                   `json:"access_policy"`
+	StartTime      pgtype.Timestamptz       `json:"start_time"`
+	EndTime        pgtype.Timestamptz       `json:"end_time"`
+	CreatedAt      time.Time                `json:"created_at"`
+	UpdatedAt      time.Time                `json:"updated_at"`
+	OrgLogin       string                   `json:"org_login"`
+	OrgName        string                   `json:"org_name"`
+}
+
+func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]ListAllContestsRow, error) {
 	rows, err := q.db.Query(ctx, listAllContests,
 		arg.Column1,
 		arg.Column2,
@@ -454,9 +519,9 @@ func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Contest{}
+	items := []ListAllContestsRow{}
 	for rows.Next() {
-		var i Contest
+		var i ListAllContestsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
@@ -471,6 +536,8 @@ func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrgLogin,
+			&i.OrgName,
 		); err != nil {
 			return nil, err
 		}
@@ -580,11 +647,13 @@ func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) 
 }
 
 const listContests = `-- name: ListContests :many
-SELECT id, organization_id, owner_id, visibility, title, short_name, description, settings, access_policy, start_time, end_time, created_at, updated_at FROM contests
-WHERE organization_id = $1
-  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR visibility = $3::contest_visibility)
-ORDER BY created_at DESC
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
+WHERE c.organization_id = $1
+  AND ($2::text = '' OR c.title ILIKE '%' || $2 || '%')
+  AND ($3::text = '' OR c.visibility = $3::contest_visibility)
+ORDER BY c.created_at DESC
 LIMIT $4 OFFSET $5
 `
 
@@ -596,7 +665,25 @@ type ListContestsParams struct {
 	Offset         int32     `json:"offset"`
 }
 
-func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]Contest, error) {
+type ListContestsRow struct {
+	ID             uuid.UUID                `json:"id"`
+	OrganizationID uuid.UUID                `json:"organization_id"`
+	OwnerID        pgtype.UUID              `json:"owner_id"`
+	Visibility     models.ContestVisibility `json:"visibility"`
+	Title          string                   `json:"title"`
+	ShortName      string                   `json:"short_name"`
+	Description    string                   `json:"description"`
+	Settings       []byte                   `json:"settings"`
+	AccessPolicy   []byte                   `json:"access_policy"`
+	StartTime      pgtype.Timestamptz       `json:"start_time"`
+	EndTime        pgtype.Timestamptz       `json:"end_time"`
+	CreatedAt      time.Time                `json:"created_at"`
+	UpdatedAt      time.Time                `json:"updated_at"`
+	OrgLogin       string                   `json:"org_login"`
+	OrgName        string                   `json:"org_name"`
+}
+
+func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]ListContestsRow, error) {
 	rows, err := q.db.Query(ctx, listContests,
 		arg.OrganizationID,
 		arg.Column2,
@@ -608,9 +695,9 @@ func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]C
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Contest{}
+	items := []ListContestsRow{}
 	for rows.Next() {
-		var i Contest
+		var i ListContestsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
@@ -625,6 +712,8 @@ func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]C
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrgLogin,
+			&i.OrgName,
 		); err != nil {
 			return nil, err
 		}
@@ -645,6 +734,7 @@ SELECT
     c.created_at as contest_created_at,
     o.id as org_id,
     o.name as org_name,
+    o.login as org_login,
     COALESCE(
         (SELECT cm.role::text FROM contest_members cm WHERE cm.contest_id = c.id AND cm.user_id = $1),
         CASE WHEN EXISTS(
@@ -679,6 +769,7 @@ type ListDashboardContestsRow struct {
 	ContestCreatedAt time.Time          `json:"contest_created_at"`
 	OrgID            uuid.UUID          `json:"org_id"`
 	OrgName          string             `json:"org_name"`
+	OrgLogin         string             `json:"org_login"`
 	UserRole         string             `json:"user_role"`
 	LastSubTime      interface{}        `json:"last_sub_time"`
 }
@@ -700,6 +791,7 @@ func (q *Queries) ListDashboardContests(ctx context.Context, arg ListDashboardCo
 			&i.ContestCreatedAt,
 			&i.OrgID,
 			&i.OrgName,
+			&i.OrgLogin,
 			&i.UserRole,
 			&i.LastSubTime,
 		); err != nil {
@@ -714,7 +806,9 @@ func (q *Queries) ListDashboardContests(ctx context.Context, arg ListDashboardCo
 }
 
 const listUserAccessibleContests = `-- name: ListUserAccessibleContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
 WHERE user_has_contest_access($1, c.id)
 ORDER BY c.created_at DESC
 LIMIT $2 OFFSET $3
@@ -726,15 +820,33 @@ type ListUserAccessibleContestsParams struct {
 	Offset  int32     `json:"offset"`
 }
 
-func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]Contest, error) {
+type ListUserAccessibleContestsRow struct {
+	ID             uuid.UUID                `json:"id"`
+	OrganizationID uuid.UUID                `json:"organization_id"`
+	OwnerID        pgtype.UUID              `json:"owner_id"`
+	Visibility     models.ContestVisibility `json:"visibility"`
+	Title          string                   `json:"title"`
+	ShortName      string                   `json:"short_name"`
+	Description    string                   `json:"description"`
+	Settings       []byte                   `json:"settings"`
+	AccessPolicy   []byte                   `json:"access_policy"`
+	StartTime      pgtype.Timestamptz       `json:"start_time"`
+	EndTime        pgtype.Timestamptz       `json:"end_time"`
+	CreatedAt      time.Time                `json:"created_at"`
+	UpdatedAt      time.Time                `json:"updated_at"`
+	OrgLogin       string                   `json:"org_login"`
+	OrgName        string                   `json:"org_name"`
+}
+
+func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]ListUserAccessibleContestsRow, error) {
 	rows, err := q.db.Query(ctx, listUserAccessibleContests, arg.PUserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Contest{}
+	items := []ListUserAccessibleContestsRow{}
 	for rows.Next() {
-		var i Contest
+		var i ListUserAccessibleContestsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
@@ -749,6 +861,8 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrgLogin,
+			&i.OrgName,
 		); err != nil {
 			return nil, err
 		}
@@ -761,7 +875,9 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 }
 
 const listUserAccessibleContestsByOrg = `-- name: ListUserAccessibleContestsByOrg :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.short_name, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
+FROM contests c
+JOIN organizations o ON c.organization_id = o.id
 WHERE user_has_contest_access($1, c.id)
   AND c.organization_id = $2
 ORDER BY c.created_at DESC
@@ -775,7 +891,25 @@ type ListUserAccessibleContestsByOrgParams struct {
 	Offset         int32     `json:"offset"`
 }
 
-func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]Contest, error) {
+type ListUserAccessibleContestsByOrgRow struct {
+	ID             uuid.UUID                `json:"id"`
+	OrganizationID uuid.UUID                `json:"organization_id"`
+	OwnerID        pgtype.UUID              `json:"owner_id"`
+	Visibility     models.ContestVisibility `json:"visibility"`
+	Title          string                   `json:"title"`
+	ShortName      string                   `json:"short_name"`
+	Description    string                   `json:"description"`
+	Settings       []byte                   `json:"settings"`
+	AccessPolicy   []byte                   `json:"access_policy"`
+	StartTime      pgtype.Timestamptz       `json:"start_time"`
+	EndTime        pgtype.Timestamptz       `json:"end_time"`
+	CreatedAt      time.Time                `json:"created_at"`
+	UpdatedAt      time.Time                `json:"updated_at"`
+	OrgLogin       string                   `json:"org_login"`
+	OrgName        string                   `json:"org_name"`
+}
+
+func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]ListUserAccessibleContestsByOrgRow, error) {
 	rows, err := q.db.Query(ctx, listUserAccessibleContestsByOrg,
 		arg.PUserID,
 		arg.OrganizationID,
@@ -786,9 +920,9 @@ func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListU
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Contest{}
+	items := []ListUserAccessibleContestsByOrgRow{}
 	for rows.Next() {
-		var i Contest
+		var i ListUserAccessibleContestsByOrgRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
@@ -803,6 +937,8 @@ func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListU
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OrgLogin,
+			&i.OrgName,
 		); err != nil {
 			return nil, err
 		}

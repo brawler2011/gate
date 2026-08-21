@@ -93,17 +93,18 @@ const (
 
 // Problem - новая модель задачи (метаданные в БД, контент в SeaweedFS)
 type Problem struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	OwnerID        *uuid.UUID
-	Visibility     string
-	Title          string
-	ShortName      string
-	TimeLimitMs    int
-	MemoryLimitMb  int
-	IsTemplate     bool
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                uuid.UUID
+	OrganizationID    uuid.UUID
+	OrganizationLogin string
+	OwnerID           *uuid.UUID
+	Visibility        string
+	Title             string
+	ShortName         string
+	TimeLimitMs       int
+	MemoryLimitMb     int
+	IsTemplate        bool
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // ProblemMember represents a user's direct membership to a problem
@@ -208,11 +209,12 @@ type ProblemTest struct {
 type ProblemTests []ProblemTest
 
 type DashboardProblem struct {
-	ID               uuid.UUID
-	Title            string
-	OrganizationID   uuid.UUID
-	OrganizationName string
-	TimeLimitMs      int
-	MemoryLimitMb    int
-	UpdatedAt        time.Time
+	ID                uuid.UUID
+	Title             string
+	OrganizationID    uuid.UUID
+	OrganizationName  string
+	OrganizationLogin string
+	TimeLimitMs       int
+	MemoryLimitMb     int
+	UpdatedAt         time.Time
 }

@@ -16,6 +16,7 @@ type Props = {
   problem: {
     id?: string;
     problem_id?: string;
+    organization_login?: string;
     title: string;
     time_limit: number;
     memory_limit: number;
@@ -32,6 +33,7 @@ type Props = {
     }>;
   };
 
+  orgLogin?: string;
   problemId?: string;
   letter?: string;
   isManager?: boolean;
@@ -190,9 +192,10 @@ const StatementContent = ({value, problemId}: { value: string; problemId?: strin
   );
 };
 
-const Problem = ({problem, letter, problemId, isManager}: Props): ReactNode => {
+const Problem = ({problem, letter, problemId, isManager, orgLogin}: Props): ReactNode => {
   letter = letter || "A";
   const activeProblemId = problemId || problem.id || problem.problem_id;
+  const org = orgLogin || problem.organization_login;
 
   const ref = useRef<HTMLDivElement>(null);
 
@@ -235,7 +238,7 @@ const Problem = ({problem, letter, problemId, isManager}: Props): ReactNode => {
             <Tooltip label="Редактировать задачу" withArrow>
               <ActionIcon
                 component="a"
-                href={`/problems/${activeProblemId}`}
+                href={org ? `/${org}/problems/${activeProblemId}` : `/problems/${activeProblemId}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 variant="subtle"
