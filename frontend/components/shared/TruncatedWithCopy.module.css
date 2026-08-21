@@ -16,15 +16,15 @@
   white-space: nowrap;
   -webkit-mask-image: linear-gradient(
     to right,
-    rgba(0, 0, 0, 1) 0%,
-    rgba(0, 0, 0, 1) calc(100% - 10px),
-    rgba(0, 0, 0, 0) 100%
+    rgb(0 0 0 / 100%) 0%,
+    rgb(0 0 0 / 100%) calc(100% - 10px),
+    rgb(0 0 0 / 0%) 100%
   );
   mask-image: linear-gradient(
     to right,
-    rgba(0, 0, 0, 1) 0%,
-    rgba(0, 0, 0, 1) calc(100% - 10px),
-    rgba(0, 0, 0, 0) 100%
+    rgb(0 0 0 / 100%) 0%,
+    rgb(0 0 0 / 100%) calc(100% - 10px),
+    rgb(0 0 0 / 0%) 100%
   );
 }
 

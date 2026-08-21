@@ -9,7 +9,7 @@
 
 .card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 10%);
   border-color: var(--mantine-color-gray-4);
 }
 
@@ -19,7 +19,7 @@
 }
 
 [data-mantine-color-scheme="dark"] .card:hover {
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 30%);
   border-color: var(--mantine-color-dark-4);
 }
 

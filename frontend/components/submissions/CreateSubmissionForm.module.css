@@ -57,20 +57,9 @@
     box-sizing: border-box;
 }
 
-.code[data-dragging="true"] .dropZone {
-    border-color: var(--mantine-color-blue-6);
-    background-color: light-dark(
-            var(--mantine-color-blue-0),
-            var(--mantine-color-blue-9)
-    );
-}
-
 .dragOverlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background-color: light-dark(
             var(--mantine-color-blue-0),
             var(--mantine-color-blue-9)
@@ -78,10 +67,6 @@
     opacity: 0;
     transition: opacity 0.2s ease;
     pointer-events: none;
-}
-
-.code[data-dragging="true"] .dragOverlay {
-    opacity: 1;
 }
 
 .fileAttached {
@@ -110,9 +95,11 @@
 .pinFileLabel {
     /* Used for Mantine Button classNames */
 }
+
 .pinFileSection {
     /* Used for Mantine Button classNames */
 }
+
 .pinFileRoot {
     /* Used for Mantine Button classNames */
 }
@@ -147,7 +134,16 @@
     height: 500px;
 }
 
-@media (max-width: 768px) {
+.code[data-dragging="true"] .dropZone {
+    border-color: var(--mantine-color-blue-6);
+    background-color: light-dark(
+            var(--mantine-color-blue-0),
+            var(--mantine-color-blue-9)
+    );
+}
+
+.code[data-dragging="true"] .dragOverlay {
+    opacity: 1;
 }
 
 @media (max-width: $mantine-breakpoint-lg) {

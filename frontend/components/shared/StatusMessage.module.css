@@ -3,6 +3,7 @@
     transform: translate(-50%, -100%);
     opacity: 0;
   }
+
   to {
     transform: translate(-50%, 0);
     opacity: 1;
@@ -14,6 +15,7 @@
     transform: translate(-50%, 0);
     opacity: 1;
   }
+
   to {
     transform: translate(-50%, -100%);
     opacity: 0;

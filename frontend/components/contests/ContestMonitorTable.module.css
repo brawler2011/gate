@@ -48,7 +48,7 @@
 
 .cellFrozenPending {
   color: var(--mantine-color-yellow-6, #e67700);
-  background-color: light-dark(rgba(252, 196, 25, 0.12), rgba(252, 196, 25, 0.18));
+  background-color: light-dark(rgb(252 196 25 / 12%), rgb(252 196 25 / 18%));
   border-radius: var(--mantine-radius-sm, 4px);
   padding: 2px 4px;
   font-weight: 600;

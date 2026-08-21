@@ -17,7 +17,7 @@ tasks:
       - bun run typecheck
 
   lint:
-    desc: "Run ESLint"
+    desc: "Run ESLint and Stylelint"
     cmds:
       - bun run lint
 

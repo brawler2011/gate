@@ -1,6 +1,6 @@
 .container {
     max-width: var(--contest-problem-max-width);
-    text-rendering: optimizeLegibility;
+    text-rendering: optimizelegibility;
     font-kerning: normal;
     color: var(--mantine-color-text);
 }
@@ -42,11 +42,11 @@
     }
 
     & th {
-        padding: 0.25em 0.5em 0.25em 0.5em;
+        padding: 0.25em 0.5em;
     }
 
     & td {
-        padding: 0.125em 0.5em 0.25em 0.5em;
+        padding: 0.125em 0.5em 0.25em;
     }
 
     .center {

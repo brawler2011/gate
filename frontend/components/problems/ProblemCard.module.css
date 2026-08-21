@@ -9,6 +9,6 @@
 
 .problemCard:hover {
   transform: translate3d(0, -2px, 0);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 8%) !important;
 }
 
