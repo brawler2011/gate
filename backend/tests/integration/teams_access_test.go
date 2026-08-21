@@ -53,7 +53,6 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 			Login:          "priv-" + suffix,
 			Description:    "Private contest description",
 			Settings:       map[string]interface{}{},
-			AccessPolicy:   models.DefaultContestAccessPolicy(),
 		})
 		s.Require().NoError(err)
 

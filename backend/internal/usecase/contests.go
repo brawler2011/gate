@@ -14,11 +14,13 @@ import (
 
 type ContestsUseCase struct {
 	contestRepo     interfaces.ContestsRepo
+	orgsRepo        interfaces.OrganizationsRepo
 	submissionsRepo interfaces.SubmissionsRepo
 }
 
 func NewContestsUseCase(
 	contestRepo interfaces.ContestsRepo,
+	orgsRepo interfaces.OrganizationsRepo,
 	submissionsRepo ...interfaces.SubmissionsRepo,
 ) *ContestsUseCase {
 	var subRepo interfaces.SubmissionsRepo
@@ -27,6 +29,7 @@ func NewContestsUseCase(
 	}
 	return &ContestsUseCase{
 		contestRepo:     contestRepo,
+		orgsRepo:        orgsRepo,
 		submissionsRepo: subRepo,
 	}
 }
@@ -44,7 +47,6 @@ func (uc *ContestsUseCase) CreateContest(
 		Login:          c.Login,
 		Description:    c.Description,
 		Settings:       c.Settings,
-		AccessPolicy:   c.AccessPolicy,
 		StartTime:      c.StartTime,
 		EndTime:        c.EndTime,
 	}
@@ -85,8 +87,8 @@ func (uc *ContestsUseCase) GetContestByOrgLoginAndContestLogin(ctx context.Conte
 	return contest, nil
 }
 
-func (uc *ContestsUseCase) ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, page, pageSize int32) (*models.ContestsList, error) {
-	contests, total, err := uc.contestRepo.ListOrganizationContests(ctx, orgID, search, page, pageSize)
+func (uc *ContestsUseCase) ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*models.ContestsList, error) {
+	contests, total, err := uc.contestRepo.ListOrganizationContests(ctx, orgID, search, visibility, page, pageSize)
 	if err != nil {
 		return nil, pkg.Wrap(err, nil, "can't list organization contests from database")
 	}
@@ -176,6 +178,17 @@ func (uc *ContestsUseCase) DeleteContestProblem(ctx context.Context, c models.Co
 }
 
 func (uc *ContestsUseCase) CreateParticipant(ctx context.Context, c models.ParticipantCreation) error {
+	if uc.orgsRepo != nil {
+		contest, err := uc.contestRepo.GetContest(ctx, c.ContestId)
+		if err != nil {
+			return err
+		}
+		_, err = uc.orgsRepo.GetMember(ctx, contest.OrganizationID, c.UserId)
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "user must be a member of the organization")
+		}
+	}
+
 	return uc.contestRepo.CreateContestMember(ctx, &models.CreateContestMemberParams{
 		ContestId: c.ContestId,
 		UserId:    c.UserId,

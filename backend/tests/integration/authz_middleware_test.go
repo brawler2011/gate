@@ -131,7 +131,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Login:          "lus-allowed-" + suffix,
 			Description:    "contest for allowed own submissions",
 			Settings:       map[string]interface{}{},
-			AccessPolicy:   models.DefaultContestAccessPolicy(),
 		})
 		s.Require().NoError(err)
 
@@ -152,7 +151,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Login:          "lus-denied-" + suffix,
 			Description:    "contest for denied own submissions",
 			Settings:       map[string]interface{}{},
-			AccessPolicy:   models.DefaultContestAccessPolicy(),
 		})
 		s.Require().NoError(err)
 
@@ -201,33 +199,14 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			s.Equal(http.StatusOK, resp.StatusCode())
 		})
 
-		s.Run("User cannot list own submissions when persisted mask denies", func() {
-			_, err := s.dbPool.Exec(
-				s.ctx,
-				"UPDATE contest_members SET permissions_mask = $3 WHERE contest_id = $1 AND user_id = $2",
-				deniedContestID,
-				requestUser.Id,
-				int64(models.ContestPermissionGetContest),
-			)
-			s.Require().NoError(err)
-
-			roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "lus-denied-"+suffix, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", requestUser.Id.String())
-				return nil
-			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusOK, roleResp.StatusCode())
-			s.Require().NotNil(roleResp.JSON200)
-			s.Require().NotNil(roleResp.JSON200.PermissionsMask)
-			s.Equal(int64(models.ContestPermissionGetContest), *roleResp.JSON200.PermissionsMask)
-
-			contestID := openapi_types.UUID(deniedContestID)
-			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, requestUser.Username, &corev1.ListUserSubmissionsParams{
+		s.Run("User cannot list submissions when not a member of private contest", func() {
+			contestID := openapi_types.UUID(allowedContestID)
+			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, anotherUser.Username, &corev1.ListUserSubmissionsParams{
 				Page:      1,
 				PageSize:  10,
 				ContestId: &contestID,
 			}, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", requestUser.Id.String())
+				req.Header.Set("X-Test-User-ID", anotherUser.Id.String())
 				return nil
 			})
 			s.Require().NoError(err)
@@ -255,7 +234,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Login:          "lcs-contest-" + suffix,
 			Description:    "contest for list contest submissions custom checks",
 			Settings:       map[string]interface{}{},
-			AccessPolicy:   models.DefaultContestAccessPolicy(),
 		})
 		s.Require().NoError(err)
 
@@ -346,7 +324,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Login:          "team-contest-" + suffix,
 			Description:    "private contest for authz",
 			Settings:       map[string]interface{}{},
-			AccessPolicy:   models.DefaultContestAccessPolicy(),
 		})
 		s.Require().NoError(err)
 
@@ -400,7 +377,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Login:          "mixed-role-" + suffix,
 			Description:    "contest for mixed direct+team role resolution",
 			Settings:       map[string]interface{}{},
-			AccessPolicy:   models.DefaultContestAccessPolicy(),
 		})
 		s.Require().NoError(err)
 
@@ -434,26 +410,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		err = s.contestsRepo.CreateContestTeam(s.ctx, contestID, teamID, models.ContestRoleModerator)
 		s.Require().NoError(err)
 
-		var directMask int64
-		err = s.dbPool.QueryRow(
-			s.ctx,
-			"SELECT permissions_mask FROM contest_members WHERE contest_id = $1 AND user_id = $2",
-			contestID,
-			mixedUser.Id,
-		).Scan(&directMask)
-		s.Require().NoError(err)
-		s.Equal(int64(models.ContestPermissionMaskParticipantDefault), directMask)
-
-		var teamMask int64
-		err = s.dbPool.QueryRow(
-			s.ctx,
-			"SELECT permissions_mask FROM contest_teams WHERE contest_id = $1 AND team_id = $2",
-			contestID,
-			teamID,
-		).Scan(&teamMask)
-		s.Require().NoError(err)
-		s.Equal(int64(models.ContestPermissionMaskModeratorDefault), teamMask)
-
 		roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "mixed-role-"+suffix, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", mixedUser.Id.String())
 			return nil
@@ -462,8 +418,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Equal(http.StatusOK, roleResp.StatusCode())
 		s.Require().NotNil(roleResp.JSON200)
 		s.Equal(string(models.ContestRoleModerator), roleResp.JSON200.Role)
-		s.Require().NotNil(roleResp.JSON200.PermissionsMask)
-		s.Equal(int64(models.ContestPermissionMaskModeratorDefault), *roleResp.JSON200.PermissionsMask)
 
 		otherUserID := openapi_types.UUID(otherUser.Id)
 		resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "mixed-role-"+suffix, &corev1.ListContestSubmissionsParams{
@@ -535,10 +489,10 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Equal(http.StatusOK, resp.StatusCode())
 	})
 
-	s.Run("Contest persisted mask denies participant", func() {
+	s.Run("Non-member cannot view private contest", func() {
 		suffix := uuid.NewString()[:8]
 		owner := s.createUser("authz_policy_owner_"+suffix, models.UserRoleUser)
-		participant := s.createUser("authz_pol_part_"+suffix, models.UserRoleUser)
+		nonMember := s.createUser("authz_pol_part_"+suffix, models.UserRoleUser)
 
 		org := s.createOrganization("authz-policy-org-"+suffix, "Authz Policy Org", owner.Id)
 		contestID := uuid.New()
@@ -549,32 +503,15 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
 			Visibility:     models.ContestVisibilityPrivate,
-			Title:          "Policy Contest",
+			Title:          "Private Contest",
 			Login:          "policy-contest-" + suffix,
-			Description:    "contest with explicit policy",
+			Description:    "contest with private access",
 			Settings:       map[string]interface{}{},
-			AccessPolicy:   models.DefaultContestAccessPolicy(),
 		})
-		s.Require().NoError(err)
-
-		err = s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{
-			ContestId: contestID,
-			UserId:    participant.Id,
-			Role:      models.ContestRoleParticipant,
-		})
-		s.Require().NoError(err)
-
-		_, err = s.dbPool.Exec(
-			s.ctx,
-			"UPDATE contest_members SET permissions_mask = $3 WHERE contest_id = $1 AND user_id = $2",
-			contestID,
-			participant.Id,
-			int64(0),
-		)
 		s.Require().NoError(err)
 
 		resp, err := s.client.GetContestWithResponse(s.ctx, org.Login, "policy-contest-"+suffix, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", participant.Id.String())
+			req.Header.Set("X-Test-User-ID", nonMember.Id.String())
 			return nil
 		})
 		s.Require().NoError(err)

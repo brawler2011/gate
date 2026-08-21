@@ -28,12 +28,18 @@ func safeInt32[T ~int | ~int64](v T) int32 {
 }
 
 type ProblemsUseCase struct {
-	repo interfaces.ProblemsRepo
+	repo     interfaces.ProblemsRepo
+	orgsRepo interfaces.OrganizationsRepo
 }
 
-func NewProblemsUseCase(repo interfaces.ProblemsRepo) *ProblemsUseCase {
+func NewProblemsUseCase(repo interfaces.ProblemsRepo, orgsRepo ...interfaces.OrganizationsRepo) *ProblemsUseCase {
+	var orgRepo interfaces.OrganizationsRepo
+	if len(orgsRepo) > 0 {
+		orgRepo = orgsRepo[0]
+	}
 	return &ProblemsUseCase{
-		repo: repo,
+		repo:     repo,
+		orgsRepo: orgRepo,
 	}
 }
 
@@ -256,6 +262,17 @@ func (uc *ProblemsUseCase) RemoveProblemTeam(ctx context.Context, problemID, tea
 }
 
 func (uc *ProblemsUseCase) CreateProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role models.ProblemRole) error {
+	if uc.orgsRepo != nil {
+		problem, err := uc.repo.GetProblemById(ctx, problemID)
+		if err != nil {
+			return err
+		}
+		_, err = uc.orgsRepo.GetMember(ctx, problem.OrganizationID, userID)
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "user must be a member of the organization")
+		}
+	}
+
 	return uc.repo.CreateProblemMember(ctx, &models.CreateProblemMemberParams{
 		ProblemID: problemID,
 		UserID:    userID,

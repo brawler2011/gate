@@ -141,12 +141,15 @@ type Querier interface {
 	MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) error
 	PickEvents(ctx context.Context, arg PickEventsParams) ([]OutboxEvent, error)
 	RemoveContestMember(ctx context.Context, arg RemoveContestMemberParams) error
+	RemoveContestMembersByOrgAndUser(ctx context.Context, arg RemoveContestMembersByOrgAndUserParams) error
 	RemoveContestProblem(ctx context.Context, arg RemoveContestProblemParams) error
 	RemoveContestTeam(ctx context.Context, arg RemoveContestTeamParams) error
 	RemoveOrganizationMember(ctx context.Context, arg RemoveOrganizationMemberParams) error
 	RemoveProblemMember(ctx context.Context, arg RemoveProblemMemberParams) error
+	RemoveProblemMembersByOrgAndUser(ctx context.Context, arg RemoveProblemMembersByOrgAndUserParams) error
 	RemoveProblemTeam(ctx context.Context, arg RemoveProblemTeamParams) error
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
+	RemoveTeamMembersByOrgAndUser(ctx context.Context, arg RemoveTeamMembersByOrgAndUserParams) error
 	ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error
 	ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]uuid.UUID, error)
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error

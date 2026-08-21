@@ -50,7 +50,8 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
     !contestResponse.contest.start_time ||
     new Date(contestResponse.contest.start_time) <= new Date();
 
-  if (!checker.canViewProblems(contestResponse.contest) || (!isManager && !hasStarted)) {
+  const draftsDisabled = contestResponse.contest.enable_drafts === false;
+  if (!checker.canViewProblems(contestResponse.contest) || (!isManager && (!hasStarted || draftsDisabled))) {
     redirect(`/${slug}/${contestLogin}`);
   }
 

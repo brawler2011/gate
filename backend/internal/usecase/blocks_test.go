@@ -206,7 +206,7 @@ func TestContestsUseCase_BlockProblemForUser(t *testing.T) {
 
 	mockRepo := new(ContestsRepoMock)
 	mockSubRepo := new(SubmissionsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo, mockSubRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil, mockSubRepo)
 
 	mockRepo.On("GetContest", mock.Anything, contestID).Return(models.Contest{ID: contestID}, nil)
 	mockRepo.On("CreateContestUserProblemBlock", mock.Anything, &models.CreateContestUserProblemBlockParams{
@@ -257,7 +257,7 @@ func TestContestsUseCase_UnblockProblemForUser(t *testing.T) {
 
 	mockRepo := new(ContestsRepoMock)
 	mockSubRepo := new(SubmissionsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo, mockSubRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil, mockSubRepo)
 
 	mockRepo.On("GetContest", mock.Anything, contestID).Return(models.Contest{ID: contestID}, nil)
 	mockRepo.On("DeleteContestUserProblemBlock", mock.Anything, contestID, userID, problemID).Return(nil)

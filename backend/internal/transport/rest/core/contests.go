@@ -117,7 +117,6 @@ func (h *CoreServer) CreateContest(ctx context.Context, request corev1.CreateCon
 		Description:    "",
 		Visibility:     models.ContestVisibilityPrivate,
 		Settings:       make(map[string]interface{}),
-		AccessPolicy:   models.DefaultContestAccessPolicy(),
 		StartTime:      nil,
 		EndTime:        nil,
 	}
@@ -147,7 +146,22 @@ func (h *CoreServer) ListOrganizationContests(ctx context.Context, request corev
 		search = *request.Params.Search
 	}
 
-	contestsList, err := h.contestsUC.ListOrganizationContests(ctx, org.ID, search, request.Params.Page, request.Params.PageSize)
+	isMember := false
+	if user.Role == models.UserRoleAdmin {
+		isMember = true
+	} else if user.Id != uuid.Nil {
+		_, err := h.organizationsUC.ListMembers(ctx, org.ID, user.Id)
+		if err == nil {
+			isMember = true
+		}
+	}
+
+	visibility := ""
+	if !isMember {
+		visibility = "public"
+	}
+
+	contestsList, err := h.contestsUC.ListOrganizationContests(ctx, org.ID, search, visibility, request.Params.Page, request.Params.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -176,25 +190,20 @@ func (h *CoreServer) GetContest(ctx context.Context, request corev1.GetContestRe
 	}
 
 	problemDetails := make(map[uuid.UUID]models.Problem, len(ps))
-	for _, contestProblem := range ps {
-		problem, err := h.problemsUC.GetProblemById(ctx, contestProblem.ProblemID)
+	for _, p := range ps {
+		prob, err := h.problemsUC.GetProblemById(ctx, p.ProblemID)
 		if err != nil {
-			return nil, err
+			continue
 		}
-
-		problemDetails[contestProblem.ProblemID] = problem
+		problemDetails[p.ProblemID] = prob
 	}
 
 	var owner models.User
 	if contest.OwnerID != nil {
 		owner, err = h.usersUC.GetUserById(ctx, *contest.OwnerID)
-	} else {
-		// Use default user if no owner
-		owner = models.User{}
-		err = nil
-	}
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return corev1.GetContest200JSONResponse(*GetContestResponseDTO(contest, ps, problemDetails, &owner)), nil
@@ -260,6 +269,22 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 		settingsMap["freeze_status"] = string(*req.FreezeStatus)
 		hasSettingsUpdate = true
 	}
+	if req.EnableDrafts != nil {
+		settingsMap["enable_drafts"] = *req.EnableDrafts
+		hasSettingsUpdate = true
+	}
+	if req.EnableUpsolving != nil {
+		settingsMap["enable_upsolving"] = *req.EnableUpsolving
+		hasSettingsUpdate = true
+	}
+	if req.EnableVirtualContests != nil {
+		settingsMap["enable_virtual_contests"] = *req.EnableVirtualContests
+		hasSettingsUpdate = true
+	}
+	if req.ParticipationMode != nil {
+		settingsMap["participation_mode"] = string(*req.ParticipationMode)
+		hasSettingsUpdate = true
+	}
 
 	var settings *map[string]interface{}
 	if hasSettingsUpdate {
@@ -267,16 +292,15 @@ func (h *CoreServer) UpdateContest(ctx context.Context, request corev1.UpdateCon
 	}
 
 	err = h.contestsUC.UpdateContest(ctx, models.ContestUpdateInput{
-		ID:           existingContest.ID,
-		Login:        newLogin,
-		Title:        req.Title,
-		Description:  req.Description,
-		Visibility:   req.Visibility,
-		Settings:     settings,
-		AccessPolicy: nil,
-		StartTime:    req.StartTime,
-		EndTime:      req.EndTime,
-		OwnerID:      nil,
+		ID:          existingContest.ID,
+		Login:       newLogin,
+		Title:       req.Title,
+		Description: req.Description,
+		Visibility:  req.Visibility,
+		Settings:    settings,
+		StartTime:   req.StartTime,
+		EndTime:     req.EndTime,
+		OwnerID:     nil,
 	})
 	if err != nil {
 		return nil, err

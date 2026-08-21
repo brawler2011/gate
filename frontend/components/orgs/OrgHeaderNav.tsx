@@ -15,13 +15,16 @@ import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTa
 export type OrgHeaderNavProps = {
   orgLogin: string;
   showMembersTab?: boolean;
+  showSettingsTab?: boolean;
 };
 
 export const OrgHeaderNav = ({
   orgLogin,
   showMembersTab = false,
+  showSettingsTab,
 }: OrgHeaderNavProps): ReactNode => {
   const pathname = usePathname();
+  const canManage = showSettingsTab !== undefined ? showSettingsTab : showMembersTab;
 
   const getActiveTabKey = (): string => {
     if (!pathname) {
@@ -78,13 +81,15 @@ export const OrgHeaderNav = ({
     });
   }
 
-  items.push({
-    key: "settings",
-    label: "Настройки",
-    href: `/${orgLogin}/settings`,
-    icon: IconSettings,
-    active: activeTab === "settings",
-  });
+  if (canManage) {
+    items.push({
+      key: "settings",
+      label: "Настройки",
+      href: `/${orgLogin}/settings`,
+      icon: IconSettings,
+      active: activeTab === "settings",
+    });
+  }
 
   return <AdaptiveTabs items={items} />;
 };

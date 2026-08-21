@@ -64,7 +64,7 @@ func TestGetContestScoreboard_StressAndBoundaryRules(t *testing.T) {
 	}
 
 	mockRepo := new(ContestsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil)
 
 	mockRepo.On("GetContest", mock.Anything, contestID).Return(contestAuto, nil)
 	mockRepo.On("GetContestProblems", mock.Anything, contestID).Return(problems, nil)
@@ -400,7 +400,7 @@ func TestGetContestScoreboard_BoundarySubmissionsAndFiltering(t *testing.T) {
 	}
 
 	mockRepo := new(ContestsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil)
 
 	mockRepo.On("GetContest", mock.Anything, contestID).Return(contest, nil)
 	mockRepo.On("GetContestProblems", mock.Anything, contestID).Return(problems, nil)
@@ -497,7 +497,7 @@ func TestGetContestScoreboard_ManualFrozenWithZeroDuration(t *testing.T) {
 	}
 
 	mockRepo := new(ContestsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil)
 
 	mockRepo.On("GetContest", mock.Anything, contestID).Return(contest, nil)
 	mockRepo.On("GetContestProblems", mock.Anything, contestID).Return(problems, nil)

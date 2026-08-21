@@ -1,7 +1,3 @@
-import {cache} from "react";
-
-import {api} from "@/lib/api";
-
 import type {ContestModel, ProblemModel, UserModel} from "@/contracts/core/v1";
 
 /**
@@ -40,65 +36,29 @@ const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
 
 /**
  * Get the current user's role in a specific contest
- * 
+ *
  * @param orgLogin - Organization login
  * @param contestLogin - Contest login
  * @returns The user's role in the contest, or null if not a participant
  */
-export const getMyContestRole = cache(async (orgLogin: string, contestLogin: string): Promise<ContestRoleResponse> => {
+export const getMyContestRole = async (orgLogin: string, contestLogin: string): Promise<ContestRoleResponse> => {
+  const {api} = await import("@/lib/api");
   const [error, response] = await api.getMyContestRole({orgLogin, contestLogin});
   if (error || !response) {
     // User is not a participant or not authenticated
     return null;
   }
-  
+
   return parseContestRoleResponse(response);
-});
-
-/**
- * Permission checker utilities for frontend
- * These are client-side checks based on available data
- * Backend always performs authoritative permission checks
- */
-
-type ContestScope = "owner" | "moderator" | "participant";
-
-// Иерархия ролей: owner > moderator > participant
-const ROLE_HIERARCHY: Record<ContestRole, number> = {
-  owner: 3,
-  moderator: 2,
-  participant: 1,
 };
 
-export type OrgRole = 'owner' | 'admin' | 'member';
+export type OrgRole = "owner" | "admin" | "member";
 
 const ORG_ROLE_HIERARCHY: Record<OrgRole, number> = {
   owner: 3,
   admin: 2,
   member: 1,
 };
-
-/**
- * Check if user's role meets the required scope
- * @param userRole - User's role in the contest
- * @param requiredScope - Required scope/permission level
- * @returns true if user has required role or higher
- */
-const hasRequiredRole = (userRole: ContestRole, requiredScope: ContestScope): boolean => {
-  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredScope];
-};
-
-const ContestPermissionMasks = {
-  GetContest: 1 << 0,
-  ManageContest: 1 << 1,
-  GetMonitor: 1 << 2,
-  ListUsersSubmissions: 1 << 3,
-  ListOwnSubmissions: 1 << 4,
-  GetOwnSubmission: 1 << 5,
-  GetOtherUserSubmission: 1 << 6,
-  CreateSubmission: 1 << 7,
-  GetSubmissionDetails: 1 << 8,
-} as const;
 
 export class PermissionChecker {
   private user: UserModel | null;
@@ -119,16 +79,29 @@ export class PermissionChecker {
   }
 
   isAuthenticated(): boolean {
-    return this.user !== null;
+    return this.user !== null && !!this.user.id;
   }
 
   isGlobalAdmin(): boolean {
     return this.user?.role === "admin";
   }
 
+  isOrgAdmin(): boolean {
+    if (this.isGlobalAdmin()) {
+      return true;
+    }
+    if (!this.orgRole) {
+      return false;
+    }
+    return ORG_ROLE_HIERARCHY[this.orgRole] >= ORG_ROLE_HIERARCHY["admin"];
+  }
+
   // Contest permissions
 
   isContestOwner(contest: ContestModel): boolean {
+    if (this.isGlobalAdmin() || this.isOrgAdmin()) {
+      return true;
+    }
     if (!this.user?.id) {
       return false;
     }
@@ -138,11 +111,32 @@ export class PermissionChecker {
     if (contest.owner?.id && this.user.id === contest.owner.id) {
       return true;
     }
+    return this.contestRole === "owner";
+  }
+
+  isContestModerator(contest: ContestModel): boolean {
+    if (this.isContestOwner(contest)) {
+      return true;
+    }
+    return this.contestRole === "moderator";
+  }
+
+  isContestParticipant(contest: ContestModel): boolean {
+    if (this.isContestModerator(contest)) {
+      return true;
+    }
+    if (this.contestRole === "participant") {
+      return true;
+    }
+    // In open public contests, authenticated users automatically have participant status
+    if (contest.visibility === "public" && (contest.participation_mode ?? "open") === "open" && this.isAuthenticated()) {
+      return true;
+    }
     return false;
   }
 
   canViewContest(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
+    if (this.isContestModerator(contest)) {
       return true;
     }
 
@@ -150,22 +144,11 @@ export class PermissionChecker {
       return true;
     }
 
-    if (!this.isAuthenticated()) {
-      return false;
-    }
-
-    if (this.permissionsMask !== null) {
-      return (this.permissionsMask & ContestPermissionMasks.GetContest) !== 0;
-    }
-
-    return this.contestRole !== null;
+    return this.isContestParticipant(contest);
   }
 
   canViewProblems(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
-      return true;
-    }
-    if (this.canManageContest(contest)) {
+    if (this.isContestModerator(contest)) {
       return true;
     }
 
@@ -178,19 +161,16 @@ export class PermissionChecker {
       return true;
     }
 
-    if (this.permissionsMask !== null) {
-      return (this.permissionsMask & ContestPermissionMasks.GetContest) !== 0;
-    }
-
-    return this.isAuthenticated() && this.contestRole !== null;
+    return this.isContestParticipant(contest);
   }
 
   canSubmitSolution(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
+    if (this.isContestModerator(contest)) {
       return true;
     }
-    if (this.canManageContest(contest)) {
-      return true;
+
+    if (!this.isAuthenticated()) {
+      return false;
     }
 
     const hasStarted = !contest.start_time || new Date(contest.start_time) <= new Date();
@@ -198,26 +178,74 @@ export class PermissionChecker {
       return false;
     }
 
-    if (!this.isAuthenticated()) {
-      return false;
+    const hasFinished = contest.end_time ? new Date(contest.end_time) <= new Date() : false;
+    if (!hasFinished) {
+      return this.isContestParticipant(contest);
     }
 
-    if (this.permissionsMask !== null) {
-      return (this.permissionsMask & ContestPermissionMasks.CreateSubmission) !== 0;
+    // Finished contest: Codeforces style upsolving
+    const enableUpsolving = contest.enable_upsolving ?? true;
+    if (enableUpsolving) {
+      return this.canViewContest(contest);
     }
 
-    if (contest.visibility === "public") {
-      return true;
-    }
-
-    return this.contestRole !== null;
+    return false;
   }
 
   canViewMySubmissions(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
+    if (this.isContestModerator(contest)) {
       return true;
     }
-    if (this.canManageContest(contest)) {
+
+    if (!this.isAuthenticated()) {
+      return false;
+    }
+
+    return this.isContestParticipant(contest);
+  }
+
+  canViewAllSubmissions(contest: ContestModel): boolean {
+    if (this.isContestModerator(contest)) {
+      return true;
+    }
+
+    const hasStarted = !contest.start_time || new Date(contest.start_time) <= new Date();
+    const scope = contest.submissions_list_scope ?? "moderator";
+
+    switch (scope) {
+      case "public":
+        return this.canViewContest(contest) && hasStarted;
+      case "participant":
+        return this.isContestParticipant(contest) && hasStarted;
+      case "moderator":
+        return this.isContestModerator(contest);
+      default:
+        return this.isContestModerator(contest);
+    }
+  }
+
+  canViewSubmissionDetails(contest: ContestModel): boolean {
+    if (this.isContestModerator(contest)) {
+      return true;
+    }
+
+    const hasStarted = !contest.start_time || new Date(contest.start_time) <= new Date();
+    const scope = contest.submission_details_scope ?? "moderator";
+
+    switch (scope) {
+      case "public":
+        return this.canViewContest(contest) && hasStarted;
+      case "participant":
+        return this.isContestParticipant(contest) && hasStarted;
+      case "moderator":
+        return this.isContestModerator(contest);
+      default:
+        return this.isContestModerator(contest);
+    }
+  }
+
+  canViewMonitor(contest: ContestModel): boolean {
+    if (this.isContestModerator(contest)) {
       return true;
     }
 
@@ -226,112 +254,42 @@ export class PermissionChecker {
       return false;
     }
 
-    if (!this.isAuthenticated()) {
-      return false;
+    const scope = contest.monitor_scope ?? "participant";
+    switch (scope) {
+      case "public":
+        return this.canViewContest(contest);
+      case "participant":
+        return this.isContestParticipant(contest);
+      case "moderator":
+        return this.isContestModerator(contest);
+      default:
+        return this.isContestParticipant(contest);
     }
-
-    if (this.permissionsMask !== null) {
-      return (this.permissionsMask & ContestPermissionMasks.ListOwnSubmissions) !== 0;
-    }
-
-    if (contest.visibility === "public") {
-      return true;
-    }
-
-    return this.contestRole !== null;
-  }
-
-  canViewAllSubmissions(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
-      return true;
-    }
-
-    if (this.permissionsMask !== null) {
-      return (this.permissionsMask & ContestPermissionMasks.ListUsersSubmissions) !== 0;
-    }
-
-    if (!this.contestRole) {
-      return false;
-    }
-
-    const requiredScope = (contest.submissions_list_scope ?? "moderator") as ContestScope;
-    return hasRequiredRole(this.contestRole, requiredScope);
-  }
-
-  canViewSubmissionDetails(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
-      return true;
-    }
-
-    if (this.permissionsMask !== null) {
-      return (this.permissionsMask & ContestPermissionMasks.GetSubmissionDetails) !== 0;
-    }
-
-    if (!this.contestRole) {
-      return false;
-    }
-
-    const requiredScope = (contest.submission_details_scope ?? "moderator") as ContestScope;
-    return hasRequiredRole(this.contestRole, requiredScope);
-  }
-
-  canViewMonitor(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
-      return true;
-    }
-
-    if (this.permissionsMask !== null) {
-      return (this.permissionsMask & ContestPermissionMasks.GetMonitor) !== 0;
-    }
-
-    if (!this.contestRole) {
-      return false;
-    }
-
-    const requiredScope = (contest.monitor_scope ?? "participant") as ContestScope;
-    return hasRequiredRole(this.contestRole, requiredScope);
   }
 
   canManageContest(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
-      return true;
-    }
-
-    if (this.permissionsMask !== null) {
-      return (this.permissionsMask & ContestPermissionMasks.ManageContest) !== 0;
-    }
-
-    if (!this.contestRole) {
-      return false;
-    }
-
-    return this.contestRole === "owner" || this.contestRole === "moderator";
+    return this.isContestModerator(contest);
   }
 
   canDeleteContest(contest: ContestModel): boolean {
-    if (this.isGlobalAdmin() || this.isContestOwner(contest)) {
-      return true;
-    }
-
-    return this.contestRole === "owner";
+    return this.isContestOwner(contest);
   }
 
   canManageContestParticipants(contest: ContestModel): boolean {
-    return this.canManageContest(contest);
+    return this.isContestModerator(contest);
   }
 
   canRejudgeSubmissions(contest: ContestModel): boolean {
-    return this.canManageContest(contest);
+    return this.isContestModerator(contest);
   }
 
   // Problem permissions
 
   canViewProblem(problem: ProblemModel): boolean {
-    if (!this.isAuthenticated()) {
-      return false;
+    if (this.isGlobalAdmin() || this.isOrgAdmin()) {
+      return true;
     }
-
-    if (this.isGlobalAdmin() || (problem.created_by && this.user?.id === problem.created_by)) {
+    if (problem.created_by && this.user?.id === problem.created_by) {
       return true;
     }
 
@@ -339,11 +297,10 @@ export class PermissionChecker {
   }
 
   canEditProblem(problem: ProblemModel): boolean {
-    if (!this.isAuthenticated()) {
-      return false;
+    if (this.isGlobalAdmin() || this.isOrgAdmin()) {
+      return true;
     }
-
-    if (this.isGlobalAdmin() || (problem.created_by && this.user?.id === problem.created_by)) {
+    if (problem.created_by && this.user?.id === problem.created_by) {
       return true;
     }
 
@@ -351,15 +308,7 @@ export class PermissionChecker {
   }
 
   canDeleteProblem(problem: ProblemModel): boolean {
-    if (!this.isAuthenticated()) {
-      return false;
-    }
-
-    if (this.isGlobalAdmin() || (problem.created_by && this.user?.id === problem.created_by)) {
-      return true;
-    }
-
-    return false;
+    return this.canEditProblem(problem);
   }
 
   // User permissions
@@ -390,13 +339,7 @@ export class PermissionChecker {
   // Org permissions
 
   canManageOrgMembers(): boolean {
-    if (this.isGlobalAdmin()) {
-      return true;
-    }
-    if (!this.orgRole) {
-      return false;
-    }
-    return ORG_ROLE_HIERARCHY[this.orgRole] >= ORG_ROLE_HIERARCHY['admin'];
+    return this.isOrgAdmin();
   }
 
   canCreateTeam(): boolean {
@@ -407,7 +350,7 @@ export class PermissionChecker {
     if (this.isGlobalAdmin()) {
       return true;
     }
-    return this.orgRole === 'owner';
+    return this.orgRole === "owner";
   }
 
   canManageTeamMembers(): boolean {
@@ -416,6 +359,7 @@ export class PermissionChecker {
 }
 
 export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> => {
+  const {api} = await import("@/lib/api");
   const [, me] = await api.getMe();
   const currentUser = me?.user ?? null;
   if (!currentUser) {
@@ -426,8 +370,9 @@ export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> =>
   }
 
   let page = 1;
-  while (page <= 10) {
-    const [error, data] = await api.listOrganizationMembers({login: orgLogin, page, pageSize: 100});
+  const pageSize = 100;
+  while (page <= 20) {
+    const [error, data] = await api.listOrganizationMembers({login: orgLogin, page, pageSize});
     if (error || !data || !data.members) {
       return false;
     }
@@ -438,8 +383,7 @@ export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> =>
     }
 
     const total = data.pagination?.total ?? 0;
-    const totalPages = Math.ceil(total / 100);
-    if (page >= totalPages || totalPages === 0) {
+    if (page * pageSize >= total || data.members.length < pageSize) {
       break;
     }
     page++;

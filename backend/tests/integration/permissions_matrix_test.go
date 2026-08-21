@@ -42,7 +42,6 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 			StartTime:      &futureStart,
 			EndTime:        &futureEnd,
 			Settings:       map[string]interface{}{},
-			AccessPolicy:   models.DefaultContestAccessPolicy(),
 		})
 		s.Require().NoError(err)
 
@@ -115,7 +114,6 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 			Login:          "del-target-" + suffix,
 			Description:    "Contest deletion test",
 			Settings:       map[string]interface{}{},
-			AccessPolicy:   models.DefaultContestAccessPolicy(),
 		})
 		s.Require().NoError(err)
 

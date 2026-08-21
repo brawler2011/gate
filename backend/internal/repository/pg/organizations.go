@@ -238,6 +238,19 @@ func (r *OrganizationsRepo) UpdateMemberRole(ctx context.Context, orgID, userID 
 }
 
 func (r *OrganizationsRepo) RemoveMember(ctx context.Context, orgID, userID uuid.UUID) error {
+	_ = r.q.RemoveTeamMembersByOrgAndUser(ctx, sqlc.RemoveTeamMembersByOrgAndUserParams{
+		OrganizationID: orgID,
+		UserID:         userID,
+	})
+	_ = r.q.RemoveContestMembersByOrgAndUser(ctx, sqlc.RemoveContestMembersByOrgAndUserParams{
+		OrganizationID: orgID,
+		UserID:         userID,
+	})
+	_ = r.q.RemoveProblemMembersByOrgAndUser(ctx, sqlc.RemoveProblemMembersByOrgAndUserParams{
+		OrganizationID: orgID,
+		UserID:         userID,
+	})
+
 	if err := r.q.RemoveOrganizationMember(ctx, sqlc.RemoveOrganizationMemberParams{
 		OrganizationID: orgID,
 		UserID:         userID,

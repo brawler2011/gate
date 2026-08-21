@@ -28,20 +28,6 @@ func safeInt32[T ~int | ~int64](v T) int32 {
 	return int32(v)
 }
 
-func safeInt64[T ~uint64](v T) int64 {
-	if uint64(v) > math.MaxInt64 {
-		return math.MaxInt64
-	}
-	return int64(v)
-}
-
-func safeUint64[T ~int64](v T) uint64 {
-	if v < 0 {
-		return 0
-	}
-	return uint64(v)
-}
-
 type ContestsRepo struct {
 	queries *sqlc.Queries
 	db      *pgxpool.Pool
@@ -66,10 +52,6 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *models.CreateC
 	if err != nil {
 		return err
 	}
-	accessPolicyJSON, err := marshalJSON(params.AccessPolicy)
-	if err != nil {
-		return err
-	}
 
 	_, err = r.queries.CreateContest(ctx, sqlc.CreateContestParams{
 		ID:             params.ID,
@@ -80,7 +62,6 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *models.CreateC
 		Login:          params.Login,
 		Description:    params.Description,
 		Settings:       settingsJSON,
-		AccessPolicy:   accessPolicyJSON,
 		StartTime:      timePtrToNullTime(params.StartTime),
 		EndTime:        timePtrToNullTime(params.EndTime),
 	})
@@ -121,7 +102,7 @@ func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, 
 }
 
 func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdateParams) error {
-	var settingsJSON, accessPolicyJSON []byte
+	var settingsJSON []byte
 	var err error
 
 	if c.Settings != nil {
@@ -130,24 +111,17 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdate
 			return err
 		}
 	}
-	if c.AccessPolicy != nil {
-		accessPolicyJSON, err = marshalJSON(*c.AccessPolicy)
-		if err != nil {
-			return err
-		}
-	}
 
 	err = r.queries.UpdateContest(ctx, sqlc.UpdateContestParams{
-		ID:           c.ID,
-		Login:        c.Login,
-		Title:        c.Title,
-		Description:  c.Description,
-		Visibility:   stringToNullContestVisibility(c.Visibility),
-		Settings:     settingsJSON,
-		AccessPolicy: accessPolicyJSON,
-		StartTime:    timePtrToNullTime(c.StartTime),
-		EndTime:      timePtrToNullTime(c.EndTime),
-		OwnerID:      uuidPtrToNullUUID(c.OwnerID),
+		ID:          c.ID,
+		Login:       c.Login,
+		Title:       c.Title,
+		Description: c.Description,
+		Visibility:  stringToNullContestVisibility(c.Visibility),
+		Settings:    settingsJSON,
+		StartTime:   timePtrToNullTime(c.StartTime),
+		EndTime:     timePtrToNullTime(c.EndTime),
+		OwnerID:     uuidPtrToNullUUID(c.OwnerID),
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -163,11 +137,11 @@ func (r *ContestsRepo) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *ContestsRepo) ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, page, pageSize int32) ([]models.Contest, int32, error) {
+func (r *ContestsRepo) ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) ([]models.Contest, int32, error) {
 	rows, err := r.queries.ListContests(ctx, sqlc.ListContestsParams{
 		OrganizationID: orgID,
 		Column2:        search,
-		Column3:        "",
+		Column3:        visibility,
 		Limit:          pageSize,
 		Offset:         Offset(page, pageSize),
 	})
@@ -178,7 +152,7 @@ func (r *ContestsRepo) ListOrganizationContests(ctx context.Context, orgID uuid.
 	count, err := r.queries.CountContests(ctx, sqlc.CountContestsParams{
 		OrganizationID: orgID,
 		Column2:        search,
-		Column3:        "",
+		Column3:        visibility,
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
@@ -422,10 +396,6 @@ func (r *ContestsRepo) CreateContestTeam(
 		return HandlePgErr(err)
 	}
 
-	if err := r.syncContestTeamPermissionsMask(ctx, contestID, teamID, role); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -442,10 +412,6 @@ func (r *ContestsRepo) UpdateContestTeamRole(
 	})
 	if err != nil {
 		return HandlePgErr(err)
-	}
-
-	if err := r.syncContestTeamPermissionsMask(ctx, contestID, teamID, role); err != nil {
-		return err
 	}
 
 	return nil
@@ -494,10 +460,6 @@ func (r *ContestsRepo) CreateContestMember(ctx context.Context, c *models.Create
 		return HandlePgErr(err)
 	}
 
-	if err := r.syncContestMemberPermissionsMask(ctx, c.ContestId, c.UserId, c.Role); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -534,60 +496,6 @@ func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.U
 		return HandlePgErr(err)
 	}
 
-	if err := r.syncContestMemberPermissionsMask(ctx, contestId, userId, role); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *ContestsRepo) syncContestMemberPermissionsMask(
-	ctx context.Context,
-	contestID uuid.UUID,
-	userID uuid.UUID,
-	role models.ContestRole,
-) error {
-	mask, ok := models.ContestRoleDefaultPermissionMask(role)
-	if !ok {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid contest role for permissions mask")
-	}
-
-	_, err := r.db.Exec(
-		ctx,
-		"UPDATE contest_members SET permissions_mask = $3 WHERE contest_id = $1 AND user_id = $2",
-		contestID,
-		userID,
-		safeInt64(mask),
-	)
-	if err != nil {
-		return HandlePgErr(err)
-	}
-
-	return nil
-}
-
-func (r *ContestsRepo) syncContestTeamPermissionsMask(
-	ctx context.Context,
-	contestID uuid.UUID,
-	teamID uuid.UUID,
-	role models.ContestRole,
-) error {
-	mask, ok := models.ContestRoleDefaultPermissionMask(role)
-	if !ok {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid contest role for team permissions mask")
-	}
-
-	_, err := r.db.Exec(
-		ctx,
-		"UPDATE contest_teams SET permissions_mask = $3 WHERE contest_id = $1 AND team_id = $2",
-		contestID,
-		teamID,
-		safeInt64(mask),
-	)
-	if err != nil {
-		return HandlePgErr(err)
-	}
-
 	return nil
 }
 
@@ -596,25 +504,20 @@ func mapContestFields(
 	orgID uuid.UUID,
 	orgLogin string,
 	ownerID pgtype.UUID,
-	visibility models.ContestVisibility,
+	visibility string,
 	title string,
 	login string,
 	description string,
 	settingsBytes []byte,
-	accessPolicyBytes []byte,
 	startTime pgtype.Timestamptz,
 	endTime pgtype.Timestamptz,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) models.Contest {
 	var settings map[string]interface{}
-	var accessPolicy map[string]interface{}
 
 	if len(settingsBytes) > 0 {
 		_ = json.Unmarshal(settingsBytes, &settings)
-	}
-	if len(accessPolicyBytes) > 0 {
-		_ = json.Unmarshal(accessPolicyBytes, &accessPolicy)
 	}
 
 	return models.Contest{
@@ -627,7 +530,6 @@ func mapContestFields(
 		Login:             login,
 		Description:       description,
 		Settings:          settings,
-		AccessPolicy:      accessPolicy,
 		StartTime:         pgTimestamptzToTimePtr(startTime),
 		EndTime:           pgTimestamptzToTimePtr(endTime),
 		CreatedAt:         createdAt,
@@ -636,31 +538,31 @@ func mapContestFields(
 }
 
 func mapGetContestByIDRow(c sqlc.GetContestByIDRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapGetContestByLoginRow(c sqlc.GetContestByLoginRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapGetContestByOrgLoginAndContestLoginRow(c sqlc.GetContestByOrgLoginAndContestLoginRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapListContestsRow(c sqlc.ListContestsRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapListAllContestsRow(c sqlc.ListAllContestsRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapListUserAccessibleContestsRow(c sqlc.ListUserAccessibleContestsRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapListUserAccessibleContestsByOrgRow(c sqlc.ListUserAccessibleContestsByOrgRow) models.Contest {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, c.Visibility, c.Title, c.Login, c.Description, c.Settings, c.AccessPolicy, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
 func mapGetContestProblemRow(c sqlc.GetContestProblemRow) models.ContestProblem {
@@ -701,25 +603,21 @@ func mapListContestMembersRow(c sqlc.ListContestMembersRow) models.ContestMember
 }
 
 func mapContestMember(c sqlc.ContestMember) models.ContestMember {
-	mask := models.ContestPermissionMask(safeUint64(c.PermissionsMask))
 	return models.ContestMember{
-		UserID:          c.UserID,
-		ContestID:       c.ContestID,
-		ContestRole:     models.ContestRole(c.Role),
-		PermissionsMask: &mask,
+		UserID:      c.UserID,
+		ContestID:   c.ContestID,
+		ContestRole: models.ContestRole(c.Role),
 	}
 }
 
 func mapContestTeam(c sqlc.ListContestTeamsRow) models.ContestTeam {
-	mask := models.ContestPermissionMask(safeUint64(c.PermissionsMask))
 	return models.ContestTeam{
-		ContestID:       c.ContestID,
-		TeamID:          c.TeamID,
-		Role:            c.Role,
-		PermissionsMask: &mask,
-		TeamName:        c.TeamName,
-		TeamSlug:        c.TeamSlug,
-		CreatedAt:       c.CreatedAt,
+		ContestID: c.ContestID,
+		TeamID:    c.TeamID,
+		Role:      c.Role,
+		TeamName:  c.TeamName,
+		TeamSlug:  c.TeamSlug,
+		CreatedAt: c.CreatedAt,
 	}
 }
 

@@ -33,11 +33,23 @@ const (
 	ContestModelFreezeStatusUnfrozen ContestModelFreezeStatus = "unfrozen"
 )
 
+// Defines values for ContestModelParticipationMode.
+const (
+	ContestModelParticipationModeInviteOnly ContestModelParticipationMode = "invite_only"
+	ContestModelParticipationModeOpen       ContestModelParticipationMode = "open"
+)
+
 // Defines values for UpdateContestRequestModelFreezeStatus.
 const (
 	UpdateContestRequestModelFreezeStatusAuto     UpdateContestRequestModelFreezeStatus = "auto"
 	UpdateContestRequestModelFreezeStatusFrozen   UpdateContestRequestModelFreezeStatus = "frozen"
 	UpdateContestRequestModelFreezeStatusUnfrozen UpdateContestRequestModelFreezeStatus = "unfrozen"
+)
+
+// Defines values for UpdateContestRequestModelParticipationMode.
+const (
+	UpdateContestRequestModelParticipationModeInviteOnly UpdateContestRequestModelParticipationMode = "invite_only"
+	UpdateContestRequestModelParticipationModeOpen       UpdateContestRequestModelParticipationMode = "open"
 )
 
 // Defines values for UpdateUserRequestModelRole.
@@ -186,33 +198,40 @@ type ContestMemberModel struct {
 
 // ContestModel defines model for ContestModel.
 type ContestModel struct {
-	CreatedAt   time.Time          `json:"created_at"`
-	CreatedBy   openapi_types.UUID `json:"created_by"`
-	Description string             `json:"description"`
-	EndTime     *time.Time         `json:"end_time"`
+	CreatedAt             time.Time          `json:"created_at"`
+	CreatedBy             openapi_types.UUID `json:"created_by"`
+	Description           string             `json:"description"`
+	EnableDrafts          *bool              `json:"enable_drafts,omitempty"`
+	EnableUpsolving       *bool              `json:"enable_upsolving,omitempty"`
+	EnableVirtualContests *bool              `json:"enable_virtual_contests,omitempty"`
+	EndTime               *time.Time         `json:"end_time"`
 
 	// FreezeDurationMinutes Freeze duration in minutes before contest end
 	FreezeDurationMinutes *int32 `json:"freeze_duration_minutes"`
 
 	// FreezeStatus Freeze mode status
-	FreezeStatus           ContestModelFreezeStatus `json:"freeze_status"`
-	Id                     openapi_types.UUID       `json:"id"`
-	Login                  string                   `json:"login"`
-	MonitorScope           string                   `json:"monitor_scope"`
-	OrganizationId         openapi_types.UUID       `json:"organization_id"`
-	OrganizationLogin      string                   `json:"organization_login"`
-	Owner                  *UserModel               `json:"owner,omitempty"`
-	StartTime              *time.Time               `json:"start_time"`
-	SubmissionDetailsScope string                   `json:"submission_details_scope"`
-	SubmissionsListScope   string                   `json:"submissions_list_scope"`
-	SubmissionsReviewScope string                   `json:"submissions_review_scope"`
-	Title                  string                   `json:"title"`
-	UpdatedAt              time.Time                `json:"updated_at"`
-	Visibility             string                   `json:"visibility"`
+	FreezeStatus           ContestModelFreezeStatus       `json:"freeze_status"`
+	Id                     openapi_types.UUID             `json:"id"`
+	Login                  string                         `json:"login"`
+	MonitorScope           string                         `json:"monitor_scope"`
+	OrganizationId         openapi_types.UUID             `json:"organization_id"`
+	OrganizationLogin      string                         `json:"organization_login"`
+	Owner                  *UserModel                     `json:"owner,omitempty"`
+	ParticipationMode      *ContestModelParticipationMode `json:"participation_mode,omitempty"`
+	StartTime              *time.Time                     `json:"start_time"`
+	SubmissionDetailsScope string                         `json:"submission_details_scope"`
+	SubmissionsListScope   string                         `json:"submissions_list_scope"`
+	SubmissionsReviewScope string                         `json:"submissions_review_scope"`
+	Title                  string                         `json:"title"`
+	UpdatedAt              time.Time                      `json:"updated_at"`
+	Visibility             string                         `json:"visibility"`
 }
 
 // ContestModelFreezeStatus Freeze mode status
 type ContestModelFreezeStatus string
+
+// ContestModelParticipationMode defines model for ContestModel.ParticipationMode.
+type ContestModelParticipationMode string
 
 // ContestProblemListItemModel defines model for ContestProblemListItemModel.
 type ContestProblemListItemModel struct {
@@ -796,26 +815,33 @@ type TestValidationResult struct {
 
 // UpdateContestRequestModel defines model for UpdateContestRequestModel.
 type UpdateContestRequestModel struct {
-	Description *string    `json:"description,omitempty"`
-	EndTime     *time.Time `json:"end_time"`
+	Description           *string    `json:"description,omitempty"`
+	EnableDrafts          *bool      `json:"enable_drafts,omitempty"`
+	EnableUpsolving       *bool      `json:"enable_upsolving,omitempty"`
+	EnableVirtualContests *bool      `json:"enable_virtual_contests,omitempty"`
+	EndTime               *time.Time `json:"end_time"`
 
 	// FreezeDurationMinutes Freeze duration in minutes before contest end
 	FreezeDurationMinutes *int32 `json:"freeze_duration_minutes"`
 
 	// FreezeStatus Freeze mode status
-	FreezeStatus           *UpdateContestRequestModelFreezeStatus `json:"freeze_status,omitempty"`
-	Login                  *string                                `json:"login,omitempty"`
-	MonitorScope           *string                                `json:"monitor_scope,omitempty"`
-	StartTime              *time.Time                             `json:"start_time"`
-	SubmissionDetailsScope *string                                `json:"submission_details_scope,omitempty"`
-	SubmissionsListScope   *string                                `json:"submissions_list_scope,omitempty"`
-	SubmissionsReviewScope *string                                `json:"submissions_review_scope,omitempty"`
-	Title                  *string                                `json:"title,omitempty"`
-	Visibility             *string                                `json:"visibility,omitempty"`
+	FreezeStatus           *UpdateContestRequestModelFreezeStatus      `json:"freeze_status,omitempty"`
+	Login                  *string                                     `json:"login,omitempty"`
+	MonitorScope           *string                                     `json:"monitor_scope,omitempty"`
+	ParticipationMode      *UpdateContestRequestModelParticipationMode `json:"participation_mode,omitempty"`
+	StartTime              *time.Time                                  `json:"start_time"`
+	SubmissionDetailsScope *string                                     `json:"submission_details_scope,omitempty"`
+	SubmissionsListScope   *string                                     `json:"submissions_list_scope,omitempty"`
+	SubmissionsReviewScope *string                                     `json:"submissions_review_scope,omitempty"`
+	Title                  *string                                     `json:"title,omitempty"`
+	Visibility             *string                                     `json:"visibility,omitempty"`
 }
 
 // UpdateContestRequestModelFreezeStatus Freeze mode status
 type UpdateContestRequestModelFreezeStatus string
+
+// UpdateContestRequestModelParticipationMode defines model for UpdateContestRequestModel.ParticipationMode.
+type UpdateContestRequestModelParticipationMode string
 
 // UpdateOrganizationRequestModel defines model for UpdateOrganizationRequestModel.
 type UpdateOrganizationRequestModel struct {

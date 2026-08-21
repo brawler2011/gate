@@ -32,7 +32,7 @@ func (q *Queries) AddContestTeam(ctx context.Context, arg AddContestTeamParams) 
 }
 
 const getContestTeam = `-- name: GetContestTeam :one
-SELECT contest_id, team_id, role, created_at, permissions_mask FROM contest_teams
+SELECT contest_id, team_id, role, created_at FROM contest_teams
 WHERE contest_id = $1 AND team_id = $2
 `
 
@@ -49,13 +49,12 @@ func (q *Queries) GetContestTeam(ctx context.Context, arg GetContestTeamParams) 
 		&i.TeamID,
 		&i.Role,
 		&i.CreatedAt,
-		&i.PermissionsMask,
 	)
 	return i, err
 }
 
 const getTeamContests = `-- name: GetTeamContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.access_policy, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
 INNER JOIN contest_teams ct ON c.id = ct.contest_id
 WHERE ct.team_id = $1
 ORDER BY c.created_at DESC
@@ -79,7 +78,6 @@ func (q *Queries) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]Cont
 			&i.Login,
 			&i.Description,
 			&i.Settings,
-			&i.AccessPolicy,
 			&i.StartTime,
 			&i.EndTime,
 			&i.CreatedAt,
@@ -96,7 +94,7 @@ func (q *Queries) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]Cont
 }
 
 const listContestTeams = `-- name: ListContestTeams :many
-SELECT ct.contest_id, ct.team_id, ct.role, ct.created_at, ct.permissions_mask, t.name as team_name, t.slug as team_slug
+SELECT ct.contest_id, ct.team_id, ct.role, ct.created_at, t.name as team_name, t.slug as team_slug
 FROM contest_teams ct
 JOIN teams t ON ct.team_id = t.id
 WHERE ct.contest_id = $1
@@ -104,13 +102,12 @@ ORDER BY ct.created_at
 `
 
 type ListContestTeamsRow struct {
-	ContestID       uuid.UUID          `json:"contest_id"`
-	TeamID          uuid.UUID          `json:"team_id"`
-	Role            models.ContestRole `json:"role"`
-	CreatedAt       time.Time          `json:"created_at"`
-	PermissionsMask int64              `json:"permissions_mask"`
-	TeamName        string             `json:"team_name"`
-	TeamSlug        string             `json:"team_slug"`
+	ContestID uuid.UUID          `json:"contest_id"`
+	TeamID    uuid.UUID          `json:"team_id"`
+	Role      models.ContestRole `json:"role"`
+	CreatedAt time.Time          `json:"created_at"`
+	TeamName  string             `json:"team_name"`
+	TeamSlug  string             `json:"team_slug"`
 }
 
 func (q *Queries) ListContestTeams(ctx context.Context, contestID uuid.UUID) ([]ListContestTeamsRow, error) {
@@ -127,7 +124,6 @@ func (q *Queries) ListContestTeams(ctx context.Context, contestID uuid.UUID) ([]
 			&i.TeamID,
 			&i.Role,
 			&i.CreatedAt,
-			&i.PermissionsMask,
 			&i.TeamName,
 			&i.TeamSlug,
 		); err != nil {

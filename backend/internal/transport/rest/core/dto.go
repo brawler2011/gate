@@ -171,6 +171,11 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 	freezeDurationMinutes := c.GetFreezeDurationMinutes()
 	freezeStatus := corev1.ContestModelFreezeStatus(c.GetFreezeStatus())
 
+	enableDrafts := settings.GetEnableDrafts()
+	enableUpsolving := settings.GetEnableUpsolving()
+	enableVirtualContests := settings.GetEnableVirtualContests()
+	participationMode := corev1.ContestModelParticipationMode(settings.GetParticipationMode())
+
 	model := corev1.ContestModel{
 		Id:                     c.ID,
 		Login:                  c.Login,
@@ -185,6 +190,10 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		SubmissionDetailsScope: submissionDetailsScope,
 		FreezeDurationMinutes:  freezeDurationMinutes,
 		FreezeStatus:           freezeStatus,
+		EnableDrafts:          &enableDrafts,
+		EnableUpsolving:        &enableUpsolving,
+		EnableVirtualContests: &enableVirtualContests,
+		ParticipationMode:     &participationMode,
 		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,

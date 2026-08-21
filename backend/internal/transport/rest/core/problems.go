@@ -49,6 +49,20 @@ func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProble
 		orgID, err := uuid.Parse(request.Params.OrganizationId.String())
 		if err == nil {
 			filter.OrganizationID = &orgID
+
+			user := middleware.GetUser(ctx)
+			isMember := false
+			if user.Role == models.UserRoleAdmin {
+				isMember = true
+			} else if user.Id != uuid.Nil {
+				_, err := h.organizationsUC.ListMembers(ctx, orgID, user.Id)
+				if err == nil {
+					isMember = true
+				}
+			}
+			if !isMember {
+				filter.Visibility = "public"
+			}
 		}
 	}
 

@@ -89,7 +89,6 @@ type CreateContestParams struct {
 	Login          string
 	Description    string
 	Settings       map[string]interface{}
-	AccessPolicy   map[string]interface{}
 	StartTime      *time.Time
 	EndTime        *time.Time
 }
@@ -102,7 +101,6 @@ type CreateContestInput struct {
 	Description    string
 	Visibility     ContestVisibility
 	Settings       map[string]interface{}
-	AccessPolicy   map[string]interface{}
 	StartTime      *time.Time
 	EndTime        *time.Time
 }
@@ -152,29 +150,27 @@ type PublicContestsFilter struct {
 }
 
 type ContestUpdateInput struct {
-	ID           uuid.UUID
-	Login        *string
-	Title        *string
-	Description  *string
-	Visibility   *ContestVisibility
-	Settings     *map[string]interface{}
-	AccessPolicy *map[string]interface{}
-	StartTime    *time.Time
-	EndTime      *time.Time
-	OwnerID      *uuid.UUID
+	ID          uuid.UUID
+	Login       *string
+	Title       *string
+	Description *string
+	Visibility  *ContestVisibility
+	Settings    *map[string]interface{}
+	StartTime   *time.Time
+	EndTime     *time.Time
+	OwnerID     *uuid.UUID
 }
 
 type ContestUpdateParams struct {
-	ID           uuid.UUID
-	Login        *string
-	Title        *string
-	Description  *string
-	Visibility   *ContestVisibility
-	Settings     *map[string]interface{}
-	AccessPolicy *map[string]interface{}
-	StartTime    *time.Time
-	EndTime      *time.Time
-	OwnerID      *uuid.UUID
+	ID          uuid.UUID
+	Login       *string
+	Title       *string
+	Description *string
+	Visibility  *ContestVisibility
+	Settings    *map[string]interface{}
+	StartTime   *time.Time
+	EndTime     *time.Time
+	OwnerID     *uuid.UUID
 }
 
 type ContestProblemGet struct {
@@ -280,7 +276,6 @@ type Contest struct {
 	Login             string
 	Description       string
 	Settings          map[string]interface{} // JSONB for contest settings
-	AccessPolicy      map[string]interface{} // JSONB for access policies
 	StartTime         *time.Time
 	EndTime           *time.Time
 	CreatedAt         time.Time
@@ -334,6 +329,13 @@ type DashboardContest struct {
 	LastSubmissionTime *time.Time
 }
 
+type ContestParticipationMode = string
+
+const (
+	ParticipationModeOpen       ContestParticipationMode = "open"
+	ParticipationModeInviteOnly ContestParticipationMode = "invite_only"
+)
+
 type ContestSettings struct {
 	PenaltyPerAttempt      int32  `json:"penalty_per_attempt,omitempty"`
 	FreezeDurationMinutes  *int32 `json:"freeze_duration_minutes,omitempty"`
@@ -345,6 +347,10 @@ type ContestSettings struct {
 	ShowVerdicts           *bool  `json:"show_verdicts,omitempty"`
 	ShowTestDetails        *bool  `json:"show_test_details,omitempty"`
 	AllowClarifications    *bool  `json:"allow_clarifications,omitempty"`
+	EnableDrafts           *bool  `json:"enable_drafts,omitempty"`
+	EnableUpsolving        *bool  `json:"enable_upsolving,omitempty"`
+	EnableVirtualContests  *bool  `json:"enable_virtual_contests,omitempty"`
+	ParticipationMode      string `json:"participation_mode,omitempty"`
 }
 
 func (s ContestSettings) GetPenaltyPerAttempt() int32 {
@@ -368,6 +374,34 @@ func (s ContestSettings) GetFreezeStatus() string {
 	default:
 		return FreezeStatusAuto
 	}
+}
+
+func (s ContestSettings) GetEnableDrafts() bool {
+	if s.EnableDrafts == nil {
+		return true
+	}
+	return *s.EnableDrafts
+}
+
+func (s ContestSettings) GetEnableUpsolving() bool {
+	if s.EnableUpsolving == nil {
+		return true
+	}
+	return *s.EnableUpsolving
+}
+
+func (s ContestSettings) GetEnableVirtualContests() bool {
+	if s.EnableVirtualContests == nil {
+		return false
+	}
+	return *s.EnableVirtualContests
+}
+
+func (s ContestSettings) GetParticipationMode() string {
+	if s.ParticipationMode == ParticipationModeInviteOnly {
+		return ParticipationModeInviteOnly
+	}
+	return ParticipationModeOpen
 }
 
 func parseFlexibleInt32(v interface{}, defaultVal int32) int32 {
@@ -425,6 +459,16 @@ func parseFlexibleInt32Ptr(v interface{}) *int32 {
 	}
 }
 
+func parseFlexibleBoolPtr(v interface{}) *bool {
+	if v == nil {
+		return nil
+	}
+	if b, ok := v.(bool); ok {
+		return &b
+	}
+	return nil
+}
+
 func MapToContestSettings(m map[string]interface{}) ContestSettings {
 	var s ContestSettings
 	if m == nil {
@@ -468,6 +512,36 @@ func MapToContestSettings(m map[string]interface{}) ContestSettings {
 	if raw, ok := m["submission_details_scope"]; ok && raw != nil {
 		if str, ok := raw.(string); ok {
 			s.SubmissionDetailsScope = str
+		}
+	}
+
+	if raw, ok := m["show_verdicts"]; ok && raw != nil {
+		s.ShowVerdicts = parseFlexibleBoolPtr(raw)
+	}
+
+	if raw, ok := m["show_test_details"]; ok && raw != nil {
+		s.ShowTestDetails = parseFlexibleBoolPtr(raw)
+	}
+
+	if raw, ok := m["allow_clarifications"]; ok && raw != nil {
+		s.AllowClarifications = parseFlexibleBoolPtr(raw)
+	}
+
+	if raw, ok := m["enable_drafts"]; ok && raw != nil {
+		s.EnableDrafts = parseFlexibleBoolPtr(raw)
+	}
+
+	if raw, ok := m["enable_upsolving"]; ok && raw != nil {
+		s.EnableUpsolving = parseFlexibleBoolPtr(raw)
+	}
+
+	if raw, ok := m["enable_virtual_contests"]; ok && raw != nil {
+		s.EnableVirtualContests = parseFlexibleBoolPtr(raw)
+	}
+
+	if raw, ok := m["participation_mode"]; ok && raw != nil {
+		if str, ok := raw.(string); ok {
+			s.ParticipationMode = str
 		}
 	}
 

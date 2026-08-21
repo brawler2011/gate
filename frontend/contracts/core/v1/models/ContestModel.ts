@@ -29,6 +29,10 @@ export type ContestModel = {
     updated_at: string;
     start_time?: string | null;
     end_time?: string | null;
+    enable_drafts?: boolean;
+    enable_upsolving?: boolean;
+    enable_virtual_contests?: boolean;
+    participation_mode?: ContestModel.participation_mode;
 };
 export namespace ContestModel {
     /**
@@ -38,6 +42,10 @@ export namespace ContestModel {
         AUTO = 'auto',
         FROZEN = 'frozen',
         UNFROZEN = 'unfrozen',
+    }
+    export enum participation_mode {
+        OPEN = 'open',
+        INVITE_ONLY = 'invite_only',
     }
 }
 

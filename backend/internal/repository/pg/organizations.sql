@@ -59,6 +59,21 @@ WHERE organization_id = $1 AND user_id = $2;
 DELETE FROM organization_members
 WHERE organization_id = $1 AND user_id = $2;
 
+-- name: RemoveTeamMembersByOrgAndUser :exec
+DELETE FROM team_members
+WHERE user_id = $2
+  AND team_id IN (SELECT id FROM teams WHERE organization_id = $1);
+
+-- name: RemoveContestMembersByOrgAndUser :exec
+DELETE FROM contest_members
+WHERE user_id = $2
+  AND contest_id IN (SELECT id FROM contests WHERE organization_id = $1);
+
+-- name: RemoveProblemMembersByOrgAndUser :exec
+DELETE FROM problem_members
+WHERE user_id = $2
+  AND problem_id IN (SELECT id FROM problems WHERE organization_id = $1);
+
 -- name: GetUserOrganizations :many
 SELECT o.* FROM organizations o
 INNER JOIN organization_members om ON o.id = om.organization_id

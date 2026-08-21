@@ -4091,6 +4091,21 @@ components:
           type: string
           format: date-time
           nullable: true
+        enable_drafts:
+          type: boolean
+          default: true
+        enable_upsolving:
+          type: boolean
+          default: true
+        enable_virtual_contests:
+          type: boolean
+          default: false
+        participation_mode:
+          type: string
+          enum:
+            - open
+            - invite_only
+          default: open
     ListContestsResponseModel:
       type: object
       required:
@@ -4238,6 +4253,17 @@ components:
           type: string
           format: date-time
           nullable: true
+        enable_drafts:
+          type: boolean
+        enable_upsolving:
+          type: boolean
+        enable_virtual_contests:
+          type: boolean
+        participation_mode:
+          type: string
+          enum:
+            - open
+            - invite_only
     CreateSubmissionRequestModel:
       type: object
       required:

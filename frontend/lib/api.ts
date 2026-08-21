@@ -1,9 +1,13 @@
 import {notFound, redirect} from "next/navigation";
-import {cache} from "react";
+import * as React from "react";
 
 import {core, type DefaultService} from "@/contracts/core/v1";
 import {ApiError as CoreApiError} from "@/contracts/core/v1/core/ApiError";
 import {env} from "@/lib/env";
+
+const cache = typeof (React as unknown as {cache?: <T>(fn: T) => T}).cache === "function"
+  ? (React as unknown as {cache: <T>(fn: T) => T}).cache
+  : <T>(fn: T): T => fn;
 
 const sessionCookieName = "session_id";
 
@@ -119,4 +123,8 @@ export const unwrap = <A extends unknown[], R>(
   };
 };
 
-export const unwrapAndCache = cache(unwrap);
+export const unwrapAndCache = <A extends unknown[], R>(
+  fn: (...args: A) => Promise<ApiResult<R>>
+): ((...args: A) => Promise<R>) => {
+  return cache(unwrap(fn)) as (...args: A) => Promise<R>;
+};

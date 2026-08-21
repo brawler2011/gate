@@ -154,7 +154,9 @@ describe("Milestone M6 Telemetry Adversarial Stress Suite", () => {
         expect(() => initBrowserTelemetry()).not.toThrow();
       } finally {
         (globalThis as unknown as {window?: unknown}).window = originalWindow;
-        (globalThis as unknown as {document?: unknown}).document = originalDocument;
+        if (originalDocument) {
+          (globalThis as unknown as {document?: unknown}).document = originalDocument;
+        }
       }
     });
   });

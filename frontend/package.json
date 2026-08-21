@@ -15,6 +15,7 @@
     "lint:css": "stylelint \"**/*.css\"",
     "lint:css:fix": "stylelint \"**/*.css\" --fix",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "knip": "knip"
   },
   "dependencies": {

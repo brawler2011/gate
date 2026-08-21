@@ -12,13 +12,15 @@ import {
   Input,
   Text,
   Divider,
+  Switch,
+  Group,
 } from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
 import {useRouter} from "next/navigation";
 import {useState} from "react";
 
-import {StatusMessage} from '@/components/shared/StatusMessage';
+import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
@@ -38,6 +40,11 @@ const SCOPE_OPTIONS = [
 const VISIBILITY_OPTIONS = [
   {label: "Публичный", value: "public", color: "green"},
   {label: "Приватный", value: "private", color: "red"},
+];
+
+const PARTICIPATION_MODE_OPTIONS = [
+  {label: "Открытый (свободная регистрация)", value: "open", color: "green"},
+  {label: "Только по приглашению", value: "invite_only", color: "orange"},
 ];
 
 const FREEZE_STATUS_OPTIONS = [
@@ -138,12 +145,20 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     end_time: string;
     freeze_duration_minutes: number | string | undefined | null;
     freeze_status: corev1.UpdateContestRequestModel.freeze_status;
+    participation_mode: corev1.UpdateContestRequestModel.participation_mode;
+    enable_drafts: boolean;
+    enable_upsolving: boolean;
+    enable_virtual_contests: boolean;
   }>({
     initialValues: {
       login: contest.login || "",
       title: contest.title,
       description: contest.description,
       visibility: contest.visibility,
+      participation_mode: (contest.participation_mode as corev1.UpdateContestRequestModel.participation_mode) || "open",
+      enable_drafts: contest.enable_drafts ?? true,
+      enable_upsolving: contest.enable_upsolving ?? true,
+      enable_virtual_contests: contest.enable_virtual_contests ?? false,
       monitor_scope: contest.monitor_scope,
       submissions_list_scope: contest.submissions_list_scope,
       submissions_review_scope: contest.submissions_review_scope,
@@ -194,6 +209,10 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       end_time: values.end_time ? new Date(values.end_time).toISOString() : null,
       freeze_duration_minutes: freezeDuration,
       freeze_status: values.freeze_status as corev1.UpdateContestRequestModel.freeze_status,
+      participation_mode: values.participation_mode as corev1.UpdateContestRequestModel.participation_mode,
+      enable_drafts: values.enable_drafts,
+      enable_upsolving: values.enable_upsolving,
+      enable_virtual_contests: values.enable_virtual_contests,
     };
     const [error] = await api.updateContest({
       orgLogin: contest.organization_login,
@@ -282,9 +301,41 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
           <CustomSelect
             label="Видимость"
             value={form.values.visibility}
-            onChange={(value) => form.setFieldValue('visibility', value)}
+            onChange={(value) => form.setFieldValue("visibility", value)}
             options={VISIBILITY_OPTIONS}
           />
+
+          <CustomSelect
+            label="Режим участия"
+            value={form.values.participation_mode}
+            onChange={(value) => form.setFieldValue("participation_mode", value as corev1.UpdateContestRequestModel.participation_mode)}
+            options={PARTICIPATION_MODE_OPTIONS}
+            description="В открытом контесте любой авторизованный пользователь может отправлять решения"
+          />
+
+          <Group justify="space-between" mt="xs">
+            <Text size="sm">Разрешить черновики решений</Text>
+            <Switch
+              checked={form.values.enable_drafts}
+              onChange={(event) => form.setFieldValue("enable_drafts", event.currentTarget.checked)}
+            />
+          </Group>
+
+          <Group justify="space-between">
+            <Text size="sm">Разрешить дорешивание после окончания</Text>
+            <Switch
+              checked={form.values.enable_upsolving}
+              onChange={(event) => form.setFieldValue("enable_upsolving", event.currentTarget.checked)}
+            />
+          </Group>
+
+          <Group justify="space-between">
+            <Text size="sm">Разрешить виртуальное участие</Text>
+            <Switch
+              checked={form.values.enable_virtual_contests}
+              onChange={(event) => form.setFieldValue("enable_virtual_contests", event.currentTarget.checked)}
+            />
+          </Group>
 
           <Divider my="sm" />
           

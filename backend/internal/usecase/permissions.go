@@ -37,15 +37,16 @@ func NewPermissionsUseCase(
 }
 
 type contestContext struct {
-	user               *models.User
-	contest            *models.Contest
-	contestRole        *models.ContestRole
-	contestPermissions models.ContestPermissionMask
-	isPublic           bool
-	isStarted          bool
-	isFinished         bool
-	isOwner            bool
-	isAdmin            bool
+	user          *models.User
+	contest       *models.Contest
+	contestRole   *models.ContestRole
+	isPublic      bool
+	isStarted     bool
+	isFinished    bool
+	isOwner       bool
+	isModerator   bool
+	isParticipant bool
+	isAdmin       bool
 }
 
 type problemContext struct {
@@ -79,7 +80,7 @@ func (uc *PermissionsUseCase) HasContestPermission(
 		return false, fmt.Errorf("get contest: %w", err)
 	}
 
-	contestRole, contestPermissions, err := uc.resolveContestRoleAndMask(ctx, &contest, userID)
+	contestRole, err := uc.resolveEffectiveContestRole(ctx, &contest, userID)
 	if err != nil {
 		return false, err
 	}
@@ -94,16 +95,22 @@ func (uc *PermissionsUseCase) HasContestPermission(
 		isFinished = contest.EndTime.Before(time.Now())
 	}
 
+	isAdmin := user.Role == models.UserRoleAdmin
+	isOwner := isAdmin || (contest.OwnerID != nil && *contest.OwnerID == userID) || (contestRole != nil && *contestRole == models.ContestRoleOwner)
+	isModerator := isOwner || (contestRole != nil && *contestRole == models.ContestRoleModerator)
+	isParticipant := isModerator || (contestRole != nil && *contestRole == models.ContestRoleParticipant)
+
 	cc := &contestContext{
-		user:               &user,
-		contest:            &contest,
-		contestRole:        contestRole,
-		contestPermissions: contestPermissions,
-		isPublic:           contest.Visibility == models.ContestVisibilityPublic,
-		isStarted:          isStarted,
-		isFinished:         isFinished,
-		isOwner:            contest.OwnerID != nil && *contest.OwnerID == userID,
-		isAdmin:            user.Role == models.UserRoleAdmin,
+		user:          &user,
+		contest:       &contest,
+		contestRole:   contestRole,
+		isPublic:      contest.Visibility == models.ContestVisibilityPublic,
+		isStarted:     isStarted,
+		isFinished:    isFinished,
+		isOwner:       isOwner,
+		isModerator:   isModerator,
+		isParticipant: isParticipant,
+		isAdmin:       isAdmin,
 	}
 
 	switch action {
@@ -134,136 +141,180 @@ func (uc *PermissionsUseCase) HasContestPermission(
 	}
 }
 
-func (uc *PermissionsUseCase) canViewContestProblem(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
+func (uc *PermissionsUseCase) canViewContest(cc *contestContext) bool {
+	if cc.isModerator {
 		return true
 	}
-	if cc.contestRole != nil && (*cc.contestRole == models.ContestRoleOwner || *cc.contestRole == models.ContestRoleModerator) {
+	if cc.isPublic {
 		return true
 	}
+	return cc.isParticipant
+}
 
+func (uc *PermissionsUseCase) canViewContestProblem(cc *contestContext) bool {
+	if cc.isModerator {
+		return true
+	}
+	if !cc.isStarted {
+		return false
+	}
+	if cc.isPublic {
+		return true
+	}
+	return cc.isParticipant
+}
+
+func (uc *PermissionsUseCase) canAdminContest(cc *contestContext) bool {
+	return cc.isOwner
+}
+
+func (uc *PermissionsUseCase) canManageContest(cc *contestContext) bool {
+	return cc.isModerator
+}
+
+func (uc *PermissionsUseCase) canViewMonitor(cc *contestContext) bool {
+	if cc.isModerator {
+		return true
+	}
 	if !cc.isStarted {
 		return false
 	}
 
-	if cc.isPublic {
-		return true
+	settings := cc.contest.TypedSettings()
+	scope := settings.MonitorScope
+	if scope == "" {
+		scope = "participant"
 	}
 
-	if cc.contestRole == nil {
-		return false
+	switch scope {
+	case "public":
+		return uc.canViewContest(cc)
+	case "participant":
+		return cc.isParticipant
+	case "moderator":
+		return cc.isModerator
+	default:
+		return cc.isParticipant
 	}
-
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionGetContest)
-}
-
-func (uc *PermissionsUseCase) canViewContest(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
-		return true
-	}
-	if cc.isPublic {
-		return true
-	}
-
-	if cc.contestRole == nil {
-		return false
-	}
-
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionGetContest)
-}
-
-func (uc *PermissionsUseCase) canAdminContest(cc *contestContext) bool {
-	return cc.isAdmin || cc.isOwner
-}
-
-func (uc *PermissionsUseCase) canManageContest(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
-		return true
-	}
-	if cc.contestRole == nil {
-		return false
-	}
-
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionManageContest)
-}
-
-func (uc *PermissionsUseCase) canViewMonitor(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
-		return true
-	}
-	if cc.contestRole == nil {
-		return false
-	}
-
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionGetMonitor)
 }
 
 func (uc *PermissionsUseCase) canListAllSubmissions(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
+	if cc.isModerator {
 		return true
 	}
-	if cc.contestRole == nil {
-		return false
+
+	settings := cc.contest.TypedSettings()
+	scope := settings.SubmissionsListScope
+	if scope == "" {
+		scope = "moderator"
 	}
 
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionListUsersSubmissions)
+	switch scope {
+	case "public":
+		return uc.canViewContest(cc) && cc.isStarted
+	case "participant":
+		return cc.isParticipant && cc.isStarted
+	case "moderator":
+		return cc.isModerator
+	default:
+		return cc.isModerator
+	}
 }
 
 func (uc *PermissionsUseCase) canListOwnSubmissions(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
+	if cc.isModerator {
 		return true
 	}
-
-	if cc.contestRole == nil {
+	if cc.user.IsGuest() || cc.user.Id == uuid.Nil {
 		return false
 	}
-
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionListOwnSubmissions)
+	return cc.isParticipant
 }
 
 func (uc *PermissionsUseCase) canGetOwnSubmission(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
+	if cc.isModerator {
 		return true
 	}
-
-	if cc.contestRole == nil {
+	if cc.user.IsGuest() || cc.user.Id == uuid.Nil {
 		return false
 	}
-
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionGetOwnSubmission)
+	return cc.isParticipant
 }
 
 func (uc *PermissionsUseCase) canViewOtherSubmission(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
+	if cc.isModerator {
 		return true
 	}
-	if cc.contestRole == nil {
-		return false
+
+	settings := cc.contest.TypedSettings()
+	scope := settings.SubmissionsReviewScope
+	if scope == "" {
+		scope = "moderator"
 	}
 
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionGetOtherUserSubmission)
+	switch scope {
+	case "public":
+		return uc.canViewContest(cc) && cc.isStarted
+	case "participant":
+		return cc.isParticipant && cc.isStarted
+	case "moderator":
+		return cc.isModerator
+	default:
+		return cc.isModerator
+	}
 }
 
 func (uc *PermissionsUseCase) canViewSubmissionDetails(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
+	if cc.isModerator {
 		return true
 	}
-	if cc.contestRole == nil {
-		return false
+
+	settings := cc.contest.TypedSettings()
+	scope := settings.SubmissionDetailsScope
+	if scope == "" {
+		scope = "moderator"
 	}
 
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionGetSubmissionDetails)
+	switch scope {
+	case "public":
+		return uc.canViewContest(cc) && cc.isStarted
+	case "participant":
+		return cc.isParticipant && cc.isStarted
+	case "moderator":
+		return cc.isModerator
+	default:
+		return cc.isModerator
+	}
 }
 
 func (uc *PermissionsUseCase) canSubmit(cc *contestContext) bool {
-	if cc.isAdmin || cc.isOwner {
+	// Moderator/Owner can always submit for testing
+	if cc.isModerator {
 		return true
 	}
-	if cc.contestRole == nil {
+
+	// Guests cannot submit
+	if cc.user.IsGuest() || cc.user.Id == uuid.Nil {
 		return false
 	}
 
-	return models.HasContestActionPermission(cc.contestPermissions, models.ActionCreateSubmission) && cc.isStarted && !cc.isFinished
+	// Before start: regular participants cannot submit
+	if !cc.isStarted {
+		return false
+	}
+
+	// Running contest: participants can submit
+	if !cc.isFinished {
+		return cc.isParticipant
+	}
+
+	// Finished contest: upsolving mode (Codeforces style)
+	settings := cc.contest.TypedSettings()
+	if settings.GetEnableUpsolving() {
+		return uc.canViewContest(cc)
+	}
+
+	return false
 }
 
 // HasProblemPermission проверяет право на действие с задачей
@@ -289,18 +340,21 @@ func (uc *PermissionsUseCase) HasProblemPermission(
 		return false, fmt.Errorf("get problem: %w", err)
 	}
 
-	permission, err := uc.resolveProblemPermission(ctx, problemID, problem.OrganizationID, userID)
+	permission, err := uc.resolveProblemPermission(ctx, &problem, userID)
 	if err != nil {
 		return false, err
 	}
+
+	isAdmin := user.Role == models.UserRoleAdmin
+	isOwner := isAdmin || (problem.OwnerID != nil && *problem.OwnerID == userID) || (permission != nil && *permission == models.ProblemPermissionAdmin)
 
 	pc := &problemContext{
 		user:       &user,
 		problem:    &problem,
 		permission: permission,
 		isPublic:   problem.Visibility == models.ProblemVisibilityPublic,
-		isOwner:    problem.OwnerID != nil && *problem.OwnerID == userID,
-		isAdmin:    user.Role == models.UserRoleAdmin,
+		isOwner:    isOwner,
+		isAdmin:    isAdmin,
 	}
 
 	switch action {
@@ -340,7 +394,19 @@ func (uc *PermissionsUseCase) GetEffectiveContestRole(
 		return nil, 0, fmt.Errorf("get contest: %w", err)
 	}
 
-	return uc.resolveContestRoleAndMask(ctx, &contest, userID)
+	role, err := uc.resolveEffectiveContestRole(ctx, &contest, userID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var mask models.ContestPermissionMask
+	if role != nil {
+		if defaultMask, ok := models.ContestRoleDefaultPermissionMask(*role); ok {
+			mask = defaultMask
+		}
+	}
+
+	return role, mask, nil
 }
 
 func (uc *PermissionsUseCase) GetContestPermissions(
@@ -348,9 +414,15 @@ func (uc *PermissionsUseCase) GetContestPermissions(
 	contestID uuid.UUID,
 	userID uuid.UUID,
 ) (*models.ContestPermissions, error) {
-	user, err := uc.usersUC.GetUserById(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("get user: %w", err)
+	var user models.User
+	var err error
+	if userID != uuid.Nil {
+		user, err = uc.usersUC.GetUserById(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("get user: %w", err)
+		}
+	} else {
+		user = models.Guest
 	}
 
 	contest, err := uc.contestsRepo.GetContest(ctx, contestID)
@@ -358,7 +430,7 @@ func (uc *PermissionsUseCase) GetContestPermissions(
 		return nil, fmt.Errorf("get contest: %w", err)
 	}
 
-	contestRole, contestPermissions, err := uc.resolveContestRoleAndMask(ctx, &contest, userID)
+	contestRole, err := uc.resolveEffectiveContestRole(ctx, &contest, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -373,16 +445,22 @@ func (uc *PermissionsUseCase) GetContestPermissions(
 		isFinished = contest.EndTime.Before(time.Now())
 	}
 
+	isAdmin := user.Role == models.UserRoleAdmin
+	isOwner := isAdmin || (contest.OwnerID != nil && *contest.OwnerID == userID) || (contestRole != nil && *contestRole == models.ContestRoleOwner)
+	isModerator := isOwner || (contestRole != nil && *contestRole == models.ContestRoleModerator)
+	isParticipant := isModerator || (contestRole != nil && *contestRole == models.ContestRoleParticipant)
+
 	cc := &contestContext{
-		user:               &user,
-		contest:            &contest,
-		contestRole:        contestRole,
-		contestPermissions: contestPermissions,
-		isPublic:           contest.Visibility == models.ContestVisibilityPublic,
-		isStarted:          isStarted,
-		isFinished:         isFinished,
-		isOwner:            contest.OwnerID != nil && *contest.OwnerID == userID,
-		isAdmin:            user.Role == models.UserRoleAdmin,
+		user:          &user,
+		contest:       &contest,
+		contestRole:   contestRole,
+		isPublic:      contest.Visibility == models.ContestVisibilityPublic,
+		isStarted:     isStarted,
+		isFinished:    isFinished,
+		isOwner:       isOwner,
+		isModerator:   isModerator,
+		isParticipant: isParticipant,
+		isAdmin:       isAdmin,
 	}
 
 	return &models.ContestPermissions{
@@ -421,18 +499,21 @@ func (uc *PermissionsUseCase) GetProblemPermissions(
 		return nil, fmt.Errorf("get problem: %w", err)
 	}
 
-	permission, err := uc.resolveProblemPermission(ctx, problemID, problem.OrganizationID, userID)
+	permission, err := uc.resolveProblemPermission(ctx, &problem, userID)
 	if err != nil {
 		return nil, err
 	}
+
+	isAdmin := user.Role == models.UserRoleAdmin
+	isOwner := isAdmin || (problem.OwnerID != nil && *problem.OwnerID == userID) || (permission != nil && *permission == models.ProblemPermissionAdmin)
 
 	pc := &problemContext{
 		user:       &user,
 		problem:    &problem,
 		permission: permission,
 		isPublic:   problem.Visibility == models.ProblemVisibilityPublic,
-		isOwner:    problem.OwnerID != nil && *problem.OwnerID == userID,
-		isAdmin:    user.Role == models.UserRoleAdmin,
+		isOwner:    isOwner,
+		isAdmin:    isAdmin,
 	}
 
 	return &models.ProblemPermissions{
@@ -442,20 +523,25 @@ func (uc *PermissionsUseCase) GetProblemPermissions(
 	}, nil
 }
 
-// HasOrganizationPermission checks if a user has permission to perform an action on an organization
-// This is a stub implementation - full implementation would check organization membership and roles
 func (uc *PermissionsUseCase) HasOrganizationPermission(
 	ctx context.Context,
 	orgID uuid.UUID,
 	userID uuid.UUID,
 	action models.OrgAction,
 ) (bool, error) {
+	if userID == uuid.Nil {
+		if action == models.ActionViewOrganization {
+			return true, nil
+		}
+		return false, nil
+	}
+
 	user, err := uc.usersUC.GetUserById(ctx, userID)
 	if err != nil {
 		return false, fmt.Errorf("get user: %w", err)
 	}
 
-	// Admins have full access
+	// Global admins have full access
 	if user.Role == models.UserRoleAdmin {
 		return true, nil
 	}
@@ -484,56 +570,69 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 	}
 }
 
-func (uc *PermissionsUseCase) resolveContestRoleAndMask(
+// RBAC Subject Resolution for Contests
+func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 	ctx context.Context,
 	contest *models.Contest,
 	userID uuid.UUID,
-) (*models.ContestRole, models.ContestPermissionMask, error) {
-	var bestRole *models.ContestRole
-	var bestMask models.ContestPermissionMask
-
+) (*models.ContestRole, error) {
 	if userID == uuid.Nil {
-		if contest.Visibility == models.ContestVisibilityPublic {
-			partRole := models.ContestRoleParticipant
-			bestRole = &partRole
-			if mask, ok := contest.PermissionMaskForRole(models.ContestRoleParticipant); ok {
-				bestMask = mask
-			} else if fallbackMask, ok := models.ContestRoleDefaultPermissionMask(models.ContestRoleParticipant); ok {
-				bestMask = fallbackMask
-			}
-		}
-		return bestRole, bestMask, nil
+		return nil, nil
 	}
 
+	user, err := uc.usersUC.GetUserById(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+
+	// 1. Global Admin gets RoleOwner
+	if user.Role == models.UserRoleAdmin {
+		ownerRole := models.ContestRoleOwner
+		return &ownerRole, nil
+	}
+
+	// 2. Contest Owner gets RoleOwner
 	if contest.OwnerID != nil && *contest.OwnerID == userID {
 		ownerRole := models.ContestRoleOwner
-		bestRole = &ownerRole
-		if mask, ok := contest.PermissionMaskForRole(models.ContestRoleOwner); ok {
-			bestMask = mask
-		} else if fallbackMask, ok := models.ContestRoleDefaultPermissionMask(models.ContestRoleOwner); ok {
-			bestMask = fallbackMask
+		return &ownerRole, nil
+	}
+
+	// 3. Organization Owner / Admin gets RoleOwner on all org contests
+	if uc.orgsRepo != nil && contest.OrganizationID != uuid.Nil {
+		orgMember, err := uc.orgsRepo.GetMember(ctx, contest.OrganizationID, userID)
+		if err == nil {
+			if orgMember.Role == models.OrgRoleOwner || orgMember.Role == models.OrgRoleAdmin {
+				ownerRole := models.ContestRoleOwner
+				return &ownerRole, nil
+			}
+		} else if !errors.Is(err, pkg.ErrNotFound) {
+			return nil, fmt.Errorf("get org member: %w", err)
 		}
 	}
 
+	var bestRole *models.ContestRole
+
+	// 4. Direct Contest Member
 	if uc.contestsRepo != nil {
 		directMember, err := uc.contestsRepo.GetContestMember(ctx, &models.ContestPermissionGet{
 			ContestId: contest.ID,
 			UserId:    userID,
 		})
 		if err == nil {
-			bestRole, bestMask = pickHigherContestRoleWithMask(contest, bestRole, bestMask, directMember.ContestRole, directMember.PermissionsMask)
+			bestRole = pickHigherContestRole(bestRole, directMember.ContestRole)
 		} else if !errors.Is(err, pkg.ErrNotFound) {
-			return nil, 0, fmt.Errorf("get contest member: %w", err)
+			return nil, fmt.Errorf("get contest member: %w", err)
 		}
 
+		// 5. Team Contest Members
 		contestTeams, err := uc.contestsRepo.GetContestTeams(ctx, contest.ID)
 		if err != nil {
-			return nil, 0, fmt.Errorf("get contest teams: %w", err)
+			return nil, fmt.Errorf("get contest teams: %w", err)
 		}
 		if len(contestTeams) > 0 && uc.teamsRepo != nil {
 			userTeams, err := uc.teamsRepo.GetUserTeamsByOrganization(ctx, userID, contest.OrganizationID)
 			if err != nil {
-				return nil, 0, fmt.Errorf("get user teams: %w", err)
+				return nil, fmt.Errorf("get user teams: %w", err)
 			}
 
 			userTeamIDs := make(map[uuid.UUID]struct{}, len(userTeams))
@@ -543,120 +642,123 @@ func (uc *PermissionsUseCase) resolveContestRoleAndMask(
 
 			for _, contestTeam := range contestTeams {
 				if _, ok := userTeamIDs[contestTeam.TeamID]; ok {
-					bestRole, bestMask = pickHigherContestRoleWithMask(contest, bestRole, bestMask, contestTeam.Role, contestTeam.PermissionsMask)
+					bestRole = pickHigherContestRole(bestRole, contestTeam.Role)
 				}
 			}
 		}
 	}
 
+	// 6. Public Contest with open participation gives RoleParticipant to any authenticated user
 	if bestRole == nil && contest.Visibility == models.ContestVisibilityPublic {
-		partRole := models.ContestRoleParticipant
-		bestRole = &partRole
-		if mask, ok := contest.PermissionMaskForRole(models.ContestRoleParticipant); ok {
-			bestMask = mask
-		} else if fallbackMask, ok := models.ContestRoleDefaultPermissionMask(models.ContestRoleParticipant); ok {
-			bestMask = fallbackMask
+		settings := contest.TypedSettings()
+		if settings.GetParticipationMode() == models.ParticipationModeOpen {
+			partRole := models.ContestRoleParticipant
+			bestRole = &partRole
 		}
 	}
 
-	return bestRole, bestMask, nil
+	return bestRole, nil
 }
 
+// RBAC Subject Resolution for Problems
 func (uc *PermissionsUseCase) resolveProblemPermission(
 	ctx context.Context,
-	problemID uuid.UUID,
-	organizationID uuid.UUID,
+	problem *models.Problem,
 	userID uuid.UUID,
 ) (*models.ProblemPermission, error) {
 	if userID == uuid.Nil {
 		return nil, nil
 	}
 
+	user, err := uc.usersUC.GetUserById(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+
+	// 1. Global Admin gets ProblemPermissionAdmin
+	if user.Role == models.UserRoleAdmin {
+		adminPerm := models.ProblemPermissionAdmin
+		return &adminPerm, nil
+	}
+
+	// 2. Problem Owner gets ProblemPermissionAdmin
+	if problem.OwnerID != nil && *problem.OwnerID == userID {
+		adminPerm := models.ProblemPermissionAdmin
+		return &adminPerm, nil
+	}
+
+	// 3. Org Owner / Admin gets ProblemPermissionAdmin on all org problems
+	if uc.orgsRepo != nil && problem.OrganizationID != uuid.Nil {
+		orgMember, err := uc.orgsRepo.GetMember(ctx, problem.OrganizationID, userID)
+		if err == nil {
+			if orgMember.Role == models.OrgRoleOwner || orgMember.Role == models.OrgRoleAdmin {
+				adminPerm := models.ProblemPermissionAdmin
+				return &adminPerm, nil
+			}
+		} else if !errors.Is(err, pkg.ErrNotFound) {
+			return nil, fmt.Errorf("get org member: %w", err)
+		}
+	}
+
 	var bestPermission *models.ProblemPermission
 
-	directMember, err := uc.problemsRepo.GetProblemMember(ctx, problemID, userID)
-	if err == nil {
-		if mappedPermission, ok := mapProblemRoleToPermission(directMember.Role); ok {
-			bestPermission = pickHigherProblemPermission(bestPermission, mappedPermission)
+	// 4. Direct Problem Member
+	if uc.problemsRepo != nil {
+		directMember, err := uc.problemsRepo.GetProblemMember(ctx, problem.ID, userID)
+		if err == nil {
+			if mappedPermission, ok := mapProblemRoleToPermission(directMember.Role); ok {
+				bestPermission = pickHigherProblemPermission(bestPermission, mappedPermission)
+			}
+		} else if !errors.Is(err, pkg.ErrNotFound) {
+			return nil, fmt.Errorf("get problem member: %w", err)
 		}
-	} else if !errors.Is(err, pkg.ErrNotFound) {
-		return nil, fmt.Errorf("get problem member: %w", err)
-	}
 
-	problemTeams, err := uc.problemsRepo.GetProblemTeams(ctx, problemID)
-	if err != nil {
-		return nil, fmt.Errorf("get problem teams: %w", err)
-	}
-	if len(problemTeams) == 0 {
-		return bestPermission, nil
-	}
+		// 5. Team Problem Members
+		problemTeams, err := uc.problemsRepo.GetProblemTeams(ctx, problem.ID)
+		if err != nil {
+			return nil, fmt.Errorf("get problem teams: %w", err)
+		}
+		if len(problemTeams) > 0 && uc.teamsRepo != nil {
+			userTeams, err := uc.teamsRepo.GetUserTeamsByOrganization(ctx, userID, problem.OrganizationID)
+			if err != nil {
+				return nil, fmt.Errorf("get user teams: %w", err)
+			}
 
-	userTeams, err := uc.teamsRepo.GetUserTeamsByOrganization(ctx, userID, organizationID)
-	if err != nil {
-		return nil, fmt.Errorf("get user teams: %w", err)
-	}
+			userTeamIDs := make(map[uuid.UUID]struct{}, len(userTeams))
+			for _, team := range userTeams {
+				userTeamIDs[team.ID] = struct{}{}
+			}
 
-	userTeamIDs := make(map[uuid.UUID]struct{}, len(userTeams))
-	for _, team := range userTeams {
-		userTeamIDs[team.ID] = struct{}{}
-	}
-
-	for _, problemTeam := range problemTeams {
-		if _, ok := userTeamIDs[problemTeam.TeamID]; ok {
-			bestPermission = pickHigherProblemPermission(bestPermission, problemTeam.Permission)
+			for _, problemTeam := range problemTeams {
+				if _, ok := userTeamIDs[problemTeam.TeamID]; ok {
+					bestPermission = pickHigherProblemPermission(bestPermission, problemTeam.Permission)
+				}
+			}
 		}
 	}
 
 	return bestPermission, nil
 }
 
-func resolvePersistedContestMask(
-	contest *models.Contest,
-	mask *models.ContestPermissionMask,
-	role models.ContestRole,
-) models.ContestPermissionMask {
-	if mask != nil {
-		return *mask
-	}
-
-	if contest != nil {
-		if policyMask, ok := contest.PermissionMaskForRole(role); ok {
-			return policyMask
-		}
-	}
-
-	fallbackMask, ok := models.ContestRoleDefaultPermissionMask(role)
-	if !ok {
-		return 0
-	}
-
-	return fallbackMask
-}
-
-func pickHigherContestRoleWithMask(
-	contest *models.Contest,
+func pickHigherContestRole(
 	currentRole *models.ContestRole,
-	currentMask models.ContestPermissionMask,
 	candidateRole models.ContestRole,
-	candidateMask *models.ContestPermissionMask,
-) (*models.ContestRole, models.ContestPermissionMask) {
+) *models.ContestRole {
 	if !models.IsValidContestRole(candidateRole) {
-		return currentRole, currentMask
+		return currentRole
 	}
-
-	candResolvedMask := resolvePersistedContestMask(contest, candidateMask, candidateRole)
 
 	if currentRole == nil {
 		role := candidateRole
-		return &role, candResolvedMask
+		return &role
 	}
 
 	if models.RoleGraterOrEquals(candidateRole, *currentRole) {
 		role := candidateRole
-		return &role, currentMask | candResolvedMask
+		return &role
 	}
 
-	return currentRole, currentMask | candResolvedMask
+	return currentRole
 }
 
 func mapProblemRoleToPermission(role models.ProblemRole) (models.ProblemPermission, bool) {

@@ -1,8 +1,8 @@
 -- Contests queries (new schema with Organizations)
 
 -- name: CreateContest :one
-INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, settings, access_policy, start_time, end_time)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: GetContestByID :one
@@ -60,7 +60,6 @@ SET login = COALESCE(sqlc.narg('login'), login),
     description = COALESCE(sqlc.narg('description'), description),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
     settings = COALESCE(sqlc.narg('settings'), settings),
-    access_policy = COALESCE(sqlc.narg('access_policy'), access_policy),
     start_time = COALESCE(sqlc.narg('start_time'), start_time),
     end_time = COALESCE(sqlc.narg('end_time'), end_time),
     owner_id = COALESCE(sqlc.narg('owner_id'), owner_id)

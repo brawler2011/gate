@@ -30,7 +30,6 @@ func (s *IntegrationTestSuite) TestListContests() {
 		Description:    "A test contest",
 		Visibility:     models.ContestVisibilityPublic,
 		Settings:       make(map[string]interface{}),
-		AccessPolicy:   models.DefaultContestAccessPolicy(),
 	})
 	s.Require().NoError(err)
 

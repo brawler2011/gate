@@ -453,7 +453,6 @@ type Contest struct {
 	Login          string                   `json:"login"`
 	Description    string                   `json:"description"`
 	Settings       []byte                   `json:"settings"`
-	AccessPolicy   []byte                   `json:"access_policy"`
 	StartTime      pgtype.Timestamptz       `json:"start_time"`
 	EndTime        pgtype.Timestamptz       `json:"end_time"`
 	CreatedAt      time.Time                `json:"created_at"`
@@ -470,11 +469,10 @@ type ContestDraft struct {
 }
 
 type ContestMember struct {
-	ContestID       uuid.UUID          `json:"contest_id"`
-	UserID          uuid.UUID          `json:"user_id"`
-	Role            models.ContestRole `json:"role"`
-	CreatedAt       time.Time          `json:"created_at"`
-	PermissionsMask int64              `json:"permissions_mask"`
+	ContestID uuid.UUID          `json:"contest_id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	Role      models.ContestRole `json:"role"`
+	CreatedAt time.Time          `json:"created_at"`
 }
 
 type ContestProblem struct {
@@ -497,11 +495,10 @@ type ContestProblemResult struct {
 }
 
 type ContestTeam struct {
-	ContestID       uuid.UUID          `json:"contest_id"`
-	TeamID          uuid.UUID          `json:"team_id"`
-	Role            models.ContestRole `json:"role"`
-	CreatedAt       time.Time          `json:"created_at"`
-	PermissionsMask int64              `json:"permissions_mask"`
+	ContestID uuid.UUID          `json:"contest_id"`
+	TeamID    uuid.UUID          `json:"team_id"`
+	Role      models.ContestRole `json:"role"`
+	CreatedAt time.Time          `json:"created_at"`
 }
 
 type ContestUserProblemBlock struct {

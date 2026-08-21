@@ -303,6 +303,22 @@ func (q *Queries) ListOrganizations(ctx context.Context, arg ListOrganizationsPa
 	return items, nil
 }
 
+const removeContestMembersByOrgAndUser = `-- name: RemoveContestMembersByOrgAndUser :exec
+DELETE FROM contest_members
+WHERE user_id = $2
+  AND contest_id IN (SELECT id FROM contests WHERE organization_id = $1)
+`
+
+type RemoveContestMembersByOrgAndUserParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	UserID         uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) RemoveContestMembersByOrgAndUser(ctx context.Context, arg RemoveContestMembersByOrgAndUserParams) error {
+	_, err := q.db.Exec(ctx, removeContestMembersByOrgAndUser, arg.OrganizationID, arg.UserID)
+	return err
+}
+
 const removeOrganizationMember = `-- name: RemoveOrganizationMember :exec
 DELETE FROM organization_members
 WHERE organization_id = $1 AND user_id = $2
@@ -315,6 +331,38 @@ type RemoveOrganizationMemberParams struct {
 
 func (q *Queries) RemoveOrganizationMember(ctx context.Context, arg RemoveOrganizationMemberParams) error {
 	_, err := q.db.Exec(ctx, removeOrganizationMember, arg.OrganizationID, arg.UserID)
+	return err
+}
+
+const removeProblemMembersByOrgAndUser = `-- name: RemoveProblemMembersByOrgAndUser :exec
+DELETE FROM problem_members
+WHERE user_id = $2
+  AND problem_id IN (SELECT id FROM problems WHERE organization_id = $1)
+`
+
+type RemoveProblemMembersByOrgAndUserParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	UserID         uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) RemoveProblemMembersByOrgAndUser(ctx context.Context, arg RemoveProblemMembersByOrgAndUserParams) error {
+	_, err := q.db.Exec(ctx, removeProblemMembersByOrgAndUser, arg.OrganizationID, arg.UserID)
+	return err
+}
+
+const removeTeamMembersByOrgAndUser = `-- name: RemoveTeamMembersByOrgAndUser :exec
+DELETE FROM team_members
+WHERE user_id = $2
+  AND team_id IN (SELECT id FROM teams WHERE organization_id = $1)
+`
+
+type RemoveTeamMembersByOrgAndUserParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	UserID         uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) RemoveTeamMembersByOrgAndUser(ctx context.Context, arg RemoveTeamMembersByOrgAndUserParams) error {
+	_, err := q.db.Exec(ctx, removeTeamMembersByOrgAndUser, arg.OrganizationID, arg.UserID)
 	return err
 }
 

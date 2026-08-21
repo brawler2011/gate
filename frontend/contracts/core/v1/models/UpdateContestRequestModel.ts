@@ -21,6 +21,10 @@ export type UpdateContestRequestModel = {
     freeze_status?: UpdateContestRequestModel.freeze_status;
     start_time?: string | null;
     end_time?: string | null;
+    enable_drafts?: boolean;
+    enable_upsolving?: boolean;
+    enable_virtual_contests?: boolean;
+    participation_mode?: UpdateContestRequestModel.participation_mode;
 };
 export namespace UpdateContestRequestModel {
     /**
@@ -30,6 +34,10 @@ export namespace UpdateContestRequestModel {
         AUTO = 'auto',
         FROZEN = 'frozen',
         UNFROZEN = 'unfrozen',
+    }
+    export enum participation_mode {
+        OPEN = 'open',
+        INVITE_ONLY = 'invite_only',
     }
 }
 

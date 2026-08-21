@@ -155,7 +155,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	workspaceStorage := usecase.NewWorkspaceStorage(s3Store, "problem-workspaces")
 	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, workspaceStorage, sb, txManager)
 	publishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages")
-	contestsUC := usecase.NewContestsUseCase(contestsRepo)
+	contestsUC := usecase.NewContestsUseCase(contestsRepo, nil)
 
 	eventPublisher := judge.NewEventPublisher(js)
 	tempDir := t.TempDir()
@@ -241,6 +241,8 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 
 	// 4. Create Contest
 	contestID := uuid.New()
+	startTime := time.Now().Add(-1 * time.Hour)
+	endTime := time.Now().Add(1 * time.Hour)
 	err = contestsRepo.CreateContest(ctx, &models.CreateContestParams{
 		ID:             contestID,
 		OrganizationID: org.ID,
@@ -249,17 +251,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		Login:          "e2e-contest",
 		Description:    "E2E Contest for judging flow",
 		Visibility:     models.ContestVisibilityPublic,
+		StartTime:      &startTime,
+		EndTime:        &endTime,
 		Settings:       make(map[string]interface{}),
-		AccessPolicy:   models.DefaultContestAccessPolicy(),
-	})
-	require.NoError(t, err)
-
-	startTime := time.Now().Add(-1 * time.Hour)
-	endTime := time.Now().Add(1 * time.Hour)
-	err = contestsRepo.UpdateContest(ctx, models.ContestUpdateParams{
-		ID:        contestID,
-		StartTime: &startTime,
-		EndTime:   &endTime,
 	})
 	require.NoError(t, err)
 

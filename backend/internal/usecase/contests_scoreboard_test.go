@@ -90,7 +90,7 @@ func TestProcessSubmissionResult_Rules(t *testing.T) {
 	endTime := time.Now().Add(2 * time.Hour)
 
 	mockRepo := new(ContestsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil)
 
 	mockRepo.On("GetContestMember", mock.Anything, &models.ContestPermissionGet{
 		ContestId: contestID,
@@ -195,7 +195,7 @@ func TestGetContestScoreboard_TieBreakerAndCustomPenalty(t *testing.T) {
 	startTime := time.Now().Add(-1 * time.Hour)
 
 	mockRepo := new(ContestsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil)
 
 	mockRepo.On("GetContest", mock.Anything, contestID).Return(models.Contest{
 		ID:        contestID,
@@ -287,7 +287,7 @@ func TestGetContestScoreboard_Freeze_ParticipantView(t *testing.T) {
 	freezeTime := endTime.Add(-60 * time.Minute) // 30 minutes ago
 
 	mockRepo := new(ContestsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil)
 
 	contest := models.Contest{
 		ID:        contestID,
@@ -458,7 +458,7 @@ func TestGetContestScoreboard_Freeze_ManagerUnfrozenView(t *testing.T) {
 	endTime := time.Now().Add(30 * time.Minute)
 
 	mockRepo := new(ContestsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil)
 
 	contest := models.Contest{
 		ID:        contestID,
@@ -545,7 +545,7 @@ func TestGetContestScoreboard_ManualUnfrozenOverride(t *testing.T) {
 	endTime := time.Now().Add(30 * time.Minute)
 
 	mockRepo := new(ContestsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil)
 
 	// freeze_status is manually "unfrozen"
 	contest := models.Contest{
@@ -587,7 +587,7 @@ func TestProcessSubmissionResult_DisqualifiedCountsAsFailedAttempt(t *testing.T)
 	endTime := time.Now().Add(2 * time.Hour)
 
 	mockRepo := new(ContestsRepoMock)
-	uc := usecase.NewContestsUseCase(mockRepo)
+	uc := usecase.NewContestsUseCase(mockRepo, nil)
 
 	mockRepo.On("GetContestMember", mock.Anything, &models.ContestPermissionGet{
 		ContestId: contestID,
