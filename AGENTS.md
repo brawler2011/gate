@@ -102,3 +102,48 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 1. **Use `task` instead of `go-task`**
    - Always invoke Task commands as `task` (e.g., `task build`, `task test`). Do not use `go-task`.
+
+---
+
+## Task Workflow & Tags
+
+Tasks may include explicit tags to define execution constraints and lifecycle:
+
+### Tags & Defaults
+
+1. **Breaking Changes (Default: Enabled)**
+   - By default, tasks **ARE PERMITTED** to introduce breaking changes (API signature updates, contract modifications, DB schema changes) without maintaining backward compatibility layers.
+   - If backward compatibility is required, the task will explicitly specify the **`BACKWARD COMPATIBLE`** tag.
+
+2. **`WORKTREE`**
+   - Signals that the task is executed in an isolated git worktree branch.
+   - When `WORKTREE` is active (or when performing autonomous task execution), the agent **MUST** follow a strict TDD & verification workflow:
+     1. **Scope & DoD Definition**: The agent explicitly analyzes the requirements and outputs:
+        - **Scope:** Precise list of files/modules to modify.
+        - **Boundaries:** Files/modules that must NOT be touched.
+        - **Definition of Done (DoD):** Specific acceptance criteria and verification commands.
+     2. **Test-First (TDD):** Write or update unit/integration tests covering the required behavior *before* writing the implementation. Verify that the new tests fail as expected.
+     3. **Implementation:** Write the minimal code necessary to make the tests pass.
+     4. **Pre-commit Verification:** Run the standard pre-commit verification command (see below).
+     5. **Commit:** Create a clean conventional git commit in the current branch (do not switch branches or push).
+
+---
+
+## Pre-commit Verification Protocol
+
+Before making any git commit, run the appropriate Task verification command based on the scope of changes:
+
+- **Full Project / Cross-cutting changes:**
+  ```bash
+  task precommit
+  ```
+- **Backend-only changes:**
+  ```bash
+  task precommit:be
+  ```
+- **Frontend-only changes:**
+  ```bash
+  task precommit:fe
+  ```
+
+Never commit code with failing tests, type errors, or unresolved linter violations.

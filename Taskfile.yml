@@ -19,6 +19,36 @@ tasks:
     cmds:
       - task -a
 
+  worktree:
+    desc: "Create a worktree and start an isolated agy session: task worktree -- <branch-name>"
+    cmds:
+      - git worktree add ../gate-{{.CLI_ARGS}} -b {{.CLI_ARGS}}
+      - cd ../gate-{{.CLI_ARGS}} && agy --dangerously-skip-permissions
+
+  worktree:clean:
+    desc: "Remove a worktree: task worktree:clean -- <branch-name>"
+    cmds:
+      - git worktree remove ../gate-{{.CLI_ARGS}}
+
+  precommit:
+    desc: "Run pre-commit checks across all components"
+    cmds:
+      - task: verify-codegen
+      - task: precommit:be
+      - task: precommit:fe
+
+  precommit:be:
+    desc: "Run backend pre-commit verification (lint + tests)"
+    cmds:
+      - task: be:lint
+      - task: be:test
+
+  precommit:fe:
+    desc: "Run frontend pre-commit verification (typecheck + lint)"
+    cmds:
+      - task: fe:typecheck
+      - task: fe:lint
+
   test:e2e:
     desc: "Run complete E2E Observability test suite across Tiers 1-4"
     cmds:
