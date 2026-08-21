@@ -3,10 +3,12 @@
 import {Badge, Box, Group, Switch, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconSearch} from "@tabler/icons-react";
+import Link from "next/link";
 import React, {useEffect, useState, useMemo} from "react";
 
 import {api} from "@/lib/api";
 import {env} from "@/lib/env";
+import {numberToLetters} from "@/lib/lib";
 import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
 import classes from "./ContestMonitorTable.module.css";
@@ -366,13 +368,21 @@ export const ContestMonitorTable = ({
               <Table.Th className={classes.thCenter} style={{width: "80px"}}>
                 Штраф
               </Table.Th>
-              {problems.map((p) => (
-                <Table.Th key={p.problem_id} className={classes.thCenter} style={{width: "70px"}}>
-                  <Tooltip label={p.title} withArrow>
-                    <span>{getProblemLetter(p.ordinal, p.short_name)}</span>
-                  </Tooltip>
-                </Table.Th>
-              ))}
+              {problems.map((p) => {
+                const letter = numberToLetters(p.ordinal);
+                return (
+                  <Table.Th key={p.problem_id} className={classes.thCenter} style={{width: "70px"}}>
+                    <Tooltip label={p.title} withArrow>
+                      <Link
+                        href={`/${orgLogin}/contests/${contestLogin}/problems/${letter}`}
+                        style={{color: "inherit", textDecoration: "none"}}
+                      >
+                        <span>{letter}</span>
+                      </Link>
+                    </Tooltip>
+                  </Table.Th>
+                );
+              })}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>

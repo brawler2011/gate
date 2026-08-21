@@ -19,7 +19,7 @@ import {IconRefresh} from "@tabler/icons-react";
 import Link from "next/link";
 import React, {useEffect, useState, type ReactNode} from "react";
 
-import {LangString, ProblemTitle, StateColor, StateString, TimeBeautify} from "@/lib/lib";
+import {LangString, numberToLetters, ProblemTitle, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import styles from "./SubmissionsList.module.css";
 
@@ -131,9 +131,9 @@ const SubmissionRow = ({
           <TableTd ta="center">
             <Link
               href={
-                submission.organization_login
-                  ? `/${submission.organization_login}/contests/${submission.contest_id}/problems/${submission.problem_id}`
-                  : `/contests/${submission.contest_id}/problems/${submission.problem_id}`
+                submission.organization_login && submission.contest_login
+                  ? `/${submission.organization_login}/contests/${submission.contest_login}/problems/${numberToLetters(submission.position)}`
+                  : `/contests/${submission.contest_login}/problems/${numberToLetters(submission.position)}`
               }
               style={{color: 'inherit'}}
             >

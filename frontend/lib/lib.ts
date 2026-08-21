@@ -19,6 +19,29 @@ export const numberToLetters = (num?: number | null): string => {
 };
 
 /**
+ * Converts alphabetic letters to a 1-based number (A -> 1, B -> 2, ..., Z -> 26, AA -> 27, etc.)
+ * Strictly validates that input contains only uppercase English letters.
+ */
+export const lettersToNumber = (str?: string | null): number => {
+  if (!str) {
+    return 0;
+  }
+  
+  const trimmed = str.trim();
+  if (!/^[A-Z]+$/.test(trimmed)) {
+    return 0;
+  }
+  
+  let result = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    result = result * 26 + (trimmed.charCodeAt(i) - 64);
+  }
+  
+  return result;
+};
+
+
+/**
  * Get color for submission state
  */
 export const StateColor = (state?: number | string): string => {

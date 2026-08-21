@@ -22,6 +22,7 @@ import {api, unwrapAndCache} from "@/lib/api";
 import {
   LangNameToString,
   LangString,
+  numberToLetters,
   ProblemTitle,
   StateColor,
   StateString,
@@ -87,7 +88,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
         </Link>
       </TableTd>
       <TableTd ta="center">
-        <Link href={submission.organization_login && submission.contest_login ? `/${submission.organization_login}/contests/${submission.contest_login}/problems/${submission.problem_id}` : `/problems/${submission.problem_id}`} style={{color: 'inherit'}}>
+        <Link href={submission.organization_login && submission.contest_login ? `/${submission.organization_login}/contests/${submission.contest_login}/problems/${numberToLetters(submission.position)}` : `/problems/${submission.problem_id}`} style={{color: 'inherit'}}>
           <Text span td="underline">
             {ProblemTitle(submission.position, submission.problem_title)}
           </Text>

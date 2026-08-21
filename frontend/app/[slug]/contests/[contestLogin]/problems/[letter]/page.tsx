@@ -5,7 +5,7 @@ import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {Task} from "@/components/shared/Task";
 import {api, unwrapAndCache} from "@/lib/api";
 import {env} from "@/lib/env";
-import {numberToLetters} from "@/lib/lib";
+import {lettersToNumber, numberToLetters} from "@/lib/lib";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
 import type {Metadata} from "next";
@@ -21,17 +21,39 @@ type Props = {
   params: Promise<{
     slug: string;
     contestLogin: string;
-    problem_id: string;
+    letter: string;
   }>;
 };
 
 export const generateMetadata = async (props: Props): Promise<Metadata> => {
   const params = await props.params;
 
+  const targetPosition = lettersToNumber(params.letter);
+  if (targetPosition <= 0) {
+    return {
+      title: "Задача не найдена",
+    };
+  }
+
+  const contestResponse = await unwrapAndCache(api.getContest)({
+    orgLogin: params.slug,
+    contestLogin: params.contestLogin,
+  });
+
+  const targetProblem = contestResponse?.problems?.find(
+    (p) => p.position === targetPosition || numberToLetters(p.position) === params.letter,
+  );
+
+  if (!targetProblem) {
+    return {
+      title: "Задача не найдена",
+    };
+  }
+
   const [error, response] = await getCachedContestProblem(
     params.slug,
     params.contestLogin,
-    params.problem_id,
+    targetProblem.problem_id,
   );
 
   if (error || !response) {
@@ -40,7 +62,7 @@ export const generateMetadata = async (props: Props): Promise<Metadata> => {
     };
   }
 
-  const problemIndex = response.problem.position ?? 0;
+  const problemIndex = response.problem.position ?? targetPosition;
   const problemLetter = numberToLetters(problemIndex);
 
   return {
@@ -52,24 +74,56 @@ export const generateMetadata = async (props: Props): Promise<Metadata> => {
 const Page = async (props: Props): Promise<ReactNode> => {
   const params = await props.params;
 
+  const targetPosition = lettersToNumber(params.letter);
+  if (targetPosition <= 0) {
+    return (
+      <ErrorDisplay
+        error={{status: 404, message: "Задача не найдена"}}
+      />
+    );
+  }
+
   // First get the user to filter submissions by their ID
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
 
+  const contestResponse = await unwrapAndCache(api.getContest)({
+    orgLogin: params.slug,
+    contestLogin: params.contestLogin,
+  });
+
+  if (!contestResponse?.contest) {
+    return (
+      <ErrorDisplay
+        error={{status: 404, message: "Задача или контест не найдены"}}
+      />
+    );
+  }
+
+  const targetProblem = contestResponse.problems?.find(
+    (p) => p.position === targetPosition || numberToLetters(p.position) === params.letter,
+  );
+
+  if (!targetProblem) {
+    return (
+      <ErrorDisplay
+        error={{status: 404, message: "Задача или контест не найдены"}}
+      />
+    );
+  }
+
   const [
     [problemError, problemResponse],
-    contestResponse,
     [, submissionsResponse],
   ] = await Promise.all([
-    getCachedContestProblem(params.slug, params.contestLogin, params.problem_id),
-    unwrapAndCache(api.getContest)({orgLogin: params.slug, contestLogin: params.contestLogin}),
+    getCachedContestProblem(params.slug, params.contestLogin, targetProblem.problem_id),
     // Only fetch user's own submissions if authenticated
     user
       ? api.listContestSubmissions({
         orgLogin: params.slug,
         contestLogin: params.contestLogin,
         userId: user.id,
-        problemId: params.problem_id,
+        problemId: targetProblem.problem_id,
         page: 1,
         pageSize: 5,
         sortOrder: "desc",
@@ -84,7 +138,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
     return <ErrorDisplay error={problemError} />;
   }
 
-  if (!problemResponse?.problem || !contestResponse?.contest) {
+  if (!problemResponse?.problem) {
     return (
       <ErrorDisplay
         error={{status: 404, message: "Задача или контест не найдены"}}
@@ -124,7 +178,7 @@ const Page = async (props: Props): Promise<ReactNode> => {
       contest={contestResponse.contest}
       tasks={contestResponse.problems || []}
       submissions={submissions}
-      problemId={params.problem_id}
+      problemId={targetProblem.problem_id}
       contestId={contestResponse.contest.id}
       user={user}
       wsUrl={wsUrl}
