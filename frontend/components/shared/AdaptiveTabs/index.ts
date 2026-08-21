@@ -1,5 +1,2 @@
-export {AdaptiveTabs, type AdaptiveTabsProps} from "./AdaptiveTabs";
-export {
-  useAdaptiveTabs,
-  type AdaptiveTabItem,
-} from "./useAdaptiveTabs";
+export {AdaptiveTabs} from "./AdaptiveTabs";
+export {type AdaptiveTabItem} from "./useAdaptiveTabs";

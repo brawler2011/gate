@@ -72,4 +72,4 @@ const DefaultLayoutClient = ({children, header, ...props}: LayoutProps): ReactNo
   );
 };
 
-export {Layout, DefaultLayoutClient};
+export {DefaultLayoutClient};
