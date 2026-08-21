@@ -2,7 +2,7 @@ import {NextResponse} from "next/server";
 
 import type {NextRequest} from "next/server";
 
-export const middleware = (request: NextRequest): NextResponse => {
+export const proxy = (request: NextRequest): NextResponse => {
   const {pathname} = request.nextUrl;
 
   // Block direct access to internal /user routes from browser

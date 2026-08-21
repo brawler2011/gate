@@ -19,7 +19,7 @@
   padding: var(--mantine-spacing-md);
 }
 
-@media (max-width: var(--mantine-breakpoint-sm)) {
+@media (max-width: $mantine-breakpoint-sm) {
   .manageLayout {
     display: block;
   }

@@ -150,7 +150,7 @@
 @media (max-width: 768px) {
 }
 
-@media (max-width: var(--mantine-breakpoint-lg)) {
+@media (max-width: $mantine-breakpoint-lg) {
     .dropZone {
         height: 130px;
         padding: 4px;
