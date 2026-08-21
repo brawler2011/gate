@@ -2,9 +2,9 @@ version: '3'
 
 tasks:
   dev:
-    desc: "Run Go backend server with Infisical local env"
+    desc: "Run Go backend server"
     cmds:
-      - infisical run --env=local -- go run main.go
+      - go run main.go
 
   test:
     desc: "Run backend unit tests"

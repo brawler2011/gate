@@ -76,6 +76,7 @@ jobs:
   build-frontend:
     needs: ci
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     permissions:
       contents: read
       packages: write
@@ -108,43 +109,18 @@ jobs:
           tags: |
             type=raw,value=${{ inputs.environment }}
 
-      - name: Install Infisical CLI
-        if: ${{ secrets.INFISICAL_CLIENT_ID != '' }}
-        run: |
-          curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | sudo -E bash
-          sudo apt-get install -y infisical
-
-      - name: Set Frontend build arguments
-        env:
-          INFISICAL_API_URL: ${{ secrets.INFISICAL_API_URL || 'https://infisical.steins.ru' }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
-          INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-        run: |
-          if [ -n "${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}" ]; then
-            echo "Fetching frontend build configuration from Infisical..."
-            infisical export --project-id=${{ secrets.INFISICAL_PROJECT_ID }} --env=${{ inputs.environment }} --format=dotenv-export >> $GITHUB_ENV
-          else
-            echo "Using fallback default build configuration..."
-            echo "NEXT_PUBLIC_APP_URL=https://${{ inputs.domain_name }}" >> $GITHUB_ENV
-            echo "NEXT_PUBLIC_BACKEND_API_URL=/api" >> $GITHUB_ENV
-            echo "BACKEND_API_URL=http://gate-backend-${{ inputs.environment }}:8080" >> $GITHUB_ENV
-            echo "NEXT_PUBLIC_WEBSOCKET_URL=wss://${{ inputs.domain_name }}/ws" >> $GITHUB_ENV
-            echo "NEXT_PUBLIC_OTEL_SERVICE_NAME=gate-frontend-browser" >> $GITHUB_ENV
-            echo "NEXT_PUBLIC_OTEL_EXPORTER_URL=https://${{ inputs.domain_name }}/otlp/v1/traces" >> $GITHUB_ENV
-          fi
-
       - name: Build and push Frontend image
         uses: docker/build-push-action@v7
         with:
           context: ./frontend
           file: frontend/Dockerfile
           build-args: |
-            NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
-            NEXT_PUBLIC_BACKEND_API_URL=${{ env.NEXT_PUBLIC_BACKEND_API_URL }}
-            BACKEND_API_URL=${{ env.BACKEND_API_URL }}
-            NEXT_PUBLIC_WEBSOCKET_URL=${{ env.NEXT_PUBLIC_WEBSOCKET_URL }}
-            NEXT_PUBLIC_OTEL_SERVICE_NAME=${{ env.NEXT_PUBLIC_OTEL_SERVICE_NAME }}
-            NEXT_PUBLIC_OTEL_EXPORTER_URL=${{ env.NEXT_PUBLIC_OTEL_EXPORTER_URL }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || secrets.NEXT_PUBLIC_APP_URL || format('https://{0}', inputs.domain_name) }}
+            NEXT_PUBLIC_BACKEND_API_URL=${{ vars.NEXT_PUBLIC_BACKEND_API_URL || secrets.NEXT_PUBLIC_BACKEND_API_URL || '/api' }}
+            BACKEND_API_URL=${{ vars.BACKEND_API_URL || secrets.BACKEND_API_URL || format('http://gate-backend-{0}:8080', inputs.environment) }}
+            NEXT_PUBLIC_WEBSOCKET_URL=${{ vars.NEXT_PUBLIC_WEBSOCKET_URL || secrets.NEXT_PUBLIC_WEBSOCKET_URL || format('wss://{0}/ws', inputs.domain_name) }}
+            NEXT_PUBLIC_OTEL_SERVICE_NAME=${{ vars.NEXT_PUBLIC_OTEL_SERVICE_NAME || secrets.NEXT_PUBLIC_OTEL_SERVICE_NAME || 'gate-frontend-browser' }}
+            NEXT_PUBLIC_OTEL_EXPORTER_URL=${{ vars.NEXT_PUBLIC_OTEL_EXPORTER_URL || secrets.NEXT_PUBLIC_OTEL_EXPORTER_URL || format('https://{0}/otlp/v1/traces', inputs.domain_name) }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -154,47 +130,76 @@ jobs:
   deploy:
     needs: [build-backend, build-frontend]
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     permissions:
       contents: read
       packages: read
     steps:
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INFISICAL_API_URL: ${{ secrets.INFISICAL_API_URL || 'https://infisical.steins.ru' }}
-          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
-          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_PROJECT_ID }}
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Copy common configuration to VPS
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          envs: GITHUB_TOKEN,INFISICAL_API_URL,INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID
+          source: "deploy/common/**"
+          strip_components: 2
+          target: "~/gate/deploy/common"
+          overwrite: true
+
+      - name: Copy environment configuration to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "deploy/${{ inputs.environment }}/**"
+          strip_components: 2
+          target: "${{ inputs.deploy_dir }}"
+          overwrite: true
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOMAIN_NAME: ${{ inputs.domain_name }}
+          IMAGE_TAG: ${{ inputs.environment }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_APP_DB: ${{ secrets.POSTGRES_APP_DB }}
+          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          REDIS_DB_INDEX: ${{ secrets.REDIS_DB_INDEX }}
+          NATS_HOST: ${{ secrets.NATS_HOST }}
+          NATS_PORT: ${{ secrets.NATS_PORT }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          STORAGE_TYPE: ${{ secrets.STORAGE_TYPE }}
+          BACKEND_ADDRESS: ${{ secrets.BACKEND_ADDRESS }}
+          BACKEND_PRIVATE_ADDRESS: ${{ secrets.BACKEND_PRIVATE_ADDRESS }}
+          BACKEND_OTEL_ENDPOINT: ${{ secrets.BACKEND_OTEL_ENDPOINT }}
+          BACKEND_OTEL_SERVICE_NAME: ${{ secrets.BACKEND_OTEL_SERVICE_NAME }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: GITHUB_TOKEN,DOMAIN_NAME,IMAGE_TAG,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,POSTGRES_APP_DB,POSTGRES_HOST,POSTGRES_PORT,REDIS_PASSWORD,REDIS_HOST,REDIS_PORT,REDIS_DB_INDEX,NATS_HOST,NATS_PORT,S3_ENDPOINT,S3_ACCESS_KEY,S3_SECRET_KEY,STORAGE_TYPE,BACKEND_ADDRESS,BACKEND_PRIVATE_ADDRESS,BACKEND_OTEL_ENDPOINT,BACKEND_OTEL_SERVICE_NAME,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_SERVICE_NAME,GRAFANA_ADMIN_PASSWORD
           script: |
             cd ${{ inputs.deploy_dir }}
             echo "$GITHUB_TOKEN" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-
-            if [ -n "${INFISICAL_CLIENT_ID}" ]; then
-              if ! command -v infisical &> /dev/null; then
-                echo "Installing Infisical CLI on VPS..."
-                curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | sudo -E bash
-                sudo apt-get install -y infisical
-              fi
-
-              echo "Starting containers with in-memory secrets injection from Infisical..."
-              infisical run \
-                --projectId=${INFISICAL_PROJECT_ID} \
-                --env=${{ inputs.environment }} \
-                --domain=${INFISICAL_API_URL} \
-                --client-id=${INFISICAL_CLIENT_ID} \
-                --client-secret=${INFISICAL_CLIENT_SECRET} \
-                -- docker compose up -d --pull always --remove-orphans
-            else
-              echo "Starting containers with existing environment..."
-              DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose pull --ignore-buildable
-              DOMAIN_NAME=${{ inputs.domain_name }} IMAGE_TAG=${{ inputs.environment }} docker compose up -d
-            fi
-
+            docker compose pull --ignore-buildable
+            docker compose up -d --remove-orphans
             docker image prune -f

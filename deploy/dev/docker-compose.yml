@@ -5,13 +5,13 @@ services:
     hostname: backend
     restart: unless-stopped
     environment:
-      - ADDRESS=${BACKEND_ADDRESS}
-      - PRIVATE_ADDRESS=${BACKEND_PRIVATE_ADDRESS}
-      - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_APP_DB}?sslmode=disable
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB_INDEX}
-      - NATS_URL=nats://${NATS_HOST}:${NATS_PORT}
+      - ADDRESS=${BACKEND_ADDRESS:-:8080}
+      - PRIVATE_ADDRESS=${BACKEND_PRIVATE_ADDRESS:-:8081}
+      - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_APP_DB:-gate}?sslmode=disable
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/${REDIS_DB_INDEX:-0}
+      - NATS_URL=nats://${NATS_HOST:-nats}:${NATS_PORT:-4222}
       - GOJUDGE_GRPC_ADDR=go-judge:5051
-      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ENDPOINT=${S3_ENDPOINT:-http://s3:8333}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - STORAGE_TYPE=${STORAGE_TYPE:-s3}
@@ -70,7 +70,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_APP_DB}?sslmode=disable
+      - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_APP_DB:-gate}?sslmode=disable
     networks:
       - gate-dev
     command: ["--migrate"]
@@ -82,14 +82,14 @@ services:
     hostname: frontend
     restart: unless-stopped
     environment:
-      - BACKEND_API_URL=${BACKEND_API_URL}
-      - NEXT_PUBLIC_BACKEND_API_URL=${NEXT_PUBLIC_BACKEND_API_URL}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
-      - NEXT_PUBLIC_OTEL_EXPORTER_URL=${NEXT_PUBLIC_OTEL_EXPORTER_URL}
-      - NEXT_PUBLIC_OTEL_SERVICE_NAME=${NEXT_PUBLIC_OTEL_SERVICE_NAME}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME}
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://gate-backend-dev:8080}
+      - NEXT_PUBLIC_BACKEND_API_URL=${NEXT_PUBLIC_BACKEND_API_URL:-/api}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://${DOMAIN_NAME}}
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://${DOMAIN_NAME}/ws}
+      - NEXT_PUBLIC_OTEL_EXPORTER_URL=${NEXT_PUBLIC_OTEL_EXPORTER_URL:-https://${DOMAIN_NAME}/otlp/v1/traces}
+      - NEXT_PUBLIC_OTEL_SERVICE_NAME=${NEXT_PUBLIC_OTEL_SERVICE_NAME:-gate-frontend-browser}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-gate-frontend}
     networks:
       - gate-dev
       - traefik-network
