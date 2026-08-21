@@ -251,6 +251,9 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"DeleteContestTeam":      {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 		"ListContestSubmissions": {RequireAuth, checkListContestSubmissionsAccess},
 		"CreateSubmission":       {RequireAuth, RequireContestPermission(models.ActionCreateSubmission)},
+		"ListContestDrafts":      {RequireAuth, checkListContestDraftsAccess},
+		"CreateContestDraft":    {RequireAuth, RequireContestPermission(models.ActionGetContest)},
+		"DeleteContestDraft":    {RequireAuth, RequireContestPermission(models.ActionGetContest)},
 		"RejudgeSubmission":     {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 		"RejudgeContestProblem": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 		"RejudgeContest":        {RequireAuth, RequireContestPermission(models.ActionManageContest)},
@@ -499,6 +502,41 @@ func checkListContestSubmissionsAccess(ctx context.Context, evalCtx *EvalContext
 	return nil
 }
 
+func checkListContestDraftsAccess(ctx context.Context, evalCtx *EvalContext) error {
+	req, err := asListContestDraftsRequestObject(evalCtx.Request)
+	if err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "invalid contest drafts request")
+	}
+
+	if evalCtx.Deps.contestsRepo == nil {
+		return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
+	}
+	contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, req.OrgLogin, req.ContestLogin)
+	if err != nil {
+		return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
+	}
+
+	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, models.ActionGetContest)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
+	}
+
+	if req.Params.UserId != nil && *req.Params.UserId != evalCtx.User.Id {
+		managerAllowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, models.ActionManageContest)
+		if err != nil {
+			return err
+		}
+		if !managerAllowed {
+			return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view other users' drafts")
+		}
+	}
+
+	return nil
+}
+
 func checkGetSubmissionAccess(ctx context.Context, evalCtx *EvalContext) error {
 	if evalCtx.Deps.submissionsUC == nil {
 		return pkg.Wrap(pkg.ErrInternal, nil, "submissions authorization dependency is not configured")
@@ -545,6 +583,17 @@ func asListContestSubmissionsRequestObject(request interface{}) (corev1.ListCont
 		return *req, nil
 	default:
 		return corev1.ListContestSubmissionsRequestObject{}, fmt.Errorf("unexpected request type %T", request)
+	}
+}
+
+func asListContestDraftsRequestObject(request interface{}) (corev1.ListContestDraftsRequestObject, error) {
+	switch req := request.(type) {
+	case corev1.ListContestDraftsRequestObject:
+		return req, nil
+	case *corev1.ListContestDraftsRequestObject:
+		return *req, nil
+	default:
+		return corev1.ListContestDraftsRequestObject{}, fmt.Errorf("unexpected request type %T", request)
 	}
 }
 

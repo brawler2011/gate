@@ -813,3 +813,53 @@ func GetScoreboardResponseDTO(sb *models.ScoreboardResponse) *corev1.ScoreboardR
 	}
 }
 
+func ContestDraftDTO(draft models.ContestDraft) corev1.ContestDraftModel {
+	var username *string
+	if draft.Username != "" {
+		u := draft.Username
+		username = &u
+	}
+	var problemTitle *string
+	if draft.ProblemTitle != "" {
+		pt := draft.ProblemTitle
+		problemTitle = &pt
+	}
+
+	return corev1.ContestDraftModel{
+		Id:           draft.ID,
+		UserId:       draft.UserID,
+		Username:     username,
+		ContestId:    draft.ContestID,
+		ProblemId:    draft.ProblemID,
+		ProblemTitle: problemTitle,
+		Position:     draft.Position,
+		Language:     int32(draft.Language),
+		Code:         draft.Code,
+		CreatedAt:    draft.CreatedAt,
+		UpdatedAt:    draft.UpdatedAt,
+	}
+}
+
+func ListContestDraftsResponseDTO(list *models.ContestDraftsList) *corev1.ListContestDraftsResponseModel {
+	if list == nil {
+		return &corev1.ListContestDraftsResponseModel{
+			Drafts: []corev1.ContestDraftModel{},
+			Pagination: corev1.PaginationModel{
+				Page:  1,
+				Total: 0,
+			},
+		}
+	}
+
+	drafts := make([]corev1.ContestDraftModel, len(list.Drafts))
+	for i, d := range list.Drafts {
+		drafts[i] = ContestDraftDTO(d)
+	}
+
+	return &corev1.ListContestDraftsResponseModel{
+		Drafts:     drafts,
+		Pagination: PaginationDTO(list.Pagination),
+	}
+}
+
+

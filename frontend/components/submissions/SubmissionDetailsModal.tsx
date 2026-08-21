@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ActionIcon,
   Button,
   Center,
   Group,
@@ -11,7 +10,7 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
-import {IconExternalLink, IconX} from "@tabler/icons-react";
+import {IconExternalLink} from "@tabler/icons-react";
 import Link from "next/link";
 import React from "react";
 import useSWR from "swr";
@@ -42,7 +41,9 @@ export const SubmissionDetailsModal = ({
   const {data, error, isLoading} = useSWR(
     opened && submissionId ? ["submission-details", submissionId] : null,
     async () => {
-      if (!submissionId) return null;
+      if (!submissionId) {
+        return null;
+      }
       const [err, res] = await api.getSubmission({submissionId});
       if (err) {
         throw new Error(err.message || "Не удалось загрузить данные посылки");

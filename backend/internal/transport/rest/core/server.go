@@ -20,6 +20,7 @@ type CoreServer struct {
 	avatarsUC       *usecase.AvatarsUseCase
 	importUC        *usecase.ProblemImportUseCase
 	publishUC       *usecase.ProblemPublishUseCase
+	draftsUC        interfaces.DraftsUC
 	natsJS          jetstream.JetStream
 }
 
@@ -37,6 +38,7 @@ func NewCoreServer(
 	avatarsUC *usecase.AvatarsUseCase,
 	importUC *usecase.ProblemImportUseCase,
 	publishUC *usecase.ProblemPublishUseCase,
+	draftsUC interfaces.DraftsUC,
 	natsJS jetstream.JetStream,
 ) *CoreServer {
 	return &CoreServer{
@@ -53,6 +55,7 @@ func NewCoreServer(
 		avatarsUC:       avatarsUC,
 		importUC:        importUC,
 		publishUC:       publishUC,
+		draftsUC:        draftsUC,
 		natsJS:          natsJS,
 	}
 }

@@ -12,11 +12,13 @@ export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AuthResponseModel } from './models/AuthResponseModel';
 export type { CompileResult } from './models/CompileResult';
+export type { ContestDraftModel } from './models/ContestDraftModel';
 export type { ContestMemberModel } from './models/ContestMemberModel';
 export { ContestModel } from './models/ContestModel';
 export type { ContestProblemListItemModel } from './models/ContestProblemListItemModel';
 export type { ContestProblemModel } from './models/ContestProblemModel';
 export type { ContestTeamModel } from './models/ContestTeamModel';
+export type { CreateContestDraftRequestModel } from './models/CreateContestDraftRequestModel';
 export type { CreatedPost } from './models/CreatedPost';
 export type { CreateOrganizationResponseModel } from './models/CreateOrganizationResponseModel';
 export type { CreateSubmissionRequestModel } from './models/CreateSubmissionRequestModel';
@@ -36,6 +38,7 @@ export type { GetSubmissionResponseModel } from './models/GetSubmissionResponseM
 export type { GetTeamResponseModel } from './models/GetTeamResponseModel';
 export type { GetUserDashboardResponseModel } from './models/GetUserDashboardResponseModel';
 export type { GetUserResponseModel } from './models/GetUserResponseModel';
+export type { ListContestDraftsResponseModel } from './models/ListContestDraftsResponseModel';
 export type { ListContestMembersResponseModel } from './models/ListContestMembersResponseModel';
 export type { ListContestsResponseModel } from './models/ListContestsResponseModel';
 export type { ListContestTeamsResponseModel } from './models/ListContestTeamsResponseModel';

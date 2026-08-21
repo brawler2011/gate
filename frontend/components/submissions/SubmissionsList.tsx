@@ -28,8 +28,8 @@ import {
   StateString,
   TimeBeautify,
 } from "@/lib/lib";
-import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 
+import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 import styles from "./SubmissionsList.module.css";
 
 import type {SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";

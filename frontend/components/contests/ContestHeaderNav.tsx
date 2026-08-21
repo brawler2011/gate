@@ -2,6 +2,7 @@
 
 import {
   IconDeviceDesktop,
+  IconFileCode,
   IconMail,
   IconPuzzle,
   IconSend,
@@ -48,6 +49,9 @@ export const ContestHeaderNav = ({
     if (pathname.startsWith(`${contestBase}/submit`)) {
       return "submit";
     }
+    if (pathname.startsWith(`${contestBase}/drafts`)) {
+      return "drafts";
+    }
     if (pathname.startsWith(`${contestBase}/mysubmissions`)) {
       return "mysubmissions";
     }
@@ -83,6 +87,16 @@ export const ContestHeaderNav = ({
       href: `${contestBase}/submit`,
       icon: IconSend,
       active: activeTab === "submit",
+    });
+  }
+
+  if (checker.canViewProblems(contest) && user?.id) {
+    items.push({
+      key: "drafts",
+      label: "Черновики",
+      href: `${contestBase}/drafts`,
+      icon: IconFileCode,
+      active: activeTab === "drafts",
     });
   }
 

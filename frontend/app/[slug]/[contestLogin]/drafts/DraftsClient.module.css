@@ -1,0 +1,55 @@
+.editorContainer {
+  min-height: 400px;
+  height: 480px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  background-color: #252526;
+  border-radius: var(--mantine-radius-sm);
+  border: 1px solid #3c3c3c;
+  padding: 4px;
+}
+
+.codeEditor {
+  min-height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #252526;
+  color: #d4d4d4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+}
+
+.codeEditor textarea {
+  outline: none;
+  color: #d4d4d4;
+  caret-color: #d4d4d4;
+}
+
+.codeEditor textarea,
+.codeEditor pre {
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+
+.draftCard {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.draftCard:hover {
+  border-color: var(--mantine-color-blue-5);
+}
+
+.draftCodePreview {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8));
+  padding: 8px 12px;
+  border-radius: var(--mantine-radius-sm);
+  max-height: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-gray-4));
+}

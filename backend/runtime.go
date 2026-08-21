@@ -140,6 +140,7 @@ func runApp(envFile string) error {
 	blogsRepo := pg.NewBlogsRepo(pool)
 	submissionsRepo := pg.NewSubmissionsRepo(pool)
 	packagesRepo := pg.NewPackagesRepo(pool)
+	draftsRepo := pg.NewDraftsRepo(pool)
 	logger.Info("successfully initialized repositories")
 
 	var store storage.Storage
@@ -182,6 +183,7 @@ func runApp(envFile string) error {
 	orgsUC := usecase.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, txManager)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, txManager)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
+	draftsUC := usecase.NewDraftsUseCase(draftsRepo, contestsUC, permissionsUC, txManager)
 	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, store, defaultS3PackageBucket)
 	logger.Info("successfully initialized use cases")
 
@@ -282,6 +284,7 @@ func runApp(envFile string) error {
 		avatarsUC,
 		problemImportUC,
 		problemPublishUC,
+		draftsUC,
 		natsJS,
 	)
 

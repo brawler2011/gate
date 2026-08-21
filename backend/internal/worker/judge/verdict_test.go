@@ -142,7 +142,7 @@ func TestCalculateStandardVerdict_TruncatesLargeInput(t *testing.T) {
 	require.NotNil(t, verdict.TestDetails)
 	require.NotNil(t, verdict.TestDetails.FailedTestDetails)
 	assert.True(t, verdict.TestDetails.FailedTestDetails.IsTruncated)
-	assert.Equal(t, maxTestDetailSize, len(verdict.TestDetails.FailedTestDetails.Input))
+	assert.Len(t, verdict.TestDetails.FailedTestDetails.Input, maxTestDetailSize)
 }
 
 func ptrInt32(v int32) *int32 {

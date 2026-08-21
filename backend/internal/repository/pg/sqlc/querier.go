@@ -35,6 +35,7 @@ type Querier interface {
 	CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error)
 	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
 	CountContests(ctx context.Context, arg CountContestsParams) (int64, error)
+	CountDrafts(ctx context.Context, arg CountDraftsParams) (int64, error)
 	CountOrganizations(ctx context.Context, dollar_1 string) (int64, error)
 	CountPosts(ctx context.Context) (int64, error)
 	CountProblems(ctx context.Context, arg CountProblemsParams) (int64, error)
@@ -42,6 +43,7 @@ type Querier interface {
 	CountUsers(ctx context.Context, arg CountUsersParams) (int32, error)
 	// Contests queries (new schema with Organizations)
 	CreateContest(ctx context.Context, arg CreateContestParams) (Contest, error)
+	CreateDraft(ctx context.Context, arg CreateDraftParams) (uuid.UUID, error)
 	// Organizations queries
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreatePost(ctx context.Context, arg CreatePostParams) (uuid.UUID, error)
@@ -55,6 +57,7 @@ type Querier interface {
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
+	DeleteDraft(ctx context.Context, id uuid.UUID) error
 	DeleteOldEvents(ctx context.Context, arg DeleteOldEventsParams) error
 	DeleteOrganization(ctx context.Context, id uuid.UUID) error
 	DeletePost(ctx context.Context, id uuid.UUID) error
@@ -70,6 +73,8 @@ type Querier interface {
 	GetContestProblemResult(ctx context.Context, arg GetContestProblemResultParams) (ContestProblemResult, error)
 	GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]GetContestScoreboardFromStandingsRow, error)
 	GetContestTeam(ctx context.Context, arg GetContestTeamParams) (ContestTeam, error)
+	GetDraft(ctx context.Context, id uuid.UUID) (GetDraftRow, error)
+	GetDraftsCountByProblem(ctx context.Context, arg GetDraftsCountByProblemParams) (int64, error)
 	GetLatestUserOrganizationID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organization, error)
 	GetOrganizationByLogin(ctx context.Context, lower string) (Organization, error)
@@ -108,6 +113,7 @@ type Querier interface {
 	ListContests(ctx context.Context, arg ListContestsParams) ([]ListContestsRow, error)
 	ListDashboardContests(ctx context.Context, arg ListDashboardContestsParams) ([]ListDashboardContestsRow, error)
 	ListDashboardProblems(ctx context.Context, arg ListDashboardProblemsParams) ([]ListDashboardProblemsRow, error)
+	ListDrafts(ctx context.Context, arg ListDraftsParams) ([]ListDraftsRow, error)
 	ListOrganizationMembers(ctx context.Context, organizationID uuid.UUID) ([]ListOrganizationMembersRow, error)
 	ListOrganizationTeams(ctx context.Context, organizationID uuid.UUID) ([]Team, error)
 	ListOrganizations(ctx context.Context, arg ListOrganizationsParams) ([]Organization, error)

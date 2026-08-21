@@ -29,6 +29,8 @@ sql:
 
           - column: "submissions.language"
             go_type: "github.com/brawler2011/gate/backend/internal/domain/models.LanguageName"
+          - column: "contest_drafts.language"
+            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.LanguageName"
           - column: "submissions.state"
             go_type: "github.com/brawler2011/gate/backend/internal/domain/models.State"
           - column: "outbox_events.status"

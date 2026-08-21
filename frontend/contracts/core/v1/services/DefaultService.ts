@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { AuthResponseModel } from '../models/AuthResponseModel';
 import type { CompileResult } from '../models/CompileResult';
+import type { CreateContestDraftRequestModel } from '../models/CreateContestDraftRequestModel';
 import type { CreatedPost } from '../models/CreatedPost';
 import type { CreateOrganizationResponseModel } from '../models/CreateOrganizationResponseModel';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
@@ -18,6 +19,7 @@ import type { GetSubmissionResponseModel } from '../models/GetSubmissionResponse
 import type { GetTeamResponseModel } from '../models/GetTeamResponseModel';
 import type { GetUserDashboardResponseModel } from '../models/GetUserDashboardResponseModel';
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
+import type { ListContestDraftsResponseModel } from '../models/ListContestDraftsResponseModel';
 import type { ListContestMembersResponseModel } from '../models/ListContestMembersResponseModel';
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
 import type { ListContestTeamsResponseModel } from '../models/ListContestTeamsResponseModel';
@@ -858,6 +860,87 @@ export class DefaultService {
             },
             query: {
                 'unfrozen': unfrozen,
+            },
+        });
+    }
+    /**
+     * @returns CreationResponseModel OK
+     * @throws ApiError
+     */
+    public createContestDraft({
+        orgLogin,
+        contestLogin,
+        requestBody,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        requestBody: CreateContestDraftRequestModel,
+    }): CancelablePromise<CreationResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/drafts',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns ListContestDraftsResponseModel OK
+     * @throws ApiError
+     */
+    public listContestDrafts({
+        orgLogin,
+        contestLogin,
+        page,
+        pageSize,
+        problemId,
+        userId,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        page?: number,
+        pageSize?: number,
+        problemId?: string,
+        userId?: string,
+    }): CancelablePromise<ListContestDraftsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{org_login}/contests/{contest_login}/drafts',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'problemId': problemId,
+                'userId': userId,
+            },
+        });
+    }
+    /**
+     * @returns any OK
+     * @throws ApiError
+     */
+    public deleteContestDraft({
+        orgLogin,
+        contestLogin,
+        draftId,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        draftId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'draft_id': draftId,
             },
         });
     }

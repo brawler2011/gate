@@ -932,6 +932,102 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ScoreboardResponseModel"
+  /organizations/{org_login}/contests/{contest_login}/drafts:
+    post:
+      operationId: CreateContestDraft
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContestDraftRequestModel"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreationResponseModel"
+    get:
+      operationId: ListContestDrafts
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          example: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          example: 20
+        - name: problemId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListContestDraftsResponseModel"
+  /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}:
+    delete:
+      operationId: DeleteContestDraft
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: draft_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
   /submissions:
     post:
       operationId: CreateSubmission
@@ -5381,3 +5477,75 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SupportedLanguage"
+    CreateContestDraftRequestModel:
+      type: object
+      required:
+        - problem_id
+        - language
+        - code
+      properties:
+        problem_id:
+          type: string
+          format: uuid
+        language:
+          type: integer
+          format: int32
+          example: 10
+        code:
+          type: string
+    ContestDraftModel:
+      type: object
+      required:
+        - id
+        - user_id
+        - contest_id
+        - problem_id
+        - language
+        - code
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        contest_id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        position:
+          type: integer
+          format: int32
+        language:
+          type: integer
+          format: int32
+          example: 10
+        code:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ListContestDraftsResponseModel:
+      type: object
+      required:
+        - drafts
+        - pagination
+      properties:
+        drafts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContestDraftModel"
+        pagination:
+          $ref: "#/components/schemas/PaginationModel"
+

@@ -59,9 +59,10 @@ func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmis
 	user := middleware.GetUser(ctx)
 	canViewDetails := false
 
-	if user.IsAdmin() {
+	switch {
+	case user.IsAdmin():
 		canViewDetails = true
-	} else if submission.ContestID != nil {
+	case submission.ContestID != nil:
 		allowed, err := h.permissionsUC.HasContestPermission(
 			ctx,
 			*submission.ContestID,
@@ -71,10 +72,8 @@ func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmis
 		if err == nil && allowed {
 			canViewDetails = true
 		}
-	} else {
-		if submission.CreatedBy != nil && *submission.CreatedBy == user.Id {
-			canViewDetails = true
-		}
+	case submission.CreatedBy != nil && *submission.CreatedBy == user.Id:
+		canViewDetails = true
 	}
 
 	if !canViewDetails {

@@ -1,6 +1,7 @@
 "use client";
 
 import {Loader, Paper, Table, Text, Tooltip} from "@mantine/core";
+import {useState} from "react";
 
 import {
   ShortVerdictString,
@@ -12,13 +13,12 @@ import {
   useSubmissionsWebSocket,
   type SubmissionWithProgress,
 } from "@/lib/useSubmissionsWebSocket";
-import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 
 import styles from "./RecentSubmissionsTable.module.css";
+import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 
 import type {SubmissionsListItemModel} from "@/contracts/core/v1";
 import type {ReactNode} from "react";
-import {useState} from "react";
 
 const RECENT_SUBMISSIONS_LIMIT = 5;
 

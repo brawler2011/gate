@@ -152,6 +152,21 @@ type CompileResult struct {
 	Success      *bool   `json:"success,omitempty"`
 }
 
+// ContestDraftModel defines model for ContestDraftModel.
+type ContestDraftModel struct {
+	Code         string             `json:"code"`
+	ContestId    openapi_types.UUID `json:"contest_id"`
+	CreatedAt    time.Time          `json:"created_at"`
+	Id           openapi_types.UUID `json:"id"`
+	Language     int32              `json:"language"`
+	Position     *int32             `json:"position,omitempty"`
+	ProblemId    openapi_types.UUID `json:"problem_id"`
+	ProblemTitle *string            `json:"problem_title,omitempty"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+	UserId       openapi_types.UUID `json:"user_id"`
+	Username     *string            `json:"username,omitempty"`
+}
+
 // ContestMemberModel defines model for ContestMemberModel.
 type ContestMemberModel struct {
 	ContestId   openapi_types.UUID `json:"contest_id"`
@@ -230,6 +245,13 @@ type ContestTeamModel struct {
 	TeamId          openapi_types.UUID `json:"team_id"`
 	TeamName        string             `json:"team_name"`
 	TeamSlug        string             `json:"team_slug"`
+}
+
+// CreateContestDraftRequestModel defines model for CreateContestDraftRequestModel.
+type CreateContestDraftRequestModel struct {
+	Code      string             `json:"code"`
+	Language  int32              `json:"language"`
+	ProblemId openapi_types.UUID `json:"problem_id"`
 }
 
 // CreateOrganizationResponseModel defines model for CreateOrganizationResponseModel.
@@ -358,6 +380,12 @@ type GetUserDashboardResponseModel struct {
 // GetUserResponseModel defines model for GetUserResponseModel.
 type GetUserResponseModel struct {
 	User UserModel `json:"user"`
+}
+
+// ListContestDraftsResponseModel defines model for ListContestDraftsResponseModel.
+type ListContestDraftsResponseModel struct {
+	Drafts     []ContestDraftModel `json:"drafts"`
+	Pagination PaginationModel     `json:"pagination"`
 }
 
 // ListContestMembersResponseModel defines model for ListContestMembersResponseModel.
@@ -921,6 +949,14 @@ type CreateContestParams struct {
 	Login *string `form:"login,omitempty" json:"login,omitempty"`
 }
 
+// ListContestDraftsParams defines parameters for ListContestDrafts.
+type ListContestDraftsParams struct {
+	Page      *int32              `form:"page,omitempty" json:"page,omitempty"`
+	PageSize  *int32              `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	ProblemId *openapi_types.UUID `form:"problemId,omitempty" json:"problemId,omitempty"`
+	UserId    *openapi_types.UUID `form:"userId,omitempty" json:"userId,omitempty"`
+}
+
 // DeleteContestMemberParams defines parameters for DeleteContestMember.
 type DeleteContestMemberParams struct {
 	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
@@ -1347,6 +1383,9 @@ type UpdateOrganizationJSONRequestBody = UpdateOrganizationRequestModel
 // UpdateContestJSONRequestBody defines body for UpdateContest for application/json ContentType.
 type UpdateContestJSONRequestBody = UpdateContestRequestModel
 
+// CreateContestDraftJSONRequestBody defines body for CreateContestDraft for application/json ContentType.
+type CreateContestDraftJSONRequestBody = CreateContestDraftRequestModel
+
 // CreatePostMultipartRequestBody defines body for CreatePost for multipart/form-data ContentType.
 type CreatePostMultipartRequestBody CreatePostMultipartBody
 
@@ -1562,6 +1601,17 @@ type ClientInterface interface {
 	UpdateContestWithBody(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	UpdateContest(ctx context.Context, orgLogin string, contestLogin string, body UpdateContestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListContestDrafts request
+	ListContestDrafts(ctx context.Context, orgLogin string, contestLogin string, params *ListContestDraftsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateContestDraftWithBody request with any body
+	CreateContestDraftWithBody(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateContestDraft(ctx context.Context, orgLogin string, contestLogin string, body CreateContestDraftJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteContestDraft request
+	DeleteContestDraft(ctx context.Context, orgLogin string, contestLogin string, draftId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteContestMember request
 	DeleteContestMember(ctx context.Context, orgLogin string, contestLogin string, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2219,6 +2269,54 @@ func (c *Client) UpdateContestWithBody(ctx context.Context, orgLogin string, con
 
 func (c *Client) UpdateContest(ctx context.Context, orgLogin string, contestLogin string, body UpdateContestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateContestRequest(c.Server, orgLogin, contestLogin, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListContestDrafts(ctx context.Context, orgLogin string, contestLogin string, params *ListContestDraftsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListContestDraftsRequest(c.Server, orgLogin, contestLogin, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateContestDraftWithBody(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateContestDraftRequestWithBody(c.Server, orgLogin, contestLogin, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateContestDraft(ctx context.Context, orgLogin string, contestLogin string, body CreateContestDraftJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateContestDraftRequest(c.Server, orgLogin, contestLogin, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteContestDraft(ctx context.Context, orgLogin string, contestLogin string, draftId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteContestDraftRequest(c.Server, orgLogin, contestLogin, draftId)
 	if err != nil {
 		return nil, err
 	}
@@ -4864,6 +4962,219 @@ func NewUpdateContestRequestWithBody(server string, orgLogin string, contestLogi
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListContestDraftsRequest generates requests for ListContestDrafts
+func NewListContestDraftsRequest(server string, orgLogin string, contestLogin string, params *ListContestDraftsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/drafts", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ProblemId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "problemId", runtime.ParamLocationQuery, *params.ProblemId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.UserId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "userId", runtime.ParamLocationQuery, *params.UserId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateContestDraftRequest calls the generic CreateContestDraft builder with application/json body
+func NewCreateContestDraftRequest(server string, orgLogin string, contestLogin string, body CreateContestDraftJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateContestDraftRequestWithBody(server, orgLogin, contestLogin, "application/json", bodyReader)
+}
+
+// NewCreateContestDraftRequestWithBody generates requests for CreateContestDraft with any type of body
+func NewCreateContestDraftRequestWithBody(server string, orgLogin string, contestLogin string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/drafts", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteContestDraftRequest generates requests for DeleteContestDraft
+func NewDeleteContestDraftRequest(server string, orgLogin string, contestLogin string, draftId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "draft_id", runtime.ParamLocationPath, draftId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/drafts/%s", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -11184,6 +11495,17 @@ type ClientWithResponsesInterface interface {
 
 	UpdateContestWithResponse(ctx context.Context, orgLogin string, contestLogin string, body UpdateContestJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateContestResponse, error)
 
+	// ListContestDraftsWithResponse request
+	ListContestDraftsWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *ListContestDraftsParams, reqEditors ...RequestEditorFn) (*ListContestDraftsResponse, error)
+
+	// CreateContestDraftWithBodyWithResponse request with any body
+	CreateContestDraftWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateContestDraftResponse, error)
+
+	CreateContestDraftWithResponse(ctx context.Context, orgLogin string, contestLogin string, body CreateContestDraftJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateContestDraftResponse, error)
+
+	// DeleteContestDraftWithResponse request
+	DeleteContestDraftWithResponse(ctx context.Context, orgLogin string, contestLogin string, draftId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteContestDraftResponse, error)
+
 	// DeleteContestMemberWithResponse request
 	DeleteContestMemberWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*DeleteContestMemberResponse, error)
 
@@ -11979,6 +12301,71 @@ func (r UpdateContestResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UpdateContestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListContestDraftsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListContestDraftsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListContestDraftsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListContestDraftsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateContestDraftResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *CreationResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateContestDraftResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateContestDraftResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteContestDraftResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteContestDraftResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteContestDraftResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -14716,6 +15103,41 @@ func (c *ClientWithResponses) UpdateContestWithResponse(ctx context.Context, org
 	return ParseUpdateContestResponse(rsp)
 }
 
+// ListContestDraftsWithResponse request returning *ListContestDraftsResponse
+func (c *ClientWithResponses) ListContestDraftsWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *ListContestDraftsParams, reqEditors ...RequestEditorFn) (*ListContestDraftsResponse, error) {
+	rsp, err := c.ListContestDrafts(ctx, orgLogin, contestLogin, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListContestDraftsResponse(rsp)
+}
+
+// CreateContestDraftWithBodyWithResponse request with arbitrary body returning *CreateContestDraftResponse
+func (c *ClientWithResponses) CreateContestDraftWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateContestDraftResponse, error) {
+	rsp, err := c.CreateContestDraftWithBody(ctx, orgLogin, contestLogin, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateContestDraftResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateContestDraftWithResponse(ctx context.Context, orgLogin string, contestLogin string, body CreateContestDraftJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateContestDraftResponse, error) {
+	rsp, err := c.CreateContestDraft(ctx, orgLogin, contestLogin, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateContestDraftResponse(rsp)
+}
+
+// DeleteContestDraftWithResponse request returning *DeleteContestDraftResponse
+func (c *ClientWithResponses) DeleteContestDraftWithResponse(ctx context.Context, orgLogin string, contestLogin string, draftId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteContestDraftResponse, error) {
+	rsp, err := c.DeleteContestDraft(ctx, orgLogin, contestLogin, draftId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteContestDraftResponse(rsp)
+}
+
 // DeleteContestMemberWithResponse request returning *DeleteContestMemberResponse
 func (c *ClientWithResponses) DeleteContestMemberWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *DeleteContestMemberParams, reqEditors ...RequestEditorFn) (*DeleteContestMemberResponse, error) {
 	rsp, err := c.DeleteContestMember(ctx, orgLogin, contestLogin, params, reqEditors...)
@@ -16344,6 +16766,74 @@ func ParseUpdateContestResponse(rsp *http.Response) (*UpdateContestResponse, err
 	}
 
 	response := &UpdateContestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseListContestDraftsResponse parses an HTTP response from a ListContestDraftsWithResponse call
+func ParseListContestDraftsResponse(rsp *http.Response) (*ListContestDraftsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListContestDraftsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListContestDraftsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateContestDraftResponse parses an HTTP response from a CreateContestDraftWithResponse call
+func ParseCreateContestDraftResponse(rsp *http.Response) (*CreateContestDraftResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateContestDraftResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CreationResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteContestDraftResponse parses an HTTP response from a DeleteContestDraftWithResponse call
+func ParseDeleteContestDraftResponse(rsp *http.Response) (*DeleteContestDraftResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteContestDraftResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -19180,6 +19670,15 @@ type ServerInterface interface {
 	// (PATCH /organizations/{org_login}/contests/{contest_login})
 	UpdateContest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string)
 
+	// (GET /organizations/{org_login}/contests/{contest_login}/drafts)
+	ListContestDrafts(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params ListContestDraftsParams)
+
+	// (POST /organizations/{org_login}/contests/{contest_login}/drafts)
+	CreateContestDraft(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string)
+
+	// (DELETE /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id})
+	DeleteContestDraft(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, draftId openapi_types.UUID)
+
 	// (DELETE /organizations/{org_login}/contests/{contest_login}/members)
 	DeleteContestMember(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params DeleteContestMemberParams)
 
@@ -20229,6 +20728,152 @@ func (siw *ServerInterfaceWrapper) UpdateContest(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateContest(w, r, orgLogin, contestLogin)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListContestDrafts operation middleware
+func (siw *ServerInterfaceWrapper) ListContestDrafts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListContestDraftsParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "page", r.URL.Query(), &params.Page)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "pageSize", r.URL.Query(), &params.PageSize)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "problemId" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "problemId", r.URL.Query(), &params.ProblemId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "userId" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "userId", r.URL.Query(), &params.UserId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListContestDrafts(w, r, orgLogin, contestLogin, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateContestDraft operation middleware
+func (siw *ServerInterfaceWrapper) CreateContestDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateContestDraft(w, r, orgLogin, contestLogin)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteContestDraft operation middleware
+func (siw *ServerInterfaceWrapper) DeleteContestDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "draft_id" -------------
+	var draftId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "draft_id", r.PathValue("draft_id"), &draftId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "draft_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteContestDraft(w, r, orgLogin, contestLogin, draftId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -25026,6 +25671,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}", wrapper.DeleteContest)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}", wrapper.GetContest)
 	m.HandleFunc("PATCH "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}", wrapper.UpdateContest)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/drafts", wrapper.ListContestDrafts)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/drafts", wrapper.CreateContestDraft)
+	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}", wrapper.DeleteContestDraft)
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/members", wrapper.DeleteContestMember)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/members", wrapper.ListContestMembers)
 	m.HandleFunc("PATCH "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/members", wrapper.UpdateContestMember)
@@ -25464,6 +26112,62 @@ type UpdateContest200Response struct {
 }
 
 func (response UpdateContest200Response) VisitUpdateContestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ListContestDraftsRequestObject struct {
+	OrgLogin     string `json:"org_login"`
+	ContestLogin string `json:"contest_login"`
+	Params       ListContestDraftsParams
+}
+
+type ListContestDraftsResponseObject interface {
+	VisitListContestDraftsResponse(w http.ResponseWriter) error
+}
+
+type ListContestDrafts200JSONResponse ListContestDraftsResponseModel
+
+func (response ListContestDrafts200JSONResponse) VisitListContestDraftsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateContestDraftRequestObject struct {
+	OrgLogin     string `json:"org_login"`
+	ContestLogin string `json:"contest_login"`
+	Body         *CreateContestDraftJSONRequestBody
+}
+
+type CreateContestDraftResponseObject interface {
+	VisitCreateContestDraftResponse(w http.ResponseWriter) error
+}
+
+type CreateContestDraft200JSONResponse CreationResponseModel
+
+func (response CreateContestDraft200JSONResponse) VisitCreateContestDraftResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteContestDraftRequestObject struct {
+	OrgLogin     string             `json:"org_login"`
+	ContestLogin string             `json:"contest_login"`
+	DraftId      openapi_types.UUID `json:"draft_id"`
+}
+
+type DeleteContestDraftResponseObject interface {
+	VisitDeleteContestDraftResponse(w http.ResponseWriter) error
+}
+
+type DeleteContestDraft200Response struct {
+}
+
+func (response DeleteContestDraft200Response) VisitDeleteContestDraftResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
 }
@@ -27829,6 +28533,15 @@ type StrictServerInterface interface {
 	// (PATCH /organizations/{org_login}/contests/{contest_login})
 	UpdateContest(ctx context.Context, request UpdateContestRequestObject) (UpdateContestResponseObject, error)
 
+	// (GET /organizations/{org_login}/contests/{contest_login}/drafts)
+	ListContestDrafts(ctx context.Context, request ListContestDraftsRequestObject) (ListContestDraftsResponseObject, error)
+
+	// (POST /organizations/{org_login}/contests/{contest_login}/drafts)
+	CreateContestDraft(ctx context.Context, request CreateContestDraftRequestObject) (CreateContestDraftResponseObject, error)
+
+	// (DELETE /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id})
+	DeleteContestDraft(ctx context.Context, request DeleteContestDraftRequestObject) (DeleteContestDraftResponseObject, error)
+
 	// (DELETE /organizations/{org_login}/contests/{contest_login}/members)
 	DeleteContestMember(ctx context.Context, request DeleteContestMemberRequestObject) (DeleteContestMemberResponseObject, error)
 
@@ -28717,6 +29430,96 @@ func (sh *strictHandler) UpdateContest(w http.ResponseWriter, r *http.Request, o
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateContestResponseObject); ok {
 		if err := validResponse.VisitUpdateContestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListContestDrafts operation middleware
+func (sh *strictHandler) ListContestDrafts(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params ListContestDraftsParams) {
+	var request ListContestDraftsRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListContestDrafts(ctx, request.(ListContestDraftsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListContestDrafts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListContestDraftsResponseObject); ok {
+		if err := validResponse.VisitListContestDraftsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateContestDraft operation middleware
+func (sh *strictHandler) CreateContestDraft(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string) {
+	var request CreateContestDraftRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+
+	var body CreateContestDraftJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateContestDraft(ctx, request.(CreateContestDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateContestDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateContestDraftResponseObject); ok {
+		if err := validResponse.VisitCreateContestDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteContestDraft operation middleware
+func (sh *strictHandler) DeleteContestDraft(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, draftId openapi_types.UUID) {
+	var request DeleteContestDraftRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.DraftId = draftId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteContestDraft(ctx, request.(DeleteContestDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteContestDraft")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteContestDraftResponseObject); ok {
+		if err := validResponse.VisitDeleteContestDraftResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
