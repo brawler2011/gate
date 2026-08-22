@@ -17,20 +17,23 @@ import (
 const timeToClose = time.Second * 1
 
 type Observer struct {
-	upgrader *websocket.Upgrader
-	handler  http.Handler
-	hub      *Hub
+	upgrader    *websocket.Upgrader
+	handler     http.Handler
+	hub         *Hub
+	contestsHub *ContestsHub
 }
 
-func NewObserver(hub *Hub, middleware func(http.Handler) http.Handler) *Observer {
+func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler) *Observer {
 	mux := http.NewServeMux()
 
 	observer := &Observer{
-		upgrader: &websocket.Upgrader{},
-		hub:      hub,
+		upgrader:    &websocket.Upgrader{},
+		hub:         hub,
+		contestsHub: contestsHub,
 	}
 
 	mux.HandleFunc("/ws/submissions", observer.HandleSubmissions)
+	mux.HandleFunc("/ws/contests", observer.HandleContests)
 	observer.handler = middleware(mux)
 
 	return observer
@@ -295,3 +298,139 @@ func startReadPump(conn *websocket.Conn) <-chan struct{} {
 	}()
 	return done
 }
+
+func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	cId := r.URL.Query().Get("contestId")
+	if cId == "" {
+		http.Error(w, "contestId is required", http.StatusBadRequest)
+		return
+	}
+	contestID, err := uuid.Parse(cId)
+	if err != nil {
+		http.Error(w, "invalid contestId", http.StatusBadRequest)
+		return
+	}
+
+	var since uint64
+	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
+		if val, err := strconv.ParseUint(sinceStr, 10, 64); err == nil {
+			since = val
+		}
+	}
+
+	userID := user.Id
+	isModerator := user.IsAdmin()
+
+	filter := &ContestsFilter{
+		Since:       since,
+		ContestId:   contestID,
+		UserId:      &userID,
+		IsModerator: isModerator,
+	}
+
+	conn, err := s.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		slog.Error("failed to upgrade contest connection", "error", err)
+		return
+	}
+
+	sub := &ContestSubscriber{
+		id:         uuid.New(),
+		conn:       conn,
+		filter:     filter,
+		outbox:     make(chan *WrappedEvent, 1000),
+		state:      StatePaused,
+		pending:    make([]*WrappedEvent, 0),
+		barrierSeq: s.contestsHub.ring.MaxSeq(),
+	}
+
+	s.contestsHub.mu.Lock()
+	s.contestsHub.subscribers[sub.id] = sub
+	s.contestsHub.mu.Unlock()
+
+	defer func() {
+		s.contestsHub.mu.Lock()
+		delete(s.contestsHub.subscribers, sub.id)
+		s.contestsHub.mu.Unlock()
+		conn.Close()
+	}()
+
+	readDone := startReadPump(conn)
+
+	// Catch-up from ring buffer
+	history, err := s.contestsHub.ring.GetRange(filter.Since, sub.barrierSeq)
+	if err != nil && !errors.Is(err, ErrBufferEmpty) {
+		code, message := getClosingFrameData(err)
+		if err := conn.WriteControl(code, message, time.Now().Add(timeToClose)); err != nil {
+			handleWriteError(err)
+			return
+		}
+		slog.Error("cannot get contest history", "error", err, "since", filter.Since, "barrier", sub.barrierSeq)
+		return
+	}
+
+	for _, event := range history {
+		select {
+		case <-readDone:
+			return
+		default:
+		}
+
+		if filter.Matches(event) {
+			if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+				handleWriteError(err)
+				return
+			}
+		}
+	}
+
+	// Flush pending and transition to LIVE
+	sub.mu.Lock()
+	for _, event := range sub.pending {
+		select {
+		case <-readDone:
+			sub.mu.Unlock()
+			return
+		default:
+		}
+
+		if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+			handleWriteError(err)
+			sub.mu.Unlock()
+			return
+		}
+	}
+
+	sub.pending = nil
+	sub.state = StateLive
+	sub.mu.Unlock()
+
+	// Main write loop
+	for {
+		select {
+		case <-readDone:
+			return
+		case event := <-sub.outbox:
+			if event == nil {
+				slog.Error("contest event is nil")
+				if err := conn.WriteControl(websocket.CloseInternalServerErr, nil, time.Now().Add(timeToClose)); err != nil {
+					handleWriteError(err)
+				}
+				return
+			}
+			if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+				handleWriteError(err)
+				return
+			}
+		}
+	}
+}
+

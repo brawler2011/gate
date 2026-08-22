@@ -4,6 +4,7 @@ import {
   IconDeviceDesktop,
   IconFileCode,
   IconMail,
+  IconMessageDots,
   IconPuzzle,
   IconSend,
   IconSettings,
@@ -49,6 +50,9 @@ export const ContestHeaderNav = ({
     if (!pathname) {
       return "tasks";
     }
+    if (pathname.startsWith(`${contestBase}/messages`)) {
+      return "messages";
+    }
     if (pathname.startsWith(`${contestBase}/submit`)) {
       return "submit";
     }
@@ -80,6 +84,14 @@ export const ContestHeaderNav = ({
       href: contestBase,
       icon: IconPuzzle,
       active: activeTab === "tasks",
+    });
+
+    items.push({
+      key: "messages",
+      label: "Сообщения",
+      href: `${contestBase}/messages`,
+      icon: IconMessageDots,
+      active: activeTab === "messages",
     });
   }
 

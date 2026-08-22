@@ -30,6 +30,7 @@ export type ContestModel = {
     start_time?: string | null;
     end_time?: string | null;
     enable_drafts?: boolean;
+    allow_clarifications?: boolean;
     enable_upsolving?: boolean;
     enable_virtual_contests?: boolean;
     participation_mode?: ContestModel.participation_mode;

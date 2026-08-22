@@ -303,6 +303,13 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ApproveContestJoinRequest":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 		"RejectContestJoinRequest":     {RequireAuth, RequireContestPermission(models.ActionManageContest)},
 
+		"ListContestAnnouncements":   {RequireContestPermission(models.ActionGetContest)},
+		"CreateContestAnnouncement": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"DeleteContestAnnouncement": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"ListContestClarifications": {RequireAuth, RequireContestPermission(models.ActionGetContest)},
+		"CreateContestClarification": {RequireAuth, RequireContestPermission(models.ActionGetContest)},
+		"AnswerContestClarification": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+
 		"GetProblem":           {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
 		"GetProblemLimits":     {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
 		"GetProblemStatement":  {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},

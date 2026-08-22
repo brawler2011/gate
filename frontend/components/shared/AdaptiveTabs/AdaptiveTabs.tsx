@@ -55,6 +55,7 @@ export const AdaptiveTabs = ({
             >
               {Icon ? <Icon size={15} /> : null}
               {item.label}
+              {item.badge ? <span className={classes.tabBadge}>{item.badge}</span> : null}
             </Link>
           );
         })}
@@ -92,6 +93,7 @@ export const AdaptiveTabs = ({
                   component={Link}
                   href={item.href}
                   leftSection={Icon ? <Icon size={15} /> : undefined}
+                  rightSection={item.badge}
                   className={cx(active && classes.menuItemActive)}
                   onClick={() => setOpened(false)}
                 >

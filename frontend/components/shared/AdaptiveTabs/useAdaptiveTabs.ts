@@ -7,6 +7,7 @@ export type AdaptiveTabItem = {
   label: string;
   href: string;
   icon?: React.ComponentType<{ size?: string | number }>;
+  badge?: React.ReactNode;
   active?: boolean;
 };
 

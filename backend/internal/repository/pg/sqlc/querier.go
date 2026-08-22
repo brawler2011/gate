@@ -27,6 +27,7 @@ type Querier interface {
 	AddProblemTeam(ctx context.Context, arg AddProblemTeamParams) error
 	// Team Members
 	AddTeamMember(ctx context.Context, arg AddTeamMemberParams) error
+	AnswerContestClarification(ctx context.Context, arg AnswerContestClarificationParams) (ContestClarification, error)
 	BlockSubmission(ctx context.Context, arg BlockSubmissionParams) error
 	BlockUserProblemSubmissions(ctx context.Context, arg BlockUserProblemSubmissionsParams) error
 	// Access check helpers
@@ -39,6 +40,9 @@ type Querier interface {
 	CleanupExpiredSessions(ctx context.Context, hardLimitCutoff time.Time) error
 	CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error)
 	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
+	CountContestAnnouncements(ctx context.Context, contestID uuid.UUID) (int64, error)
+	CountContestClarificationsForModerator(ctx context.Context, arg CountContestClarificationsForModeratorParams) (int64, error)
+	CountContestClarificationsForUser(ctx context.Context, arg CountContestClarificationsForUserParams) (int64, error)
 	CountContests(ctx context.Context, arg CountContestsParams) (int64, error)
 	CountDrafts(ctx context.Context, arg CountDraftsParams) (int64, error)
 	CountNotificationsByUserID(ctx context.Context, arg CountNotificationsByUserIDParams) (int64, error)
@@ -50,6 +54,8 @@ type Querier interface {
 	CreateAuthToken(ctx context.Context, arg CreateAuthTokenParams) error
 	// Contests queries (new schema with Organizations)
 	CreateContest(ctx context.Context, arg CreateContestParams) (Contest, error)
+	CreateContestAnnouncement(ctx context.Context, arg CreateContestAnnouncementParams) (ContestAnnouncement, error)
+	CreateContestClarification(ctx context.Context, arg CreateContestClarificationParams) (ContestClarification, error)
 	// ============================================================================
 	// Contest Join Requests
 	// ============================================================================
@@ -83,6 +89,7 @@ type Querier interface {
 	DeleteAuthToken(ctx context.Context, id uuid.UUID) error
 	DeleteAuthTokensByUserIdAndType(ctx context.Context, arg DeleteAuthTokensByUserIdAndTypeParams) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
+	DeleteContestAnnouncement(ctx context.Context, arg DeleteContestAnnouncementParams) error
 	DeleteContestUserProblemBlock(ctx context.Context, arg DeleteContestUserProblemBlockParams) error
 	DeleteDraft(ctx context.Context, id uuid.UUID) error
 	DeleteOldEvents(ctx context.Context, arg DeleteOldEventsParams) error
@@ -94,9 +101,11 @@ type Querier interface {
 	DeleteSessionsByUserId(ctx context.Context, userID uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
 	GetAuthTokenByHash(ctx context.Context, arg GetAuthTokenByHashParams) (AuthToken, error)
+	GetContestAnnouncementByID(ctx context.Context, id uuid.UUID) (GetContestAnnouncementByIDRow, error)
 	GetContestByID(ctx context.Context, id uuid.UUID) (GetContestByIDRow, error)
 	GetContestByLogin(ctx context.Context, arg GetContestByLoginParams) (GetContestByLoginRow, error)
 	GetContestByOrgLoginAndContestLogin(ctx context.Context, arg GetContestByOrgLoginAndContestLoginParams) (GetContestByOrgLoginAndContestLoginRow, error)
+	GetContestClarificationByID(ctx context.Context, id uuid.UUID) (GetContestClarificationByIDRow, error)
 	GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (GetContestJoinRequestByIDRow, error)
 	GetContestMember(ctx context.Context, arg GetContestMemberParams) (ContestMember, error)
 	GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error)
@@ -146,6 +155,9 @@ type Querier interface {
 	ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]ListAllContestsRow, error)
 	ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error)
 	ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]User, error)
+	ListContestAnnouncements(ctx context.Context, arg ListContestAnnouncementsParams) ([]ListContestAnnouncementsRow, error)
+	ListContestClarificationsForModerator(ctx context.Context, arg ListContestClarificationsForModeratorParams) ([]ListContestClarificationsForModeratorRow, error)
+	ListContestClarificationsForUser(ctx context.Context, arg ListContestClarificationsForUserParams) ([]ListContestClarificationsForUserRow, error)
 	ListContestJoinRequests(ctx context.Context, arg ListContestJoinRequestsParams) ([]ListContestJoinRequestsRow, error)
 	ListContestMembers(ctx context.Context, contestID uuid.UUID) ([]ListContestMembersRow, error)
 	ListContestProblems(ctx context.Context, contestID uuid.UUID) ([]ListContestProblemsRow, error)

@@ -35,4 +35,24 @@ export class DefaultService {
             },
         });
     }
+    /**
+     * @returns void
+     * @throws ApiError
+     */
+    public observeContests({
+        contestId,
+        since,
+    }: {
+        contestId: string,
+        since?: number,
+    }): CancelablePromise<void> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/contests',
+            query: {
+                'since': since,
+                'contestId': contestId,
+            },
+        });
+    }
 }

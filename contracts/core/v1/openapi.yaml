@@ -1448,6 +1448,200 @@ paths:
       responses:
         "200":
           description: Request rejected
+
+  /organizations/{org_login}/contests/{contest_login}/announcements:
+    get:
+      operationId: ListContestAnnouncements
+      summary: List contest announcements
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 50
+      responses:
+        "200":
+          description: List of contest announcements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListContestAnnouncementsResponseModel"
+    post:
+      operationId: CreateContestAnnouncement
+      summary: Create a contest announcement (jury only)
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContestAnnouncementRequestModel"
+      responses:
+        "200":
+          description: Announcement created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContestAnnouncementModel"
+
+  /organizations/{org_login}/contests/{contest_login}/announcements/{announcement_id}:
+    delete:
+      operationId: DeleteContestAnnouncement
+      summary: Delete a contest announcement (jury only)
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: announcement_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Announcement deleted
+
+  /organizations/{org_login}/contests/{contest_login}/clarifications:
+    get:
+      operationId: ListContestClarifications
+      summary: "List contest clarifications (for participant: own questions; for jury: all questions)"
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: problem_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 50
+      responses:
+        "200":
+          description: List of contest clarifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListContestClarificationsResponseModel"
+    post:
+      operationId: CreateContestClarification
+      summary: Submit a clarification question to the jury
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContestClarificationRequestModel"
+      responses:
+        "200":
+          description: Clarification question submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContestClarificationModel"
+
+  /organizations/{org_login}/contests/{contest_login}/clarifications/{clarification_id}/answer:
+    post:
+      operationId: AnswerContestClarification
+      summary: Answer a clarification question (jury only)
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: clarification_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerContestClarificationRequestModel"
+      responses:
+        "200":
+          description: Clarification answered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContestClarificationModel"
+
   /submissions:
     post:
       operationId: CreateSubmission
@@ -4815,6 +5009,9 @@ components:
         enable_drafts:
           type: boolean
           default: true
+        allow_clarifications:
+          type: boolean
+          default: true
         enable_upsolving:
           type: boolean
           default: true
@@ -5000,6 +5197,8 @@ components:
           format: date-time
           nullable: true
         enable_drafts:
+          type: boolean
+        allow_clarifications:
           type: boolean
         enable_upsolving:
           type: boolean
@@ -6970,5 +7169,161 @@ components:
       properties:
         request:
           $ref: "#/components/schemas/ContestJoinRequestModel"
+
+    ContestAnnouncementModel:
+      type: object
+      required:
+        - id
+        - contest_id
+        - author_id
+        - author_username
+        - title
+        - body
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        problem_letter:
+          type: string
+        author_id:
+          type: string
+          format: uuid
+        author_username:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateContestAnnouncementRequestModel:
+      type: object
+      required:
+        - title
+        - body
+      properties:
+        problem_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        body:
+          type: string
+
+    ListContestAnnouncementsResponseModel:
+      type: object
+      required:
+        - announcements
+        - pagination
+      properties:
+        announcements:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContestAnnouncementModel"
+        pagination:
+          $ref: "#/components/schemas/PaginationModel"
+
+    ContestClarificationModel:
+      type: object
+      required:
+        - id
+        - contest_id
+        - user_id
+        - username
+        - question
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        problem_letter:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        question:
+          type: string
+        answer:
+          type: string
+        answered_by:
+          type: string
+          format: uuid
+        answered_by_username:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        answered_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateContestClarificationRequestModel:
+      type: object
+      required:
+        - question
+      properties:
+        problem_id:
+          type: string
+          format: uuid
+        question:
+          type: string
+
+    AnswerContestClarificationRequestModel:
+      type: object
+      required:
+        - answer
+      properties:
+        answer:
+          type: string
+        publish_as_announcement:
+          type: boolean
+        announcement_title:
+          type: string
+
+    ListContestClarificationsResponseModel:
+      type: object
+      required:
+        - clarifications
+        - pagination
+      properties:
+        clarifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContestClarificationModel"
+        pagination:
+          $ref: "#/components/schemas/PaginationModel"
+
 
 

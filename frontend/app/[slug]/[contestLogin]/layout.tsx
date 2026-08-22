@@ -1,4 +1,4 @@
-import {ContestHeaderNav} from "@/components/contests";
+import {ContestHeaderNav, ContestEventsListener} from "@/components/contests";
 import {DefaultLayout} from "@/components/shared";
 import {api, unwrapAndCache} from "@/lib/api";
 import {getMyContestRole} from "@/lib/permissions";
@@ -23,6 +23,11 @@ const ContestLayout = async ({
   const contestRole = me?.user ? await getMyContestRole(slug, contestLogin) : null;
   const org = orgData.organization;
 
+  const isModerator =
+    contestRole?.role === "moderator" ||
+    contestRole?.role === "owner" ||
+    me?.user?.role === "admin";
+
   return (
     <DefaultLayout
       headerUser={me?.user ?? null}
@@ -41,6 +46,11 @@ const ContestLayout = async ({
         />
       }
     >
+      <ContestEventsListener
+        contestId={response.contest.id}
+        currentUserId={me?.user?.id}
+        isModerator={isModerator}
+      />
       {children}
     </DefaultLayout>
   );

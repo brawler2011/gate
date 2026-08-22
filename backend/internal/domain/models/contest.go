@@ -426,6 +426,13 @@ func (s ContestSettings) GetEnableDrafts() bool {
 	return *s.EnableDrafts
 }
 
+func (s ContestSettings) GetAllowClarifications() bool {
+	if s.AllowClarifications == nil {
+		return true
+	}
+	return *s.AllowClarifications
+}
+
 func (s ContestSettings) GetEnableUpsolving() bool {
 	if s.EnableUpsolving == nil {
 		return true

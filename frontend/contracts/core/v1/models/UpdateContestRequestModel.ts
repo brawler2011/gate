@@ -22,6 +22,7 @@ export type UpdateContestRequestModel = {
     start_time?: string | null;
     end_time?: string | null;
     enable_drafts?: boolean;
+    allow_clarifications?: boolean;
     enable_upsolving?: boolean;
     enable_virtual_contests?: boolean;
     participation_mode?: UpdateContestRequestModel.participation_mode;

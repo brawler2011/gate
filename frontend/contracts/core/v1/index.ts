@@ -12,6 +12,7 @@ export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AdminChangeEmailRequestModel } from './models/AdminChangeEmailRequestModel';
 export type { AdminSetPasswordRequestModel } from './models/AdminSetPasswordRequestModel';
+export type { AnswerContestClarificationRequestModel } from './models/AnswerContestClarificationRequestModel';
 export { ApproveOrganizationJoinRequestModel } from './models/ApproveOrganizationJoinRequestModel';
 export type { AuthResponseModel } from './models/AuthResponseModel';
 export type { BatchCreatedUserItem } from './models/BatchCreatedUserItem';
@@ -25,6 +26,8 @@ export type { ClaimTemporaryUserRequestModel } from './models/ClaimTemporaryUser
 export type { ClaimTemporaryUserResponseModel } from './models/ClaimTemporaryUserResponseModel';
 export type { CompileResult } from './models/CompileResult';
 export type { ConfirmEmailChangeRequestModel } from './models/ConfirmEmailChangeRequestModel';
+export type { ContestAnnouncementModel } from './models/ContestAnnouncementModel';
+export type { ContestClarificationModel } from './models/ContestClarificationModel';
 export type { ContestDraftModel } from './models/ContestDraftModel';
 export type { ContestJoinRequestModel } from './models/ContestJoinRequestModel';
 export type { ContestJoinRequestNullableResponseModel } from './models/ContestJoinRequestNullableResponseModel';
@@ -35,6 +38,8 @@ export type { ContestProblemListItemModel } from './models/ContestProblemListIte
 export type { ContestProblemModel } from './models/ContestProblemModel';
 export type { ContestProblemReorderItemModel } from './models/ContestProblemReorderItemModel';
 export type { ContestTeamModel } from './models/ContestTeamModel';
+export type { CreateContestAnnouncementRequestModel } from './models/CreateContestAnnouncementRequestModel';
+export type { CreateContestClarificationRequestModel } from './models/CreateContestClarificationRequestModel';
 export type { CreateContestDraftRequestModel } from './models/CreateContestDraftRequestModel';
 export type { CreateContestJoinRequestModel } from './models/CreateContestJoinRequestModel';
 export type { CreatedPost } from './models/CreatedPost';
@@ -60,6 +65,8 @@ export type { GetUserDashboardResponseModel } from './models/GetUserDashboardRes
 export type { GetUserResponseModel } from './models/GetUserResponseModel';
 export { InviteOrganizationMemberRequestModel } from './models/InviteOrganizationMemberRequestModel';
 export type { ListClaimedAccountsResponseModel } from './models/ListClaimedAccountsResponseModel';
+export type { ListContestAnnouncementsResponseModel } from './models/ListContestAnnouncementsResponseModel';
+export type { ListContestClarificationsResponseModel } from './models/ListContestClarificationsResponseModel';
 export type { ListContestDraftsResponseModel } from './models/ListContestDraftsResponseModel';
 export type { ListContestJoinRequestsResponseModel } from './models/ListContestJoinRequestsResponseModel';
 export type { ListContestMembersResponseModel } from './models/ListContestMembersResponseModel';

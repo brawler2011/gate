@@ -43,6 +43,12 @@
   border-bottom-color: var(--mantine-color-blue-6);
 }
 
+.tabBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+}
+
 .moreButton {
   display: inline-flex;
   align-items: center;

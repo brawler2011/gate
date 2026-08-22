@@ -40,6 +40,25 @@ paths:
       responses:
         "101":
           description: Switching protocols
+  /contests:
+    get:
+      operationId: ObserveContests
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: contestId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "101":
+          description: Switching protocols
 components:
   schemas:
     SubmissionsWsCloseCode:
@@ -206,3 +225,146 @@ components:
               type: integer
               format: int32
               nullable: true
+    ContestEventType:
+      type: string
+      enum:
+        - contest.announcement_created
+        - contest.announcement_deleted
+        - contest.clarification_created
+        - contest.clarification_answered
+    ContestMessage:
+      type: object
+      required:
+        - event_type
+        - payload
+      properties:
+        event_type:
+          $ref: "#/components/schemas/ContestEventType"
+        payload:
+          oneOf:
+            - $ref: "#/components/schemas/MessageContestAnnouncementCreated"
+            - $ref: "#/components/schemas/MessageContestAnnouncementDeleted"
+            - $ref: "#/components/schemas/MessageContestClarificationCreated"
+            - $ref: "#/components/schemas/MessageContestClarificationAnswered"
+    MessageContestAnnouncementCreated:
+      type: object
+      required:
+        - id
+        - contest_id
+        - title
+        - body
+        - author_username
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        problem_letter:
+          type: string
+        author_id:
+          type: string
+          format: uuid
+        author_username:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    MessageContestAnnouncementDeleted:
+      type: object
+      required:
+        - id
+        - contest_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+    MessageContestClarificationCreated:
+      type: object
+      required:
+        - id
+        - contest_id
+        - user_id
+        - username
+        - question
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        problem_letter:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        question:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    MessageContestClarificationAnswered:
+      type: object
+      required:
+        - id
+        - contest_id
+        - user_id
+        - username
+        - question
+        - answer
+        - answered_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        problem_letter:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        question:
+          type: string
+        answer:
+          type: string
+        answered_by:
+          type: string
+          format: uuid
+        answered_by_username:
+          type: string
+        answered_at:
+          type: string
+          format: date-time
+

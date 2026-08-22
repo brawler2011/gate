@@ -469,6 +469,31 @@ type Contest struct {
 	UpdatedAt      time.Time                `json:"updated_at"`
 }
 
+type ContestAnnouncement struct {
+	ID        uuid.UUID   `json:"id"`
+	ContestID uuid.UUID   `json:"contest_id"`
+	ProblemID pgtype.UUID `json:"problem_id"`
+	AuthorID  uuid.UUID   `json:"author_id"`
+	Title     string      `json:"title"`
+	Body      string      `json:"body"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
+}
+
+type ContestClarification struct {
+	ID         uuid.UUID          `json:"id"`
+	ContestID  uuid.UUID          `json:"contest_id"`
+	ProblemID  pgtype.UUID        `json:"problem_id"`
+	UserID     uuid.UUID          `json:"user_id"`
+	Question   string             `json:"question"`
+	Answer     *string            `json:"answer"`
+	AnsweredBy pgtype.UUID        `json:"answered_by"`
+	Status     string             `json:"status"`
+	CreatedAt  time.Time          `json:"created_at"`
+	AnsweredAt pgtype.Timestamptz `json:"answered_at"`
+	UpdatedAt  time.Time          `json:"updated_at"`
+}
+
 type ContestDraft struct {
 	ID        uuid.UUID `json:"id"`
 	ContestID uuid.UUID `json:"contest_id"`

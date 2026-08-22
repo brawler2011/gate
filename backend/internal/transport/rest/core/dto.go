@@ -172,6 +172,7 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 	freezeStatus := corev1.ContestModelFreezeStatus(c.GetFreezeStatus())
 
 	enableDrafts := settings.GetEnableDrafts()
+	allowClarifications := settings.GetAllowClarifications()
 	enableUpsolving := settings.GetEnableUpsolving()
 	enableVirtualContests := settings.GetEnableVirtualContests()
 	participationMode := corev1.ContestModelParticipationMode(settings.GetParticipationMode())
@@ -192,6 +193,7 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		FreezeDurationMinutes:  freezeDurationMinutes,
 		FreezeStatus:           freezeStatus,
 		EnableDrafts:          &enableDrafts,
+		AllowClarifications:   &allowClarifications,
 		EnableUpsolving:        &enableUpsolving,
 		EnableVirtualContests: &enableVirtualContests,
 		ParticipationMode:     &participationMode,
@@ -1002,6 +1004,87 @@ func ListContestJoinRequestsResponseDTO(reqs []models.ContestJoinRequest) *corev
 		Requests: items,
 	}
 }
+
+func ContestAnnouncementDTO(a *models.ContestAnnouncement) *corev1.ContestAnnouncementModel {
+	if a == nil {
+		return nil
+	}
+	return &corev1.ContestAnnouncementModel{
+		Id:             a.ID,
+		ContestId:      a.ContestID,
+		ProblemId:      a.ProblemID,
+		ProblemTitle:   a.ProblemTitle,
+		ProblemLetter:  a.ProblemLetter,
+		AuthorId:       a.AuthorID,
+		AuthorUsername: a.AuthorUsername,
+		Title:          a.Title,
+		Body:           a.Body,
+		CreatedAt:      a.CreatedAt,
+		UpdatedAt:      a.UpdatedAt,
+	}
+}
+
+func ContestAnnouncementsListResponseDTO(list *models.ContestAnnouncementsList) *corev1.ListContestAnnouncementsResponseModel {
+	if list == nil {
+		return &corev1.ListContestAnnouncementsResponseModel{
+			Announcements: []corev1.ContestAnnouncementModel{},
+			Pagination:    corev1.PaginationModel{},
+		}
+	}
+
+	items := make([]corev1.ContestAnnouncementModel, len(list.Announcements))
+	for i, a := range list.Announcements {
+		items[i] = *ContestAnnouncementDTO(&a)
+	}
+
+	return &corev1.ListContestAnnouncementsResponseModel{
+		Announcements: items,
+		Pagination:    PaginationDTO(list.Pagination),
+	}
+}
+
+func ContestClarificationDTO(c *models.ContestClarification) *corev1.ContestClarificationModel {
+	if c == nil {
+		return nil
+	}
+	return &corev1.ContestClarificationModel{
+		Id:                 c.ID,
+		ContestId:          c.ContestID,
+		ProblemId:          c.ProblemID,
+		ProblemTitle:       c.ProblemTitle,
+		ProblemLetter:      c.ProblemLetter,
+		UserId:             c.UserID,
+		Username:           c.Username,
+		Question:           c.Question,
+		Answer:             c.Answer,
+		AnsweredBy:         c.AnsweredBy,
+		AnsweredByUsername: c.AnsweredByUsername,
+		Status:             string(c.Status),
+		CreatedAt:          c.CreatedAt,
+		AnsweredAt:         c.AnsweredAt,
+		UpdatedAt:          c.UpdatedAt,
+	}
+}
+
+func ContestClarificationsListResponseDTO(list *models.ContestClarificationsList) *corev1.ListContestClarificationsResponseModel {
+	if list == nil {
+		return &corev1.ListContestClarificationsResponseModel{
+			Clarifications: []corev1.ContestClarificationModel{},
+			Pagination:     corev1.PaginationModel{},
+		}
+	}
+
+	items := make([]corev1.ContestClarificationModel, len(list.Clarifications))
+	for i, c := range list.Clarifications {
+		items[i] = *ContestClarificationDTO(&c)
+	}
+
+	return &corev1.ListContestClarificationsResponseModel{
+		Clarifications: items,
+		Pagination:     PaginationDTO(list.Pagination),
+	}
+}
+
 
 
 

@@ -17,6 +17,14 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ContestEventType.
+const (
+	ContestAnnouncementCreated   ContestEventType = "contest.announcement_created"
+	ContestAnnouncementDeleted   ContestEventType = "contest.announcement_deleted"
+	ContestClarificationAnswered ContestEventType = "contest.clarification_answered"
+	ContestClarificationCreated  ContestEventType = "contest.clarification_created"
+)
+
 // Defines values for SubmissionsEventType.
 const (
 	SubmissionsCompilingStarted SubmissionsEventType = "submissions.compiling_started"
@@ -40,6 +48,69 @@ const (
 	SubmissionsWsCloseReasonHistoryLost  SubmissionsWsCloseReason = "history_lost"
 	SubmissionsWsCloseReasonInvalidRange SubmissionsWsCloseReason = "invalid_range"
 )
+
+// ContestEventType defines model for ContestEventType.
+type ContestEventType string
+
+// ContestMessage defines model for ContestMessage.
+type ContestMessage struct {
+	EventType ContestEventType       `json:"event_type"`
+	Payload   ContestMessage_Payload `json:"payload"`
+}
+
+// ContestMessage_Payload defines model for ContestMessage.Payload.
+type ContestMessage_Payload struct {
+	union json.RawMessage
+}
+
+// MessageContestAnnouncementCreated defines model for MessageContestAnnouncementCreated.
+type MessageContestAnnouncementCreated struct {
+	AuthorId       *openapi_types.UUID `json:"author_id,omitempty"`
+	AuthorUsername string              `json:"author_username"`
+	Body           string              `json:"body"`
+	ContestId      openapi_types.UUID  `json:"contest_id"`
+	CreatedAt      time.Time           `json:"created_at"`
+	Id             openapi_types.UUID  `json:"id"`
+	ProblemId      *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemLetter  *string             `json:"problem_letter,omitempty"`
+	ProblemTitle   *string             `json:"problem_title,omitempty"`
+	Title          string              `json:"title"`
+}
+
+// MessageContestAnnouncementDeleted defines model for MessageContestAnnouncementDeleted.
+type MessageContestAnnouncementDeleted struct {
+	ContestId openapi_types.UUID `json:"contest_id"`
+	Id        openapi_types.UUID `json:"id"`
+}
+
+// MessageContestClarificationAnswered defines model for MessageContestClarificationAnswered.
+type MessageContestClarificationAnswered struct {
+	Answer             string              `json:"answer"`
+	AnsweredAt         time.Time           `json:"answered_at"`
+	AnsweredBy         *openapi_types.UUID `json:"answered_by,omitempty"`
+	AnsweredByUsername *string             `json:"answered_by_username,omitempty"`
+	ContestId          openapi_types.UUID  `json:"contest_id"`
+	Id                 openapi_types.UUID  `json:"id"`
+	ProblemId          *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemLetter      *string             `json:"problem_letter,omitempty"`
+	ProblemTitle       *string             `json:"problem_title,omitempty"`
+	Question           string              `json:"question"`
+	UserId             openapi_types.UUID  `json:"user_id"`
+	Username           string              `json:"username"`
+}
+
+// MessageContestClarificationCreated defines model for MessageContestClarificationCreated.
+type MessageContestClarificationCreated struct {
+	ContestId     openapi_types.UUID  `json:"contest_id"`
+	CreatedAt     time.Time           `json:"created_at"`
+	Id            openapi_types.UUID  `json:"id"`
+	ProblemId     *openapi_types.UUID `json:"problem_id,omitempty"`
+	ProblemLetter *string             `json:"problem_letter,omitempty"`
+	ProblemTitle  *string             `json:"problem_title,omitempty"`
+	Question      string              `json:"question"`
+	UserId        openapi_types.UUID  `json:"user_id"`
+	Username      string              `json:"username"`
+}
 
 // MessageSubmissionCompilingStarted defines model for MessageSubmissionCompilingStarted.
 type MessageSubmissionCompilingStarted struct {
@@ -167,6 +238,12 @@ type SubmissionsWsCloseCode int32
 // SubmissionsWsCloseReason defines model for SubmissionsWsCloseReason.
 type SubmissionsWsCloseReason string
 
+// ObserveContestsParams defines parameters for ObserveContests.
+type ObserveContestsParams struct {
+	Since     *int64             `form:"since,omitempty" json:"since,omitempty"`
+	ContestId openapi_types.UUID `form:"contestId" json:"contestId"`
+}
+
 // ObserveSubmissionsParams defines parameters for ObserveSubmissions.
 type ObserveSubmissionsParams struct {
 	Since     int64               `form:"since" json:"since"`
@@ -174,6 +251,120 @@ type ObserveSubmissionsParams struct {
 	UserId    *openapi_types.UUID `form:"userId,omitempty" json:"userId,omitempty"`
 	ProblemId *openapi_types.UUID `form:"problemId,omitempty" json:"problemId,omitempty"`
 	Language  *int32              `form:"language,omitempty" json:"language,omitempty"`
+}
+
+// AsMessageContestAnnouncementCreated returns the union data inside the ContestMessage_Payload as a MessageContestAnnouncementCreated
+func (t ContestMessage_Payload) AsMessageContestAnnouncementCreated() (MessageContestAnnouncementCreated, error) {
+	var body MessageContestAnnouncementCreated
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageContestAnnouncementCreated overwrites any union data inside the ContestMessage_Payload as the provided MessageContestAnnouncementCreated
+func (t *ContestMessage_Payload) FromMessageContestAnnouncementCreated(v MessageContestAnnouncementCreated) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageContestAnnouncementCreated performs a merge with any union data inside the ContestMessage_Payload, using the provided MessageContestAnnouncementCreated
+func (t *ContestMessage_Payload) MergeMessageContestAnnouncementCreated(v MessageContestAnnouncementCreated) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMessageContestAnnouncementDeleted returns the union data inside the ContestMessage_Payload as a MessageContestAnnouncementDeleted
+func (t ContestMessage_Payload) AsMessageContestAnnouncementDeleted() (MessageContestAnnouncementDeleted, error) {
+	var body MessageContestAnnouncementDeleted
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageContestAnnouncementDeleted overwrites any union data inside the ContestMessage_Payload as the provided MessageContestAnnouncementDeleted
+func (t *ContestMessage_Payload) FromMessageContestAnnouncementDeleted(v MessageContestAnnouncementDeleted) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageContestAnnouncementDeleted performs a merge with any union data inside the ContestMessage_Payload, using the provided MessageContestAnnouncementDeleted
+func (t *ContestMessage_Payload) MergeMessageContestAnnouncementDeleted(v MessageContestAnnouncementDeleted) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMessageContestClarificationCreated returns the union data inside the ContestMessage_Payload as a MessageContestClarificationCreated
+func (t ContestMessage_Payload) AsMessageContestClarificationCreated() (MessageContestClarificationCreated, error) {
+	var body MessageContestClarificationCreated
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageContestClarificationCreated overwrites any union data inside the ContestMessage_Payload as the provided MessageContestClarificationCreated
+func (t *ContestMessage_Payload) FromMessageContestClarificationCreated(v MessageContestClarificationCreated) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageContestClarificationCreated performs a merge with any union data inside the ContestMessage_Payload, using the provided MessageContestClarificationCreated
+func (t *ContestMessage_Payload) MergeMessageContestClarificationCreated(v MessageContestClarificationCreated) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMessageContestClarificationAnswered returns the union data inside the ContestMessage_Payload as a MessageContestClarificationAnswered
+func (t ContestMessage_Payload) AsMessageContestClarificationAnswered() (MessageContestClarificationAnswered, error) {
+	var body MessageContestClarificationAnswered
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMessageContestClarificationAnswered overwrites any union data inside the ContestMessage_Payload as the provided MessageContestClarificationAnswered
+func (t *ContestMessage_Payload) FromMessageContestClarificationAnswered(v MessageContestClarificationAnswered) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMessageContestClarificationAnswered performs a merge with any union data inside the ContestMessage_Payload, using the provided MessageContestClarificationAnswered
+func (t *ContestMessage_Payload) MergeMessageContestClarificationAnswered(v MessageContestClarificationAnswered) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ContestMessage_Payload) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ContestMessage_Payload) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
 }
 
 // AsMessageSubmissionCreated returns the union data inside the SubmissionsMessage_Payload as a MessageSubmissionCreated
@@ -345,6 +536,9 @@ func (t *SubmissionsMessage_Payload) UnmarshalJSON(b []byte) error {
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (GET /contests)
+	ObserveContests(w http.ResponseWriter, r *http.Request, params ObserveContestsParams)
+
 	// (GET /submissions)
 	ObserveSubmissions(w http.ResponseWriter, r *http.Request, params ObserveSubmissionsParams)
 }
@@ -357,6 +551,48 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ObserveContests operation middleware
+func (siw *ServerInterfaceWrapper) ObserveContests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ObserveContestsParams
+
+	// ------------- Optional query parameter "since" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "since", r.URL.Query(), &params.Since)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "since", Err: err})
+		return
+	}
+
+	// ------------- Required query parameter "contestId" -------------
+
+	if paramValue := r.URL.Query().Get("contestId"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contestId"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "contestId", r.URL.Query(), &params.ContestId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contestId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ObserveContests(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ObserveSubmissions operation middleware
 func (siw *ServerInterfaceWrapper) ObserveSubmissions(w http.ResponseWriter, r *http.Request) {
@@ -544,9 +780,26 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc("GET "+options.BaseURL+"/contests", wrapper.ObserveContests)
 	m.HandleFunc("GET "+options.BaseURL+"/submissions", wrapper.ObserveSubmissions)
 
 	return m
+}
+
+type ObserveContestsRequestObject struct {
+	Params ObserveContestsParams
+}
+
+type ObserveContestsResponseObject interface {
+	VisitObserveContestsResponse(w http.ResponseWriter) error
+}
+
+type ObserveContests101Response struct {
+}
+
+func (response ObserveContests101Response) VisitObserveContestsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(101)
+	return nil
 }
 
 type ObserveSubmissionsRequestObject struct {
@@ -567,6 +820,9 @@ func (response ObserveSubmissions101Response) VisitObserveSubmissionsResponse(w 
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+
+	// (GET /contests)
+	ObserveContests(ctx context.Context, request ObserveContestsRequestObject) (ObserveContestsResponseObject, error)
 
 	// (GET /submissions)
 	ObserveSubmissions(ctx context.Context, request ObserveSubmissionsRequestObject) (ObserveSubmissionsResponseObject, error)
@@ -599,6 +855,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ObserveContests operation middleware
+func (sh *strictHandler) ObserveContests(w http.ResponseWriter, r *http.Request, params ObserveContestsParams) {
+	var request ObserveContestsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ObserveContests(ctx, request.(ObserveContestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ObserveContests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ObserveContestsResponseObject); ok {
+		if err := validResponse.VisitObserveContestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ObserveSubmissions operation middleware

@@ -143,6 +143,8 @@ func runApp(envFile string) error {
 	packagesRepo := pg.NewPackagesRepo(pool)
 	draftsRepo := pg.NewDraftsRepo(pool)
 	notificationsRepo := pg.NewNotificationsRepo(pool)
+	announcementsRepo := pg.NewAnnouncementsRepo(pool)
+	clarificationsRepo := pg.NewClarificationsRepo(pool)
 	logger.Info("successfully initialized repositories")
 
 	var store storage.Storage
@@ -192,6 +194,8 @@ func runApp(envFile string) error {
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
 	draftsUC := usecase.NewDraftsUseCase(draftsRepo, contestsUC, permissionsUC, txManager)
 	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, store, defaultS3PackageBucket)
+	announcementsUC := usecase.NewAnnouncementsUseCase(announcementsRepo, contestsUC, outboxRepo, txManager)
+	clarificationsUC := usecase.NewClarificationsUseCase(clarificationsRepo, announcementsRepo, contestsUC, outboxRepo, txManager)
 	logger.Info("successfully initialized use cases")
 
 	judgeTempDir, err := prepareJudgeTempDir(cfg.JudgeTempDir)
@@ -223,13 +227,21 @@ func runApp(envFile string) error {
 	if err := pkg.EnsureSubmissionsStream(context.Background(), natsJS); err != nil {
 		return fmt.Errorf("ensure submissions stream: %w", err)
 	}
+	if err := pkg.EnsureContestsStream(context.Background(), natsJS); err != nil {
+		return fmt.Errorf("ensure contests stream: %w", err)
+	}
 	if err := telemetry.RegisterNATSMetrics(natsJS); err != nil {
 		logger.Warn("failed to register nats metrics", slog.String("error", err.Error()))
 	}
-	logger.Info("SUBMISSIONS stream ready")
+	logger.Info("SUBMISSIONS and CONTESTS streams ready")
 
 	outboxDispatcher := outbox.NewEventDispatcher()
 	outboxDispatcher.Register(models.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
+	contestEventsPublisher := pubsub.NewContestEventsPublisher(natsJS)
+	outboxDispatcher.Register(models.OutboxEventContestAnnouncementCreated, contestEventsPublisher)
+	outboxDispatcher.Register(models.OutboxEventContestAnnouncementDeleted, contestEventsPublisher)
+	outboxDispatcher.Register(models.OutboxEventContestClarificationCreated, contestEventsPublisher)
+	outboxDispatcher.Register(models.OutboxEventContestClarificationAnswered, contestEventsPublisher)
 	outboxWorker := outbox.NewOutboxWorker(outboxDispatcher, outboxRepo)
 
 	judgeUC := usecase.NewJudgeUseCase(
@@ -268,7 +280,24 @@ func runApp(envFile string) error {
 		return fmt.Errorf("create submissions subscriber: %w", err)
 	}
 
-	observer := wsobserver.NewObserver(observerHub, newObserverMiddleware(usersUC, authUC))
+	contestsDispatcher := outbox.NewEventDispatcher()
+	contestsObserverHub := wsobserver.NewContestsHub(submissionsRingBufferSize)
+
+	for _, event := range []string{
+		models.ContestEventAnnouncementCreated,
+		models.ContestEventAnnouncementDeleted,
+		models.ContestEventClarificationCreated,
+		models.ContestEventClarificationAnswered,
+	} {
+		contestsDispatcher.Register(event, contestsObserverHub)
+	}
+
+	contestsSub, err := pubsub.NewContestsSub(context.Background(), natsJS, contestsDispatcher)
+	if err != nil {
+		return fmt.Errorf("create contests subscriber: %w", err)
+	}
+
+	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersUC, authUC))
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
@@ -293,6 +322,8 @@ func runApp(envFile string) error {
 		problemPublishUC,
 		draftsUC,
 		notificationsUC,
+		announcementsUC,
+		clarificationsUC,
 		natsJS,
 	)
 
@@ -354,6 +385,14 @@ func runApp(envFile string) error {
 			submissionsSub.Start,
 			func(context.Context) error {
 				submissionsSub.Stop()
+				return nil
+			},
+		),
+		newService(
+			"contests subscriber",
+			contestsSub.Start,
+			func(context.Context) error {
+				contestsSub.Stop()
 				return nil
 			},
 		),

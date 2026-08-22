@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { AdminChangeEmailRequestModel } from '../models/AdminChangeEmailRequestModel';
 import type { AdminSetPasswordRequestModel } from '../models/AdminSetPasswordRequestModel';
+import type { AnswerContestClarificationRequestModel } from '../models/AnswerContestClarificationRequestModel';
 import type { ApproveOrganizationJoinRequestModel } from '../models/ApproveOrganizationJoinRequestModel';
 import type { AuthResponseModel } from '../models/AuthResponseModel';
 import type { BatchCreateOrganizationUsersRequestModel } from '../models/BatchCreateOrganizationUsersRequestModel';
@@ -15,8 +16,12 @@ import type { ClaimTemporaryUserRequestModel } from '../models/ClaimTemporaryUse
 import type { ClaimTemporaryUserResponseModel } from '../models/ClaimTemporaryUserResponseModel';
 import type { CompileResult } from '../models/CompileResult';
 import type { ConfirmEmailChangeRequestModel } from '../models/ConfirmEmailChangeRequestModel';
+import type { ContestAnnouncementModel } from '../models/ContestAnnouncementModel';
+import type { ContestClarificationModel } from '../models/ContestClarificationModel';
 import type { ContestJoinRequestNullableResponseModel } from '../models/ContestJoinRequestNullableResponseModel';
 import type { ContestJoinRequestResponseModel } from '../models/ContestJoinRequestResponseModel';
+import type { CreateContestAnnouncementRequestModel } from '../models/CreateContestAnnouncementRequestModel';
+import type { CreateContestClarificationRequestModel } from '../models/CreateContestClarificationRequestModel';
 import type { CreateContestDraftRequestModel } from '../models/CreateContestDraftRequestModel';
 import type { CreateContestJoinRequestModel } from '../models/CreateContestJoinRequestModel';
 import type { CreatedPost } from '../models/CreatedPost';
@@ -37,6 +42,8 @@ import type { GetUserDashboardResponseModel } from '../models/GetUserDashboardRe
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
 import type { InviteOrganizationMemberRequestModel } from '../models/InviteOrganizationMemberRequestModel';
 import type { ListClaimedAccountsResponseModel } from '../models/ListClaimedAccountsResponseModel';
+import type { ListContestAnnouncementsResponseModel } from '../models/ListContestAnnouncementsResponseModel';
+import type { ListContestClarificationsResponseModel } from '../models/ListContestClarificationsResponseModel';
 import type { ListContestDraftsResponseModel } from '../models/ListContestDraftsResponseModel';
 import type { ListContestJoinRequestsResponseModel } from '../models/ListContestJoinRequestsResponseModel';
 import type { ListContestMembersResponseModel } from '../models/ListContestMembersResponseModel';
@@ -1389,6 +1396,172 @@ export class DefaultService {
                 'contest_login': contestLogin,
                 'id': id,
             },
+        });
+    }
+    /**
+     * List contest announcements
+     * @returns ListContestAnnouncementsResponseModel List of contest announcements
+     * @throws ApiError
+     */
+    public listContestAnnouncements({
+        orgLogin,
+        contestLogin,
+        page = 1,
+        pageSize = 50,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        page?: number,
+        pageSize?: number,
+    }): CancelablePromise<ListContestAnnouncementsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{org_login}/contests/{contest_login}/announcements',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+            },
+        });
+    }
+    /**
+     * Create a contest announcement (jury only)
+     * @returns ContestAnnouncementModel Announcement created
+     * @throws ApiError
+     */
+    public createContestAnnouncement({
+        orgLogin,
+        contestLogin,
+        requestBody,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        requestBody: CreateContestAnnouncementRequestModel,
+    }): CancelablePromise<ContestAnnouncementModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/announcements',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Delete a contest announcement (jury only)
+     * @returns any Announcement deleted
+     * @throws ApiError
+     */
+    public deleteContestAnnouncement({
+        orgLogin,
+        contestLogin,
+        announcementId,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        announcementId: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/organizations/{org_login}/contests/{contest_login}/announcements/{announcement_id}',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'announcement_id': announcementId,
+            },
+        });
+    }
+    /**
+     * List contest clarifications (for participant: own questions; for jury: all questions)
+     * @returns ListContestClarificationsResponseModel List of contest clarifications
+     * @throws ApiError
+     */
+    public listContestClarifications({
+        orgLogin,
+        contestLogin,
+        problemId,
+        status,
+        page = 1,
+        pageSize = 50,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        problemId?: string,
+        status?: string,
+        page?: number,
+        pageSize?: number,
+    }): CancelablePromise<ListContestClarificationsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{org_login}/contests/{contest_login}/clarifications',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+            query: {
+                'problem_id': problemId,
+                'status': status,
+                'page': page,
+                'pageSize': pageSize,
+            },
+        });
+    }
+    /**
+     * Submit a clarification question to the jury
+     * @returns ContestClarificationModel Clarification question submitted
+     * @throws ApiError
+     */
+    public createContestClarification({
+        orgLogin,
+        contestLogin,
+        requestBody,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        requestBody: CreateContestClarificationRequestModel,
+    }): CancelablePromise<ContestClarificationModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/clarifications',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Answer a clarification question (jury only)
+     * @returns ContestClarificationModel Clarification answered
+     * @throws ApiError
+     */
+    public answerContestClarification({
+        orgLogin,
+        contestLogin,
+        clarificationId,
+        requestBody,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        clarificationId: string,
+        requestBody: AnswerContestClarificationRequestModel,
+    }): CancelablePromise<ContestClarificationModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/clarifications/{clarification_id}/answer',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'clarification_id': clarificationId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**

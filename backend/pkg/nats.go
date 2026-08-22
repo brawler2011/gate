@@ -45,6 +45,19 @@ func EnsureSubmissionsStream(ctx context.Context, js jetstream.JetStream) error 
 	return nil
 }
 
+const ContestsStreamName = "CONTESTS"
+
+func EnsureContestsStream(ctx context.Context, js jetstream.JetStream) error {
+	_, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:     ContestsStreamName,
+		Subjects: []string{"contest.>"},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to ensure CONTESTS stream: %w", err)
+	}
+	return nil
+}
+
 func GetSubmissionsLastSequence(ctx context.Context, js jetstream.JetStream) (uint64, error) {
 	stream, err := js.Stream(ctx, SubmissionsStreamName)
 	if err != nil {

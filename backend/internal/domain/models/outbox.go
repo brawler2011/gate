@@ -18,7 +18,11 @@ const (
 type OutboxEventType = string
 
 const (
-	OutboxEventSubmissionCreated OutboxEventType = "submission.created"
+	OutboxEventSubmissionCreated           OutboxEventType = "submission.created"
+	OutboxEventContestAnnouncementCreated   OutboxEventType = "contest.announcement_created"
+	OutboxEventContestAnnouncementDeleted   OutboxEventType = "contest.announcement_deleted"
+	OutboxEventContestClarificationCreated  OutboxEventType = "contest.clarification_created"
+	OutboxEventContestClarificationAnswered OutboxEventType = "contest.clarification_answered"
 )
 
 type OutboxEvent struct {
