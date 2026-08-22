@@ -87,6 +87,7 @@ const Contest = ({
           orgLogin={orgLogin}
           problems={problems}
           isManager={isManager}
+          hideStatements={contest.hide_statements}
         />
       )}
     </Container>

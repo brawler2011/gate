@@ -1,9 +1,10 @@
 "use client";
 
-import {ActionIcon, Box, Table, Text, Tooltip} from "@mantine/core";
+import {ActionIcon, Box, Group, Table, Text, Tooltip} from "@mantine/core";
 import {IconEdit} from "@tabler/icons-react";
 import {useRouter} from "next/navigation";
 
+import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {CONTEST_CONTENT_MAX_WIDTH} from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
 
@@ -17,6 +18,7 @@ type ContestProblemsTableProps = {
   orgLogin: string;
   problems: Array<ContestProblemListItemModel>;
   isManager?: boolean;
+  hideStatements?: boolean;
 };
 
 const formatTimeLimit = (timeMs: number) => {
@@ -35,11 +37,22 @@ export const ContestProblemsTable = ({
   orgLogin,
   problems,
   isManager,
+  hideStatements,
 }: ContestProblemsTableProps): ReactNode => {
   const router = useRouter();
 
   return (
     <Box style={{width: "100%", maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto"}}>
+      {(!hideStatements || isManager) && (
+        <Group justify="flex-end" mb="sm">
+          <DownloadStatementsButton
+            orgLogin={orgLogin}
+            contestLogin={contestLogin}
+            size="xs"
+            variant="default"
+          />
+        </Group>
+      )}
       <Box className={classes.tableContainer}>
         <Table className={classes.table} verticalSpacing="md">
           <Table.Thead className={classes.thead}>

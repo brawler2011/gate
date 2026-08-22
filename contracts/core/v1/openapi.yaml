@@ -484,6 +484,34 @@ paths:
       responses:
         "200":
           description: OK
+  /organizations/{org_login}/contests/{contest_login}/statements.pdf:
+    get:
+      operationId: DownloadContestStatementsPdf
+      summary: Download PDF booklet with contest statements
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: lang
+          in: query
+          schema:
+            type: string
+            default: ru
+      responses:
+        "200":
+          description: PDF booklet containing contest problem statements
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
   /organizations/{org_login}/contests/{contest_login}/problems:
     post:
       operationId: CreateContestProblem
@@ -4222,6 +4250,9 @@ components:
             - open
             - invite_only
           default: open
+        hide_statements:
+          type: boolean
+          default: false
     ListContestsResponseModel:
       type: object
       required:
@@ -4401,6 +4432,8 @@ components:
           enum:
             - open
             - invite_only
+        hide_statements:
+          type: boolean
     CreateSubmissionRequestModel:
       type: object
       required:

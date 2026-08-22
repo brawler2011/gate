@@ -362,6 +362,14 @@ type ContestSettings struct {
 	EnableUpsolving        *bool  `json:"enable_upsolving,omitempty"`
 	EnableVirtualContests  *bool  `json:"enable_virtual_contests,omitempty"`
 	ParticipationMode      string `json:"participation_mode,omitempty"`
+	HideStatements         *bool  `json:"hide_statements,omitempty"`
+}
+
+func (s ContestSettings) GetHideStatements() bool {
+	if s.HideStatements == nil {
+		return false
+	}
+	return *s.HideStatements
 }
 
 func (s ContestSettings) GetPenaltyPerAttempt() int32 {
@@ -556,11 +564,19 @@ func MapToContestSettings(m map[string]interface{}) ContestSettings {
 		}
 	}
 
+	if raw, ok := m["hide_statements"]; ok && raw != nil {
+		s.HideStatements = parseFlexibleBoolPtr(raw)
+	}
+
 	return s
 }
 
 func (c *Contest) TypedSettings() ContestSettings {
 	return MapToContestSettings(c.Settings)
+}
+
+func (c *Contest) GetHideStatements() bool {
+	return c.TypedSettings().GetHideStatements()
 }
 
 func (c *Contest) GetPenaltyPerAttempt() int32 {

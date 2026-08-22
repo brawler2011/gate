@@ -1,8 +1,8 @@
 "use client";
 
-import {ActionIcon, Box, Flex, Group, Paper, Stack, Text, Title, Tooltip} from "@mantine/core";
+import {ActionIcon, Alert, Box, Flex, Group, Paper, Stack, Text, Title, Tooltip} from "@mantine/core";
 import {useClipboard} from "@mantine/hooks";
-import {IconCheck, IconCopy, IconEdit} from "@tabler/icons-react";
+import {IconCheck, IconCopy, IconEdit, IconEyeOff} from "@tabler/icons-react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import {useEffect, useRef, type ReactNode} from "react";
@@ -37,6 +37,7 @@ type Props = {
   problemId?: string;
   letter?: string;
   isManager?: boolean;
+  hideStatements?: boolean;
 };
 
 const prettifyTimeLimit = (time_limit: number) => {
@@ -192,7 +193,7 @@ const StatementContent = ({value, problemId}: { value: string; problemId?: strin
   );
 };
 
-const Problem = ({problem, letter, problemId, isManager, orgLogin}: Props): ReactNode => {
+const Problem = ({problem, letter, problemId, isManager, orgLogin, hideStatements}: Props): ReactNode => {
   letter = letter || "A";
   const activeProblemId = problemId || problem.id || problem.problem_id;
   const org = orgLogin || problem.organization_login;
@@ -259,50 +260,65 @@ const Problem = ({problem, letter, problemId, isManager, orgLogin}: Props): Reac
           </Text>
         </Stack>
       </Stack>
-      {problem.legend_html && <StatementContent value={problem.legend_html} problemId={activeProblemId} />}
-      {problem.input_format_html && (
-        <Stack gap="xs">
-          <Title order={3}>Входные данные</Title>
-          <StatementContent value={problem.input_format_html} problemId={activeProblemId} />
-        </Stack>
-      )}
-      {problem.output_format_html && (
-        <Stack gap="xs">
-          <Title order={3}>Выходные данные</Title>
-          <StatementContent value={problem.output_format_html} problemId={activeProblemId} />
-        </Stack>
-      )}
-      {problem.samples && problem.samples.length > 0 && (
-        <Stack gap="xs">
-          <Title order={3}>Примеры</Title>
-          <Stack gap="md">
-            {problem.samples.map((sample, index) => (
-              <Paper
-                key={index}
-                withBorder
-                p="md"
-                radius="md"
-                bg="light-dark(var(--mantine-color-white), var(--mantine-color-dark-7))"
-              >
-                <Stack gap="xs">
-                  <Text fw={700} size="sm" c="dimmed">
-                    Пример {index + 1}
-                  </Text>
-                  <Flex gap="md" wrap="wrap">
-                    <CopyableSection label="Входные данные" value={sample.input} />
-                    <CopyableSection label="Выходные данные" value={sample.output} />
-                  </Flex>
-                </Stack>
-              </Paper>
-            ))}
-          </Stack>
-        </Stack>
-      )}
-      {problem.notes_html && (
-        <Stack gap="xs">
-          <Title order={3}>Примечание</Title>
-          <StatementContent value={problem.notes_html} problemId={activeProblemId} />
-        </Stack>
+      {hideStatements && !isManager ? (
+        <Alert
+          icon={<IconEyeOff size={20} />}
+          title="Условия задач скрыты"
+          color="blue"
+          variant="light"
+          radius="md"
+        >
+          Условия задач скрыты организатором контеста.
+          Пожалуйста, используйте печатные материалы для ознакомления с заданием.
+        </Alert>
+      ) : (
+        <>
+          {problem.legend_html && <StatementContent value={problem.legend_html} problemId={activeProblemId} />}
+          {problem.input_format_html && (
+            <Stack gap="xs">
+              <Title order={3}>Входные данные</Title>
+              <StatementContent value={problem.input_format_html} problemId={activeProblemId} />
+            </Stack>
+          )}
+          {problem.output_format_html && (
+            <Stack gap="xs">
+              <Title order={3}>Выходные данные</Title>
+              <StatementContent value={problem.output_format_html} problemId={activeProblemId} />
+            </Stack>
+          )}
+          {problem.samples && problem.samples.length > 0 && (
+            <Stack gap="xs">
+              <Title order={3}>Примеры</Title>
+              <Stack gap="md">
+                {problem.samples.map((sample, index) => (
+                  <Paper
+                    key={index}
+                    withBorder
+                    p="md"
+                    radius="md"
+                    bg="light-dark(var(--mantine-color-white), var(--mantine-color-dark-7))"
+                  >
+                    <Stack gap="xs">
+                      <Text fw={700} size="sm" c="dimmed">
+                        Пример {index + 1}
+                      </Text>
+                      <Flex gap="md" wrap="wrap">
+                        <CopyableSection label="Входные данные" value={sample.input} />
+                        <CopyableSection label="Выходные данные" value={sample.output} />
+                      </Flex>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            </Stack>
+          )}
+          {problem.notes_html && (
+            <Stack gap="xs">
+              <Title order={3}>Примечание</Title>
+              <StatementContent value={problem.notes_html} problemId={activeProblemId} />
+            </Stack>
+          )}
+        </>
       )}
     </Stack>
   );

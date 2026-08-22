@@ -12,14 +12,28 @@ import (
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
 func (h *CoreServer) loadProblemStatement(ctx context.Context, problemID uuid.UUID) *models.Statement {
+	return h.loadProblemStatementWithLang(ctx, problemID, "")
+}
+
+func (h *CoreServer) loadProblemStatementWithLang(ctx context.Context, problemID uuid.UUID, lang string) *models.Statement {
 	if h.workshopUC == nil || !h.workshopUC.IsInitialized(ctx, problemID) {
 		return nil
+	}
+
+	if lang != "" {
+		if mdBytes, err := h.workshopUC.ReadProblemFile(ctx, problemID, "statements/"+lang+".md"); err == nil {
+			parsed := usecase.ParseStatementMarkdown(string(mdBytes))
+			if hasStatementContent(parsed) {
+				return &parsed
+			}
+		}
 	}
 
 	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
@@ -101,6 +115,15 @@ func (h *CoreServer) loadPackageStatementAndSamples(
 	problemID uuid.UUID,
 	packageID uuid.UUID,
 ) (*models.Statement, []corev1.ProblemSampleModel) {
+	return h.loadPackageStatementAndSamplesWithLang(ctx, problemID, packageID, "")
+}
+
+func (h *CoreServer) loadPackageStatementAndSamplesWithLang(
+	ctx context.Context,
+	problemID uuid.UUID,
+	packageID uuid.UUID,
+	lang string,
+) (*models.Statement, []corev1.ProblemSampleModel) {
 	if h.publishUC == nil || packageID == uuid.Nil {
 		return nil, nil
 	}
@@ -159,9 +182,20 @@ func (h *CoreServer) loadPackageStatementAndSamples(
 	}
 
 	var statement models.Statement
-	statementBytes, err := os.ReadFile(filepath.Join(tempDir, "statement.json"))
-	if err == nil {
-		_ = json.Unmarshal(statementBytes, &statement)
+	if lang != "" {
+		if mdBytes, err := os.ReadFile(filepath.Join(tempDir, "statements", lang+".md")); err == nil {
+			parsed := usecase.ParseStatementMarkdown(string(mdBytes))
+			if hasStatementContent(parsed) {
+				statement = parsed
+			}
+		}
+	}
+
+	if !hasStatementContent(statement) {
+		statementBytes, err := os.ReadFile(filepath.Join(tempDir, "statement.json"))
+		if err == nil {
+			_ = json.Unmarshal(statementBytes, &statement)
+		}
 	}
 
 	if !hasStatementContent(statement) {

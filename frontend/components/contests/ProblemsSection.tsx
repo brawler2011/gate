@@ -30,6 +30,7 @@ import {
 import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
 
+import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
@@ -401,6 +402,12 @@ export const ProblemsSection = ({
             Задачи контеста {problems.length > 0 && `(${problems.length})`}
           </Text>
           <Group gap="xs">
+            <DownloadStatementsButton
+              orgLogin={orgLogin}
+              contestLogin={contestLogin}
+              size="xs"
+              variant="default"
+            />
             <Button
               variant="default"
               size="xs"

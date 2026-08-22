@@ -25,6 +25,7 @@ export type UpdateContestRequestModel = {
     enable_upsolving?: boolean;
     enable_virtual_contests?: boolean;
     participation_mode?: UpdateContestRequestModel.participation_mode;
+    hide_statements?: boolean;
 };
 export namespace UpdateContestRequestModel {
     /**

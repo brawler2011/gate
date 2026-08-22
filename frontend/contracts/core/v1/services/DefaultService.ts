@@ -453,6 +453,32 @@ export class DefaultService {
         });
     }
     /**
+     * Download PDF booklet with contest statements
+     * @returns binary PDF booklet containing contest problem statements
+     * @throws ApiError
+     */
+    public downloadContestStatementsPdf({
+        orgLogin,
+        contestLogin,
+        lang = 'ru',
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        lang?: string,
+    }): CancelablePromise<Blob> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{org_login}/contests/{contest_login}/statements.pdf',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+            query: {
+                'lang': lang,
+            },
+        });
+    }
+    /**
      * @returns CreationResponseModel OK
      * @throws ApiError
      */

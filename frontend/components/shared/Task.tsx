@@ -171,6 +171,7 @@ const Task = ({
                 problemId={task.problem_id}
                 isManager={isManager}
                 orgLogin={contest.organization_login}
+                hideStatements={contest.hide_statements}
               />
             </Box>
           </Container>

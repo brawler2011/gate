@@ -238,8 +238,9 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"DeletePostById":    {RequireAuth, RequireAdmin},
 		"ListSubmissions":   {RequireAuth, RequireAdmin},
 
-		"GetContest":             {RequireContestPermission(models.ActionGetContest)},
-		"GetContestScoreboard":   {RequireContestPermission(models.ActionGetMonitor)},
+		"GetContest":                   {RequireContestPermission(models.ActionGetContest)},
+		"DownloadContestStatementsPdf": {RequireContestPermission(models.ActionGetContest)},
+		"GetContestScoreboard":         {RequireContestPermission(models.ActionGetMonitor)},
 		"UpdateContest":          {RequireAuth, RequireContestPermission(models.ActionUpdateContest)},
 		"DeleteContest":          {RequireAuth, RequireContestPermission(models.ActionAdminContest)},
 		"CreateContestProblem":   {RequireAuth, RequireContestPermission(models.ActionManageContest)},

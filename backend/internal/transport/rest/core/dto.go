@@ -175,6 +175,7 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 	enableUpsolving := settings.GetEnableUpsolving()
 	enableVirtualContests := settings.GetEnableVirtualContests()
 	participationMode := corev1.ContestModelParticipationMode(settings.GetParticipationMode())
+	hideStatements := settings.GetHideStatements()
 
 	model := corev1.ContestModel{
 		Id:                     c.ID,
@@ -194,6 +195,7 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		EnableUpsolving:        &enableUpsolving,
 		EnableVirtualContests: &enableVirtualContests,
 		ParticipationMode:     &participationMode,
+		HideStatements:        &hideStatements,
 		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,

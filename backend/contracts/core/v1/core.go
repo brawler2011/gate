@@ -252,6 +252,7 @@ type ContestModel struct {
 
 	// FreezeStatus Freeze mode status
 	FreezeStatus           ContestModelFreezeStatus       `json:"freeze_status"`
+	HideStatements         *bool                          `json:"hide_statements,omitempty"`
 	Id                     openapi_types.UUID             `json:"id"`
 	Login                  string                         `json:"login"`
 	MonitorScope           string                         `json:"monitor_scope"`
@@ -892,6 +893,7 @@ type UpdateContestRequestModel struct {
 
 	// FreezeStatus Freeze mode status
 	FreezeStatus           *UpdateContestRequestModelFreezeStatus      `json:"freeze_status,omitempty"`
+	HideStatements         *bool                                       `json:"hide_statements,omitempty"`
 	Login                  *string                                     `json:"login,omitempty"`
 	MonitorScope           *string                                     `json:"monitor_scope,omitempty"`
 	ParticipationMode      *UpdateContestRequestModelParticipationMode `json:"participation_mode,omitempty"`
@@ -1100,6 +1102,11 @@ type CreateContestProblemParams struct {
 type GetContestScoreboardParams struct {
 	// Unfrozen Whether to return unfrozen scoreboard (managers only)
 	Unfrozen *bool `form:"unfrozen,omitempty" json:"unfrozen,omitempty"`
+}
+
+// DownloadContestStatementsPdfParams defines parameters for DownloadContestStatementsPdf.
+type DownloadContestStatementsPdfParams struct {
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty"`
 }
 
 // ListContestSubmissionsParams defines parameters for ListContestSubmissions.
@@ -1797,6 +1804,9 @@ type ClientInterface interface {
 
 	// GetContestScoreboard request
 	GetContestScoreboard(ctx context.Context, orgLogin string, contestLogin string, params *GetContestScoreboardParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DownloadContestStatementsPdf request
+	DownloadContestStatementsPdf(ctx context.Context, orgLogin string, contestLogin string, params *DownloadContestStatementsPdfParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListContestSubmissions request
 	ListContestSubmissions(ctx context.Context, orgLogin string, contestLogin string, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2716,6 +2726,18 @@ func (c *Client) RejudgeContest(ctx context.Context, orgLogin string, contestLog
 
 func (c *Client) GetContestScoreboard(ctx context.Context, orgLogin string, contestLogin string, params *GetContestScoreboardParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetContestScoreboardRequest(c.Server, orgLogin, contestLogin, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DownloadContestStatementsPdf(ctx context.Context, orgLogin string, contestLogin string, params *DownloadContestStatementsPdfParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDownloadContestStatementsPdfRequest(c.Server, orgLogin, contestLogin, params)
 	if err != nil {
 		return nil, err
 	}
@@ -6399,6 +6421,69 @@ func NewGetContestScoreboardRequest(server string, orgLogin string, contestLogin
 		if params.Unfrozen != nil {
 
 			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "unfrozen", runtime.ParamLocationQuery, *params.Unfrozen); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDownloadContestStatementsPdfRequest generates requests for DownloadContestStatementsPdf
+func NewDownloadContestStatementsPdfRequest(server string, orgLogin string, contestLogin string, params *DownloadContestStatementsPdfParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/statements.pdf", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Lang != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "lang", runtime.ParamLocationQuery, *params.Lang); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -12401,6 +12486,9 @@ type ClientWithResponsesInterface interface {
 	// GetContestScoreboardWithResponse request
 	GetContestScoreboardWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *GetContestScoreboardParams, reqEditors ...RequestEditorFn) (*GetContestScoreboardResponse, error)
 
+	// DownloadContestStatementsPdfWithResponse request
+	DownloadContestStatementsPdfWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *DownloadContestStatementsPdfParams, reqEditors ...RequestEditorFn) (*DownloadContestStatementsPdfResponse, error)
+
 	// ListContestSubmissionsWithResponse request
 	ListContestSubmissionsWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*ListContestSubmissionsResponse, error)
 
@@ -13591,6 +13679,27 @@ func (r GetContestScoreboardResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetContestScoreboardResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DownloadContestStatementsPdfResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DownloadContestStatementsPdfResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DownloadContestStatementsPdfResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -16402,6 +16511,15 @@ func (c *ClientWithResponses) GetContestScoreboardWithResponse(ctx context.Conte
 	return ParseGetContestScoreboardResponse(rsp)
 }
 
+// DownloadContestStatementsPdfWithResponse request returning *DownloadContestStatementsPdfResponse
+func (c *ClientWithResponses) DownloadContestStatementsPdfWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *DownloadContestStatementsPdfParams, reqEditors ...RequestEditorFn) (*DownloadContestStatementsPdfResponse, error) {
+	rsp, err := c.DownloadContestStatementsPdf(ctx, orgLogin, contestLogin, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDownloadContestStatementsPdfResponse(rsp)
+}
+
 // ListContestSubmissionsWithResponse request returning *ListContestSubmissionsResponse
 func (c *ClientWithResponses) ListContestSubmissionsWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *ListContestSubmissionsParams, reqEditors ...RequestEditorFn) (*ListContestSubmissionsResponse, error) {
 	rsp, err := c.ListContestSubmissions(ctx, orgLogin, contestLogin, params, reqEditors...)
@@ -18398,6 +18516,22 @@ func ParseGetContestScoreboardResponse(rsp *http.Response) (*GetContestScoreboar
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseDownloadContestStatementsPdfResponse parses an HTTP response from a DownloadContestStatementsPdfWithResponse call
+func ParseDownloadContestStatementsPdfResponse(rsp *http.Response) (*DownloadContestStatementsPdfResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DownloadContestStatementsPdfResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -21162,6 +21296,9 @@ type ServerInterface interface {
 
 	// (GET /organizations/{org_login}/contests/{contest_login}/scoreboard)
 	GetContestScoreboard(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params GetContestScoreboardParams)
+	// Download PDF booklet with contest statements
+	// (GET /organizations/{org_login}/contests/{contest_login}/statements.pdf)
+	DownloadContestStatementsPdf(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params DownloadContestStatementsPdfParams)
 
 	// (GET /organizations/{org_login}/contests/{contest_login}/submissions)
 	ListContestSubmissions(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params ListContestSubmissionsParams)
@@ -23090,6 +23227,51 @@ func (siw *ServerInterfaceWrapper) GetContestScoreboard(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContestScoreboard(w, r, orgLogin, contestLogin, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadContestStatementsPdf operation middleware
+func (siw *ServerInterfaceWrapper) DownloadContestStatementsPdf(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DownloadContestStatementsPdfParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "lang", r.URL.Query(), &params.Lang)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadContestStatementsPdf(w, r, orgLogin, contestLogin, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -27514,6 +27696,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge", wrapper.RejudgeContestProblem)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/rejudge", wrapper.RejudgeContest)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/scoreboard", wrapper.GetContestScoreboard)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/statements.pdf", wrapper.DownloadContestStatementsPdf)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/submissions", wrapper.ListContestSubmissions)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block", wrapper.BlockSubmission)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge", wrapper.RejudgeSubmission)
@@ -28302,6 +28485,35 @@ func (response GetContestScoreboard200JSONResponse) VisitGetContestScoreboardRes
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type DownloadContestStatementsPdfRequestObject struct {
+	OrgLogin     string `json:"org_login"`
+	ContestLogin string `json:"contest_login"`
+	Params       DownloadContestStatementsPdfParams
+}
+
+type DownloadContestStatementsPdfResponseObject interface {
+	VisitDownloadContestStatementsPdfResponse(w http.ResponseWriter) error
+}
+
+type DownloadContestStatementsPdf200ApplicationpdfResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response DownloadContestStatementsPdf200ApplicationpdfResponse) VisitDownloadContestStatementsPdfResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/pdf")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
 }
 
 type ListContestSubmissionsRequestObject struct {
@@ -30606,6 +30818,9 @@ type StrictServerInterface interface {
 
 	// (GET /organizations/{org_login}/contests/{contest_login}/scoreboard)
 	GetContestScoreboard(ctx context.Context, request GetContestScoreboardRequestObject) (GetContestScoreboardResponseObject, error)
+	// Download PDF booklet with contest statements
+	// (GET /organizations/{org_login}/contests/{contest_login}/statements.pdf)
+	DownloadContestStatementsPdf(ctx context.Context, request DownloadContestStatementsPdfRequestObject) (DownloadContestStatementsPdfResponseObject, error)
 
 	// (GET /organizations/{org_login}/contests/{contest_login}/submissions)
 	ListContestSubmissions(ctx context.Context, request ListContestSubmissionsRequestObject) (ListContestSubmissionsResponseObject, error)
@@ -32035,6 +32250,34 @@ func (sh *strictHandler) GetContestScoreboard(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetContestScoreboardResponseObject); ok {
 		if err := validResponse.VisitGetContestScoreboardResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DownloadContestStatementsPdf operation middleware
+func (sh *strictHandler) DownloadContestStatementsPdf(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params DownloadContestStatementsPdfParams) {
+	var request DownloadContestStatementsPdfRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DownloadContestStatementsPdf(ctx, request.(DownloadContestStatementsPdfRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DownloadContestStatementsPdf")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DownloadContestStatementsPdfResponseObject); ok {
+		if err := validResponse.VisitDownloadContestStatementsPdfResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

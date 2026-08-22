@@ -20,6 +20,7 @@ import {notifications} from "@mantine/notifications";
 import {useRouter} from "next/navigation";
 import {useState} from "react";
 
+import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
@@ -149,6 +150,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     enable_drafts: boolean;
     enable_upsolving: boolean;
     enable_virtual_contests: boolean;
+    hide_statements: boolean;
   }>({
     initialValues: {
       login: contest.login || "",
@@ -159,6 +161,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       enable_drafts: contest.enable_drafts ?? true,
       enable_upsolving: contest.enable_upsolving ?? true,
       enable_virtual_contests: contest.enable_virtual_contests ?? false,
+      hide_statements: contest.hide_statements ?? false,
       monitor_scope: contest.monitor_scope,
       submissions_list_scope: contest.submissions_list_scope,
       submissions_review_scope: contest.submissions_review_scope,
@@ -213,6 +216,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       enable_drafts: values.enable_drafts,
       enable_upsolving: values.enable_upsolving,
       enable_virtual_contests: values.enable_virtual_contests,
+      hide_statements: values.hide_statements,
     };
     const [error] = await api.updateContest({
       orgLogin: contest.organization_login,
@@ -334,6 +338,34 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             <Switch
               checked={form.values.enable_virtual_contests}
               onChange={(event) => form.setFieldValue("enable_virtual_contests", event.currentTarget.checked)}
+            />
+          </Group>
+
+          <Group justify="space-between">
+            <Stack gap={2}>
+              <Text size="sm">Скрыть условия задач</Text>
+              <Text size="xs" c="dimmed">
+                Условия задач будут скрыты для участников на сайте (режим очной олимпиады с печатными условиями)
+              </Text>
+            </Stack>
+            <Switch
+              checked={form.values.hide_statements}
+              onChange={(event) => form.setFieldValue("hide_statements", event.currentTarget.checked)}
+            />
+          </Group>
+
+          <Divider my="sm" />
+
+          <Group justify="space-between" align="center">
+            <Stack gap={2}>
+              <Text size="sm" fw={500}>Печатный буклет задач</Text>
+              <Text size="xs" c="dimmed">
+                Сгенерировать официальный PDF буклет со всеми условиями и примерами контеста (LaTeX / olymp.sty)
+              </Text>
+            </Stack>
+            <DownloadStatementsButton
+              orgLogin={contest.organization_login}
+              contestLogin={contest.login}
             />
           </Group>
 
