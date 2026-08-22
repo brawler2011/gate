@@ -172,7 +172,7 @@ func runApp(envFile string) error {
 	workspaceStorage := usecase.NewWorkspaceStorage(store, defaultS3WorkshopBucket)
 
 	authRepo := pg.NewAuthRepo(pool)
-	emailService := email.NewEmailService(cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)
+	emailService := email.NewEmailService(cfg.Env, cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)
 
 	usersUC := usecase.NewUsersUseCase(usersRepo, contestsRepo, outboxRepo, txManager, authRepo, emailService)
 	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, txManager, emailService)

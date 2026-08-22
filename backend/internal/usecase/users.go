@@ -34,7 +34,7 @@ func NewUsersUseCase(
 	emailService email.EmailService,
 ) *UsersUseCase {
 	if emailService == nil {
-		emailService = email.NewEmailService("", "", "")
+		emailService = email.NewEmailService("local", "", "", "")
 	}
 
 	return &UsersUseCase{

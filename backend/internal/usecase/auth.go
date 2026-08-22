@@ -44,7 +44,7 @@ func NewAuthUseCase(
 	if len(emailService) > 0 && emailService[0] != nil {
 		es = emailService[0]
 	} else {
-		es = email.NewEmailService("", "", "")
+		es = email.NewEmailService("local", "", "", "")
 	}
 
 	return &AuthUseCase{

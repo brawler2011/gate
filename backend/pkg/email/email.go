@@ -19,20 +19,30 @@ type EmailService interface {
 	SendEmailChangeAlert(ctx context.Context, toOldEmail, username, newEmail string) error
 }
 
-func NewEmailService(apiKey, fromEmail, appBaseURL string) EmailService {
+func NewEmailService(envName, apiKey, fromEmail, appBaseURL string) EmailService {
 	appBaseURL = strings.TrimRight(appBaseURL, "/")
 	if appBaseURL == "" {
 		appBaseURL = "http://localhost:3000"
 	}
-	if apiKey == "" {
-		slog.Info("no RESEND_API_KEY provided; using LogEmailService for email delivery")
+	if fromEmail == "" {
+		fromEmail = "Gate <no-reply@gate.local>"
+	}
+
+	if envName == "local" {
+		slog.Info("running in local environment; using LogEmailService for email delivery", "env", envName)
 		return &LogEmailService{
 			AppBaseURL: appBaseURL,
 		}
 	}
-	if fromEmail == "" {
-		fromEmail = "Gate <no-reply@gate.local>"
+
+	if apiKey == "" {
+		slog.Warn("no RESEND_API_KEY provided in non-local environment; falling back to LogEmailService", "env", envName)
+		return &LogEmailService{
+			AppBaseURL: appBaseURL,
+		}
 	}
+
+	slog.Info("initializing Resend email delivery service", "env", envName, "from", fromEmail)
 	return &ResendEmailService{
 		APIKey:     apiKey,
 		FromEmail:  fromEmail,
@@ -40,6 +50,7 @@ func NewEmailService(apiKey, fromEmail, appBaseURL string) EmailService {
 		Client:     &http.Client{Timeout: 10 * time.Second},
 	}
 }
+
 
 // LogEmailService logs emails via slog for local development and testing
 type LogEmailService struct {
