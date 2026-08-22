@@ -7,9 +7,29 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const claimTemporaryUser = `-- name: ClaimTemporaryUser :exec
+UPDATE users
+SET claimed_by_user_id = $1::uuid,
+    claimed_at = $2::timestamptz
+WHERE id = $3::uuid
+`
+
+type ClaimTemporaryUserParams struct {
+	ClaimedByUserID uuid.UUID `json:"claimed_by_user_id"`
+	ClaimedAt       time.Time `json:"claimed_at"`
+	ID              uuid.UUID `json:"id"`
+}
+
+func (q *Queries) ClaimTemporaryUser(ctx context.Context, arg ClaimTemporaryUserParams) error {
+	_, err := q.db.Exec(ctx, claimTemporaryUser, arg.ClaimedByUserID, arg.ClaimedAt, arg.ID)
+	return err
+}
 
 const countUsers = `-- name: CountUsers :one
 SELECT COUNT(*)::int4
@@ -43,7 +63,8 @@ INSERT INTO users (
         role,
         password_hash,
         email,
-        avatar_url
+        avatar_url,
+        expires_at
     )
 VALUES (
         $1::uuid,
@@ -51,17 +72,19 @@ VALUES (
         $3,
         $4,
         $5,
-        $6
+        $6,
+        $7
     )
 `
 
 type CreateUserParams struct {
-	ID           uuid.UUID `json:"id"`
-	Username     string    `json:"username"`
-	Role         UserRole  `json:"role"`
-	PasswordHash string    `json:"password_hash"`
-	Email        string    `json:"email"`
-	AvatarUrl    *string   `json:"avatar_url"`
+	ID           uuid.UUID          `json:"id"`
+	Username     string             `json:"username"`
+	Role         UserRole           `json:"role"`
+	PasswordHash string             `json:"password_hash"`
+	Email        *string            `json:"email"`
+	AvatarUrl    *string            `json:"avatar_url"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -72,12 +95,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.PasswordHash,
 		arg.Email,
 		arg.AvatarUrl,
+		arg.ExpiresAt,
 	)
 	return err
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
 FROM users
 WHERE id = $1::uuid
 LIMIT 1
@@ -95,12 +119,15 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordHash,
+		&i.ExpiresAt,
+		&i.ClaimedByUserID,
+		&i.ClaimedAt,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
 FROM users
 WHERE LOWER(username) = LOWER($1)
 LIMIT 1
@@ -118,14 +145,17 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordHash,
+		&i.ExpiresAt,
+		&i.ClaimedByUserID,
+		&i.ClaimedAt,
 	)
 	return i, err
 }
 
 const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
 FROM users
-WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1)
+WHERE LOWER(username) = LOWER($1) OR (email IS NOT NULL AND LOWER(email) = LOWER($1))
 LIMIT 1
 `
 
@@ -141,12 +171,80 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, identifier strin
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordHash,
+		&i.ExpiresAt,
+		&i.ClaimedByUserID,
+		&i.ClaimedAt,
 	)
 	return i, err
 }
 
+const listClaimedAccountsByUserId = `-- name: ListClaimedAccountsByUserId :many
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
+FROM users
+WHERE claimed_by_user_id = $1::uuid
+ORDER BY claimed_at DESC
+`
+
+func (q *Queries) ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]User, error) {
+	rows, err := q.db.Query(ctx, listClaimedAccountsByUserId, claimedByUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Role,
+			&i.Email,
+			&i.AvatarUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.PasswordHash,
+			&i.ExpiresAt,
+			&i.ClaimedByUserID,
+			&i.ClaimedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listExistingUsernamesByPrefix = `-- name: ListExistingUsernamesByPrefix :many
+SELECT username
+FROM users
+WHERE username ILIKE $1::text || '%'
+`
+
+func (q *Queries) ListExistingUsernamesByPrefix(ctx context.Context, prefix string) ([]string, error) {
+	rows, err := q.db.Query(ctx, listExistingUsernamesByPrefix, prefix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var username string
+		if err := rows.Scan(&username); err != nil {
+			return nil, err
+		}
+		items = append(items, username)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
 FROM users
 WHERE (
         $1::text = ''
@@ -193,6 +291,9 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PasswordHash,
+			&i.ExpiresAt,
+			&i.ClaimedByUserID,
+			&i.ClaimedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -209,16 +310,18 @@ UPDATE users
 SET username = COALESCE($1, username),
     role = COALESCE($2, role),
     email = COALESCE($3, email),
-    avatar_url = COALESCE($4, avatar_url)
-WHERE id = $5::uuid
+    avatar_url = COALESCE($4, avatar_url),
+    expires_at = COALESCE($5, expires_at)
+WHERE id = $6::uuid
 `
 
 type UpdateUserParams struct {
-	Username  *string      `json:"username"`
-	Role      NullUserRole `json:"role"`
-	Email     *string      `json:"email"`
-	AvatarUrl *string      `json:"avatar_url"`
-	ID        uuid.UUID    `json:"id"`
+	Username  *string            `json:"username"`
+	Role      NullUserRole       `json:"role"`
+	Email     *string            `json:"email"`
+	AvatarUrl *string            `json:"avatar_url"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	ID        uuid.UUID          `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
@@ -227,6 +330,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 		arg.Role,
 		arg.Email,
 		arg.AvatarUrl,
+		arg.ExpiresAt,
 		arg.ID,
 	)
 	return err

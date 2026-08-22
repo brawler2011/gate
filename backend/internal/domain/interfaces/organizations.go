@@ -48,4 +48,6 @@ type OrganizationsUC interface {
 	RemoveMemberByLogin(ctx context.Context, login string, userID, requestUserID uuid.UUID) error
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.Organization, error)
 	ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, error)
+	BatchCreateUsers(ctx context.Context, input models.BatchCreateOrganizationUsersInput, requestUserID uuid.UUID) (*models.BatchCreateOrganizationUsersResult, error)
 }
+

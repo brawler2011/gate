@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
@@ -15,7 +16,10 @@ import (
 
 func (m *MockContestsUC) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []models.ContestProblemReorderItem) error {
 	args := m.Called(ctx, contestId, problems)
-	return args.Error(0)
+	if err := args.Error(0); err != nil {
+		return fmt.Errorf("mock error: %w", err)
+	}
+	return nil
 }
 
 func TestReorderContestProblems(t *testing.T) {
@@ -32,6 +36,7 @@ func TestReorderContestProblems(t *testing.T) {
 	}
 
 	t.Run("Successfully reorders contest problems", func(t *testing.T) {
+		t.Parallel()
 		mockContests := new(MockContestsUC)
 		server := core.NewCoreServer(nil, mockContests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
@@ -62,6 +67,7 @@ func TestReorderContestProblems(t *testing.T) {
 	})
 
 	t.Run("Returns error when request body is nil", func(t *testing.T) {
+		t.Parallel()
 		mockContests := new(MockContestsUC)
 		server := core.NewCoreServer(nil, mockContests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 

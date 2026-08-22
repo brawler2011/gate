@@ -60,7 +60,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, email, password s
 		Username:     username,
 		Role:         models.UserRoleUser,
 		PasswordHash: string(hashed),
-		Email:        email,
+		Email:        &email,
 	})
 	if err != nil {
 		return models.User{}, uuid.Nil, err
@@ -83,6 +83,10 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 	user, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, identifier)
 	if err != nil {
 		return models.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid credentials")
+	}
+
+	if user.IsExpired() {
+		return models.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "account has expired")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
@@ -137,6 +141,11 @@ func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (m
 	user, err := uc.usersRepo.GetUserById(ctx, session.UserID)
 	if err != nil {
 		return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, err, "user not found")
+	}
+
+	if user.IsExpired() {
+		_ = uc.authRepo.DeleteSession(ctx, sessionID)
+		return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "account has expired")
 	}
 
 	return user, nil

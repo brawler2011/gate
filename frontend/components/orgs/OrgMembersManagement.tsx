@@ -14,9 +14,10 @@ import {
 } from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconPlus, IconTrash, IconUsers} from "@tabler/icons-react";
+import {IconPlus, IconTrash, IconUserPlus, IconUsers} from "@tabler/icons-react";
 import {useCallback, useEffect, useState} from "react";
 
+import {BatchCreateUsersModal} from "@/components/orgs/BatchCreateUsersModal";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 
@@ -41,6 +42,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
   const [members, setMembers] = useState<OrganizationMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [batchModalOpened, setBatchModalOpened] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<
@@ -164,6 +166,14 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
           >
             Добавить
           </Button>
+          <Button
+            size="md"
+            variant="light"
+            onClick={() => setBatchModalOpened(true)}
+            leftSection={<IconUserPlus size={16} />}
+          >
+            Сгенерировать участников
+          </Button>
         </Group>
 
         {loading && (
@@ -235,6 +245,12 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
           </Table>
         )}
       </Stack>
+      <BatchCreateUsersModal
+        opened={batchModalOpened}
+        onClose={() => setBatchModalOpened(false)}
+        orgLogin={orgLogin}
+        onSuccess={loadMembers}
+      />
       <StatusMessage
         type={status?.type ?? "success"}
         message={status?.message ?? ""}

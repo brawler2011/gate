@@ -472,13 +472,16 @@ func userDTO(u models.User) corev1.UserModel {
 	}
 
 	return corev1.UserModel{
-		Id:        u.Id,
-		Username:  u.Username,
-		Role:      u.Role,
-		Email:     &u.Email,
-		ImgId:     imgID,
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
+		Id:              u.Id,
+		Username:        u.Username,
+		Role:            u.Role,
+		Email:           u.Email,
+		ImgId:           imgID,
+		ExpiresAt:       u.ExpiresAt,
+		ClaimedByUserId: u.ClaimedByUserID,
+		ClaimedAt:       u.ClaimedAt,
+		CreatedAt:       u.CreatedAt,
+		UpdatedAt:       u.UpdatedAt,
 	}
 }
 

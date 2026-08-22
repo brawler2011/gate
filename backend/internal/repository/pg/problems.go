@@ -378,12 +378,16 @@ func mapProblemMember(pm sqlc.ProblemMember) models.ProblemMember {
 }
 
 func mapListProblemMembersRow(pm sqlc.ListProblemMembersRow) models.ProblemMember {
+	var email string
+	if pm.Email != nil {
+		email = *pm.Email
+	}
 	return models.ProblemMember{
 		ProblemID: pm.ProblemID,
 		UserID:    pm.UserID,
 		Role:      models.ProblemRole(pm.Role),
 		Username:  pm.Username,
-		Email:     pm.Email,
+		Email:     email,
 		CreatedAt: pm.CreatedAt,
 	}
 }

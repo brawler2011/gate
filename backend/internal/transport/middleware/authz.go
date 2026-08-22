@@ -205,6 +205,7 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ListOrganizationMembers":  {RequireAuth, RequireOrgPermission(models.ActionViewOrganization)},
 		"AddOrganizationMember":    {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
 		"RemoveOrganizationMember": {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
+		"BatchCreateOrganizationUsers": {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
 		"ListOrganizationContests": {RequireAuth, RequireOrgPermission(models.ActionViewOrganization)},
 
 		"ListTeams":            {RequireAuth},
@@ -227,6 +228,8 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"UploadAvatar":         {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
 		"DeleteAvatar":         {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
 		"UpdateUser":           {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
+		"ClaimTemporaryUser":   {RequireAuth},
+		"ListMyClaimedAccounts": {RequireAuth},
 
 		"ListAdminContests": {RequireAuth, RequireAdmin},
 		"CreatePost":        {RequireAuth, RequireAdmin},

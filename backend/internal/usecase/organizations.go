@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type OrganizationsUseCase struct {
@@ -283,3 +286,144 @@ func (uc *OrganizationsUseCase) ResolveUserOrganizationID(ctx context.Context, u
 
 	return orgID, nil
 }
+
+func (uc *OrganizationsUseCase) BatchCreateUsers(
+	ctx context.Context,
+	input models.BatchCreateOrganizationUsersInput,
+	requestUserID uuid.UUID,
+) (*models.BatchCreateOrganizationUsersResult, error) {
+	if input.Count < 1 || input.Count > 500 {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "count must be between 1 and 500")
+	}
+
+	prefix := strings.TrimSpace(input.Prefix)
+	if prefix == "" {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "prefix cannot be empty")
+	}
+	if len(prefix) > 20 {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "prefix cannot exceed 20 characters")
+	}
+
+	org, err := uc.repo.GetOrganizationByLogin(ctx, input.OrgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, requestUserID, models.ActionManageOrganization)
+	if err != nil {
+		return nil, fmt.Errorf("check permissions: %w", err)
+	}
+	if !hasAccess {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+
+	// Calculate expiration date if ttl_days > 0
+	var expiresAt *time.Time
+	if input.TTLDays != nil && *input.TTLDays > 0 {
+		t := time.Now().Add(time.Duration(*input.TTLDays) * 24 * time.Hour)
+		expiresAt = &t
+	}
+
+	// Find existing usernames matching prefix to determine padding & index
+	existingUsernames, err := uc.usersRepo.ListExistingUsernamesByPrefix(ctx, prefix)
+	if err != nil {
+		return nil, fmt.Errorf("list existing usernames: %w", err)
+	}
+
+	existingSet := make(map[string]struct{}, len(existingUsernames))
+	for _, u := range existingUsernames {
+		existingSet[strings.ToLower(u)] = struct{}{}
+	}
+
+	padding := 2
+	if input.Count >= 100 {
+		padding = 3
+	}
+
+	type pendingUser struct {
+		id           uuid.UUID
+		username     string
+		password     string
+		passwordHash string
+	}
+
+	pendingUsers := make([]pendingUser, 0, input.Count)
+	currentIndex := 1
+
+	for len(pendingUsers) < int(input.Count) {
+		formatStr := fmt.Sprintf("%%s%%0%dd", padding)
+		candidate := fmt.Sprintf(formatStr, prefix, currentIndex)
+		currentIndex++
+
+		if _, exists := existingSet[strings.ToLower(candidate)]; exists {
+			continue
+		}
+		if err := models.UsernameValidate(candidate); err != nil {
+			return nil, pkg.Wrap(pkg.ErrBadInput, err, fmt.Sprintf("generated username %q is invalid", candidate))
+		}
+
+		pwd, err := pkg.GeneratePassword(10)
+		if err != nil {
+			return nil, fmt.Errorf("generate password: %w", err)
+		}
+
+		hashed, err := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to hash password")
+		}
+
+		pendingUsers = append(pendingUsers, pendingUser{
+			id:           uuid.New(),
+			username:     candidate,
+			password:     pwd,
+			passwordHash: string(hashed),
+		})
+	}
+
+	// Save all users and org members in a transaction
+	err = uc.transactor.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
+		txUsersRepo := uc.usersRepo.WithTx(tx)
+		txOrgRepo := uc.repo.WithTx(tx)
+
+		for _, pu := range pendingUsers {
+			err := txUsersRepo.CreateUser(txCtx, models.CreateUserParams{
+				Id:           pu.id,
+				Username:     pu.username,
+				Role:         models.UserRoleUser,
+				PasswordHash: pu.passwordHash,
+				Email:        nil,
+				AvatarUrl:    nil,
+				ExpiresAt:    expiresAt,
+			})
+			if err != nil {
+				return fmt.Errorf("create user %s: %w", pu.username, err)
+			}
+
+			err = txOrgRepo.AddMember(txCtx, org.ID, pu.id, models.OrgRoleMember)
+			if err != nil {
+				return fmt.Errorf("add member %s to org: %w", pu.username, err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	resultItems := make([]models.BatchCreatedUserItem, len(pendingUsers))
+	for i, pu := range pendingUsers {
+		resultItems[i] = models.BatchCreatedUserItem{
+			ID:        pu.id,
+			Username:  pu.username,
+			Password:  pu.password,
+			ExpiresAt: expiresAt,
+		}
+	}
+
+	return &models.BatchCreateOrganizationUsersResult{
+		Users: resultItems,
+	}, nil
+}
+

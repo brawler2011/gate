@@ -1464,6 +1464,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetUserDashboardResponseModel"
+  /users/claim-temporary:
+    post:
+      operationId: ClaimTemporaryUser
+      summary: Claim temporary user results into permanent account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimTemporaryUserRequestModel"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimTemporaryUserResponseModel"
+  /users/me/claimed-accounts:
+    get:
+      operationId: ListMyClaimedAccounts
+      summary: List claimed temporary accounts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListClaimedAccountsResponseModel"
   /users/{username}/avatar:
     get:
       operationId: GetUserAvatar
@@ -3221,6 +3249,29 @@ paths:
       responses:
         "200":
           description: Member removed successfully
+  /organizations/{login}/members/batch:
+    post:
+      operationId: BatchCreateOrganizationUsers
+      summary: Batch create users in organization
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchCreateOrganizationUsersRequestModel"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchCreateOrganizationUsersResponseModel"
   /teams:
     get:
       operationId: ListTeams
@@ -4748,6 +4799,15 @@ components:
         imgId:
           type: string
           format: uuid
+        expires_at:
+          type: string
+          format: date-time
+        claimed_by_user_id:
+          type: string
+          format: uuid
+        claimed_at:
+          type: string
+          format: date-time
     ListUsersResponseModel:
       type: object
       required:
@@ -5768,4 +5828,107 @@ components:
             $ref: "#/components/schemas/ContestDraftModel"
         pagination:
           $ref: "#/components/schemas/PaginationModel"
+    BatchCreateOrganizationUsersRequestModel:
+      type: object
+      required:
+        - prefix
+        - count
+      properties:
+        prefix:
+          type: string
+          example: "olymp2026_"
+        count:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 500
+          example: 50
+        ttl_days:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 30
+    BatchCreateOrganizationUsersResponseModel:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/BatchCreatedUserItem"
+    BatchCreatedUserItem:
+      type: object
+      required:
+        - id
+        - username
+        - password
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          example: "olymp2026_01"
+        password:
+          type: string
+          example: "k8F3m9Pq"
+        expires_at:
+          type: string
+          format: date-time
+    ClaimTemporaryUserRequestModel:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "olymp2026_01"
+        password:
+          type: string
+          example: "k8F3m9Pq"
+    ClaimTemporaryUserResponseModel:
+      type: object
+      required:
+        - claimed_user_id
+        - claimed_username
+      properties:
+        claimed_user_id:
+          type: string
+          format: uuid
+        claimed_username:
+          type: string
+        contests_granted:
+          type: array
+          items:
+            type: string
+            format: uuid
+    ClaimedAccountItem:
+      type: object
+      required:
+        - id
+        - username
+        - claimed_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        claimed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    ListClaimedAccountsResponseModel:
+      type: object
+      required:
+        - accounts
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClaimedAccountItem"
 

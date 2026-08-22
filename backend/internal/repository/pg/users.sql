@@ -5,7 +5,8 @@ INSERT INTO users (
         role,
         password_hash,
         email,
-        avatar_url
+        avatar_url,
+        expires_at
     )
 VALUES (
         @id::uuid,
@@ -13,7 +14,8 @@ VALUES (
         @role,
         @password_hash,
         @email,
-        @avatar_url
+        @avatar_url,
+        @expires_at
     );
 
 -- name: GetUserById :one
@@ -25,7 +27,7 @@ LIMIT 1;
 -- name: GetUserByUsernameOrEmail :one
 SELECT *
 FROM users
-WHERE LOWER(username) = LOWER(@identifier) OR LOWER(email) = LOWER(@identifier)
+WHERE LOWER(username) = LOWER(@identifier) OR (email IS NOT NULL AND LOWER(email) = LOWER(@identifier))
 LIMIT 1;
 
 -- name: GetUserByUsername :one
@@ -68,5 +70,25 @@ UPDATE users
 SET username = COALESCE(sqlc.narg(username), username),
     role = COALESCE(sqlc.narg(role), role),
     email = COALESCE(sqlc.narg(email), email),
-    avatar_url = COALESCE(sqlc.narg(avatar_url), avatar_url)
+    avatar_url = COALESCE(sqlc.narg(avatar_url), avatar_url),
+    expires_at = COALESCE(sqlc.narg(expires_at), expires_at)
 WHERE id = @id::uuid;
+
+-- name: ClaimTemporaryUser :exec
+UPDATE users
+SET claimed_by_user_id = @claimed_by_user_id::uuid,
+    claimed_at = @claimed_at::timestamptz
+WHERE id = @id::uuid;
+
+-- name: ListClaimedAccountsByUserId :many
+SELECT *
+FROM users
+WHERE claimed_by_user_id = @claimed_by_user_id::uuid
+ORDER BY claimed_at DESC;
+
+-- name: ListExistingUsernamesByPrefix :many
+SELECT username
+FROM users
+WHERE username ILIKE @prefix::text || '%';
+
+

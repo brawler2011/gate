@@ -224,6 +224,43 @@ func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, request corev
 	return corev1.RemoveOrganizationMember200Response{}, nil
 }
 
+// BatchCreateOrganizationUsers handles POST /organizations/{login}/members/batch
+func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, request corev1.BatchCreateOrganizationUsersRequestObject) (corev1.BatchCreateOrganizationUsersResponseObject, error) {
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
+	}
+
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	result, err := h.organizationsUC.BatchCreateUsers(ctx, models.BatchCreateOrganizationUsersInput{
+		OrgLogin: request.Login,
+		Prefix:   request.Body.Prefix,
+		Count:    request.Body.Count,
+		TTLDays:  request.Body.TtlDays,
+	}, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to batch create users")
+	}
+
+	userItems := make([]corev1.BatchCreatedUserItem, len(result.Users))
+	for i, u := range result.Users {
+		userItems[i] = corev1.BatchCreatedUserItem{
+			Id:        u.ID,
+			Username:  u.Username,
+			Password:  u.Password,
+			ExpiresAt: u.ExpiresAt,
+		}
+	}
+
+	return corev1.BatchCreateOrganizationUsers200JSONResponse{
+		Users: userItems,
+	}, nil
+}
+
+
 func wrapOrgUCError(err error, fallbackMsg string) error {
 	if err == nil {
 		return nil

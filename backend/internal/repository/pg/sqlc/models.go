@@ -639,12 +639,15 @@ type TeamMember struct {
 }
 
 type User struct {
-	ID           uuid.UUID `json:"id"`
-	Username     string    `json:"username"`
-	Role         UserRole  `json:"role"`
-	Email        string    `json:"email"`
-	AvatarUrl    *string   `json:"avatar_url"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	PasswordHash string    `json:"password_hash"`
+	ID              uuid.UUID          `json:"id"`
+	Username        string             `json:"username"`
+	Role            UserRole           `json:"role"`
+	Email           *string            `json:"email"`
+	AvatarUrl       *string            `json:"avatar_url"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+	PasswordHash    string             `json:"password_hash"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	ClaimedByUserID pgtype.UUID        `json:"claimed_by_user_id"`
+	ClaimedAt       pgtype.Timestamptz `json:"claimed_at"`
 }

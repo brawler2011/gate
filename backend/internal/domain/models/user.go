@@ -57,8 +57,9 @@ type CreateUserParams struct {
 	Username     string
 	Role         UserRole
 	PasswordHash string
-	Email        string
+	Email        *string
 	AvatarUrl    *string
+	ExpiresAt    *time.Time
 }
 
 var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,30}$`)
@@ -116,7 +117,11 @@ func (p CreateUserParams) Validate() error {
 	errs := []error{
 		UsernameValidate(p.Username),
 		UserRoleValidate(p.Role),
-		EmailValidate(p.Email),
+	}
+	if p.Email != nil && *p.Email != "" {
+		if err := EmailValidate(*p.Email); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return errors.Join(errs...)
@@ -126,8 +131,9 @@ type CreateUserInput struct {
 	Username  string
 	Role      string
 	Password  string
-	Email     string
+	Email     *string
 	AvatarUrl *string
+	ExpiresAt *time.Time
 }
 
 type UsersListFilter struct {
@@ -143,6 +149,7 @@ type UpdateUserParams struct {
 	Role      *UserRole
 	Email     *string
 	AvatarUrl *string
+	ExpiresAt *time.Time
 }
 
 func (p UpdateUserParams) Validate() error {
@@ -167,17 +174,21 @@ type UpdateUserInput struct {
 	Role      *string
 	Email     *string
 	AvatarUrl *string
+	ExpiresAt *time.Time
 }
 
 type User struct {
-	Id           uuid.UUID
-	Username     string
-	Role         UserRole
-	PasswordHash string
-	Email        string
-	AvatarUrl    *string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	Id              uuid.UUID
+	Username        string
+	Role            UserRole
+	PasswordHash    string
+	Email           *string
+	AvatarUrl       *string
+	ExpiresAt       *time.Time
+	ClaimedByUserID *uuid.UUID
+	ClaimedAt       *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 var Guest = User{
@@ -196,3 +207,52 @@ func (u User) IsUser() bool {
 func (u User) IsAdmin() bool {
 	return u.Role == UserRoleAdmin
 }
+
+func (u User) IsExpired() bool {
+	return u.ExpiresAt != nil && u.ExpiresAt.Before(time.Now())
+}
+
+func (u User) IsTemporary() bool {
+	return u.ExpiresAt != nil
+}
+
+func (u User) IsClaimed() bool {
+	return u.ClaimedByUserID != nil
+}
+
+type ClaimTemporaryUserInput struct {
+	Username string
+	Password string
+}
+
+type ClaimTemporaryUserResult struct {
+	ClaimedUserID   uuid.UUID
+	ClaimedUsername string
+	ContestsGranted []uuid.UUID
+}
+
+type ClaimedAccountItem struct {
+	ID        uuid.UUID
+	Username  string
+	ClaimedAt time.Time
+	ExpiresAt *time.Time
+}
+
+type BatchCreateOrganizationUsersInput struct {
+	OrgLogin string
+	Prefix   string
+	Count    int32
+	TTLDays  *int32
+}
+
+type BatchCreatedUserItem struct {
+	ID        uuid.UUID
+	Username  string
+	Password  string
+	ExpiresAt *time.Time
+}
+
+type BatchCreateOrganizationUsersResult struct {
+	Users []BatchCreatedUserItem
+}
+

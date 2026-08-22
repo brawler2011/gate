@@ -32,6 +32,23 @@ func (q *Queries) AddContestMember(ctx context.Context, arg AddContestMemberPara
 	return err
 }
 
+const addContestMemberIfNotExists = `-- name: AddContestMemberIfNotExists :exec
+INSERT INTO contest_members (contest_id, user_id, role)
+VALUES ($1, $2, $3)
+ON CONFLICT (contest_id, user_id) DO NOTHING
+`
+
+type AddContestMemberIfNotExistsParams struct {
+	ContestID uuid.UUID          `json:"contest_id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	Role      models.ContestRole `json:"role"`
+}
+
+func (q *Queries) AddContestMemberIfNotExists(ctx context.Context, arg AddContestMemberIfNotExistsParams) error {
+	_, err := q.db.Exec(ctx, addContestMemberIfNotExists, arg.ContestID, arg.UserID, arg.Role)
+	return err
+}
+
 const addContestProblem = `-- name: AddContestProblem :exec
 
 INSERT INTO contest_problems (contest_id, problem_id, package_id, ordinal)
@@ -676,7 +693,7 @@ type ListContestMembersRow struct {
 	Role      models.ContestRole `json:"role"`
 	CreatedAt time.Time          `json:"created_at"`
 	Username  string             `json:"username"`
-	Email     string             `json:"email"`
+	Email     *string            `json:"email"`
 }
 
 func (q *Queries) ListContestMembers(ctx context.Context, contestID uuid.UUID) ([]ListContestMembersRow, error) {
@@ -1086,6 +1103,37 @@ func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListU
 			&i.OrgLogin,
 			&i.OrgName,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserContestMemberships = `-- name: ListUserContestMemberships :many
+SELECT contest_id, role
+FROM contest_members
+WHERE user_id = $1
+`
+
+type ListUserContestMembershipsRow struct {
+	ContestID uuid.UUID          `json:"contest_id"`
+	Role      models.ContestRole `json:"role"`
+}
+
+func (q *Queries) ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]ListUserContestMembershipsRow, error) {
+	rows, err := q.db.Query(ctx, listUserContestMemberships, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUserContestMembershipsRow{}
+	for rows.Next() {
+		var i ListUserContestMembershipsRow
+		if err := rows.Scan(&i.ContestID, &i.Role); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

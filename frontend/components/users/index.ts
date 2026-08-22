@@ -8,3 +8,4 @@ export * from './UsersContentSkeleton';
 export * from './UsersRoleFilter';
 export * from './UsersSearchInput';
 export * from './UsersTable';
+export * from './ClaimTemporaryAccountSection';

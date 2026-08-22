@@ -16,6 +16,8 @@ type ProfileHeaderProps = {
   username: string;
   role: string;
   createdAt?: string;
+  expiresAt?: string | null;
+  claimedAt?: string | null;
   isOwnProfile?: boolean;
 };
 
@@ -23,6 +25,8 @@ export const ProfileHeader = (props: ProfileHeaderProps): ReactNode => {
   const showRole = props.role?.toLowerCase() !== "user";
   const roleColor = ROLE_COLORS[props.role?.toLowerCase()] ?? "gray";
   const initials = props.username?.[0]?.toUpperCase() ?? "?";
+
+  const isExpired = props.expiresAt ? new Date(props.expiresAt) < new Date() : false;
 
   return (
     <Paper shadow="sm" p="lg" radius="md">
@@ -37,6 +41,18 @@ export const ProfileHeader = (props: ProfileHeaderProps): ReactNode => {
               {showRole && (
                 <Badge color={roleColor} size="lg">
                   {props.role}
+                </Badge>
+              )}
+              {props.expiresAt && (
+                <Badge color={isExpired ? "red" : "orange"} variant="light" size="md">
+                  {isExpired
+                    ? `Срок истёк (${new Date(props.expiresAt).toLocaleDateString("ru-RU")})`
+                    : `Временный (до ${new Date(props.expiresAt).toLocaleDateString("ru-RU")})`}
+                </Badge>
+              )}
+              {props.claimedAt && (
+                <Badge color="teal" variant="light" size="md">
+                  Привязан к профилю
                 </Badge>
               )}
             </Group>

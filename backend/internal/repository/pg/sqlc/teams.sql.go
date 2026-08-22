@@ -282,7 +282,7 @@ type ListTeamMembersRow struct {
 	Role      TeamRole  `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 	Username  string    `json:"username"`
-	Email     string    `json:"email"`
+	Email     *string   `json:"email"`
 }
 
 func (q *Queries) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]ListTeamMembersRow, error) {

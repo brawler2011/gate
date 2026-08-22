@@ -213,12 +213,16 @@ func (r *OrganizationsRepo) ListMembers(ctx context.Context, orgID uuid.UUID) ([
 
 	result := make([]models.OrganizationMember, len(members))
 	for i, m := range members {
+		var email string
+		if m.Email != nil {
+			email = *m.Email
+		}
 		result[i] = models.OrganizationMember{
 			OrganizationID: m.OrganizationID,
 			UserID:         m.UserID,
 			Role:           models.OrganizationRole(m.Role),
 			Username:       m.Username,
-			Email:          m.Email,
+			Email:          email,
 			CreatedAt:      m.CreatedAt,
 		}
 	}

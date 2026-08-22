@@ -23,6 +23,12 @@ const (
 	ContestRoleParticipant ContestRole = "participant"
 )
 
+type UserContestMembership struct {
+	ContestID uuid.UUID
+	Role      ContestRole
+}
+
+
 type ContestFreezeStatus = string
 
 const (

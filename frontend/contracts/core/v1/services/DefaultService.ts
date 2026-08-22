@@ -3,8 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AuthResponseModel } from '../models/AuthResponseModel';
+import type { BatchCreateOrganizationUsersRequestModel } from '../models/BatchCreateOrganizationUsersRequestModel';
+import type { BatchCreateOrganizationUsersResponseModel } from '../models/BatchCreateOrganizationUsersResponseModel';
 import type { BlockProblemRequestModel } from '../models/BlockProblemRequestModel';
 import type { BlockSubmissionRequestModel } from '../models/BlockSubmissionRequestModel';
+import type { ClaimTemporaryUserRequestModel } from '../models/ClaimTemporaryUserRequestModel';
+import type { ClaimTemporaryUserResponseModel } from '../models/ClaimTemporaryUserResponseModel';
 import type { CompileResult } from '../models/CompileResult';
 import type { CreateContestDraftRequestModel } from '../models/CreateContestDraftRequestModel';
 import type { CreatedPost } from '../models/CreatedPost';
@@ -21,6 +25,7 @@ import type { GetSubmissionResponseModel } from '../models/GetSubmissionResponse
 import type { GetTeamResponseModel } from '../models/GetTeamResponseModel';
 import type { GetUserDashboardResponseModel } from '../models/GetUserDashboardResponseModel';
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
+import type { ListClaimedAccountsResponseModel } from '../models/ListClaimedAccountsResponseModel';
 import type { ListContestDraftsResponseModel } from '../models/ListContestDraftsResponseModel';
 import type { ListContestMembersResponseModel } from '../models/ListContestMembersResponseModel';
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
@@ -1317,6 +1322,34 @@ export class DefaultService {
         return this.httpRequest.request({
             method: 'GET',
             url: '/users/me/dashboard',
+        });
+    }
+    /**
+     * Claim temporary user results into permanent account
+     * @returns ClaimTemporaryUserResponseModel OK
+     * @throws ApiError
+     */
+    public claimTemporaryUser({
+        requestBody,
+    }: {
+        requestBody: ClaimTemporaryUserRequestModel,
+    }): CancelablePromise<ClaimTemporaryUserResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/users/claim-temporary',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * List claimed temporary accounts
+     * @returns ListClaimedAccountsResponseModel OK
+     * @throws ApiError
+     */
+    public listMyClaimedAccounts(): CancelablePromise<ListClaimedAccountsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/users/me/claimed-accounts',
         });
     }
     /**
@@ -2961,6 +2994,28 @@ export class DefaultService {
             query: {
                 'user_id': userId,
             },
+        });
+    }
+    /**
+     * Batch create users in organization
+     * @returns BatchCreateOrganizationUsersResponseModel OK
+     * @throws ApiError
+     */
+    public batchCreateOrganizationUsers({
+        login,
+        requestBody,
+    }: {
+        login: string,
+        requestBody: BatchCreateOrganizationUsersRequestModel,
+    }): CancelablePromise<BatchCreateOrganizationUsersResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{login}/members/batch',
+            path: {
+                'login': login,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**

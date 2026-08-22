@@ -7,6 +7,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
 )
 
 func (h *CoreServer) GetUser(ctx context.Context, request corev1.GetUserRequestObject) (corev1.GetUserResponseObject, error) {
@@ -100,4 +101,60 @@ func (h *CoreServer) UpdateUser(ctx context.Context, request corev1.UpdateUserRe
 
 	return corev1.UpdateUser200Response{}, nil
 }
+
+func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, request corev1.ClaimTemporaryUserRequestObject) (corev1.ClaimTemporaryUserResponseObject, error) {
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
+	}
+
+	user := middleware.GetUser(ctx)
+
+	result, err := h.usersUC.ClaimTemporaryUser(ctx, user, models.ClaimTemporaryUserInput{
+		Username: request.Body.Username,
+		Password: request.Body.Password,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var contestsGranted *[]uuid.UUID
+	if len(result.ContestsGranted) > 0 {
+		cg := make([]uuid.UUID, len(result.ContestsGranted))
+		copy(cg, result.ContestsGranted)
+		contestsGranted = &cg
+	}
+
+	return corev1.ClaimTemporaryUser200JSONResponse{
+		ClaimedUserId:   result.ClaimedUserID,
+		ClaimedUsername: result.ClaimedUsername,
+		ContestsGranted: contestsGranted,
+	}, nil
+}
+
+func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context, request corev1.ListMyClaimedAccountsRequestObject) (corev1.ListMyClaimedAccountsResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	accounts, err := h.usersUC.ListClaimedAccounts(ctx, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]corev1.ClaimedAccountItem, len(accounts))
+	for i, acc := range accounts {
+		items[i] = corev1.ClaimedAccountItem{
+			Id:        acc.ID,
+			Username:  acc.Username,
+			ClaimedAt: acc.ClaimedAt,
+			ExpiresAt: acc.ExpiresAt,
+		}
+	}
+
+	return corev1.ListMyClaimedAccounts200JSONResponse{
+		Accounts: items,
+	}, nil
+}
+
 

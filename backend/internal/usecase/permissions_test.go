@@ -9,6 +9,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -65,13 +66,50 @@ func (m *mockContestsRepo) GetContestTeams(ctx context.Context, contestID uuid.U
 	return m.contestTeams[contestID], nil
 }
 
+func (m *mockContestsRepo) ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]models.UserContestMembership, error) {
+	var list []models.UserContestMembership
+	for _, mem := range m.members {
+		if mem.UserID == userID {
+			list = append(list, models.UserContestMembership{
+				ContestID: mem.ContestID,
+				Role:      mem.Role,
+			})
+		}
+	}
+	return list, nil
+}
+
+func (m *mockContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role string) error {
+	key := contestID.String() + ":" + userID.String()
+	if _, exists := m.members[key]; !exists {
+		m.members[key] = models.ContestMember{
+			ContestID: contestID,
+			UserID:    userID,
+			Role:      role,
+		}
+	}
+	return nil
+}
+
+func (m *mockContestsRepo) WithTx(tx pgx.Tx) interfaces.ContestsRepo {
+	return m
+}
+
 type mockOrgsRepo struct {
 	interfaces.OrganizationsRepo
-	members map[string]models.OrganizationMember // key: orgID:userID
+	members       map[string]models.OrganizationMember // key: orgID:userID
+	organizations map[string]models.Organization       // key: login
 }
 
 func newMockOrgsRepo() *mockOrgsRepo {
-	return &mockOrgsRepo{members: make(map[string]models.OrganizationMember)}
+	return &mockOrgsRepo{
+		members:       make(map[string]models.OrganizationMember),
+		organizations: make(map[string]models.Organization),
+	}
+}
+
+func (m *mockOrgsRepo) WithTx(tx pgx.Tx) interfaces.OrganizationsRepo {
+	return m
 }
 
 func (m *mockOrgsRepo) GetMember(ctx context.Context, orgID, userID uuid.UUID) (*models.OrganizationMember, error) {
@@ -81,6 +119,28 @@ func (m *mockOrgsRepo) GetMember(ctx context.Context, orgID, userID uuid.UUID) (
 	}
 	return nil, pkg.ErrNotFound
 }
+
+func (m *mockOrgsRepo) GetOrganizationByLogin(ctx context.Context, login string) (*models.Organization, error) {
+	if org, ok := m.organizations[login]; ok {
+		return &org, nil
+	}
+	return &models.Organization{
+		ID:    uuid.New(),
+		Login: login,
+		Name:  "Test Org",
+	}, nil
+}
+
+func (m *mockOrgsRepo) AddMember(ctx context.Context, orgID, userID uuid.UUID, role models.OrganizationRole) error {
+	m.members[orgID.String()+":"+userID.String()] = models.OrganizationMember{
+		OrganizationID: orgID,
+		UserID:         userID,
+		Role:           role,
+	}
+	return nil
+}
+
+
 
 type mockTeamsRepo struct {
 	interfaces.TeamsRepo
@@ -153,7 +213,7 @@ func setupPermissionsFixture() *permissionsFixture {
 
 	permUC := NewPermissionsUseCase(contestsRepo, usersUC, problemsRepo, teamsRepo, orgsRepo)
 
-	return &permissionsFixture{
+	f := &permissionsFixture{
 		usersUC:   usersUC,
 		contests:  contestsRepo,
 		orgs:      orgsRepo,
@@ -164,6 +224,12 @@ func setupPermissionsFixture() *permissionsFixture {
 		contestID: uuid.New(),
 		problemID: uuid.New(),
 	}
+	orgsRepo.organizations["test-org"] = models.Organization{
+		ID:    f.orgID,
+		Login: "test-org",
+		Name:  "Test Org",
+	}
+	return f
 }
 
 // --- Effective Role Resolution Tests (RBAC) ---

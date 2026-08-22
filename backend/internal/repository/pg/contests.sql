@@ -94,6 +94,17 @@ WHERE contest_id = $1 AND user_id = $2;
 DELETE FROM contest_members
 WHERE contest_id = $1 AND user_id = $2;
 
+-- name: ListUserContestMemberships :many
+SELECT contest_id, role
+FROM contest_members
+WHERE user_id = $1;
+
+-- name: AddContestMemberIfNotExists :exec
+INSERT INTO contest_members (contest_id, user_id, role)
+VALUES ($1, $2, $3)
+ON CONFLICT (contest_id, user_id) DO NOTHING;
+
+
 -- Contest Problems (linking to packages)
 
 -- name: AddContestProblem :exec

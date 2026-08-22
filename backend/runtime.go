@@ -172,7 +172,7 @@ func runApp(envFile string) error {
 
 	authRepo := pg.NewAuthRepo(pool)
 
-	usersUC := usecase.NewUsersUseCase(usersRepo, outboxRepo, txManager)
+	usersUC := usecase.NewUsersUseCase(usersRepo, contestsRepo, outboxRepo, txManager)
 	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, txManager)
 	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
 	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)

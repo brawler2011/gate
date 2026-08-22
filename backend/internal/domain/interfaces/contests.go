@@ -52,8 +52,11 @@ type ContestsRepo interface {
 	DeleteContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) error
 	GetContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestUserProblemBlock, error)
 	ListContestUserProblemBlocks(ctx context.Context, contestID uuid.UUID, userID *uuid.UUID) ([]models.ContestUserProblemBlock, error)
+	ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]models.UserContestMembership, error)
+	AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role string) error
 	WithTx(tx pgx.Tx) ContestsRepo
 }
+
 
 type ContestsUC interface {
 	CreateContest(ctx context.Context, c *models.CreateContestInput) (uuid.UUID, error)

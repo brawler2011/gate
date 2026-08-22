@@ -428,7 +428,7 @@ type ListProblemMembersRow struct {
 	Role      ProblemRole `json:"role"`
 	CreatedAt time.Time   `json:"created_at"`
 	Username  string      `json:"username"`
-	Email     string      `json:"email"`
+	Email     *string     `json:"email"`
 }
 
 func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]ListProblemMembersRow, error) {

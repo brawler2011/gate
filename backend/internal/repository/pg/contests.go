@@ -544,6 +544,35 @@ func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.U
 	return nil
 }
 
+func (r *ContestsRepo) ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]models.UserContestMembership, error) {
+	rows, err := r.queries.ListUserContestMemberships(ctx, userID)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	memberships := make([]models.UserContestMembership, len(rows))
+	for i, row := range rows {
+		memberships[i] = models.UserContestMembership{
+			ContestID: row.ContestID,
+			Role:      row.Role,
+		}
+	}
+	return memberships, nil
+}
+
+func (r *ContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role string) error {
+	err := r.queries.AddContestMemberIfNotExists(ctx, sqlc.AddContestMemberIfNotExistsParams{
+		ContestID: contestID,
+		UserID:    userID,
+		Role:      role,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+
 func mapContestFields(
 	id uuid.UUID,
 	orgID uuid.UUID,

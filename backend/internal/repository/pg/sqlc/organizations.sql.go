@@ -232,7 +232,7 @@ type ListOrganizationMembersRow struct {
 	Role           OrganizationRole `json:"role"`
 	CreatedAt      time.Time        `json:"created_at"`
 	Username       string           `json:"username"`
-	Email          string           `json:"email"`
+	Email          *string          `json:"email"`
 }
 
 func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID uuid.UUID) ([]ListOrganizationMembersRow, error) {

@@ -11,8 +11,14 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AuthResponseModel } from './models/AuthResponseModel';
+export type { BatchCreatedUserItem } from './models/BatchCreatedUserItem';
+export type { BatchCreateOrganizationUsersRequestModel } from './models/BatchCreateOrganizationUsersRequestModel';
+export type { BatchCreateOrganizationUsersResponseModel } from './models/BatchCreateOrganizationUsersResponseModel';
 export type { BlockProblemRequestModel } from './models/BlockProblemRequestModel';
 export type { BlockSubmissionRequestModel } from './models/BlockSubmissionRequestModel';
+export type { ClaimedAccountItem } from './models/ClaimedAccountItem';
+export type { ClaimTemporaryUserRequestModel } from './models/ClaimTemporaryUserRequestModel';
+export type { ClaimTemporaryUserResponseModel } from './models/ClaimTemporaryUserResponseModel';
 export type { CompileResult } from './models/CompileResult';
 export type { ContestDraftModel } from './models/ContestDraftModel';
 export type { ContestMemberModel } from './models/ContestMemberModel';
@@ -41,6 +47,7 @@ export type { GetSubmissionResponseModel } from './models/GetSubmissionResponseM
 export type { GetTeamResponseModel } from './models/GetTeamResponseModel';
 export type { GetUserDashboardResponseModel } from './models/GetUserDashboardResponseModel';
 export type { GetUserResponseModel } from './models/GetUserResponseModel';
+export type { ListClaimedAccountsResponseModel } from './models/ListClaimedAccountsResponseModel';
 export type { ListContestDraftsResponseModel } from './models/ListContestDraftsResponseModel';
 export type { ListContestMembersResponseModel } from './models/ListContestMembersResponseModel';
 export type { ListContestsResponseModel } from './models/ListContestsResponseModel';

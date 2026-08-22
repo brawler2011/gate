@@ -2,16 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type UserModel = {
+export type ClaimedAccountItem = {
     id: string;
     username: string;
-    createdAt: string;
-    updatedAt: string;
-    role: string;
-    email?: string;
-    imgId?: string;
+    claimed_at: string;
     expires_at?: string;
-    claimed_by_user_id?: string;
-    claimed_at?: string;
 };
 

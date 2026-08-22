@@ -190,12 +190,16 @@ func (r *TeamsRepo) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]mo
 
 	result := make([]models.TeamMember, len(members))
 	for i, m := range members {
+		var email string
+		if m.Email != nil {
+			email = *m.Email
+		}
 		result[i] = models.TeamMember{
 			TeamID:    m.TeamID,
 			UserID:    m.UserID,
 			Role:      models.TeamRole(m.Role),
 			Username:  m.Username,
-			Email:     m.Email,
+			Email:     email,
 			CreatedAt: m.CreatedAt,
 		}
 	}

@@ -155,6 +155,26 @@ type AuthResponseModel struct {
 	User      UserModel          `json:"user"`
 }
 
+// BatchCreateOrganizationUsersRequestModel defines model for BatchCreateOrganizationUsersRequestModel.
+type BatchCreateOrganizationUsersRequestModel struct {
+	Count   int32  `json:"count"`
+	Prefix  string `json:"prefix"`
+	TtlDays *int32 `json:"ttl_days,omitempty"`
+}
+
+// BatchCreateOrganizationUsersResponseModel defines model for BatchCreateOrganizationUsersResponseModel.
+type BatchCreateOrganizationUsersResponseModel struct {
+	Users []BatchCreatedUserItem `json:"users"`
+}
+
+// BatchCreatedUserItem defines model for BatchCreatedUserItem.
+type BatchCreatedUserItem struct {
+	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Password  string             `json:"password"`
+	Username  string             `json:"username"`
+}
+
 // BlockProblemRequestModel defines model for BlockProblemRequestModel.
 type BlockProblemRequestModel struct {
 	Reason *string `json:"reason,omitempty"`
@@ -163,6 +183,27 @@ type BlockProblemRequestModel struct {
 // BlockSubmissionRequestModel defines model for BlockSubmissionRequestModel.
 type BlockSubmissionRequestModel struct {
 	Reason *string `json:"reason,omitempty"`
+}
+
+// ClaimTemporaryUserRequestModel defines model for ClaimTemporaryUserRequestModel.
+type ClaimTemporaryUserRequestModel struct {
+	Password string `json:"password"`
+	Username string `json:"username"`
+}
+
+// ClaimTemporaryUserResponseModel defines model for ClaimTemporaryUserResponseModel.
+type ClaimTemporaryUserResponseModel struct {
+	ClaimedUserId   openapi_types.UUID    `json:"claimed_user_id"`
+	ClaimedUsername string                `json:"claimed_username"`
+	ContestsGranted *[]openapi_types.UUID `json:"contests_granted,omitempty"`
+}
+
+// ClaimedAccountItem defines model for ClaimedAccountItem.
+type ClaimedAccountItem struct {
+	ClaimedAt time.Time          `json:"claimed_at"`
+	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Username  string             `json:"username"`
 }
 
 // CompileResult defines model for CompileResult.
@@ -409,6 +450,11 @@ type GetUserDashboardResponseModel struct {
 // GetUserResponseModel defines model for GetUserResponseModel.
 type GetUserResponseModel struct {
 	User UserModel `json:"user"`
+}
+
+// ListClaimedAccountsResponseModel defines model for ListClaimedAccountsResponseModel.
+type ListClaimedAccountsResponseModel struct {
+	Accounts []ClaimedAccountItem `json:"accounts"`
 }
 
 // ListContestDraftsResponseModel defines model for ListContestDraftsResponseModel.
@@ -915,13 +961,16 @@ type UpdateUserRequestModelRole string
 
 // UserModel defines model for UserModel.
 type UserModel struct {
-	CreatedAt time.Time           `json:"createdAt"`
-	Email     *string             `json:"email,omitempty"`
-	Id        openapi_types.UUID  `json:"id"`
-	ImgId     *openapi_types.UUID `json:"imgId,omitempty"`
-	Role      string              `json:"role"`
-	UpdatedAt time.Time           `json:"updatedAt"`
-	Username  string              `json:"username"`
+	ClaimedAt       *time.Time          `json:"claimed_at,omitempty"`
+	ClaimedByUserId *openapi_types.UUID `json:"claimed_by_user_id,omitempty"`
+	CreatedAt       time.Time           `json:"createdAt"`
+	Email           *string             `json:"email,omitempty"`
+	ExpiresAt       *time.Time          `json:"expires_at,omitempty"`
+	Id              openapi_types.UUID  `json:"id"`
+	ImgId           *openapi_types.UUID `json:"imgId,omitempty"`
+	Role            string              `json:"role"`
+	UpdatedAt       time.Time           `json:"updatedAt"`
+	Username        string              `json:"username"`
 }
 
 // ValidationReport defines model for ValidationReport.
@@ -1433,6 +1482,9 @@ type RegisterJSONRequestBody = RegisterRequestModel
 // UpdateOrganizationJSONRequestBody defines body for UpdateOrganization for application/json ContentType.
 type UpdateOrganizationJSONRequestBody = UpdateOrganizationRequestModel
 
+// BatchCreateOrganizationUsersJSONRequestBody defines body for BatchCreateOrganizationUsers for application/json ContentType.
+type BatchCreateOrganizationUsersJSONRequestBody = BatchCreateOrganizationUsersRequestModel
+
 // UpdateContestJSONRequestBody defines body for UpdateContest for application/json ContentType.
 type UpdateContestJSONRequestBody = UpdateContestRequestModel
 
@@ -1519,6 +1571,9 @@ type CreateTeamJSONRequestBody CreateTeamJSONBody
 
 // UpdateTeamJSONRequestBody defines body for UpdateTeam for application/json ContentType.
 type UpdateTeamJSONRequestBody = UpdateTeamRequestModel
+
+// ClaimTemporaryUserJSONRequestBody defines body for ClaimTemporaryUser for application/json ContentType.
+type ClaimTemporaryUserJSONRequestBody = ClaimTemporaryUserRequestModel
 
 // UpdateUserJSONRequestBody defines body for UpdateUser for application/json ContentType.
 type UpdateUserJSONRequestBody = UpdateUserRequestModel
@@ -1646,6 +1701,11 @@ type ClientInterface interface {
 
 	// AddOrganizationMember request
 	AddOrganizationMember(ctx context.Context, login string, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// BatchCreateOrganizationUsersWithBody request with any body
+	BatchCreateOrganizationUsersWithBody(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	BatchCreateOrganizationUsers(ctx context.Context, login string, body BatchCreateOrganizationUsersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListOrganizationContests request
 	ListOrganizationContests(ctx context.Context, orgLogin string, params *ListOrganizationContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2056,8 +2116,16 @@ type ClientInterface interface {
 	// ListUsers request
 	ListUsers(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ClaimTemporaryUserWithBody request with any body
+	ClaimTemporaryUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ClaimTemporaryUser(ctx context.Context, body ClaimTemporaryUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetMe request
 	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListMyClaimedAccounts request
+	ListMyClaimedAccounts(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetMyDashboard request
 	GetMyDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2283,6 +2351,30 @@ func (c *Client) ListOrganizationMembers(ctx context.Context, login string, para
 
 func (c *Client) AddOrganizationMember(ctx context.Context, login string, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAddOrganizationMemberRequest(c.Server, login, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) BatchCreateOrganizationUsersWithBody(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBatchCreateOrganizationUsersRequestWithBody(c.Server, login, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) BatchCreateOrganizationUsers(ctx context.Context, login string, body BatchCreateOrganizationUsersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBatchCreateOrganizationUsersRequest(c.Server, login, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4033,8 +4125,44 @@ func (c *Client) ListUsers(ctx context.Context, params *ListUsersParams, reqEdit
 	return c.Client.Do(req)
 }
 
+func (c *Client) ClaimTemporaryUserWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewClaimTemporaryUserRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ClaimTemporaryUser(ctx context.Context, body ClaimTemporaryUserJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewClaimTemporaryUserRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetMeRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListMyClaimedAccounts(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListMyClaimedAccountsRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -4872,6 +5000,53 @@ func NewAddOrganizationMemberRequest(server string, login string, params *AddOrg
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewBatchCreateOrganizationUsersRequest calls the generic BatchCreateOrganizationUsers builder with application/json body
+func NewBatchCreateOrganizationUsersRequest(server string, login string, body BatchCreateOrganizationUsersJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewBatchCreateOrganizationUsersRequestWithBody(server, login, "application/json", bodyReader)
+}
+
+// NewBatchCreateOrganizationUsersRequestWithBody generates requests for BatchCreateOrganizationUsers with any type of body
+func NewBatchCreateOrganizationUsersRequestWithBody(server string, login string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/members/batch", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -11297,6 +11472,46 @@ func NewListUsersRequest(server string, params *ListUsersParams) (*http.Request,
 	return req, nil
 }
 
+// NewClaimTemporaryUserRequest calls the generic ClaimTemporaryUser builder with application/json body
+func NewClaimTemporaryUserRequest(server string, body ClaimTemporaryUserJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewClaimTemporaryUserRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewClaimTemporaryUserRequestWithBody generates requests for ClaimTemporaryUser with any type of body
+func NewClaimTemporaryUserRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/users/claim-temporary")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetMeRequest generates requests for GetMe
 func NewGetMeRequest(server string) (*http.Request, error) {
 	var err error
@@ -11307,6 +11522,33 @@ func NewGetMeRequest(server string) (*http.Request, error) {
 	}
 
 	operationPath := fmt.Sprintf("/users/me")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListMyClaimedAccountsRequest generates requests for ListMyClaimedAccounts
+func NewListMyClaimedAccountsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/users/me/claimed-accounts")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -12003,6 +12245,11 @@ type ClientWithResponsesInterface interface {
 	// AddOrganizationMemberWithResponse request
 	AddOrganizationMemberWithResponse(ctx context.Context, login string, params *AddOrganizationMemberParams, reqEditors ...RequestEditorFn) (*AddOrganizationMemberResponse, error)
 
+	// BatchCreateOrganizationUsersWithBodyWithResponse request with any body
+	BatchCreateOrganizationUsersWithBodyWithResponse(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*BatchCreateOrganizationUsersResponse, error)
+
+	BatchCreateOrganizationUsersWithResponse(ctx context.Context, login string, body BatchCreateOrganizationUsersJSONRequestBody, reqEditors ...RequestEditorFn) (*BatchCreateOrganizationUsersResponse, error)
+
 	// ListOrganizationContestsWithResponse request
 	ListOrganizationContestsWithResponse(ctx context.Context, orgLogin string, params *ListOrganizationContestsParams, reqEditors ...RequestEditorFn) (*ListOrganizationContestsResponse, error)
 
@@ -12412,8 +12659,16 @@ type ClientWithResponsesInterface interface {
 	// ListUsersWithResponse request
 	ListUsersWithResponse(ctx context.Context, params *ListUsersParams, reqEditors ...RequestEditorFn) (*ListUsersResponse, error)
 
+	// ClaimTemporaryUserWithBodyWithResponse request with any body
+	ClaimTemporaryUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ClaimTemporaryUserResponse, error)
+
+	ClaimTemporaryUserWithResponse(ctx context.Context, body ClaimTemporaryUserJSONRequestBody, reqEditors ...RequestEditorFn) (*ClaimTemporaryUserResponse, error)
+
 	// GetMeWithResponse request
 	GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
+
+	// ListMyClaimedAccountsWithResponse request
+	ListMyClaimedAccountsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMyClaimedAccountsResponse, error)
 
 	// GetMyDashboardWithResponse request
 	GetMyDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMyDashboardResponse, error)
@@ -12742,6 +12997,28 @@ func (r AddOrganizationMemberResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r AddOrganizationMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type BatchCreateOrganizationUsersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *BatchCreateOrganizationUsersResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r BatchCreateOrganizationUsersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r BatchCreateOrganizationUsersResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -15355,6 +15632,28 @@ func (r ListUsersResponse) StatusCode() int {
 	return 0
 }
 
+type ClaimTemporaryUserResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ClaimTemporaryUserResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ClaimTemporaryUserResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ClaimTemporaryUserResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetMeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -15371,6 +15670,28 @@ func (r GetMeResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetMeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListMyClaimedAccountsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListClaimedAccountsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListMyClaimedAccountsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListMyClaimedAccountsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -15724,6 +16045,23 @@ func (c *ClientWithResponses) AddOrganizationMemberWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseAddOrganizationMemberResponse(rsp)
+}
+
+// BatchCreateOrganizationUsersWithBodyWithResponse request with arbitrary body returning *BatchCreateOrganizationUsersResponse
+func (c *ClientWithResponses) BatchCreateOrganizationUsersWithBodyWithResponse(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*BatchCreateOrganizationUsersResponse, error) {
+	rsp, err := c.BatchCreateOrganizationUsersWithBody(ctx, login, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBatchCreateOrganizationUsersResponse(rsp)
+}
+
+func (c *ClientWithResponses) BatchCreateOrganizationUsersWithResponse(ctx context.Context, login string, body BatchCreateOrganizationUsersJSONRequestBody, reqEditors ...RequestEditorFn) (*BatchCreateOrganizationUsersResponse, error) {
+	rsp, err := c.BatchCreateOrganizationUsers(ctx, login, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBatchCreateOrganizationUsersResponse(rsp)
 }
 
 // ListOrganizationContestsWithResponse request returning *ListOrganizationContestsResponse
@@ -17005,6 +17343,23 @@ func (c *ClientWithResponses) ListUsersWithResponse(ctx context.Context, params 
 	return ParseListUsersResponse(rsp)
 }
 
+// ClaimTemporaryUserWithBodyWithResponse request with arbitrary body returning *ClaimTemporaryUserResponse
+func (c *ClientWithResponses) ClaimTemporaryUserWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ClaimTemporaryUserResponse, error) {
+	rsp, err := c.ClaimTemporaryUserWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseClaimTemporaryUserResponse(rsp)
+}
+
+func (c *ClientWithResponses) ClaimTemporaryUserWithResponse(ctx context.Context, body ClaimTemporaryUserJSONRequestBody, reqEditors ...RequestEditorFn) (*ClaimTemporaryUserResponse, error) {
+	rsp, err := c.ClaimTemporaryUser(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseClaimTemporaryUserResponse(rsp)
+}
+
 // GetMeWithResponse request returning *GetMeResponse
 func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error) {
 	rsp, err := c.GetMe(ctx, reqEditors...)
@@ -17012,6 +17367,15 @@ func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors 
 		return nil, err
 	}
 	return ParseGetMeResponse(rsp)
+}
+
+// ListMyClaimedAccountsWithResponse request returning *ListMyClaimedAccountsResponse
+func (c *ClientWithResponses) ListMyClaimedAccountsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMyClaimedAccountsResponse, error) {
+	rsp, err := c.ListMyClaimedAccounts(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListMyClaimedAccountsResponse(rsp)
 }
 
 // GetMyDashboardWithResponse request returning *GetMyDashboardResponse
@@ -17412,6 +17776,32 @@ func ParseAddOrganizationMemberResponse(rsp *http.Response) (*AddOrganizationMem
 	response := &AddOrganizationMemberResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseBatchCreateOrganizationUsersResponse parses an HTTP response from a BatchCreateOrganizationUsersWithResponse call
+func ParseBatchCreateOrganizationUsersResponse(rsp *http.Response) (*BatchCreateOrganizationUsersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &BatchCreateOrganizationUsersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest BatchCreateOrganizationUsersResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -20221,6 +20611,32 @@ func ParseListUsersResponse(rsp *http.Response) (*ListUsersResponse, error) {
 	return response, nil
 }
 
+// ParseClaimTemporaryUserResponse parses an HTTP response from a ClaimTemporaryUserWithResponse call
+func ParseClaimTemporaryUserResponse(rsp *http.Response) (*ClaimTemporaryUserResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ClaimTemporaryUserResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ClaimTemporaryUserResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetMeResponse parses an HTTP response from a GetMeWithResponse call
 func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -20237,6 +20653,32 @@ func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest GetUserResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListMyClaimedAccountsResponse parses an HTTP response from a ListMyClaimedAccountsWithResponse call
+func ParseListMyClaimedAccountsResponse(rsp *http.Response) (*ListMyClaimedAccountsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListMyClaimedAccountsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListClaimedAccountsResponseModel
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -20514,6 +20956,9 @@ type ServerInterface interface {
 	// Add member to organization
 	// (POST /organizations/{login}/members)
 	AddOrganizationMember(w http.ResponseWriter, r *http.Request, login string, params AddOrganizationMemberParams)
+	// Batch create users in organization
+	// (POST /organizations/{login}/members/batch)
+	BatchCreateOrganizationUsers(w http.ResponseWriter, r *http.Request, login string)
 
 	// (GET /organizations/{org_login}/contests)
 	ListOrganizationContests(w http.ResponseWriter, r *http.Request, orgLogin string, params ListOrganizationContestsParams)
@@ -20871,9 +21316,15 @@ type ServerInterface interface {
 
 	// (GET /users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
+	// Claim temporary user results into permanent account
+	// (POST /users/claim-temporary)
+	ClaimTemporaryUser(w http.ResponseWriter, r *http.Request)
 
 	// (GET /users/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
+	// List claimed temporary accounts
+	// (GET /users/me/claimed-accounts)
+	ListMyClaimedAccounts(w http.ResponseWriter, r *http.Request)
 
 	// (GET /users/me/dashboard)
 	GetMyDashboard(w http.ResponseWriter, r *http.Request)
@@ -21387,6 +21838,31 @@ func (siw *ServerInterfaceWrapper) AddOrganizationMember(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AddOrganizationMember(w, r, login, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BatchCreateOrganizationUsers operation middleware
+func (siw *ServerInterfaceWrapper) BatchCreateOrganizationUsers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BatchCreateOrganizationUsers(w, r, login)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -26251,11 +26727,39 @@ func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ClaimTemporaryUser operation middleware
+func (siw *ServerInterfaceWrapper) ClaimTemporaryUser(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClaimTemporaryUser(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMe operation middleware
 func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyClaimedAccounts operation middleware
+func (siw *ServerInterfaceWrapper) ListMyClaimedAccounts(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyClaimedAccounts(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -26815,6 +27319,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{login}/members", wrapper.RemoveOrganizationMember)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{login}/members", wrapper.ListOrganizationMembers)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{login}/members", wrapper.AddOrganizationMember)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{login}/members/batch", wrapper.BatchCreateOrganizationUsers)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests", wrapper.ListOrganizationContests)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests", wrapper.CreateContest)
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}", wrapper.DeleteContest)
@@ -26934,7 +27439,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("POST "+options.BaseURL+"/teams/{id}/members", wrapper.AddTeamMember)
 	m.HandleFunc("GET "+options.BaseURL+"/teams/{id}/problems", wrapper.ListTeamProblems)
 	m.HandleFunc("GET "+options.BaseURL+"/users", wrapper.ListUsers)
+	m.HandleFunc("POST "+options.BaseURL+"/users/claim-temporary", wrapper.ClaimTemporaryUser)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetMe)
+	m.HandleFunc("GET "+options.BaseURL+"/users/me/claimed-accounts", wrapper.ListMyClaimedAccounts)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me/dashboard", wrapper.GetMyDashboard)
 	m.HandleFunc("GET "+options.BaseURL+"/users/{username}", wrapper.GetUser)
 	m.HandleFunc("PATCH "+options.BaseURL+"/users/{username}", wrapper.UpdateUser)
@@ -27180,6 +27687,24 @@ type AddOrganizationMember200Response struct {
 func (response AddOrganizationMember200Response) VisitAddOrganizationMemberResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
+}
+
+type BatchCreateOrganizationUsersRequestObject struct {
+	Login string `json:"login"`
+	Body  *BatchCreateOrganizationUsersJSONRequestBody
+}
+
+type BatchCreateOrganizationUsersResponseObject interface {
+	VisitBatchCreateOrganizationUsersResponse(w http.ResponseWriter) error
+}
+
+type BatchCreateOrganizationUsers200JSONResponse BatchCreateOrganizationUsersResponseModel
+
+func (response BatchCreateOrganizationUsers200JSONResponse) VisitBatchCreateOrganizationUsersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type ListOrganizationContestsRequestObject struct {
@@ -29522,6 +30047,23 @@ func (response ListUsers200JSONResponse) VisitListUsersResponse(w http.ResponseW
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ClaimTemporaryUserRequestObject struct {
+	Body *ClaimTemporaryUserJSONRequestBody
+}
+
+type ClaimTemporaryUserResponseObject interface {
+	VisitClaimTemporaryUserResponse(w http.ResponseWriter) error
+}
+
+type ClaimTemporaryUser200JSONResponse ClaimTemporaryUserResponseModel
+
+func (response ClaimTemporaryUser200JSONResponse) VisitClaimTemporaryUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetMeRequestObject struct {
 }
 
@@ -29532,6 +30074,22 @@ type GetMeResponseObject interface {
 type GetMe200JSONResponse GetUserResponseModel
 
 func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyClaimedAccountsRequestObject struct {
+}
+
+type ListMyClaimedAccountsResponseObject interface {
+	VisitListMyClaimedAccountsResponse(w http.ResponseWriter) error
+}
+
+type ListMyClaimedAccounts200JSONResponse ListClaimedAccountsResponseModel
+
+func (response ListMyClaimedAccounts200JSONResponse) VisitListMyClaimedAccountsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -29787,6 +30345,9 @@ type StrictServerInterface interface {
 	// Add member to organization
 	// (POST /organizations/{login}/members)
 	AddOrganizationMember(ctx context.Context, request AddOrganizationMemberRequestObject) (AddOrganizationMemberResponseObject, error)
+	// Batch create users in organization
+	// (POST /organizations/{login}/members/batch)
+	BatchCreateOrganizationUsers(ctx context.Context, request BatchCreateOrganizationUsersRequestObject) (BatchCreateOrganizationUsersResponseObject, error)
 
 	// (GET /organizations/{org_login}/contests)
 	ListOrganizationContests(ctx context.Context, request ListOrganizationContestsRequestObject) (ListOrganizationContestsResponseObject, error)
@@ -30144,9 +30705,15 @@ type StrictServerInterface interface {
 
 	// (GET /users)
 	ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error)
+	// Claim temporary user results into permanent account
+	// (POST /users/claim-temporary)
+	ClaimTemporaryUser(ctx context.Context, request ClaimTemporaryUserRequestObject) (ClaimTemporaryUserResponseObject, error)
 
 	// (GET /users/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+	// List claimed temporary accounts
+	// (GET /users/me/claimed-accounts)
+	ListMyClaimedAccounts(ctx context.Context, request ListMyClaimedAccountsRequestObject) (ListMyClaimedAccountsResponseObject, error)
 
 	// (GET /users/me/dashboard)
 	GetMyDashboard(ctx context.Context, request GetMyDashboardRequestObject) (GetMyDashboardResponseObject, error)
@@ -30576,6 +31143,39 @@ func (sh *strictHandler) AddOrganizationMember(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AddOrganizationMemberResponseObject); ok {
 		if err := validResponse.VisitAddOrganizationMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BatchCreateOrganizationUsers operation middleware
+func (sh *strictHandler) BatchCreateOrganizationUsers(w http.ResponseWriter, r *http.Request, login string) {
+	var request BatchCreateOrganizationUsersRequestObject
+
+	request.Login = login
+
+	var body BatchCreateOrganizationUsersJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BatchCreateOrganizationUsers(ctx, request.(BatchCreateOrganizationUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BatchCreateOrganizationUsers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BatchCreateOrganizationUsersResponseObject); ok {
+		if err := validResponse.VisitBatchCreateOrganizationUsersResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -34002,6 +34602,37 @@ func (sh *strictHandler) ListUsers(w http.ResponseWriter, r *http.Request, param
 	}
 }
 
+// ClaimTemporaryUser operation middleware
+func (sh *strictHandler) ClaimTemporaryUser(w http.ResponseWriter, r *http.Request) {
+	var request ClaimTemporaryUserRequestObject
+
+	var body ClaimTemporaryUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ClaimTemporaryUser(ctx, request.(ClaimTemporaryUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ClaimTemporaryUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ClaimTemporaryUserResponseObject); ok {
+		if err := validResponse.VisitClaimTemporaryUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetMe operation middleware
 func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	var request GetMeRequestObject
@@ -34019,6 +34650,30 @@ func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMeResponseObject); ok {
 		if err := validResponse.VisitGetMeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMyClaimedAccounts operation middleware
+func (sh *strictHandler) ListMyClaimedAccounts(w http.ResponseWriter, r *http.Request) {
+	var request ListMyClaimedAccountsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMyClaimedAccounts(ctx, request.(ListMyClaimedAccountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMyClaimedAccounts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMyClaimedAccountsResponseObject); ok {
+		if err := validResponse.VisitListMyClaimedAccountsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

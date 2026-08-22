@@ -2,12 +2,14 @@ package pg
 
 import (
 	"context"
+	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -32,6 +34,14 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params models.CreateUserPara
 		return err
 	}
 
+	var expiresAt pgtype.Timestamptz
+	if params.ExpiresAt != nil {
+		expiresAt = pgtype.Timestamptz{
+			Time:  *params.ExpiresAt,
+			Valid: true,
+		}
+	}
+
 	err := r.queries.CreateUser(ctx, sqlc.CreateUserParams{
 		ID:           params.Id,
 		Username:     params.Username,
@@ -39,6 +49,7 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params models.CreateUserPara
 		PasswordHash: params.PasswordHash,
 		Email:        params.Email,
 		AvatarUrl:    params.AvatarUrl,
+		ExpiresAt:    expiresAt,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -55,15 +66,32 @@ func (r *UsersRepo) GetUserById(ctx context.Context, id uuid.UUID) (models.User,
 }
 
 func mapUserToModel(user sqlc.User) models.User {
+	var expiresAt *time.Time
+	if user.ExpiresAt.Valid {
+		expiresAt = &user.ExpiresAt.Time
+	}
+	var claimedByUserID *uuid.UUID
+	if user.ClaimedByUserID.Valid {
+		uid := uuid.UUID(user.ClaimedByUserID.Bytes)
+		claimedByUserID = &uid
+	}
+	var claimedAt *time.Time
+	if user.ClaimedAt.Valid {
+		claimedAt = &user.ClaimedAt.Time
+	}
+
 	return models.User{
-		Id:           user.ID,
-		Username:     user.Username,
-		Role:         models.UserRole(user.Role),
-		PasswordHash: user.PasswordHash,
-		Email:        user.Email,
-		AvatarUrl:    user.AvatarUrl,
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
+		Id:              user.ID,
+		Username:        user.Username,
+		Role:            models.UserRole(user.Role),
+		PasswordHash:    user.PasswordHash,
+		Email:           user.Email,
+		AvatarUrl:       user.AvatarUrl,
+		ExpiresAt:       expiresAt,
+		ClaimedByUserID: claimedByUserID,
+		ClaimedAt:       claimedAt,
+		CreatedAt:       user.CreatedAt,
+		UpdatedAt:       user.UpdatedAt,
 	}
 }
 
@@ -133,12 +161,21 @@ func (r *UsersRepo) UpdateUser(
 		}
 	}
 
+	var expiresAt pgtype.Timestamptz
+	if params.ExpiresAt != nil {
+		expiresAt = pgtype.Timestamptz{
+			Time:  *params.ExpiresAt,
+			Valid: true,
+		}
+	}
+
 	err := r.queries.UpdateUser(ctx, sqlc.UpdateUserParams{
 		ID:        params.Id,
 		Username:  params.Username,
 		Role:      role,
 		Email:     params.Email,
 		AvatarUrl: params.AvatarUrl,
+		ExpiresAt: expiresAt,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -146,3 +183,37 @@ func (r *UsersRepo) UpdateUser(
 
 	return nil
 }
+
+func (r *UsersRepo) ClaimTemporaryUser(ctx context.Context, id, claimedByUserID uuid.UUID, claimedAt time.Time) error {
+	err := r.queries.ClaimTemporaryUser(ctx, sqlc.ClaimTemporaryUserParams{
+		ID:              id,
+		ClaimedByUserID: claimedByUserID,
+		ClaimedAt:       claimedAt,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *UsersRepo) ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]models.User, error) {
+	users, err := r.queries.ListClaimedAccountsByUserId(ctx, claimedByUserID)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	res := make([]models.User, len(users))
+	for i, u := range users {
+		res[i] = mapUserToModel(u)
+	}
+	return res, nil
+}
+
+func (r *UsersRepo) ListExistingUsernamesByPrefix(ctx context.Context, prefix string) ([]string, error) {
+	usernames, err := r.queries.ListExistingUsernamesByPrefix(ctx, prefix)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	return usernames, nil
+}
+
