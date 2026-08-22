@@ -2,7 +2,8 @@
 
 import {ActionIcon, Group, Select, Stack, Table, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {IconFileCode} from "@tabler/icons-react";
+import {IconFileCode, IconSettings} from "@tabler/icons-react";
+
 import {useRouter} from "next/navigation";
 import {useState} from "react";
 
@@ -140,6 +141,14 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
                   <ActionIcon
                     variant="subtle"
                     color="blue"
+                    title="Редактировать пользователя"
+                    onClick={() => router.push(`/admin/users/${user.username}`)}
+                  >
+                    <IconSettings size={18} />
+                  </ActionIcon>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
                     title="Посмотреть посылки пользователя"
                     onClick={() => router.push(`/admin/submissions?userId=${user.id}`)}
                   >
@@ -147,6 +156,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
                   </ActionIcon>
                 </Group>
               </Table.Td>
+
             </Table.Tr>
           ))}
         </Table.Tbody>

@@ -482,9 +482,11 @@ func userDTO(u models.User) corev1.UserModel {
 		ExpiresAt:       u.ExpiresAt,
 		ClaimedByUserId: u.ClaimedByUserID,
 		ClaimedAt:       u.ClaimedAt,
+		IsEmailVerified: &u.IsEmailVerified,
 		CreatedAt:       u.CreatedAt,
 		UpdatedAt:       u.UpdatedAt,
 	}
+
 }
 
 func usersListDTO(ul *models.UsersList) corev1.ListUsersResponseModel {

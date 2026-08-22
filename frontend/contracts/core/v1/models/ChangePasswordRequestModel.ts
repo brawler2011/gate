@@ -2,9 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { UserModel } from './UserModel';
-export type AuthResponseModel = {
-    user: UserModel;
-    session_id?: string;
+export type ChangePasswordRequestModel = {
+    old_password: string;
+    new_password: string;
 };
 

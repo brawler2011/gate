@@ -210,8 +210,8 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	usersRepo := newMockUsersRepoForTemp()
 	contestsRepo := newMockContestsRepo()
 	txManager := &mockTransactorNoop{}
+	usersUC := NewUsersUseCase(usersRepo, contestsRepo, nil, txManager, nil, nil)
 
-	usersUC := NewUsersUseCase(usersRepo, contestsRepo, nil, txManager)
 
 	// Permanent user
 	permUser := models.User{
@@ -279,7 +279,7 @@ func TestClaimTemporaryUser_Rejections(t *testing.T) {
 	usersRepo := newMockUsersRepoForTemp()
 	contestsRepo := newMockContestsRepo()
 	txManager := &mockTransactorNoop{}
-	usersUC := NewUsersUseCase(usersRepo, contestsRepo, nil, txManager)
+	usersUC := NewUsersUseCase(usersRepo, contestsRepo, nil, txManager, nil, nil)
 
 	permUser := models.User{Id: uuid.New(), Username: "alice_perm", Role: models.UserRoleUser}
 	usersRepo.users[permUser.Id] = permUser
@@ -329,12 +329,14 @@ func TestAuth_ExpiredAccount(t *testing.T) {
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	expiredUser := models.User{
-		Id:           uuid.New(),
-		Username:     "expired_user",
-		Role:         models.UserRoleUser,
-		PasswordHash: string(hashed),
-		ExpiresAt:    &pastExpiry,
+		Id:              uuid.New(),
+		Username:        "expired_user",
+		Role:            models.UserRoleUser,
+		PasswordHash:    string(hashed),
+		ExpiresAt:       &pastExpiry,
+		IsEmailVerified: true,
 	}
+
 	usersRepo.users[expiredUser.Id] = expiredUser
 	usersRepo.usersByName[expiredUser.Username] = expiredUser
 

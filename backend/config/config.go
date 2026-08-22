@@ -51,6 +51,11 @@ type Config struct {
 	OtelServiceVersion string `env:"OTEL_SERVICE_VERSION" env-default:"0.1.0"`
 	OtelInsecure       bool   `env:"OTEL_INSECURE" env-default:"true"`
 	OtelEnabled        bool   `env:"OTEL_ENABLED" env-default:"true"`
+
+	// Email configuration
+	ResendAPIKey string `env:"RESEND_API_KEY"`
+	EmailFrom    string `env:"EMAIL_FROM" env-default:"Gate <no-reply@gate.local>"`
+	AppBaseURL   string `env:"APP_BASE_URL" env-default:"http://localhost:3000"`
 }
 
 func (c *Config) GetPostgresDSN() string {

@@ -15,7 +15,8 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import {IconAlertCircle} from "@tabler/icons-react";
+import {notifications} from "@mantine/notifications";
+import {IconAlertCircle, IconCheck} from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
 import {useRouter, useSearchParams} from "next/navigation";
@@ -48,10 +49,13 @@ const LoginPageContent = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isUnverified, setIsUnverified] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setIsUnverified(false);
     setLoading(true);
 
     try {
@@ -63,12 +67,50 @@ const LoginPageContent = () => {
         router.push(returnTo);
         router.refresh();
       } else {
-        setError(err?.message || "Неверный логин или пароль");
+        const msg = err?.message || "Неверный логин или пароль";
+        if (msg.toLowerCase().includes("email not verified") || msg.toLowerCase().includes("не подтверждена")) {
+          setIsUnverified(true);
+          setError("Почта для этого аккаунта ещё не подтверждена. Пожалуйста, проверьте ваш почтовый ящик.");
+        } else {
+          setError(msg);
+        }
       }
     } catch {
       setError("Не удалось подключиться к серверу");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!identifier) return;
+    setResendLoading(true);
+    try {
+      const [err] = await api.resendVerification({
+        requestBody: {identifier},
+      });
+      if (!err) {
+        notifications.show({
+          title: "Письмо отправлено",
+          message: "Ссылка для подтверждения отправлена на ваш email",
+          color: "green",
+          icon: <IconCheck size={18} />,
+        });
+      } else {
+        notifications.show({
+          title: "Ошибка",
+          message: err.message || "Не удалось отправить письмо",
+          color: "red",
+        });
+      }
+    } catch {
+      notifications.show({
+        title: "Ошибка",
+        message: "Не удалось подключиться к серверу",
+        color: "red",
+      });
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -121,7 +163,19 @@ const LoginPageContent = () => {
               title="Не удалось войти"
               radius="md"
             >
-              {error}
+              <Text fz={14}>{error}</Text>
+              {isUnverified && (
+                <Button
+                  size="xs"
+                  variant="white"
+                  color="red"
+                  mt="xs"
+                  loading={resendLoading}
+                  onClick={handleResend}
+                >
+                  Отправить письмо для подтверждения повторно
+                </Button>
+              )}
             </Alert>
           )}
 
@@ -137,15 +191,28 @@ const LoginPageContent = () => {
                 onChange={(e) => setIdentifier(e.currentTarget.value)}
               />
 
-              <PasswordInput
-                label="Пароль"
-                placeholder="Введите пароль"
-                required
-                size="md"
-                radius="md"
-                value={password}
-                onChange={(e) => setPassword(e.currentTarget.value)}
-              />
+              <div>
+                <PasswordInput
+                  label="Пароль"
+                  placeholder="Введите пароль"
+                  required
+                  size="md"
+                  radius="md"
+                  value={password}
+                  onChange={(e) => setPassword(e.currentTarget.value)}
+                />
+                <Group justify="flex-end" mt={6}>
+                  <Anchor
+                    component={Link}
+                    href="/auth/forgot-password"
+                    fz={13}
+                    c="dimmed"
+                    underline="hover"
+                  >
+                    Забыли пароль?
+                  </Anchor>
+                </Group>
+              </div>
 
               <Button
                 type="submit"

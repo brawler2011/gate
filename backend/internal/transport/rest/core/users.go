@@ -44,6 +44,7 @@ func (h *CoreServer) GetMyDashboard(ctx context.Context, request corev1.GetMyDas
 
 	return corev1.GetMyDashboard200JSONResponse(DashboardResponseDTO(contests, problems)), nil
 }
+
 func (h *CoreServer) ListUsers(ctx context.Context, request corev1.ListUsersRequestObject) (corev1.ListUsersResponseObject, error) {
 	filter, err := validateGetUsersParams(request.Params)
 	if err != nil {
@@ -157,4 +158,90 @@ func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context, request corev1.L
 	}, nil
 }
 
+func (h *CoreServer) ChangePassword(ctx context.Context, request corev1.ChangePasswordRequestObject) (corev1.ChangePasswordResponseObject, error) {
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+	}
 
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	newSessionID, err := h.authUC.ChangePassword(ctx, user.Id, request.Body.OldPassword, request.Body.NewPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	return customChangePasswordResponse{
+		User:      userDTO(user),
+		SessionID: newSessionID,
+	}, nil
+}
+
+func (h *CoreServer) RequestEmailChange(ctx context.Context, request corev1.RequestEmailChangeRequestObject) (corev1.RequestEmailChangeResponseObject, error) {
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+	}
+
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	err := h.authUC.RequestEmailChange(ctx, user.Id, request.Body.Password, string(request.Body.NewEmail))
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.RequestEmailChange200Response{}, nil
+}
+
+func (h *CoreServer) AdminChangeEmail(ctx context.Context, request corev1.AdminChangeEmailRequestObject) (corev1.AdminChangeEmailResponseObject, error) {
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+	}
+
+	withConfirmation := true
+	if request.Body.WithConfirmation != nil {
+		withConfirmation = *request.Body.WithConfirmation
+	}
+
+	err := h.usersUC.AdminChangeEmail(ctx, request.Username, string(request.Body.Email), withConfirmation)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.AdminChangeEmail200Response{}, nil
+}
+
+func (h *CoreServer) AdminSetPassword(ctx context.Context, request corev1.AdminSetPasswordRequestObject) (corev1.AdminSetPasswordResponseObject, error) {
+	if request.Body == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+	}
+
+	err := h.usersUC.AdminSetPassword(ctx, request.Username, request.Body.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.AdminSetPassword200Response{}, nil
+}
+
+func (h *CoreServer) AdminSendPasswordReset(ctx context.Context, request corev1.AdminSendPasswordResetRequestObject) (corev1.AdminSendPasswordResetResponseObject, error) {
+	err := h.usersUC.AdminSendPasswordReset(ctx, request.Username)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.AdminSendPasswordReset200Response{}, nil
+}
+
+func (h *CoreServer) AdminResendVerification(ctx context.Context, request corev1.AdminResendVerificationRequestObject) (corev1.AdminResendVerificationResponseObject, error) {
+	err := h.usersUC.AdminResendVerification(ctx, request.Username)
+	if err != nil {
+		return nil, err
+	}
+
+	return corev1.AdminResendVerification200Response{}, nil
+}

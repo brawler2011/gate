@@ -149,10 +149,21 @@ const (
 	ListWorkshopContestsParamsSortOrderDesc ListWorkshopContestsParamsSortOrder = "desc"
 )
 
+// AdminChangeEmailRequestModel defines model for AdminChangeEmailRequestModel.
+type AdminChangeEmailRequestModel struct {
+	Email            openapi_types.Email `json:"email"`
+	WithConfirmation *bool               `json:"with_confirmation,omitempty"`
+}
+
+// AdminSetPasswordRequestModel defines model for AdminSetPasswordRequestModel.
+type AdminSetPasswordRequestModel struct {
+	Password string `json:"password"`
+}
+
 // AuthResponseModel defines model for AuthResponseModel.
 type AuthResponseModel struct {
-	SessionId openapi_types.UUID `json:"session_id"`
-	User      UserModel          `json:"user"`
+	SessionId *openapi_types.UUID `json:"session_id,omitempty"`
+	User      UserModel           `json:"user"`
 }
 
 // BatchCreateOrganizationUsersRequestModel defines model for BatchCreateOrganizationUsersRequestModel.
@@ -185,6 +196,12 @@ type BlockSubmissionRequestModel struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// ChangePasswordRequestModel defines model for ChangePasswordRequestModel.
+type ChangePasswordRequestModel struct {
+	NewPassword string `json:"new_password"`
+	OldPassword string `json:"old_password"`
+}
+
 // ClaimTemporaryUserRequestModel defines model for ClaimTemporaryUserRequestModel.
 type ClaimTemporaryUserRequestModel struct {
 	Password string `json:"password"`
@@ -213,6 +230,11 @@ type CompileResult struct {
 	FileId       *string `json:"file_id,omitempty"`
 	Sha256       *string `json:"sha256,omitempty"`
 	Success      *bool   `json:"success,omitempty"`
+}
+
+// ConfirmEmailChangeRequestModel defines model for ConfirmEmailChangeRequestModel.
+type ConfirmEmailChangeRequestModel struct {
+	Token string `json:"token"`
 }
 
 // ContestDraftModel defines model for ContestDraftModel.
@@ -396,6 +418,11 @@ type FileEntry struct {
 	IsMain      *bool   `json:"is_main,omitempty"`
 	Path        *string `json:"path,omitempty"`
 	Size        *int64  `json:"size,omitempty"`
+}
+
+// ForgotPasswordRequestModel defines model for ForgotPasswordRequestModel.
+type ForgotPasswordRequestModel struct {
+	Identifier string `json:"identifier"`
 }
 
 // GetContestProblemResponseModel defines model for GetContestProblemResponseModel.
@@ -711,6 +738,23 @@ type ReorderContestProblemsRequestModel struct {
 	Problems []ContestProblemReorderItemModel `json:"problems"`
 }
 
+// RequestEmailChangeRequestModel defines model for RequestEmailChangeRequestModel.
+type RequestEmailChangeRequestModel struct {
+	NewEmail openapi_types.Email `json:"new_email"`
+	Password string              `json:"password"`
+}
+
+// ResendVerificationRequestModel defines model for ResendVerificationRequestModel.
+type ResendVerificationRequestModel struct {
+	Identifier string `json:"identifier"`
+}
+
+// ResetPasswordRequestModel defines model for ResetPasswordRequestModel.
+type ResetPasswordRequestModel struct {
+	Password string `json:"password"`
+	Token    string `json:"token"`
+}
+
 // ScoreboardItemModel defines model for ScoreboardItemModel.
 type ScoreboardItemModel struct {
 	LastAcceptedAt *time.Time                     `json:"last_accepted_at,omitempty"`
@@ -979,6 +1023,7 @@ type UserModel struct {
 	ExpiresAt       *time.Time          `json:"expires_at,omitempty"`
 	Id              openapi_types.UUID  `json:"id"`
 	ImgId           *openapi_types.UUID `json:"imgId,omitempty"`
+	IsEmailVerified *bool               `json:"is_email_verified,omitempty"`
 	Role            string              `json:"role"`
 	UpdatedAt       time.Time           `json:"updatedAt"`
 	Username        string              `json:"username"`
@@ -990,6 +1035,11 @@ type ValidationReport struct {
 	Results      *[]TestValidationResult `json:"results,omitempty"`
 	TotalTests   *int                    `json:"total_tests,omitempty"`
 	ValidTests   *int                    `json:"valid_tests,omitempty"`
+}
+
+// VerifyEmailRequestModel defines model for VerifyEmailRequestModel.
+type VerifyEmailRequestModel struct {
+	Token string `json:"token"`
 }
 
 // WorkshopFileListResponse defines model for WorkshopFileListResponse.
@@ -1494,11 +1544,32 @@ type ListWorkshopContestsParamsSortBy string
 // ListWorkshopContestsParamsSortOrder defines parameters for ListWorkshopContests.
 type ListWorkshopContestsParamsSortOrder string
 
+// AdminChangeEmailJSONRequestBody defines body for AdminChangeEmail for application/json ContentType.
+type AdminChangeEmailJSONRequestBody = AdminChangeEmailRequestModel
+
+// AdminSetPasswordJSONRequestBody defines body for AdminSetPassword for application/json ContentType.
+type AdminSetPasswordJSONRequestBody = AdminSetPasswordRequestModel
+
+// ConfirmEmailChangeJSONRequestBody defines body for ConfirmEmailChange for application/json ContentType.
+type ConfirmEmailChangeJSONRequestBody = ConfirmEmailChangeRequestModel
+
+// ForgotPasswordJSONRequestBody defines body for ForgotPassword for application/json ContentType.
+type ForgotPasswordJSONRequestBody = ForgotPasswordRequestModel
+
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequestModel
 
 // RegisterJSONRequestBody defines body for Register for application/json ContentType.
 type RegisterJSONRequestBody = RegisterRequestModel
+
+// ResendVerificationJSONRequestBody defines body for ResendVerification for application/json ContentType.
+type ResendVerificationJSONRequestBody = ResendVerificationRequestModel
+
+// ResetPasswordJSONRequestBody defines body for ResetPassword for application/json ContentType.
+type ResetPasswordJSONRequestBody = ResetPasswordRequestModel
+
+// VerifyEmailJSONRequestBody defines body for VerifyEmail for application/json ContentType.
+type VerifyEmailJSONRequestBody = VerifyEmailRequestModel
 
 // UpdateOrganizationJSONRequestBody defines body for UpdateOrganization for application/json ContentType.
 type UpdateOrganizationJSONRequestBody = UpdateOrganizationRequestModel
@@ -1596,6 +1667,12 @@ type UpdateTeamJSONRequestBody = UpdateTeamRequestModel
 // ClaimTemporaryUserJSONRequestBody defines body for ClaimTemporaryUser for application/json ContentType.
 type ClaimTemporaryUserJSONRequestBody = ClaimTemporaryUserRequestModel
 
+// ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
+type ChangePasswordJSONRequestBody = ChangePasswordRequestModel
+
+// RequestEmailChangeJSONRequestBody defines body for RequestEmailChange for application/json ContentType.
+type RequestEmailChangeJSONRequestBody = RequestEmailChangeRequestModel
+
 // UpdateUserJSONRequestBody defines body for UpdateUser for application/json ContentType.
 type UpdateUserJSONRequestBody = UpdateUserRequestModel
 
@@ -1678,6 +1755,32 @@ type ClientInterface interface {
 	// ListAdminContests request
 	ListAdminContests(ctx context.Context, params *ListAdminContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// AdminChangeEmailWithBody request with any body
+	AdminChangeEmailWithBody(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AdminChangeEmail(ctx context.Context, username string, body AdminChangeEmailJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminResendVerification request
+	AdminResendVerification(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminSendPasswordReset request
+	AdminSendPasswordReset(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AdminSetPasswordWithBody request with any body
+	AdminSetPasswordWithBody(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AdminSetPassword(ctx context.Context, username string, body AdminSetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfirmEmailChangeWithBody request with any body
+	ConfirmEmailChangeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConfirmEmailChange(ctx context.Context, body ConfirmEmailChangeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ForgotPasswordWithBody request with any body
+	ForgotPasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ForgotPassword(ctx context.Context, body ForgotPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// LoginWithBody request with any body
 	LoginWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1690,6 +1793,21 @@ type ClientInterface interface {
 	RegisterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	Register(ctx context.Context, body RegisterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResendVerificationWithBody request with any body
+	ResendVerificationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ResendVerification(ctx context.Context, body ResendVerificationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResetPasswordWithBody request with any body
+	ResetPasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ResetPassword(ctx context.Context, body ResetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// VerifyEmailWithBody request with any body
+	VerifyEmailWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	VerifyEmail(ctx context.Context, body VerifyEmailJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetHealth request
 	GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2151,11 +2269,21 @@ type ClientInterface interface {
 	// GetMe request
 	GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ChangePasswordWithBody request with any body
+	ChangePasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ChangePassword(ctx context.Context, body ChangePasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListMyClaimedAccounts request
 	ListMyClaimedAccounts(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetMyDashboard request
 	GetMyDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RequestEmailChangeWithBody request with any body
+	RequestEmailChangeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	RequestEmailChange(ctx context.Context, body RequestEmailChangeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUser request
 	GetUser(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2186,6 +2314,126 @@ type ClientInterface interface {
 
 func (c *Client) ListAdminContests(ctx context.Context, params *ListAdminContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListAdminContestsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AdminChangeEmailWithBody(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminChangeEmailRequestWithBody(c.Server, username, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AdminChangeEmail(ctx context.Context, username string, body AdminChangeEmailJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminChangeEmailRequest(c.Server, username, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AdminResendVerification(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminResendVerificationRequest(c.Server, username)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AdminSendPasswordReset(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminSendPasswordResetRequest(c.Server, username)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AdminSetPasswordWithBody(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminSetPasswordRequestWithBody(c.Server, username, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AdminSetPassword(ctx context.Context, username string, body AdminSetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAdminSetPasswordRequest(c.Server, username, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfirmEmailChangeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfirmEmailChangeRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfirmEmailChange(ctx context.Context, body ConfirmEmailChangeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfirmEmailChangeRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ForgotPasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewForgotPasswordRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ForgotPassword(ctx context.Context, body ForgotPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewForgotPasswordRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2246,6 +2494,78 @@ func (c *Client) RegisterWithBody(ctx context.Context, contentType string, body 
 
 func (c *Client) Register(ctx context.Context, body RegisterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRegisterRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResendVerificationWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResendVerificationRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResendVerification(ctx context.Context, body ResendVerificationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResendVerificationRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResetPasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResetPasswordRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResetPassword(ctx context.Context, body ResetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResetPasswordRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) VerifyEmailWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewVerifyEmailRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) VerifyEmail(ctx context.Context, body VerifyEmailJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewVerifyEmailRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4212,6 +4532,30 @@ func (c *Client) GetMe(ctx context.Context, reqEditors ...RequestEditorFn) (*htt
 	return c.Client.Do(req)
 }
 
+func (c *Client) ChangePasswordWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewChangePasswordRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ChangePassword(ctx context.Context, body ChangePasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewChangePasswordRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListMyClaimedAccounts(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListMyClaimedAccountsRequest(c.Server)
 	if err != nil {
@@ -4226,6 +4570,30 @@ func (c *Client) ListMyClaimedAccounts(ctx context.Context, reqEditors ...Reques
 
 func (c *Client) GetMyDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetMyDashboardRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RequestEmailChangeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRequestEmailChangeRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RequestEmailChange(ctx context.Context, body RequestEmailChangeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRequestEmailChangeRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4465,6 +4833,248 @@ func NewListAdminContestsRequest(server string, params *ListAdminContestsParams)
 	return req, nil
 }
 
+// NewAdminChangeEmailRequest calls the generic AdminChangeEmail builder with application/json body
+func NewAdminChangeEmailRequest(server string, username string, body AdminChangeEmailJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAdminChangeEmailRequestWithBody(server, username, "application/json", bodyReader)
+}
+
+// NewAdminChangeEmailRequestWithBody generates requests for AdminChangeEmail with any type of body
+func NewAdminChangeEmailRequestWithBody(server string, username string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/admin/users/%s/change-email", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewAdminResendVerificationRequest generates requests for AdminResendVerification
+func NewAdminResendVerificationRequest(server string, username string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/admin/users/%s/resend-verification", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAdminSendPasswordResetRequest generates requests for AdminSendPasswordReset
+func NewAdminSendPasswordResetRequest(server string, username string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/admin/users/%s/send-reset-password", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAdminSetPasswordRequest calls the generic AdminSetPassword builder with application/json body
+func NewAdminSetPasswordRequest(server string, username string, body AdminSetPasswordJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAdminSetPasswordRequestWithBody(server, username, "application/json", bodyReader)
+}
+
+// NewAdminSetPasswordRequestWithBody generates requests for AdminSetPassword with any type of body
+func NewAdminSetPasswordRequestWithBody(server string, username string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "username", runtime.ParamLocationPath, username)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/admin/users/%s/set-password", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewConfirmEmailChangeRequest calls the generic ConfirmEmailChange builder with application/json body
+func NewConfirmEmailChangeRequest(server string, body ConfirmEmailChangeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfirmEmailChangeRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewConfirmEmailChangeRequestWithBody generates requests for ConfirmEmailChange with any type of body
+func NewConfirmEmailChangeRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/auth/confirm-email-change")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewForgotPasswordRequest calls the generic ForgotPassword builder with application/json body
+func NewForgotPasswordRequest(server string, body ForgotPasswordJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewForgotPasswordRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewForgotPasswordRequestWithBody generates requests for ForgotPassword with any type of body
+func NewForgotPasswordRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/auth/forgot-password")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewLoginRequest calls the generic Login builder with application/json body
 func NewLoginRequest(server string, body LoginJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -4553,6 +5163,126 @@ func NewRegisterRequestWithBody(server string, contentType string, body io.Reade
 	}
 
 	operationPath := fmt.Sprintf("/auth/register")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewResendVerificationRequest calls the generic ResendVerification builder with application/json body
+func NewResendVerificationRequest(server string, body ResendVerificationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewResendVerificationRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewResendVerificationRequestWithBody generates requests for ResendVerification with any type of body
+func NewResendVerificationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/auth/resend-verification")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewResetPasswordRequest calls the generic ResetPassword builder with application/json body
+func NewResetPasswordRequest(server string, body ResetPasswordJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewResetPasswordRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewResetPasswordRequestWithBody generates requests for ResetPassword with any type of body
+func NewResetPasswordRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/auth/reset-password")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewVerifyEmailRequest calls the generic VerifyEmail builder with application/json body
+func NewVerifyEmailRequest(server string, body VerifyEmailJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewVerifyEmailRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewVerifyEmailRequestWithBody generates requests for VerifyEmail with any type of body
+func NewVerifyEmailRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/auth/verify-email")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -11698,6 +12428,46 @@ func NewGetMeRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewChangePasswordRequest calls the generic ChangePassword builder with application/json body
+func NewChangePasswordRequest(server string, body ChangePasswordJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewChangePasswordRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewChangePasswordRequestWithBody generates requests for ChangePassword with any type of body
+func NewChangePasswordRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/users/me/change-password")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewListMyClaimedAccountsRequest generates requests for ListMyClaimedAccounts
 func NewListMyClaimedAccountsRequest(server string) (*http.Request, error) {
 	var err error
@@ -11748,6 +12518,46 @@ func NewGetMyDashboardRequest(server string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewRequestEmailChangeRequest calls the generic RequestEmailChange builder with application/json body
+func NewRequestEmailChangeRequest(server string, body RequestEmailChangeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRequestEmailChangeRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewRequestEmailChangeRequestWithBody generates requests for RequestEmailChange with any type of body
+func NewRequestEmailChangeRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/users/me/request-email-change")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -12359,6 +13169,32 @@ type ClientWithResponsesInterface interface {
 	// ListAdminContestsWithResponse request
 	ListAdminContestsWithResponse(ctx context.Context, params *ListAdminContestsParams, reqEditors ...RequestEditorFn) (*ListAdminContestsResponse, error)
 
+	// AdminChangeEmailWithBodyWithResponse request with any body
+	AdminChangeEmailWithBodyWithResponse(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminChangeEmailResponse, error)
+
+	AdminChangeEmailWithResponse(ctx context.Context, username string, body AdminChangeEmailJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminChangeEmailResponse, error)
+
+	// AdminResendVerificationWithResponse request
+	AdminResendVerificationWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*AdminResendVerificationResponse, error)
+
+	// AdminSendPasswordResetWithResponse request
+	AdminSendPasswordResetWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*AdminSendPasswordResetResponse, error)
+
+	// AdminSetPasswordWithBodyWithResponse request with any body
+	AdminSetPasswordWithBodyWithResponse(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminSetPasswordResponse, error)
+
+	AdminSetPasswordWithResponse(ctx context.Context, username string, body AdminSetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminSetPasswordResponse, error)
+
+	// ConfirmEmailChangeWithBodyWithResponse request with any body
+	ConfirmEmailChangeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfirmEmailChangeResponse, error)
+
+	ConfirmEmailChangeWithResponse(ctx context.Context, body ConfirmEmailChangeJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfirmEmailChangeResponse, error)
+
+	// ForgotPasswordWithBodyWithResponse request with any body
+	ForgotPasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ForgotPasswordResponse, error)
+
+	ForgotPasswordWithResponse(ctx context.Context, body ForgotPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ForgotPasswordResponse, error)
+
 	// LoginWithBodyWithResponse request with any body
 	LoginWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LoginResponse, error)
 
@@ -12371,6 +13207,21 @@ type ClientWithResponsesInterface interface {
 	RegisterWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterResponse, error)
 
 	RegisterWithResponse(ctx context.Context, body RegisterJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterResponse, error)
+
+	// ResendVerificationWithBodyWithResponse request with any body
+	ResendVerificationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResendVerificationResponse, error)
+
+	ResendVerificationWithResponse(ctx context.Context, body ResendVerificationJSONRequestBody, reqEditors ...RequestEditorFn) (*ResendVerificationResponse, error)
+
+	// ResetPasswordWithBodyWithResponse request with any body
+	ResetPasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResetPasswordResponse, error)
+
+	ResetPasswordWithResponse(ctx context.Context, body ResetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ResetPasswordResponse, error)
+
+	// VerifyEmailWithBodyWithResponse request with any body
+	VerifyEmailWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*VerifyEmailResponse, error)
+
+	VerifyEmailWithResponse(ctx context.Context, body VerifyEmailJSONRequestBody, reqEditors ...RequestEditorFn) (*VerifyEmailResponse, error)
 
 	// GetHealthWithResponse request
 	GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error)
@@ -12832,11 +13683,21 @@ type ClientWithResponsesInterface interface {
 	// GetMeWithResponse request
 	GetMeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMeResponse, error)
 
+	// ChangePasswordWithBodyWithResponse request with any body
+	ChangePasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ChangePasswordResponse, error)
+
+	ChangePasswordWithResponse(ctx context.Context, body ChangePasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ChangePasswordResponse, error)
+
 	// ListMyClaimedAccountsWithResponse request
 	ListMyClaimedAccountsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMyClaimedAccountsResponse, error)
 
 	// GetMyDashboardWithResponse request
 	GetMyDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetMyDashboardResponse, error)
+
+	// RequestEmailChangeWithBodyWithResponse request with any body
+	RequestEmailChangeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RequestEmailChangeResponse, error)
+
+	RequestEmailChangeWithResponse(ctx context.Context, body RequestEmailChangeJSONRequestBody, reqEditors ...RequestEditorFn) (*RequestEmailChangeResponse, error)
 
 	// GetUserWithResponse request
 	GetUserWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*GetUserResponse, error)
@@ -12881,6 +13742,132 @@ func (r ListAdminContestsResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r ListAdminContestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type AdminChangeEmailResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r AdminChangeEmailResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AdminChangeEmailResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type AdminResendVerificationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r AdminResendVerificationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AdminResendVerificationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type AdminSendPasswordResetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r AdminSendPasswordResetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AdminSendPasswordResetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type AdminSetPasswordResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r AdminSetPasswordResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AdminSetPasswordResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ConfirmEmailChangeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfirmEmailChangeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfirmEmailChangeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ForgotPasswordResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r ForgotPasswordResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ForgotPasswordResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -12946,6 +13933,70 @@ func (r RegisterResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r RegisterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ResendVerificationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r ResendVerificationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResendVerificationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ResetPasswordResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r ResetPasswordResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResetPasswordResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type VerifyEmailResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AuthResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r VerifyEmailResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r VerifyEmailResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -15884,6 +16935,28 @@ func (r GetMeResponse) StatusCode() int {
 	return 0
 }
 
+type ChangePasswordResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AuthResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ChangePasswordResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ChangePasswordResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListMyClaimedAccountsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -15922,6 +16995,27 @@ func (r GetMyDashboardResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetMyDashboardResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type RequestEmailChangeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r RequestEmailChangeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RequestEmailChangeResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -16114,6 +17208,92 @@ func (c *ClientWithResponses) ListAdminContestsWithResponse(ctx context.Context,
 	return ParseListAdminContestsResponse(rsp)
 }
 
+// AdminChangeEmailWithBodyWithResponse request with arbitrary body returning *AdminChangeEmailResponse
+func (c *ClientWithResponses) AdminChangeEmailWithBodyWithResponse(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminChangeEmailResponse, error) {
+	rsp, err := c.AdminChangeEmailWithBody(ctx, username, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminChangeEmailResponse(rsp)
+}
+
+func (c *ClientWithResponses) AdminChangeEmailWithResponse(ctx context.Context, username string, body AdminChangeEmailJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminChangeEmailResponse, error) {
+	rsp, err := c.AdminChangeEmail(ctx, username, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminChangeEmailResponse(rsp)
+}
+
+// AdminResendVerificationWithResponse request returning *AdminResendVerificationResponse
+func (c *ClientWithResponses) AdminResendVerificationWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*AdminResendVerificationResponse, error) {
+	rsp, err := c.AdminResendVerification(ctx, username, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminResendVerificationResponse(rsp)
+}
+
+// AdminSendPasswordResetWithResponse request returning *AdminSendPasswordResetResponse
+func (c *ClientWithResponses) AdminSendPasswordResetWithResponse(ctx context.Context, username string, reqEditors ...RequestEditorFn) (*AdminSendPasswordResetResponse, error) {
+	rsp, err := c.AdminSendPasswordReset(ctx, username, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminSendPasswordResetResponse(rsp)
+}
+
+// AdminSetPasswordWithBodyWithResponse request with arbitrary body returning *AdminSetPasswordResponse
+func (c *ClientWithResponses) AdminSetPasswordWithBodyWithResponse(ctx context.Context, username string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AdminSetPasswordResponse, error) {
+	rsp, err := c.AdminSetPasswordWithBody(ctx, username, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminSetPasswordResponse(rsp)
+}
+
+func (c *ClientWithResponses) AdminSetPasswordWithResponse(ctx context.Context, username string, body AdminSetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*AdminSetPasswordResponse, error) {
+	rsp, err := c.AdminSetPassword(ctx, username, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAdminSetPasswordResponse(rsp)
+}
+
+// ConfirmEmailChangeWithBodyWithResponse request with arbitrary body returning *ConfirmEmailChangeResponse
+func (c *ClientWithResponses) ConfirmEmailChangeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfirmEmailChangeResponse, error) {
+	rsp, err := c.ConfirmEmailChangeWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfirmEmailChangeResponse(rsp)
+}
+
+func (c *ClientWithResponses) ConfirmEmailChangeWithResponse(ctx context.Context, body ConfirmEmailChangeJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfirmEmailChangeResponse, error) {
+	rsp, err := c.ConfirmEmailChange(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfirmEmailChangeResponse(rsp)
+}
+
+// ForgotPasswordWithBodyWithResponse request with arbitrary body returning *ForgotPasswordResponse
+func (c *ClientWithResponses) ForgotPasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ForgotPasswordResponse, error) {
+	rsp, err := c.ForgotPasswordWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseForgotPasswordResponse(rsp)
+}
+
+func (c *ClientWithResponses) ForgotPasswordWithResponse(ctx context.Context, body ForgotPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ForgotPasswordResponse, error) {
+	rsp, err := c.ForgotPassword(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseForgotPasswordResponse(rsp)
+}
+
 // LoginWithBodyWithResponse request with arbitrary body returning *LoginResponse
 func (c *ClientWithResponses) LoginWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*LoginResponse, error) {
 	rsp, err := c.LoginWithBody(ctx, contentType, body, reqEditors...)
@@ -16155,6 +17335,57 @@ func (c *ClientWithResponses) RegisterWithResponse(ctx context.Context, body Reg
 		return nil, err
 	}
 	return ParseRegisterResponse(rsp)
+}
+
+// ResendVerificationWithBodyWithResponse request with arbitrary body returning *ResendVerificationResponse
+func (c *ClientWithResponses) ResendVerificationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResendVerificationResponse, error) {
+	rsp, err := c.ResendVerificationWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResendVerificationResponse(rsp)
+}
+
+func (c *ClientWithResponses) ResendVerificationWithResponse(ctx context.Context, body ResendVerificationJSONRequestBody, reqEditors ...RequestEditorFn) (*ResendVerificationResponse, error) {
+	rsp, err := c.ResendVerification(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResendVerificationResponse(rsp)
+}
+
+// ResetPasswordWithBodyWithResponse request with arbitrary body returning *ResetPasswordResponse
+func (c *ClientWithResponses) ResetPasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResetPasswordResponse, error) {
+	rsp, err := c.ResetPasswordWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResetPasswordResponse(rsp)
+}
+
+func (c *ClientWithResponses) ResetPasswordWithResponse(ctx context.Context, body ResetPasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ResetPasswordResponse, error) {
+	rsp, err := c.ResetPassword(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResetPasswordResponse(rsp)
+}
+
+// VerifyEmailWithBodyWithResponse request with arbitrary body returning *VerifyEmailResponse
+func (c *ClientWithResponses) VerifyEmailWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*VerifyEmailResponse, error) {
+	rsp, err := c.VerifyEmailWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseVerifyEmailResponse(rsp)
+}
+
+func (c *ClientWithResponses) VerifyEmailWithResponse(ctx context.Context, body VerifyEmailJSONRequestBody, reqEditors ...RequestEditorFn) (*VerifyEmailResponse, error) {
+	rsp, err := c.VerifyEmail(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseVerifyEmailResponse(rsp)
 }
 
 // GetHealthWithResponse request returning *GetHealthResponse
@@ -17595,6 +18826,23 @@ func (c *ClientWithResponses) GetMeWithResponse(ctx context.Context, reqEditors 
 	return ParseGetMeResponse(rsp)
 }
 
+// ChangePasswordWithBodyWithResponse request with arbitrary body returning *ChangePasswordResponse
+func (c *ClientWithResponses) ChangePasswordWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ChangePasswordResponse, error) {
+	rsp, err := c.ChangePasswordWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseChangePasswordResponse(rsp)
+}
+
+func (c *ClientWithResponses) ChangePasswordWithResponse(ctx context.Context, body ChangePasswordJSONRequestBody, reqEditors ...RequestEditorFn) (*ChangePasswordResponse, error) {
+	rsp, err := c.ChangePassword(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseChangePasswordResponse(rsp)
+}
+
 // ListMyClaimedAccountsWithResponse request returning *ListMyClaimedAccountsResponse
 func (c *ClientWithResponses) ListMyClaimedAccountsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListMyClaimedAccountsResponse, error) {
 	rsp, err := c.ListMyClaimedAccounts(ctx, reqEditors...)
@@ -17611,6 +18859,23 @@ func (c *ClientWithResponses) GetMyDashboardWithResponse(ctx context.Context, re
 		return nil, err
 	}
 	return ParseGetMyDashboardResponse(rsp)
+}
+
+// RequestEmailChangeWithBodyWithResponse request with arbitrary body returning *RequestEmailChangeResponse
+func (c *ClientWithResponses) RequestEmailChangeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RequestEmailChangeResponse, error) {
+	rsp, err := c.RequestEmailChangeWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRequestEmailChangeResponse(rsp)
+}
+
+func (c *ClientWithResponses) RequestEmailChangeWithResponse(ctx context.Context, body RequestEmailChangeJSONRequestBody, reqEditors ...RequestEditorFn) (*RequestEmailChangeResponse, error) {
+	rsp, err := c.RequestEmailChange(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRequestEmailChangeResponse(rsp)
 }
 
 // GetUserWithResponse request returning *GetUserResponse
@@ -17719,6 +18984,102 @@ func ParseListAdminContestsResponse(rsp *http.Response) (*ListAdminContestsRespo
 	return response, nil
 }
 
+// ParseAdminChangeEmailResponse parses an HTTP response from a AdminChangeEmailWithResponse call
+func ParseAdminChangeEmailResponse(rsp *http.Response) (*AdminChangeEmailResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AdminChangeEmailResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseAdminResendVerificationResponse parses an HTTP response from a AdminResendVerificationWithResponse call
+func ParseAdminResendVerificationResponse(rsp *http.Response) (*AdminResendVerificationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AdminResendVerificationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseAdminSendPasswordResetResponse parses an HTTP response from a AdminSendPasswordResetWithResponse call
+func ParseAdminSendPasswordResetResponse(rsp *http.Response) (*AdminSendPasswordResetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AdminSendPasswordResetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseAdminSetPasswordResponse parses an HTTP response from a AdminSetPasswordWithResponse call
+func ParseAdminSetPasswordResponse(rsp *http.Response) (*AdminSetPasswordResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AdminSetPasswordResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseConfirmEmailChangeResponse parses an HTTP response from a ConfirmEmailChangeWithResponse call
+func ParseConfirmEmailChangeResponse(rsp *http.Response) (*ConfirmEmailChangeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfirmEmailChangeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseForgotPasswordResponse parses an HTTP response from a ForgotPasswordWithResponse call
+func ParseForgotPasswordResponse(rsp *http.Response) (*ForgotPasswordResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ForgotPasswordResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseLoginResponse parses an HTTP response from a LoginWithResponse call
 func ParseLoginResponse(rsp *http.Response) (*LoginResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -17770,6 +19131,64 @@ func ParseRegisterResponse(rsp *http.Response) (*RegisterResponse, error) {
 	}
 
 	response := &RegisterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AuthResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseResendVerificationResponse parses an HTTP response from a ResendVerificationWithResponse call
+func ParseResendVerificationResponse(rsp *http.Response) (*ResendVerificationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResendVerificationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseResetPasswordResponse parses an HTTP response from a ResetPasswordWithResponse call
+func ParseResetPasswordResponse(rsp *http.Response) (*ResetPasswordResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResetPasswordResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseVerifyEmailResponse parses an HTTP response from a VerifyEmailWithResponse call
+func ParseVerifyEmailResponse(rsp *http.Response) (*VerifyEmailResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &VerifyEmailResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -20931,6 +22350,32 @@ func ParseGetMeResponse(rsp *http.Response) (*GetMeResponse, error) {
 	return response, nil
 }
 
+// ParseChangePasswordResponse parses an HTTP response from a ChangePasswordWithResponse call
+func ParseChangePasswordResponse(rsp *http.Response) (*ChangePasswordResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ChangePasswordResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AuthResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListMyClaimedAccountsResponse parses an HTTP response from a ListMyClaimedAccountsWithResponse call
 func ParseListMyClaimedAccountsResponse(rsp *http.Response) (*ListMyClaimedAccountsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -20978,6 +22423,22 @@ func ParseGetMyDashboardResponse(rsp *http.Response) (*GetMyDashboardResponse, e
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseRequestEmailChangeResponse parses an HTTP response from a RequestEmailChangeWithResponse call
+func ParseRequestEmailChangeResponse(rsp *http.Response) (*RequestEmailChangeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RequestEmailChangeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -21185,6 +22646,24 @@ type ServerInterface interface {
 
 	// (GET /admin/contests)
 	ListAdminContests(w http.ResponseWriter, r *http.Request, params ListAdminContestsParams)
+	// Change user email as admin (direct or with confirmation)
+	// (POST /admin/users/{username}/change-email)
+	AdminChangeEmail(w http.ResponseWriter, r *http.Request, username string)
+	// Resend email verification link for user
+	// (POST /admin/users/{username}/resend-verification)
+	AdminResendVerification(w http.ResponseWriter, r *http.Request, username string)
+	// Send password reset link to user email
+	// (POST /admin/users/{username}/send-reset-password)
+	AdminSendPasswordReset(w http.ResponseWriter, r *http.Request, username string)
+	// Set user password directly as admin
+	// (POST /admin/users/{username}/set-password)
+	AdminSetPassword(w http.ResponseWriter, r *http.Request, username string)
+
+	// (POST /auth/confirm-email-change)
+	ConfirmEmailChange(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/forgot-password)
+	ForgotPassword(w http.ResponseWriter, r *http.Request)
 
 	// (POST /auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
@@ -21194,6 +22673,15 @@ type ServerInterface interface {
 
 	// (POST /auth/register)
 	Register(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/resend-verification)
+	ResendVerification(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/reset-password)
+	ResetPassword(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/verify-email)
+	VerifyEmail(w http.ResponseWriter, r *http.Request)
 
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
@@ -21596,12 +23084,18 @@ type ServerInterface interface {
 
 	// (GET /users/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
+	// Change password for current user
+	// (POST /users/me/change-password)
+	ChangePassword(w http.ResponseWriter, r *http.Request)
 	// List claimed temporary accounts
 	// (GET /users/me/claimed-accounts)
 	ListMyClaimedAccounts(w http.ResponseWriter, r *http.Request)
 
 	// (GET /users/me/dashboard)
 	GetMyDashboard(w http.ResponseWriter, r *http.Request)
+	// Request email change for current user
+	// (POST /users/me/request-email-change)
+	RequestEmailChange(w http.ResponseWriter, r *http.Request)
 
 	// (GET /users/{username})
 	GetUser(w http.ResponseWriter, r *http.Request, username string)
@@ -21718,6 +23212,134 @@ func (siw *ServerInterfaceWrapper) ListAdminContests(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// AdminChangeEmail operation middleware
+func (siw *ServerInterfaceWrapper) AdminChangeEmail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminChangeEmail(w, r, username)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminResendVerification operation middleware
+func (siw *ServerInterfaceWrapper) AdminResendVerification(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminResendVerification(w, r, username)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminSendPasswordReset operation middleware
+func (siw *ServerInterfaceWrapper) AdminSendPasswordReset(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminSendPasswordReset(w, r, username)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminSetPassword operation middleware
+func (siw *ServerInterfaceWrapper) AdminSetPassword(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "username" -------------
+	var username string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "username", r.PathValue("username"), &username, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "username", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminSetPassword(w, r, username)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmEmailChange operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmEmailChange(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ForgotPassword operation middleware
+func (siw *ServerInterfaceWrapper) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ForgotPassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // Login operation middleware
 func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
 
@@ -21751,6 +23373,48 @@ func (siw *ServerInterfaceWrapper) Register(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Register(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResendVerification operation middleware
+func (siw *ServerInterfaceWrapper) ResendVerification(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResendVerification(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResetPassword operation middleware
+func (siw *ServerInterfaceWrapper) ResetPassword(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResetPassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyEmail operation middleware
+func (siw *ServerInterfaceWrapper) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyEmail(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -27108,6 +28772,20 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 	handler.ServeHTTP(w, r)
 }
 
+// ChangePassword operation middleware
+func (siw *ServerInterfaceWrapper) ChangePassword(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ChangePassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMyClaimedAccounts operation middleware
 func (siw *ServerInterfaceWrapper) ListMyClaimedAccounts(w http.ResponseWriter, r *http.Request) {
 
@@ -27127,6 +28805,20 @@ func (siw *ServerInterfaceWrapper) GetMyDashboard(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMyDashboard(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestEmailChange operation middleware
+func (siw *ServerInterfaceWrapper) RequestEmailChange(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestEmailChange(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -27659,9 +29351,18 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("GET "+options.BaseURL+"/admin/contests", wrapper.ListAdminContests)
+	m.HandleFunc("POST "+options.BaseURL+"/admin/users/{username}/change-email", wrapper.AdminChangeEmail)
+	m.HandleFunc("POST "+options.BaseURL+"/admin/users/{username}/resend-verification", wrapper.AdminResendVerification)
+	m.HandleFunc("POST "+options.BaseURL+"/admin/users/{username}/send-reset-password", wrapper.AdminSendPasswordReset)
+	m.HandleFunc("POST "+options.BaseURL+"/admin/users/{username}/set-password", wrapper.AdminSetPassword)
+	m.HandleFunc("POST "+options.BaseURL+"/auth/confirm-email-change", wrapper.ConfirmEmailChange)
+	m.HandleFunc("POST "+options.BaseURL+"/auth/forgot-password", wrapper.ForgotPassword)
 	m.HandleFunc("POST "+options.BaseURL+"/auth/login", wrapper.Login)
 	m.HandleFunc("POST "+options.BaseURL+"/auth/logout", wrapper.Logout)
 	m.HandleFunc("POST "+options.BaseURL+"/auth/register", wrapper.Register)
+	m.HandleFunc("POST "+options.BaseURL+"/auth/resend-verification", wrapper.ResendVerification)
+	m.HandleFunc("POST "+options.BaseURL+"/auth/reset-password", wrapper.ResetPassword)
+	m.HandleFunc("POST "+options.BaseURL+"/auth/verify-email", wrapper.VerifyEmail)
 	m.HandleFunc("GET "+options.BaseURL+"/health", wrapper.GetHealth)
 	m.HandleFunc("GET "+options.BaseURL+"/languages", wrapper.GetLanguages)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations", wrapper.ListOrganizations)
@@ -27796,8 +29497,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/users", wrapper.ListUsers)
 	m.HandleFunc("POST "+options.BaseURL+"/users/claim-temporary", wrapper.ClaimTemporaryUser)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetMe)
+	m.HandleFunc("POST "+options.BaseURL+"/users/me/change-password", wrapper.ChangePassword)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me/claimed-accounts", wrapper.ListMyClaimedAccounts)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me/dashboard", wrapper.GetMyDashboard)
+	m.HandleFunc("POST "+options.BaseURL+"/users/me/request-email-change", wrapper.RequestEmailChange)
 	m.HandleFunc("GET "+options.BaseURL+"/users/{username}", wrapper.GetUser)
 	m.HandleFunc("PATCH "+options.BaseURL+"/users/{username}", wrapper.UpdateUser)
 	m.HandleFunc("DELETE "+options.BaseURL+"/users/{username}/avatar", wrapper.DeleteAvatar)
@@ -27825,6 +29528,104 @@ func (response ListAdminContests200JSONResponse) VisitListAdminContestsResponse(
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type AdminChangeEmailRequestObject struct {
+	Username string `json:"username"`
+	Body     *AdminChangeEmailJSONRequestBody
+}
+
+type AdminChangeEmailResponseObject interface {
+	VisitAdminChangeEmailResponse(w http.ResponseWriter) error
+}
+
+type AdminChangeEmail200Response struct {
+}
+
+func (response AdminChangeEmail200Response) VisitAdminChangeEmailResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type AdminResendVerificationRequestObject struct {
+	Username string `json:"username"`
+}
+
+type AdminResendVerificationResponseObject interface {
+	VisitAdminResendVerificationResponse(w http.ResponseWriter) error
+}
+
+type AdminResendVerification200Response struct {
+}
+
+func (response AdminResendVerification200Response) VisitAdminResendVerificationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type AdminSendPasswordResetRequestObject struct {
+	Username string `json:"username"`
+}
+
+type AdminSendPasswordResetResponseObject interface {
+	VisitAdminSendPasswordResetResponse(w http.ResponseWriter) error
+}
+
+type AdminSendPasswordReset200Response struct {
+}
+
+func (response AdminSendPasswordReset200Response) VisitAdminSendPasswordResetResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type AdminSetPasswordRequestObject struct {
+	Username string `json:"username"`
+	Body     *AdminSetPasswordJSONRequestBody
+}
+
+type AdminSetPasswordResponseObject interface {
+	VisitAdminSetPasswordResponse(w http.ResponseWriter) error
+}
+
+type AdminSetPassword200Response struct {
+}
+
+func (response AdminSetPassword200Response) VisitAdminSetPasswordResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ConfirmEmailChangeRequestObject struct {
+	Body *ConfirmEmailChangeJSONRequestBody
+}
+
+type ConfirmEmailChangeResponseObject interface {
+	VisitConfirmEmailChangeResponse(w http.ResponseWriter) error
+}
+
+type ConfirmEmailChange200Response struct {
+}
+
+func (response ConfirmEmailChange200Response) VisitConfirmEmailChangeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ForgotPasswordRequestObject struct {
+	Body *ForgotPasswordJSONRequestBody
+}
+
+type ForgotPasswordResponseObject interface {
+	VisitForgotPasswordResponse(w http.ResponseWriter) error
+}
+
+type ForgotPassword200Response struct {
+}
+
+func (response ForgotPassword200Response) VisitForgotPasswordResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
 }
 
 type LoginRequestObject struct {
@@ -27870,6 +29671,55 @@ type RegisterResponseObject interface {
 type Register200JSONResponse AuthResponseModel
 
 func (response Register200JSONResponse) VisitRegisterResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResendVerificationRequestObject struct {
+	Body *ResendVerificationJSONRequestBody
+}
+
+type ResendVerificationResponseObject interface {
+	VisitResendVerificationResponse(w http.ResponseWriter) error
+}
+
+type ResendVerification200Response struct {
+}
+
+func (response ResendVerification200Response) VisitResendVerificationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ResetPasswordRequestObject struct {
+	Body *ResetPasswordJSONRequestBody
+}
+
+type ResetPasswordResponseObject interface {
+	VisitResetPasswordResponse(w http.ResponseWriter) error
+}
+
+type ResetPassword200Response struct {
+}
+
+func (response ResetPassword200Response) VisitResetPasswordResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type VerifyEmailRequestObject struct {
+	Body *VerifyEmailJSONRequestBody
+}
+
+type VerifyEmailResponseObject interface {
+	VisitVerifyEmailResponse(w http.ResponseWriter) error
+}
+
+type VerifyEmail200JSONResponse AuthResponseModel
+
+func (response VerifyEmail200JSONResponse) VisitVerifyEmailResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -30481,6 +32331,23 @@ func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) e
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ChangePasswordRequestObject struct {
+	Body *ChangePasswordJSONRequestBody
+}
+
+type ChangePasswordResponseObject interface {
+	VisitChangePasswordResponse(w http.ResponseWriter) error
+}
+
+type ChangePassword200JSONResponse AuthResponseModel
+
+func (response ChangePassword200JSONResponse) VisitChangePasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListMyClaimedAccountsRequestObject struct {
 }
 
@@ -30511,6 +32378,22 @@ func (response GetMyDashboard200JSONResponse) VisitGetMyDashboardResponse(w http
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type RequestEmailChangeRequestObject struct {
+	Body *RequestEmailChangeJSONRequestBody
+}
+
+type RequestEmailChangeResponseObject interface {
+	VisitRequestEmailChangeResponse(w http.ResponseWriter) error
+}
+
+type RequestEmailChange200Response struct {
+}
+
+func (response RequestEmailChange200Response) VisitRequestEmailChangeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
 }
 
 type GetUserRequestObject struct {
@@ -30707,6 +32590,24 @@ type StrictServerInterface interface {
 
 	// (GET /admin/contests)
 	ListAdminContests(ctx context.Context, request ListAdminContestsRequestObject) (ListAdminContestsResponseObject, error)
+	// Change user email as admin (direct or with confirmation)
+	// (POST /admin/users/{username}/change-email)
+	AdminChangeEmail(ctx context.Context, request AdminChangeEmailRequestObject) (AdminChangeEmailResponseObject, error)
+	// Resend email verification link for user
+	// (POST /admin/users/{username}/resend-verification)
+	AdminResendVerification(ctx context.Context, request AdminResendVerificationRequestObject) (AdminResendVerificationResponseObject, error)
+	// Send password reset link to user email
+	// (POST /admin/users/{username}/send-reset-password)
+	AdminSendPasswordReset(ctx context.Context, request AdminSendPasswordResetRequestObject) (AdminSendPasswordResetResponseObject, error)
+	// Set user password directly as admin
+	// (POST /admin/users/{username}/set-password)
+	AdminSetPassword(ctx context.Context, request AdminSetPasswordRequestObject) (AdminSetPasswordResponseObject, error)
+
+	// (POST /auth/confirm-email-change)
+	ConfirmEmailChange(ctx context.Context, request ConfirmEmailChangeRequestObject) (ConfirmEmailChangeResponseObject, error)
+
+	// (POST /auth/forgot-password)
+	ForgotPassword(ctx context.Context, request ForgotPasswordRequestObject) (ForgotPasswordResponseObject, error)
 
 	// (POST /auth/login)
 	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
@@ -30716,6 +32617,15 @@ type StrictServerInterface interface {
 
 	// (POST /auth/register)
 	Register(ctx context.Context, request RegisterRequestObject) (RegisterResponseObject, error)
+
+	// (POST /auth/resend-verification)
+	ResendVerification(ctx context.Context, request ResendVerificationRequestObject) (ResendVerificationResponseObject, error)
+
+	// (POST /auth/reset-password)
+	ResetPassword(ctx context.Context, request ResetPasswordRequestObject) (ResetPasswordResponseObject, error)
+
+	// (POST /auth/verify-email)
+	VerifyEmail(ctx context.Context, request VerifyEmailRequestObject) (VerifyEmailResponseObject, error)
 
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
@@ -31118,12 +33028,18 @@ type StrictServerInterface interface {
 
 	// (GET /users/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+	// Change password for current user
+	// (POST /users/me/change-password)
+	ChangePassword(ctx context.Context, request ChangePasswordRequestObject) (ChangePasswordResponseObject, error)
 	// List claimed temporary accounts
 	// (GET /users/me/claimed-accounts)
 	ListMyClaimedAccounts(ctx context.Context, request ListMyClaimedAccountsRequestObject) (ListMyClaimedAccountsResponseObject, error)
 
 	// (GET /users/me/dashboard)
 	GetMyDashboard(ctx context.Context, request GetMyDashboardRequestObject) (GetMyDashboardResponseObject, error)
+	// Request email change for current user
+	// (POST /users/me/request-email-change)
+	RequestEmailChange(ctx context.Context, request RequestEmailChangeRequestObject) (RequestEmailChangeResponseObject, error)
 
 	// (GET /users/{username})
 	GetUser(ctx context.Context, request GetUserRequestObject) (GetUserResponseObject, error)
@@ -31198,6 +33114,186 @@ func (sh *strictHandler) ListAdminContests(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListAdminContestsResponseObject); ok {
 		if err := validResponse.VisitListAdminContestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminChangeEmail operation middleware
+func (sh *strictHandler) AdminChangeEmail(w http.ResponseWriter, r *http.Request, username string) {
+	var request AdminChangeEmailRequestObject
+
+	request.Username = username
+
+	var body AdminChangeEmailJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminChangeEmail(ctx, request.(AdminChangeEmailRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminChangeEmail")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminChangeEmailResponseObject); ok {
+		if err := validResponse.VisitAdminChangeEmailResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminResendVerification operation middleware
+func (sh *strictHandler) AdminResendVerification(w http.ResponseWriter, r *http.Request, username string) {
+	var request AdminResendVerificationRequestObject
+
+	request.Username = username
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminResendVerification(ctx, request.(AdminResendVerificationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminResendVerification")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminResendVerificationResponseObject); ok {
+		if err := validResponse.VisitAdminResendVerificationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminSendPasswordReset operation middleware
+func (sh *strictHandler) AdminSendPasswordReset(w http.ResponseWriter, r *http.Request, username string) {
+	var request AdminSendPasswordResetRequestObject
+
+	request.Username = username
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminSendPasswordReset(ctx, request.(AdminSendPasswordResetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminSendPasswordReset")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminSendPasswordResetResponseObject); ok {
+		if err := validResponse.VisitAdminSendPasswordResetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminSetPassword operation middleware
+func (sh *strictHandler) AdminSetPassword(w http.ResponseWriter, r *http.Request, username string) {
+	var request AdminSetPasswordRequestObject
+
+	request.Username = username
+
+	var body AdminSetPasswordJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminSetPassword(ctx, request.(AdminSetPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminSetPassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AdminSetPasswordResponseObject); ok {
+		if err := validResponse.VisitAdminSetPasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ConfirmEmailChange operation middleware
+func (sh *strictHandler) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
+	var request ConfirmEmailChangeRequestObject
+
+	var body ConfirmEmailChangeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ConfirmEmailChange(ctx, request.(ConfirmEmailChangeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ConfirmEmailChange")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ConfirmEmailChangeResponseObject); ok {
+		if err := validResponse.VisitConfirmEmailChangeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ForgotPassword operation middleware
+func (sh *strictHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var request ForgotPasswordRequestObject
+
+	var body ForgotPasswordJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ForgotPassword(ctx, request.(ForgotPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ForgotPassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ForgotPasswordResponseObject); ok {
+		if err := validResponse.VisitForgotPasswordResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -31284,6 +33380,99 @@ func (sh *strictHandler) Register(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RegisterResponseObject); ok {
 		if err := validResponse.VisitRegisterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResendVerification operation middleware
+func (sh *strictHandler) ResendVerification(w http.ResponseWriter, r *http.Request) {
+	var request ResendVerificationRequestObject
+
+	var body ResendVerificationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResendVerification(ctx, request.(ResendVerificationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResendVerification")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResendVerificationResponseObject); ok {
+		if err := validResponse.VisitResendVerificationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResetPassword operation middleware
+func (sh *strictHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var request ResetPasswordRequestObject
+
+	var body ResetPasswordJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResetPassword(ctx, request.(ResetPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResetPassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResetPasswordResponseObject); ok {
+		if err := validResponse.VisitResetPasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// VerifyEmail operation middleware
+func (sh *strictHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	var request VerifyEmailRequestObject
+
+	var body VerifyEmailJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.VerifyEmail(ctx, request.(VerifyEmailRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "VerifyEmail")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(VerifyEmailResponseObject); ok {
+		if err := validResponse.VisitVerifyEmailResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -35118,6 +37307,37 @@ func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ChangePassword operation middleware
+func (sh *strictHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	var request ChangePasswordRequestObject
+
+	var body ChangePasswordJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ChangePassword(ctx, request.(ChangePasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ChangePassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ChangePasswordResponseObject); ok {
+		if err := validResponse.VisitChangePasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListMyClaimedAccounts operation middleware
 func (sh *strictHandler) ListMyClaimedAccounts(w http.ResponseWriter, r *http.Request) {
 	var request ListMyClaimedAccountsRequestObject
@@ -35159,6 +37379,37 @@ func (sh *strictHandler) GetMyDashboard(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMyDashboardResponseObject); ok {
 		if err := validResponse.VisitGetMyDashboardResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RequestEmailChange operation middleware
+func (sh *strictHandler) RequestEmailChange(w http.ResponseWriter, r *http.Request) {
+	var request RequestEmailChangeRequestObject
+
+	var body RequestEmailChangeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RequestEmailChange(ctx, request.(RequestEmailChangeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RequestEmailChange")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RequestEmailChangeResponseObject); ok {
+		if err := validResponse.VisitRequestEmailChangeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

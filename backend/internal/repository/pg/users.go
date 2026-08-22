@@ -43,13 +43,14 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params models.CreateUserPara
 	}
 
 	err := r.queries.CreateUser(ctx, sqlc.CreateUserParams{
-		ID:           params.Id,
-		Username:     params.Username,
-		Role:         sqlc.UserRole(params.Role),
-		PasswordHash: params.PasswordHash,
-		Email:        params.Email,
-		AvatarUrl:    params.AvatarUrl,
-		ExpiresAt:    expiresAt,
+		ID:              params.Id,
+		Username:        params.Username,
+		Role:            sqlc.UserRole(params.Role),
+		PasswordHash:    params.PasswordHash,
+		Email:           params.Email,
+		AvatarUrl:       params.AvatarUrl,
+		ExpiresAt:       expiresAt,
+		IsEmailVerified: params.IsEmailVerified,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -88,6 +89,7 @@ func mapUserToModel(user sqlc.User) models.User {
 		Email:           user.Email,
 		AvatarUrl:       user.AvatarUrl,
 		ExpiresAt:       expiresAt,
+		IsEmailVerified: user.IsEmailVerified,
 		ClaimedByUserID: claimedByUserID,
 		ClaimedAt:       claimedAt,
 		CreatedAt:       user.CreatedAt,
@@ -170,12 +172,13 @@ func (r *UsersRepo) UpdateUser(
 	}
 
 	err := r.queries.UpdateUser(ctx, sqlc.UpdateUserParams{
-		ID:        params.Id,
-		Username:  params.Username,
-		Role:      role,
-		Email:     params.Email,
-		AvatarUrl: params.AvatarUrl,
-		ExpiresAt: expiresAt,
+		ID:              params.Id,
+		Username:        params.Username,
+		Role:            role,
+		Email:           params.Email,
+		AvatarUrl:       params.AvatarUrl,
+		ExpiresAt:       expiresAt,
+		IsEmailVerified: params.IsEmailVerified,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -183,6 +186,41 @@ func (r *UsersRepo) UpdateUser(
 
 	return nil
 }
+
+func (r *UsersRepo) SetUserEmailVerified(ctx context.Context, id uuid.UUID, isVerified bool) error {
+	err := r.queries.SetUserEmailVerified(ctx, sqlc.SetUserEmailVerifiedParams{
+		ID:              id,
+		IsEmailVerified: isVerified,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *UsersRepo) UpdateUserPassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
+	err := r.queries.UpdateUserPassword(ctx, sqlc.UpdateUserPasswordParams{
+		ID:           id,
+		PasswordHash: passwordHash,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+func (r *UsersRepo) UpdateUserEmail(ctx context.Context, id uuid.UUID, email string, isVerified bool) error {
+	err := r.queries.UpdateUserEmail(ctx, sqlc.UpdateUserEmailParams{
+		ID:              id,
+		Email:           &email,
+		IsEmailVerified: isVerified,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
 
 func (r *UsersRepo) ClaimTemporaryUser(ctx context.Context, id, claimedByUserID uuid.UUID, claimedAt time.Time) error {
 	err := r.queries.ClaimTemporaryUser(ctx, sqlc.ClaimTemporaryUserParams{

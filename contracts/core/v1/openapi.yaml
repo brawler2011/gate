@@ -210,7 +210,80 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListContestsResponseModel"
+  /admin/users/{username}/change-email:
+    post:
+      operationId: AdminChangeEmail
+      summary: Change user email as admin (direct or with confirmation)
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          example: user123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminChangeEmailRequestModel"
+      responses:
+        "200":
+          description: OK
+          content: {}
+  /admin/users/{username}/set-password:
+    post:
+      operationId: AdminSetPassword
+      summary: Set user password directly as admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          example: user123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSetPasswordRequestModel"
+      responses:
+        "200":
+          description: OK
+          content: {}
+  /admin/users/{username}/send-reset-password:
+    post:
+      operationId: AdminSendPasswordReset
+      summary: Send password reset link to user email
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          example: user123
+      responses:
+        "200":
+          description: OK
+          content: {}
+  /admin/users/{username}/resend-verification:
+    post:
+      operationId: AdminResendVerification
+      summary: Resend email verification link for user
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          example: user123
+      responses:
+        "200":
+          description: OK
+          content: {}
   /users/{username}/contests:
+
     get:
       operationId: ListUserContests
       parameters:
@@ -1539,6 +1612,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListClaimedAccountsResponseModel"
+  /users/me/change-password:
+    post:
+      operationId: ChangePassword
+      summary: Change password for current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequestModel"
+      responses:
+        "200":
+          description: Password successfully changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponseModel"
+  /users/me/request-email-change:
+    post:
+      operationId: RequestEmailChange
+      summary: Request email change for current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestEmailChangeRequestModel"
+      responses:
+        "200":
+          description: Email change requested
+          content: {}
+
   /users/{username}/avatar:
     get:
       operationId: GetUserAvatar
@@ -3876,7 +3981,76 @@ paths:
       responses:
         "200":
           description: Successfully logged out
+  /auth/verify-email:
+    post:
+      operationId: VerifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequestModel"
+      responses:
+        "200":
+          description: Successfully verified email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponseModel"
+  /auth/resend-verification:
+    post:
+      operationId: ResendVerification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendVerificationRequestModel"
+      responses:
+        "200":
+          description: Verification email resent
+          content: {}
+  /auth/forgot-password:
+    post:
+      operationId: ForgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequestModel"
+      responses:
+        "200":
+          description: Password reset email sent
+          content: {}
+  /auth/reset-password:
+    post:
+      operationId: ResetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequestModel"
+      responses:
+        "200":
+          description: Password reset successfully
+          content: {}
+  /auth/confirm-email-change:
+    post:
+      operationId: ConfirmEmailChange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmEmailChangeRequestModel"
+      responses:
+        "200":
+          description: Email change confirmed successfully
+          content: {}
 components:
+
   schemas:
     Error:
       type: object
@@ -4883,6 +5057,8 @@ components:
         claimed_at:
           type: string
           format: date-time
+        is_email_verified:
+          type: boolean
     ListUsersResponseModel:
       type: object
       required:
@@ -5824,13 +6000,96 @@ components:
       type: object
       required:
         - user
-        - session_id
       properties:
         user:
           $ref: "#/components/schemas/UserModel"
         session_id:
           type: string
           format: uuid
+
+    VerifyEmailRequestModel:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+    ResendVerificationRequestModel:
+      type: object
+      required:
+        - identifier
+      properties:
+        identifier:
+          type: string
+    ForgotPasswordRequestModel:
+      type: object
+      required:
+        - identifier
+      properties:
+        identifier:
+          type: string
+    ResetPasswordRequestModel:
+      type: object
+      required:
+        - token
+        - password
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          format: password
+    ChangePasswordRequestModel:
+      type: object
+      required:
+        - old_password
+        - new_password
+      properties:
+        old_password:
+          type: string
+          format: password
+        new_password:
+          type: string
+          format: password
+    RequestEmailChangeRequestModel:
+      type: object
+      required:
+        - password
+        - new_email
+      properties:
+        password:
+          type: string
+          format: password
+        new_email:
+          type: string
+          format: email
+    ConfirmEmailChangeRequestModel:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+    AdminChangeEmailRequestModel:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+        with_confirmation:
+          type: boolean
+          default: true
+    AdminSetPasswordRequestModel:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: string
+          format: password
+
     SupportedLanguage:
       type: object
       required:

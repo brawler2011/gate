@@ -13,15 +13,16 @@ import {
   Stack,
   Text,
   TextInput,
+  ThemeIcon,
   Title,
 } from "@mantine/core";
-import {IconAlertCircle} from "@tabler/icons-react";
+import {notifications} from "@mantine/notifications";
+import {IconAlertCircle, IconCheck, IconMailCheck} from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
-import {useRouter, useSearchParams} from "next/navigation";
+import {useSearchParams} from "next/navigation";
 import {Suspense, useState, type ReactNode} from "react";
 
-import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
 
 const RegistrationPage = (): ReactNode => {
@@ -39,16 +40,16 @@ const RegistrationPage = (): ReactNode => {
 };
 
 const RegistrationPageContent = () => {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("return_to") || "/";
-  const {setUser} = useSession();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,13 +57,11 @@ const RegistrationPageContent = () => {
     setLoading(true);
 
     try {
-      const [err, data] = await api.register({
+      const [err] = await api.register({
         requestBody: {username, email, password},
       });
-      if (!err && data) {
-        setUser(data.user);
-        router.push(returnTo);
-        router.refresh();
+      if (!err) {
+        setIsSuccess(true);
       } else {
         setError(err?.message || "Ошибка при регистрации");
       }
@@ -70,6 +69,37 @@ const RegistrationPageContent = () => {
       setError("Не удалось подключиться к серверу");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResendLoading(true);
+    try {
+      const [err] = await api.resendVerification({
+        requestBody: {identifier: email || username},
+      });
+      if (!err) {
+        notifications.show({
+          title: "Письмо отправлено",
+          message: `Ссылка для подтверждения отправлена на ${email}`,
+          color: "green",
+          icon: <IconCheck size={18} />,
+        });
+      } else {
+        notifications.show({
+          title: "Ошибка",
+          message: err.message || "Не удалось отправить письмо",
+          color: "red",
+        });
+      }
+    } catch {
+      notifications.show({
+        title: "Ошибка",
+        message: "Не удалось подключиться к серверу",
+        color: "red",
+      });
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -110,80 +140,122 @@ const RegistrationPageContent = () => {
           shadow="sm"
           style={{width: "100%"}}
         >
-          <Title order={2} ta="center" mb={24} fz={22}>
-            Регистрация аккаунта
-          </Title>
+          {isSuccess ? (
+            <Stack align="center" gap="md" ta="center">
+              <ThemeIcon size={64} radius="xl" color="blue" variant="light">
+                <IconMailCheck size={36} />
+              </ThemeIcon>
 
-          {error && (
-            <Alert
-              icon={<IconAlertCircle size={18} />}
-              color="red"
-              mb={20}
-              title="Не удалось зарегистрироваться"
-              radius="md"
-            >
-              {error}
-            </Alert>
-          )}
+              <Title order={2} fz={22}>
+                Подтвердите адрес почты
+              </Title>
 
-          <form onSubmit={handleSubmit}>
-            <Stack gap={16}>
-              <TextInput
-                label="Имя пользователя"
-                placeholder="Введите имя пользователя"
-                required
-                size="md"
-                radius="md"
-                value={username}
-                onChange={(e) => setUsername(e.currentTarget.value)}
-              />
+              <Text c="dimmed" fz={15}>
+                Мы отправили письмо с ссылкой для подтверждения регистрации на адрес <b>{email}</b>.
+              </Text>
 
-              <TextInput
-                label="Email"
-                placeholder="Введите email"
-                type="email"
-                required
-                size="md"
-                radius="md"
-                value={email}
-                onChange={(e) => setEmail(e.currentTarget.value)}
-              />
+              <Text c="dimmed" fz={13}>
+                Пожалуйста, проверьте папку «Входящие» (и «Спам») и перейдите по ссылке в письме для завершения регистрации.
+              </Text>
 
-              <PasswordInput
-                label="Пароль"
-                placeholder="Введите пароль"
-                required
-                size="md"
-                radius="md"
-                value={password}
-                onChange={(e) => setPassword(e.currentTarget.value)}
-              />
+              <Group justify="center" mt="md" gap="sm" w="100%">
+                <Button
+                  variant="outline"
+                  loading={resendLoading}
+                  onClick={handleResend}
+                  size="sm"
+                >
+                  Отправить письмо повторно
+                </Button>
 
-              <Button
-                type="submit"
-                fullWidth
-                size="md"
-                radius="md"
-                loading={loading}
-                mt={8}
-              >
-                Зарегистрироваться
-              </Button>
+                <Button
+                  component={Link}
+                  href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`}
+                  variant="filled"
+                  size="sm"
+                >
+                  Перейти ко входу
+                </Button>
+              </Group>
             </Stack>
-          </form>
+          ) : (
+            <>
+              <Title order={2} ta="center" mb={24} fz={22}>
+                Регистрация аккаунта
+              </Title>
 
-          <Text c="dimmed" ta="center" mt={24} fz={14}>
-            Уже есть аккаунт?{" "}
-            <Anchor
-              component={Link}
-              href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`}
-              fz={14}
-              fw={600}
-              underline="hover"
-            >
-              Войти
-            </Anchor>
-          </Text>
+              {error && (
+                <Alert
+                  icon={<IconAlertCircle size={18} />}
+                  color="red"
+                  mb={20}
+                  title="Не удалось зарегистрироваться"
+                  radius="md"
+                >
+                  {error}
+                </Alert>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                <Stack gap={16}>
+                  <TextInput
+                    label="Имя пользователя"
+                    placeholder="Введите имя пользователя"
+                    required
+                    size="md"
+                    radius="md"
+                    value={username}
+                    onChange={(e) => setUsername(e.currentTarget.value)}
+                  />
+
+                  <TextInput
+                    label="Email"
+                    placeholder="Введите email"
+                    type="email"
+                    required
+                    size="md"
+                    radius="md"
+                    value={email}
+                    onChange={(e) => setEmail(e.currentTarget.value)}
+                  />
+
+                  <PasswordInput
+                    label="Пароль"
+                    placeholder="Введите пароль"
+                    required
+                    size="md"
+                    radius="md"
+                    value={password}
+                    onChange={(e) => setPassword(e.currentTarget.value)}
+                  />
+
+                  <Button
+                    type="submit"
+                    fullWidth
+                    size="md"
+                    radius="md"
+                    loading={loading}
+                    mt={8}
+                  >
+                    Зарегистрироваться
+                  </Button>
+                </Stack>
+              </form>
+
+              <Text c="dimmed" ta="center" mt={24} fz={14}>
+                Уже есть аккаунт?{" "}
+                <Anchor
+                  component={Link}
+                  href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`}
+                  fz={14}
+                  fw={600}
+                  underline="hover"
+                >
+                  Войти
+                </Anchor>
+              </Text>
+            </>
+          )}
         </Paper>
       </Stack>
     </Box>

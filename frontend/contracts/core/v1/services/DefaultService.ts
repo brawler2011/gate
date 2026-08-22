@@ -2,19 +2,24 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AdminChangeEmailRequestModel } from '../models/AdminChangeEmailRequestModel';
+import type { AdminSetPasswordRequestModel } from '../models/AdminSetPasswordRequestModel';
 import type { AuthResponseModel } from '../models/AuthResponseModel';
 import type { BatchCreateOrganizationUsersRequestModel } from '../models/BatchCreateOrganizationUsersRequestModel';
 import type { BatchCreateOrganizationUsersResponseModel } from '../models/BatchCreateOrganizationUsersResponseModel';
 import type { BlockProblemRequestModel } from '../models/BlockProblemRequestModel';
 import type { BlockSubmissionRequestModel } from '../models/BlockSubmissionRequestModel';
+import type { ChangePasswordRequestModel } from '../models/ChangePasswordRequestModel';
 import type { ClaimTemporaryUserRequestModel } from '../models/ClaimTemporaryUserRequestModel';
 import type { ClaimTemporaryUserResponseModel } from '../models/ClaimTemporaryUserResponseModel';
 import type { CompileResult } from '../models/CompileResult';
+import type { ConfirmEmailChangeRequestModel } from '../models/ConfirmEmailChangeRequestModel';
 import type { CreateContestDraftRequestModel } from '../models/CreateContestDraftRequestModel';
 import type { CreatedPost } from '../models/CreatedPost';
 import type { CreateOrganizationResponseModel } from '../models/CreateOrganizationResponseModel';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
 import type { CreationResponseModel } from '../models/CreationResponseModel';
+import type { ForgotPasswordRequestModel } from '../models/ForgotPasswordRequestModel';
 import type { GetContestProblemResponseModel } from '../models/GetContestProblemResponseModel';
 import type { GetContestResponseModel } from '../models/GetContestResponseModel';
 import type { GetHealthResponseModel } from '../models/GetHealthResponseModel';
@@ -50,6 +55,9 @@ import type { ProblemStatement } from '../models/ProblemStatement';
 import type { ProblemTemplateModel } from '../models/ProblemTemplateModel';
 import type { RegisterRequestModel } from '../models/RegisterRequestModel';
 import type { ReorderContestProblemsRequestModel } from '../models/ReorderContestProblemsRequestModel';
+import type { RequestEmailChangeRequestModel } from '../models/RequestEmailChangeRequestModel';
+import type { ResendVerificationRequestModel } from '../models/ResendVerificationRequestModel';
+import type { ResetPasswordRequestModel } from '../models/ResetPasswordRequestModel';
 import type { ScoreboardResponseModel } from '../models/ScoreboardResponseModel';
 import type { SupportedLanguagesResponse } from '../models/SupportedLanguagesResponse';
 import type { TestReport } from '../models/TestReport';
@@ -62,6 +70,7 @@ import type { UpdateProblemTestsConfigRequest } from '../models/UpdateProblemTes
 import type { UpdateTeamRequestModel } from '../models/UpdateTeamRequestModel';
 import type { UpdateUserRequestModel } from '../models/UpdateUserRequestModel';
 import type { ValidationReport } from '../models/ValidationReport';
+import type { VerifyEmailRequestModel } from '../models/VerifyEmailRequestModel';
 import type { WorkshopFileListResponse } from '../models/WorkshopFileListResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
@@ -237,6 +246,86 @@ export class DefaultService {
                 'visibility': visibility,
                 'sortBy': sortBy,
                 'sortOrder': sortOrder,
+            },
+        });
+    }
+    /**
+     * Change user email as admin (direct or with confirmation)
+     * @returns any OK
+     * @throws ApiError
+     */
+    public adminChangeEmail({
+        username,
+        requestBody,
+    }: {
+        username: string,
+        requestBody: AdminChangeEmailRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/admin/users/{username}/change-email',
+            path: {
+                'username': username,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Set user password directly as admin
+     * @returns any OK
+     * @throws ApiError
+     */
+    public adminSetPassword({
+        username,
+        requestBody,
+    }: {
+        username: string,
+        requestBody: AdminSetPasswordRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/admin/users/{username}/set-password',
+            path: {
+                'username': username,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Send password reset link to user email
+     * @returns any OK
+     * @throws ApiError
+     */
+    public adminSendPasswordReset({
+        username,
+    }: {
+        username: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/admin/users/{username}/send-reset-password',
+            path: {
+                'username': username,
+            },
+        });
+    }
+    /**
+     * Resend email verification link for user
+     * @returns any OK
+     * @throws ApiError
+     */
+    public adminResendVerification({
+        username,
+    }: {
+        username: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/admin/users/{username}/resend-verification',
+            path: {
+                'username': username,
             },
         });
     }
@@ -1394,6 +1483,40 @@ export class DefaultService {
         return this.httpRequest.request({
             method: 'GET',
             url: '/users/me/claimed-accounts',
+        });
+    }
+    /**
+     * Change password for current user
+     * @returns AuthResponseModel Password successfully changed
+     * @throws ApiError
+     */
+    public changePassword({
+        requestBody,
+    }: {
+        requestBody: ChangePasswordRequestModel,
+    }): CancelablePromise<AuthResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/users/me/change-password',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Request email change for current user
+     * @returns any Email change requested
+     * @throws ApiError
+     */
+    public requestEmailChange({
+        requestBody,
+    }: {
+        requestBody: RequestEmailChangeRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/users/me/request-email-change',
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**
@@ -3519,6 +3642,86 @@ export class DefaultService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/auth/logout',
+        });
+    }
+    /**
+     * @returns AuthResponseModel Successfully verified email
+     * @throws ApiError
+     */
+    public verifyEmail({
+        requestBody,
+    }: {
+        requestBody: VerifyEmailRequestModel,
+    }): CancelablePromise<AuthResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/auth/verify-email',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns any Verification email resent
+     * @throws ApiError
+     */
+    public resendVerification({
+        requestBody,
+    }: {
+        requestBody: ResendVerificationRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/auth/resend-verification',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns any Password reset email sent
+     * @throws ApiError
+     */
+    public forgotPassword({
+        requestBody,
+    }: {
+        requestBody: ForgotPasswordRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/auth/forgot-password',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns any Password reset successfully
+     * @throws ApiError
+     */
+    public resetPassword({
+        requestBody,
+    }: {
+        requestBody: ResetPasswordRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/auth/reset-password',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * @returns any Email change confirmed successfully
+     * @throws ApiError
+     */
+    public confirmEmailChange({
+        requestBody,
+    }: {
+        requestBody: ConfirmEmailChangeRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/auth/confirm-email-change',
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
 }

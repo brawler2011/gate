@@ -13,5 +13,6 @@ export type UserModel = {
     expires_at?: string;
     claimed_by_user_id?: string;
     claimed_at?: string;
+    is_email_verified?: boolean;
 };
 

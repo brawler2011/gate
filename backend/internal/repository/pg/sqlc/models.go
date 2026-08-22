@@ -444,6 +444,16 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
+type AuthToken struct {
+	ID        uuid.UUID   `json:"id"`
+	UserID    uuid.UUID   `json:"user_id"`
+	TokenType interface{} `json:"token_type"`
+	TokenHash string      `json:"token_hash"`
+	Payload   []byte      `json:"payload"`
+	ExpiresAt time.Time   `json:"expires_at"`
+	CreatedAt time.Time   `json:"created_at"`
+}
+
 type Contest struct {
 	ID             uuid.UUID                `json:"id"`
 	OrganizationID uuid.UUID                `json:"organization_id"`
@@ -650,4 +660,5 @@ type User struct {
 	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
 	ClaimedByUserID pgtype.UUID        `json:"claimed_by_user_id"`
 	ClaimedAt       pgtype.Timestamptz `json:"claimed_at"`
+	IsEmailVerified bool               `json:"is_email_verified"`
 }

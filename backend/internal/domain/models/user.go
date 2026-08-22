@@ -53,13 +53,14 @@ func (f UsersListFilter) Validate() error {
 }
 
 type CreateUserParams struct {
-	Id           uuid.UUID
-	Username     string
-	Role         UserRole
-	PasswordHash string
-	Email        *string
-	AvatarUrl    *string
-	ExpiresAt    *time.Time
+	Id              uuid.UUID
+	Username        string
+	Role            UserRole
+	PasswordHash    string
+	Email           *string
+	AvatarUrl       *string
+	ExpiresAt       *time.Time
+	IsEmailVerified bool
 }
 
 var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,30}$`)
@@ -144,12 +145,13 @@ type UsersListFilter struct {
 }
 
 type UpdateUserParams struct {
-	Id        uuid.UUID
-	Username  *string
-	Role      *UserRole
-	Email     *string
-	AvatarUrl *string
-	ExpiresAt *time.Time
+	Id              uuid.UUID
+	Username        *string
+	Role            *UserRole
+	Email           *string
+	AvatarUrl       *string
+	ExpiresAt       *time.Time
+	IsEmailVerified *bool
 }
 
 func (p UpdateUserParams) Validate() error {
@@ -169,12 +171,13 @@ func (p UpdateUserParams) Validate() error {
 }
 
 type UpdateUserInput struct {
-	Id        uuid.UUID
-	Username  *string
-	Role      *string
-	Email     *string
-	AvatarUrl *string
-	ExpiresAt *time.Time
+	Id              uuid.UUID
+	Username        *string
+	Role            *string
+	Email           *string
+	AvatarUrl       *string
+	ExpiresAt       *time.Time
+	IsEmailVerified *bool
 }
 
 type User struct {
@@ -185,11 +188,40 @@ type User struct {
 	Email           *string
 	AvatarUrl       *string
 	ExpiresAt       *time.Time
+	IsEmailVerified bool
 	ClaimedByUserID *uuid.UUID
 	ClaimedAt       *time.Time
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
+
+type AuthTokenType = string
+
+const (
+	AuthTokenTypeEmailVerification AuthTokenType = "email_verification"
+	AuthTokenTypePasswordReset     AuthTokenType = "password_reset"
+	AuthTokenTypeEmailChange       AuthTokenType = "email_change"
+)
+
+type AuthToken struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	TokenType AuthTokenType
+	TokenHash string
+	Payload   []byte
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
+type CreateAuthTokenParams struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	TokenType AuthTokenType
+	TokenHash string
+	Payload   []byte
+	ExpiresAt time.Time
+}
+
 
 var Guest = User{
 	Id:   uuid.Nil,

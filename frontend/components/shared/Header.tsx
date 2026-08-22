@@ -26,6 +26,7 @@ import {
   IconBuilding,
   IconLogout,
   IconMoon,
+  IconSettings,
   IconSun,
   IconUser,
 } from "@tabler/icons-react";
@@ -150,7 +151,16 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
               Организации
             </Menu.Item>
 
+            <Menu.Item
+              component={Link}
+              href="/settings"
+              leftSection={<IconSettings size={16} />}
+            >
+              Настройки
+            </Menu.Item>
+
             <Menu.Divider />
+
 
             <Menu.Item
               color="red"
@@ -440,7 +450,19 @@ export const Header = ({
                 >
                   Организации
                 </Button>
+                <Button
+                  component={Link}
+                  href="/settings"
+                  variant="light"
+                  color="gray"
+                  leftSection={<IconSettings size={20} />}
+                  fullWidth
+                  onClick={closeDrawer}
+                >
+                  Настройки
+                </Button>
                 <LogoutLink variant="outline" fullWidth>
+
                   Выйти
                 </LogoutLink>
               </Stack>

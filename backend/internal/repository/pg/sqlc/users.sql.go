@@ -64,7 +64,8 @@ INSERT INTO users (
         password_hash,
         email,
         avatar_url,
-        expires_at
+        expires_at,
+        is_email_verified
     )
 VALUES (
         $1::uuid,
@@ -73,18 +74,20 @@ VALUES (
         $4,
         $5,
         $6,
-        $7
+        $7,
+        $8
     )
 `
 
 type CreateUserParams struct {
-	ID           uuid.UUID          `json:"id"`
-	Username     string             `json:"username"`
-	Role         UserRole           `json:"role"`
-	PasswordHash string             `json:"password_hash"`
-	Email        *string            `json:"email"`
-	AvatarUrl    *string            `json:"avatar_url"`
-	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
+	ID              uuid.UUID          `json:"id"`
+	Username        string             `json:"username"`
+	Role            UserRole           `json:"role"`
+	PasswordHash    string             `json:"password_hash"`
+	Email           *string            `json:"email"`
+	AvatarUrl       *string            `json:"avatar_url"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	IsEmailVerified bool               `json:"is_email_verified"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -96,12 +99,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.Email,
 		arg.AvatarUrl,
 		arg.ExpiresAt,
+		arg.IsEmailVerified,
 	)
 	return err
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at, is_email_verified
 FROM users
 WHERE id = $1::uuid
 LIMIT 1
@@ -122,12 +126,13 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.ExpiresAt,
 		&i.ClaimedByUserID,
 		&i.ClaimedAt,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at, is_email_verified
 FROM users
 WHERE LOWER(username) = LOWER($1)
 LIMIT 1
@@ -148,12 +153,13 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.ExpiresAt,
 		&i.ClaimedByUserID,
 		&i.ClaimedAt,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
 
 const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at, is_email_verified
 FROM users
 WHERE LOWER(username) = LOWER($1) OR (email IS NOT NULL AND LOWER(email) = LOWER($1))
 LIMIT 1
@@ -174,12 +180,13 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, identifier strin
 		&i.ExpiresAt,
 		&i.ClaimedByUserID,
 		&i.ClaimedAt,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
 
 const listClaimedAccountsByUserId = `-- name: ListClaimedAccountsByUserId :many
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at, is_email_verified
 FROM users
 WHERE claimed_by_user_id = $1::uuid
 ORDER BY claimed_at DESC
@@ -206,6 +213,7 @@ func (q *Queries) ListClaimedAccountsByUserId(ctx context.Context, claimedByUser
 			&i.ExpiresAt,
 			&i.ClaimedByUserID,
 			&i.ClaimedAt,
+			&i.IsEmailVerified,
 		); err != nil {
 			return nil, err
 		}
@@ -244,7 +252,7 @@ func (q *Queries) ListExistingUsernamesByPrefix(ctx context.Context, prefix stri
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at
+SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at, is_email_verified
 FROM users
 WHERE (
         $1::text = ''
@@ -294,6 +302,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.ExpiresAt,
 			&i.ClaimedByUserID,
 			&i.ClaimedAt,
+			&i.IsEmailVerified,
 		); err != nil {
 			return nil, err
 		}
@@ -305,23 +314,41 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 	return items, nil
 }
 
+const setUserEmailVerified = `-- name: SetUserEmailVerified :exec
+UPDATE users
+SET is_email_verified = $1::boolean
+WHERE id = $2::uuid
+`
+
+type SetUserEmailVerifiedParams struct {
+	IsEmailVerified bool      `json:"is_email_verified"`
+	ID              uuid.UUID `json:"id"`
+}
+
+func (q *Queries) SetUserEmailVerified(ctx context.Context, arg SetUserEmailVerifiedParams) error {
+	_, err := q.db.Exec(ctx, setUserEmailVerified, arg.IsEmailVerified, arg.ID)
+	return err
+}
+
 const updateUser = `-- name: UpdateUser :exec
 UPDATE users
 SET username = COALESCE($1, username),
     role = COALESCE($2, role),
     email = COALESCE($3, email),
     avatar_url = COALESCE($4, avatar_url),
-    expires_at = COALESCE($5, expires_at)
-WHERE id = $6::uuid
+    expires_at = COALESCE($5, expires_at),
+    is_email_verified = COALESCE($6, is_email_verified)
+WHERE id = $7::uuid
 `
 
 type UpdateUserParams struct {
-	Username  *string            `json:"username"`
-	Role      NullUserRole       `json:"role"`
-	Email     *string            `json:"email"`
-	AvatarUrl *string            `json:"avatar_url"`
-	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
-	ID        uuid.UUID          `json:"id"`
+	Username        *string            `json:"username"`
+	Role            NullUserRole       `json:"role"`
+	Email           *string            `json:"email"`
+	AvatarUrl       *string            `json:"avatar_url"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	IsEmailVerified *bool              `json:"is_email_verified"`
+	ID              uuid.UUID          `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
@@ -331,7 +358,42 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 		arg.Email,
 		arg.AvatarUrl,
 		arg.ExpiresAt,
+		arg.IsEmailVerified,
 		arg.ID,
 	)
+	return err
+}
+
+const updateUserEmail = `-- name: UpdateUserEmail :exec
+UPDATE users
+SET email = $1,
+    is_email_verified = $2::boolean
+WHERE id = $3::uuid
+`
+
+type UpdateUserEmailParams struct {
+	Email           *string   `json:"email"`
+	IsEmailVerified bool      `json:"is_email_verified"`
+	ID              uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error {
+	_, err := q.db.Exec(ctx, updateUserEmail, arg.Email, arg.IsEmailVerified, arg.ID)
+	return err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE users
+SET password_hash = $1
+WHERE id = $2::uuid
+`
+
+type UpdateUserPasswordParams struct {
+	PasswordHash string    `json:"password_hash"`
+	ID           uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateUserPassword, arg.PasswordHash, arg.ID)
 	return err
 }

@@ -6,7 +6,8 @@ INSERT INTO users (
         password_hash,
         email,
         avatar_url,
-        expires_at
+        expires_at,
+        is_email_verified
     )
 VALUES (
         @id::uuid,
@@ -15,7 +16,8 @@ VALUES (
         @password_hash,
         @email,
         @avatar_url,
-        @expires_at
+        @expires_at,
+        @is_email_verified
     );
 
 -- name: GetUserById :one
@@ -71,7 +73,24 @@ SET username = COALESCE(sqlc.narg(username), username),
     role = COALESCE(sqlc.narg(role), role),
     email = COALESCE(sqlc.narg(email), email),
     avatar_url = COALESCE(sqlc.narg(avatar_url), avatar_url),
-    expires_at = COALESCE(sqlc.narg(expires_at), expires_at)
+    expires_at = COALESCE(sqlc.narg(expires_at), expires_at),
+    is_email_verified = COALESCE(sqlc.narg(is_email_verified), is_email_verified)
+WHERE id = @id::uuid;
+
+-- name: SetUserEmailVerified :exec
+UPDATE users
+SET is_email_verified = @is_email_verified::boolean
+WHERE id = @id::uuid;
+
+-- name: UpdateUserPassword :exec
+UPDATE users
+SET password_hash = @password_hash
+WHERE id = @id::uuid;
+
+-- name: UpdateUserEmail :exec
+UPDATE users
+SET email = @email,
+    is_email_verified = @is_email_verified::boolean
 WHERE id = @id::uuid;
 
 -- name: ClaimTemporaryUser :exec
@@ -90,5 +109,6 @@ ORDER BY claimed_at DESC;
 SELECT username
 FROM users
 WHERE username ILIKE @prefix::text || '%';
+
 
 

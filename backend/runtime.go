@@ -25,6 +25,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/worker/outbox"
 	"github.com/brawler2011/gate/backend/internal/worker/pubsub"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/pkg/telemetry"
@@ -171,9 +172,11 @@ func runApp(envFile string) error {
 	workspaceStorage := usecase.NewWorkspaceStorage(store, defaultS3WorkshopBucket)
 
 	authRepo := pg.NewAuthRepo(pool)
+	emailService := email.NewEmailService(cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)
 
-	usersUC := usecase.NewUsersUseCase(usersRepo, contestsRepo, outboxRepo, txManager)
-	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, txManager)
+	usersUC := usecase.NewUsersUseCase(usersRepo, contestsRepo, outboxRepo, txManager, authRepo, emailService)
+	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, txManager, emailService)
+
 	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
 	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo, orgsRepo)

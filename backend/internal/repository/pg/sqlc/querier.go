@@ -35,6 +35,7 @@ type Querier interface {
 	CheckUserHasProblemAccess(ctx context.Context, arg CheckUserHasProblemAccessParams) (bool, error)
 	CheckUserIsContestModerator(ctx context.Context, arg CheckUserIsContestModeratorParams) (bool, error)
 	ClaimTemporaryUser(ctx context.Context, arg ClaimTemporaryUserParams) error
+	CleanupExpiredAuthTokens(ctx context.Context) error
 	CleanupExpiredSessions(ctx context.Context, hardLimitCutoff time.Time) error
 	CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error)
 	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
@@ -45,6 +46,7 @@ type Querier interface {
 	CountProblems(ctx context.Context, arg CountProblemsParams) (int64, error)
 	CountSubmissions(ctx context.Context, arg CountSubmissionsParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int32, error)
+	CreateAuthToken(ctx context.Context, arg CreateAuthTokenParams) error
 	// Contests queries (new schema with Organizations)
 	CreateContest(ctx context.Context, arg CreateContestParams) (Contest, error)
 	// Contest User Problem Blocks
@@ -62,6 +64,8 @@ type Querier interface {
 	// Teams queries
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) error
+	DeleteAuthToken(ctx context.Context, id uuid.UUID) error
+	DeleteAuthTokensByUserIdAndType(ctx context.Context, arg DeleteAuthTokensByUserIdAndTypeParams) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
 	DeleteContestUserProblemBlock(ctx context.Context, arg DeleteContestUserProblemBlockParams) error
 	DeleteDraft(ctx context.Context, id uuid.UUID) error
@@ -71,7 +75,9 @@ type Querier interface {
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
 	DeleteProblemPackage(ctx context.Context, id uuid.UUID) error
 	DeleteSession(ctx context.Context, id uuid.UUID) error
+	DeleteSessionsByUserId(ctx context.Context, userID uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
+	GetAuthTokenByHash(ctx context.Context, arg GetAuthTokenByHashParams) (AuthToken, error)
 	GetContestByID(ctx context.Context, id uuid.UUID) (GetContestByIDRow, error)
 	GetContestByLogin(ctx context.Context, arg GetContestByLoginParams) (GetContestByLoginRow, error)
 	GetContestByOrgLoginAndContestLogin(ctx context.Context, arg GetContestByOrgLoginAndContestLoginParams) (GetContestByOrgLoginAndContestLoginRow, error)
@@ -157,6 +163,7 @@ type Querier interface {
 	RemoveTeamMembersByOrgAndUser(ctx context.Context, arg RemoveTeamMembersByOrgAndUserParams) error
 	ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error
 	ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]uuid.UUID, error)
+	SetUserEmailVerified(ctx context.Context, arg SetUserEmailVerifiedParams) error
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error
 	UpdateContestMemberRole(ctx context.Context, arg UpdateContestMemberRoleParams) error
 	UpdateContestProblemOrdinal(ctx context.Context, arg UpdateContestProblemOrdinalParams) error
@@ -177,6 +184,8 @@ type Querier interface {
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) error
 	UpdateTeamMemberRole(ctx context.Context, arg UpdateTeamMemberRoleParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error
+	UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error
+	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	// Contest Standings (Scoreboard)
 	UpsertContestProblemResult(ctx context.Context, arg UpsertContestProblemResultParams) error
 }

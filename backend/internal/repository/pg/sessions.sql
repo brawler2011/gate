@@ -22,3 +22,7 @@ DELETE FROM sessions
 WHERE expires_at < NOW()
    OR created_at < @hard_limit_cutoff::timestamptz;
 
+-- name: DeleteSessionsByUserId :exec
+DELETE FROM sessions
+WHERE user_id = @user_id::uuid;
+
