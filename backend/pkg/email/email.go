@@ -17,6 +17,11 @@ type EmailService interface {
 	SendPasswordResetEmail(ctx context.Context, toEmail, username, token string) error
 	SendEmailChangeVerification(ctx context.Context, toNewEmail, username, token string) error
 	SendEmailChangeAlert(ctx context.Context, toOldEmail, username, newEmail string) error
+	SendOrgInvitationEmail(ctx context.Context, toEmail, username, orgName, orgLogin, role, inviterUsername string) error
+	SendOrgJoinRequestEmail(ctx context.Context, toEmail, adminUsername, applicantUsername, orgName, orgLogin string) error
+	SendOrgJoinRequestResolvedEmail(ctx context.Context, toEmail, username, orgName, orgLogin string, approved bool) error
+	SendContestJoinRequestEmail(ctx context.Context, toEmail, moderatorUsername, applicantUsername, contestTitle, orgLogin, contestLogin string) error
+	SendContestJoinRequestResolvedEmail(ctx context.Context, toEmail, username, contestTitle, orgLogin, contestLogin string, approved bool) error
 }
 
 func NewEmailService(envName, apiKey, fromEmail, appBaseURL string) EmailService {
@@ -50,7 +55,6 @@ func NewEmailService(envName, apiKey, fromEmail, appBaseURL string) EmailService
 		Client:     &http.Client{Timeout: 10 * time.Second},
 	}
 }
-
 
 // LogEmailService logs emails via slog for local development and testing
 type LogEmailService struct {
@@ -92,6 +96,74 @@ func (s *LogEmailService) SendEmailChangeAlert(ctx context.Context, toOldEmail, 
 		"to", toOldEmail,
 		"username", username,
 		"new_email", newEmail,
+	)
+	return nil
+}
+
+func (s *LogEmailService) SendOrgInvitationEmail(ctx context.Context, toEmail, username, orgName, orgLogin, role, inviterUsername string) error {
+	link := fmt.Sprintf("%s/notifications", s.AppBaseURL)
+	slog.Info("[EMAIL MOCK] Org invitation email",
+		"to", toEmail,
+		"username", username,
+		"org_name", orgName,
+		"org_login", orgLogin,
+		"role", role,
+		"inviter", inviterUsername,
+		"link", link,
+	)
+	return nil
+}
+
+func (s *LogEmailService) SendOrgJoinRequestEmail(ctx context.Context, toEmail, adminUsername, applicantUsername, orgName, orgLogin string) error {
+	link := fmt.Sprintf("%s/%s/settings/members", s.AppBaseURL, orgLogin)
+	slog.Info("[EMAIL MOCK] Org join request email",
+		"to", toEmail,
+		"admin", adminUsername,
+		"applicant", applicantUsername,
+		"org_name", orgName,
+		"org_login", orgLogin,
+		"link", link,
+	)
+	return nil
+}
+
+func (s *LogEmailService) SendOrgJoinRequestResolvedEmail(ctx context.Context, toEmail, username, orgName, orgLogin string, approved bool) error {
+	link := fmt.Sprintf("%s/%s", s.AppBaseURL, orgLogin)
+	slog.Info("[EMAIL MOCK] Org join request resolved email",
+		"to", toEmail,
+		"username", username,
+		"org_name", orgName,
+		"org_login", orgLogin,
+		"approved", approved,
+		"link", link,
+	)
+	return nil
+}
+
+func (s *LogEmailService) SendContestJoinRequestEmail(ctx context.Context, toEmail, moderatorUsername, applicantUsername, contestTitle, orgLogin, contestLogin string) error {
+	link := fmt.Sprintf("%s/%s/%s", s.AppBaseURL, orgLogin, contestLogin)
+	slog.Info("[EMAIL MOCK] Contest join request email",
+		"to", toEmail,
+		"moderator", moderatorUsername,
+		"applicant", applicantUsername,
+		"contest", contestTitle,
+		"org_login", orgLogin,
+		"contest_login", contestLogin,
+		"link", link,
+	)
+	return nil
+}
+
+func (s *LogEmailService) SendContestJoinRequestResolvedEmail(ctx context.Context, toEmail, username, contestTitle, orgLogin, contestLogin string, approved bool) error {
+	link := fmt.Sprintf("%s/%s/%s", s.AppBaseURL, orgLogin, contestLogin)
+	slog.Info("[EMAIL MOCK] Contest join request resolved email",
+		"to", toEmail,
+		"username", username,
+		"contest", contestTitle,
+		"org_login", orgLogin,
+		"contest_login", contestLogin,
+		"approved", approved,
+		"link", link,
 	)
 	return nil
 }
@@ -207,4 +279,79 @@ func (s *ResendEmailService) SendEmailChangeAlert(ctx context.Context, toOldEmai
 	textBody := fmt.Sprintf("Здравствуйте, %s!\n\nДля вашей учетной записи был создан запрос на смену email на %s.\nЕсли это были не вы, немедленно смените пароль.", username, newEmail)
 
 	return s.send(ctx, toOldEmail, subject, htmlBody, textBody)
+}
+
+func (s *ResendEmailService) SendOrgInvitationEmail(ctx context.Context, toEmail, username, orgName, orgLogin, role, inviterUsername string) error {
+	link := fmt.Sprintf("%s/notifications", s.AppBaseURL)
+	subject := fmt.Sprintf("Приглашение в организацию %s на платформе Gate", orgName)
+	htmlBody := fmt.Sprintf(`
+		<h2>Здравствуйте, %s!</h2>
+		<p>Пользователь <strong>@%s</strong> пригласил вас вступить в организацию <strong>%s</strong> (роль: <strong>%s</strong>).</p>
+		<p>Вы можете принять или отклонить это приглашение в разделе уведомлений:</p>
+		<p><a href="%s" style="display:inline-block;padding:10px 20px;background-color:#228be6;color:#ffffff;text-decoration:none;border-radius:4px;">Перейти к уведомлениям</a></p>
+	`, username, inviterUsername, orgName, role, link)
+	textBody := fmt.Sprintf("Здравствуйте, %s!\n\nПользователь @%s пригласил вас в организацию %s (роль: %s).\nПринять приглашение: %s", username, inviterUsername, orgName, role, link)
+
+	return s.send(ctx, toEmail, subject, htmlBody, textBody)
+}
+
+func (s *ResendEmailService) SendOrgJoinRequestEmail(ctx context.Context, toEmail, adminUsername, applicantUsername, orgName, orgLogin string) error {
+	link := fmt.Sprintf("%s/%s/settings/members", s.AppBaseURL, orgLogin)
+	subject := fmt.Sprintf("Новая заявка на вступление в организацию %s", orgName)
+	htmlBody := fmt.Sprintf(`
+		<h2>Здравствуйте, %s!</h2>
+		<p>Пользователь <strong>@%s</strong> подал заявку на вступление в вашу организацию <strong>%s</strong>.</p>
+		<p>Вы можете рассмотреть заявку в панели управления организацией:</p>
+		<p><a href="%s" style="display:inline-block;padding:10px 20px;background-color:#228be6;color:#ffffff;text-decoration:none;border-radius:4px;">Перейти к заявкам</a></p>
+	`, adminUsername, applicantUsername, orgName, link)
+	textBody := fmt.Sprintf("Здравствуйте, %s!\n\nПользователь @%s подал заявку на вступление в организацию %s.\nРассмотреть заявку: %s", adminUsername, applicantUsername, orgName, link)
+
+	return s.send(ctx, toEmail, subject, htmlBody, textBody)
+}
+
+func (s *ResendEmailService) SendOrgJoinRequestResolvedEmail(ctx context.Context, toEmail, username, orgName, orgLogin string, approved bool) error {
+	link := fmt.Sprintf("%s/%s", s.AppBaseURL, orgLogin)
+	statusText := "одобрена"
+	if !approved {
+		statusText = "отклонена"
+	}
+	subject := fmt.Sprintf("Ваша заявка в организацию %s %s", orgName, statusText)
+	htmlBody := fmt.Sprintf(`
+		<h2>Здравствуйте, %s!</h2>
+		<p>Ваша заявка на вступление в организацию <strong>%s</strong> была <strong>%s</strong>.</p>
+		<p><a href="%s" style="display:inline-block;padding:10px 20px;background-color:#228be6;color:#ffffff;text-decoration:none;border-radius:4px;">Перейти на страницу организации</a></p>
+	`, username, orgName, statusText, link)
+	textBody := fmt.Sprintf("Здравствуйте, %s!\n\nВаша заявка на вступление в организацию %s была %s.\nСтраница организации: %s", username, orgName, statusText, link)
+
+	return s.send(ctx, toEmail, subject, htmlBody, textBody)
+}
+
+func (s *ResendEmailService) SendContestJoinRequestEmail(ctx context.Context, toEmail, moderatorUsername, applicantUsername, contestTitle, orgLogin, contestLogin string) error {
+	link := fmt.Sprintf("%s/%s/%s", s.AppBaseURL, orgLogin, contestLogin)
+	subject := fmt.Sprintf("Новая заявка на участие в контесте %s", contestTitle)
+	htmlBody := fmt.Sprintf(`
+		<h2>Здравствуйте, %s!</h2>
+		<p>Пользователь <strong>@%s</strong> запросил доступ к участию в контесте <strong>%s</strong>.</p>
+		<p><a href="%s" style="display:inline-block;padding:10px 20px;background-color:#228be6;color:#ffffff;text-decoration:none;border-radius:4px;">Перейти к контесту</a></p>
+	`, moderatorUsername, applicantUsername, contestTitle, link)
+	textBody := fmt.Sprintf("Здравствуйте, %s!\n\nПользователь @%s запросил доступ к контесту %s.\nСсылка: %s", moderatorUsername, applicantUsername, contestTitle, link)
+
+	return s.send(ctx, toEmail, subject, htmlBody, textBody)
+}
+
+func (s *ResendEmailService) SendContestJoinRequestResolvedEmail(ctx context.Context, toEmail, username, contestTitle, orgLogin, contestLogin string, approved bool) error {
+	link := fmt.Sprintf("%s/%s/%s", s.AppBaseURL, orgLogin, contestLogin)
+	statusText := "одобрена"
+	if !approved {
+		statusText = "отклонена"
+	}
+	subject := fmt.Sprintf("Ваша заявка на контест %s %s", contestTitle, statusText)
+	htmlBody := fmt.Sprintf(`
+		<h2>Здравствуйте, %s!</h2>
+		<p>Ваша заявка на участие в контесте <strong>%s</strong> была <strong>%s</strong>.</p>
+		<p><a href="%s" style="display:inline-block;padding:10px 20px;background-color:#228be6;color:#ffffff;text-decoration:none;border-radius:4px;">Перейти к контесту</a></p>
+	`, username, contestTitle, statusText, link)
+	textBody := fmt.Sprintf("Здравствуйте, %s!\n\nВаша заявка на участие в контесте %s была %s.\nСсылка: %s", username, contestTitle, statusText, link)
+
+	return s.send(ctx, toEmail, subject, htmlBody, textBody)
 }

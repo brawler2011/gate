@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -1113,5 +1114,136 @@ func (h *CoreServer) GetProblemBlockStatusForUser(ctx context.Context, request c
 		CreatedAt: &createdAt,
 	}, nil
 }
+
+// Contest Join Requests
+
+// ListContestJoinRequests handles GET /organizations/{org_login}/contests/{contest_login}/requests
+func (h *CoreServer) ListContestJoinRequests(ctx context.Context, request corev1.ListContestJoinRequestsRequestObject) (corev1.ListContestJoinRequestsResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	reqs, err := h.contestsUC.ListJoinRequests(ctx, request.OrgLogin, request.ContestLogin, user.Id)
+	if err != nil {
+		return nil, wrapContestUCError(err, "failed to list contest join requests")
+	}
+
+	return corev1.ListContestJoinRequests200JSONResponse(*ListContestJoinRequestsResponseDTO(reqs)), nil
+}
+
+// CreateContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests
+func (h *CoreServer) CreateContestJoinRequest(ctx context.Context, request corev1.CreateContestJoinRequestRequestObject) (corev1.CreateContestJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	var message *string
+	if request.Body != nil {
+		message = request.Body.Message
+	}
+
+	req, registered, err := h.contestsUC.CreateJoinRequest(ctx, request.OrgLogin, request.ContestLogin, user.Id, message)
+	if err != nil {
+		return nil, wrapContestUCError(err, "failed to create contest join request")
+	}
+
+	var reqDTO *corev1.ContestJoinRequestModel
+	if req != nil {
+		d := ContestJoinRequestDTO(*req)
+		reqDTO = &d
+	}
+
+	return corev1.CreateContestJoinRequest200JSONResponse{
+		Registered: registered,
+		Request:    reqDTO,
+	}, nil
+}
+
+// GetMyContestJoinRequest handles GET /organizations/{org_login}/contests/{contest_login}/requests/mine
+func (h *CoreServer) GetMyContestJoinRequest(ctx context.Context, request corev1.GetMyContestJoinRequestRequestObject) (corev1.GetMyContestJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return corev1.GetMyContestJoinRequest200JSONResponse{Request: nil}, nil
+	}
+
+	req, err := h.contestsUC.GetMyPendingJoinRequest(ctx, request.OrgLogin, request.ContestLogin, user.Id)
+	if err != nil {
+		return nil, wrapContestUCError(err, "failed to get contest join request")
+	}
+
+	var reqDTO *corev1.ContestJoinRequestModel
+	if req != nil {
+		d := ContestJoinRequestDTO(*req)
+		reqDTO = &d
+	}
+
+	return corev1.GetMyContestJoinRequest200JSONResponse{
+		Request: reqDTO,
+	}, nil
+}
+
+// CancelContestJoinRequest handles DELETE /organizations/{org_login}/contests/{contest_login}/requests/mine
+func (h *CoreServer) CancelContestJoinRequest(ctx context.Context, request corev1.CancelContestJoinRequestRequestObject) (corev1.CancelContestJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	err := h.contestsUC.CancelJoinRequest(ctx, request.OrgLogin, request.ContestLogin, user.Id)
+	if err != nil {
+		return nil, wrapContestUCError(err, "failed to cancel contest join request")
+	}
+
+	return corev1.CancelContestJoinRequest200Response{}, nil
+}
+
+// ApproveContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/approve
+func (h *CoreServer) ApproveContestJoinRequest(ctx context.Context, request corev1.ApproveContestJoinRequestRequestObject) (corev1.ApproveContestJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	err := h.contestsUC.ApproveJoinRequest(ctx, request.OrgLogin, request.ContestLogin, request.Id, user.Id)
+	if err != nil {
+		return nil, wrapContestUCError(err, "failed to approve contest join request")
+	}
+
+	return corev1.ApproveContestJoinRequest200Response{}, nil
+}
+
+// RejectContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/reject
+func (h *CoreServer) RejectContestJoinRequest(ctx context.Context, request corev1.RejectContestJoinRequestRequestObject) (corev1.RejectContestJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	err := h.contestsUC.RejectJoinRequest(ctx, request.OrgLogin, request.ContestLogin, request.Id, user.Id)
+	if err != nil {
+		return nil, wrapContestUCError(err, "failed to reject contest join request")
+	}
+
+	return corev1.RejectContestJoinRequest200Response{}, nil
+}
+
+func wrapContestUCError(err error, fallbackMsg string) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
+		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
+	}
+	if errors.Is(err, pkg.ErrNotFound) {
+		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
+	}
+	if errors.Is(err, pkg.ErrBadInput) {
+		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
+	}
+	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
+}
+
 
 

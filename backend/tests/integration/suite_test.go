@@ -23,6 +23,7 @@ import (
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/tests/mocks"
 	"github.com/google/uuid"
@@ -149,7 +150,9 @@ func (s *IntegrationTestSuite) initApp() {
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo, s.organizationsRepo)
 	permissionsUC := usecase.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
-	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
+	notificationsRepo := pg.NewNotificationsRepo(s.dbPool)
+	notificationsUC := usecase.NewNotificationsUseCase(notificationsRepo, s.usersRepo, &email.LogEmailService{})
+	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager, notificationsUC)
 	teamsUC := usecase.NewTeamsUseCase(s.teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
 	workshopUC := usecase.NewWorkshopUseCase(s.problemsRepo, workspaceStorage, nil, txManager)
@@ -179,6 +182,7 @@ func (s *IntegrationTestSuite) initApp() {
 		importUC,
 		publishUC,
 		draftsUC,
+		notificationsUC,
 		nil, // natsJS - not needed for integration tests
 	)
 

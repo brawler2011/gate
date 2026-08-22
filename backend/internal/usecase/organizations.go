@@ -16,10 +16,11 @@ import (
 )
 
 type OrganizationsUseCase struct {
-	repo          interfaces.OrganizationsRepo
-	usersRepo     interfaces.UsersRepo
-	permissionsUC *PermissionsUseCase
-	transactor    interfaces.Transactor
+	repo            interfaces.OrganizationsRepo
+	usersRepo       interfaces.UsersRepo
+	permissionsUC   *PermissionsUseCase
+	transactor      interfaces.Transactor
+	notificationsUC interfaces.NotificationsUC
 }
 
 func NewOrganizationsUseCase(
@@ -27,12 +28,14 @@ func NewOrganizationsUseCase(
 	usersRepo interfaces.UsersRepo,
 	permissionsUC *PermissionsUseCase,
 	transactor interfaces.Transactor,
+	notificationsUC interfaces.NotificationsUC,
 ) *OrganizationsUseCase {
 	return &OrganizationsUseCase{
-		repo:          repo,
-		usersRepo:     usersRepo,
-		permissionsUC: permissionsUC,
-		transactor:    transactor,
+		repo:            repo,
+		usersRepo:       usersRepo,
+		permissionsUC:   permissionsUC,
+		transactor:      transactor,
+		notificationsUC: notificationsUC,
 	}
 }
 
@@ -51,13 +54,13 @@ func (uc *OrganizationsUseCase) CreateOrganization(ctx context.Context, input *m
 	var org *models.Organization
 	err = uc.transactor.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
 		// Create organization
-		org, err = uc.repo.CreateOrganization(txCtx, input)
+		org, err = uc.repo.WithTx(tx).CreateOrganization(txCtx, input)
 		if err != nil {
 			return fmt.Errorf("create organization: %w", err)
 		}
 
 		// Add creator as owner
-		err = uc.repo.AddMember(txCtx, org.ID, input.CreatorID, models.OrgRoleOwner)
+		err = uc.repo.WithTx(tx).AddMember(txCtx, org.ID, input.CreatorID, models.OrgRoleOwner)
 		if err != nil {
 			return fmt.Errorf("add creator as owner: %w", err)
 		}
@@ -104,7 +107,7 @@ func (uc *OrganizationsUseCase) GetOrganizationByLogin(ctx context.Context, logi
 }
 
 func (uc *OrganizationsUseCase) ListOrganizations(ctx context.Context, filter *models.OrganizationFilter, userID uuid.UUID) (*models.OrganizationList, error) {
-	// List all organizations (visibility filtering happens at repo level or we filter here)
+	// List all organizations
 	orgs, total, err := uc.repo.ListOrganizations(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -427,3 +430,420 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 	}, nil
 }
 
+// Invitations
+
+func (uc *OrganizationsUseCase) InviteMember(
+	ctx context.Context,
+	orgLogin string,
+	targetUserID uuid.UUID,
+	role models.OrganizationRole,
+	inviterID uuid.UUID,
+) (*models.OrganizationInvitation, error) {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, inviterID, models.ActionManageOrganization)
+	if err != nil {
+		return nil, fmt.Errorf("check permissions: %w", err)
+	}
+	if !hasAccess {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+
+	// Verify target user exists
+	_, err = uc.usersRepo.GetUserById(ctx, targetUserID)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrNotFound, err, "user not found")
+	}
+
+	inviterUser, err := uc.usersRepo.GetUserById(ctx, inviterID)
+	if err != nil {
+		return nil, fmt.Errorf("get inviter user: %w", err)
+	}
+
+	// Check if already a member
+	_, err = uc.repo.GetMember(ctx, org.ID, targetUserID)
+	if err == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "пользователь уже является участником организации")
+	}
+
+	// Check if there is already a pending invitation
+	pending, err := uc.repo.GetPendingInvitation(ctx, org.ID, targetUserID)
+	if err != nil {
+		return nil, fmt.Errorf("get pending invitation: %w", err)
+	}
+	if pending != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "приглашение этому пользователю уже отправлено")
+	}
+
+	invitation, err := uc.repo.CreateInvitation(ctx, &models.CreateOrganizationInvitationInput{
+		OrganizationID: org.ID,
+		UserID:         targetUserID,
+		InviterID:      inviterID,
+		Role:           role,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create invitation: %w", err)
+	}
+
+	// Send in-app notification & async email
+	if uc.notificationsUC != nil {
+		link := "/notifications"
+		_, _ = uc.notificationsUC.Notify(ctx, &models.CreateNotificationInput{
+			UserID: targetUserID,
+			Type:   models.NotificationTypeOrgInvitation,
+			Title:  fmt.Sprintf("Приглашение в организацию %s", org.Name),
+			Body:   fmt.Sprintf("Пользователь @%s пригласил вас вступить в организацию %s (роль: %s)", inviterUser.Username, org.Name, role),
+			Link:   &link,
+			Data: map[string]interface{}{
+				"organization_id":    org.ID.String(),
+				"organization_name":  org.Name,
+				"organization_login": org.Login,
+				"role":               string(role),
+				"inviter_id":         inviterID.String(),
+				"inviter_username":   inviterUser.Username,
+				"invitation_id":      invitation.ID.String(),
+			},
+		})
+	}
+
+	return invitation, nil
+}
+
+func (uc *OrganizationsUseCase) ListInvitations(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]models.OrganizationInvitation, error) {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, requestUserID, models.ActionManageOrganization)
+	if err != nil {
+		return nil, fmt.Errorf("check permissions: %w", err)
+	}
+	if !hasAccess {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+
+	status := string(models.RequestStatusPending)
+	return uc.repo.ListInvitations(ctx, org.ID, &status)
+}
+
+func (uc *OrganizationsUseCase) CancelInvitation(ctx context.Context, orgLogin string, invitationID, requestUserID uuid.UUID) error {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return err
+	}
+
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, requestUserID, models.ActionManageOrganization)
+	if err != nil {
+		return fmt.Errorf("check permissions: %w", err)
+	}
+	if !hasAccess {
+		return pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+
+	inv, err := uc.repo.GetInvitationByID(ctx, invitationID)
+	if err != nil {
+		return err
+	}
+	if inv.OrganizationID != org.ID {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invitation does not belong to this organization")
+	}
+
+	return uc.repo.UpdateInvitationStatus(ctx, invitationID, models.RequestStatusCanceled)
+}
+
+func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitationID, requestUserID uuid.UUID) error {
+	inv, err := uc.repo.GetInvitationByID(ctx, invitationID)
+	if err != nil {
+		return err
+	}
+
+	if inv.UserID != requestUserID {
+		return pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+	if inv.Status != models.RequestStatusPending {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "приглашение уже не активно")
+	}
+
+	return uc.transactor.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
+		txRepo := uc.repo.WithTx(tx)
+
+		if err := txRepo.AddMember(txCtx, inv.OrganizationID, inv.UserID, inv.Role); err != nil {
+			return fmt.Errorf("add member: %w", err)
+		}
+
+		if err := txRepo.UpdateInvitationStatus(txCtx, inv.ID, models.RequestStatusAccepted); err != nil {
+			return fmt.Errorf("update invitation status: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (uc *OrganizationsUseCase) DeclineInvitation(ctx context.Context, invitationID, requestUserID uuid.UUID) error {
+	inv, err := uc.repo.GetInvitationByID(ctx, invitationID)
+	if err != nil {
+		return err
+	}
+
+	if inv.UserID != requestUserID {
+		return pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+	if inv.Status != models.RequestStatusPending {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "приглашение уже не активно")
+	}
+
+	return uc.repo.UpdateInvitationStatus(ctx, inv.ID, models.RequestStatusDeclined)
+}
+
+// Join Requests
+
+func (uc *OrganizationsUseCase) CreateJoinRequest(
+	ctx context.Context,
+	orgLogin string,
+	userID uuid.UUID,
+	message *string,
+) (*models.OrganizationJoinRequest, bool, error) {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Check if already a member
+	_, err = uc.repo.GetMember(ctx, org.ID, userID)
+	if err == nil {
+		return nil, false, pkg.Wrap(pkg.ErrBadInput, nil, "вы уже состоите в этой организации")
+	}
+
+	applicantUser, err := uc.usersRepo.GetUserById(ctx, userID)
+	if err != nil {
+		return nil, false, fmt.Errorf("get applicant user: %w", err)
+	}
+
+	if org.JoinPolicy == models.OrgJoinPolicyInviteOnly {
+		return nil, false, pkg.Wrap(pkg.ErrBadInput, nil, "вступление в организацию только по приглашениям")
+	}
+
+	if org.JoinPolicy == models.OrgJoinPolicyOpen {
+		// Immediately add member
+		if err := uc.repo.AddMember(ctx, org.ID, userID, models.OrgRoleMember); err != nil {
+			return nil, false, fmt.Errorf("add member: %w", err)
+		}
+		return nil, true, nil
+	}
+
+	// By Request
+	pending, err := uc.repo.GetPendingJoinRequest(ctx, org.ID, userID)
+	if err != nil {
+		return nil, false, fmt.Errorf("get pending request: %w", err)
+	}
+	if pending != nil {
+		return nil, false, pkg.Wrap(pkg.ErrBadInput, nil, "заявка на вступление уже подана и ожидает рассмотрения")
+	}
+
+	req, err := uc.repo.CreateJoinRequest(ctx, &models.CreateOrganizationJoinRequestInput{
+		OrganizationID: org.ID,
+		UserID:         userID,
+		Message:        message,
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("create join request: %w", err)
+	}
+
+	// Notify all org owners and admins
+	if uc.notificationsUC != nil {
+		members, err := uc.repo.ListMembers(ctx, org.ID)
+		if err == nil {
+			link := fmt.Sprintf("/%s/settings/members", org.Login)
+			for _, m := range members {
+				if m.Role == models.OrgRoleOwner || m.Role == models.OrgRoleAdmin {
+					_, _ = uc.notificationsUC.Notify(ctx, &models.CreateNotificationInput{
+						UserID: m.UserID,
+						Type:   models.NotificationTypeOrgJoinRequest,
+						Title:  fmt.Sprintf("Новая заявка в организацию %s", org.Name),
+						Body:   fmt.Sprintf("Пользователь @%s подал заявку на вступление в организацию %s", applicantUser.Username, org.Name),
+						Link:   &link,
+						Data: map[string]interface{}{
+							"organization_id":    org.ID.String(),
+							"organization_name":  org.Name,
+							"organization_login": org.Login,
+							"applicant_id":       userID.String(),
+							"applicant_username": applicantUser.Username,
+							"request_id":         req.ID.String(),
+						},
+					})
+				}
+			}
+		}
+	}
+
+	return req, false, nil
+}
+
+func (uc *OrganizationsUseCase) ListJoinRequests(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]models.OrganizationJoinRequest, error) {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, requestUserID, models.ActionManageOrganization)
+	if err != nil {
+		return nil, fmt.Errorf("check permissions: %w", err)
+	}
+	if !hasAccess {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+
+	status := string(models.RequestStatusPending)
+	return uc.repo.ListJoinRequests(ctx, org.ID, &status)
+}
+
+func (uc *OrganizationsUseCase) CancelJoinRequest(ctx context.Context, orgLogin string, requestUserID uuid.UUID) error {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return err
+	}
+
+	req, err := uc.repo.GetPendingJoinRequest(ctx, org.ID, requestUserID)
+	if err != nil {
+		return err
+	}
+	if req == nil {
+		return pkg.Wrap(pkg.ErrNotFound, nil, "активная заявка не найдена")
+	}
+
+	return uc.repo.UpdateJoinRequestStatus(ctx, req.ID, models.RequestStatusCanceled, nil)
+}
+
+func (uc *OrganizationsUseCase) ApproveJoinRequest(
+	ctx context.Context,
+	orgLogin string,
+	requestID, reviewerID uuid.UUID,
+	role models.OrganizationRole,
+) error {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return err
+	}
+
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, reviewerID, models.ActionManageOrganization)
+	if err != nil {
+		return fmt.Errorf("check permissions: %w", err)
+	}
+	if !hasAccess {
+		return pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+
+	req, err := uc.repo.GetJoinRequestByID(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if req.OrganizationID != org.ID {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "request does not belong to this organization")
+	}
+	if req.Status != models.RequestStatusPending {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
+	}
+
+	if role == "" {
+		role = models.OrgRoleMember
+	}
+
+	err = uc.transactor.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
+		txRepo := uc.repo.WithTx(tx)
+
+		if err := txRepo.AddMember(txCtx, req.OrganizationID, req.UserID, role); err != nil {
+			return fmt.Errorf("add member: %w", err)
+		}
+
+		if err := txRepo.UpdateJoinRequestStatus(txCtx, req.ID, models.RequestStatusApproved, &reviewerID); err != nil {
+			return fmt.Errorf("update join request status: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Notify applicant
+	if uc.notificationsUC != nil {
+		link := fmt.Sprintf("/%s", org.Login)
+		_, _ = uc.notificationsUC.Notify(ctx, &models.CreateNotificationInput{
+			UserID: req.UserID,
+			Type:   models.NotificationTypeOrgJoinApproved,
+			Title:  fmt.Sprintf("Заявка в организацию %s одобрена", org.Name),
+			Body:   fmt.Sprintf("Ваша заявка на вступление в организацию %s была одобрена. Добро пожаловать!", org.Name),
+			Link:   &link,
+			Data: map[string]interface{}{
+				"organization_id":    org.ID.String(),
+				"organization_name":  org.Name,
+				"organization_login": org.Login,
+				"request_id":         req.ID.String(),
+			},
+		})
+	}
+
+	return nil
+}
+
+func (uc *OrganizationsUseCase) RejectJoinRequest(ctx context.Context, orgLogin string, requestID, reviewerID uuid.UUID) error {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return err
+	}
+
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, reviewerID, models.ActionManageOrganization)
+	if err != nil {
+		return fmt.Errorf("check permissions: %w", err)
+	}
+	if !hasAccess {
+		return pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+
+	req, err := uc.repo.GetJoinRequestByID(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if req.OrganizationID != org.ID {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "request does not belong to this organization")
+	}
+	if req.Status != models.RequestStatusPending {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
+	}
+
+	if err := uc.repo.UpdateJoinRequestStatus(ctx, req.ID, models.RequestStatusRejected, &reviewerID); err != nil {
+		return fmt.Errorf("update join request status: %w", err)
+	}
+
+	// Notify applicant
+	if uc.notificationsUC != nil {
+		link := fmt.Sprintf("/%s", org.Login)
+		_, _ = uc.notificationsUC.Notify(ctx, &models.CreateNotificationInput{
+			UserID: req.UserID,
+			Type:   models.NotificationTypeOrgJoinRejected,
+			Title:  fmt.Sprintf("Заявка в организацию %s отклонена", org.Name),
+			Body:   fmt.Sprintf("Ваша заявка на вступление в организацию %s была отклонена.", org.Name),
+			Link:   &link,
+			Data: map[string]interface{}{
+				"organization_id":    org.ID.String(),
+				"organization_name":  org.Name,
+				"organization_login": org.Login,
+				"request_id":         req.ID.String(),
+			},
+		})
+	}
+
+	return nil
+}
+
+func (uc *OrganizationsUseCase) GetMyPendingJoinRequest(ctx context.Context, orgLogin string, userID uuid.UUID) (*models.OrganizationJoinRequest, error) {
+	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+	return uc.repo.GetPendingJoinRequest(ctx, org.ID, userID)
+}

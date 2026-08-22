@@ -142,6 +142,7 @@ func runApp(envFile string) error {
 	submissionsRepo := pg.NewSubmissionsRepo(pool)
 	packagesRepo := pg.NewPackagesRepo(pool)
 	draftsRepo := pg.NewDraftsRepo(pool)
+	notificationsRepo := pg.NewNotificationsRepo(pool)
 	logger.Info("successfully initialized repositories")
 
 	var store storage.Storage
@@ -176,14 +177,17 @@ func runApp(envFile string) error {
 
 	usersUC := usecase.NewUsersUseCase(usersRepo, contestsRepo, outboxRepo, txManager, authRepo, emailService)
 	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, txManager, emailService)
+	notificationsUC := usecase.NewNotificationsUseCase(notificationsRepo, usersRepo, emailService)
 
 	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
 	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
 	problemsUC := usecase.NewProblemsUseCase(problemsRepo, orgsRepo)
 	contestsUC := usecase.NewContestsUseCase(contestsRepo, orgsRepo, submissionsRepo)
+	contestsUC.SetNotificationsUC(notificationsUC)
+	contestsUC.SetUsersRepo(usersRepo)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)
 	permissionsUC := usecase.NewPermissionsUseCase(contestsRepo, usersUC, problemsRepo, teamsRepo, orgsRepo)
-	orgsUC := usecase.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, txManager)
+	orgsUC := usecase.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, txManager, notificationsUC)
 	teamsUC := usecase.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, txManager)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
 	draftsUC := usecase.NewDraftsUseCase(draftsRepo, contestsUC, permissionsUC, txManager)
@@ -288,6 +292,7 @@ func runApp(envFile string) error {
 		problemImportUC,
 		problemPublishUC,
 		draftsUC,
+		notificationsUC,
 		natsJS,
 	)
 

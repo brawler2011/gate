@@ -26,6 +26,13 @@ const (
 	CookieAuthScopes = "cookieAuth.Scopes"
 )
 
+// Defines values for ApproveOrganizationJoinRequestModelRole.
+const (
+	ApproveOrganizationJoinRequestModelRoleAdmin  ApproveOrganizationJoinRequestModelRole = "admin"
+	ApproveOrganizationJoinRequestModelRoleMember ApproveOrganizationJoinRequestModelRole = "member"
+	ApproveOrganizationJoinRequestModelRoleOwner  ApproveOrganizationJoinRequestModelRole = "owner"
+)
+
 // Defines values for ContestModelFreezeStatus.
 const (
 	ContestModelFreezeStatusAuto     ContestModelFreezeStatus = "auto"
@@ -35,8 +42,23 @@ const (
 
 // Defines values for ContestModelParticipationMode.
 const (
+	ContestModelParticipationModeByRequest  ContestModelParticipationMode = "by_request"
 	ContestModelParticipationModeInviteOnly ContestModelParticipationMode = "invite_only"
 	ContestModelParticipationModeOpen       ContestModelParticipationMode = "open"
+)
+
+// Defines values for InviteOrganizationMemberRequestModelRole.
+const (
+	InviteOrganizationMemberRequestModelRoleAdmin  InviteOrganizationMemberRequestModelRole = "admin"
+	InviteOrganizationMemberRequestModelRoleMember InviteOrganizationMemberRequestModelRole = "member"
+	InviteOrganizationMemberRequestModelRoleOwner  InviteOrganizationMemberRequestModelRole = "owner"
+)
+
+// Defines values for OrganizationModelJoinPolicy.
+const (
+	OrganizationModelJoinPolicyByRequest  OrganizationModelJoinPolicy = "by_request"
+	OrganizationModelJoinPolicyInviteOnly OrganizationModelJoinPolicy = "invite_only"
+	OrganizationModelJoinPolicyOpen       OrganizationModelJoinPolicy = "open"
 )
 
 // Defines values for UpdateContestRequestModelFreezeStatus.
@@ -48,8 +70,16 @@ const (
 
 // Defines values for UpdateContestRequestModelParticipationMode.
 const (
+	UpdateContestRequestModelParticipationModeByRequest  UpdateContestRequestModelParticipationMode = "by_request"
 	UpdateContestRequestModelParticipationModeInviteOnly UpdateContestRequestModelParticipationMode = "invite_only"
 	UpdateContestRequestModelParticipationModeOpen       UpdateContestRequestModelParticipationMode = "open"
+)
+
+// Defines values for UpdateOrganizationRequestModelJoinPolicy.
+const (
+	UpdateOrganizationRequestModelJoinPolicyByRequest  UpdateOrganizationRequestModelJoinPolicy = "by_request"
+	UpdateOrganizationRequestModelJoinPolicyInviteOnly UpdateOrganizationRequestModelJoinPolicy = "invite_only"
+	UpdateOrganizationRequestModelJoinPolicyOpen       UpdateOrganizationRequestModelJoinPolicy = "open"
 )
 
 // Defines values for UpdateUserRequestModelRole.
@@ -75,6 +105,13 @@ const (
 const (
 	ListAdminContestsParamsSortOrderAsc  ListAdminContestsParamsSortOrder = "asc"
 	ListAdminContestsParamsSortOrderDesc ListAdminContestsParamsSortOrder = "desc"
+)
+
+// Defines values for CreateOrganizationParamsJoinPolicy.
+const (
+	ByRequest  CreateOrganizationParamsJoinPolicy = "by_request"
+	InviteOnly CreateOrganizationParamsJoinPolicy = "invite_only"
+	Open       CreateOrganizationParamsJoinPolicy = "open"
 )
 
 // Defines values for ListContestSubmissionsParamsSortOrder.
@@ -159,6 +196,14 @@ type AdminChangeEmailRequestModel struct {
 type AdminSetPasswordRequestModel struct {
 	Password string `json:"password"`
 }
+
+// ApproveOrganizationJoinRequestModel defines model for ApproveOrganizationJoinRequestModel.
+type ApproveOrganizationJoinRequestModel struct {
+	Role *ApproveOrganizationJoinRequestModelRole `json:"role,omitempty"`
+}
+
+// ApproveOrganizationJoinRequestModelRole defines model for ApproveOrganizationJoinRequestModel.Role.
+type ApproveOrganizationJoinRequestModelRole string
 
 // AuthResponseModel defines model for AuthResponseModel.
 type AuthResponseModel struct {
@@ -246,6 +291,34 @@ type ContestDraftModel struct {
 	UpdatedAt time.Time          `json:"updated_at"`
 	UserId    openapi_types.UUID `json:"user_id"`
 	Username  *string            `json:"username,omitempty"`
+}
+
+// ContestJoinRequestModel defines model for ContestJoinRequestModel.
+type ContestJoinRequestModel struct {
+	ContestId         openapi_types.UUID `json:"contest_id"`
+	ContestLogin      string             `json:"contest_login"`
+	ContestTitle      string             `json:"contest_title"`
+	CreatedAt         time.Time          `json:"created_at"`
+	Email             *string            `json:"email,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
+	Message           *string            `json:"message,omitempty"`
+	OrganizationLogin string             `json:"organization_login"`
+	ReviewerUsername  *string            `json:"reviewer_username,omitempty"`
+	Status            string             `json:"status"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	UserId            openapi_types.UUID `json:"user_id"`
+	Username          string             `json:"username"`
+}
+
+// ContestJoinRequestNullableResponseModel defines model for ContestJoinRequestNullableResponseModel.
+type ContestJoinRequestNullableResponseModel struct {
+	Request *ContestJoinRequestModel `json:"request,omitempty"`
+}
+
+// ContestJoinRequestResponseModel defines model for ContestJoinRequestResponseModel.
+type ContestJoinRequestResponseModel struct {
+	Registered bool                     `json:"registered"`
+	Request    *ContestJoinRequestModel `json:"request,omitempty"`
 }
 
 // ContestMemberModel defines model for ContestMemberModel.
@@ -345,6 +418,16 @@ type ContestTeamModel struct {
 // CreateContestDraftRequestModel defines model for CreateContestDraftRequestModel.
 type CreateContestDraftRequestModel struct {
 	Code string `json:"code"`
+}
+
+// CreateContestJoinRequestModel defines model for CreateContestJoinRequestModel.
+type CreateContestJoinRequestModel struct {
+	Message *string `json:"message,omitempty"`
+}
+
+// CreateOrganizationJoinRequestModel defines model for CreateOrganizationJoinRequestModel.
+type CreateOrganizationJoinRequestModel struct {
+	Message *string `json:"message,omitempty"`
 }
 
 // CreateOrganizationResponseModel defines model for CreateOrganizationResponseModel.
@@ -480,6 +563,15 @@ type GetUserResponseModel struct {
 	User UserModel `json:"user"`
 }
 
+// InviteOrganizationMemberRequestModel defines model for InviteOrganizationMemberRequestModel.
+type InviteOrganizationMemberRequestModel struct {
+	Role   InviteOrganizationMemberRequestModelRole `json:"role"`
+	UserId openapi_types.UUID                       `json:"user_id"`
+}
+
+// InviteOrganizationMemberRequestModelRole defines model for InviteOrganizationMemberRequestModel.Role.
+type InviteOrganizationMemberRequestModelRole string
+
 // ListClaimedAccountsResponseModel defines model for ListClaimedAccountsResponseModel.
 type ListClaimedAccountsResponseModel struct {
 	Accounts []ClaimedAccountItem `json:"accounts"`
@@ -489,6 +581,11 @@ type ListClaimedAccountsResponseModel struct {
 type ListContestDraftsResponseModel struct {
 	Drafts     []ContestDraftModel `json:"drafts"`
 	Pagination PaginationModel     `json:"pagination"`
+}
+
+// ListContestJoinRequestsResponseModel defines model for ListContestJoinRequestsResponseModel.
+type ListContestJoinRequestsResponseModel struct {
+	Requests []ContestJoinRequestModel `json:"requests"`
 }
 
 // ListContestMembersResponseModel defines model for ListContestMembersResponseModel.
@@ -506,6 +603,16 @@ type ListContestTeamsResponseModel struct {
 type ListContestsResponseModel struct {
 	Contests   []ContestModel  `json:"contests"`
 	Pagination PaginationModel `json:"pagination"`
+}
+
+// ListOrganizationInvitationsResponseModel defines model for ListOrganizationInvitationsResponseModel.
+type ListOrganizationInvitationsResponseModel struct {
+	Invitations []OrganizationInvitationModel `json:"invitations"`
+}
+
+// ListOrganizationJoinRequestsResponseModel defines model for ListOrganizationJoinRequestsResponseModel.
+type ListOrganizationJoinRequestsResponseModel struct {
+	Requests []OrganizationJoinRequestModel `json:"requests"`
 }
 
 // ListOrganizationMembersResponseModel defines model for ListOrganizationMembersResponseModel.
@@ -585,6 +692,70 @@ type MessageResponse struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// NotificationModel defines model for NotificationModel.
+type NotificationModel struct {
+	Body      string                  `json:"body"`
+	CreatedAt time.Time               `json:"created_at"`
+	Data      *map[string]interface{} `json:"data,omitempty"`
+	Id        openapi_types.UUID      `json:"id"`
+	IsRead    bool                    `json:"is_read"`
+	Link      *string                 `json:"link,omitempty"`
+	Title     string                  `json:"title"`
+	Type      string                  `json:"type"`
+	UserId    openapi_types.UUID      `json:"user_id"`
+}
+
+// NotificationsListResponseModel defines model for NotificationsListResponseModel.
+type NotificationsListResponseModel struct {
+	Notifications []NotificationModel `json:"notifications"`
+	Pagination    PaginationModel     `json:"pagination"`
+}
+
+// OrganizationInvitationModel defines model for OrganizationInvitationModel.
+type OrganizationInvitationModel struct {
+	CreatedAt             time.Time          `json:"created_at"`
+	Email                 *string            `json:"email,omitempty"`
+	Id                    openapi_types.UUID `json:"id"`
+	InviterId             openapi_types.UUID `json:"inviter_id"`
+	InviterUsername       string             `json:"inviter_username"`
+	OrganizationAvatarUrl *string            `json:"organization_avatar_url,omitempty"`
+	OrganizationId        openapi_types.UUID `json:"organization_id"`
+	OrganizationLogin     string             `json:"organization_login"`
+	OrganizationName      string             `json:"organization_name"`
+	Role                  string             `json:"role"`
+	Status                string             `json:"status"`
+	UpdatedAt             time.Time          `json:"updated_at"`
+	UserId                openapi_types.UUID `json:"user_id"`
+	Username              string             `json:"username"`
+}
+
+// OrganizationJoinRequestModel defines model for OrganizationJoinRequestModel.
+type OrganizationJoinRequestModel struct {
+	CreatedAt         time.Time          `json:"created_at"`
+	Email             *string            `json:"email,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
+	Message           *string            `json:"message,omitempty"`
+	OrganizationId    openapi_types.UUID `json:"organization_id"`
+	OrganizationLogin string             `json:"organization_login"`
+	OrganizationName  string             `json:"organization_name"`
+	ReviewerUsername  *string            `json:"reviewer_username,omitempty"`
+	Status            string             `json:"status"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	UserId            openapi_types.UUID `json:"user_id"`
+	Username          string             `json:"username"`
+}
+
+// OrganizationJoinRequestNullableResponseModel defines model for OrganizationJoinRequestNullableResponseModel.
+type OrganizationJoinRequestNullableResponseModel struct {
+	Request *OrganizationJoinRequestModel `json:"request,omitempty"`
+}
+
+// OrganizationJoinRequestResponseModel defines model for OrganizationJoinRequestResponseModel.
+type OrganizationJoinRequestResponseModel struct {
+	Joined  bool                          `json:"joined"`
+	Request *OrganizationJoinRequestModel `json:"request,omitempty"`
+}
+
 // OrganizationMemberModel defines model for OrganizationMemberModel.
 type OrganizationMemberModel struct {
 	CreatedAt      time.Time          `json:"created_at"`
@@ -596,13 +767,17 @@ type OrganizationMemberModel struct {
 
 // OrganizationModel defines model for OrganizationModel.
 type OrganizationModel struct {
-	CreatedAt   time.Time          `json:"created_at"`
-	Description *string            `json:"description,omitempty"`
-	Id          openapi_types.UUID `json:"id"`
-	Login       string             `json:"login"`
-	Name        string             `json:"name"`
-	UpdatedAt   time.Time          `json:"updated_at"`
+	CreatedAt   time.Time                   `json:"created_at"`
+	Description *string                     `json:"description,omitempty"`
+	Id          openapi_types.UUID          `json:"id"`
+	JoinPolicy  OrganizationModelJoinPolicy `json:"join_policy"`
+	Login       string                      `json:"login"`
+	Name        string                      `json:"name"`
+	UpdatedAt   time.Time                   `json:"updated_at"`
 }
+
+// OrganizationModelJoinPolicy defines model for OrganizationModel.JoinPolicy.
+type OrganizationModelJoinPolicy string
 
 // PaginationModel defines model for PaginationModel.
 type PaginationModel struct {
@@ -924,6 +1099,11 @@ type TestValidationResult struct {
 	Valid      *bool   `json:"valid,omitempty"`
 }
 
+// UnreadNotificationsCountResponseModel defines model for UnreadNotificationsCountResponseModel.
+type UnreadNotificationsCountResponseModel struct {
+	Count int32 `json:"count"`
+}
+
 // UpdateContestRequestModel defines model for UpdateContestRequestModel.
 type UpdateContestRequestModel struct {
 	Description           *string    `json:"description,omitempty"`
@@ -957,10 +1137,14 @@ type UpdateContestRequestModelParticipationMode string
 
 // UpdateOrganizationRequestModel defines model for UpdateOrganizationRequestModel.
 type UpdateOrganizationRequestModel struct {
-	Description *string `json:"description,omitempty"`
-	Login       *string `json:"login,omitempty"`
-	Name        *string `json:"name,omitempty"`
+	Description *string                                   `json:"description,omitempty"`
+	JoinPolicy  *UpdateOrganizationRequestModelJoinPolicy `json:"join_policy,omitempty"`
+	Login       *string                                   `json:"login,omitempty"`
+	Name        *string                                   `json:"name,omitempty"`
 }
+
+// UpdateOrganizationRequestModelJoinPolicy defines model for UpdateOrganizationRequestModel.JoinPolicy.
+type UpdateOrganizationRequestModelJoinPolicy string
 
 // UpdateProblemLimitsRequest defines model for UpdateProblemLimitsRequest.
 type UpdateProblemLimitsRequest struct {
@@ -1066,6 +1250,13 @@ type ListAdminContestsParamsSortBy string
 // ListAdminContestsParamsSortOrder defines parameters for ListAdminContests.
 type ListAdminContestsParamsSortOrder string
 
+// ListNotificationsParams defines parameters for ListNotifications.
+type ListNotificationsParams struct {
+	Page       *int32 `form:"page,omitempty" json:"page,omitempty"`
+	PageSize   *int32 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	UnreadOnly *bool  `form:"unread_only,omitempty" json:"unread_only,omitempty"`
+}
+
 // ListOrganizationsParams defines parameters for ListOrganizations.
 type ListOrganizationsParams struct {
 	Page     int32   `form:"page" json:"page"`
@@ -1075,9 +1266,13 @@ type ListOrganizationsParams struct {
 
 // CreateOrganizationParams defines parameters for CreateOrganization.
 type CreateOrganizationParams struct {
-	Name  string  `form:"name" json:"name"`
-	Login *string `form:"login,omitempty" json:"login,omitempty"`
+	Name       string                              `form:"name" json:"name"`
+	Login      *string                             `form:"login,omitempty" json:"login,omitempty"`
+	JoinPolicy *CreateOrganizationParamsJoinPolicy `form:"join_policy,omitempty" json:"join_policy,omitempty"`
 }
+
+// CreateOrganizationParamsJoinPolicy defines parameters for CreateOrganization.
+type CreateOrganizationParamsJoinPolicy string
 
 // RemoveOrganizationMemberParams defines parameters for RemoveOrganizationMember.
 type RemoveOrganizationMemberParams struct {
@@ -1574,8 +1769,17 @@ type VerifyEmailJSONRequestBody = VerifyEmailRequestModel
 // UpdateOrganizationJSONRequestBody defines body for UpdateOrganization for application/json ContentType.
 type UpdateOrganizationJSONRequestBody = UpdateOrganizationRequestModel
 
+// InviteOrganizationMemberJSONRequestBody defines body for InviteOrganizationMember for application/json ContentType.
+type InviteOrganizationMemberJSONRequestBody = InviteOrganizationMemberRequestModel
+
 // BatchCreateOrganizationUsersJSONRequestBody defines body for BatchCreateOrganizationUsers for application/json ContentType.
 type BatchCreateOrganizationUsersJSONRequestBody = BatchCreateOrganizationUsersRequestModel
+
+// CreateOrganizationJoinRequestJSONRequestBody defines body for CreateOrganizationJoinRequest for application/json ContentType.
+type CreateOrganizationJoinRequestJSONRequestBody = CreateOrganizationJoinRequestModel
+
+// ApproveOrganizationJoinRequestJSONRequestBody defines body for ApproveOrganizationJoinRequest for application/json ContentType.
+type ApproveOrganizationJoinRequestJSONRequestBody = ApproveOrganizationJoinRequestModel
 
 // UpdateContestJSONRequestBody defines body for UpdateContest for application/json ContentType.
 type UpdateContestJSONRequestBody = UpdateContestRequestModel
@@ -1588,6 +1792,9 @@ type BlockProblemForUserJSONRequestBody = BlockProblemRequestModel
 
 // ReorderContestProblemsJSONRequestBody defines body for ReorderContestProblems for application/json ContentType.
 type ReorderContestProblemsJSONRequestBody = ReorderContestProblemsRequestModel
+
+// CreateContestJoinRequestJSONRequestBody defines body for CreateContestJoinRequest for application/json ContentType.
+type CreateContestJoinRequestJSONRequestBody = CreateContestJoinRequestModel
 
 // BlockSubmissionJSONRequestBody defines body for BlockSubmission for application/json ContentType.
 type BlockSubmissionJSONRequestBody = BlockSubmissionRequestModel
@@ -1812,8 +2019,26 @@ type ClientInterface interface {
 	// GetHealth request
 	GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// AcceptOrganizationInvitation request
+	AcceptOrganizationInvitation(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeclineOrganizationInvitation request
+	DeclineOrganizationInvitation(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetLanguages request
 	GetLanguages(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListNotifications request
+	ListNotifications(ctx context.Context, params *ListNotificationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// MarkAllNotificationsAsRead request
+	MarkAllNotificationsAsRead(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetUnreadNotificationsCount request
+	GetUnreadNotificationsCount(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// MarkNotificationAsRead request
+	MarkNotificationAsRead(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListOrganizations request
 	ListOrganizations(ctx context.Context, params *ListOrganizationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1832,6 +2057,17 @@ type ClientInterface interface {
 
 	UpdateOrganization(ctx context.Context, login string, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListOrganizationInvitations request
+	ListOrganizationInvitations(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// InviteOrganizationMemberWithBody request with any body
+	InviteOrganizationMemberWithBody(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	InviteOrganizationMember(ctx context.Context, login string, body InviteOrganizationMemberJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CancelOrganizationInvitation request
+	CancelOrganizationInvitation(ctx context.Context, login string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RemoveOrganizationMember request
 	RemoveOrganizationMember(ctx context.Context, login string, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1845,6 +2081,28 @@ type ClientInterface interface {
 	BatchCreateOrganizationUsersWithBody(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	BatchCreateOrganizationUsers(ctx context.Context, login string, body BatchCreateOrganizationUsersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListOrganizationJoinRequests request
+	ListOrganizationJoinRequests(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateOrganizationJoinRequestWithBody request with any body
+	CreateOrganizationJoinRequestWithBody(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateOrganizationJoinRequest(ctx context.Context, login string, body CreateOrganizationJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CancelOrganizationJoinRequest request
+	CancelOrganizationJoinRequest(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetMyOrganizationJoinRequest request
+	GetMyOrganizationJoinRequest(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ApproveOrganizationJoinRequestWithBody request with any body
+	ApproveOrganizationJoinRequestWithBody(ctx context.Context, login string, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ApproveOrganizationJoinRequest(ctx context.Context, login string, id openapi_types.UUID, body ApproveOrganizationJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RejectOrganizationJoinRequest request
+	RejectOrganizationJoinRequest(ctx context.Context, login string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListOrganizationContests request
 	ListOrganizationContests(ctx context.Context, orgLogin string, params *ListOrganizationContestsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1919,6 +2177,26 @@ type ClientInterface interface {
 
 	// RejudgeContest request
 	RejudgeContest(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListContestJoinRequests request
+	ListContestJoinRequests(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateContestJoinRequestWithBody request with any body
+	CreateContestJoinRequestWithBody(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, body CreateContestJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CancelContestJoinRequest request
+	CancelContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetMyContestJoinRequest request
+	GetMyContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ApproveContestJoinRequest request
+	ApproveContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RejectContestJoinRequest request
+	RejectContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetContestScoreboard request
 	GetContestScoreboard(ctx context.Context, orgLogin string, contestLogin string, params *GetContestScoreboardParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2588,8 +2866,80 @@ func (c *Client) GetHealth(ctx context.Context, reqEditors ...RequestEditorFn) (
 	return c.Client.Do(req)
 }
 
+func (c *Client) AcceptOrganizationInvitation(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAcceptOrganizationInvitationRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeclineOrganizationInvitation(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeclineOrganizationInvitationRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetLanguages(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetLanguagesRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListNotifications(ctx context.Context, params *ListNotificationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListNotificationsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) MarkAllNotificationsAsRead(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMarkAllNotificationsAsReadRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetUnreadNotificationsCount(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetUnreadNotificationsCountRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) MarkNotificationAsRead(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewMarkNotificationAsReadRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -2672,6 +3022,54 @@ func (c *Client) UpdateOrganization(ctx context.Context, login string, body Upda
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListOrganizationInvitations(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListOrganizationInvitationsRequest(c.Server, login)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) InviteOrganizationMemberWithBody(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewInviteOrganizationMemberRequestWithBody(c.Server, login, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) InviteOrganizationMember(ctx context.Context, login string, body InviteOrganizationMemberJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewInviteOrganizationMemberRequest(c.Server, login, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CancelOrganizationInvitation(ctx context.Context, login string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCancelOrganizationInvitationRequest(c.Server, login, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) RemoveOrganizationMember(ctx context.Context, login string, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRemoveOrganizationMemberRequest(c.Server, login, params)
 	if err != nil {
@@ -2722,6 +3120,102 @@ func (c *Client) BatchCreateOrganizationUsersWithBody(ctx context.Context, login
 
 func (c *Client) BatchCreateOrganizationUsers(ctx context.Context, login string, body BatchCreateOrganizationUsersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewBatchCreateOrganizationUsersRequest(c.Server, login, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListOrganizationJoinRequests(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListOrganizationJoinRequestsRequest(c.Server, login)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateOrganizationJoinRequestWithBody(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateOrganizationJoinRequestRequestWithBody(c.Server, login, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateOrganizationJoinRequest(ctx context.Context, login string, body CreateOrganizationJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateOrganizationJoinRequestRequest(c.Server, login, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CancelOrganizationJoinRequest(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCancelOrganizationJoinRequestRequest(c.Server, login)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetMyOrganizationJoinRequest(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetMyOrganizationJoinRequestRequest(c.Server, login)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ApproveOrganizationJoinRequestWithBody(ctx context.Context, login string, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewApproveOrganizationJoinRequestRequestWithBody(c.Server, login, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ApproveOrganizationJoinRequest(ctx context.Context, login string, id openapi_types.UUID, body ApproveOrganizationJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewApproveOrganizationJoinRequestRequest(c.Server, login, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RejectOrganizationJoinRequest(ctx context.Context, login string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRejectOrganizationJoinRequestRequest(c.Server, login, id)
 	if err != nil {
 		return nil, err
 	}
@@ -3034,6 +3528,90 @@ func (c *Client) RejudgeContestProblem(ctx context.Context, orgLogin string, con
 
 func (c *Client) RejudgeContest(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRejudgeContestRequest(c.Server, orgLogin, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListContestJoinRequests(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListContestJoinRequestsRequest(c.Server, orgLogin, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateContestJoinRequestWithBody(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateContestJoinRequestRequestWithBody(c.Server, orgLogin, contestLogin, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, body CreateContestJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateContestJoinRequestRequest(c.Server, orgLogin, contestLogin, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CancelContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCancelContestJoinRequestRequest(c.Server, orgLogin, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetMyContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetMyContestJoinRequestRequest(c.Server, orgLogin, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ApproveContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewApproveContestJoinRequestRequest(c.Server, orgLogin, contestLogin, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RejectContestJoinRequest(ctx context.Context, orgLogin string, contestLogin string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRejectContestJoinRequestRequest(c.Server, orgLogin, contestLogin, id)
 	if err != nil {
 		return nil, err
 	}
@@ -5329,6 +5907,74 @@ func NewGetHealthRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewAcceptOrganizationInvitationRequest generates requests for AcceptOrganizationInvitation
+func NewAcceptOrganizationInvitationRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations/%s/accept", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeclineOrganizationInvitationRequest generates requests for DeclineOrganizationInvitation
+func NewDeclineOrganizationInvitationRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/invitations/%s/decline", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetLanguagesRequest generates requests for GetLanguages
 func NewGetLanguagesRequest(server string) (*http.Request, error) {
 	var err error
@@ -5349,6 +5995,175 @@ func NewGetLanguagesRequest(server string) (*http.Request, error) {
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListNotificationsRequest generates requests for ListNotifications
+func NewListNotificationsRequest(server string, params *ListNotificationsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/notifications")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.UnreadOnly != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "unread_only", runtime.ParamLocationQuery, *params.UnreadOnly); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewMarkAllNotificationsAsReadRequest generates requests for MarkAllNotificationsAsRead
+func NewMarkAllNotificationsAsReadRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/notifications/read-all")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetUnreadNotificationsCountRequest generates requests for GetUnreadNotificationsCount
+func NewGetUnreadNotificationsCountRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/notifications/unread-count")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewMarkNotificationAsReadRequest generates requests for MarkNotificationAsRead
+func NewMarkNotificationAsReadRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/notifications/%s/read", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -5466,6 +6281,22 @@ func NewCreateOrganizationRequest(server string, params *CreateOrganizationParam
 		if params.Login != nil {
 
 			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "login", runtime.ParamLocationQuery, *params.Login); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.JoinPolicy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "join_policy", runtime.ParamLocationQuery, *params.JoinPolicy); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -5601,6 +6432,128 @@ func NewUpdateOrganizationRequestWithBody(server string, login string, contentTy
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListOrganizationInvitationsRequest generates requests for ListOrganizationInvitations
+func NewListOrganizationInvitationsRequest(server string, login string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/invitations", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewInviteOrganizationMemberRequest calls the generic InviteOrganizationMember builder with application/json body
+func NewInviteOrganizationMemberRequest(server string, login string, body InviteOrganizationMemberJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewInviteOrganizationMemberRequestWithBody(server, login, "application/json", bodyReader)
+}
+
+// NewInviteOrganizationMemberRequestWithBody generates requests for InviteOrganizationMember with any type of body
+func NewInviteOrganizationMemberRequestWithBody(server string, login string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/invitations", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewCancelOrganizationInvitationRequest generates requests for CancelOrganizationInvitation
+func NewCancelOrganizationInvitationRequest(server string, login string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/invitations/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -5828,6 +6781,250 @@ func NewBatchCreateOrganizationUsersRequestWithBody(server string, login string,
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListOrganizationJoinRequestsRequest generates requests for ListOrganizationJoinRequests
+func NewListOrganizationJoinRequestsRequest(server string, login string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/requests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateOrganizationJoinRequestRequest calls the generic CreateOrganizationJoinRequest builder with application/json body
+func NewCreateOrganizationJoinRequestRequest(server string, login string, body CreateOrganizationJoinRequestJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateOrganizationJoinRequestRequestWithBody(server, login, "application/json", bodyReader)
+}
+
+// NewCreateOrganizationJoinRequestRequestWithBody generates requests for CreateOrganizationJoinRequest with any type of body
+func NewCreateOrganizationJoinRequestRequestWithBody(server string, login string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/requests", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewCancelOrganizationJoinRequestRequest generates requests for CancelOrganizationJoinRequest
+func NewCancelOrganizationJoinRequestRequest(server string, login string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/requests/mine", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetMyOrganizationJoinRequestRequest generates requests for GetMyOrganizationJoinRequest
+func NewGetMyOrganizationJoinRequestRequest(server string, login string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/requests/mine", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewApproveOrganizationJoinRequestRequest calls the generic ApproveOrganizationJoinRequest builder with application/json body
+func NewApproveOrganizationJoinRequestRequest(server string, login string, id openapi_types.UUID, body ApproveOrganizationJoinRequestJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewApproveOrganizationJoinRequestRequestWithBody(server, login, id, "application/json", bodyReader)
+}
+
+// NewApproveOrganizationJoinRequestRequestWithBody generates requests for ApproveOrganizationJoinRequest with any type of body
+func NewApproveOrganizationJoinRequestRequestWithBody(server string, login string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/requests/%s/approve", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRejectOrganizationJoinRequestRequest generates requests for RejectOrganizationJoinRequest
+func NewRejectOrganizationJoinRequestRequest(server string, login string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "login", runtime.ParamLocationPath, login)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/requests/%s/reject", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -7095,6 +8292,279 @@ func NewRejudgeContestRequest(server string, orgLogin string, contestLogin strin
 	}
 
 	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/rejudge", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListContestJoinRequestsRequest generates requests for ListContestJoinRequests
+func NewListContestJoinRequestsRequest(server string, orgLogin string, contestLogin string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/requests", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateContestJoinRequestRequest calls the generic CreateContestJoinRequest builder with application/json body
+func NewCreateContestJoinRequestRequest(server string, orgLogin string, contestLogin string, body CreateContestJoinRequestJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateContestJoinRequestRequestWithBody(server, orgLogin, contestLogin, "application/json", bodyReader)
+}
+
+// NewCreateContestJoinRequestRequestWithBody generates requests for CreateContestJoinRequest with any type of body
+func NewCreateContestJoinRequestRequestWithBody(server string, orgLogin string, contestLogin string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/requests", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewCancelContestJoinRequestRequest generates requests for CancelContestJoinRequest
+func NewCancelContestJoinRequestRequest(server string, orgLogin string, contestLogin string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/requests/mine", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetMyContestJoinRequestRequest generates requests for GetMyContestJoinRequest
+func NewGetMyContestJoinRequestRequest(server string, orgLogin string, contestLogin string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/requests/mine", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewApproveContestJoinRequestRequest generates requests for ApproveContestJoinRequest
+func NewApproveContestJoinRequestRequest(server string, orgLogin string, contestLogin string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/requests/%s/approve", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRejectContestJoinRequestRequest generates requests for RejectContestJoinRequest
+func NewRejectContestJoinRequestRequest(server string, orgLogin string, contestLogin string, id openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "org_login", runtime.ParamLocationPath, orgLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "contest_login", runtime.ParamLocationPath, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/organizations/%s/contests/%s/requests/%s/reject", pathParam0, pathParam1, pathParam2)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -13226,8 +14696,26 @@ type ClientWithResponsesInterface interface {
 	// GetHealthWithResponse request
 	GetHealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthResponse, error)
 
+	// AcceptOrganizationInvitationWithResponse request
+	AcceptOrganizationInvitationWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error)
+
+	// DeclineOrganizationInvitationWithResponse request
+	DeclineOrganizationInvitationWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeclineOrganizationInvitationResponse, error)
+
 	// GetLanguagesWithResponse request
 	GetLanguagesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLanguagesResponse, error)
+
+	// ListNotificationsWithResponse request
+	ListNotificationsWithResponse(ctx context.Context, params *ListNotificationsParams, reqEditors ...RequestEditorFn) (*ListNotificationsResponse, error)
+
+	// MarkAllNotificationsAsReadWithResponse request
+	MarkAllNotificationsAsReadWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*MarkAllNotificationsAsReadResponse, error)
+
+	// GetUnreadNotificationsCountWithResponse request
+	GetUnreadNotificationsCountWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetUnreadNotificationsCountResponse, error)
+
+	// MarkNotificationAsReadWithResponse request
+	MarkNotificationAsReadWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*MarkNotificationAsReadResponse, error)
 
 	// ListOrganizationsWithResponse request
 	ListOrganizationsWithResponse(ctx context.Context, params *ListOrganizationsParams, reqEditors ...RequestEditorFn) (*ListOrganizationsResponse, error)
@@ -13246,6 +14734,17 @@ type ClientWithResponsesInterface interface {
 
 	UpdateOrganizationWithResponse(ctx context.Context, login string, body UpdateOrganizationJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateOrganizationResponse, error)
 
+	// ListOrganizationInvitationsWithResponse request
+	ListOrganizationInvitationsWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*ListOrganizationInvitationsResponse, error)
+
+	// InviteOrganizationMemberWithBodyWithResponse request with any body
+	InviteOrganizationMemberWithBodyWithResponse(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*InviteOrganizationMemberResponse, error)
+
+	InviteOrganizationMemberWithResponse(ctx context.Context, login string, body InviteOrganizationMemberJSONRequestBody, reqEditors ...RequestEditorFn) (*InviteOrganizationMemberResponse, error)
+
+	// CancelOrganizationInvitationWithResponse request
+	CancelOrganizationInvitationWithResponse(ctx context.Context, login string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*CancelOrganizationInvitationResponse, error)
+
 	// RemoveOrganizationMemberWithResponse request
 	RemoveOrganizationMemberWithResponse(ctx context.Context, login string, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*RemoveOrganizationMemberResponse, error)
 
@@ -13259,6 +14758,28 @@ type ClientWithResponsesInterface interface {
 	BatchCreateOrganizationUsersWithBodyWithResponse(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*BatchCreateOrganizationUsersResponse, error)
 
 	BatchCreateOrganizationUsersWithResponse(ctx context.Context, login string, body BatchCreateOrganizationUsersJSONRequestBody, reqEditors ...RequestEditorFn) (*BatchCreateOrganizationUsersResponse, error)
+
+	// ListOrganizationJoinRequestsWithResponse request
+	ListOrganizationJoinRequestsWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*ListOrganizationJoinRequestsResponse, error)
+
+	// CreateOrganizationJoinRequestWithBodyWithResponse request with any body
+	CreateOrganizationJoinRequestWithBodyWithResponse(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOrganizationJoinRequestResponse, error)
+
+	CreateOrganizationJoinRequestWithResponse(ctx context.Context, login string, body CreateOrganizationJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrganizationJoinRequestResponse, error)
+
+	// CancelOrganizationJoinRequestWithResponse request
+	CancelOrganizationJoinRequestWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*CancelOrganizationJoinRequestResponse, error)
+
+	// GetMyOrganizationJoinRequestWithResponse request
+	GetMyOrganizationJoinRequestWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*GetMyOrganizationJoinRequestResponse, error)
+
+	// ApproveOrganizationJoinRequestWithBodyWithResponse request with any body
+	ApproveOrganizationJoinRequestWithBodyWithResponse(ctx context.Context, login string, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApproveOrganizationJoinRequestResponse, error)
+
+	ApproveOrganizationJoinRequestWithResponse(ctx context.Context, login string, id openapi_types.UUID, body ApproveOrganizationJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*ApproveOrganizationJoinRequestResponse, error)
+
+	// RejectOrganizationJoinRequestWithResponse request
+	RejectOrganizationJoinRequestWithResponse(ctx context.Context, login string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejectOrganizationJoinRequestResponse, error)
 
 	// ListOrganizationContestsWithResponse request
 	ListOrganizationContestsWithResponse(ctx context.Context, orgLogin string, params *ListOrganizationContestsParams, reqEditors ...RequestEditorFn) (*ListOrganizationContestsResponse, error)
@@ -13333,6 +14854,26 @@ type ClientWithResponsesInterface interface {
 
 	// RejudgeContestWithResponse request
 	RejudgeContestWithResponse(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*RejudgeContestResponse, error)
+
+	// ListContestJoinRequestsWithResponse request
+	ListContestJoinRequestsWithResponse(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*ListContestJoinRequestsResponse, error)
+
+	// CreateContestJoinRequestWithBodyWithResponse request with any body
+	CreateContestJoinRequestWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateContestJoinRequestResponse, error)
+
+	CreateContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, body CreateContestJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateContestJoinRequestResponse, error)
+
+	// CancelContestJoinRequestWithResponse request
+	CancelContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*CancelContestJoinRequestResponse, error)
+
+	// GetMyContestJoinRequestWithResponse request
+	GetMyContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*GetMyContestJoinRequestResponse, error)
+
+	// ApproveContestJoinRequestWithResponse request
+	ApproveContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*ApproveContestJoinRequestResponse, error)
+
+	// RejectContestJoinRequestWithResponse request
+	RejectContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejectContestJoinRequestResponse, error)
 
 	// GetContestScoreboardWithResponse request
 	GetContestScoreboardWithResponse(ctx context.Context, orgLogin string, contestLogin string, params *GetContestScoreboardParams, reqEditors ...RequestEditorFn) (*GetContestScoreboardResponse, error)
@@ -14025,6 +15566,48 @@ func (r GetHealthResponse) StatusCode() int {
 	return 0
 }
 
+type AcceptOrganizationInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r AcceptOrganizationInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AcceptOrganizationInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeclineOrganizationInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeclineOrganizationInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeclineOrganizationInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetLanguagesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -14041,6 +15624,92 @@ func (r GetLanguagesResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetLanguagesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListNotificationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *NotificationsListResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListNotificationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListNotificationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type MarkAllNotificationsAsReadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r MarkAllNotificationsAsReadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r MarkAllNotificationsAsReadResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetUnreadNotificationsCountResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *UnreadNotificationsCountResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetUnreadNotificationsCountResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetUnreadNotificationsCountResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type MarkNotificationAsReadResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r MarkNotificationAsReadResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r MarkNotificationAsReadResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -14155,6 +15824,71 @@ func (r UpdateOrganizationResponse) StatusCode() int {
 	return 0
 }
 
+type ListOrganizationInvitationsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListOrganizationInvitationsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListOrganizationInvitationsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListOrganizationInvitationsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type InviteOrganizationMemberResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *OrganizationInvitationModel
+}
+
+// Status returns HTTPResponse.Status
+func (r InviteOrganizationMemberResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r InviteOrganizationMemberResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CancelOrganizationInvitationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CancelOrganizationInvitationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CancelOrganizationInvitationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type RemoveOrganizationMemberResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -14235,6 +15969,135 @@ func (r BatchCreateOrganizationUsersResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r BatchCreateOrganizationUsersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListOrganizationJoinRequestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListOrganizationJoinRequestsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListOrganizationJoinRequestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListOrganizationJoinRequestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateOrganizationJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *OrganizationJoinRequestResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateOrganizationJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateOrganizationJoinRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CancelOrganizationJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CancelOrganizationJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CancelOrganizationJoinRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetMyOrganizationJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *OrganizationJoinRequestNullableResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetMyOrganizationJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetMyOrganizationJoinRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ApproveOrganizationJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r ApproveOrganizationJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ApproveOrganizationJoinRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type RejectOrganizationJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r RejectOrganizationJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RejectOrganizationJoinRequestResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -14708,6 +16571,135 @@ func (r RejudgeContestResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r RejudgeContestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListContestJoinRequestsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ListContestJoinRequestsResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListContestJoinRequestsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListContestJoinRequestsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateContestJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ContestJoinRequestResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateContestJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateContestJoinRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CancelContestJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CancelContestJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CancelContestJoinRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetMyContestJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ContestJoinRequestNullableResponseModel
+}
+
+// Status returns HTTPResponse.Status
+func (r GetMyContestJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetMyContestJoinRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ApproveContestJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r ApproveContestJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ApproveContestJoinRequestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type RejectContestJoinRequestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r RejectContestJoinRequestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RejectContestJoinRequestResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -17397,6 +19389,24 @@ func (c *ClientWithResponses) GetHealthWithResponse(ctx context.Context, reqEdit
 	return ParseGetHealthResponse(rsp)
 }
 
+// AcceptOrganizationInvitationWithResponse request returning *AcceptOrganizationInvitationResponse
+func (c *ClientWithResponses) AcceptOrganizationInvitationWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*AcceptOrganizationInvitationResponse, error) {
+	rsp, err := c.AcceptOrganizationInvitation(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAcceptOrganizationInvitationResponse(rsp)
+}
+
+// DeclineOrganizationInvitationWithResponse request returning *DeclineOrganizationInvitationResponse
+func (c *ClientWithResponses) DeclineOrganizationInvitationWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeclineOrganizationInvitationResponse, error) {
+	rsp, err := c.DeclineOrganizationInvitation(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeclineOrganizationInvitationResponse(rsp)
+}
+
 // GetLanguagesWithResponse request returning *GetLanguagesResponse
 func (c *ClientWithResponses) GetLanguagesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLanguagesResponse, error) {
 	rsp, err := c.GetLanguages(ctx, reqEditors...)
@@ -17404,6 +19414,42 @@ func (c *ClientWithResponses) GetLanguagesWithResponse(ctx context.Context, reqE
 		return nil, err
 	}
 	return ParseGetLanguagesResponse(rsp)
+}
+
+// ListNotificationsWithResponse request returning *ListNotificationsResponse
+func (c *ClientWithResponses) ListNotificationsWithResponse(ctx context.Context, params *ListNotificationsParams, reqEditors ...RequestEditorFn) (*ListNotificationsResponse, error) {
+	rsp, err := c.ListNotifications(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListNotificationsResponse(rsp)
+}
+
+// MarkAllNotificationsAsReadWithResponse request returning *MarkAllNotificationsAsReadResponse
+func (c *ClientWithResponses) MarkAllNotificationsAsReadWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*MarkAllNotificationsAsReadResponse, error) {
+	rsp, err := c.MarkAllNotificationsAsRead(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMarkAllNotificationsAsReadResponse(rsp)
+}
+
+// GetUnreadNotificationsCountWithResponse request returning *GetUnreadNotificationsCountResponse
+func (c *ClientWithResponses) GetUnreadNotificationsCountWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetUnreadNotificationsCountResponse, error) {
+	rsp, err := c.GetUnreadNotificationsCount(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetUnreadNotificationsCountResponse(rsp)
+}
+
+// MarkNotificationAsReadWithResponse request returning *MarkNotificationAsReadResponse
+func (c *ClientWithResponses) MarkNotificationAsReadWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*MarkNotificationAsReadResponse, error) {
+	rsp, err := c.MarkNotificationAsRead(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseMarkNotificationAsReadResponse(rsp)
 }
 
 // ListOrganizationsWithResponse request returning *ListOrganizationsResponse
@@ -17459,6 +19505,41 @@ func (c *ClientWithResponses) UpdateOrganizationWithResponse(ctx context.Context
 	return ParseUpdateOrganizationResponse(rsp)
 }
 
+// ListOrganizationInvitationsWithResponse request returning *ListOrganizationInvitationsResponse
+func (c *ClientWithResponses) ListOrganizationInvitationsWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*ListOrganizationInvitationsResponse, error) {
+	rsp, err := c.ListOrganizationInvitations(ctx, login, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListOrganizationInvitationsResponse(rsp)
+}
+
+// InviteOrganizationMemberWithBodyWithResponse request with arbitrary body returning *InviteOrganizationMemberResponse
+func (c *ClientWithResponses) InviteOrganizationMemberWithBodyWithResponse(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*InviteOrganizationMemberResponse, error) {
+	rsp, err := c.InviteOrganizationMemberWithBody(ctx, login, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseInviteOrganizationMemberResponse(rsp)
+}
+
+func (c *ClientWithResponses) InviteOrganizationMemberWithResponse(ctx context.Context, login string, body InviteOrganizationMemberJSONRequestBody, reqEditors ...RequestEditorFn) (*InviteOrganizationMemberResponse, error) {
+	rsp, err := c.InviteOrganizationMember(ctx, login, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseInviteOrganizationMemberResponse(rsp)
+}
+
+// CancelOrganizationInvitationWithResponse request returning *CancelOrganizationInvitationResponse
+func (c *ClientWithResponses) CancelOrganizationInvitationWithResponse(ctx context.Context, login string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*CancelOrganizationInvitationResponse, error) {
+	rsp, err := c.CancelOrganizationInvitation(ctx, login, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCancelOrganizationInvitationResponse(rsp)
+}
+
 // RemoveOrganizationMemberWithResponse request returning *RemoveOrganizationMemberResponse
 func (c *ClientWithResponses) RemoveOrganizationMemberWithResponse(ctx context.Context, login string, params *RemoveOrganizationMemberParams, reqEditors ...RequestEditorFn) (*RemoveOrganizationMemberResponse, error) {
 	rsp, err := c.RemoveOrganizationMember(ctx, login, params, reqEditors...)
@@ -17501,6 +19582,76 @@ func (c *ClientWithResponses) BatchCreateOrganizationUsersWithResponse(ctx conte
 		return nil, err
 	}
 	return ParseBatchCreateOrganizationUsersResponse(rsp)
+}
+
+// ListOrganizationJoinRequestsWithResponse request returning *ListOrganizationJoinRequestsResponse
+func (c *ClientWithResponses) ListOrganizationJoinRequestsWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*ListOrganizationJoinRequestsResponse, error) {
+	rsp, err := c.ListOrganizationJoinRequests(ctx, login, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListOrganizationJoinRequestsResponse(rsp)
+}
+
+// CreateOrganizationJoinRequestWithBodyWithResponse request with arbitrary body returning *CreateOrganizationJoinRequestResponse
+func (c *ClientWithResponses) CreateOrganizationJoinRequestWithBodyWithResponse(ctx context.Context, login string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOrganizationJoinRequestResponse, error) {
+	rsp, err := c.CreateOrganizationJoinRequestWithBody(ctx, login, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateOrganizationJoinRequestResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateOrganizationJoinRequestWithResponse(ctx context.Context, login string, body CreateOrganizationJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOrganizationJoinRequestResponse, error) {
+	rsp, err := c.CreateOrganizationJoinRequest(ctx, login, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateOrganizationJoinRequestResponse(rsp)
+}
+
+// CancelOrganizationJoinRequestWithResponse request returning *CancelOrganizationJoinRequestResponse
+func (c *ClientWithResponses) CancelOrganizationJoinRequestWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*CancelOrganizationJoinRequestResponse, error) {
+	rsp, err := c.CancelOrganizationJoinRequest(ctx, login, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCancelOrganizationJoinRequestResponse(rsp)
+}
+
+// GetMyOrganizationJoinRequestWithResponse request returning *GetMyOrganizationJoinRequestResponse
+func (c *ClientWithResponses) GetMyOrganizationJoinRequestWithResponse(ctx context.Context, login string, reqEditors ...RequestEditorFn) (*GetMyOrganizationJoinRequestResponse, error) {
+	rsp, err := c.GetMyOrganizationJoinRequest(ctx, login, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetMyOrganizationJoinRequestResponse(rsp)
+}
+
+// ApproveOrganizationJoinRequestWithBodyWithResponse request with arbitrary body returning *ApproveOrganizationJoinRequestResponse
+func (c *ClientWithResponses) ApproveOrganizationJoinRequestWithBodyWithResponse(ctx context.Context, login string, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApproveOrganizationJoinRequestResponse, error) {
+	rsp, err := c.ApproveOrganizationJoinRequestWithBody(ctx, login, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseApproveOrganizationJoinRequestResponse(rsp)
+}
+
+func (c *ClientWithResponses) ApproveOrganizationJoinRequestWithResponse(ctx context.Context, login string, id openapi_types.UUID, body ApproveOrganizationJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*ApproveOrganizationJoinRequestResponse, error) {
+	rsp, err := c.ApproveOrganizationJoinRequest(ctx, login, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseApproveOrganizationJoinRequestResponse(rsp)
+}
+
+// RejectOrganizationJoinRequestWithResponse request returning *RejectOrganizationJoinRequestResponse
+func (c *ClientWithResponses) RejectOrganizationJoinRequestWithResponse(ctx context.Context, login string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejectOrganizationJoinRequestResponse, error) {
+	rsp, err := c.RejectOrganizationJoinRequest(ctx, login, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRejectOrganizationJoinRequestResponse(rsp)
 }
 
 // ListOrganizationContestsWithResponse request returning *ListOrganizationContestsResponse
@@ -17731,6 +19882,68 @@ func (c *ClientWithResponses) RejudgeContestWithResponse(ctx context.Context, or
 		return nil, err
 	}
 	return ParseRejudgeContestResponse(rsp)
+}
+
+// ListContestJoinRequestsWithResponse request returning *ListContestJoinRequestsResponse
+func (c *ClientWithResponses) ListContestJoinRequestsWithResponse(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*ListContestJoinRequestsResponse, error) {
+	rsp, err := c.ListContestJoinRequests(ctx, orgLogin, contestLogin, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListContestJoinRequestsResponse(rsp)
+}
+
+// CreateContestJoinRequestWithBodyWithResponse request with arbitrary body returning *CreateContestJoinRequestResponse
+func (c *ClientWithResponses) CreateContestJoinRequestWithBodyWithResponse(ctx context.Context, orgLogin string, contestLogin string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateContestJoinRequestResponse, error) {
+	rsp, err := c.CreateContestJoinRequestWithBody(ctx, orgLogin, contestLogin, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateContestJoinRequestResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, body CreateContestJoinRequestJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateContestJoinRequestResponse, error) {
+	rsp, err := c.CreateContestJoinRequest(ctx, orgLogin, contestLogin, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateContestJoinRequestResponse(rsp)
+}
+
+// CancelContestJoinRequestWithResponse request returning *CancelContestJoinRequestResponse
+func (c *ClientWithResponses) CancelContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*CancelContestJoinRequestResponse, error) {
+	rsp, err := c.CancelContestJoinRequest(ctx, orgLogin, contestLogin, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCancelContestJoinRequestResponse(rsp)
+}
+
+// GetMyContestJoinRequestWithResponse request returning *GetMyContestJoinRequestResponse
+func (c *ClientWithResponses) GetMyContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, reqEditors ...RequestEditorFn) (*GetMyContestJoinRequestResponse, error) {
+	rsp, err := c.GetMyContestJoinRequest(ctx, orgLogin, contestLogin, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetMyContestJoinRequestResponse(rsp)
+}
+
+// ApproveContestJoinRequestWithResponse request returning *ApproveContestJoinRequestResponse
+func (c *ClientWithResponses) ApproveContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*ApproveContestJoinRequestResponse, error) {
+	rsp, err := c.ApproveContestJoinRequest(ctx, orgLogin, contestLogin, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseApproveContestJoinRequestResponse(rsp)
+}
+
+// RejectContestJoinRequestWithResponse request returning *RejectContestJoinRequestResponse
+func (c *ClientWithResponses) RejectContestJoinRequestWithResponse(ctx context.Context, orgLogin string, contestLogin string, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*RejectContestJoinRequestResponse, error) {
+	rsp, err := c.RejectContestJoinRequest(ctx, orgLogin, contestLogin, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRejectContestJoinRequestResponse(rsp)
 }
 
 // GetContestScoreboardWithResponse request returning *GetContestScoreboardResponse
@@ -19232,6 +21445,38 @@ func ParseGetHealthResponse(rsp *http.Response) (*GetHealthResponse, error) {
 	return response, nil
 }
 
+// ParseAcceptOrganizationInvitationResponse parses an HTTP response from a AcceptOrganizationInvitationWithResponse call
+func ParseAcceptOrganizationInvitationResponse(rsp *http.Response) (*AcceptOrganizationInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AcceptOrganizationInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseDeclineOrganizationInvitationResponse parses an HTTP response from a DeclineOrganizationInvitationWithResponse call
+func ParseDeclineOrganizationInvitationResponse(rsp *http.Response) (*DeclineOrganizationInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeclineOrganizationInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseGetLanguagesResponse parses an HTTP response from a GetLanguagesWithResponse call
 func ParseGetLanguagesResponse(rsp *http.Response) (*GetLanguagesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -19253,6 +21498,90 @@ func ParseGetLanguagesResponse(rsp *http.Response) (*GetLanguagesResponse, error
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseListNotificationsResponse parses an HTTP response from a ListNotificationsWithResponse call
+func ParseListNotificationsResponse(rsp *http.Response) (*ListNotificationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListNotificationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NotificationsListResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseMarkAllNotificationsAsReadResponse parses an HTTP response from a MarkAllNotificationsAsReadWithResponse call
+func ParseMarkAllNotificationsAsReadResponse(rsp *http.Response) (*MarkAllNotificationsAsReadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &MarkAllNotificationsAsReadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseGetUnreadNotificationsCountResponse parses an HTTP response from a GetUnreadNotificationsCountWithResponse call
+func ParseGetUnreadNotificationsCountResponse(rsp *http.Response) (*GetUnreadNotificationsCountResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetUnreadNotificationsCountResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest UnreadNotificationsCountResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseMarkNotificationAsReadResponse parses an HTTP response from a MarkNotificationAsReadWithResponse call
+func ParseMarkNotificationAsReadResponse(rsp *http.Response) (*MarkNotificationAsReadResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &MarkNotificationAsReadResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -19368,6 +21697,74 @@ func ParseUpdateOrganizationResponse(rsp *http.Response) (*UpdateOrganizationRes
 	return response, nil
 }
 
+// ParseListOrganizationInvitationsResponse parses an HTTP response from a ListOrganizationInvitationsWithResponse call
+func ParseListOrganizationInvitationsResponse(rsp *http.Response) (*ListOrganizationInvitationsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListOrganizationInvitationsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListOrganizationInvitationsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseInviteOrganizationMemberResponse parses an HTTP response from a InviteOrganizationMemberWithResponse call
+func ParseInviteOrganizationMemberResponse(rsp *http.Response) (*InviteOrganizationMemberResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &InviteOrganizationMemberResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationInvitationModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCancelOrganizationInvitationResponse parses an HTTP response from a CancelOrganizationInvitationWithResponse call
+func ParseCancelOrganizationInvitationResponse(rsp *http.Response) (*CancelOrganizationInvitationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CancelOrganizationInvitationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseRemoveOrganizationMemberResponse parses an HTTP response from a RemoveOrganizationMemberWithResponse call
 func ParseRemoveOrganizationMemberResponse(rsp *http.Response) (*RemoveOrganizationMemberResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -19447,6 +21844,132 @@ func ParseBatchCreateOrganizationUsersResponse(rsp *http.Response) (*BatchCreate
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseListOrganizationJoinRequestsResponse parses an HTTP response from a ListOrganizationJoinRequestsWithResponse call
+func ParseListOrganizationJoinRequestsResponse(rsp *http.Response) (*ListOrganizationJoinRequestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListOrganizationJoinRequestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListOrganizationJoinRequestsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateOrganizationJoinRequestResponse parses an HTTP response from a CreateOrganizationJoinRequestWithResponse call
+func ParseCreateOrganizationJoinRequestResponse(rsp *http.Response) (*CreateOrganizationJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateOrganizationJoinRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationJoinRequestResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCancelOrganizationJoinRequestResponse parses an HTTP response from a CancelOrganizationJoinRequestWithResponse call
+func ParseCancelOrganizationJoinRequestResponse(rsp *http.Response) (*CancelOrganizationJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CancelOrganizationJoinRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseGetMyOrganizationJoinRequestResponse parses an HTTP response from a GetMyOrganizationJoinRequestWithResponse call
+func ParseGetMyOrganizationJoinRequestResponse(rsp *http.Response) (*GetMyOrganizationJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetMyOrganizationJoinRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OrganizationJoinRequestNullableResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseApproveOrganizationJoinRequestResponse parses an HTTP response from a ApproveOrganizationJoinRequestWithResponse call
+func ParseApproveOrganizationJoinRequestResponse(rsp *http.Response) (*ApproveOrganizationJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ApproveOrganizationJoinRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseRejectOrganizationJoinRequestResponse parses an HTTP response from a RejectOrganizationJoinRequestWithResponse call
+func ParseRejectOrganizationJoinRequestResponse(rsp *http.Response) (*RejectOrganizationJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RejectOrganizationJoinRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -19907,6 +22430,132 @@ func ParseRejudgeContestResponse(rsp *http.Response) (*RejudgeContestResponse, e
 	}
 
 	response := &RejudgeContestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseListContestJoinRequestsResponse parses an HTTP response from a ListContestJoinRequestsWithResponse call
+func ParseListContestJoinRequestsResponse(rsp *http.Response) (*ListContestJoinRequestsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListContestJoinRequestsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListContestJoinRequestsResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateContestJoinRequestResponse parses an HTTP response from a CreateContestJoinRequestWithResponse call
+func ParseCreateContestJoinRequestResponse(rsp *http.Response) (*CreateContestJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateContestJoinRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ContestJoinRequestResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCancelContestJoinRequestResponse parses an HTTP response from a CancelContestJoinRequestWithResponse call
+func ParseCancelContestJoinRequestResponse(rsp *http.Response) (*CancelContestJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CancelContestJoinRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseGetMyContestJoinRequestResponse parses an HTTP response from a GetMyContestJoinRequestWithResponse call
+func ParseGetMyContestJoinRequestResponse(rsp *http.Response) (*GetMyContestJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetMyContestJoinRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ContestJoinRequestNullableResponseModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseApproveContestJoinRequestResponse parses an HTTP response from a ApproveContestJoinRequestWithResponse call
+func ParseApproveContestJoinRequestResponse(rsp *http.Response) (*ApproveContestJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ApproveContestJoinRequestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseRejectContestJoinRequestResponse parses an HTTP response from a RejectContestJoinRequestWithResponse call
+func ParseRejectContestJoinRequestResponse(rsp *http.Response) (*RejectContestJoinRequestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RejectContestJoinRequestResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -22685,9 +25334,27 @@ type ServerInterface interface {
 
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// Accept organization invitation
+	// (POST /invitations/{id}/accept)
+	AcceptOrganizationInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Decline organization invitation
+	// (POST /invitations/{id}/decline)
+	DeclineOrganizationInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get supported programming languages
 	// (GET /languages)
 	GetLanguages(w http.ResponseWriter, r *http.Request)
+	// List user notifications
+	// (GET /notifications)
+	ListNotifications(w http.ResponseWriter, r *http.Request, params ListNotificationsParams)
+	// Mark all notifications as read
+	// (POST /notifications/read-all)
+	MarkAllNotificationsAsRead(w http.ResponseWriter, r *http.Request)
+	// Get count of unread notifications
+	// (GET /notifications/unread-count)
+	GetUnreadNotificationsCount(w http.ResponseWriter, r *http.Request)
+	// Mark a notification as read
+	// (POST /notifications/{id}/read)
+	MarkNotificationAsRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List organizations
 	// (GET /organizations)
 	ListOrganizations(w http.ResponseWriter, r *http.Request, params ListOrganizationsParams)
@@ -22703,6 +25370,15 @@ type ServerInterface interface {
 	// Update organization
 	// (PATCH /organizations/{login})
 	UpdateOrganization(w http.ResponseWriter, r *http.Request, login string)
+	// List pending organization invitations
+	// (GET /organizations/{login}/invitations)
+	ListOrganizationInvitations(w http.ResponseWriter, r *http.Request, login string)
+	// Invite user to organization
+	// (POST /organizations/{login}/invitations)
+	InviteOrganizationMember(w http.ResponseWriter, r *http.Request, login string)
+	// Cancel organization invitation
+	// (DELETE /organizations/{login}/invitations/{id})
+	CancelOrganizationInvitation(w http.ResponseWriter, r *http.Request, login string, id openapi_types.UUID)
 	// Remove member from organization
 	// (DELETE /organizations/{login}/members)
 	RemoveOrganizationMember(w http.ResponseWriter, r *http.Request, login string, params RemoveOrganizationMemberParams)
@@ -22715,6 +25391,24 @@ type ServerInterface interface {
 	// Batch create users in organization
 	// (POST /organizations/{login}/members/batch)
 	BatchCreateOrganizationUsers(w http.ResponseWriter, r *http.Request, login string)
+	// List pending organization join requests
+	// (GET /organizations/{login}/requests)
+	ListOrganizationJoinRequests(w http.ResponseWriter, r *http.Request, login string)
+	// Request to join organization
+	// (POST /organizations/{login}/requests)
+	CreateOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string)
+	// Cancel my join request to organization
+	// (DELETE /organizations/{login}/requests/mine)
+	CancelOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string)
+	// Get my pending join request to organization
+	// (GET /organizations/{login}/requests/mine)
+	GetMyOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string)
+	// Approve organization join request
+	// (POST /organizations/{login}/requests/{id}/approve)
+	ApproveOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string, id openapi_types.UUID)
+	// Reject organization join request
+	// (POST /organizations/{login}/requests/{id}/reject)
+	RejectOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string, id openapi_types.UUID)
 
 	// (GET /organizations/{org_login}/contests)
 	ListOrganizationContests(w http.ResponseWriter, r *http.Request, orgLogin string, params ListOrganizationContestsParams)
@@ -22781,6 +25475,24 @@ type ServerInterface interface {
 
 	// (POST /organizations/{org_login}/contests/{contest_login}/rejudge)
 	RejudgeContest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string)
+	// List pending contest join requests
+	// (GET /organizations/{org_login}/contests/{contest_login}/requests)
+	ListContestJoinRequests(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string)
+	// Request to participate in contest
+	// (POST /organizations/{org_login}/contests/{contest_login}/requests)
+	CreateContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string)
+	// Cancel my contest join request
+	// (DELETE /organizations/{org_login}/contests/{contest_login}/requests/mine)
+	CancelContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string)
+	// Get my pending contest join request
+	// (GET /organizations/{org_login}/contests/{contest_login}/requests/mine)
+	GetMyContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string)
+	// Approve contest join request
+	// (POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/approve)
+	ApproveContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, id openapi_types.UUID)
+	// Reject contest join request
+	// (POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/reject)
+	RejectContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, id openapi_types.UUID)
 
 	// (GET /organizations/{org_login}/contests/{contest_login}/scoreboard)
 	GetContestScoreboard(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, params GetContestScoreboardParams)
@@ -23438,11 +26150,157 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// AcceptOrganizationInvitation operation middleware
+func (siw *ServerInterfaceWrapper) AcceptOrganizationInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptOrganizationInvitation(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeclineOrganizationInvitation operation middleware
+func (siw *ServerInterfaceWrapper) DeclineOrganizationInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclineOrganizationInvitation(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetLanguages operation middleware
 func (siw *ServerInterfaceWrapper) GetLanguages(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLanguages(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNotifications operation middleware
+func (siw *ServerInterfaceWrapper) ListNotifications(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNotificationsParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "page", r.URL.Query(), &params.Page)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "pageSize", r.URL.Query(), &params.PageSize)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "unread_only" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "unread_only", r.URL.Query(), &params.UnreadOnly)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unread_only", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotifications(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkAllNotificationsAsRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkAllNotificationsAsRead(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkAllNotificationsAsRead(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetUnreadNotificationsCount operation middleware
+func (siw *ServerInterfaceWrapper) GetUnreadNotificationsCount(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUnreadNotificationsCount(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkNotificationAsRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkNotificationAsRead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkNotificationAsRead(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -23540,6 +26398,14 @@ func (siw *ServerInterfaceWrapper) CreateOrganization(w http.ResponseWriter, r *
 		return
 	}
 
+	// ------------- Optional query parameter "join_policy" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "join_policy", r.URL.Query(), &params.JoinPolicy)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "join_policy", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateOrganization(w, r, params)
 	}))
@@ -23617,6 +26483,90 @@ func (siw *ServerInterfaceWrapper) UpdateOrganization(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateOrganization(w, r, login)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListOrganizationInvitations operation middleware
+func (siw *ServerInterfaceWrapper) ListOrganizationInvitations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOrganizationInvitations(w, r, login)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// InviteOrganizationMember operation middleware
+func (siw *ServerInterfaceWrapper) InviteOrganizationMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.InviteOrganizationMember(w, r, login)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelOrganizationInvitation operation middleware
+func (siw *ServerInterfaceWrapper) CancelOrganizationInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelOrganizationInvitation(w, r, login, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -23801,6 +26751,174 @@ func (siw *ServerInterfaceWrapper) BatchCreateOrganizationUsers(w http.ResponseW
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.BatchCreateOrganizationUsers(w, r, login)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListOrganizationJoinRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListOrganizationJoinRequests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOrganizationJoinRequests(w, r, login)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateOrganizationJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) CreateOrganizationJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateOrganizationJoinRequest(w, r, login)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelOrganizationJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) CancelOrganizationJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelOrganizationJoinRequest(w, r, login)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMyOrganizationJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetMyOrganizationJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyOrganizationJoinRequest(w, r, login)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveOrganizationJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) ApproveOrganizationJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveOrganizationJoinRequest(w, r, login, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejectOrganizationJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) RejectOrganizationJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "login" -------------
+	var login string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "login", r.PathValue("login"), &login, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectOrganizationJoinRequest(w, r, login, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -24846,6 +27964,228 @@ func (siw *ServerInterfaceWrapper) RejudgeContest(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RejudgeContest(w, r, orgLogin, contestLogin)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListContestJoinRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListContestJoinRequests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListContestJoinRequests(w, r, orgLogin, contestLogin)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateContestJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) CreateContestJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateContestJoinRequest(w, r, orgLogin, contestLogin)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelContestJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) CancelContestJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelContestJoinRequest(w, r, orgLogin, contestLogin)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMyContestJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetMyContestJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyContestJoinRequest(w, r, orgLogin, contestLogin)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveContestJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) ApproveContestJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveContestJoinRequest(w, r, orgLogin, contestLogin, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejectContestJoinRequest operation middleware
+func (siw *ServerInterfaceWrapper) RejectContestJoinRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "org_login" -------------
+	var orgLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "org_login", r.PathValue("org_login"), &orgLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "org_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "contest_login" -------------
+	var contestLogin string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contest_login", r.PathValue("contest_login"), &contestLogin, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contest_login", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectContestJoinRequest(w, r, orgLogin, contestLogin, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -29364,16 +32704,31 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("POST "+options.BaseURL+"/auth/reset-password", wrapper.ResetPassword)
 	m.HandleFunc("POST "+options.BaseURL+"/auth/verify-email", wrapper.VerifyEmail)
 	m.HandleFunc("GET "+options.BaseURL+"/health", wrapper.GetHealth)
+	m.HandleFunc("POST "+options.BaseURL+"/invitations/{id}/accept", wrapper.AcceptOrganizationInvitation)
+	m.HandleFunc("POST "+options.BaseURL+"/invitations/{id}/decline", wrapper.DeclineOrganizationInvitation)
 	m.HandleFunc("GET "+options.BaseURL+"/languages", wrapper.GetLanguages)
+	m.HandleFunc("GET "+options.BaseURL+"/notifications", wrapper.ListNotifications)
+	m.HandleFunc("POST "+options.BaseURL+"/notifications/read-all", wrapper.MarkAllNotificationsAsRead)
+	m.HandleFunc("GET "+options.BaseURL+"/notifications/unread-count", wrapper.GetUnreadNotificationsCount)
+	m.HandleFunc("POST "+options.BaseURL+"/notifications/{id}/read", wrapper.MarkNotificationAsRead)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations", wrapper.ListOrganizations)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations", wrapper.CreateOrganization)
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{login}", wrapper.DeleteOrganization)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{login}", wrapper.GetOrganization)
 	m.HandleFunc("PATCH "+options.BaseURL+"/organizations/{login}", wrapper.UpdateOrganization)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{login}/invitations", wrapper.ListOrganizationInvitations)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{login}/invitations", wrapper.InviteOrganizationMember)
+	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{login}/invitations/{id}", wrapper.CancelOrganizationInvitation)
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{login}/members", wrapper.RemoveOrganizationMember)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{login}/members", wrapper.ListOrganizationMembers)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{login}/members", wrapper.AddOrganizationMember)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{login}/members/batch", wrapper.BatchCreateOrganizationUsers)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{login}/requests", wrapper.ListOrganizationJoinRequests)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{login}/requests", wrapper.CreateOrganizationJoinRequest)
+	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{login}/requests/mine", wrapper.CancelOrganizationJoinRequest)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{login}/requests/mine", wrapper.GetMyOrganizationJoinRequest)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{login}/requests/{id}/approve", wrapper.ApproveOrganizationJoinRequest)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{login}/requests/{id}/reject", wrapper.RejectOrganizationJoinRequest)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests", wrapper.ListOrganizationContests)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests", wrapper.CreateContest)
 	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}", wrapper.DeleteContest)
@@ -29396,6 +32751,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}", wrapper.GetContestProblem)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge", wrapper.RejudgeContestProblem)
 	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/rejudge", wrapper.RejudgeContest)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/requests", wrapper.ListContestJoinRequests)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/requests", wrapper.CreateContestJoinRequest)
+	m.HandleFunc("DELETE "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/requests/mine", wrapper.CancelContestJoinRequest)
+	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/requests/mine", wrapper.GetMyContestJoinRequest)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/requests/{id}/approve", wrapper.ApproveContestJoinRequest)
+	m.HandleFunc("POST "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/requests/{id}/reject", wrapper.RejectContestJoinRequest)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/scoreboard", wrapper.GetContestScoreboard)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/statements.pdf", wrapper.DownloadContestStatementsPdf)
 	m.HandleFunc("GET "+options.BaseURL+"/organizations/{org_login}/contests/{contest_login}/submissions", wrapper.ListContestSubmissions)
@@ -29742,6 +33103,38 @@ func (response GetHealth200JSONResponse) VisitGetHealthResponse(w http.ResponseW
 	return json.NewEncoder(w).Encode(response)
 }
 
+type AcceptOrganizationInvitationRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type AcceptOrganizationInvitationResponseObject interface {
+	VisitAcceptOrganizationInvitationResponse(w http.ResponseWriter) error
+}
+
+type AcceptOrganizationInvitation200Response struct {
+}
+
+func (response AcceptOrganizationInvitation200Response) VisitAcceptOrganizationInvitationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type DeclineOrganizationInvitationRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeclineOrganizationInvitationResponseObject interface {
+	VisitDeclineOrganizationInvitationResponse(w http.ResponseWriter) error
+}
+
+type DeclineOrganizationInvitation200Response struct {
+}
+
+func (response DeclineOrganizationInvitation200Response) VisitDeclineOrganizationInvitationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
 type GetLanguagesRequestObject struct {
 }
 
@@ -29756,6 +33149,70 @@ func (response GetLanguages200JSONResponse) VisitGetLanguagesResponse(w http.Res
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type ListNotificationsRequestObject struct {
+	Params ListNotificationsParams
+}
+
+type ListNotificationsResponseObject interface {
+	VisitListNotificationsResponse(w http.ResponseWriter) error
+}
+
+type ListNotifications200JSONResponse NotificationsListResponseModel
+
+func (response ListNotifications200JSONResponse) VisitListNotificationsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MarkAllNotificationsAsReadRequestObject struct {
+}
+
+type MarkAllNotificationsAsReadResponseObject interface {
+	VisitMarkAllNotificationsAsReadResponse(w http.ResponseWriter) error
+}
+
+type MarkAllNotificationsAsRead200Response struct {
+}
+
+func (response MarkAllNotificationsAsRead200Response) VisitMarkAllNotificationsAsReadResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type GetUnreadNotificationsCountRequestObject struct {
+}
+
+type GetUnreadNotificationsCountResponseObject interface {
+	VisitGetUnreadNotificationsCountResponse(w http.ResponseWriter) error
+}
+
+type GetUnreadNotificationsCount200JSONResponse UnreadNotificationsCountResponseModel
+
+func (response GetUnreadNotificationsCount200JSONResponse) VisitGetUnreadNotificationsCountResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MarkNotificationAsReadRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type MarkNotificationAsReadResponseObject interface {
+	VisitMarkNotificationAsReadResponse(w http.ResponseWriter) error
+}
+
+type MarkNotificationAsRead200Response struct {
+}
+
+func (response MarkNotificationAsRead200Response) VisitMarkNotificationAsReadResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
 }
 
 type ListOrganizationsRequestObject struct {
@@ -29842,6 +33299,58 @@ func (response UpdateOrganization200Response) VisitUpdateOrganizationResponse(w 
 	return nil
 }
 
+type ListOrganizationInvitationsRequestObject struct {
+	Login string `json:"login"`
+}
+
+type ListOrganizationInvitationsResponseObject interface {
+	VisitListOrganizationInvitationsResponse(w http.ResponseWriter) error
+}
+
+type ListOrganizationInvitations200JSONResponse ListOrganizationInvitationsResponseModel
+
+func (response ListOrganizationInvitations200JSONResponse) VisitListOrganizationInvitationsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InviteOrganizationMemberRequestObject struct {
+	Login string `json:"login"`
+	Body  *InviteOrganizationMemberJSONRequestBody
+}
+
+type InviteOrganizationMemberResponseObject interface {
+	VisitInviteOrganizationMemberResponse(w http.ResponseWriter) error
+}
+
+type InviteOrganizationMember200JSONResponse OrganizationInvitationModel
+
+func (response InviteOrganizationMember200JSONResponse) VisitInviteOrganizationMemberResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CancelOrganizationInvitationRequestObject struct {
+	Login string             `json:"login"`
+	Id    openapi_types.UUID `json:"id"`
+}
+
+type CancelOrganizationInvitationResponseObject interface {
+	VisitCancelOrganizationInvitationResponse(w http.ResponseWriter) error
+}
+
+type CancelOrganizationInvitation200Response struct {
+}
+
+func (response CancelOrganizationInvitation200Response) VisitCancelOrganizationInvitationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
 type RemoveOrganizationMemberRequestObject struct {
 	Login  string `json:"login"`
 	Params RemoveOrganizationMemberParams
@@ -29910,6 +33419,109 @@ func (response BatchCreateOrganizationUsers200JSONResponse) VisitBatchCreateOrga
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type ListOrganizationJoinRequestsRequestObject struct {
+	Login string `json:"login"`
+}
+
+type ListOrganizationJoinRequestsResponseObject interface {
+	VisitListOrganizationJoinRequestsResponse(w http.ResponseWriter) error
+}
+
+type ListOrganizationJoinRequests200JSONResponse ListOrganizationJoinRequestsResponseModel
+
+func (response ListOrganizationJoinRequests200JSONResponse) VisitListOrganizationJoinRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateOrganizationJoinRequestRequestObject struct {
+	Login string `json:"login"`
+	Body  *CreateOrganizationJoinRequestJSONRequestBody
+}
+
+type CreateOrganizationJoinRequestResponseObject interface {
+	VisitCreateOrganizationJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type CreateOrganizationJoinRequest200JSONResponse OrganizationJoinRequestResponseModel
+
+func (response CreateOrganizationJoinRequest200JSONResponse) VisitCreateOrganizationJoinRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CancelOrganizationJoinRequestRequestObject struct {
+	Login string `json:"login"`
+}
+
+type CancelOrganizationJoinRequestResponseObject interface {
+	VisitCancelOrganizationJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type CancelOrganizationJoinRequest200Response struct {
+}
+
+func (response CancelOrganizationJoinRequest200Response) VisitCancelOrganizationJoinRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type GetMyOrganizationJoinRequestRequestObject struct {
+	Login string `json:"login"`
+}
+
+type GetMyOrganizationJoinRequestResponseObject interface {
+	VisitGetMyOrganizationJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type GetMyOrganizationJoinRequest200JSONResponse OrganizationJoinRequestNullableResponseModel
+
+func (response GetMyOrganizationJoinRequest200JSONResponse) VisitGetMyOrganizationJoinRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ApproveOrganizationJoinRequestRequestObject struct {
+	Login string             `json:"login"`
+	Id    openapi_types.UUID `json:"id"`
+	Body  *ApproveOrganizationJoinRequestJSONRequestBody
+}
+
+type ApproveOrganizationJoinRequestResponseObject interface {
+	VisitApproveOrganizationJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type ApproveOrganizationJoinRequest200Response struct {
+}
+
+func (response ApproveOrganizationJoinRequest200Response) VisitApproveOrganizationJoinRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type RejectOrganizationJoinRequestRequestObject struct {
+	Login string             `json:"login"`
+	Id    openapi_types.UUID `json:"id"`
+}
+
+type RejectOrganizationJoinRequestResponseObject interface {
+	VisitRejectOrganizationJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type RejectOrganizationJoinRequest200Response struct {
+}
+
+func (response RejectOrganizationJoinRequest200Response) VisitRejectOrganizationJoinRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
 }
 
 type ListOrganizationContestsRequestObject struct {
@@ -30314,6 +33926,114 @@ type RejudgeContest200Response struct {
 }
 
 func (response RejudgeContest200Response) VisitRejudgeContestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ListContestJoinRequestsRequestObject struct {
+	OrgLogin     string `json:"org_login"`
+	ContestLogin string `json:"contest_login"`
+}
+
+type ListContestJoinRequestsResponseObject interface {
+	VisitListContestJoinRequestsResponse(w http.ResponseWriter) error
+}
+
+type ListContestJoinRequests200JSONResponse ListContestJoinRequestsResponseModel
+
+func (response ListContestJoinRequests200JSONResponse) VisitListContestJoinRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateContestJoinRequestRequestObject struct {
+	OrgLogin     string `json:"org_login"`
+	ContestLogin string `json:"contest_login"`
+	Body         *CreateContestJoinRequestJSONRequestBody
+}
+
+type CreateContestJoinRequestResponseObject interface {
+	VisitCreateContestJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type CreateContestJoinRequest200JSONResponse ContestJoinRequestResponseModel
+
+func (response CreateContestJoinRequest200JSONResponse) VisitCreateContestJoinRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CancelContestJoinRequestRequestObject struct {
+	OrgLogin     string `json:"org_login"`
+	ContestLogin string `json:"contest_login"`
+}
+
+type CancelContestJoinRequestResponseObject interface {
+	VisitCancelContestJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type CancelContestJoinRequest200Response struct {
+}
+
+func (response CancelContestJoinRequest200Response) VisitCancelContestJoinRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type GetMyContestJoinRequestRequestObject struct {
+	OrgLogin     string `json:"org_login"`
+	ContestLogin string `json:"contest_login"`
+}
+
+type GetMyContestJoinRequestResponseObject interface {
+	VisitGetMyContestJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type GetMyContestJoinRequest200JSONResponse ContestJoinRequestNullableResponseModel
+
+func (response GetMyContestJoinRequest200JSONResponse) VisitGetMyContestJoinRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ApproveContestJoinRequestRequestObject struct {
+	OrgLogin     string             `json:"org_login"`
+	ContestLogin string             `json:"contest_login"`
+	Id           openapi_types.UUID `json:"id"`
+}
+
+type ApproveContestJoinRequestResponseObject interface {
+	VisitApproveContestJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type ApproveContestJoinRequest200Response struct {
+}
+
+func (response ApproveContestJoinRequest200Response) VisitApproveContestJoinRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type RejectContestJoinRequestRequestObject struct {
+	OrgLogin     string             `json:"org_login"`
+	ContestLogin string             `json:"contest_login"`
+	Id           openapi_types.UUID `json:"id"`
+}
+
+type RejectContestJoinRequestResponseObject interface {
+	VisitRejectContestJoinRequestResponse(w http.ResponseWriter) error
+}
+
+type RejectContestJoinRequest200Response struct {
+}
+
+func (response RejectContestJoinRequest200Response) VisitRejectContestJoinRequestResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
 }
@@ -32629,9 +36349,27 @@ type StrictServerInterface interface {
 
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// Accept organization invitation
+	// (POST /invitations/{id}/accept)
+	AcceptOrganizationInvitation(ctx context.Context, request AcceptOrganizationInvitationRequestObject) (AcceptOrganizationInvitationResponseObject, error)
+	// Decline organization invitation
+	// (POST /invitations/{id}/decline)
+	DeclineOrganizationInvitation(ctx context.Context, request DeclineOrganizationInvitationRequestObject) (DeclineOrganizationInvitationResponseObject, error)
 	// Get supported programming languages
 	// (GET /languages)
 	GetLanguages(ctx context.Context, request GetLanguagesRequestObject) (GetLanguagesResponseObject, error)
+	// List user notifications
+	// (GET /notifications)
+	ListNotifications(ctx context.Context, request ListNotificationsRequestObject) (ListNotificationsResponseObject, error)
+	// Mark all notifications as read
+	// (POST /notifications/read-all)
+	MarkAllNotificationsAsRead(ctx context.Context, request MarkAllNotificationsAsReadRequestObject) (MarkAllNotificationsAsReadResponseObject, error)
+	// Get count of unread notifications
+	// (GET /notifications/unread-count)
+	GetUnreadNotificationsCount(ctx context.Context, request GetUnreadNotificationsCountRequestObject) (GetUnreadNotificationsCountResponseObject, error)
+	// Mark a notification as read
+	// (POST /notifications/{id}/read)
+	MarkNotificationAsRead(ctx context.Context, request MarkNotificationAsReadRequestObject) (MarkNotificationAsReadResponseObject, error)
 	// List organizations
 	// (GET /organizations)
 	ListOrganizations(ctx context.Context, request ListOrganizationsRequestObject) (ListOrganizationsResponseObject, error)
@@ -32647,6 +36385,15 @@ type StrictServerInterface interface {
 	// Update organization
 	// (PATCH /organizations/{login})
 	UpdateOrganization(ctx context.Context, request UpdateOrganizationRequestObject) (UpdateOrganizationResponseObject, error)
+	// List pending organization invitations
+	// (GET /organizations/{login}/invitations)
+	ListOrganizationInvitations(ctx context.Context, request ListOrganizationInvitationsRequestObject) (ListOrganizationInvitationsResponseObject, error)
+	// Invite user to organization
+	// (POST /organizations/{login}/invitations)
+	InviteOrganizationMember(ctx context.Context, request InviteOrganizationMemberRequestObject) (InviteOrganizationMemberResponseObject, error)
+	// Cancel organization invitation
+	// (DELETE /organizations/{login}/invitations/{id})
+	CancelOrganizationInvitation(ctx context.Context, request CancelOrganizationInvitationRequestObject) (CancelOrganizationInvitationResponseObject, error)
 	// Remove member from organization
 	// (DELETE /organizations/{login}/members)
 	RemoveOrganizationMember(ctx context.Context, request RemoveOrganizationMemberRequestObject) (RemoveOrganizationMemberResponseObject, error)
@@ -32659,6 +36406,24 @@ type StrictServerInterface interface {
 	// Batch create users in organization
 	// (POST /organizations/{login}/members/batch)
 	BatchCreateOrganizationUsers(ctx context.Context, request BatchCreateOrganizationUsersRequestObject) (BatchCreateOrganizationUsersResponseObject, error)
+	// List pending organization join requests
+	// (GET /organizations/{login}/requests)
+	ListOrganizationJoinRequests(ctx context.Context, request ListOrganizationJoinRequestsRequestObject) (ListOrganizationJoinRequestsResponseObject, error)
+	// Request to join organization
+	// (POST /organizations/{login}/requests)
+	CreateOrganizationJoinRequest(ctx context.Context, request CreateOrganizationJoinRequestRequestObject) (CreateOrganizationJoinRequestResponseObject, error)
+	// Cancel my join request to organization
+	// (DELETE /organizations/{login}/requests/mine)
+	CancelOrganizationJoinRequest(ctx context.Context, request CancelOrganizationJoinRequestRequestObject) (CancelOrganizationJoinRequestResponseObject, error)
+	// Get my pending join request to organization
+	// (GET /organizations/{login}/requests/mine)
+	GetMyOrganizationJoinRequest(ctx context.Context, request GetMyOrganizationJoinRequestRequestObject) (GetMyOrganizationJoinRequestResponseObject, error)
+	// Approve organization join request
+	// (POST /organizations/{login}/requests/{id}/approve)
+	ApproveOrganizationJoinRequest(ctx context.Context, request ApproveOrganizationJoinRequestRequestObject) (ApproveOrganizationJoinRequestResponseObject, error)
+	// Reject organization join request
+	// (POST /organizations/{login}/requests/{id}/reject)
+	RejectOrganizationJoinRequest(ctx context.Context, request RejectOrganizationJoinRequestRequestObject) (RejectOrganizationJoinRequestResponseObject, error)
 
 	// (GET /organizations/{org_login}/contests)
 	ListOrganizationContests(ctx context.Context, request ListOrganizationContestsRequestObject) (ListOrganizationContestsResponseObject, error)
@@ -32725,6 +36490,24 @@ type StrictServerInterface interface {
 
 	// (POST /organizations/{org_login}/contests/{contest_login}/rejudge)
 	RejudgeContest(ctx context.Context, request RejudgeContestRequestObject) (RejudgeContestResponseObject, error)
+	// List pending contest join requests
+	// (GET /organizations/{org_login}/contests/{contest_login}/requests)
+	ListContestJoinRequests(ctx context.Context, request ListContestJoinRequestsRequestObject) (ListContestJoinRequestsResponseObject, error)
+	// Request to participate in contest
+	// (POST /organizations/{org_login}/contests/{contest_login}/requests)
+	CreateContestJoinRequest(ctx context.Context, request CreateContestJoinRequestRequestObject) (CreateContestJoinRequestResponseObject, error)
+	// Cancel my contest join request
+	// (DELETE /organizations/{org_login}/contests/{contest_login}/requests/mine)
+	CancelContestJoinRequest(ctx context.Context, request CancelContestJoinRequestRequestObject) (CancelContestJoinRequestResponseObject, error)
+	// Get my pending contest join request
+	// (GET /organizations/{org_login}/contests/{contest_login}/requests/mine)
+	GetMyContestJoinRequest(ctx context.Context, request GetMyContestJoinRequestRequestObject) (GetMyContestJoinRequestResponseObject, error)
+	// Approve contest join request
+	// (POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/approve)
+	ApproveContestJoinRequest(ctx context.Context, request ApproveContestJoinRequestRequestObject) (ApproveContestJoinRequestResponseObject, error)
+	// Reject contest join request
+	// (POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/reject)
+	RejectContestJoinRequest(ctx context.Context, request RejectContestJoinRequestRequestObject) (RejectContestJoinRequestResponseObject, error)
 
 	// (GET /organizations/{org_login}/contests/{contest_login}/scoreboard)
 	GetContestScoreboard(ctx context.Context, request GetContestScoreboardRequestObject) (GetContestScoreboardResponseObject, error)
@@ -33504,6 +37287,58 @@ func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// AcceptOrganizationInvitation operation middleware
+func (sh *strictHandler) AcceptOrganizationInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request AcceptOrganizationInvitationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptOrganizationInvitation(ctx, request.(AcceptOrganizationInvitationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptOrganizationInvitation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AcceptOrganizationInvitationResponseObject); ok {
+		if err := validResponse.VisitAcceptOrganizationInvitationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeclineOrganizationInvitation operation middleware
+func (sh *strictHandler) DeclineOrganizationInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request DeclineOrganizationInvitationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeclineOrganizationInvitation(ctx, request.(DeclineOrganizationInvitationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeclineOrganizationInvitation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeclineOrganizationInvitationResponseObject); ok {
+		if err := validResponse.VisitDeclineOrganizationInvitationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetLanguages operation middleware
 func (sh *strictHandler) GetLanguages(w http.ResponseWriter, r *http.Request) {
 	var request GetLanguagesRequestObject
@@ -33521,6 +37356,106 @@ func (sh *strictHandler) GetLanguages(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetLanguagesResponseObject); ok {
 		if err := validResponse.VisitGetLanguagesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListNotifications operation middleware
+func (sh *strictHandler) ListNotifications(w http.ResponseWriter, r *http.Request, params ListNotificationsParams) {
+	var request ListNotificationsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListNotifications(ctx, request.(ListNotificationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListNotifications")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListNotificationsResponseObject); ok {
+		if err := validResponse.VisitListNotificationsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// MarkAllNotificationsAsRead operation middleware
+func (sh *strictHandler) MarkAllNotificationsAsRead(w http.ResponseWriter, r *http.Request) {
+	var request MarkAllNotificationsAsReadRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MarkAllNotificationsAsRead(ctx, request.(MarkAllNotificationsAsReadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MarkAllNotificationsAsRead")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MarkAllNotificationsAsReadResponseObject); ok {
+		if err := validResponse.VisitMarkAllNotificationsAsReadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUnreadNotificationsCount operation middleware
+func (sh *strictHandler) GetUnreadNotificationsCount(w http.ResponseWriter, r *http.Request) {
+	var request GetUnreadNotificationsCountRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUnreadNotificationsCount(ctx, request.(GetUnreadNotificationsCountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUnreadNotificationsCount")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetUnreadNotificationsCountResponseObject); ok {
+		if err := validResponse.VisitGetUnreadNotificationsCountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// MarkNotificationAsRead operation middleware
+func (sh *strictHandler) MarkNotificationAsRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request MarkNotificationAsReadRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MarkNotificationAsRead(ctx, request.(MarkNotificationAsReadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MarkNotificationAsRead")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MarkNotificationAsReadResponseObject); ok {
+		if err := validResponse.VisitMarkNotificationAsReadResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -33665,6 +37600,92 @@ func (sh *strictHandler) UpdateOrganization(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// ListOrganizationInvitations operation middleware
+func (sh *strictHandler) ListOrganizationInvitations(w http.ResponseWriter, r *http.Request, login string) {
+	var request ListOrganizationInvitationsRequestObject
+
+	request.Login = login
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListOrganizationInvitations(ctx, request.(ListOrganizationInvitationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListOrganizationInvitations")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListOrganizationInvitationsResponseObject); ok {
+		if err := validResponse.VisitListOrganizationInvitationsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// InviteOrganizationMember operation middleware
+func (sh *strictHandler) InviteOrganizationMember(w http.ResponseWriter, r *http.Request, login string) {
+	var request InviteOrganizationMemberRequestObject
+
+	request.Login = login
+
+	var body InviteOrganizationMemberJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.InviteOrganizationMember(ctx, request.(InviteOrganizationMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "InviteOrganizationMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(InviteOrganizationMemberResponseObject); ok {
+		if err := validResponse.VisitInviteOrganizationMemberResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelOrganizationInvitation operation middleware
+func (sh *strictHandler) CancelOrganizationInvitation(w http.ResponseWriter, r *http.Request, login string, id openapi_types.UUID) {
+	var request CancelOrganizationInvitationRequestObject
+
+	request.Login = login
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelOrganizationInvitation(ctx, request.(CancelOrganizationInvitationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelOrganizationInvitation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CancelOrganizationInvitationResponseObject); ok {
+		if err := validResponse.VisitCancelOrganizationInvitationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RemoveOrganizationMember operation middleware
 func (sh *strictHandler) RemoveOrganizationMember(w http.ResponseWriter, r *http.Request, login string, params RemoveOrganizationMemberParams) {
 	var request RemoveOrganizationMemberRequestObject
@@ -33772,6 +37793,178 @@ func (sh *strictHandler) BatchCreateOrganizationUsers(w http.ResponseWriter, r *
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(BatchCreateOrganizationUsersResponseObject); ok {
 		if err := validResponse.VisitBatchCreateOrganizationUsersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListOrganizationJoinRequests operation middleware
+func (sh *strictHandler) ListOrganizationJoinRequests(w http.ResponseWriter, r *http.Request, login string) {
+	var request ListOrganizationJoinRequestsRequestObject
+
+	request.Login = login
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListOrganizationJoinRequests(ctx, request.(ListOrganizationJoinRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListOrganizationJoinRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListOrganizationJoinRequestsResponseObject); ok {
+		if err := validResponse.VisitListOrganizationJoinRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateOrganizationJoinRequest operation middleware
+func (sh *strictHandler) CreateOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string) {
+	var request CreateOrganizationJoinRequestRequestObject
+
+	request.Login = login
+
+	var body CreateOrganizationJoinRequestJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateOrganizationJoinRequest(ctx, request.(CreateOrganizationJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateOrganizationJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateOrganizationJoinRequestResponseObject); ok {
+		if err := validResponse.VisitCreateOrganizationJoinRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelOrganizationJoinRequest operation middleware
+func (sh *strictHandler) CancelOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string) {
+	var request CancelOrganizationJoinRequestRequestObject
+
+	request.Login = login
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelOrganizationJoinRequest(ctx, request.(CancelOrganizationJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelOrganizationJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CancelOrganizationJoinRequestResponseObject); ok {
+		if err := validResponse.VisitCancelOrganizationJoinRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMyOrganizationJoinRequest operation middleware
+func (sh *strictHandler) GetMyOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string) {
+	var request GetMyOrganizationJoinRequestRequestObject
+
+	request.Login = login
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMyOrganizationJoinRequest(ctx, request.(GetMyOrganizationJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMyOrganizationJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMyOrganizationJoinRequestResponseObject); ok {
+		if err := validResponse.VisitGetMyOrganizationJoinRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveOrganizationJoinRequest operation middleware
+func (sh *strictHandler) ApproveOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string, id openapi_types.UUID) {
+	var request ApproveOrganizationJoinRequestRequestObject
+
+	request.Login = login
+	request.Id = id
+
+	var body ApproveOrganizationJoinRequestJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveOrganizationJoinRequest(ctx, request.(ApproveOrganizationJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveOrganizationJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApproveOrganizationJoinRequestResponseObject); ok {
+		if err := validResponse.VisitApproveOrganizationJoinRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectOrganizationJoinRequest operation middleware
+func (sh *strictHandler) RejectOrganizationJoinRequest(w http.ResponseWriter, r *http.Request, login string, id openapi_types.UUID) {
+	var request RejectOrganizationJoinRequestRequestObject
+
+	request.Login = login
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectOrganizationJoinRequest(ctx, request.(RejectOrganizationJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectOrganizationJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RejectOrganizationJoinRequestResponseObject); ok {
+		if err := validResponse.VisitRejectOrganizationJoinRequestResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -34411,6 +38604,177 @@ func (sh *strictHandler) RejudgeContest(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RejudgeContestResponseObject); ok {
 		if err := validResponse.VisitRejudgeContestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListContestJoinRequests operation middleware
+func (sh *strictHandler) ListContestJoinRequests(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string) {
+	var request ListContestJoinRequestsRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListContestJoinRequests(ctx, request.(ListContestJoinRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListContestJoinRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListContestJoinRequestsResponseObject); ok {
+		if err := validResponse.VisitListContestJoinRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateContestJoinRequest operation middleware
+func (sh *strictHandler) CreateContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string) {
+	var request CreateContestJoinRequestRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+
+	var body CreateContestJoinRequestJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateContestJoinRequest(ctx, request.(CreateContestJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateContestJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateContestJoinRequestResponseObject); ok {
+		if err := validResponse.VisitCreateContestJoinRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelContestJoinRequest operation middleware
+func (sh *strictHandler) CancelContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string) {
+	var request CancelContestJoinRequestRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelContestJoinRequest(ctx, request.(CancelContestJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelContestJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CancelContestJoinRequestResponseObject); ok {
+		if err := validResponse.VisitCancelContestJoinRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMyContestJoinRequest operation middleware
+func (sh *strictHandler) GetMyContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string) {
+	var request GetMyContestJoinRequestRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMyContestJoinRequest(ctx, request.(GetMyContestJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMyContestJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMyContestJoinRequestResponseObject); ok {
+		if err := validResponse.VisitGetMyContestJoinRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveContestJoinRequest operation middleware
+func (sh *strictHandler) ApproveContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, id openapi_types.UUID) {
+	var request ApproveContestJoinRequestRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveContestJoinRequest(ctx, request.(ApproveContestJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveContestJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApproveContestJoinRequestResponseObject); ok {
+		if err := validResponse.VisitApproveContestJoinRequestResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectContestJoinRequest operation middleware
+func (sh *strictHandler) RejectContestJoinRequest(w http.ResponseWriter, r *http.Request, orgLogin string, contestLogin string, id openapi_types.UUID) {
+	var request RejectContestJoinRequestRequestObject
+
+	request.OrgLogin = orgLogin
+	request.ContestLogin = contestLogin
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectContestJoinRequest(ctx, request.(RejectContestJoinRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectContestJoinRequest")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RejectContestJoinRequestResponseObject); ok {
+		if err := validResponse.VisitRejectContestJoinRequestResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

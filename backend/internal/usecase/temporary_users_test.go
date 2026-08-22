@@ -131,7 +131,7 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 		Role:           models.OrgRoleOwner,
 	}
 
-	orgsUC := NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, txManager)
+	orgsUC := NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, txManager, nil)
 
 	ttl := int32(30)
 	input := models.BatchCreateOrganizationUsersInput{
@@ -188,7 +188,7 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 		PasswordHash: "dummy",
 	})
 
-	orgsUC := NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, txManager)
+	orgsUC := NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, txManager, nil)
 
 	input := models.BatchCreateOrganizationUsersInput{
 		OrgLogin: "test-org",

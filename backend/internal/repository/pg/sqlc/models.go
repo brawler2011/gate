@@ -478,6 +478,17 @@ type ContestDraft struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type ContestJoinRequest struct {
+	ID         uuid.UUID   `json:"id"`
+	ContestID  uuid.UUID   `json:"contest_id"`
+	UserID     uuid.UUID   `json:"user_id"`
+	Message    *string     `json:"message"`
+	Status     string      `json:"status"`
+	ReviewedBy pgtype.UUID `json:"reviewed_by"`
+	CreatedAt  time.Time   `json:"created_at"`
+	UpdatedAt  time.Time   `json:"updated_at"`
+}
+
 type ContestMember struct {
 	ContestID uuid.UUID          `json:"contest_id"`
 	UserID    uuid.UUID          `json:"user_id"`
@@ -520,6 +531,18 @@ type ContestUserProblemBlock struct {
 	CreatedAt time.Time   `json:"created_at"`
 }
 
+type Notification struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Type      string    `json:"type"`
+	Title     string    `json:"title"`
+	Body      string    `json:"body"`
+	Link      *string   `json:"link"`
+	Data      []byte    `json:"data"`
+	IsRead    bool      `json:"is_read"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Organization struct {
 	ID          uuid.UUID `json:"id"`
 	Login       string    `json:"login"`
@@ -528,6 +551,29 @@ type Organization struct {
 	AvatarUrl   *string   `json:"avatar_url"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	JoinPolicy  string    `json:"join_policy"`
+}
+
+type OrganizationInvitation struct {
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	UserID         uuid.UUID `json:"user_id"`
+	InviterID      uuid.UUID `json:"inviter_id"`
+	Role           string    `json:"role"`
+	Status         string    `json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type OrganizationJoinRequest struct {
+	ID             uuid.UUID   `json:"id"`
+	OrganizationID uuid.UUID   `json:"organization_id"`
+	UserID         uuid.UUID   `json:"user_id"`
+	Message        *string     `json:"message"`
+	Status         string      `json:"status"`
+	ReviewedBy     pgtype.UUID `json:"reviewed_by"`
+	CreatedAt      time.Time   `json:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at"`
 }
 
 type OrganizationMember struct {

@@ -54,6 +54,15 @@ type ContestsRepo interface {
 	ListContestUserProblemBlocks(ctx context.Context, contestID uuid.UUID, userID *uuid.UUID) ([]models.ContestUserProblemBlock, error)
 	ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]models.UserContestMembership, error)
 	AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role string) error
+
+	// Contest Join Requests
+	CreateContestJoinRequest(ctx context.Context, input *models.CreateContestJoinRequestInput) (*models.ContestJoinRequest, error)
+	GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (*models.ContestJoinRequest, error)
+	GetPendingContestJoinRequest(ctx context.Context, contestID, userID uuid.UUID) (*models.ContestJoinRequest, error)
+	ListContestJoinRequests(ctx context.Context, contestID uuid.UUID, status *string) ([]models.ContestJoinRequest, error)
+	ListUserContestJoinRequests(ctx context.Context, userID uuid.UUID) ([]models.ContestJoinRequest, error)
+	UpdateContestJoinRequestStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus, reviewedBy *uuid.UUID) error
+
 	WithTx(tx pgx.Tx) ContestsRepo
 }
 
@@ -96,5 +105,12 @@ type ContestsUC interface {
 	BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string, operatorID uuid.UUID) error
 	UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error
 	GetProblemBlockStatusForUser(ctx context.Context, contestID, userID, problemID uuid.UUID) (*models.ContestUserProblemBlock, error)
-}
 
+	// Contest Join Requests
+	CreateJoinRequest(ctx context.Context, orgLogin, contestLogin string, userID uuid.UUID, message *string) (*models.ContestJoinRequest, bool, error)
+	ListJoinRequests(ctx context.Context, orgLogin, contestLogin string, requestUserID uuid.UUID) ([]models.ContestJoinRequest, error)
+	CancelJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestUserID uuid.UUID) error
+	ApproveJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID, reviewerID uuid.UUID) error
+	RejectJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID, reviewerID uuid.UUID) error
+	GetMyPendingJoinRequest(ctx context.Context, orgLogin, contestLogin string, userID uuid.UUID) (*models.ContestJoinRequest, error)
+}

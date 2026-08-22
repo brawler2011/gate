@@ -17,7 +17,16 @@ import {
 } from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconEdit, IconPlus, IconTrash, IconUser, IconUsersGroup} from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconEdit,
+  IconPlus,
+  IconTrash,
+  IconUser,
+  IconUserCheck,
+  IconUsersGroup,
+  IconX,
+} from "@tabler/icons-react";
 import {useCallback, useEffect, useState} from "react";
 
 import {StatusMessage} from '@/components/shared/StatusMessage';
@@ -59,6 +68,11 @@ export const ParticipantsSection = ({
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  // Requests state
+  const [requests, setRequests] = useState<corev1.ContestJoinRequestModel[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<corev1.UserModel[]>([]);
@@ -96,10 +110,20 @@ export const ParticipantsSection = ({
     setTotalPages(Math.ceil(total / pageSize));
   }, [orgLogin, contestLogin, page]);
 
-  // Load participants on mount and when page changes
+  // Load requests
+  const loadRequests = useCallback(async () => {
+    setLoadingRequests(true);
+    const [, data] = await api.listContestJoinRequests({orgLogin, contestLogin});
+    setLoadingRequests(false);
+    if (data) {
+      setRequests(data.requests);
+    }
+  }, [orgLogin, contestLogin]);
+
   useEffect(() => {
     loadParticipants();
-  }, [loadParticipants]);
+    loadRequests();
+  }, [loadParticipants, loadRequests]);
 
   // Search for users
   useEffect(() => {
@@ -229,93 +253,146 @@ export const ParticipantsSection = ({
     await loadParticipants();
   };
 
-  const autocompleteData = searchResults.map((u) => ({
-    value: u.id,
-    label: `${u.username} (${u.role})`,
-  }));
+  const handleApproveRequest = async (requestId: string, username: string) => {
+    setProcessingRequestId(requestId);
+    const [error] = await api.approveContestJoinRequest({
+      orgLogin,
+      contestLogin,
+      id: requestId,
+    });
+    setProcessingRequestId(null);
+
+    if (error) {
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось одобрить заявку",
+        color: "red",
+      });
+      return;
+    }
+
+    notifications.show({
+      message: `Заявка пользователя @${username} одобрена`,
+      color: "green",
+    });
+    loadRequests();
+    loadParticipants();
+  };
+
+  const handleRejectRequest = async (requestId: string, username: string) => {
+    setProcessingRequestId(requestId);
+    const [error] = await api.rejectContestJoinRequest({
+      orgLogin,
+      contestLogin,
+      id: requestId,
+    });
+    setProcessingRequestId(null);
+
+    if (error) {
+      notifications.show({
+        title: "Ошибка",
+        message: error.message || "Не удалось отклонить заявку",
+        color: "red",
+      });
+      return;
+    }
+
+    notifications.show({
+      message: `Заявка пользователя @${username} отклонена`,
+      color: "blue",
+    });
+    loadRequests();
+  };
 
   return (
     <>
       <Tabs value={activeTab} onChange={setActiveTab} mb="md">
         <Tabs.List>
-          <Tabs.Tab value="users" leftSection={<IconUser size={16} />}>
+          <Tabs.Tab
+            value="users"
+            leftSection={<IconUser size={16} />}
+            rightSection={
+              participants.length > 0 ? (
+                <Badge size="xs" variant="light">
+                  {participants.length}
+                </Badge>
+              ) : null
+            }
+          >
             Пользователи
           </Tabs.Tab>
           <Tabs.Tab value="teams" leftSection={<IconUsersGroup size={16} />}>
             Команды
           </Tabs.Tab>
+          <Tabs.Tab
+            value="requests"
+            leftSection={<IconUserCheck size={16} />}
+            rightSection={
+              requests.length > 0 ? (
+                <Badge size="xs" color="orange" variant="filled">
+                  {requests.length}
+                </Badge>
+              ) : null
+            }
+          >
+            Заявки
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="users" pt="md">
           <Stack gap="md">
-            {/* Add Participant Form */}
-            <Card withBorder padding="md">
-              <Stack gap="sm">
-                <Text size="sm" fw={500}>
-                  Добавить участника
-                </Text>
-                <Group gap="sm">
-                  <Autocomplete
-                    placeholder="Поиск по имени пользователя или email..."
-                    value={searchQuery}
-                    onChange={setSearchQuery}
-                    onOptionSubmit={(value) => {
-                      setSelectedUserId(value);
-                      const selected = searchResults.find((u) => u.id === value);
-                      if (selected) {
-                        setSearchQuery(selected.username);
-                      }
-                    }}
-                    data={autocompleteData}
-                    rightSection={searching && <Loader size="xs" />}
-                    style={{flex: 1}}
-                  />
-                  <Button
-                    onClick={handleAddParticipant}
-                    disabled={!selectedUserId || adding}
-                    loading={adding}
-                    leftSection={<IconPlus size={16} />}
-                  >
-                    Добавить
-                  </Button>
-                </Group>
-              </Stack>
-            </Card>
+            <Group gap="md">
+              <Autocomplete
+                placeholder="Поиск по имени пользователя..."
+                value={searchQuery}
+                onChange={(value) => {
+                  setSearchQuery(value);
+                  const selected = searchResults.find(
+                    (u) => `${u.username} (${u.role})` === value
+                  );
+                  setSelectedUserId(selected ? selected.id : null);
+                }}
+                data={searchResults.map((u) => `${u.username} (${u.role})`)}
+                style={{flex: 1}}
+                leftSection={searching ? <Loader size="xs" /> : undefined}
+              />
+              <Button
+                onClick={handleAddParticipant}
+                loading={adding}
+                disabled={!selectedUserId}
+                leftSection={<IconPlus size={16} />}
+              >
+                Добавить
+              </Button>
+            </Group>
 
             {loading && (
               <Center py="xl">
-                <Loader size="md" />
+                <Loader />
               </Center>
             )}
             {!loading && participants.length === 0 && (
-              <Center py="xl">
-                <Stack align="center" gap="sm">
-                  <Text size="lg" c="dimmed">
-                    Нет участников
-                  </Text>
-                  <Text size="sm" c="dimmed">
-                    Добавьте участников для контеста
-                  </Text>
-                </Stack>
-              </Center>
+              <Card withBorder p="xl">
+                <Text c="dimmed" ta="center">
+                  Участники не найдены
+                </Text>
+              </Card>
             )}
             {!loading && participants.length > 0 && (
               <Stack gap="md">
-                <Table highlightOnHover>
+                <Table striped highlightOnHover withTableBorder withColumnBorders>
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th style={{width: 140}}>Пользователь</Table.Th>
+                      <Table.Th>Пользователь</Table.Th>
                       <Table.Th style={{textAlign: 'center'}}>Роль</Table.Th>
-                      <Table.Th style={{width: 80}}>Действия</Table.Th>
+                      <Table.Th style={{width: 100}}>Действия</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
                     {participants.map((user) => (
                       <Table.Tr key={user.user_id}>
                         <Table.Td>
-                          <Text size="sm" fw={500}>
-                            {user.username}
-                          </Text>
+                          <Text fw={500}>@{user.username}</Text>
                         </Table.Td>
                         <Table.Td style={{textAlign: 'center'}}>
                           <Badge
@@ -371,6 +448,88 @@ export const ParticipantsSection = ({
 
         <Tabs.Panel value="teams" pt="md">
           <ContestTeamsManagement orgLogin={orgLogin} contestLogin={contestLogin} contestId={contestId} orgId={orgId} />
+        </Tabs.Panel>
+
+        {/* Contest Join Requests Panel */}
+        <Tabs.Panel value="requests" pt="md">
+          <Stack gap="md">
+            {loadingRequests && (
+              <Center py="xl">
+                <Loader />
+              </Center>
+            )}
+            {!loadingRequests && requests.length === 0 && (
+              <Card withBorder p="xl">
+                <Text c="dimmed" ta="center">
+                  Нет активных заявок на участие в контесте
+                </Text>
+              </Card>
+            )}
+            {!loadingRequests && requests.length > 0 && (
+              <Table highlightOnHover withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Пользователь</Table.Th>
+                    <Table.Th>Комментарий</Table.Th>
+                    <Table.Th>Дата заявки</Table.Th>
+                    <Table.Th style={{width: 180}}>Решение</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {requests.map((req) => (
+                    <Table.Tr key={req.id}>
+                      <Table.Td>
+                        <Stack gap={2}>
+                          <Text size="sm" fw={500}>
+                            @{req.username}
+                          </Text>
+                          {req.email && (
+                            <Text size="xs" c="dimmed">
+                              {req.email}
+                            </Text>
+                          )}
+                        </Stack>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c={req.message ? undefined : "dimmed"}>
+                          {req.message || "—"}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">
+                          {new Date(req.created_at).toLocaleDateString("ru-RU")}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <Button
+                            size="xs"
+                            color="green"
+                            variant="filled"
+                            leftSection={<IconCheck size={14} />}
+                            onClick={() => handleApproveRequest(req.id, req.username)}
+                            loading={processingRequestId === req.id}
+                          >
+                            Одобрить
+                          </Button>
+                          <Button
+                            size="xs"
+                            color="red"
+                            variant="light"
+                            leftSection={<IconX size={14} />}
+                            onClick={() => handleRejectRequest(req.id, req.username)}
+                            loading={processingRequestId === req.id}
+                          >
+                            Отклонить
+                          </Button>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            )}
+          </Stack>
         </Tabs.Panel>
       </Tabs>
 

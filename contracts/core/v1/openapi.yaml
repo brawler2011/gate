@@ -1312,6 +1312,142 @@ paths:
       responses:
         "200":
           description: OK
+  /organizations/{org_login}/contests/{contest_login}/requests:
+    get:
+      operationId: ListContestJoinRequests
+      summary: List pending contest join requests
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of contest join requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListContestJoinRequestsResponseModel"
+    post:
+      operationId: CreateContestJoinRequest
+      summary: Request to participate in contest
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContestJoinRequestModel"
+      responses:
+        "200":
+          description: Request created or user registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContestJoinRequestResponseModel"
+  /organizations/{org_login}/contests/{contest_login}/requests/mine:
+    get:
+      operationId: GetMyContestJoinRequest
+      summary: Get my pending contest join request
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: My pending contest join request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContestJoinRequestNullableResponseModel"
+    delete:
+      operationId: CancelContestJoinRequest
+      summary: Cancel my contest join request
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Request canceled
+  /organizations/{org_login}/contests/{contest_login}/requests/{id}/approve:
+    post:
+      operationId: ApproveContestJoinRequest
+      summary: Approve contest join request
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Request approved
+  /organizations/{org_login}/contests/{contest_login}/requests/{id}/reject:
+    post:
+      operationId: RejectContestJoinRequest
+      summary: Reject contest join request
+      parameters:
+        - name: org_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contest_login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Request rejected
   /submissions:
     post:
       operationId: CreateSubmission
@@ -3275,6 +3411,12 @@ paths:
           required: false
           schema:
             type: string
+        - name: join_policy
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, by_request, invite_only]
       responses:
         "200":
           description: Organization created successfully
@@ -3424,6 +3566,267 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BatchCreateOrganizationUsersResponseModel"
+  /organizations/{login}/invitations:
+    get:
+      operationId: ListOrganizationInvitations
+      summary: List pending organization invitations
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of invitations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListOrganizationInvitationsResponseModel"
+    post:
+      operationId: InviteOrganizationMember
+      summary: Invite user to organization
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteOrganizationMemberRequestModel"
+      responses:
+        "200":
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationInvitationModel"
+  /organizations/{login}/invitations/{id}:
+    delete:
+      operationId: CancelOrganizationInvitation
+      summary: Cancel organization invitation
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Invitation canceled
+  /invitations/{id}/accept:
+    post:
+      operationId: AcceptOrganizationInvitation
+      summary: Accept organization invitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Invitation accepted
+  /invitations/{id}/decline:
+    post:
+      operationId: DeclineOrganizationInvitation
+      summary: Decline organization invitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Invitation declined
+  /organizations/{login}/requests:
+    get:
+      operationId: ListOrganizationJoinRequests
+      summary: List pending organization join requests
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of join requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListOrganizationJoinRequestsResponseModel"
+    post:
+      operationId: CreateOrganizationJoinRequest
+      summary: Request to join organization
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrganizationJoinRequestModel"
+      responses:
+        "200":
+          description: Request submitted or user joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationJoinRequestResponseModel"
+  /organizations/{login}/requests/mine:
+    get:
+      operationId: GetMyOrganizationJoinRequest
+      summary: Get my pending join request to organization
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: My pending join request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationJoinRequestNullableResponseModel"
+    delete:
+      operationId: CancelOrganizationJoinRequest
+      summary: Cancel my join request to organization
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Request canceled
+  /organizations/{login}/requests/{id}/approve:
+    post:
+      operationId: ApproveOrganizationJoinRequest
+      summary: Approve organization join request
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveOrganizationJoinRequestModel"
+      responses:
+        "200":
+          description: Request approved
+  /organizations/{login}/requests/{id}/reject:
+    post:
+      operationId: RejectOrganizationJoinRequest
+      summary: Reject organization join request
+      parameters:
+        - name: login
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Request rejected
+  /notifications:
+    get:
+      operationId: ListNotifications
+      summary: List user notifications
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+        - name: unread_only
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationsListResponseModel"
+  /notifications/unread-count:
+    get:
+      operationId: GetUnreadNotificationsCount
+      summary: Get count of unread notifications
+      responses:
+        "200":
+          description: Unread notifications count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadNotificationsCountResponseModel"
+  /notifications/{id}/read:
+    post:
+      operationId: MarkNotificationAsRead
+      summary: Mark a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Notification marked as read
+  /notifications/read-all:
+    post:
+      operationId: MarkAllNotificationsAsRead
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: All notifications marked as read
   /teams:
     get:
       operationId: ListTeams
@@ -4422,6 +4825,7 @@ components:
           type: string
           enum:
             - open
+            - by_request
             - invite_only
           default: open
         hide_statements:
@@ -4605,6 +5009,7 @@ components:
           type: string
           enum:
             - open
+            - by_request
             - invite_only
         hide_statements:
           type: boolean
@@ -5631,6 +6036,7 @@ components:
         - id
         - login
         - name
+        - join_policy
         - created_at
         - updated_at
       properties:
@@ -5643,6 +6049,10 @@ components:
           type: string
         description:
           type: string
+        join_policy:
+          type: string
+          enum: [open, by_request, invite_only]
+          default: by_request
         created_at:
           type: string
           format: date-time
@@ -5677,6 +6087,9 @@ components:
           type: string
         description:
           type: string
+        join_policy:
+          type: string
+          enum: [open, by_request, invite_only]
     OrganizationMemberModel:
       type: object
       required:
@@ -6265,4 +6678,297 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ClaimedAccountItem"
+
+    NotificationModel:
+      type: object
+      required:
+        - id
+        - user_id
+        - type
+        - title
+        - body
+        - is_read
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        link:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    NotificationsListResponseModel:
+      type: object
+      required:
+        - notifications
+        - pagination
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationModel"
+        pagination:
+          $ref: "#/components/schemas/PaginationModel"
+
+    UnreadNotificationsCountResponseModel:
+      type: object
+      required:
+        - count
+      properties:
+        count:
+          type: integer
+          format: int32
+
+    OrganizationInvitationModel:
+      type: object
+      required:
+        - id
+        - organization_id
+        - organization_name
+        - organization_login
+        - user_id
+        - username
+        - inviter_id
+        - inviter_username
+        - role
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        organization_name:
+          type: string
+        organization_login:
+          type: string
+        organization_avatar_url:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        inviter_id:
+          type: string
+          format: uuid
+        inviter_username:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    InviteOrganizationMemberRequestModel:
+      type: object
+      required:
+        - user_id
+        - role
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, admin, member]
+          default: member
+
+    ListOrganizationInvitationsResponseModel:
+      type: object
+      required:
+        - invitations
+      properties:
+        invitations:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationInvitationModel"
+
+    OrganizationJoinRequestModel:
+      type: object
+      required:
+        - id
+        - organization_id
+        - organization_name
+        - organization_login
+        - user_id
+        - username
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        organization_name:
+          type: string
+        organization_login:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+        reviewer_username:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateOrganizationJoinRequestModel:
+      type: object
+      properties:
+        message:
+          type: string
+
+    ApproveOrganizationJoinRequestModel:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [owner, admin, member]
+          default: member
+
+    ListOrganizationJoinRequestsResponseModel:
+      type: object
+      required:
+        - requests
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationJoinRequestModel"
+
+    OrganizationJoinRequestResponseModel:
+      type: object
+      required:
+        - joined
+      properties:
+        request:
+          $ref: "#/components/schemas/OrganizationJoinRequestModel"
+        joined:
+          type: boolean
+
+    OrganizationJoinRequestNullableResponseModel:
+      type: object
+      properties:
+        request:
+          $ref: "#/components/schemas/OrganizationJoinRequestModel"
+
+    ContestJoinRequestModel:
+      type: object
+      required:
+        - id
+        - contest_id
+        - contest_title
+        - contest_login
+        - organization_login
+        - user_id
+        - username
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        contest_title:
+          type: string
+        contest_login:
+          type: string
+        organization_login:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+        reviewer_username:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateContestJoinRequestModel:
+      type: object
+      properties:
+        message:
+          type: string
+
+    ListContestJoinRequestsResponseModel:
+      type: object
+      required:
+        - requests
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContestJoinRequestModel"
+
+    ContestJoinRequestResponseModel:
+      type: object
+      required:
+        - registered
+      properties:
+        request:
+          $ref: "#/components/schemas/ContestJoinRequestModel"
+        registered:
+          type: boolean
+
+    ContestJoinRequestNullableResponseModel:
+      type: object
+      properties:
+        request:
+          $ref: "#/components/schemas/ContestJoinRequestModel"
+
 

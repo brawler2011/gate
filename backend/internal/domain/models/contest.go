@@ -344,8 +344,32 @@ type ContestParticipationMode = string
 
 const (
 	ParticipationModeOpen       ContestParticipationMode = "open"
+	ParticipationModeByRequest  ContestParticipationMode = "by_request"
 	ParticipationModeInviteOnly ContestParticipationMode = "invite_only"
 )
+
+type ContestJoinRequest struct {
+	ID                uuid.UUID
+	ContestID         uuid.UUID
+	ContestTitle      string
+	ContestLogin      string
+	OrganizationLogin string
+	UserID            uuid.UUID
+	Username          string
+	Email             string
+	Message           *string
+	Status            RequestStatus
+	ReviewedBy        *uuid.UUID
+	ReviewerUsername  *string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type CreateContestJoinRequestInput struct {
+	ContestID uuid.UUID
+	UserID    uuid.UUID
+	Message   *string
+}
 
 type ContestSettings struct {
 	PenaltyPerAttempt      int32  `json:"penalty_per_attempt,omitempty"`
@@ -419,6 +443,9 @@ func (s ContestSettings) GetEnableVirtualContests() bool {
 func (s ContestSettings) GetParticipationMode() string {
 	if s.ParticipationMode == ParticipationModeInviteOnly {
 		return ParticipationModeInviteOnly
+	}
+	if s.ParticipationMode == ParticipationModeByRequest {
+		return ParticipationModeByRequest
 	}
 	return ParticipationModeOpen
 }

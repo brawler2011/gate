@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sort"
 	"time"
 
@@ -16,6 +17,8 @@ type ContestsUseCase struct {
 	contestRepo     interfaces.ContestsRepo
 	orgsRepo        interfaces.OrganizationsRepo
 	submissionsRepo interfaces.SubmissionsRepo
+	notificationsUC interfaces.NotificationsUC
+	usersRepo       interfaces.UsersRepo
 }
 
 func NewContestsUseCase(
@@ -32,6 +35,14 @@ func NewContestsUseCase(
 		orgsRepo:        orgsRepo,
 		submissionsRepo: subRepo,
 	}
+}
+
+func (uc *ContestsUseCase) SetNotificationsUC(n interfaces.NotificationsUC) {
+	uc.notificationsUC = n
+}
+
+func (uc *ContestsUseCase) SetUsersRepo(u interfaces.UsersRepo) {
+	uc.usersRepo = u
 }
 
 func (uc *ContestsUseCase) CreateContest(
@@ -686,4 +697,259 @@ func (uc *ContestsUseCase) GetProblemBlockStatusForUser(
 	}
 	return block, nil
 }
+
+// Contest Join Requests
+
+func (uc *ContestsUseCase) CreateJoinRequest(
+	ctx context.Context,
+	orgLogin, contestLogin string,
+	userID uuid.UUID,
+	message *string,
+) (*models.ContestJoinRequest, bool, error) {
+	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Check if already a member
+	_, err = uc.contestRepo.GetContestMember(ctx, &models.ContestPermissionGet{
+		ContestId: contest.ID,
+		UserId:    userID,
+	})
+	if err == nil {
+		return nil, false, pkg.Wrap(pkg.ErrBadInput, nil, "вы уже являетесь участником этого контеста")
+	}
+
+	mode := contest.TypedSettings().GetParticipationMode()
+	if mode == models.ParticipationModeInviteOnly {
+		return nil, false, pkg.Wrap(pkg.ErrBadInput, nil, "регистрация на данный контест закрыта (только по приглашениям)")
+	}
+
+	if mode == models.ParticipationModeOpen {
+		err := uc.CreateParticipant(ctx, models.ParticipantCreation{
+			ContestId: contest.ID,
+			UserId:    userID,
+		})
+		if err != nil {
+			return nil, false, err
+		}
+		return nil, true, nil
+	}
+
+	// Mode is ByRequest
+	pending, err := uc.contestRepo.GetPendingContestJoinRequest(ctx, contest.ID, userID)
+	if err != nil {
+		return nil, false, err
+	}
+	if pending != nil {
+		return nil, false, pkg.Wrap(pkg.ErrBadInput, nil, "заявка на участие уже отправлена и ожидает рассмотрения")
+	}
+
+	req, err := uc.contestRepo.CreateContestJoinRequest(ctx, &models.CreateContestJoinRequestInput{
+		ContestID: contest.ID,
+		UserID:    userID,
+		Message:   message,
+	})
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Send notifications to contest moderators / owner
+	if uc.notificationsUC != nil && uc.usersRepo != nil {
+		applicantUser, err := uc.usersRepo.GetUserById(ctx, userID)
+		if err == nil {
+			link := fmt.Sprintf("/%s/%s", orgLogin, contestLogin)
+			if contest.OwnerID != nil {
+				_, _ = uc.notificationsUC.Notify(ctx, &models.CreateNotificationInput{
+					UserID: *contest.OwnerID,
+					Type:   models.NotificationTypeContestJoinRequest,
+					Title:  fmt.Sprintf("Новая заявка на участие в контесте %s", contest.Title),
+					Body:   fmt.Sprintf("Пользователь @%s запросил доступ к контесту %s", applicantUser.Username, contest.Title),
+					Link:   &link,
+					Data: map[string]interface{}{
+						"contest_id":         contest.ID.String(),
+						"contest_title":      contest.Title,
+						"contest_login":      contest.Login,
+						"organization_login": orgLogin,
+						"applicant_id":       userID.String(),
+						"applicant_username": applicantUser.Username,
+						"request_id":         req.ID.String(),
+					},
+				})
+			}
+		}
+	}
+
+	return req, false, nil
+}
+
+func (uc *ContestsUseCase) ListJoinRequests(
+	ctx context.Context,
+	orgLogin, contestLogin string,
+	requestUserID uuid.UUID,
+) ([]models.ContestJoinRequest, error) {
+	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify user is moderator/owner or org admin
+	member, err := uc.contestRepo.GetContestMember(ctx, &models.ContestPermissionGet{
+		ContestId: contest.ID,
+		UserId:    requestUserID,
+	})
+	isModerator := err == nil && (member.ContestRole == models.ContestRoleOwner || member.ContestRole == models.ContestRoleModerator)
+
+	if !isModerator && uc.orgsRepo != nil {
+		orgMember, err := uc.orgsRepo.GetMember(ctx, contest.OrganizationID, requestUserID)
+		if err == nil && (orgMember.Role == models.OrgRoleOwner || orgMember.Role == models.OrgRoleAdmin) {
+			isModerator = true
+		}
+	}
+
+	if !isModerator {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
+	}
+
+	status := string(models.RequestStatusPending)
+	return uc.contestRepo.ListContestJoinRequests(ctx, contest.ID, &status)
+}
+
+func (uc *ContestsUseCase) CancelJoinRequest(
+	ctx context.Context,
+	orgLogin, contestLogin string,
+	requestUserID uuid.UUID,
+) error {
+	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	if err != nil {
+		return err
+	}
+
+	req, err := uc.contestRepo.GetPendingContestJoinRequest(ctx, contest.ID, requestUserID)
+	if err != nil {
+		return err
+	}
+	if req == nil {
+		return pkg.Wrap(pkg.ErrNotFound, nil, "активная заявка не найдена")
+	}
+
+	return uc.contestRepo.UpdateContestJoinRequestStatus(ctx, req.ID, models.RequestStatusCanceled, nil)
+}
+
+func (uc *ContestsUseCase) ApproveJoinRequest(
+	ctx context.Context,
+	orgLogin, contestLogin string,
+	requestID, reviewerID uuid.UUID,
+) error {
+	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	if err != nil {
+		return err
+	}
+
+	req, err := uc.contestRepo.GetContestJoinRequestByID(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if req.ContestID != contest.ID {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "request does not belong to this contest")
+	}
+	if req.Status != models.RequestStatusPending {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
+	}
+
+	// Add member to contest
+	err = uc.contestRepo.CreateContestMember(ctx, &models.CreateContestMemberParams{
+		ContestId: contest.ID,
+		UserId:    req.UserID,
+		Role:      models.ContestRoleParticipant,
+	})
+	if err != nil {
+		return fmt.Errorf("create contest member: %w", err)
+	}
+
+	if err := uc.contestRepo.UpdateContestJoinRequestStatus(ctx, req.ID, models.RequestStatusApproved, &reviewerID); err != nil {
+		return fmt.Errorf("update join request status: %w", err)
+	}
+
+	// Notify applicant
+	if uc.notificationsUC != nil {
+		link := fmt.Sprintf("/%s/%s", orgLogin, contestLogin)
+		_, _ = uc.notificationsUC.Notify(ctx, &models.CreateNotificationInput{
+			UserID: req.UserID,
+			Type:   models.NotificationTypeContestJoinApproved,
+			Title:  fmt.Sprintf("Заявка на контест %s одобрена", contest.Title),
+			Body:   fmt.Sprintf("Ваша заявка на участие в контесте %s была одобрена!", contest.Title),
+			Link:   &link,
+			Data: map[string]interface{}{
+				"contest_id":         contest.ID.String(),
+				"contest_title":      contest.Title,
+				"contest_login":      contest.Login,
+				"organization_login": orgLogin,
+				"request_id":         req.ID.String(),
+			},
+		})
+	}
+
+	return nil
+}
+
+func (uc *ContestsUseCase) RejectJoinRequest(
+	ctx context.Context,
+	orgLogin, contestLogin string,
+	requestID, reviewerID uuid.UUID,
+) error {
+	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	if err != nil {
+		return err
+	}
+
+	req, err := uc.contestRepo.GetContestJoinRequestByID(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if req.ContestID != contest.ID {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "request does not belong to this contest")
+	}
+	if req.Status != models.RequestStatusPending {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
+	}
+
+	if err := uc.contestRepo.UpdateContestJoinRequestStatus(ctx, req.ID, models.RequestStatusRejected, &reviewerID); err != nil {
+		return fmt.Errorf("update join request status: %w", err)
+	}
+
+	// Notify applicant
+	if uc.notificationsUC != nil {
+		link := fmt.Sprintf("/%s/%s", orgLogin, contestLogin)
+		_, _ = uc.notificationsUC.Notify(ctx, &models.CreateNotificationInput{
+			UserID: req.UserID,
+			Type:   models.NotificationTypeContestJoinRejected,
+			Title:  fmt.Sprintf("Заявка на контест %s отклонена", contest.Title),
+			Body:   fmt.Sprintf("Ваша заявка на участие в контесте %s была отклонена.", contest.Title),
+			Link:   &link,
+			Data: map[string]interface{}{
+				"contest_id":         contest.ID.String(),
+				"contest_title":      contest.Title,
+				"contest_login":      contest.Login,
+				"organization_login": orgLogin,
+				"request_id":         req.ID.String(),
+			},
+		})
+	}
+
+	return nil
+}
+
+func (uc *ContestsUseCase) GetMyPendingJoinRequest(
+	ctx context.Context,
+	orgLogin, contestLogin string,
+	userID uuid.UUID,
+) (*models.ContestJoinRequest, error) {
+	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	if err != nil {
+		return nil, err
+	}
+	return uc.contestRepo.GetPendingContestJoinRequest(ctx, contest.ID, userID)
+}
+
 

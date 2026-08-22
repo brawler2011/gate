@@ -197,6 +197,7 @@ type User struct {
 
 type AuthTokenType = string
 
+//nolint:gosec // token type identifier, not hardcoded credentials
 const (
 	AuthTokenTypeEmailVerification AuthTokenType = "email_verification"
 	AuthTokenTypePasswordReset     AuthTokenType = "password_reset"

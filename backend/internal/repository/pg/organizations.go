@@ -12,6 +12,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -35,12 +36,18 @@ func (r *OrganizationsRepo) WithTx(tx pgx.Tx) interfaces.OrganizationsRepo {
 }
 
 func (r *OrganizationsRepo) CreateOrganization(ctx context.Context, input *models.CreateOrganizationInput) (*models.Organization, error) {
+	joinPolicy := string(input.JoinPolicy)
+	if joinPolicy == "" {
+		joinPolicy = string(models.OrgJoinPolicyByRequest)
+	}
+
 	org, err := r.q.CreateOrganization(ctx, sqlc.CreateOrganizationParams{
 		ID:          uuid.New(),
 		Login:       input.Login,
 		Name:        input.Name,
 		Description: input.Description,
 		AvatarUrl:   input.AvatarURL,
+		Column6:     joinPolicy,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create organization: %w", err)
@@ -52,6 +59,7 @@ func (r *OrganizationsRepo) CreateOrganization(ctx context.Context, input *model
 		Name:        org.Name,
 		Description: org.Description,
 		AvatarURL:   org.AvatarUrl,
+		JoinPolicy:  models.OrganizationJoinPolicy(org.JoinPolicy),
 		CreatedAt:   org.CreatedAt,
 		UpdatedAt:   org.UpdatedAt,
 	}, nil
@@ -72,6 +80,7 @@ func (r *OrganizationsRepo) GetOrganizationByID(ctx context.Context, id uuid.UUI
 		Name:        org.Name,
 		Description: org.Description,
 		AvatarURL:   org.AvatarUrl,
+		JoinPolicy:  models.OrganizationJoinPolicy(org.JoinPolicy),
 		CreatedAt:   org.CreatedAt,
 		UpdatedAt:   org.UpdatedAt,
 	}, nil
@@ -92,6 +101,7 @@ func (r *OrganizationsRepo) GetOrganizationByLogin(ctx context.Context, login st
 		Name:        org.Name,
 		Description: org.Description,
 		AvatarURL:   org.AvatarUrl,
+		JoinPolicy:  models.OrganizationJoinPolicy(org.JoinPolicy),
 		CreatedAt:   org.CreatedAt,
 		UpdatedAt:   org.UpdatedAt,
 	}, nil
@@ -134,6 +144,7 @@ func (r *OrganizationsRepo) ListOrganizations(ctx context.Context, filter *model
 			Name:        org.Name,
 			Description: org.Description,
 			AvatarURL:   org.AvatarUrl,
+			JoinPolicy:  models.OrganizationJoinPolicy(org.JoinPolicy),
 			CreatedAt:   org.CreatedAt,
 			UpdatedAt:   org.UpdatedAt,
 		}
@@ -158,6 +169,10 @@ func (r *OrganizationsRepo) UpdateOrganization(ctx context.Context, id uuid.UUID
 	}
 	if input.AvatarURL != nil {
 		params.AvatarUrl = input.AvatarURL
+	}
+	if input.JoinPolicy != nil {
+		jp := string(*input.JoinPolicy)
+		params.JoinPolicy = &jp
 	}
 
 	if err := r.q.UpdateOrganization(ctx, params); err != nil {
@@ -278,6 +293,7 @@ func (r *OrganizationsRepo) GetUserOrganizations(ctx context.Context, userID uui
 			Name:        org.Name,
 			Description: org.Description,
 			AvatarURL:   org.AvatarUrl,
+			JoinPolicy:  models.OrganizationJoinPolicy(org.JoinPolicy),
 			CreatedAt:   org.CreatedAt,
 			UpdatedAt:   org.UpdatedAt,
 		}
@@ -307,4 +323,277 @@ func (r *OrganizationsRepo) ResolveUserOrganizationID(ctx context.Context, userI
 	}
 
 	return orgID, true, nil
+}
+
+// Invitations
+
+func (r *OrganizationsRepo) CreateInvitation(ctx context.Context, input *models.CreateOrganizationInvitationInput) (*models.OrganizationInvitation, error) {
+	id := uuid.New()
+	row, err := r.q.CreateOrganizationInvitation(ctx, sqlc.CreateOrganizationInvitationParams{
+		ID:             id,
+		OrganizationID: input.OrganizationID,
+		UserID:         input.UserID,
+		InviterID:      input.InviterID,
+		Role:           string(input.Role),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create organization invitation: %w", err)
+	}
+
+	return r.GetInvitationByID(ctx, row.ID)
+}
+
+func (r *OrganizationsRepo) GetInvitationByID(ctx context.Context, id uuid.UUID) (*models.OrganizationInvitation, error) {
+	row, err := r.q.GetOrganizationInvitationByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pkg.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get organization invitation: %w", err)
+	}
+
+	var email string
+	if row.Email != nil {
+		email = *row.Email
+	}
+
+	return &models.OrganizationInvitation{
+		ID:                row.ID,
+		OrganizationID:    row.OrganizationID,
+		OrganizationName:  row.OrganizationName,
+		OrganizationLogin: row.OrganizationLogin,
+		UserID:            row.UserID,
+		Username:          row.Username,
+		Email:             email,
+		InviterID:         row.InviterID,
+		InviterUsername:   row.InviterUsername,
+		Role:              models.OrganizationRole(row.Role),
+		Status:            models.RequestStatus(row.Status),
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}, nil
+}
+
+func (r *OrganizationsRepo) GetPendingInvitation(ctx context.Context, orgID, userID uuid.UUID) (*models.OrganizationInvitation, error) {
+	row, err := r.q.GetPendingOrganizationInvitation(ctx, sqlc.GetPendingOrganizationInvitationParams{
+		OrganizationID: orgID,
+		UserID:         userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get pending organization invitation: %w", err)
+	}
+
+	return r.GetInvitationByID(ctx, row.ID)
+}
+
+func (r *OrganizationsRepo) ListInvitations(ctx context.Context, orgID uuid.UUID, status *string) ([]models.OrganizationInvitation, error) {
+	rows, err := r.q.ListOrganizationInvitations(ctx, sqlc.ListOrganizationInvitationsParams{
+		OrganizationID: orgID,
+		Status:         status,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list organization invitations: %w", err)
+	}
+
+	invitations := make([]models.OrganizationInvitation, len(rows))
+	for i, row := range rows {
+		var email string
+		if row.Email != nil {
+			email = *row.Email
+		}
+		invitations[i] = models.OrganizationInvitation{
+			ID:              row.ID,
+			OrganizationID:  row.OrganizationID,
+			UserID:          row.UserID,
+			Username:        row.Username,
+			Email:           email,
+			InviterID:       row.InviterID,
+			InviterUsername: row.InviterUsername,
+			Role:            models.OrganizationRole(row.Role),
+			Status:          models.RequestStatus(row.Status),
+			CreatedAt:       row.CreatedAt,
+			UpdatedAt:       row.UpdatedAt,
+		}
+	}
+	return invitations, nil
+}
+
+func (r *OrganizationsRepo) ListUserInvitations(ctx context.Context, userID uuid.UUID, status *string) ([]models.OrganizationInvitation, error) {
+	rows, err := r.q.ListUserOrganizationInvitations(ctx, sqlc.ListUserOrganizationInvitationsParams{
+		UserID: userID,
+		Status: status,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list user organization invitations: %w", err)
+	}
+
+	invitations := make([]models.OrganizationInvitation, len(rows))
+	for i, row := range rows {
+		invitations[i] = models.OrganizationInvitation{
+			ID:                    row.ID,
+			OrganizationID:        row.OrganizationID,
+			OrganizationName:      row.OrganizationName,
+			OrganizationLogin:     row.OrganizationLogin,
+			OrganizationAvatarURL: row.OrganizationAvatarUrl,
+			UserID:                row.UserID,
+			InviterID:             row.InviterID,
+			InviterUsername:       row.InviterUsername,
+			Role:                  models.OrganizationRole(row.Role),
+			Status:                models.RequestStatus(row.Status),
+			CreatedAt:             row.CreatedAt,
+			UpdatedAt:             row.UpdatedAt,
+		}
+	}
+	return invitations, nil
+}
+
+func (r *OrganizationsRepo) UpdateInvitationStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus) error {
+	return r.q.UpdateOrganizationInvitationStatus(ctx, sqlc.UpdateOrganizationInvitationStatusParams{
+		ID:     id,
+		Status: string(status),
+	})
+}
+
+// Join Requests
+
+func (r *OrganizationsRepo) CreateJoinRequest(ctx context.Context, input *models.CreateOrganizationJoinRequestInput) (*models.OrganizationJoinRequest, error) {
+	id := uuid.New()
+	row, err := r.q.CreateOrganizationJoinRequest(ctx, sqlc.CreateOrganizationJoinRequestParams{
+		ID:             id,
+		OrganizationID: input.OrganizationID,
+		UserID:         input.UserID,
+		Message:        input.Message,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create organization join request: %w", err)
+	}
+
+	return r.GetJoinRequestByID(ctx, row.ID)
+}
+
+func (r *OrganizationsRepo) GetJoinRequestByID(ctx context.Context, id uuid.UUID) (*models.OrganizationJoinRequest, error) {
+	row, err := r.q.GetOrganizationJoinRequestByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pkg.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get organization join request: %w", err)
+	}
+
+	var email string
+	if row.Email != nil {
+		email = *row.Email
+	}
+
+	var reviewedBy *uuid.UUID
+	if row.ReviewedBy.Valid {
+		id := uuid.UUID(row.ReviewedBy.Bytes)
+		reviewedBy = &id
+	}
+
+	return &models.OrganizationJoinRequest{
+		ID:                row.ID,
+		OrganizationID:    row.OrganizationID,
+		OrganizationName:  row.OrganizationName,
+		OrganizationLogin: row.OrganizationLogin,
+		UserID:            row.UserID,
+		Username:          row.Username,
+		Email:             email,
+		Message:           row.Message,
+		Status:            models.RequestStatus(row.Status),
+		ReviewedBy:        reviewedBy,
+		ReviewerUsername:  row.ReviewerUsername,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}, nil
+}
+
+func (r *OrganizationsRepo) GetPendingJoinRequest(ctx context.Context, orgID, userID uuid.UUID) (*models.OrganizationJoinRequest, error) {
+	row, err := r.q.GetPendingOrganizationJoinRequest(ctx, sqlc.GetPendingOrganizationJoinRequestParams{
+		OrganizationID: orgID,
+		UserID:         userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get pending organization join request: %w", err)
+	}
+
+	return r.GetJoinRequestByID(ctx, row.ID)
+}
+
+func (r *OrganizationsRepo) ListJoinRequests(ctx context.Context, orgID uuid.UUID, status *string) ([]models.OrganizationJoinRequest, error) {
+	rows, err := r.q.ListOrganizationJoinRequests(ctx, sqlc.ListOrganizationJoinRequestsParams{
+		OrganizationID: orgID,
+		Status:         status,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list organization join requests: %w", err)
+	}
+
+	requests := make([]models.OrganizationJoinRequest, len(rows))
+	for i, row := range rows {
+		var email string
+		if row.Email != nil {
+			email = *row.Email
+		}
+		var reviewedBy *uuid.UUID
+		if row.ReviewedBy.Valid {
+			id := uuid.UUID(row.ReviewedBy.Bytes)
+			reviewedBy = &id
+		}
+		requests[i] = models.OrganizationJoinRequest{
+			ID:               row.ID,
+			OrganizationID:   row.OrganizationID,
+			UserID:           row.UserID,
+			Username:         row.Username,
+			Email:            email,
+			Message:          row.Message,
+			Status:           models.RequestStatus(row.Status),
+			ReviewedBy:       reviewedBy,
+			ReviewerUsername: row.ReviewerUsername,
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
+		}
+	}
+	return requests, nil
+}
+
+func (r *OrganizationsRepo) ListUserJoinRequests(ctx context.Context, userID uuid.UUID) ([]models.OrganizationJoinRequest, error) {
+	rows, err := r.q.ListUserOrganizationJoinRequests(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list user organization join requests: %w", err)
+	}
+
+	requests := make([]models.OrganizationJoinRequest, len(rows))
+	for i, row := range rows {
+		requests[i] = models.OrganizationJoinRequest{
+			ID:                row.ID,
+			OrganizationID:    row.OrganizationID,
+			OrganizationName:  row.OrganizationName,
+			OrganizationLogin: row.OrganizationLogin,
+			UserID:            row.UserID,
+			Message:           row.Message,
+			Status:            models.RequestStatus(row.Status),
+			CreatedAt:         row.CreatedAt,
+			UpdatedAt:         row.UpdatedAt,
+		}
+	}
+	return requests, nil
+}
+
+func (r *OrganizationsRepo) UpdateJoinRequestStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus, reviewedBy *uuid.UUID) error {
+	pgReviewedBy := pgtype.UUID{}
+	if reviewedBy != nil {
+		pgReviewedBy = pgtype.UUID{Bytes: *reviewedBy, Valid: true}
+	}
+	return r.q.UpdateOrganizationJoinRequestStatus(ctx, sqlc.UpdateOrganizationJoinRequestStatusParams{
+		ID:         id,
+		Status:     string(status),
+		ReviewedBy: pgReviewedBy,
+	})
 }

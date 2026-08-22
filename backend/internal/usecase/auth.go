@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -58,7 +59,7 @@ func NewAuthUseCase(
 func generateSecureToken() (string, string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("read random bytes: %w", err)
 	}
 	token := hex.EncodeToString(b)
 	hash := sha256.Sum256([]byte(token))
@@ -240,6 +241,7 @@ func (uc *AuthUseCase) VerifyEmail(ctx context.Context, token string) (models.Us
 	expiresAt := time.Now().Add(sessionSoftLifetime)
 	err = uc.authRepo.CreateSession(ctx, sessionID, user.Id, expiresAt)
 	if err != nil {
+		//nolint:nilerr // session creation failure during registration allows user creation to proceed
 		return user, uuid.Nil, nil
 	}
 
@@ -284,7 +286,7 @@ func (uc *AuthUseCase) ResendVerificationEmail(ctx context.Context, identifier s
 func (uc *AuthUseCase) ForgotPassword(ctx context.Context, identifier string) error {
 	user, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, identifier)
 	if err != nil {
-		// Do not reveal if user does not exist
+		//nolint:nilerr // do not reveal if user does not exist to prevent enumeration attacks
 		return nil
 	}
 

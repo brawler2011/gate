@@ -66,6 +66,26 @@ func (m *mockEmailService) SendEmailChangeAlert(ctx context.Context, toOldEmail,
 	return nil
 }
 
+func (m *mockEmailService) SendOrgInvitationEmail(ctx context.Context, toEmail, username, inviterUsername, orgName, orgLogin, role string) error {
+	return nil
+}
+
+func (m *mockEmailService) SendOrgJoinRequestEmail(ctx context.Context, toEmail, reviewerUsername, applicantUsername, orgName, orgLogin string) error {
+	return nil
+}
+
+func (m *mockEmailService) SendOrgJoinRequestResolvedEmail(ctx context.Context, toEmail, username, orgName, orgLogin string, approved bool) error {
+	return nil
+}
+
+func (m *mockEmailService) SendContestJoinRequestEmail(ctx context.Context, toEmail, reviewerUsername, applicantUsername, contestTitle, orgLogin, contestLogin string) error {
+	return nil
+}
+
+func (m *mockEmailService) SendContestJoinRequestResolvedEmail(ctx context.Context, toEmail, username, contestTitle, orgLogin, contestLogin string, approved bool) error {
+	return nil
+}
+
 type fullMockAuthRepo struct {
 	sessions   map[uuid.UUID]models.Session
 	tokens     map[uuid.UUID]models.AuthToken

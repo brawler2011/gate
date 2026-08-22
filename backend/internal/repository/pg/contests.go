@@ -994,5 +994,151 @@ func (r *ContestsRepo) ListContestUserProblemBlocks(ctx context.Context, contest
 	return blocks, nil
 }
 
+func (r *ContestsRepo) CreateContestJoinRequest(ctx context.Context, input *models.CreateContestJoinRequestInput) (*models.ContestJoinRequest, error) {
+	id := uuid.New()
+	row, err := r.queries.CreateContestJoinRequest(ctx, sqlc.CreateContestJoinRequestParams{
+		ID:        id,
+		ContestID: input.ContestID,
+		UserID:    input.UserID,
+		Message:   input.Message,
+	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	return r.GetContestJoinRequestByID(ctx, row.ID)
+}
+
+func (r *ContestsRepo) GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (*models.ContestJoinRequest, error) {
+	row, err := r.queries.GetContestJoinRequestByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, pkg.ErrNotFound
+		}
+		return nil, HandlePgErr(err)
+	}
+
+	var email string
+	if row.Email != nil {
+		email = *row.Email
+	}
+
+	var reviewedBy *uuid.UUID
+	if row.ReviewedBy.Valid {
+		id := uuid.UUID(row.ReviewedBy.Bytes)
+		reviewedBy = &id
+	}
+
+	return &models.ContestJoinRequest{
+		ID:                row.ID,
+		ContestID:         row.ContestID,
+		ContestTitle:      row.ContestTitle,
+		ContestLogin:      row.ContestLogin,
+		OrganizationLogin: row.OrganizationLogin,
+		UserID:            row.UserID,
+		Username:          row.Username,
+		Email:             email,
+		Message:           row.Message,
+		Status:            models.RequestStatus(row.Status),
+		ReviewedBy:        reviewedBy,
+		ReviewerUsername:  row.ReviewerUsername,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}, nil
+}
+
+func (r *ContestsRepo) GetPendingContestJoinRequest(ctx context.Context, contestID, userID uuid.UUID) (*models.ContestJoinRequest, error) {
+	row, err := r.queries.GetPendingContestJoinRequest(ctx, sqlc.GetPendingContestJoinRequestParams{
+		ContestID: contestID,
+		UserID:    userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, HandlePgErr(err)
+	}
+
+	return r.GetContestJoinRequestByID(ctx, row.ID)
+}
+
+func (r *ContestsRepo) ListContestJoinRequests(ctx context.Context, contestID uuid.UUID, status *string) ([]models.ContestJoinRequest, error) {
+	rows, err := r.queries.ListContestJoinRequests(ctx, sqlc.ListContestJoinRequestsParams{
+		ContestID: contestID,
+		Status:    status,
+	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	requests := make([]models.ContestJoinRequest, len(rows))
+	for i, row := range rows {
+		var email string
+		if row.Email != nil {
+			email = *row.Email
+		}
+		var reviewedBy *uuid.UUID
+		if row.ReviewedBy.Valid {
+			id := uuid.UUID(row.ReviewedBy.Bytes)
+			reviewedBy = &id
+		}
+		requests[i] = models.ContestJoinRequest{
+			ID:               row.ID,
+			ContestID:        row.ContestID,
+			UserID:           row.UserID,
+			Username:         row.Username,
+			Email:            email,
+			Message:          row.Message,
+			Status:           models.RequestStatus(row.Status),
+			ReviewedBy:       reviewedBy,
+			ReviewerUsername: row.ReviewerUsername,
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
+		}
+	}
+	return requests, nil
+}
+
+func (r *ContestsRepo) ListUserContestJoinRequests(ctx context.Context, userID uuid.UUID) ([]models.ContestJoinRequest, error) {
+	rows, err := r.queries.ListUserContestJoinRequests(ctx, userID)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+
+	requests := make([]models.ContestJoinRequest, len(rows))
+	for i, row := range rows {
+		requests[i] = models.ContestJoinRequest{
+			ID:                row.ID,
+			ContestID:         row.ContestID,
+			ContestTitle:      row.ContestTitle,
+			ContestLogin:      row.ContestLogin,
+			OrganizationLogin: row.OrganizationLogin,
+			UserID:            row.UserID,
+			Message:           row.Message,
+			Status:            models.RequestStatus(row.Status),
+			CreatedAt:         row.CreatedAt,
+			UpdatedAt:         row.UpdatedAt,
+		}
+	}
+	return requests, nil
+}
+
+func (r *ContestsRepo) UpdateContestJoinRequestStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus, reviewedBy *uuid.UUID) error {
+	pgReviewedBy := pgtype.UUID{}
+	if reviewedBy != nil {
+		pgReviewedBy = pgtype.UUID{Bytes: *reviewedBy, Valid: true}
+	}
+	err := r.queries.UpdateContestJoinRequestStatus(ctx, sqlc.UpdateContestJoinRequestStatusParams{
+		ID:         id,
+		Status:     string(status),
+		ReviewedBy: pgReviewedBy,
+	})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+
+
 
 

@@ -25,6 +25,22 @@ type OrganizationsRepo interface {
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.Organization, error)
 	ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, bool, error)
 
+	// Invitations
+	CreateInvitation(ctx context.Context, input *models.CreateOrganizationInvitationInput) (*models.OrganizationInvitation, error)
+	GetInvitationByID(ctx context.Context, id uuid.UUID) (*models.OrganizationInvitation, error)
+	GetPendingInvitation(ctx context.Context, orgID, userID uuid.UUID) (*models.OrganizationInvitation, error)
+	ListInvitations(ctx context.Context, orgID uuid.UUID, status *string) ([]models.OrganizationInvitation, error)
+	ListUserInvitations(ctx context.Context, userID uuid.UUID, status *string) ([]models.OrganizationInvitation, error)
+	UpdateInvitationStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus) error
+
+	// Join Requests
+	CreateJoinRequest(ctx context.Context, input *models.CreateOrganizationJoinRequestInput) (*models.OrganizationJoinRequest, error)
+	GetJoinRequestByID(ctx context.Context, id uuid.UUID) (*models.OrganizationJoinRequest, error)
+	GetPendingJoinRequest(ctx context.Context, orgID, userID uuid.UUID) (*models.OrganizationJoinRequest, error)
+	ListJoinRequests(ctx context.Context, orgID uuid.UUID, status *string) ([]models.OrganizationJoinRequest, error)
+	ListUserJoinRequests(ctx context.Context, userID uuid.UUID) ([]models.OrganizationJoinRequest, error)
+	UpdateJoinRequestStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus, reviewedBy *uuid.UUID) error
+
 	WithTx(tx pgx.Tx) OrganizationsRepo
 }
 
@@ -49,5 +65,19 @@ type OrganizationsUC interface {
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.Organization, error)
 	ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, error)
 	BatchCreateUsers(ctx context.Context, input models.BatchCreateOrganizationUsersInput, requestUserID uuid.UUID) (*models.BatchCreateOrganizationUsersResult, error)
-}
 
+	// Invitations
+	InviteMember(ctx context.Context, orgLogin string, targetUserID uuid.UUID, role models.OrganizationRole, inviterID uuid.UUID) (*models.OrganizationInvitation, error)
+	ListInvitations(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]models.OrganizationInvitation, error)
+	CancelInvitation(ctx context.Context, orgLogin string, invitationID, requestUserID uuid.UUID) error
+	AcceptInvitation(ctx context.Context, invitationID, requestUserID uuid.UUID) error
+	DeclineInvitation(ctx context.Context, invitationID, requestUserID uuid.UUID) error
+
+	// Join Requests
+	CreateJoinRequest(ctx context.Context, orgLogin string, userID uuid.UUID, message *string) (*models.OrganizationJoinRequest, bool, error)
+	ListJoinRequests(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]models.OrganizationJoinRequest, error)
+	CancelJoinRequest(ctx context.Context, orgLogin string, requestUserID uuid.UUID) error
+	ApproveJoinRequest(ctx context.Context, orgLogin string, requestID, reviewerID uuid.UUID, role models.OrganizationRole) error
+	RejectJoinRequest(ctx context.Context, orgLogin string, requestID, reviewerID uuid.UUID) error
+	GetMyPendingJoinRequest(ctx context.Context, orgLogin string, userID uuid.UUID) (*models.OrganizationJoinRequest, error)
+}

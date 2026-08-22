@@ -82,7 +82,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 	t.Run("Participant Requesting unfrozen=true Is Rejected (403 Forbidden)", func(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		user := models.User{
 			Id:   participantID,
@@ -115,7 +115,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		t.Parallel()
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		user := models.User{
 			Id:   participantID,
@@ -157,7 +157,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		t.Parallel()
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		user := models.User{
 			Id:   moderatorID,
@@ -200,7 +200,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		t.Parallel()
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		user := models.User{
 			Id:   adminID,
@@ -238,7 +238,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 	t.Run("Contest Not Started - Non-Manager Blocked (403)", func(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		futureStart := time.Now().Add(1 * time.Hour)
 		futureContest := models.Contest{
@@ -274,7 +274,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		t.Parallel()
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		futureStart := time.Now().Add(1 * time.Hour)
 		futureContest := models.Contest{
@@ -310,7 +310,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 	t.Run("User Lacking ActionGetMonitor Blocked (403)", func(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		user := models.User{
 			Id:   participantID,

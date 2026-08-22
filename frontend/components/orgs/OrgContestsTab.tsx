@@ -6,6 +6,7 @@ import {useRouter, useSearchParams} from "next/navigation";
 import {useCallback, useEffect, useRef, useState} from "react";
 
 import {ContestsTable} from "@/components/contests/ContestsTable";
+import {OrgJoinButton} from "@/components/orgs/OrgJoinButton";
 import {NextPagination} from "@/components/shared/Pagination";
 import {CreateContestModal} from "@/components/workshop/CreateContestModal";
 
@@ -90,17 +91,20 @@ export const OrgContestsTab = ({
           size="md"
           style={{flex: 1}}
         />
-        {isAuthenticated && (
-          <Button
-            title="Создать новый контест"
-            onClick={() => setCreateOpened(true)}
-            size="md"
-            leftSection={<IconPlus size={18} />}
-            radius="md"
-          >
-            Создать контест
-          </Button>
-        )}
+        <Group gap="sm">
+          <OrgJoinButton org={org} isAuthenticated={isAuthenticated} />
+          {isAuthenticated && (
+            <Button
+              title="Создать новый контест"
+              onClick={() => setCreateOpened(true)}
+              size="md"
+              leftSection={<IconPlus size={18} />}
+              radius="md"
+            >
+              Создать контест
+            </Button>
+          )}
+        </Group>
       </Group>
 
       {contests.length === 0 ? (

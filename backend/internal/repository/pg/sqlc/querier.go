@@ -41,6 +41,7 @@ type Querier interface {
 	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
 	CountContests(ctx context.Context, arg CountContestsParams) (int64, error)
 	CountDrafts(ctx context.Context, arg CountDraftsParams) (int64, error)
+	CountNotificationsByUserID(ctx context.Context, arg CountNotificationsByUserIDParams) (int64, error)
 	CountOrganizations(ctx context.Context, dollar_1 string) (int64, error)
 	CountPosts(ctx context.Context) (int64, error)
 	CountProblems(ctx context.Context, arg CountProblemsParams) (int64, error)
@@ -49,11 +50,26 @@ type Querier interface {
 	CreateAuthToken(ctx context.Context, arg CreateAuthTokenParams) error
 	// Contests queries (new schema with Organizations)
 	CreateContest(ctx context.Context, arg CreateContestParams) (Contest, error)
+	// ============================================================================
+	// Contest Join Requests
+	// ============================================================================
+	CreateContestJoinRequest(ctx context.Context, arg CreateContestJoinRequestParams) (ContestJoinRequest, error)
 	// Contest User Problem Blocks
 	CreateContestUserProblemBlock(ctx context.Context, arg CreateContestUserProblemBlockParams) error
 	CreateDraft(ctx context.Context, arg CreateDraftParams) (uuid.UUID, error)
+	// Notifications queries
+	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	// Organizations queries
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
+	// Invitations & Join Requests queries
+	// ============================================================================
+	// Organization Invitations
+	// ============================================================================
+	CreateOrganizationInvitation(ctx context.Context, arg CreateOrganizationInvitationParams) (OrganizationInvitation, error)
+	// ============================================================================
+	// Organization Join Requests
+	// ============================================================================
+	CreateOrganizationJoinRequest(ctx context.Context, arg CreateOrganizationJoinRequestParams) (OrganizationJoinRequest, error)
 	CreatePost(ctx context.Context, arg CreatePostParams) (uuid.UUID, error)
 	// Problems queries (new schema with Organizations)
 	CreateProblem(ctx context.Context, arg CreateProblemParams) (Problem, error)
@@ -81,6 +97,7 @@ type Querier interface {
 	GetContestByID(ctx context.Context, id uuid.UUID) (GetContestByIDRow, error)
 	GetContestByLogin(ctx context.Context, arg GetContestByLoginParams) (GetContestByLoginRow, error)
 	GetContestByOrgLoginAndContestLogin(ctx context.Context, arg GetContestByOrgLoginAndContestLoginParams) (GetContestByOrgLoginAndContestLoginRow, error)
+	GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (GetContestJoinRequestByIDRow, error)
 	GetContestMember(ctx context.Context, arg GetContestMemberParams) (ContestMember, error)
 	GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error)
 	GetContestProblemResult(ctx context.Context, arg GetContestProblemResultParams) (ContestProblemResult, error)
@@ -90,9 +107,15 @@ type Querier interface {
 	GetDraft(ctx context.Context, id uuid.UUID) (GetDraftRow, error)
 	GetDraftsCount(ctx context.Context, arg GetDraftsCountParams) (int64, error)
 	GetLatestUserOrganizationID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
+	GetNotificationByID(ctx context.Context, arg GetNotificationByIDParams) (Notification, error)
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organization, error)
 	GetOrganizationByLogin(ctx context.Context, lower string) (Organization, error)
+	GetOrganizationInvitationByID(ctx context.Context, id uuid.UUID) (GetOrganizationInvitationByIDRow, error)
+	GetOrganizationJoinRequestByID(ctx context.Context, id uuid.UUID) (GetOrganizationJoinRequestByIDRow, error)
 	GetOrganizationMember(ctx context.Context, arg GetOrganizationMemberParams) (OrganizationMember, error)
+	GetPendingContestJoinRequest(ctx context.Context, arg GetPendingContestJoinRequestParams) (ContestJoinRequest, error)
+	GetPendingOrganizationInvitation(ctx context.Context, arg GetPendingOrganizationInvitationParams) (OrganizationInvitation, error)
+	GetPendingOrganizationJoinRequest(ctx context.Context, arg GetPendingOrganizationJoinRequestParams) (OrganizationJoinRequest, error)
 	GetPostByID(ctx context.Context, id uuid.UUID) (Post, error)
 	GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemByIDRow, error)
 	GetProblemByShortName(ctx context.Context, arg GetProblemByShortNameParams) (GetProblemByShortNameRow, error)
@@ -112,6 +135,7 @@ type Querier interface {
 	GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]Contest, error)
 	GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (TeamMember, error)
 	GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]Problem, error)
+	GetUnreadNotificationsCount(ctx context.Context, userID uuid.UUID) (int64, error)
 	GetUserById(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	GetUserByUsernameOrEmail(ctx context.Context, identifier string) (User, error)
@@ -122,6 +146,7 @@ type Querier interface {
 	ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]ListAllContestsRow, error)
 	ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error)
 	ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]User, error)
+	ListContestJoinRequests(ctx context.Context, arg ListContestJoinRequestsParams) ([]ListContestJoinRequestsRow, error)
 	ListContestMembers(ctx context.Context, contestID uuid.UUID) ([]ListContestMembersRow, error)
 	ListContestProblems(ctx context.Context, contestID uuid.UUID) ([]ListContestProblemsRow, error)
 	ListContestTeams(ctx context.Context, contestID uuid.UUID) ([]ListContestTeamsRow, error)
@@ -131,6 +156,9 @@ type Querier interface {
 	ListDashboardProblems(ctx context.Context, arg ListDashboardProblemsParams) ([]ListDashboardProblemsRow, error)
 	ListDrafts(ctx context.Context, arg ListDraftsParams) ([]ListDraftsRow, error)
 	ListExistingUsernamesByPrefix(ctx context.Context, prefix string) ([]string, error)
+	ListNotificationsByUserID(ctx context.Context, arg ListNotificationsByUserIDParams) ([]Notification, error)
+	ListOrganizationInvitations(ctx context.Context, arg ListOrganizationInvitationsParams) ([]ListOrganizationInvitationsRow, error)
+	ListOrganizationJoinRequests(ctx context.Context, arg ListOrganizationJoinRequestsParams) ([]ListOrganizationJoinRequestsRow, error)
 	ListOrganizationMembers(ctx context.Context, organizationID uuid.UUID) ([]ListOrganizationMembersRow, error)
 	ListOrganizationTeams(ctx context.Context, organizationID uuid.UUID) ([]Team, error)
 	ListOrganizations(ctx context.Context, arg ListOrganizationsParams) ([]Organization, error)
@@ -146,10 +174,15 @@ type Querier interface {
 	ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]ListUserAccessibleContestsRow, error)
 	ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]ListUserAccessibleContestsByOrgRow, error)
 	ListUserAccessibleProblems(ctx context.Context, arg ListUserAccessibleProblemsParams) ([]ListUserAccessibleProblemsRow, error)
+	ListUserContestJoinRequests(ctx context.Context, userID uuid.UUID) ([]ListUserContestJoinRequestsRow, error)
 	ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]ListUserContestMembershipsRow, error)
+	ListUserOrganizationInvitations(ctx context.Context, arg ListUserOrganizationInvitationsParams) ([]ListUserOrganizationInvitationsRow, error)
+	ListUserOrganizationJoinRequests(ctx context.Context, userID uuid.UUID) ([]ListUserOrganizationJoinRequestsRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) error
 	MarkAsCompleted(ctx context.Context, id uuid.UUID) error
 	MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) error
+	MarkNotificationAsRead(ctx context.Context, arg MarkNotificationAsReadParams) error
 	PickEvents(ctx context.Context, arg PickEventsParams) ([]OutboxEvent, error)
 	RemoveContestMember(ctx context.Context, arg RemoveContestMemberParams) error
 	RemoveContestMembersByOrgAndUser(ctx context.Context, arg RemoveContestMembersByOrgAndUserParams) error
@@ -165,11 +198,14 @@ type Querier interface {
 	ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]uuid.UUID, error)
 	SetUserEmailVerified(ctx context.Context, arg SetUserEmailVerifiedParams) error
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error
+	UpdateContestJoinRequestStatus(ctx context.Context, arg UpdateContestJoinRequestStatusParams) error
 	UpdateContestMemberRole(ctx context.Context, arg UpdateContestMemberRoleParams) error
 	UpdateContestProblemOrdinal(ctx context.Context, arg UpdateContestProblemOrdinalParams) error
 	UpdateContestProblemPackage(ctx context.Context, arg UpdateContestProblemPackageParams) error
 	UpdateContestTeamRole(ctx context.Context, arg UpdateContestTeamRoleParams) error
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error
+	UpdateOrganizationInvitationStatus(ctx context.Context, arg UpdateOrganizationInvitationStatusParams) error
+	UpdateOrganizationJoinRequestStatus(ctx context.Context, arg UpdateOrganizationJoinRequestStatusParams) error
 	UpdateOrganizationMemberRole(ctx context.Context, arg UpdateOrganizationMemberRoleParams) error
 	UpdatePackageStatus(ctx context.Context, arg UpdatePackageStatusParams) error
 	UpdatePost(ctx context.Context, arg UpdatePostParams) error

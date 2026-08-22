@@ -44,17 +44,18 @@ func (q *Queries) CountOrganizations(ctx context.Context, dollar_1 string) (int6
 
 const createOrganization = `-- name: CreateOrganization :one
 
-INSERT INTO organizations (id, login, name, description, avatar_url)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, login, name, description, avatar_url, created_at, updated_at
+INSERT INTO organizations (id, login, name, description, avatar_url, join_policy)
+VALUES ($1, $2, $3, $4, $5, COALESCE($6, 'by_request'))
+RETURNING id, login, name, description, avatar_url, created_at, updated_at, join_policy
 `
 
 type CreateOrganizationParams struct {
-	ID          uuid.UUID `json:"id"`
-	Login       string    `json:"login"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	AvatarUrl   *string   `json:"avatar_url"`
+	ID          uuid.UUID   `json:"id"`
+	Login       string      `json:"login"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	AvatarUrl   *string     `json:"avatar_url"`
+	Column6     interface{} `json:"column_6"`
 }
 
 // Organizations queries
@@ -65,6 +66,7 @@ func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganization
 		arg.Name,
 		arg.Description,
 		arg.AvatarUrl,
+		arg.Column6,
 	)
 	var i Organization
 	err := row.Scan(
@@ -75,6 +77,7 @@ func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganization
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JoinPolicy,
 	)
 	return i, err
 }
@@ -104,7 +107,7 @@ func (q *Queries) GetLatestUserOrganizationID(ctx context.Context, userID uuid.U
 }
 
 const getOrganizationByID = `-- name: GetOrganizationByID :one
-SELECT id, login, name, description, avatar_url, created_at, updated_at FROM organizations WHERE id = $1
+SELECT id, login, name, description, avatar_url, created_at, updated_at, join_policy FROM organizations WHERE id = $1
 `
 
 func (q *Queries) GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organization, error) {
@@ -118,12 +121,13 @@ func (q *Queries) GetOrganizationByID(ctx context.Context, id uuid.UUID) (Organi
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JoinPolicy,
 	)
 	return i, err
 }
 
 const getOrganizationByLogin = `-- name: GetOrganizationByLogin :one
-SELECT id, login, name, description, avatar_url, created_at, updated_at FROM organizations WHERE LOWER(login) = LOWER($1)
+SELECT id, login, name, description, avatar_url, created_at, updated_at, join_policy FROM organizations WHERE LOWER(login) = LOWER($1)
 `
 
 func (q *Queries) GetOrganizationByLogin(ctx context.Context, lower string) (Organization, error) {
@@ -137,6 +141,7 @@ func (q *Queries) GetOrganizationByLogin(ctx context.Context, lower string) (Org
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JoinPolicy,
 	)
 	return i, err
 }
@@ -183,7 +188,7 @@ func (q *Queries) GetSpecificUserOrganizationID(ctx context.Context, arg GetSpec
 }
 
 const getUserOrganizations = `-- name: GetUserOrganizations :many
-SELECT o.id, o.login, o.name, o.description, o.avatar_url, o.created_at, o.updated_at FROM organizations o
+SELECT o.id, o.login, o.name, o.description, o.avatar_url, o.created_at, o.updated_at, o.join_policy FROM organizations o
 INNER JOIN organization_members om ON o.id = om.organization_id
 WHERE om.user_id = $1
 ORDER BY o.created_at DESC
@@ -206,6 +211,7 @@ func (q *Queries) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([
 			&i.AvatarUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.JoinPolicy,
 		); err != nil {
 			return nil, err
 		}
@@ -263,7 +269,7 @@ func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID uu
 }
 
 const listOrganizations = `-- name: ListOrganizations :many
-SELECT id, login, name, description, avatar_url, created_at, updated_at FROM organizations
+SELECT id, login, name, description, avatar_url, created_at, updated_at, join_policy FROM organizations
 WHERE ($1::text = '' OR name ILIKE '%' || $1 || '%')
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -292,6 +298,7 @@ func (q *Queries) ListOrganizations(ctx context.Context, arg ListOrganizationsPa
 			&i.AvatarUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.JoinPolicy,
 		); err != nil {
 			return nil, err
 		}
@@ -371,7 +378,8 @@ UPDATE organizations
 SET login = COALESCE($2, login),
     name = COALESCE($3, name),
     description = COALESCE($4, description),
-    avatar_url = COALESCE($5, avatar_url)
+    avatar_url = COALESCE($5, avatar_url),
+    join_policy = COALESCE($6, join_policy)
 WHERE id = $1
 `
 
@@ -381,6 +389,7 @@ type UpdateOrganizationParams struct {
 	Name        *string   `json:"name"`
 	Description *string   `json:"description"`
 	AvatarUrl   *string   `json:"avatar_url"`
+	JoinPolicy  *string   `json:"join_policy"`
 }
 
 func (q *Queries) UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error {
@@ -390,6 +399,7 @@ func (q *Queries) UpdateOrganization(ctx context.Context, arg UpdateOrganization
 		arg.Name,
 		arg.Description,
 		arg.AvatarUrl,
+		arg.JoinPolicy,
 	)
 	return err
 }

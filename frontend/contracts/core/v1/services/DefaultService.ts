@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { AdminChangeEmailRequestModel } from '../models/AdminChangeEmailRequestModel';
 import type { AdminSetPasswordRequestModel } from '../models/AdminSetPasswordRequestModel';
+import type { ApproveOrganizationJoinRequestModel } from '../models/ApproveOrganizationJoinRequestModel';
 import type { AuthResponseModel } from '../models/AuthResponseModel';
 import type { BatchCreateOrganizationUsersRequestModel } from '../models/BatchCreateOrganizationUsersRequestModel';
 import type { BatchCreateOrganizationUsersResponseModel } from '../models/BatchCreateOrganizationUsersResponseModel';
@@ -14,8 +15,12 @@ import type { ClaimTemporaryUserRequestModel } from '../models/ClaimTemporaryUse
 import type { ClaimTemporaryUserResponseModel } from '../models/ClaimTemporaryUserResponseModel';
 import type { CompileResult } from '../models/CompileResult';
 import type { ConfirmEmailChangeRequestModel } from '../models/ConfirmEmailChangeRequestModel';
+import type { ContestJoinRequestNullableResponseModel } from '../models/ContestJoinRequestNullableResponseModel';
+import type { ContestJoinRequestResponseModel } from '../models/ContestJoinRequestResponseModel';
 import type { CreateContestDraftRequestModel } from '../models/CreateContestDraftRequestModel';
+import type { CreateContestJoinRequestModel } from '../models/CreateContestJoinRequestModel';
 import type { CreatedPost } from '../models/CreatedPost';
+import type { CreateOrganizationJoinRequestModel } from '../models/CreateOrganizationJoinRequestModel';
 import type { CreateOrganizationResponseModel } from '../models/CreateOrganizationResponseModel';
 import type { CreateSubmissionRequestModel } from '../models/CreateSubmissionRequestModel';
 import type { CreationResponseModel } from '../models/CreationResponseModel';
@@ -30,11 +35,15 @@ import type { GetSubmissionResponseModel } from '../models/GetSubmissionResponse
 import type { GetTeamResponseModel } from '../models/GetTeamResponseModel';
 import type { GetUserDashboardResponseModel } from '../models/GetUserDashboardResponseModel';
 import type { GetUserResponseModel } from '../models/GetUserResponseModel';
+import type { InviteOrganizationMemberRequestModel } from '../models/InviteOrganizationMemberRequestModel';
 import type { ListClaimedAccountsResponseModel } from '../models/ListClaimedAccountsResponseModel';
 import type { ListContestDraftsResponseModel } from '../models/ListContestDraftsResponseModel';
+import type { ListContestJoinRequestsResponseModel } from '../models/ListContestJoinRequestsResponseModel';
 import type { ListContestMembersResponseModel } from '../models/ListContestMembersResponseModel';
 import type { ListContestsResponseModel } from '../models/ListContestsResponseModel';
 import type { ListContestTeamsResponseModel } from '../models/ListContestTeamsResponseModel';
+import type { ListOrganizationInvitationsResponseModel } from '../models/ListOrganizationInvitationsResponseModel';
+import type { ListOrganizationJoinRequestsResponseModel } from '../models/ListOrganizationJoinRequestsResponseModel';
 import type { ListOrganizationMembersResponseModel } from '../models/ListOrganizationMembersResponseModel';
 import type { ListOrganizationsResponseModel } from '../models/ListOrganizationsResponseModel';
 import type { ListPostsResponseModel } from '../models/ListPostsResponseModel';
@@ -48,6 +57,10 @@ import type { ListUserContestsResponseModel } from '../models/ListUserContestsRe
 import type { ListUsersResponseModel } from '../models/ListUsersResponseModel';
 import type { LoginRequestModel } from '../models/LoginRequestModel';
 import type { MessageResponse } from '../models/MessageResponse';
+import type { NotificationsListResponseModel } from '../models/NotificationsListResponseModel';
+import type { OrganizationInvitationModel } from '../models/OrganizationInvitationModel';
+import type { OrganizationJoinRequestNullableResponseModel } from '../models/OrganizationJoinRequestNullableResponseModel';
+import type { OrganizationJoinRequestResponseModel } from '../models/OrganizationJoinRequestResponseModel';
 import type { PostModel } from '../models/PostModel';
 import type { ProblemBlockStatusResponseModel } from '../models/ProblemBlockStatusResponseModel';
 import type { ProblemLimits } from '../models/ProblemLimits';
@@ -61,6 +74,7 @@ import type { ResetPasswordRequestModel } from '../models/ResetPasswordRequestMo
 import type { ScoreboardResponseModel } from '../models/ScoreboardResponseModel';
 import type { SupportedLanguagesResponse } from '../models/SupportedLanguagesResponse';
 import type { TestReport } from '../models/TestReport';
+import type { UnreadNotificationsCountResponseModel } from '../models/UnreadNotificationsCountResponseModel';
 import type { UpdateContestRequestModel } from '../models/UpdateContestRequestModel';
 import type { UpdateOrganizationRequestModel } from '../models/UpdateOrganizationRequestModel';
 import type { UpdateProblemLimitsRequest } from '../models/UpdateProblemLimitsRequest';
@@ -1238,6 +1252,142 @@ export class DefaultService {
                 'org_login': orgLogin,
                 'contest_login': contestLogin,
                 'draft_id': draftId,
+            },
+        });
+    }
+    /**
+     * List pending contest join requests
+     * @returns ListContestJoinRequestsResponseModel List of contest join requests
+     * @throws ApiError
+     */
+    public listContestJoinRequests({
+        orgLogin,
+        contestLogin,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+    }): CancelablePromise<ListContestJoinRequestsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{org_login}/contests/{contest_login}/requests',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+        });
+    }
+    /**
+     * Request to participate in contest
+     * @returns ContestJoinRequestResponseModel Request created or user registered
+     * @throws ApiError
+     */
+    public createContestJoinRequest({
+        orgLogin,
+        contestLogin,
+        requestBody,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        requestBody?: CreateContestJoinRequestModel,
+    }): CancelablePromise<ContestJoinRequestResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/requests',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Get my pending contest join request
+     * @returns ContestJoinRequestNullableResponseModel My pending contest join request
+     * @throws ApiError
+     */
+    public getMyContestJoinRequest({
+        orgLogin,
+        contestLogin,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+    }): CancelablePromise<ContestJoinRequestNullableResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{org_login}/contests/{contest_login}/requests/mine',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+        });
+    }
+    /**
+     * Cancel my contest join request
+     * @returns any Request canceled
+     * @throws ApiError
+     */
+    public cancelContestJoinRequest({
+        orgLogin,
+        contestLogin,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/organizations/{org_login}/contests/{contest_login}/requests/mine',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+            },
+        });
+    }
+    /**
+     * Approve contest join request
+     * @returns any Request approved
+     * @throws ApiError
+     */
+    public approveContestJoinRequest({
+        orgLogin,
+        contestLogin,
+        id,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/requests/{id}/approve',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'id': id,
+            },
+        });
+    }
+    /**
+     * Reject contest join request
+     * @returns any Request rejected
+     * @throws ApiError
+     */
+    public rejectContestJoinRequest({
+        orgLogin,
+        contestLogin,
+        id,
+    }: {
+        orgLogin: string,
+        contestLogin: string,
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{org_login}/contests/{contest_login}/requests/{id}/reject',
+            path: {
+                'org_login': orgLogin,
+                'contest_login': contestLogin,
+                'id': id,
             },
         });
     }
@@ -3017,9 +3167,11 @@ export class DefaultService {
     public createOrganization({
         name,
         login,
+        joinPolicy,
     }: {
         name: string,
         login?: string,
+        joinPolicy?: 'open' | 'by_request' | 'invite_only',
     }): CancelablePromise<CreateOrganizationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
@@ -3027,6 +3179,7 @@ export class DefaultService {
             query: {
                 'name': name,
                 'login': login,
+                'join_policy': joinPolicy,
             },
         });
     }
@@ -3183,6 +3336,289 @@ export class DefaultService {
             },
             body: requestBody,
             mediaType: 'application/json',
+        });
+    }
+    /**
+     * List pending organization invitations
+     * @returns ListOrganizationInvitationsResponseModel List of invitations
+     * @throws ApiError
+     */
+    public listOrganizationInvitations({
+        login,
+    }: {
+        login: string,
+    }): CancelablePromise<ListOrganizationInvitationsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{login}/invitations',
+            path: {
+                'login': login,
+            },
+        });
+    }
+    /**
+     * Invite user to organization
+     * @returns OrganizationInvitationModel Invitation sent
+     * @throws ApiError
+     */
+    public inviteOrganizationMember({
+        login,
+        requestBody,
+    }: {
+        login: string,
+        requestBody: InviteOrganizationMemberRequestModel,
+    }): CancelablePromise<OrganizationInvitationModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{login}/invitations',
+            path: {
+                'login': login,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Cancel organization invitation
+     * @returns any Invitation canceled
+     * @throws ApiError
+     */
+    public cancelOrganizationInvitation({
+        login,
+        id,
+    }: {
+        login: string,
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/organizations/{login}/invitations/{id}',
+            path: {
+                'login': login,
+                'id': id,
+            },
+        });
+    }
+    /**
+     * Accept organization invitation
+     * @returns any Invitation accepted
+     * @throws ApiError
+     */
+    public acceptOrganizationInvitation({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/invitations/{id}/accept',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * Decline organization invitation
+     * @returns any Invitation declined
+     * @throws ApiError
+     */
+    public declineOrganizationInvitation({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/invitations/{id}/decline',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * List pending organization join requests
+     * @returns ListOrganizationJoinRequestsResponseModel List of join requests
+     * @throws ApiError
+     */
+    public listOrganizationJoinRequests({
+        login,
+    }: {
+        login: string,
+    }): CancelablePromise<ListOrganizationJoinRequestsResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{login}/requests',
+            path: {
+                'login': login,
+            },
+        });
+    }
+    /**
+     * Request to join organization
+     * @returns OrganizationJoinRequestResponseModel Request submitted or user joined
+     * @throws ApiError
+     */
+    public createOrganizationJoinRequest({
+        login,
+        requestBody,
+    }: {
+        login: string,
+        requestBody?: CreateOrganizationJoinRequestModel,
+    }): CancelablePromise<OrganizationJoinRequestResponseModel> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{login}/requests',
+            path: {
+                'login': login,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Get my pending join request to organization
+     * @returns OrganizationJoinRequestNullableResponseModel My pending join request
+     * @throws ApiError
+     */
+    public getMyOrganizationJoinRequest({
+        login,
+    }: {
+        login: string,
+    }): CancelablePromise<OrganizationJoinRequestNullableResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/organizations/{login}/requests/mine',
+            path: {
+                'login': login,
+            },
+        });
+    }
+    /**
+     * Cancel my join request to organization
+     * @returns any Request canceled
+     * @throws ApiError
+     */
+    public cancelOrganizationJoinRequest({
+        login,
+    }: {
+        login: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/organizations/{login}/requests/mine',
+            path: {
+                'login': login,
+            },
+        });
+    }
+    /**
+     * Approve organization join request
+     * @returns any Request approved
+     * @throws ApiError
+     */
+    public approveOrganizationJoinRequest({
+        login,
+        id,
+        requestBody,
+    }: {
+        login: string,
+        id: string,
+        requestBody?: ApproveOrganizationJoinRequestModel,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{login}/requests/{id}/approve',
+            path: {
+                'login': login,
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Reject organization join request
+     * @returns any Request rejected
+     * @throws ApiError
+     */
+    public rejectOrganizationJoinRequest({
+        login,
+        id,
+    }: {
+        login: string,
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/organizations/{login}/requests/{id}/reject',
+            path: {
+                'login': login,
+                'id': id,
+            },
+        });
+    }
+    /**
+     * List user notifications
+     * @returns NotificationsListResponseModel List of notifications
+     * @throws ApiError
+     */
+    public listNotifications({
+        page = 1,
+        pageSize = 20,
+        unreadOnly,
+    }: {
+        page?: number,
+        pageSize?: number,
+        unreadOnly?: boolean,
+    }): CancelablePromise<NotificationsListResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/notifications',
+            query: {
+                'page': page,
+                'pageSize': pageSize,
+                'unread_only': unreadOnly,
+            },
+        });
+    }
+    /**
+     * Get count of unread notifications
+     * @returns UnreadNotificationsCountResponseModel Unread notifications count
+     * @throws ApiError
+     */
+    public getUnreadNotificationsCount(): CancelablePromise<UnreadNotificationsCountResponseModel> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/notifications/unread-count',
+        });
+    }
+    /**
+     * Mark a notification as read
+     * @returns any Notification marked as read
+     * @throws ApiError
+     */
+    public markNotificationAsRead({
+        id,
+    }: {
+        id: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/notifications/{id}/read',
+            path: {
+                'id': id,
+            },
+        });
+    }
+    /**
+     * Mark all notifications as read
+     * @returns any All notifications marked as read
+     * @throws ApiError
+     */
+    public markAllNotificationsAsRead(): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/notifications/read-all',
         });
     }
     /**

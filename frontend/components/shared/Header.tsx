@@ -4,6 +4,7 @@ import {
   ActionIcon,
   Anchor,
   Avatar,
+  Badge,
   Box,
   Burger,
   Button,
@@ -12,6 +13,7 @@ import {
   Drawer,
   Group,
   Image,
+  Indicator,
   Loader,
   Menu,
   ScrollArea,
@@ -23,6 +25,7 @@ import {
 } from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {
+  IconBell,
   IconBuilding,
   IconLogout,
   IconMoon,
@@ -38,6 +41,7 @@ import {useState, type ReactNode} from "react";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 import {useSession} from "@/contexts/SessionContext";
+import {useUnreadNotificationsCount} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
@@ -68,6 +72,7 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
   const router = useRouter();
   const {user: sessionUser, setUser, isLoading} = useSession();
   const user = propUser !== undefined ? propUser : sessionUser;
+  const {unreadCount} = useUnreadNotificationsCount(Boolean(user));
   const [logoutLoading, setLogoutLoading] = useState(false);
 
   const getReturnUrl = () => {
@@ -117,10 +122,31 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
 
   if (user) {
     return (
-      <Group justify="flex-end">
+      <Group justify="flex-end" gap="xs">
+        <Indicator
+          disabled={unreadCount === 0}
+          label={unreadCount > 99 ? "99+" : unreadCount}
+          size={16}
+          offset={4}
+          color="red"
+          withBorder
+        >
+          <ActionIcon
+            component={Link}
+            href="/notifications"
+            variant="subtle"
+            color="gray"
+            size={36}
+            radius="xl"
+            aria-label="Уведомления"
+          >
+            <IconBell size={20} />
+          </ActionIcon>
+        </Indicator>
+
         <Menu
           shadow="md"
-          width={200}
+          width={220}
           position="bottom-end"
           transitionProps={{transition: "pop-top-right"}}
         >
@@ -145,6 +171,21 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
 
             <Menu.Item
               component={Link}
+              href="/notifications"
+              leftSection={<IconBell size={16} />}
+              rightSection={
+                unreadCount > 0 ? (
+                  <Badge size="xs" color="red" circle>
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Badge>
+                ) : null
+              }
+            >
+              Уведомления
+            </Menu.Item>
+
+            <Menu.Item
+              component={Link}
               href="/orgs"
               leftSection={<IconBuilding size={16} />}
             >
@@ -160,7 +201,6 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
             </Menu.Item>
 
             <Menu.Divider />
-
 
             <Menu.Item
               color="red"
@@ -228,6 +268,7 @@ export const Header = ({
   const computedColorScheme = useComputedColorScheme("dark", {
     getInitialValueInEffect: true,
   });
+  const {unreadCount} = useUnreadNotificationsCount(Boolean(user));
 
   const hasSecondaryNav = Boolean(secondaryNav || (secondaryNavItems && secondaryNavItems.length > 0));
 
@@ -438,6 +479,24 @@ export const Header = ({
                   onClick={closeDrawer}
                 >
                   Профиль
+                </Button>
+                <Button
+                  component={Link}
+                  href="/notifications"
+                  variant="light"
+                  color="blue"
+                  leftSection={<IconBell size={20} />}
+                  rightSection={
+                    unreadCount > 0 ? (
+                      <Badge size="sm" color="red" circle>
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </Badge>
+                    ) : null
+                  }
+                  fullWidth
+                  onClick={closeDrawer}
+                >
+                  Уведомления
                 </Button>
                 <Button
                   component={Link}

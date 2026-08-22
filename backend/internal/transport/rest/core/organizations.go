@@ -14,23 +14,17 @@ import (
 
 // generateLogin creates a URL-safe login from a name
 func generateLogin(name string) string {
-	// Convert to lowercase
 	login := strings.ToLower(name)
-	// Replace spaces and special characters with hyphens
 	login = regexp.MustCompile(`[^a-z0-9-]+`).ReplaceAllString(login, "-")
-	// Remove leading/trailing hyphens
 	login = strings.Trim(login, "-")
-	// Collapse multiple hyphens
 	login = regexp.MustCompile(`-+`).ReplaceAllString(login, "-")
 	return login
 }
 
 // ListOrganizations handles GET /organizations
 func (h *CoreServer) ListOrganizations(ctx context.Context, request corev1.ListOrganizationsRequestObject) (corev1.ListOrganizationsResponseObject, error) {
-	// Get current user
 	user := middleware.GetUser(ctx)
 
-	// Validate parameters
 	search := ""
 	if request.Params.Search != nil {
 		search = *request.Params.Search
@@ -41,14 +35,12 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, request corev1.ListO
 		return nil, err
 	}
 
-	// Create filter
 	filter := &models.OrganizationFilter{
 		Search:   search,
 		Page:     request.Params.Page,
 		PageSize: request.Params.PageSize,
 	}
 
-	// Get organizations
 	organizationsList, err := h.organizationsUC.ListOrganizations(ctx, filter, user.Id)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to list organizations")
@@ -59,10 +51,8 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, request corev1.ListO
 
 // CreateOrganization handles POST /organizations
 func (h *CoreServer) CreateOrganization(ctx context.Context, request corev1.CreateOrganizationRequestObject) (corev1.CreateOrganizationResponseObject, error) {
-	// Get current user
 	user := middleware.GetUser(ctx)
 
-	// Validate parameters
 	if err := validateCreateOrganizationParams(request.Params.Name); err != nil {
 		return nil, err
 	}
@@ -74,7 +64,6 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, request corev1.Crea
 			return nil, err
 		}
 	} else {
-		// Generate login from name
 		login = generateLogin(request.Params.Name)
 		if login == "" {
 			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "name must contain at least one latin letter or digit")
@@ -84,16 +73,20 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, request corev1.Crea
 		}
 	}
 
-	// Create input
+	joinPolicy := models.OrgJoinPolicyByRequest
+	if request.Params.JoinPolicy != nil {
+		joinPolicy = models.OrganizationJoinPolicy(*request.Params.JoinPolicy)
+	}
+
 	input := &models.CreateOrganizationInput{
 		Login:       login,
 		Name:        request.Params.Name,
 		Description: "",
 		AvatarURL:   nil,
+		JoinPolicy:  joinPolicy,
 		CreatorID:   user.Id,
 	}
 
-	// Create organization
 	org, err := h.organizationsUC.CreateOrganization(ctx, input)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to create organization")
@@ -107,10 +100,8 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, request corev1.Crea
 
 // GetOrganization handles GET /organizations/{login}
 func (h *CoreServer) GetOrganization(ctx context.Context, request corev1.GetOrganizationRequestObject) (corev1.GetOrganizationResponseObject, error) {
-	// Get current user
 	user := middleware.GetUser(ctx)
 
-	// Get organization
 	org, err := h.organizationsUC.GetOrganizationByLogin(ctx, request.Login, user.Id)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to get organization")
@@ -123,23 +114,26 @@ func (h *CoreServer) GetOrganization(ctx context.Context, request corev1.GetOrga
 
 // UpdateOrganization handles PATCH /organizations/{login}
 func (h *CoreServer) UpdateOrganization(ctx context.Context, request corev1.UpdateOrganizationRequestObject) (corev1.UpdateOrganizationResponseObject, error) {
-	// Get current user
 	user := middleware.GetUser(ctx)
 
-	// Validate request body
 	if err := validateUpdateOrganizationRequest(*request.Body); err != nil {
 		return nil, err
 	}
 
-	// Create update input
+	var joinPolicy *models.OrganizationJoinPolicy
+	if request.Body.JoinPolicy != nil {
+		jp := models.OrganizationJoinPolicy(*request.Body.JoinPolicy)
+		joinPolicy = &jp
+	}
+
 	input := &models.UpdateOrganizationInput{
 		Login:       request.Body.Login,
 		Name:        request.Body.Name,
 		Description: request.Body.Description,
 		AvatarURL:   nil,
+		JoinPolicy:  joinPolicy,
 	}
 
-	// Update organization
 	err := h.organizationsUC.UpdateOrganizationByLogin(ctx, request.Login, user.Id, input)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to update organization")
@@ -150,10 +144,8 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, request corev1.Upda
 
 // DeleteOrganization handles DELETE /organizations/{login}
 func (h *CoreServer) DeleteOrganization(ctx context.Context, request corev1.DeleteOrganizationRequestObject) (corev1.DeleteOrganizationResponseObject, error) {
-	// Get current user
 	user := middleware.GetUser(ctx)
 
-	// Delete organization
 	err := h.organizationsUC.DeleteOrganizationByLogin(ctx, request.Login, user.Id)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to delete organization")
@@ -164,44 +156,35 @@ func (h *CoreServer) DeleteOrganization(ctx context.Context, request corev1.Dele
 
 // ListOrganizationMembers handles GET /organizations/{login}/members
 func (h *CoreServer) ListOrganizationMembers(ctx context.Context, request corev1.ListOrganizationMembersRequestObject) (corev1.ListOrganizationMembersResponseObject, error) {
-	// Get current user
 	user := middleware.GetUser(ctx)
 
-	// Validate parameters
 	err := validateListOrganizationsParams(request.Params.Page, request.Params.PageSize, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get members
 	members, err := h.organizationsUC.ListMembersByLogin(ctx, request.Login, user.Id)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to list organization members")
 	}
 
-	// Calculate total for pagination (using actual count)
 	total := safeInt32(len(members))
-
 	return corev1.ListOrganizationMembers200JSONResponse(*listOrganizationMembersDTO(members, request.Params.Page, total)), nil
 }
 
 // AddOrganizationMember handles POST /organizations/{login}/members
 func (h *CoreServer) AddOrganizationMember(ctx context.Context, request corev1.AddOrganizationMemberRequestObject) (corev1.AddOrganizationMemberResponseObject, error) {
-	// Get current user
 	user := middleware.GetUser(ctx)
 
-	// Validate role
 	if !validateOrganizationRole(request.Params.Role) {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid role, must be 'owner', 'admin', or 'member'")
 	}
 
-	// Create input
 	input := &models.AddOrganizationMemberInput{
 		UserID: request.Params.UserId,
 		Role:   models.OrganizationRole(request.Params.Role),
 	}
 
-	// Add member
 	err := h.organizationsUC.AddMemberByLogin(ctx, request.Login, input, user.Id)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to add organization member")
@@ -212,10 +195,8 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, request corev1.A
 
 // RemoveOrganizationMember handles DELETE /organizations/{login}/members
 func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, request corev1.RemoveOrganizationMemberRequestObject) (corev1.RemoveOrganizationMemberResponseObject, error) {
-	// Get current user
 	user := middleware.GetUser(ctx)
 
-	// Remove member
 	err := h.organizationsUC.RemoveMemberByLogin(ctx, request.Login, request.Params.UserId, user.Id)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to remove organization member")
@@ -260,6 +241,206 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, request c
 	}, nil
 }
 
+// Invitations
+
+// ListOrganizationInvitations handles GET /organizations/{login}/invitations
+func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, request corev1.ListOrganizationInvitationsRequestObject) (corev1.ListOrganizationInvitationsResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	invs, err := h.organizationsUC.ListInvitations(ctx, request.Login, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to list invitations")
+	}
+
+	return corev1.ListOrganizationInvitations200JSONResponse(*ListOrganizationInvitationsResponseDTO(invs)), nil
+}
+
+// InviteOrganizationMember handles POST /organizations/{login}/invitations
+func (h *CoreServer) InviteOrganizationMember(ctx context.Context, request corev1.InviteOrganizationMemberRequestObject) (corev1.InviteOrganizationMemberResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	role := models.OrganizationRole(request.Body.Role)
+	if !validateOrganizationRole(string(role)) {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid role")
+	}
+
+	inv, err := h.organizationsUC.InviteMember(ctx, request.Login, request.Body.UserId, role, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to invite member")
+	}
+
+	return corev1.InviteOrganizationMember200JSONResponse(OrganizationInvitationDTO(*inv)), nil
+}
+
+// CancelOrganizationInvitation handles DELETE /organizations/{login}/invitations/{id}
+func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, request corev1.CancelOrganizationInvitationRequestObject) (corev1.CancelOrganizationInvitationResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	err := h.organizationsUC.CancelInvitation(ctx, request.Login, request.Id, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to cancel invitation")
+	}
+
+	return corev1.CancelOrganizationInvitation200Response{}, nil
+}
+
+// AcceptOrganizationInvitation handles POST /invitations/{id}/accept
+func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, request corev1.AcceptOrganizationInvitationRequestObject) (corev1.AcceptOrganizationInvitationResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	err := h.organizationsUC.AcceptInvitation(ctx, request.Id, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to accept invitation")
+	}
+
+	return corev1.AcceptOrganizationInvitation200Response{}, nil
+}
+
+// DeclineOrganizationInvitation handles POST /invitations/{id}/decline
+func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, request corev1.DeclineOrganizationInvitationRequestObject) (corev1.DeclineOrganizationInvitationResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	err := h.organizationsUC.DeclineInvitation(ctx, request.Id, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to decline invitation")
+	}
+
+	return corev1.DeclineOrganizationInvitation200Response{}, nil
+}
+
+// Join Requests
+
+// ListOrganizationJoinRequests handles GET /organizations/{login}/requests
+func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, request corev1.ListOrganizationJoinRequestsRequestObject) (corev1.ListOrganizationJoinRequestsResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	reqs, err := h.organizationsUC.ListJoinRequests(ctx, request.Login, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to list join requests")
+	}
+
+	return corev1.ListOrganizationJoinRequests200JSONResponse(*ListOrganizationJoinRequestsResponseDTO(reqs)), nil
+}
+
+// CreateOrganizationJoinRequest handles POST /organizations/{login}/requests
+func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, request corev1.CreateOrganizationJoinRequestRequestObject) (corev1.CreateOrganizationJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	var message *string
+	if request.Body != nil {
+		message = request.Body.Message
+	}
+
+	req, joined, err := h.organizationsUC.CreateJoinRequest(ctx, request.Login, user.Id, message)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to create join request")
+	}
+
+	var reqDTO *corev1.OrganizationJoinRequestModel
+	if req != nil {
+		d := OrganizationJoinRequestDTO(*req)
+		reqDTO = &d
+	}
+
+	return corev1.CreateOrganizationJoinRequest200JSONResponse{
+		Joined:  joined,
+		Request: reqDTO,
+	}, nil
+}
+
+// GetMyOrganizationJoinRequest handles GET /organizations/{login}/requests/mine
+func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, request corev1.GetMyOrganizationJoinRequestRequestObject) (corev1.GetMyOrganizationJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return corev1.GetMyOrganizationJoinRequest200JSONResponse{Request: nil}, nil
+	}
+
+	req, err := h.organizationsUC.GetMyPendingJoinRequest(ctx, request.Login, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to get join request")
+	}
+
+	var reqDTO *corev1.OrganizationJoinRequestModel
+	if req != nil {
+		d := OrganizationJoinRequestDTO(*req)
+		reqDTO = &d
+	}
+
+	return corev1.GetMyOrganizationJoinRequest200JSONResponse{
+		Request: reqDTO,
+	}, nil
+}
+
+// CancelOrganizationJoinRequest handles DELETE /organizations/{login}/requests/mine
+func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, request corev1.CancelOrganizationJoinRequestRequestObject) (corev1.CancelOrganizationJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	err := h.organizationsUC.CancelJoinRequest(ctx, request.Login, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to cancel join request")
+	}
+
+	return corev1.CancelOrganizationJoinRequest200Response{}, nil
+}
+
+// ApproveOrganizationJoinRequest handles POST /organizations/{login}/requests/{id}/approve
+func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, request corev1.ApproveOrganizationJoinRequestRequestObject) (corev1.ApproveOrganizationJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	role := models.OrgRoleMember
+	if request.Body != nil && request.Body.Role != nil {
+		role = models.OrganizationRole(*request.Body.Role)
+	}
+
+	err := h.organizationsUC.ApproveJoinRequest(ctx, request.Login, request.Id, user.Id, role)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to approve join request")
+	}
+
+	return corev1.ApproveOrganizationJoinRequest200Response{}, nil
+}
+
+// RejectOrganizationJoinRequest handles POST /organizations/{login}/requests/{id}/reject
+func (h *CoreServer) RejectOrganizationJoinRequest(ctx context.Context, request corev1.RejectOrganizationJoinRequestRequestObject) (corev1.RejectOrganizationJoinRequestResponseObject, error) {
+	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
+
+	err := h.organizationsUC.RejectJoinRequest(ctx, request.Login, request.Id, user.Id)
+	if err != nil {
+		return nil, wrapOrgUCError(err, "failed to reject join request")
+	}
+
+	return corev1.RejectOrganizationJoinRequest200Response{}, nil
+}
 
 func wrapOrgUCError(err error, fallbackMsg string) error {
 	if err == nil {
@@ -270,6 +451,9 @@ func wrapOrgUCError(err error, fallbackMsg string) error {
 	}
 	if errors.Is(err, pkg.ErrNotFound) {
 		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
+	}
+	if errors.Is(err, pkg.ErrBadInput) {
+		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
 	}
 	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
 }

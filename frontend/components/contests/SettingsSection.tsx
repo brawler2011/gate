@@ -45,6 +45,7 @@ const VISIBILITY_OPTIONS = [
 
 const PARTICIPATION_MODE_OPTIONS = [
   {label: "Открытый (свободная регистрация)", value: "open", color: "green"},
+  {label: "По заявкам (требуется одобрение)", value: "by_request", color: "blue"},
   {label: "Только по приглашению", value: "invite_only", color: "orange"},
 ];
 

@@ -543,11 +543,17 @@ func organizationDTO(o models.Organization) corev1.OrganizationModel {
 		description = o.Description
 	}
 
+	joinPolicy := corev1.OrganizationModelJoinPolicyByRequest
+	if o.JoinPolicy != "" {
+		joinPolicy = corev1.OrganizationModelJoinPolicy(o.JoinPolicy)
+	}
+
 	return corev1.OrganizationModel{
 		Id:          o.ID,
 		Login:       o.Login,
 		Name:        o.Name,
 		Description: &description,
+		JoinPolicy:  joinPolicy,
 		CreatedAt:   o.CreatedAt,
 		UpdatedAt:   o.UpdatedAt,
 	}
@@ -861,5 +867,141 @@ func ListContestDraftsResponseDTO(list *models.ContestDraftsList) *corev1.ListCo
 		Pagination: PaginationDTO(list.Pagination),
 	}
 }
+
+func NotificationDTO(n models.Notification) corev1.NotificationModel {
+	return corev1.NotificationModel{
+		Id:        n.ID,
+		UserId:    n.UserID,
+		Type:      string(n.Type),
+		Title:     n.Title,
+		Body:      n.Body,
+		Link:      n.Link,
+		Data:      &n.Data,
+		IsRead:    n.IsRead,
+		CreatedAt: n.CreatedAt,
+	}
+}
+
+func NotificationsListResponseDTO(list *models.NotificationsList) *corev1.NotificationsListResponseModel {
+	if list == nil {
+		return &corev1.NotificationsListResponseModel{
+			Notifications: []corev1.NotificationModel{},
+			Pagination: corev1.PaginationModel{
+				Page:  1,
+				Total: 0,
+			},
+		}
+	}
+
+	notifs := make([]corev1.NotificationModel, len(list.Notifications))
+	for i, n := range list.Notifications {
+		notifs[i] = NotificationDTO(n)
+	}
+
+	return &corev1.NotificationsListResponseModel{
+		Notifications: notifs,
+		Pagination:    PaginationDTO(list.Pagination),
+	}
+}
+
+func OrganizationInvitationDTO(inv models.OrganizationInvitation) corev1.OrganizationInvitationModel {
+	var email *string
+	if inv.Email != "" {
+		email = &inv.Email
+	}
+
+	return corev1.OrganizationInvitationModel{
+		Id:                    inv.ID,
+		OrganizationId:        inv.OrganizationID,
+		OrganizationName:      inv.OrganizationName,
+		OrganizationLogin:     inv.OrganizationLogin,
+		OrganizationAvatarUrl: inv.OrganizationAvatarURL,
+		UserId:                inv.UserID,
+		Username:              inv.Username,
+		Email:                 email,
+		InviterId:             inv.InviterID,
+		InviterUsername:       inv.InviterUsername,
+		Role:                  string(inv.Role),
+		Status:                string(inv.Status),
+		CreatedAt:             inv.CreatedAt,
+		UpdatedAt:             inv.UpdatedAt,
+	}
+}
+
+func ListOrganizationInvitationsResponseDTO(invs []models.OrganizationInvitation) *corev1.ListOrganizationInvitationsResponseModel {
+	items := make([]corev1.OrganizationInvitationModel, len(invs))
+	for i, inv := range invs {
+		items[i] = OrganizationInvitationDTO(inv)
+	}
+	return &corev1.ListOrganizationInvitationsResponseModel{
+		Invitations: items,
+	}
+}
+
+func OrganizationJoinRequestDTO(req models.OrganizationJoinRequest) corev1.OrganizationJoinRequestModel {
+	var email *string
+	if req.Email != "" {
+		email = &req.Email
+	}
+
+	return corev1.OrganizationJoinRequestModel{
+		Id:                req.ID,
+		OrganizationId:    req.OrganizationID,
+		OrganizationName:  req.OrganizationName,
+		OrganizationLogin: req.OrganizationLogin,
+		UserId:            req.UserID,
+		Username:          req.Username,
+		Email:             email,
+		Message:           req.Message,
+		Status:            string(req.Status),
+		ReviewerUsername:  req.ReviewerUsername,
+		CreatedAt:         req.CreatedAt,
+		UpdatedAt:         req.UpdatedAt,
+	}
+}
+
+func ListOrganizationJoinRequestsResponseDTO(reqs []models.OrganizationJoinRequest) *corev1.ListOrganizationJoinRequestsResponseModel {
+	items := make([]corev1.OrganizationJoinRequestModel, len(reqs))
+	for i, r := range reqs {
+		items[i] = OrganizationJoinRequestDTO(r)
+	}
+	return &corev1.ListOrganizationJoinRequestsResponseModel{
+		Requests: items,
+	}
+}
+
+func ContestJoinRequestDTO(req models.ContestJoinRequest) corev1.ContestJoinRequestModel {
+	var email *string
+	if req.Email != "" {
+		email = &req.Email
+	}
+
+	return corev1.ContestJoinRequestModel{
+		Id:                req.ID,
+		ContestId:         req.ContestID,
+		ContestTitle:      req.ContestTitle,
+		ContestLogin:      req.ContestLogin,
+		OrganizationLogin: req.OrganizationLogin,
+		UserId:            req.UserID,
+		Username:          req.Username,
+		Email:             email,
+		Message:           req.Message,
+		Status:            string(req.Status),
+		ReviewerUsername:  req.ReviewerUsername,
+		CreatedAt:         req.CreatedAt,
+		UpdatedAt:         req.UpdatedAt,
+	}
+}
+
+func ListContestJoinRequestsResponseDTO(reqs []models.ContestJoinRequest) *corev1.ListContestJoinRequestsResponseModel {
+	items := make([]corev1.ContestJoinRequestModel, len(reqs))
+	for i, r := range reqs {
+		items[i] = ContestJoinRequestDTO(r)
+	}
+	return &corev1.ListContestJoinRequestsResponseModel{
+		Requests: items,
+	}
+}
+
 
 

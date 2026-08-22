@@ -1,8 +1,8 @@
 -- Organizations queries
 
 -- name: CreateOrganization :one
-INSERT INTO organizations (id, login, name, description, avatar_url)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO organizations (id, login, name, description, avatar_url, join_policy)
+VALUES ($1, $2, $3, $4, $5, COALESCE($6, 'by_request'))
 RETURNING *;
 
 -- name: GetOrganizationByID :one
@@ -26,7 +26,8 @@ UPDATE organizations
 SET login = COALESCE(sqlc.narg('login'), login),
     name = COALESCE(sqlc.narg('name'), name),
     description = COALESCE(sqlc.narg('description'), description),
-    avatar_url = COALESCE(sqlc.narg('avatar_url'), avatar_url)
+    avatar_url = COALESCE(sqlc.narg('avatar_url'), avatar_url),
+    join_policy = COALESCE(sqlc.narg('join_policy'), join_policy)
 WHERE id = $1;
 
 -- name: DeleteOrganization :exec

@@ -7,6 +7,7 @@ import {
 } from "@mantine/core";
 
 import {ContestCountdown} from "@/components/contests/ContestCountdown";
+import {ContestJoinButton} from "@/components/contests/ContestJoinButton";
 import {api, unwrapAndCache} from "@/lib/api";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
@@ -46,6 +47,8 @@ type ContestProps = {
   orgLogin: string;
   problems: Array<ContestProblemListItemModel>;
   isManager: boolean;
+  isAuthenticated: boolean;
+  hasAccess: boolean;
 };
 
 const Contest = ({
@@ -53,6 +56,8 @@ const Contest = ({
   orgLogin,
   problems,
   isManager,
+  isAuthenticated,
+  hasAccess,
 }: ContestProps) => {
   const hasStarted = !contest.start_time || new Date(contest.start_time) <= new Date();
   const showCountdown = !isManager && !hasStarted;
@@ -63,6 +68,12 @@ const Contest = ({
       pt={0}
       pb={{base: "md", sm: "lg", md: "xl"}}
     >
+      <ContestJoinButton
+        contest={contest}
+        orgLogin={orgLogin}
+        isAuthenticated={isAuthenticated}
+        hasAccess={hasAccess || isManager}
+      />
       {showCountdown && (
         <ContestCountdown
           startTime={contest.start_time!}
@@ -109,6 +120,7 @@ const Page = async ({params}: Props): Promise<ReactNode> => {
     contestRole?.permissionsMask ?? null,
   );
   const isManager = checker.canManageContest(response.contest);
+  const hasAccess = Boolean(contestRole?.role);
 
   return (
     <Contest
@@ -116,6 +128,8 @@ const Page = async ({params}: Props): Promise<ReactNode> => {
       orgLogin={slug}
       problems={response.problems || []}
       isManager={isManager}
+      isAuthenticated={Boolean(user)}
+      hasAccess={hasAccess}
     />
   );
 };

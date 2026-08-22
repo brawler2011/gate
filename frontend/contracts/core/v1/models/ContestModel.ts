@@ -46,6 +46,7 @@ export namespace ContestModel {
     }
     export enum participation_mode {
         OPEN = 'open',
+        BY_REQUEST = 'by_request',
         INVITE_ONLY = 'invite_only',
     }
 }
