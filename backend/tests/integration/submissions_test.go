@@ -29,6 +29,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	probResp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
 		Title:          problemTitle,
 		OrganizationId: &problemOrganizationID,
+		TemplateId:     "builtin:a-plus-b",
 	}, func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("X-Test-User-ID", admin.Id.String())
 		return nil

@@ -143,7 +143,7 @@ func (s *IntegrationTestSuite) initApp() {
 	authRepo := pg.NewAuthRepo(s.dbPool)
 
 	// UseCases
-	usersUC := usecase.NewUsersUseCase(s.usersRepo, outboxRepo, txManager)
+	usersUC := usecase.NewUsersUseCase(s.usersRepo, s.contestsRepo, outboxRepo, txManager)
 	authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager)
 	problemsUC := usecase.NewProblemsUseCase(s.problemsRepo, s.organizationsRepo)
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo, s.organizationsRepo)

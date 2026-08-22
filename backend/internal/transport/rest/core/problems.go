@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"strings"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -86,11 +88,80 @@ func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProble
 	return corev1.ListProblems200JSONResponse(resp), nil
 }
 
+func (h *CoreServer) ListProblemTemplates(ctx context.Context, request corev1.ListProblemTemplatesRequestObject) (corev1.ListProblemTemplatesResponseObject, error) {
+	user := middleware.GetUser(ctx)
+
+	var orgID uuid.UUID
+	if request.Params.OrganizationId != nil {
+		orgID = uuid.UUID(*request.Params.OrganizationId)
+	} else if user.Id != uuid.Nil {
+		orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
+		if err == nil && len(orgs) > 0 {
+			orgID = orgs[0].ID
+		}
+	}
+
+	result := make([]corev1.ProblemTemplateModel, 0)
+
+	// 1. Builtin templates
+	builtinList := templates.ListBuiltinTemplates()
+	for _, b := range builtinList {
+		result = append(result, corev1.ProblemTemplateModel{
+			Id:          b.ID,
+			Title:       b.Title,
+			Description: b.Description,
+			ProblemType: b.ProblemType,
+			IsBuiltin:   true,
+		})
+	}
+
+	// 2. Organization templates
+	if orgID != uuid.Nil {
+		isTemplate := true
+		filter := &models.ProblemsFilter{
+			Page:           1,
+			PageSize:       100,
+			OrganizationID: &orgID,
+			IsTemplate:     &isTemplate,
+		}
+		orgProblems, err := h.problemsUC.ListProblems(ctx, filter)
+		if err == nil && orgProblems != nil {
+			for _, p := range orgProblems.Problems {
+				probType := "pass-fail"
+				manifest, err := h.workshopUC.GetManifest(ctx, p.ID)
+				if err == nil && manifest != nil && manifest.ProblemType != "" {
+					probType = manifest.ProblemType
+				}
+
+				desc := "Пользовательский шаблон организации"
+				if manifest != nil && manifest.Statement.Legend != "" {
+					desc = manifest.Statement.Legend
+				}
+
+				result = append(result, corev1.ProblemTemplateModel{
+					Id:          p.ID.String(),
+					Title:       p.Title,
+					Description: desc,
+					ProblemType: probType,
+					IsBuiltin:   false,
+				})
+			}
+		}
+	}
+
+	return corev1.ListProblemTemplates200JSONResponse(result), nil
+}
+
 func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreateProblemRequestObject) (corev1.CreateProblemResponseObject, error) {
 	user := middleware.GetUser(ctx)
 
 	if request.Params.Title == "" {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
+	}
+
+	templateIDStr := strings.TrimSpace(request.Params.TemplateId)
+	if templateIDStr == "" {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "template_id is required")
 	}
 
 	var orgID uuid.UUID
@@ -117,22 +188,10 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 		Visibility:     models.ProblemVisibilityPrivate,
 	}
 
-	if request.Params.TemplateId != nil {
-		templateID := uuid.UUID(*request.Params.TemplateId)
-		templateProblem, err := h.problemsUC.GetProblemById(ctx, templateID)
+	if strings.HasPrefix(templateIDStr, "builtin:") {
+		zipBytes, err := templates.GetBuiltinTemplateZip(templateIDStr)
 		if err != nil {
-			return nil, err
-		}
-		if !templateProblem.IsTemplate {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "выбранная задача не является шаблоном")
-		}
-		if templateProblem.OrganizationID != orgID {
-			return nil, pkg.Wrap(pkg.NoPermission, nil, "шаблон должен принадлежать той же организации")
-		}
-
-		readyPkg, err := h.publishUC.GetReadyPackage(ctx, templateID)
-		if err != nil {
-			return nil, pkg.Wrap(pkg.ErrBadInput, err, "не удалось найти готовый пакет шаблона")
+			return nil, pkg.Wrap(pkg.ErrBadInput, err, "неизвестный встроенный шаблон")
 		}
 
 		problemID, err := h.problemsUC.CreateProblem(ctx, input)
@@ -140,23 +199,10 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 			return nil, err
 		}
 
-		zipReader, err := h.publishUC.DownloadPackage(ctx, templateID, readyPkg.PackageHash)
+		_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(zipBytes), int64(len(zipBytes)), problemID)
 		if err != nil {
 			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to download template package")
-		}
-		defer zipReader.Close()
-
-		fileBytes, err := io.ReadAll(zipReader)
-		if err != nil {
-			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to read template package")
-		}
-
-		_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), problemID)
-		if err != nil {
-			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import template package")
+			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import builtin template package")
 		}
 
 		manifest, err := h.workshopUC.GetManifest(ctx, problemID)
@@ -168,16 +214,55 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 		return corev1.CreateProblem200JSONResponse{Id: problemID}, nil
 	}
 
+	templateUUID, err := uuid.Parse(templateIDStr)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid template_id format")
+	}
+
+	templateProblem, err := h.problemsUC.GetProblemById(ctx, templateUUID)
+	if err != nil {
+		return nil, err
+	}
+	if !templateProblem.IsTemplate {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "выбранная задача не является шаблоном")
+	}
+	if templateProblem.OrganizationID != orgID {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "шаблон должен принадлежать той же организации")
+	}
+
+	readyPkg, err := h.publishUC.GetReadyPackage(ctx, templateUUID)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "не удалось найти готовый пакет шаблона")
+	}
+
 	problemID, err := h.problemsUC.CreateProblem(ctx, input)
 	if err != nil {
 		return nil, err
 	}
 
-	if h.workshopUC != nil {
-		if err := h.workshopUC.InitProblemWorkshop(ctx, problemID, input.Title); err != nil {
-			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to initialize workshop")
-		}
+	zipReader, err := h.publishUC.DownloadPackage(ctx, templateUUID, readyPkg.PackageHash)
+	if err != nil {
+		_ = h.problemsUC.DeleteProblem(ctx, problemID)
+		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to download template package")
+	}
+	defer zipReader.Close()
+
+	fileBytes, err := io.ReadAll(zipReader)
+	if err != nil {
+		_ = h.problemsUC.DeleteProblem(ctx, problemID)
+		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to read template package")
+	}
+
+	_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), problemID)
+	if err != nil {
+		_ = h.problemsUC.DeleteProblem(ctx, problemID)
+		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import template package")
+	}
+
+	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
+	if err == nil {
+		manifest.Statement.Title = input.Title
+		_ = h.workshopUC.SaveManifest(ctx, problemID, manifest)
 	}
 
 	return corev1.CreateProblem200JSONResponse{Id: problemID}, nil

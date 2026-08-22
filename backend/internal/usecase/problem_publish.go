@@ -87,9 +87,27 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 	}
 
 	// Validate the package layout by loading problem.yaml
-	_, err = gfmt.OpenPackage(tempDir)
+	gfmtProb, err := gfmt.OpenPackage(tempDir)
 	if err != nil {
 		return nil, fmt.Errorf("invalid problem package: %w", err)
+	}
+
+	// Validate required components
+	switch gfmtProb.Problem.Type {
+	case "interactive":
+		if gfmtProb.Problem.Interactor == "" {
+			return nil, fmt.Errorf("interactive problem must have an interactor")
+		}
+		if _, err := gfmtProb.GetInteractor(gfmtProb.Problem.Interactor); err != nil {
+			return nil, fmt.Errorf("interactor file %s not found: %w", gfmtProb.Problem.Interactor, err)
+		}
+	default: // "pass-fail", "scoring"
+		if gfmtProb.Problem.Checker == "" {
+			return nil, fmt.Errorf("problem must have a checker")
+		}
+		if _, err := gfmtProb.GetChecker(gfmtProb.Problem.Checker); err != nil {
+			return nil, fmt.Errorf("checker file %s not found: %w", gfmtProb.Problem.Checker, err)
+		}
 	}
 
 	// Directly compress the temp directory into a ZIP archive

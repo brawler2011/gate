@@ -79,6 +79,7 @@ export type { ProblemSampleModel } from './models/ProblemSampleModel';
 export type { ProblemsListItemModel } from './models/ProblemsListItemModel';
 export type { ProblemStatement } from './models/ProblemStatement';
 export type { ProblemTeamModel } from './models/ProblemTeamModel';
+export type { ProblemTemplateModel } from './models/ProblemTemplateModel';
 export type { RegisterRequestModel } from './models/RegisterRequestModel';
 export type { ReorderContestProblemsRequestModel } from './models/ReorderContestProblemsRequestModel';
 export type { ScoreboardItemModel } from './models/ScoreboardItemModel';

@@ -45,26 +45,41 @@ func readFile(path string) ([]byte, error) {
 
 // GetSolution reads the content of the specified solution file.
 func (g *GateFormat) GetSolution(name string) ([]byte, error) {
+	if strings.HasPrefix(name, "solutions/") {
+		return readFile(filepath.Join(g.Path, name))
+	}
 	return readFile(filepath.Join(g.Path, "solutions", name))
 }
 
 // GetChecker reads the content of the specified checker file.
 func (g *GateFormat) GetChecker(name string) ([]byte, error) {
+	if strings.HasPrefix(name, "checkers/") {
+		return readFile(filepath.Join(g.Path, name))
+	}
 	return readFile(filepath.Join(g.Path, "checkers", name))
 }
 
 // GetGenerator reads the content of the specified generator file.
 func (g *GateFormat) GetGenerator(name string) ([]byte, error) {
+	if strings.HasPrefix(name, "generators/") {
+		return readFile(filepath.Join(g.Path, name))
+	}
 	return readFile(filepath.Join(g.Path, "generators", name))
 }
 
 // GetInteractor reads the content of the specified interactor file.
 func (g *GateFormat) GetInteractor(name string) ([]byte, error) {
+	if strings.HasPrefix(name, "interactors/") {
+		return readFile(filepath.Join(g.Path, name))
+	}
 	return readFile(filepath.Join(g.Path, "interactors", name))
 }
 
 // GetLib reads the content of the specified library file.
 func (g *GateFormat) GetLib(name string) ([]byte, error) {
+	if strings.HasPrefix(name, "lib/") {
+		return readFile(filepath.Join(g.Path, name))
+	}
 	return readFile(filepath.Join(g.Path, "lib", name))
 }
 

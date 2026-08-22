@@ -28,6 +28,7 @@ func (s *IntegrationTestSuite) TestProblems() {
 		resp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
 			Title:          title,
 			OrganizationId: &organizationID,
+			TemplateId:     "builtin:a-plus-b",
 		}, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", admin.Id.String())
 			return nil
@@ -103,6 +104,7 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 		resp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
 			Title:          title,
 			OrganizationId: &organizationID,
+			TemplateId:     "builtin:a-plus-b",
 		}, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", admin.Id.String())
 			return nil
@@ -157,15 +159,30 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 		s.True(getResp.JSON200.Problem.IsTemplate)
 	})
 
-	// 5. Create Problem B using Problem A as a template
+	// 5. List Problem Templates
+	s.Run("ListProblemTemplates", func() {
+		organizationID := openapi_types.UUID(org.ID)
+		tmplResp, err := s.client.ListProblemTemplatesWithResponse(s.ctx, &corev1.ListProblemTemplatesParams{
+			OrganizationId: &organizationID,
+		}, func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("X-Test-User-ID", admin.Id.String())
+			return nil
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusOK, tmplResp.StatusCode())
+		s.Require().NotNil(tmplResp.JSON200)
+		s.GreaterOrEqual(len(*tmplResp.JSON200), 4) // 3 builtin + at least 1 org template
+	})
+
+	// 6. Create Problem B using Problem A as a template
 	s.Run("CreateProblemFromTemplate", func() {
 		title := "Problem B"
 		organizationID := openapi_types.UUID(org.ID)
-		templateID := openapi_types.UUID(problemID)
+		templateID := problemID.String()
 		resp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
 			Title:          title,
 			OrganizationId: &organizationID,
-			TemplateId:     &templateID,
+			TemplateId:     templateID,
 		}, func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("X-Test-User-ID", admin.Id.String())
 			return nil

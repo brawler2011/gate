@@ -221,6 +221,7 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ListTeamProblems":     {RequireAuth},
 
 		"CreateProblem":        {RequireAuth},
+		"ListProblemTemplates": {RequireAuth},
 		"ListUserContests":     {RequireAuth, checkListUserContestsAccess},
 		"ListUserSubmissions":  {RequireAuth, checkListUserSubmissionsAccess},
 		"ListWorkshopContests": {RequireAuth},

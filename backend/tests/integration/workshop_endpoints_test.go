@@ -22,6 +22,7 @@ func (s *IntegrationTestSuite) TestWorkshopStatementEndpointSyncsProblemTitle() 
 	createResp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
 		Title:          "Original Workshop Title",
 		OrganizationId: &organizationID,
+		TemplateId:     "builtin:a-plus-b",
 	}, func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("X-Test-User-ID", admin.Id.String())
 		return nil
@@ -62,6 +63,7 @@ func (s *IntegrationTestSuite) TestWorkshopCheckerEndpointsCRUD() {
 	createResp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
 		Title:          "Checker CRUD Problem",
 		OrganizationId: &organizationID,
+		TemplateId:     "builtin:a-plus-b",
 	}, func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("X-Test-User-ID", admin.Id.String())
 		return nil
@@ -149,6 +151,7 @@ func (s *IntegrationTestSuite) TestWorkshopTestsConfigEndpoint() {
 	createResp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
 		Title:          "Tests Config Problem",
 		OrganizationId: &organizationID,
+		TemplateId:     "builtin:a-plus-b",
 	}, func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("X-Test-User-ID", admin.Id.String())
 		return nil

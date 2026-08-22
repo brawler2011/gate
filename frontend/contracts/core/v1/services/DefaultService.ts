@@ -47,6 +47,7 @@ import type { PostModel } from '../models/PostModel';
 import type { ProblemBlockStatusResponseModel } from '../models/ProblemBlockStatusResponseModel';
 import type { ProblemLimits } from '../models/ProblemLimits';
 import type { ProblemStatement } from '../models/ProblemStatement';
+import type { ProblemTemplateModel } from '../models/ProblemTemplateModel';
 import type { RegisterRequestModel } from '../models/RegisterRequestModel';
 import type { ReorderContestProblemsRequestModel } from '../models/ReorderContestProblemsRequestModel';
 import type { ScoreboardResponseModel } from '../models/ScoreboardResponseModel';
@@ -118,12 +119,12 @@ export class DefaultService {
      */
     public createProblem({
         title,
-        organizationId,
         templateId,
+        organizationId,
     }: {
         title: string,
+        templateId: string,
         organizationId?: string,
-        templateId?: string,
     }): CancelablePromise<CreationResponseModel> {
         return this.httpRequest.request({
             method: 'POST',
@@ -132,6 +133,23 @@ export class DefaultService {
                 'title': title,
                 'organization_id': organizationId,
                 'template_id': templateId,
+            },
+        });
+    }
+    /**
+     * @returns ProblemTemplateModel OK
+     * @throws ApiError
+     */
+    public listProblemTemplates({
+        organizationId,
+    }: {
+        organizationId?: string,
+    }): CancelablePromise<Array<ProblemTemplateModel>> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/problem-templates',
+            query: {
+                'organization_id': organizationId,
             },
         });
     }

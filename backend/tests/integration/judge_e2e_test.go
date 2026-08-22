@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/brawler2011/gate/backend/internal/worker/judge"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -172,10 +174,11 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 
 	// 1. Create Organization & User
 	userID := uuid.New()
+	email := "test@example.com"
 	err := usersRepo.CreateUser(ctx, models.CreateUserParams{
 		Id:           userID,
 		Username:     "testuser",
-		Email:        "test@example.com",
+		Email:        &email,
 		PasswordHash: "hashed_password",
 		Role:         models.UserRoleUser,
 	})
@@ -200,7 +203,11 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = workshopUC.InitProblemWorkshop(ctx, problemID, "Sum of Two Numbers")
+	zipBytes, err := templates.GetBuiltinTemplateZip("builtin:a-plus-b")
+	require.NoError(t, err)
+
+	importUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
+	_, err = importUC.ImportProblemPackage(ctx, bytes.NewReader(zipBytes), int64(len(zipBytes)), problemID)
 	require.NoError(t, err)
 
 	// Add test cases (01: 1 2 -> 3; 02: 3 2 -> 5)

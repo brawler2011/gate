@@ -5,6 +5,7 @@ import {
   Modal,
   Select,
   Stack,
+  Text,
   TextInput,
 } from "@mantine/core";
 import {notifications} from "@mantine/notifications";
@@ -13,7 +14,8 @@ import {useEffect, useState} from "react";
 
 import {api} from "@/lib/api";
 
-import type {OrganizationModel, ProblemsListItemModel} from "@/contracts/core/v1";
+import type {OrganizationModel, ProblemTemplateModel} from "@/contracts/core/v1";
+import type {ComboboxItem, ComboboxItemGroup} from "@mantine/core";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -34,8 +36,9 @@ export const CreateProblemModal = ({
   const router = useRouter();
   const [title, setTitle] = useState("New Problem");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
-  const [templateId, setTemplateId] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<Array<{ value: string; label: string }>>([]);
+  const [templateId, setTemplateId] = useState<string | null>("builtin:a-plus-b");
+  const [templateList, setTemplateList] = useState<ProblemTemplateModel[]>([]);
+  const [templateSelectData, setTemplateSelectData] = useState<Array<ComboboxItemGroup<ComboboxItem>>>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -46,42 +49,69 @@ export const CreateProblemModal = ({
       const validDefault =
         defaultOrgId && orgIds.has(defaultOrgId) ? defaultOrgId : null;
       setOrgId(validDefault ?? (orgs.length === 1 ? orgs[0].id : null));
-      setTemplateId(null);
+      setTemplateId("builtin:a-plus-b");
     }
   }, [opened, defaultOrgId, orgs]);
 
   useEffect(() => {
     if (opened && orgId) {
       setLoadingTemplates(true);
-      api.listProblems({page: 1, pageSize: 100, organizationId: orgId, isTemplate: true})
+      api.listProblemTemplates({organizationId: orgId})
         .then(([err, res]) => {
-          if (!err && res?.problems) {
-            setTemplates(
-              res.problems.map((p: ProblemsListItemModel) => ({
-                value: p.id,
-                label: p.title,
-              }))
-            );
+          if (!err && res) {
+            setTemplateList(res);
+
+            const builtinItems: ComboboxItem[] = res
+              .filter((t) => t.is_builtin)
+              .map((t) => ({value: t.id, label: t.title}));
+            const orgItems: ComboboxItem[] = res
+              .filter((t) => !t.is_builtin)
+              .map((t) => ({value: t.id, label: t.title}));
+
+            const groups: Array<ComboboxItemGroup<ComboboxItem>> = [];
+            if (builtinItems.length > 0) {
+              groups.push({
+                group: "Системные шаблоны",
+                items: builtinItems,
+              });
+            }
+            if (orgItems.length > 0) {
+              groups.push({
+                group: "Шаблоны организации",
+                items: orgItems,
+              });
+            }
+
+            setTemplateSelectData(groups);
+            setTemplateId((prev) => {
+              if (prev && res.some((t) => t.id === prev)) {
+                return prev;
+              }
+              return res[0]?.id ?? "builtin:a-plus-b";
+            });
           } else {
-            setTemplates([]);
+            setTemplateList([]);
+            setTemplateSelectData([]);
           }
         })
         .catch(() => {
-          setTemplates([]);
+          setTemplateList([]);
+          setTemplateSelectData([]);
         })
         .finally(() => {
           setLoadingTemplates(false);
         });
     } else {
-      setTemplates([]);
-      setTemplateId(null);
+      setTemplateList([]);
+      setTemplateSelectData([]);
     }
   }, [opened, orgId]);
 
   const orgData = orgs.map((o) => ({value: o.id, label: o.name}));
+  const selectedTemplate = templateList.find((t) => t.id === templateId);
 
   const handleSubmit = async () => {
-    if (!orgId) {
+    if (!orgId || !templateId) {
       return;
     }
 
@@ -90,7 +120,7 @@ export const CreateProblemModal = ({
       const [createError, createResponse] = await api.createProblem({
         title: title.trim() || "New Problem",
         organizationId: orgId,
-        templateId: templateId ?? undefined,
+        templateId: templateId,
       });
       if (createError) {
         throw new Error(createError.message);
@@ -117,7 +147,7 @@ export const CreateProblemModal = ({
     }
   };
 
-  const isValid = title.trim() && orgId;
+  const isValid = Boolean(title.trim() && orgId && templateId);
 
   return (
     <Modal
@@ -148,15 +178,23 @@ export const CreateProblemModal = ({
             required
           />
         )}
-        <Select
-          label="Шаблон задачи"
-          placeholder={loadingTemplates ? "Загрузка шаблонов..." : "Выберите шаблон (необязательно)"}
-          data={templates}
-          value={templateId}
-          onChange={setTemplateId}
-          clearable
-          disabled={loadingTemplates || templates.length === 0}
-        />
+        <div>
+          <Select
+            label="Шаблон задачи"
+            placeholder={loadingTemplates ? "Загрузка шаблонов..." : "Выберите шаблон"}
+            data={templateSelectData}
+            value={templateId}
+            onChange={setTemplateId}
+            required
+            allowDeselect={false}
+            disabled={loadingTemplates || templateSelectData.length === 0}
+          />
+          {selectedTemplate?.description && (
+            <Text size="xs" c="dimmed" mt={4}>
+              {selectedTemplate.description}
+            </Text>
+          )}
+        </div>
         <Button
           onClick={handleSubmit}
           loading={loading}

@@ -78,6 +78,23 @@ paths:
             format: uuid
         - name: template_id
           in: query
+          required: true
+          schema:
+            type: string
+          example: builtin:a-plus-b
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreationResponseModel"
+  /problem-templates:
+    get:
+      operationId: ListProblemTemplates
+      parameters:
+        - name: organization_id
+          in: query
           schema:
             type: string
             format: uuid
@@ -87,7 +104,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProblemTemplateModel"
   /problems/{id}:
     get:
       operationId: GetProblem
@@ -3882,6 +3901,29 @@ components:
           type: string
         output:
           type: string
+    ProblemTemplateModel:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - problem_type
+        - is_builtin
+      properties:
+        id:
+          type: string
+          example: builtin:a-plus-b
+        title:
+          type: string
+          example: Стандартная задача (A+B)
+        description:
+          type: string
+          example: Классическая задача со стандартным вводом-выводом, чекером на testlib.h и валидатором тестов
+        problem_type:
+          type: string
+          example: pass-fail
+        is_builtin:
+          type: boolean
     ProblemModel:
       type: object
       required:

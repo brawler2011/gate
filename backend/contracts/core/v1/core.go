@@ -675,6 +675,15 @@ type ProblemTeamModel struct {
 	TeamSlug   string             `json:"team_slug"`
 }
 
+// ProblemTemplateModel defines model for ProblemTemplateModel.
+type ProblemTemplateModel struct {
+	Description string `json:"description"`
+	Id          string `json:"id"`
+	IsBuiltin   bool   `json:"is_builtin"`
+	ProblemType string `json:"problem_type"`
+	Title       string `json:"title"`
+}
+
 // ProblemsListItemModel defines model for ProblemsListItemModel.
 type ProblemsListItemModel struct {
 	CreatedAt         time.Time          `json:"created_at"`
@@ -1155,6 +1164,11 @@ type GetPostImageParams struct {
 	IfNoneMatch *string `json:"If-None-Match,omitempty"`
 }
 
+// ListProblemTemplatesParams defines parameters for ListProblemTemplates.
+type ListProblemTemplatesParams struct {
+	OrganizationId *openapi_types.UUID `form:"organization_id,omitempty" json:"organization_id,omitempty"`
+}
+
 // ListProblemsParams defines parameters for ListProblems.
 type ListProblemsParams struct {
 	Page           int32               `form:"page" json:"page"`
@@ -1170,7 +1184,7 @@ type ListProblemsParams struct {
 type CreateProblemParams struct {
 	Title          string              `form:"title" json:"title"`
 	OrganizationId *openapi_types.UUID `form:"organization_id,omitempty" json:"organization_id,omitempty"`
-	TemplateId     *openapi_types.UUID `form:"template_id,omitempty" json:"template_id,omitempty"`
+	TemplateId     string              `form:"template_id" json:"template_id"`
 }
 
 // ImportProblemMultipartBody defines parameters for ImportProblem.
@@ -1827,6 +1841,9 @@ type ClientInterface interface {
 
 	// GetPostImage request
 	GetPostImage(ctx context.Context, id openapi_types.UUID, params *GetPostImageParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListProblemTemplates request
+	ListProblemTemplates(ctx context.Context, params *ListProblemTemplatesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListProblems request
 	ListProblems(ctx context.Context, params *ListProblemsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2879,6 +2896,18 @@ func (c *Client) PatchPostByIdWithBody(ctx context.Context, id openapi_types.UUI
 
 func (c *Client) GetPostImage(ctx context.Context, id openapi_types.UUID, params *GetPostImageParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPostImageRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListProblemTemplates(ctx context.Context, params *ListProblemTemplatesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListProblemTemplatesRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -7211,6 +7240,55 @@ func NewGetPostImageRequest(server string, id openapi_types.UUID, params *GetPos
 	return req, nil
 }
 
+// NewListProblemTemplatesRequest generates requests for ListProblemTemplates
+func NewListProblemTemplatesRequest(server string, params *ListProblemTemplatesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/problem-templates")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.OrganizationId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "organization_id", runtime.ParamLocationQuery, *params.OrganizationId); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListProblemsRequest generates requests for ListProblems
 func NewListProblemsRequest(server string, params *ListProblemsParams) (*http.Request, error) {
 	var err error
@@ -7398,20 +7476,16 @@ func NewCreateProblemRequest(server string, params *CreateProblemParams) (*http.
 
 		}
 
-		if params.TemplateId != nil {
-
-			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "template_id", runtime.ParamLocationQuery, *params.TemplateId); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "template_id", runtime.ParamLocationQuery, params.TemplateId); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
 				}
 			}
-
 		}
 
 		queryURL.RawQuery = queryValues.Encode()
@@ -12371,6 +12445,9 @@ type ClientWithResponsesInterface interface {
 	// GetPostImageWithResponse request
 	GetPostImageWithResponse(ctx context.Context, id openapi_types.UUID, params *GetPostImageParams, reqEditors ...RequestEditorFn) (*GetPostImageResponse, error)
 
+	// ListProblemTemplatesWithResponse request
+	ListProblemTemplatesWithResponse(ctx context.Context, params *ListProblemTemplatesParams, reqEditors ...RequestEditorFn) (*ListProblemTemplatesResponse, error)
+
 	// ListProblemsWithResponse request
 	ListProblemsWithResponse(ctx context.Context, params *ListProblemsParams, reqEditors ...RequestEditorFn) (*ListProblemsResponse, error)
 
@@ -13828,6 +13905,28 @@ func (r GetPostImageResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetPostImageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListProblemTemplatesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *[]ProblemTemplateModel
+}
+
+// Status returns HTTPResponse.Status
+func (r ListProblemTemplatesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListProblemTemplatesResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -16437,6 +16536,15 @@ func (c *ClientWithResponses) GetPostImageWithResponse(ctx context.Context, id o
 	return ParseGetPostImageResponse(rsp)
 }
 
+// ListProblemTemplatesWithResponse request returning *ListProblemTemplatesResponse
+func (c *ClientWithResponses) ListProblemTemplatesWithResponse(ctx context.Context, params *ListProblemTemplatesParams, reqEditors ...RequestEditorFn) (*ListProblemTemplatesResponse, error) {
+	rsp, err := c.ListProblemTemplates(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListProblemTemplatesResponse(rsp)
+}
+
 // ListProblemsWithResponse request returning *ListProblemsResponse
 func (c *ClientWithResponses) ListProblemsWithResponse(ctx context.Context, params *ListProblemsParams, reqEditors ...RequestEditorFn) (*ListProblemsResponse, error) {
 	rsp, err := c.ListProblems(ctx, params, reqEditors...)
@@ -18677,6 +18785,32 @@ func ParseGetPostImageResponse(rsp *http.Response) (*GetPostImageResponse, error
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListProblemTemplatesResponse parses an HTTP response from a ListProblemTemplatesWithResponse call
+func ParseListProblemTemplatesResponse(rsp *http.Response) (*ListProblemTemplatesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListProblemTemplatesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ProblemTemplateModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	}
 
@@ -21070,6 +21204,9 @@ type ServerInterface interface {
 	// Get image of the post by ID
 	// (GET /posts/{id}/image)
 	GetPostImage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetPostImageParams)
+
+	// (GET /problem-templates)
+	ListProblemTemplates(w http.ResponseWriter, r *http.Request, params ListProblemTemplatesParams)
 
 	// (GET /problems)
 	ListProblems(w http.ResponseWriter, r *http.Request, params ListProblemsParams)
@@ -23610,6 +23747,33 @@ func (siw *ServerInterfaceWrapper) GetPostImage(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ListProblemTemplates operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemTemplates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListProblemTemplatesParams
+
+	// ------------- Optional query parameter "organization_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "organization_id", r.URL.Query(), &params.OrganizationId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "organization_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemTemplates(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProblems operation middleware
 func (siw *ServerInterfaceWrapper) ListProblems(w http.ResponseWriter, r *http.Request) {
 
@@ -23730,9 +23894,16 @@ func (siw *ServerInterfaceWrapper) CreateProblem(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// ------------- Optional query parameter "template_id" -------------
+	// ------------- Required query parameter "template_id" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "template_id", r.URL.Query(), &params.TemplateId)
+	if paramValue := r.URL.Query().Get("template_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "template_id"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "template_id", r.URL.Query(), &params.TemplateId)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "template_id", Err: err})
 		return
@@ -27357,6 +27528,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/posts/{id}", wrapper.GetPostById)
 	m.HandleFunc("PATCH "+options.BaseURL+"/posts/{id}", wrapper.PatchPostById)
 	m.HandleFunc("GET "+options.BaseURL+"/posts/{id}/image", wrapper.GetPostImage)
+	m.HandleFunc("GET "+options.BaseURL+"/problem-templates", wrapper.ListProblemTemplates)
 	m.HandleFunc("GET "+options.BaseURL+"/problems", wrapper.ListProblems)
 	m.HandleFunc("POST "+options.BaseURL+"/problems", wrapper.CreateProblem)
 	m.HandleFunc("DELETE "+options.BaseURL+"/problems/{id}", wrapper.DeleteProblem)
@@ -28541,6 +28713,23 @@ type GetPostImage404JSONResponse Error
 func (response GetPostImage404JSONResponse) VisitGetPostImageResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListProblemTemplatesRequestObject struct {
+	Params ListProblemTemplatesParams
+}
+
+type ListProblemTemplatesResponseObject interface {
+	VisitListProblemTemplatesResponse(w http.ResponseWriter) error
+}
+
+type ListProblemTemplates200JSONResponse []ProblemTemplateModel
+
+func (response ListProblemTemplates200JSONResponse) VisitListProblemTemplatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -30460,6 +30649,9 @@ type StrictServerInterface interface {
 	// (GET /posts/{id}/image)
 	GetPostImage(ctx context.Context, request GetPostImageRequestObject) (GetPostImageResponseObject, error)
 
+	// (GET /problem-templates)
+	ListProblemTemplates(ctx context.Context, request ListProblemTemplatesRequestObject) (ListProblemTemplatesResponseObject, error)
+
 	// (GET /problems)
 	ListProblems(ctx context.Context, request ListProblemsRequestObject) (ListProblemsResponseObject, error)
 
@@ -32242,6 +32434,32 @@ func (sh *strictHandler) GetPostImage(w http.ResponseWriter, r *http.Request, id
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetPostImageResponseObject); ok {
 		if err := validResponse.VisitGetPostImageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProblemTemplates operation middleware
+func (sh *strictHandler) ListProblemTemplates(w http.ResponseWriter, r *http.Request, params ListProblemTemplatesParams) {
+	var request ListProblemTemplatesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemTemplates(ctx, request.(ListProblemTemplatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemTemplates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemTemplatesResponseObject); ok {
+		if err := validResponse.VisitListProblemTemplatesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

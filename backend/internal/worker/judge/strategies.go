@@ -66,6 +66,9 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 	}
 
 	checkerExec, hasChecker := s.compiledComponents["checker"]
+	if !hasChecker {
+		return nil, fmt.Errorf("checker is required for standard strategy")
+	}
 
 	// Collect tests
 	flatTests := collectFlatTests(s.pkg.Problem)
@@ -121,25 +124,15 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 		var checkerOutput string
 
 		if runRes.Status == sandbox.StatusOK {
-			if hasChecker {
-				chkRes, err := s.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
-				if err != nil {
-					verdict = "IE"
-					message = fmt.Sprintf("Checker execution failed: %v", err)
-				} else {
-					verdict = string(chkRes.Status)
-					message = chkRes.Message
-					checkerOutput = chkRes.Message
-					checkerScore = chkRes.Score
-				}
+			chkRes, err := s.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
+			if err != nil {
+				verdict = "IE"
+				message = fmt.Sprintf("Checker execution failed: %v", err)
 			} else {
-				if string(runRes.Stdout) == string(answer) || strings.TrimSpace(string(runRes.Stdout)) == strings.TrimSpace(string(answer)) {
-					verdict = "OK"
-					message = "Answer is correct"
-				} else {
-					verdict = "WA"
-					message = "Output does not match expected answer"
-				}
+				verdict = string(chkRes.Status)
+				message = chkRes.Message
+				checkerOutput = chkRes.Message
+				checkerScore = chkRes.Score
 			}
 		}
 

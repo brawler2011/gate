@@ -188,19 +188,20 @@ func (s *IntegrationTestSuite) TestUsers() {
 }
 
 func (s *IntegrationTestSuite) createUser(username string, role models.UserRole) models.User {
+	email := username + "@example.com"
 	user := models.User{
 		Id:           uuid.New(),
 		Username:     username,
 		Role:         role,
 		PasswordHash: "$2a$10$8K1p/ae9QD.b69/j/8G5/eF/G0y.L4tG7c2G/u1w5u/c3t6T7y6m6", // dummy bcrypt hash
-		Email:        username + "@example.com",
+		Email:        &email,
 	}
 	err := s.usersRepo.CreateUser(s.ctx, models.CreateUserParams{
 		Id:           user.Id,
 		Username:     user.Username,
 		Role:         user.Role,
 		PasswordHash: user.PasswordHash,
-		Email:        user.Email,
+		Email:        &email,
 	})
 	s.Require().NoError(err)
 	return user
