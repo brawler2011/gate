@@ -1,5 +1,5 @@
 FROM golang:1.25-alpine AS base
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates
 WORKDIR /workspace/backend
 
 COPY backend/go.mod backend/go.sum ./
@@ -13,6 +13,7 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
   go build -o /bin/backend .
 
 FROM scratch AS runner
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /bin/backend /bin/
 COPY --from=builder /workspace/backend/languages.yaml /
 WORKDIR /
