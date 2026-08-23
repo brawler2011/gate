@@ -88,34 +88,90 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 		return models.User{}, pkg.Wrap(pkg.ErrInternal, err, "failed to hash password")
 	}
 
-	userID := uuid.New()
+	existingByName, errByName := uc.usersRepo.GetUserByUsername(ctx, username)
+	if errByName != nil && !errors.Is(errByName, pkg.ErrNotFound) {
+		return models.User{}, errByName
+	}
+
+	existingByEmail, errByEmail := uc.usersRepo.GetUserByUsernameOrEmail(ctx, emailAddr)
+	if errByEmail != nil && !errors.Is(errByEmail, pkg.ErrNotFound) {
+		return models.User{}, errByEmail
+	}
+
+	if errByName == nil && existingByName.IsEmailVerified {
+		return models.User{}, pkg.Wrap(pkg.ErrConflict, nil, "username already taken")
+	}
+	if errByEmail == nil && existingByEmail.IsEmailVerified {
+		return models.User{}, pkg.Wrap(pkg.ErrConflict, nil, "email already in use")
+	}
+
+	if errByName == nil && errByEmail == nil && existingByName.Id != existingByEmail.Id {
+		return models.User{}, pkg.Wrap(pkg.ErrConflict, nil, "username or email already in use")
+	}
 
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {
 		return models.User{}, pkg.Wrap(pkg.ErrInternal, err, "failed to generate token")
 	}
 
-	err = uc.usersRepo.CreateUser(ctx, models.CreateUserParams{
-		Id:              userID,
-		Username:        username,
-		Role:            models.UserRoleUser,
-		PasswordHash:    string(hashed),
-		Email:           &emailAddr,
-		IsEmailVerified: false,
-	})
-	if err != nil {
-		return models.User{}, err
+	var targetUserID uuid.UUID
+
+	switch {
+	case errByName == nil:
+		targetUserID = existingByName.Id
+		if err := uc.usersRepo.UpdateUserPassword(ctx, targetUserID, string(hashed)); err != nil {
+			return models.User{}, err
+		}
+		if existingByName.Username != username {
+			if err := uc.usersRepo.UpdateUser(ctx, models.UpdateUserParams{
+				Id:       targetUserID,
+				Username: &username,
+			}); err != nil {
+				return models.User{}, err
+			}
+		}
+		if existingByName.Email == nil || *existingByName.Email != emailAddr {
+			if err := uc.usersRepo.UpdateUserEmail(ctx, targetUserID, emailAddr, false); err != nil {
+				return models.User{}, err
+			}
+		}
+		_ = uc.authRepo.DeleteAuthTokensByUserIdAndType(ctx, targetUserID, models.AuthTokenTypeEmailVerification)
+	case errByEmail == nil:
+		targetUserID = existingByEmail.Id
+		if err := uc.usersRepo.UpdateUserPassword(ctx, targetUserID, string(hashed)); err != nil {
+			return models.User{}, err
+		}
+		if err := uc.usersRepo.UpdateUser(ctx, models.UpdateUserParams{
+			Id:       targetUserID,
+			Username: &username,
+		}); err != nil {
+			return models.User{}, err
+		}
+		_ = uc.authRepo.DeleteAuthTokensByUserIdAndType(ctx, targetUserID, models.AuthTokenTypeEmailVerification)
+	default:
+		targetUserID = uuid.New()
+		err = uc.usersRepo.CreateUser(ctx, models.CreateUserParams{
+			Id:              targetUserID,
+			Username:        username,
+			Role:            models.UserRoleUser,
+			PasswordHash:    string(hashed),
+			Email:           &emailAddr,
+			IsEmailVerified: false,
+		})
+		if err != nil {
+			return models.User{}, err
+		}
 	}
 
 	err = uc.authRepo.CreateAuthToken(ctx, models.CreateAuthTokenParams{
 		ID:        uuid.New(),
-		UserID:    userID,
+		UserID:    targetUserID,
 		TokenType: models.AuthTokenTypeEmailVerification,
 		TokenHash: tokenHash,
 		ExpiresAt: time.Now().Add(verificationTokenTTL),
 	})
 	if err != nil {
-		slog.Error("failed to create email verification token", "error", err, "user_id", userID)
+		slog.Error("failed to create email verification token", "error", err, "user_id", targetUserID)
 	}
 
 	// Send verification email
@@ -123,7 +179,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 		slog.Error("failed to send verification email", "error", err, "email", emailAddr)
 	}
 
-	user, err := uc.usersRepo.GetUserById(ctx, userID)
+	user, err := uc.usersRepo.GetUserById(ctx, targetUserID)
 	if err != nil {
 		return models.User{}, err
 	}

@@ -34,14 +34,27 @@ func (s *IntegrationTestSuite) TestAuth() {
 		s.Require().NotNil(resp.JSON200.User.Email)
 		s.Equal(email, *resp.JSON200.User.Email)
 
-		// Test Duplicate Registration (should fail)
+		// Test Unverified Re-Registration (should succeed and update token/email)
 		respDup, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+			Username: username,
+			Email:    types.Email(email),
+			Password: "newpassword123",
+		})
+		s.Require().NoError(err)
+		s.Equal(http.StatusOK, respDup.StatusCode())
+
+		// Mark email as verified
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", resp.JSON200.User.Id)
+		s.Require().NoError(err)
+
+		// Test Duplicate Registration after verification (should fail with conflict)
+		respVerifiedDup, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
 			Username: username,
 			Email:    types.Email(email),
 			Password: password,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusBadRequest, respDup.StatusCode())
+		s.Equal(http.StatusConflict, respVerifiedDup.StatusCode())
 
 		// Test short password validation (min 8 characters)
 		respShort, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{

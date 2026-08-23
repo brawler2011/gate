@@ -285,6 +285,39 @@ func (m *fullMockUsersRepo) UpdateUserEmail(ctx context.Context, id uuid.UUID, e
 	return pkg.ErrNotFound
 }
 
+func (m *fullMockUsersRepo) UpdateUser(ctx context.Context, params models.UpdateUserParams) error {
+	u, ok := m.users[params.Id]
+	if !ok {
+		return pkg.ErrNotFound
+	}
+	if params.Username != nil {
+		delete(m.usersByName, u.Username)
+		u.Username = *params.Username
+		m.usersByName[u.Username] = u
+	}
+	if params.Email != nil {
+		if u.Email != nil {
+			delete(m.usersByEmail, *u.Email)
+		}
+		u.Email = params.Email
+		m.usersByEmail[*params.Email] = u
+	}
+	if params.Role != nil {
+		u.Role = *params.Role
+	}
+	if params.AvatarUrl != nil {
+		u.AvatarUrl = params.AvatarUrl
+	}
+	if params.ExpiresAt != nil {
+		u.ExpiresAt = params.ExpiresAt
+	}
+	if params.IsEmailVerified != nil {
+		u.IsEmailVerified = *params.IsEmailVerified
+	}
+	m.users[u.Id] = u
+	return nil
+}
+
 func (m *fullMockUsersRepo) WithTx(tx pgx.Tx) interfaces.UsersRepo {
 	return m
 }
@@ -321,6 +354,60 @@ func TestRegistrationAndEmailVerification(t *testing.T) {
 	_, loginSessionID, err := authUC.Login(ctx, "testuser", "SecretPass123")
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, loginSessionID)
+}
+
+func TestRegistrationRetryUnverifiedUser(t *testing.T) {
+	ctx := context.Background()
+	usersRepo := newFullMockUsersRepo()
+	authRepo := newFullMockAuthRepo()
+	emailSvc := &mockEmailService{}
+	txManager := &mockTransactorNoop{}
+
+	authUC := NewAuthUseCase(usersRepo, authRepo, txManager, emailSvc)
+
+	// 1. Initial registration (email not verified yet)
+	user1, err := authUC.Register(ctx, "unverifieduser", "unverified@example.com", "FirstPassword123")
+	require.NoError(t, err)
+	assert.False(t, user1.IsEmailVerified)
+	token1 := emailSvc.lastVerificationEmail.Token
+	require.NotEmpty(t, token1)
+
+	// 2. Re-register with the same unverified username & email, updated password
+	user2, err := authUC.Register(ctx, "unverifieduser", "unverified@example.com", "NewPassword456")
+	require.NoError(t, err)
+	assert.Equal(t, user1.Id, user2.Id)
+	assert.False(t, user2.IsEmailVerified)
+	token2 := emailSvc.lastVerificationEmail.Token
+	require.NotEmpty(t, token2)
+	assert.NotEqual(t, token1, token2)
+
+	// 3. Old token should no longer work
+	_, _, err = authUC.VerifyEmail(ctx, token1)
+	require.Error(t, err)
+
+	// 4. New token works and verifies the account
+	verifiedUser, sessionID, err := authUC.VerifyEmail(ctx, token2)
+	require.NoError(t, err)
+	assert.True(t, verifiedUser.IsEmailVerified)
+	assert.NotEqual(t, uuid.Nil, sessionID)
+
+	// 5. Login with new password succeeds
+	_, loginSessID, err := authUC.Login(ctx, "unverifieduser", "NewPassword456")
+	require.NoError(t, err)
+	assert.NotEqual(t, uuid.Nil, loginSessID)
+
+	// 6. Login with old password fails
+	_, _, err = authUC.Login(ctx, "unverifieduser", "FirstPassword123")
+	require.Error(t, err)
+
+	// 7. Trying to register again after email is verified should fail with conflict
+	_, err = authUC.Register(ctx, "unverifieduser", "different@example.com", "AnotherPass123")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "username already taken")
+
+	_, err = authUC.Register(ctx, "otheruser", "unverified@example.com", "AnotherPass123")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "email already in use")
 }
 
 func TestPasswordResetFlow(t *testing.T) {
