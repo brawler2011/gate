@@ -36,6 +36,12 @@ func (m *MockContestsUC) GetContestProblems(ctx context.Context, contestID uuid.
 	return args.Get(0).([]models.ContestProblem), args.Error(1) //nolint:wrapcheck
 }
 
+type stubBookletCompiler struct{}
+
+func (stubBookletCompiler) CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
+	return []byte("%PDF-1.4 mock PDF content"), nil
+}
+
 func TestHideStatementsAndPDFBooklet(t *testing.T) {
 	t.Parallel()
 
@@ -77,7 +83,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, stubBookletCompiler{})
 
 		user := models.User{
 			Id:   participantID,
@@ -116,7 +122,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, stubBookletCompiler{})
 
 		user := models.User{
 			Id:   participantID,
@@ -139,7 +145,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, stubBookletCompiler{})
 
 		user := models.User{
 			Id:   managerID,
