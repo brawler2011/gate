@@ -38,7 +38,7 @@ func TestReorderContestProblems(t *testing.T) {
 	t.Run("Successfully reorders contest problems", func(t *testing.T) {
 		t.Parallel()
 		mockContests := new(MockContestsUC)
-		server := core.NewCoreServer(nil, mockContests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		ctx := context.Background()
 
@@ -69,7 +69,7 @@ func TestReorderContestProblems(t *testing.T) {
 	t.Run("Returns error when request body is nil", func(t *testing.T) {
 		t.Parallel()
 		mockContests := new(MockContestsUC)
-		server := core.NewCoreServer(nil, mockContests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		ctx := context.Background()
 

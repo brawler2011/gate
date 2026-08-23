@@ -692,7 +692,12 @@ func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, request c
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to generate LaTeX booklet")
 	}
 
-	pdfBytes, err := booklet.CompilePDF(ctx, texSource)
+	var pdfBytes []byte
+	if h.bookletCompiler != nil {
+		pdfBytes, err = h.bookletCompiler.CompilePDF(ctx, texSource)
+	} else {
+		pdfBytes, err = booklet.CompilePDFLocal(ctx, texSource)
+	}
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to compile PDF booklet", "error", err)
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to compile PDF booklet")

@@ -428,6 +428,28 @@ func TestIntegrationSandbox(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("compile latex booklet", func(t *testing.T) {
+		texSource := `\documentclass[11pt,a4paper,oneside]{article}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian,english]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{olymp}
+\contest{Test Contest}{Org}{2026}
+\begin{document}
+\begin{problem}{A. Test Problem}{stdin}{stdout}{1.0 сек}{256 МБ}
+Test legend.
+\end{problem}
+\end{document}`
+		pdfBytes, err := sb.CompilePDF(ctx, texSource)
+		if err != nil {
+			t.Fatalf("failed to compile PDF booklet in sandbox: %v", err)
+		}
+		if len(pdfBytes) < 4 || !strings.HasPrefix(string(pdfBytes[:4]), "%PDF") {
+			t.Fatalf("expected valid PDF header, got %q", string(pdfBytes[:4]))
+		}
+	})
 }
 
 func getLanguageKey(filename string) (string, error) {

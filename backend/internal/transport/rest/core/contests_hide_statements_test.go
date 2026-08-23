@@ -77,7 +77,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		user := models.User{
 			Id:   participantID,
@@ -116,7 +116,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		user := models.User{
 			Id:   participantID,
@@ -139,7 +139,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 		user := models.User{
 			Id:   managerID,

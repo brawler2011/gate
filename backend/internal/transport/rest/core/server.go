@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/usecase"
+	"github.com/brawler2011/gate/backend/pkg/booklet"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -25,6 +26,7 @@ type CoreServer struct {
 	announcementsUC *usecase.AnnouncementsUseCase
 	clarificationsUC *usecase.ClarificationsUseCase
 	natsJS          jetstream.JetStream
+	bookletCompiler booklet.Compiler
 }
 
 func NewCoreServer(
@@ -46,6 +48,7 @@ func NewCoreServer(
 	announcementsUC *usecase.AnnouncementsUseCase,
 	clarificationsUC *usecase.ClarificationsUseCase,
 	natsJS jetstream.JetStream,
+	bookletCompiler booklet.Compiler,
 ) *CoreServer {
 	return &CoreServer{
 		authUC:          authUC,
@@ -66,5 +69,6 @@ func NewCoreServer(
 		announcementsUC: announcementsUC,
 		clarificationsUC: clarificationsUC,
 		natsJS:          natsJS,
+		bookletCompiler: bookletCompiler,
 	}
 }

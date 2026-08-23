@@ -228,8 +228,18 @@ func formatSampleContent(s string) string {
 	return s
 }
 
-// CompilePDF compiles the given LaTeX source into a PDF file using pdflatex or xelatex.
+// Compiler represents an interface capable of compiling LaTeX documents into PDF bytes.
+type Compiler interface {
+	CompilePDF(ctx context.Context, texSource string) ([]byte, error)
+}
+
+// CompilePDF compiles the given LaTeX source into a PDF file using local pdflatex or xelatex.
 func CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
+	return CompilePDFLocal(ctx, texSource)
+}
+
+// CompilePDFLocal compiles the given LaTeX source into a PDF file using pdflatex or xelatex.
+func CompilePDFLocal(ctx context.Context, texSource string) ([]byte, error) {
 	tempDir, err := os.MkdirTemp("", "booklet-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)

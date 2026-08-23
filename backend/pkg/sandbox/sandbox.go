@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/booklet"
 	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	pb "github.com/criyle/go-judge/pb"
 )
@@ -70,6 +71,12 @@ const (
 	// Solution execution limits defaults
 	solutionProcLimit           = 50
 	solutionClockTimeMultiplier = 2
+
+	// Booklet LaTeX compilation limits
+	bookletCompileCpuTimeLimit   = 30 * time.Second
+	bookletCompileClockTimeLimit = 60 * time.Second
+	bookletCompileMemoryLimit    = 512 * 1024 * 1024
+	bookletCompileProcLimit      = 100
 )
 
 const (
@@ -615,3 +622,60 @@ func statusToString(status pb.Response_Result_StatusType) Status {
 		return StatusFail
 	}
 }
+
+// CompilePDF compiles a LaTeX booklet source into a PDF using pdflatex in go-judge sandbox.
+func (s *Sandbox) CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
+	copyIn := map[string]*pb.Request_File{
+		"booklet.tex": newMemoryFile([]byte(texSource)),
+		"olymp.sty":   newMemoryFile(booklet.OlympSty),
+	}
+
+	cmd := pb.Request_CmdType_builder{
+		Args: []string{"/bin/sh", "-c", "pdflatex -interaction=nonstopmode -halt-on-error booklet.tex && pdflatex -interaction=nonstopmode -halt-on-error booklet.tex"},
+		Files: []*pb.Request_File{
+			newMemoryFile([]byte("")),
+			newPipeCollector("stdout", defaultPipeCollectorSize),
+			newPipeCollector("stderr", defaultPipeCollectorSize),
+		},
+		CopyIn: copyIn,
+		CopyOut: []*pb.Request_CmdCopyOutFile{
+			pb.Request_CmdCopyOutFile_builder{Name: "booklet.pdf"}.Build(),
+			pb.Request_CmdCopyOutFile_builder{Name: "booklet.log"}.Build(),
+		},
+		CpuTimeLimit:   safeUint64(bookletCompileCpuTimeLimit.Nanoseconds()),
+		ClockTimeLimit: safeUint64(bookletCompileClockTimeLimit.Nanoseconds()),
+		MemoryLimit:    bookletCompileMemoryLimit,
+		ProcLimit:      bookletCompileProcLimit,
+		Env:            []string{"PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/tmp", "TEXMFVAR=/tmp/texmf-var", "TEXMFCONFIG=/tmp/texmf-config"},
+	}.Build()
+
+	req := pb.Request_builder{
+		Cmd: []*pb.Request_CmdType{cmd},
+	}.Build()
+
+	resp, err := s.client.Exec(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("LaTeX compilation failed to dispatch: %w", err)
+	}
+	if len(resp.GetResults()) == 0 {
+		return nil, fmt.Errorf("LaTeX compilation returned no results")
+	}
+
+	res := resp.GetResults()[0]
+	if res.GetStatus() != pb.Response_Result_Accepted {
+		logSnippet := string(res.GetFiles()["booklet.log"])
+		if len(logSnippet) > 4000 {
+			logSnippet = logSnippet[len(logSnippet)-4000:]
+		}
+		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\nOutput:\n%s\nLog:\n%s",
+			res.GetStatus(), res.GetExitStatus(), string(res.GetFiles()["stdout"]), logSnippet)
+	}
+
+	pdfBytes, ok := res.GetFiles()["booklet.pdf"]
+	if !ok || len(pdfBytes) == 0 {
+		return nil, fmt.Errorf("LaTeX compilation succeeded but booklet.pdf was not produced")
+	}
+
+	return pdfBytes, nil
+}
+

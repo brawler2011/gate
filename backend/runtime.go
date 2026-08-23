@@ -325,6 +325,7 @@ func runApp(envFile string) error {
 		announcementsUC,
 		clarificationsUC,
 		natsJS,
+		sandboxInstance,
 	)
 
 	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, []corev1.StrictMiddlewareFunc{

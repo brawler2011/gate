@@ -194,6 +194,7 @@ func (s *IntegrationTestSuite) initApp() {
 		announcementsUC,
 		clarificationsUC,
 		nil, // natsJS - not needed for integration tests
+		nil, // bookletCompiler - not needed for integration tests
 	)
 
 	// Strict Handler
