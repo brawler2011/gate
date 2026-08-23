@@ -86,6 +86,10 @@ When working with the frontend codebase (`/frontend` directory), adhere strictly
    - Always use `bun` for package management, running scripts, and development commands (e.g., `bun run dev`, `bun add <package>`, `bun install`, `bun run typecheck`, `bun run build:local`). Do not use `npm`, `npx`, `yarn`, or `pnpm`.
 4. **Never override or set fallback values for environment variables in code**
    - Do not use fallback values for environment variables (e.g., `return process.env.BACKEND_API_URL || "http://localhost:8080";`).
+5. **Do not use or create Server Actions (`'use server'`)**
+   - In this architecture, Server Actions are unnecessary and prohibited.
+   - **Client Components (`"use client"`)**: Perform direct API calls via `@/lib/api` (`api.<method>(...)`).
+   - **Server Components (RSC)**: Fetch data directly during component/page render using `@/lib/api` (e.g., `await unwrap(api.<method>)(...)` or `await api.<method>(...)`).
 
 ---
 
