@@ -264,6 +264,9 @@ services:
     image: chrislusf/seaweedfs:3.77_full
     container_name: gate-seaweed-s3-prod
     hostname: s3
+    environment:
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
     networks:
       - gate-prod
     command: '-v 9 s3 -filer="filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327 -config=/etc/seaweedfs/s3.json'
