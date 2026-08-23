@@ -8,7 +8,7 @@ import remarkMath from "remark-math";
 
 import "katex/dist/katex.min.css";
 
-export const renderSafeImage = (
+const renderSafeImage = (
   problemId?: string
 ): ((props: React.ImgHTMLAttributes<HTMLImageElement> & { node?: unknown }) => ReactNode) => {
   const SafeImage = ({

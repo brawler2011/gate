@@ -13,7 +13,7 @@ import {ProblemStatement} from "./ProblemStatement";
 
 import "./Problem.css";
 
-export type ProblemModelProps = {
+type ProblemModelProps = {
   id?: string;
   problem_id?: string;
   organization_login?: string;

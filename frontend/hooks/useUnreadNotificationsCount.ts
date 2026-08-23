@@ -4,7 +4,7 @@ import {useCallback, useEffect, useState} from "react";
 
 import {api} from "@/lib/api";
 
-export const NOTIFICATIONS_UPDATED_EVENT = "gate:notifications_updated";
+const NOTIFICATIONS_UPDATED_EVENT = "gate:notifications_updated";
 
 export const dispatchNotificationsUpdated = (): void => {
   if (typeof window !== "undefined") {

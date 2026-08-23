@@ -1,14 +1,14 @@
 import {Stack, Text} from "@mantine/core";
 import React, {type ReactNode} from "react";
 
-export const prettifyTimeLimit = (timeLimit: number): string => {
+const prettifyTimeLimit = (timeLimit: number): string => {
   if (timeLimit % 1000 === 0) {
     return `${timeLimit / 1000} сек`;
   }
   return `${timeLimit} мс`;
 };
 
-export const prettifyMemoryLimit = (memoryLimit: number): string => {
+const prettifyMemoryLimit = (memoryLimit: number): string => {
   if (memoryLimit % 1000 === 0) {
     return `${memoryLimit / 1000} ГБ`;
   }

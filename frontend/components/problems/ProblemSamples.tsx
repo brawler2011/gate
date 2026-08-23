@@ -3,7 +3,7 @@ import React, {type ReactNode} from "react";
 
 import {ProblemCopyableBlock} from "./ProblemCopyableBlock";
 
-export interface ProblemSampleItem {
+interface ProblemSampleItem {
   input: string;
   output: string;
 }

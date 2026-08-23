@@ -14,7 +14,7 @@ import {
 import {IconEdit, IconTrash} from "@tabler/icons-react";
 import React, {type ReactNode} from "react";
 
-export interface EntityColumn<T> {
+interface EntityColumn<T> {
   header: string;
   accessorKey?: keyof T;
   render?: (item: T) => ReactNode;

@@ -3,7 +3,7 @@
 import {Button, Modal, Select, Stack, Text} from "@mantine/core";
 import {useEffect, useState, type ReactNode} from "react";
 
-export interface RoleOption {
+interface RoleOption {
   label: string;
   value: string;
 }

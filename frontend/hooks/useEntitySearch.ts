@@ -3,7 +3,7 @@
 import {useDebouncedValue} from "@mantine/hooks";
 import {useCallback, useEffect, useRef, useState} from "react";
 
-export type EntitySearchItem = {
+type EntitySearchItem = {
   value: string;
   label: string;
   data?: unknown;
