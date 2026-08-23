@@ -1,28 +1,26 @@
 "use client";
 
 import {
-  ActionIcon,
   Autocomplete,
   Badge,
   Button,
-  Center,
+  Card,
   Group,
   Loader,
   Stack,
-  Table,
   Text,
 } from "@mantine/core";
-import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconEdit, IconPlus, IconTrash, IconUser} from "@tabler/icons-react";
-import {useCallback, useEffect, useState} from "react";
+import {IconPlus, IconUser} from "@tabler/icons-react";
+import {useCallback, useEffect, useState, type ReactNode} from "react";
 
-import {ChangeRoleModal} from "@/components/contests/ChangeRoleModal";
+import {ChangeRoleModal} from "@/components/shared/ChangeRoleModal";
+import {EntityManagementTable} from "@/components/shared/EntityManagementTable";
 import {StatusMessage} from "@/components/shared/StatusMessage";
+import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
 
 import type * as corev1 from "@/contracts/core/v1";
-import type {ReactNode} from "react";
 
 const PROBLEM_ROLE_OPTIONS = [
   {label: "Просмотр", value: "viewer", color: "gray"},
@@ -35,19 +33,13 @@ const getRoleDisplay = (role: string) => {
   return found || {label: role, color: "gray"};
 };
 
-interface ProblemMembersManagementProps {
+export interface ProblemMembersManagementProps {
   problemId: string;
 }
 
 export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementProps): ReactNode => {
   const [members, setMembers] = useState<corev1.ProblemMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
-  const [searchResults, setSearchResults] = useState<corev1.UserModel[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -79,26 +71,32 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     loadMembers();
   }, [loadMembers]);
 
-  useEffect(() => {
-    const searchUsersAsync = async () => {
-      if (!debouncedQuery || debouncedQuery.length < 2) {
-        setSearchResults([]);
-        return;
-      }
+  const searchUsersFn = useCallback(async (query: string) => {
+    const [error, response] = await api.listUsers({page: 1, pageSize: 10, search: query});
+    if (error || !response) {
+      return [];
+    }
+    return response.users;
+  }, []);
 
-      setSearching(true);
-      const [error, response] = await api.listUsers({page: 1, pageSize: 10, search: debouncedQuery});
-      setSearching(false);
+  const mapUserToItem = useCallback(
+    (u: corev1.UserModel) => ({value: u.id, label: u.username, data: u}),
+    []
+  );
 
-      if (error || !response) {
-        return;
-      }
-
-      setSearchResults(response.users);
-    };
-
-    searchUsersAsync();
-  }, [debouncedQuery]);
+  const {
+    searchQuery,
+    setSearchQuery,
+    results: searchResults,
+    rawResults,
+    searching,
+    selectedId: selectedUserId,
+    selectOption: setSelectedUserId,
+    reset: resetSearch,
+  } = useEntitySearch<corev1.UserModel>({
+    searchFn: searchUsersFn,
+    mapToItem: mapUserToItem,
+  });
 
   const handleAddMember = async () => {
     if (!selectedUserId) {
@@ -116,47 +114,46 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось добавить доступ пользователю",
+        message: error.message || "Не удалось добавить участника",
         color: "red",
       });
       setStatusMessage({
         type: "error",
-        message: "Не удалось добавить доступ пользователю",
+        message: "Не удалось добавить участника",
       });
       return;
     }
 
     setStatusMessage({
       type: "success",
-      message: "Пользователь добавлен",
+      message: "Участник добавлен",
     });
 
-    setSearchQuery("");
-    setSelectedUserId(null);
+    resetSearch();
     await loadMembers();
   };
 
-  const handleDeleteMember = async (userId: string) => {
-    setDeletingId(userId);
-    const [error] = await api.deleteProblemMember({id: problemId, userId});
+  const handleDeleteMember = async (member: corev1.ProblemMemberModel) => {
+    setDeletingId(member.user_id);
+    const [error] = await api.deleteProblemMember({id: problemId, userId: member.user_id});
     setDeletingId(null);
 
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось отзывать доступ",
+        message: error.message || "Не удалось удалить участника",
         color: "red",
       });
       setStatusMessage({
         type: "error",
-        message: "Не удалось отозвать доступ",
+        message: "Не удалось удалить участника",
       });
       return;
     }
 
     setStatusMessage({
       type: "success",
-      message: "Доступ отозван",
+      message: "Участник удален",
     });
 
     await loadMembers();
@@ -187,133 +184,92 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось изменить роль",
+        message: error.message || "Не удалось изменить роль участника",
         color: "red",
       });
       setStatusMessage({
         type: "error",
-        message: "Не удалось изменить роль",
+        message: "Не удалось изменить роль участника",
       });
       return;
     }
 
     setStatusMessage({
       type: "success",
-      message: "Роль успешно обновлена",
+      message: "Роль участника обновлена",
     });
 
     await loadMembers();
   };
 
-  const autocompleteData = searchResults.map((u) => ({
-    value: u.id,
-    label: `${u.username} (${u.role})`,
-  }));
-
   return (
     <>
       <Stack gap="md">
-        <Group gap="sm">
-          <Autocomplete
-            size="md"
-            placeholder="Поиск пользователя..."
-            value={searchQuery}
-            onChange={setSearchQuery}
-            onOptionSubmit={(value) => {
-              setSelectedUserId(value);
-              const selected = searchResults.find((u) => u.id === value);
-              if (selected) {
-                setSearchQuery(selected.username);
-              }
-            }}
-            data={autocompleteData}
-            rightSection={searching && <Loader size="xs" />}
-            style={{flex: 1}}
-          />
-          <Button
-            size="md"
-            onClick={handleAddMember}
-            disabled={!selectedUserId || adding}
-            loading={adding}
-            leftSection={<IconPlus size={16} />}
-          >
-            Выдать доступ
-          </Button>
-        </Group>
+        <Card withBorder padding="md">
+          <Stack gap="sm">
+            <Text size="sm" fw={500}>
+              Добавить участника
+            </Text>
+            <Group gap="sm">
+              <Autocomplete
+                placeholder="Поиск пользователя по username..."
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onOptionSubmit={(value) => {
+                  setSelectedUserId(value);
+                  const selected = rawResults.find((u) => u.id === value);
+                  if (selected) {
+                    setSearchQuery(selected.username);
+                  }
+                }}
+                data={searchResults}
+                rightSection={searching && <Loader size="xs" />}
+                style={{flex: 1}}
+              />
+              <Button
+                onClick={handleAddMember}
+                disabled={!selectedUserId || adding}
+                loading={adding}
+                leftSection={<IconPlus size={16} />}
+              >
+                Добавить
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
 
-        {loading && (
-          <Center py="xl">
-            <Loader size="md" />
-          </Center>
-        )}
-        {!loading && members.length === 0 && (
-          <Center py="xl">
-            <Stack align="center" gap="sm">
-              <IconUser size={32} color="var(--mantine-color-dimmed)" />
-              <Text size="lg" c="dimmed">
-                Нет индивидуального доступа
-              </Text>
-              <Text size="sm" c="dimmed">
-                Добавьте пользователей с индивидуальным доступом к задаче
-              </Text>
-            </Stack>
-          </Center>
-        )}
-        {!loading && members.length > 0 && (
-          <Table highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th style={{width: 180}}>Пользователь</Table.Th>
-                <Table.Th style={{textAlign: "center"}}>Уровень доступа</Table.Th>
-                <Table.Th style={{width: 80}}>Действия</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {members.map((m) => (
-                <Table.Tr key={m.user_id}>
-                  <Table.Td>
-                    <Text size="sm" fw={500}>
-                      {m.username}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td style={{textAlign: "center"}}>
-                    <Badge
-                      variant="filled"
-                      color={getRoleDisplay(m.role).color}
-                      tt="none"
-                      size="md"
-                    >
-                      {getRoleDisplay(m.role).label}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs" wrap="nowrap">
-                      {m.role !== "owner" ? (
-                        <ActionIcon
-                          color="blue"
-                          variant="subtle"
-                          onClick={() => handleEditRole(m)}
-                        >
-                          <IconEdit size={16} />
-                        </ActionIcon>
-                      ) : (
-                        <div style={{width: 28}} />
-                      )}
-                      <ActionIcon
-                        color="red"
-                        variant="subtle"
-                        onClick={() => handleDeleteMember(m.user_id)}
-                        loading={deletingId === m.user_id}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        )}
+        <EntityManagementTable<corev1.ProblemMemberModel>
+          items={members}
+          loading={loading}
+          getItemKey={(m) => m.user_id}
+          emptyMessage="Нет участников. Добавьте участников для совместной работы над задачей"
+          emptyIcon={<IconUser size={32} color="var(--mantine-color-dimmed)" />}
+          columns={[
+            {
+              header: "Пользователь",
+              render: (m) => (
+                <Text size="sm" fw={500}>
+                  {m.username}
+                </Text>
+              ),
+            },
+            {
+              header: "Роль",
+              align: "center",
+              render: (m) => {
+                const role = getRoleDisplay(m.role);
+                return (
+                  <Badge variant="filled" color={role.color} tt="none" size="md">
+                    {role.label}
+                  </Badge>
+                );
+              },
+            },
+          ]}
+          onEdit={handleEditRole}
+          onDelete={handleDeleteMember}
+          deletingId={deletingId}
+        />
       </Stack>
 
       {editingMember && (
@@ -325,6 +281,7 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
             userId: editingMember.userId,
           }}
           currentRole={editingMember.currentRole}
+          roleOptions={PROBLEM_ROLE_OPTIONS}
           onSubmit={handleChangeRole}
         />
       )}

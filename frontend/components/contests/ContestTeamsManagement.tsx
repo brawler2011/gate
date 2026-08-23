@@ -1,30 +1,26 @@
 "use client";
 
 import {
-  ActionIcon,
   Autocomplete,
   Badge,
   Button,
   Card,
-  Center,
   Group,
   Loader,
   Stack,
-  Table,
   Text,
 } from "@mantine/core";
-import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconEdit, IconPlus, IconTrash, IconUsersGroup} from "@tabler/icons-react";
-import {useCallback, useEffect, useState} from "react";
+import {IconPlus, IconUsersGroup} from "@tabler/icons-react";
+import {useCallback, useEffect, useState, type ReactNode} from "react";
 
+import {ChangeRoleModal} from "@/components/shared/ChangeRoleModal";
+import {EntityManagementTable} from "@/components/shared/EntityManagementTable";
 import {StatusMessage} from "@/components/shared/StatusMessage";
+import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
 
-import {ChangeRoleModal} from "./ChangeRoleModal";
-
 import type * as corev1 from "@/contracts/core/v1";
-import type {ReactNode} from "react";
 
 const CONTEST_TEAM_ROLE_OPTIONS = [
   {label: "Участник", value: "participant", color: "gray"},
@@ -36,22 +32,20 @@ const getRoleDisplay = (role: string) => {
   return found || {label: role, color: "gray"};
 };
 
-interface ContestTeamsManagementProps {
+export interface ContestTeamsManagementProps {
   orgLogin: string;
   contestLogin: string;
   contestId?: string;
   orgId?: string;
 }
 
-export const ContestTeamsManagement = ({orgLogin, contestLogin, orgId}: ContestTeamsManagementProps): ReactNode => {
+export const ContestTeamsManagement = ({
+  orgLogin,
+  contestLogin,
+  orgId,
+}: ContestTeamsManagementProps): ReactNode => {
   const [teams, setTeams] = useState<corev1.ContestTeamModel[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
-  const [searchResults, setSearchResults] = useState<corev1.TeamModel[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -83,31 +77,40 @@ export const ContestTeamsManagement = ({orgLogin, contestLogin, orgId}: ContestT
     loadTeams();
   }, [loadTeams]);
 
-  useEffect(() => {
-    const searchTeamsAsync = async () => {
-      if (!debouncedQuery || debouncedQuery.length < 2) {
-        setSearchResults([]);
-        return;
-      }
-
-      setSearching(true);
+  const searchTeamsFn = useCallback(
+    async (query: string) => {
       const [error, response] = await api.listTeams({
         organizationId: orgId,
-        search: debouncedQuery,
+        search: query,
         page: 1,
         pageSize: 10,
       });
-      setSearching(false);
-
       if (error || !response) {
-        return;
+        return [];
       }
+      return response.teams;
+    },
+    [orgId]
+  );
 
-      setSearchResults(response.teams);
-    };
+  const mapTeamToItem = useCallback(
+    (t: corev1.TeamModel) => ({value: t.id, label: t.name, data: t}),
+    []
+  );
 
-    searchTeamsAsync();
-  }, [debouncedQuery, orgId]);
+  const {
+    searchQuery,
+    setSearchQuery,
+    results: searchResults,
+    rawResults,
+    searching,
+    selectedId: selectedTeamId,
+    selectOption: setSelectedTeamId,
+    reset: resetSearch,
+  } = useEntitySearch<corev1.TeamModel>({
+    searchFn: searchTeamsFn,
+    mapToItem: mapTeamToItem,
+  });
 
   const handleAddTeam = async () => {
     if (!selectedTeamId) {
@@ -141,14 +144,13 @@ export const ContestTeamsManagement = ({orgLogin, contestLogin, orgId}: ContestT
       message: "Команда добавлена",
     });
 
-    setSearchQuery("");
-    setSelectedTeamId(null);
+    resetSearch();
     await loadTeams();
   };
 
-  const handleDeleteTeam = async (teamId: string) => {
-    setDeletingId(teamId);
-    const [error] = await api.deleteContestTeam({orgLogin, contestLogin, teamId});
+  const handleDeleteTeam = async (team: corev1.ContestTeamModel) => {
+    setDeletingId(team.team_id);
+    const [error] = await api.deleteContestTeam({orgLogin, contestLogin, teamId: team.team_id});
     setDeletingId(null);
 
     if (error) {
@@ -216,11 +218,6 @@ export const ContestTeamsManagement = ({orgLogin, contestLogin, orgId}: ContestT
     await loadTeams();
   };
 
-  const autocompleteData = searchResults.map((t) => ({
-    value: t.id,
-    label: t.name,
-  }));
-
   return (
     <>
       <Stack gap="md">
@@ -236,12 +233,12 @@ export const ContestTeamsManagement = ({orgLogin, contestLogin, orgId}: ContestT
                 onChange={setSearchQuery}
                 onOptionSubmit={(value) => {
                   setSelectedTeamId(value);
-                  const selected = searchResults.find((t) => t.id === value);
+                  const selected = rawResults.find((t) => t.id === value);
                   if (selected) {
                     setSearchQuery(selected.name);
                   }
                 }}
-                data={autocompleteData}
+                data={searchResults}
                 rightSection={searching && <Loader size="xs" />}
                 style={{flex: 1}}
               />
@@ -257,75 +254,38 @@ export const ContestTeamsManagement = ({orgLogin, contestLogin, orgId}: ContestT
           </Stack>
         </Card>
 
-        {loading && (
-          <Center py="xl">
-            <Loader size="md" />
-          </Center>
-        )}
-        {!loading && teams.length === 0 && (
-          <Center py="xl">
-            <Stack align="center" gap="sm">
-              <IconUsersGroup size={32} color="var(--mantine-color-dimmed)" />
-              <Text size="lg" c="dimmed">
-                Нет команд
-              </Text>
-              <Text size="sm" c="dimmed">
-                Добавьте команды для привязки к контесту
-              </Text>
-            </Stack>
-          </Center>
-        )}
-        {!loading && teams.length > 0 && (
-          <Table highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th style={{width: 180}}>Команда</Table.Th>
-                <Table.Th style={{textAlign: "center"}}>Роль</Table.Th>
-                <Table.Th style={{width: 80}}>Действия</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {teams.map((t) => (
-                <Table.Tr key={t.team_id}>
-                  <Table.Td>
-                    <Text size="sm" fw={500}>
-                      {t.team_name}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td style={{textAlign: "center"}}>
-                    <Badge
-                      variant="filled"
-                      color={getRoleDisplay(t.contest_role).color}
-                      tt="none"
-                      size="md"
-                    >
-                      {getRoleDisplay(t.contest_role).label}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs" wrap="nowrap">
-                      <ActionIcon
-                        color="blue"
-                        variant="subtle"
-                        onClick={() => handleEditRole(t)}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        color="red"
-                        variant="subtle"
-                        onClick={() => handleDeleteTeam(t.team_id)}
-                        loading={deletingId === t.team_id}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        )}
+        <EntityManagementTable<corev1.ContestTeamModel>
+          items={teams}
+          loading={loading}
+          getItemKey={(t) => t.team_id}
+          emptyMessage="Нет команд. Добавьте команды для привязки к контесту"
+          emptyIcon={<IconUsersGroup size={32} color="var(--mantine-color-dimmed)" />}
+          columns={[
+            {
+              header: "Команда",
+              render: (t) => (
+                <Text size="sm" fw={500}>
+                  {t.team_name}
+                </Text>
+              ),
+            },
+            {
+              header: "Роль",
+              align: "center",
+              render: (t) => {
+                const role = getRoleDisplay(t.contest_role);
+                return (
+                  <Badge variant="filled" color={role.color} tt="none" size="md">
+                    {role.label}
+                  </Badge>
+                );
+              },
+            },
+          ]}
+          onEdit={handleEditRole}
+          onDelete={handleDeleteTeam}
+          deletingId={deletingId}
+        />
       </Stack>
 
       {editingTeam && (
@@ -337,6 +297,7 @@ export const ContestTeamsManagement = ({orgLogin, contestLogin, orgId}: ContestT
             userId: editingTeam.teamId,
           }}
           currentRole={editingTeam.currentRole}
+          roleOptions={CONTEST_TEAM_ROLE_OPTIONS}
           onSubmit={handleChangeRole}
         />
       )}

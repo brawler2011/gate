@@ -1,4 +1,5 @@
 -- +goose Up
+-- +goose StatementBegin
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN NOT NULL DEFAULT FALSE;
 UPDATE users SET is_email_verified = TRUE;
 
@@ -25,8 +26,12 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
 CREATE INDEX IF NOT EXISTS auth_tokens_user_id_type_idx ON auth_tokens (user_id, token_type);
 CREATE INDEX IF NOT EXISTS auth_tokens_token_hash_idx ON auth_tokens (token_hash);
 CREATE INDEX IF NOT EXISTS auth_tokens_expires_at_idx ON auth_tokens (expires_at);
+-- +goose StatementEnd
 
 -- +goose Down
+-- +goose StatementBegin
 DROP TABLE IF EXISTS auth_tokens;
 DROP TYPE IF EXISTS auth_token_type;
 ALTER TABLE users DROP COLUMN IF EXISTS is_email_verified;
+-- +goose StatementEnd
+

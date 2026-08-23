@@ -52,6 +52,8 @@
     "swr": "^2.4.2"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.6",
     "@types/bun": "^1.4.0",
     "@types/node": "^22.19.3",
     "@types/react": "^18.3.27",
@@ -59,6 +61,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "eslint": "9.39.1",
     "eslint-config-next": "^16.3.1",
+    "happy-dom": "^20.11.6",
     "knip": "^6.32.1",
     "postcss": "^8.5.6",
     "postcss-preset-mantine": "^1.18.0",

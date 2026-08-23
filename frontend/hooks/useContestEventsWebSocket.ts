@@ -32,6 +32,16 @@ export const useContestEventsWebSocket = ({
   const reconnectAttemptsRef = useRef(0);
   const isUnmountedRef = useRef(false);
 
+  const onEventRef = useRef(onEvent);
+  const currentUserIdRef = useRef(currentUserId);
+  const isModeratorRef = useRef(isModerator);
+
+  useEffect(() => {
+    onEventRef.current = onEvent;
+    currentUserIdRef.current = currentUserId;
+    isModeratorRef.current = isModerator;
+  }, [onEvent, currentUserId, isModerator]);
+
   useEffect(() => {
     isUnmountedRef.current = false;
 
@@ -45,20 +55,26 @@ export const useContestEventsWebSocket = ({
       }
 
       const wsBase = env.getWebSocketUrl();
-      const wsUrl = `${wsBase}/ws/contests?contestId=${contestId}`;
+      const wsUrl = `${wsBase}/contests?contestId=${contestId}`;
 
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
+          if (wsRef.current !== ws || isUnmountedRef.current) {
+            return;
+          }
           reconnectAttemptsRef.current = 0;
         };
 
         ws.onmessage = (event) => {
+          if (wsRef.current !== ws || isUnmountedRef.current) {
+            return;
+          }
           try {
             const data: ContestMessage = JSON.parse(event.data);
-            onEvent?.(data);
+            onEventRef.current?.(data);
 
             switch (data.event_type) {
               case ContestEventType.CONTEST_ANNOUNCEMENT_CREATED: {
@@ -79,7 +95,7 @@ export const useContestEventsWebSocket = ({
 
               case ContestEventType.CONTEST_CLARIFICATION_CREATED: {
                 const payload = data.payload as MessageContestClarificationCreated;
-                if (isModerator && payload.user_id !== currentUserId) {
+                if (isModeratorRef.current && payload.user_id !== currentUserIdRef.current) {
                   const author = payload.username ? ` от ${payload.username}` : "";
                   const prob = payload.problem_letter
                     ? ` (Задача ${payload.problem_letter})`
@@ -98,7 +114,7 @@ export const useContestEventsWebSocket = ({
 
               case ContestEventType.CONTEST_CLARIFICATION_ANSWERED: {
                 const payload = data.payload as MessageContestClarificationAnswered;
-                if (payload.user_id === currentUserId) {
+                if (payload.user_id === currentUserIdRef.current) {
                   const prob = payload.problem_letter
                     ? ` (Задача ${payload.problem_letter})`
                     : "";
@@ -118,12 +134,14 @@ export const useContestEventsWebSocket = ({
                 break;
             }
           } catch (err) {
-            console.error("Failed to parse contest WS event", err);
+            if (env.isDevelopment()) {
+              console.error("Failed to parse contest WS event", err);
+            }
           }
         };
 
         ws.onclose = () => {
-          if (isUnmountedRef.current) {
+          if (isUnmountedRef.current || wsRef.current !== ws) {
             return;
           }
 
@@ -137,11 +155,14 @@ export const useContestEventsWebSocket = ({
         };
 
         ws.onerror = (err) => {
-          console.error("Contest events WebSocket error", err);
-          ws.close();
+          if (env.isDevelopment()) {
+            console.warn("Contest events WebSocket error", err);
+          }
         };
       } catch (err) {
-        console.error("Failed to establish contest WebSocket connection", err);
+        if (env.isDevelopment()) {
+          console.warn("Failed to establish contest WebSocket connection", err);
+        }
       }
     };
 
@@ -151,11 +172,17 @@ export const useContestEventsWebSocket = ({
       isUnmountedRef.current = true;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
       if (wsRef.current) {
-        wsRef.current.close();
+        const ws = wsRef.current;
         wsRef.current = null;
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+        ws.close();
       }
     };
-  }, [contestId, enabled, currentUserId, isModerator, onEvent]);
+  }, [contestId, enabled]);
 };

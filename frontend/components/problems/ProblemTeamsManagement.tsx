@@ -1,28 +1,26 @@
 "use client";
 
 import {
-  ActionIcon,
   Autocomplete,
   Badge,
   Button,
-  Center,
+  Card,
   Group,
   Loader,
   Stack,
-  Table,
   Text,
 } from "@mantine/core";
-import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconEdit, IconPlus, IconTrash, IconUsersGroup} from "@tabler/icons-react";
-import {useCallback, useEffect, useState} from "react";
+import {IconPlus, IconUsersGroup} from "@tabler/icons-react";
+import {useCallback, useEffect, useState, type ReactNode} from "react";
 
-import {ChangeRoleModal} from "@/components/contests/ChangeRoleModal";
+import {ChangeRoleModal} from "@/components/shared/ChangeRoleModal";
+import {EntityManagementTable} from "@/components/shared/EntityManagementTable";
 import {StatusMessage} from "@/components/shared/StatusMessage";
+import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
 
 import type * as corev1 from "@/contracts/core/v1";
-import type {ReactNode} from "react";
 
 const PROBLEM_PERMISSION_OPTIONS = [
   {label: "Чтение (read)", value: "read", color: "gray"},
@@ -35,7 +33,7 @@ const getPermissionDisplay = (perm: string) => {
   return found || {label: perm, color: "gray"};
 };
 
-interface ProblemTeamsManagementProps {
+export interface ProblemTeamsManagementProps {
   problemId: string;
   orgId?: string;
 }
@@ -43,12 +41,6 @@ interface ProblemTeamsManagementProps {
 export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagementProps): ReactNode => {
   const [teams, setTeams] = useState<corev1.ProblemTeamModel[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
-  const [searchResults, setSearchResults] = useState<corev1.TeamModel[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -80,31 +72,40 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     loadTeams();
   }, [loadTeams]);
 
-  useEffect(() => {
-    const searchTeamsAsync = async () => {
-      if (!debouncedQuery || debouncedQuery.length < 2) {
-        setSearchResults([]);
-        return;
-      }
-
-      setSearching(true);
+  const searchTeamsFn = useCallback(
+    async (query: string) => {
       const [error, response] = await api.listTeams({
         organizationId: orgId,
-        search: debouncedQuery,
+        search: query,
         page: 1,
         pageSize: 10,
       });
-      setSearching(false);
-
       if (error || !response) {
-        return;
+        return [];
       }
+      return response.teams;
+    },
+    [orgId]
+  );
 
-      setSearchResults(response.teams);
-    };
+  const mapTeamToItem = useCallback(
+    (t: corev1.TeamModel) => ({value: t.id, label: t.name, data: t}),
+    []
+  );
 
-    searchTeamsAsync();
-  }, [debouncedQuery, orgId]);
+  const {
+    searchQuery,
+    setSearchQuery,
+    results: searchResults,
+    rawResults,
+    searching,
+    selectedId: selectedTeamId,
+    selectOption: setSelectedTeamId,
+    reset: resetSearch,
+  } = useEntitySearch<corev1.TeamModel>({
+    searchFn: searchTeamsFn,
+    mapToItem: mapTeamToItem,
+  });
 
   const handleAddTeam = async () => {
     if (!selectedTeamId) {
@@ -137,38 +138,37 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
       message: "Команда добавлена",
     });
 
-    setSearchQuery("");
-    setSelectedTeamId(null);
+    resetSearch();
     await loadTeams();
   };
 
-  const handleDeleteTeam = async (teamId: string) => {
-    setDeletingId(teamId);
-    const [error] = await api.deleteProblemTeam({id: problemId, teamId});
+  const handleDeleteTeam = async (team: corev1.ProblemTeamModel) => {
+    setDeletingId(team.team_id);
+    const [error] = await api.deleteProblemTeam({id: problemId, teamId: team.team_id});
     setDeletingId(null);
 
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось отозвать доступ у команды",
+        message: error.message || "Не удалось удалить команду",
         color: "red",
       });
       setStatusMessage({
         type: "error",
-        message: "Не удалось отозвать доступ у команды",
+        message: "Не удалось удалить команду",
       });
       return;
     }
 
     setStatusMessage({
       type: "success",
-      message: "Доступ команды отозван",
+      message: "Команда удалена",
     });
 
     await loadTeams();
   };
 
-  const handleEditPermission = (team: corev1.ProblemTeamModel) => {
+  const handleEditRole = (team: corev1.ProblemTeamModel) => {
     setEditingTeam({
       teamName: team.team_name,
       teamId: team.team_id,
@@ -177,7 +177,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     setModalOpened(true);
   };
 
-  const handleChangePermission = async (newPermission: string) => {
+  const handleChangeRole = async (newRole: string) => {
     if (!editingTeam) {
       return;
     }
@@ -185,7 +185,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     const [error] = await api.updateProblemTeam({
       id: problemId,
       teamId: editingTeam.teamId,
-      permission: newPermission,
+      permission: newRole,
     });
 
     setModalOpened(false);
@@ -211,111 +211,74 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     await loadTeams();
   };
 
-  const autocompleteData = searchResults.map((t) => ({
-    value: t.id,
-    label: t.name,
-  }));
-
   return (
     <>
       <Stack gap="md">
-        <Group gap="sm">
-          <Autocomplete
-            size="md"
-            placeholder="Поиск команды по названию..."
-            value={searchQuery}
-            onChange={setSearchQuery}
-            onOptionSubmit={(value) => {
-              setSelectedTeamId(value);
-              const selected = searchResults.find((t) => t.id === value);
-              if (selected) {
-                setSearchQuery(selected.name);
-              }
-            }}
-            data={autocompleteData}
-            rightSection={searching && <Loader size="xs" />}
-            style={{flex: 1}}
-          />
-          <Button
-            size="md"
-            onClick={handleAddTeam}
-            disabled={!selectedTeamId || adding}
-            loading={adding}
-            leftSection={<IconPlus size={16} />}
-          >
-            Выдать доступ
-          </Button>
-        </Group>
+        <Card withBorder padding="md">
+          <Stack gap="sm">
+            <Text size="sm" fw={500}>
+              Добавить команду
+            </Text>
+            <Group gap="sm">
+              <Autocomplete
+                placeholder="Поиск команды по названию..."
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onOptionSubmit={(value) => {
+                  setSelectedTeamId(value);
+                  const selected = rawResults.find((t) => t.id === value);
+                  if (selected) {
+                    setSearchQuery(selected.name);
+                  }
+                }}
+                data={searchResults}
+                rightSection={searching && <Loader size="xs" />}
+                style={{flex: 1}}
+              />
+              <Button
+                onClick={handleAddTeam}
+                disabled={!selectedTeamId || adding}
+                loading={adding}
+                leftSection={<IconPlus size={16} />}
+              >
+                Добавить
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
 
-        {loading && (
-          <Center py="xl">
-            <Loader size="md" />
-          </Center>
-        )}
-        {!loading && teams.length === 0 && (
-          <Center py="xl">
-            <Stack align="center" gap="sm">
-              <IconUsersGroup size={32} color="var(--mantine-color-dimmed)" />
-              <Text size="lg" c="dimmed">
-                Нет команд с доступом
-              </Text>
-              <Text size="sm" c="dimmed">
-                Добавьте команды для совместной работы над задачей
-              </Text>
-            </Stack>
-          </Center>
-        )}
-        {!loading && teams.length > 0 && (
-          <Table highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th style={{width: 180}}>Команда</Table.Th>
-                <Table.Th style={{textAlign: "center"}}>Права доступа</Table.Th>
-                <Table.Th style={{width: 80}}>Действия</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {teams.map((t) => (
-                <Table.Tr key={t.team_id}>
-                  <Table.Td>
-                    <Text size="sm" fw={500}>
-                      {t.team_name}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td style={{textAlign: "center"}}>
-                    <Badge
-                      variant="filled"
-                      color={getPermissionDisplay(t.permission).color}
-                      tt="none"
-                      size="md"
-                    >
-                      {getPermissionDisplay(t.permission).label}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs" wrap="nowrap">
-                      <ActionIcon
-                        color="blue"
-                        variant="subtle"
-                        onClick={() => handleEditPermission(t)}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        color="red"
-                        variant="subtle"
-                        onClick={() => handleDeleteTeam(t.team_id)}
-                        loading={deletingId === t.team_id}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        )}
+        <EntityManagementTable<corev1.ProblemTeamModel>
+          items={teams}
+          loading={loading}
+          getItemKey={(t) => t.team_id}
+          emptyMessage="Нет команд. Добавьте команды для управления правами на задачу"
+          emptyIcon={<IconUsersGroup size={32} color="var(--mantine-color-dimmed)" />}
+          columns={[
+            {
+              header: "Команда",
+              render: (t) => (
+                <Text size="sm" fw={500}>
+                  {t.team_name}
+                </Text>
+              ),
+            },
+            {
+              header: "Права",
+              align: "center",
+              render: (t) => {
+                const perm = getPermissionDisplay(t.permission);
+                return (
+                  <Badge variant="filled" color={perm.color} tt="none" size="md">
+                    {perm.label}
+                  </Badge>
+                );
+              },
+            },
+          ]}
+          onEdit={handleEditRole}
+          onDelete={handleDeleteTeam}
+          deletingId={deletingId}
+        />
       </Stack>
 
       {editingTeam && (
@@ -327,7 +290,10 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
             userId: editingTeam.teamId,
           }}
           currentRole={editingTeam.currentPermission}
-          onSubmit={handleChangePermission}
+          roleOptions={PROBLEM_PERMISSION_OPTIONS}
+          title="Изменить права"
+          selectLabel="Новые права"
+          onSubmit={handleChangeRole}
         />
       )}
 

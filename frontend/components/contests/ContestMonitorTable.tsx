@@ -85,7 +85,7 @@ export const ContestMonitorTable = ({
   };
 
   useEffect(() => {
-    const wsUrl = `${env.getWebSocketUrl()}/ws/submissions`;
+    const wsUrl = `${env.getWebSocketUrl()}/submissions`;
 
     const handleMessage = (event: MessageEvent) => {
       try {
