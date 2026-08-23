@@ -1,4 +1,4 @@
-FROM oven/bun:canary-slim AS builder
+FROM oven/bun:1.4-slim AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -32,7 +32,7 @@ ENV NEXT_PUBLIC_OTEL_EXPORTER_URL=$NEXT_PUBLIC_OTEL_EXPORTER_URL
 RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
   bun run next build
 
-FROM oven/bun:canary-slim AS runner
+FROM oven/bun:1.4-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
