@@ -5,6 +5,7 @@ services:
     hostname: backend
     restart: unless-stopped
     environment:
+      - ENV=${ENV:-prod}
       - ADDRESS=${BACKEND_ADDRESS:-:8080}
       - PRIVATE_ADDRESS=${BACKEND_PRIVATE_ADDRESS:-:8081}
       - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_APP_DB:-gate}?sslmode=disable
@@ -17,6 +18,9 @@ services:
       - STORAGE_TYPE=${STORAGE_TYPE:-s3}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${BACKEND_OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${BACKEND_OTEL_SERVICE_NAME:-gate-backend}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM:-Gate <no-reply@${DOMAIN_NAME}>}
+      - APP_BASE_URL=${APP_BASE_URL:-https://${DOMAIN_NAME}}
     networks:
       - gate-prod
       - traefik-network

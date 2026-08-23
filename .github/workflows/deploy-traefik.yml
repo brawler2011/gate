@@ -23,7 +23,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          source: "deploy/traefik/*"
+          source: "deploy/traefik/**"
           strip_components: 2
           target: "${{ inputs.deploy_dir }}"
           overwrite: true
