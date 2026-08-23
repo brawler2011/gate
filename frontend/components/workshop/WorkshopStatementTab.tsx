@@ -411,6 +411,7 @@ export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
 
   useEffect(() => {
     loadStatement(activeLang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problemId]);
 
   useEffect(() => {

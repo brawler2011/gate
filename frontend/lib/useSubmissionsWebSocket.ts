@@ -358,7 +358,7 @@ export const useSubmissionsWebSocket = ({
       url.searchParams.set('userId', filter.userId);
     }
     return url.toString();
-  }, [wsUrl, sinceState, filter.orgLogin, filter.contestLogin, filter.contestId, filter.userId]);
+  }, [wsUrl, sinceState, filter.contestId, filter.userId]);
 
   const connectionKey = useMemo(
     () => `${wsUrl}|${sinceState ?? 0}|${filter.orgLogin ?? ''}|${filter.contestLogin ?? ''}|${filter.contestId ?? ''}|${filter.userId ?? ''}`,
@@ -624,6 +624,7 @@ export const useSubmissionsWebSocket = ({
         listenerIdRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

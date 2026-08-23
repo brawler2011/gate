@@ -60,7 +60,9 @@ const VerifyEmailContent = () => {
           requestBody: {token},
         });
 
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
 
         if (!err && data) {
           if (data.user) {
@@ -87,6 +89,91 @@ const VerifyEmailContent = () => {
       isMounted = false;
     };
   }, [token, setUser]);
+
+  const renderContent = (): ReactNode => {
+    if (loading) {
+      return (
+        <Stack align="center" gap="md" py="xl">
+          <Loader size="lg" />
+          <Text fz={15} c="dimmed">
+            Подтверждаем ваш адрес электронной почты...
+          </Text>
+        </Stack>
+      );
+    }
+
+    if (success) {
+      return (
+        <Stack align="center" gap="md" ta="center">
+          <ThemeIcon size={64} radius="xl" color="green" variant="light">
+            <IconCheck size={36} />
+          </ThemeIcon>
+
+          <Title order={2} fz={22}>
+            Почта успешно подтверждена!
+          </Title>
+
+          <Text c="dimmed" fz={15}>
+            Ваша учетная запись активирована. Добро пожаловать на платформу Gate.
+          </Text>
+
+          <Button
+            component={Link}
+            href="/"
+            variant="filled"
+            size="sm"
+            mt="md"
+          >
+            Перейти на главную
+          </Button>
+        </Stack>
+      );
+    }
+
+    return (
+      <Stack align="center" gap="md" ta="center">
+        <ThemeIcon size={64} radius="xl" color="red" variant="light">
+          <IconAlertCircle size={36} />
+        </ThemeIcon>
+
+        <Title order={2} fz={22}>
+          Не удалось подтвердить почту
+        </Title>
+
+        {error && (
+          <Alert
+            icon={<IconAlertCircle size={18} />}
+            color="red"
+            title="Ошибка верификации"
+            radius="md"
+            w="100%"
+            ta="left"
+          >
+            {error}
+          </Alert>
+        )}
+
+        <Group justify="center" mt="md" gap="sm">
+          <Button
+            component={Link}
+            href="/auth/login"
+            variant="outline"
+            size="sm"
+          >
+            Перейти ко входу
+          </Button>
+          <Button
+            component={Link}
+            href="/auth/registration"
+            variant="filled"
+            size="sm"
+          >
+            Зарегистрироваться
+          </Button>
+        </Group>
+      </Stack>
+    );
+  };
 
   return (
     <Box
@@ -125,80 +212,7 @@ const VerifyEmailContent = () => {
           shadow="sm"
           style={{width: "100%"}}
         >
-          {loading ? (
-            <Stack align="center" gap="md" py="xl">
-              <Loader size="lg" />
-              <Text fz={15} c="dimmed">
-                Подтверждаем ваш адрес электронной почты...
-              </Text>
-            </Stack>
-          ) : success ? (
-            <Stack align="center" gap="md" ta="center">
-              <ThemeIcon size={64} radius="xl" color="green" variant="light">
-                <IconCheck size={36} />
-              </ThemeIcon>
-
-              <Title order={2} fz={22}>
-                Почта успешно подтверждена!
-              </Title>
-
-              <Text c="dimmed" fz={15}>
-                Ваша учетная запись активирована. Добро пожаловать на платформу Gate.
-              </Text>
-
-              <Button
-                component={Link}
-                href="/"
-                variant="filled"
-                size="sm"
-                mt="md"
-              >
-                Перейти на главную
-              </Button>
-            </Stack>
-          ) : (
-            <Stack align="center" gap="md" ta="center">
-              <ThemeIcon size={64} radius="xl" color="red" variant="light">
-                <IconAlertCircle size={36} />
-              </ThemeIcon>
-
-              <Title order={2} fz={22}>
-                Не удалось подтвердить почту
-              </Title>
-
-              {error && (
-                <Alert
-                  icon={<IconAlertCircle size={18} />}
-                  color="red"
-                  title="Ошибка верификации"
-                  radius="md"
-                  w="100%"
-                  ta="left"
-                >
-                  {error}
-                </Alert>
-              )}
-
-              <Group justify="center" mt="md" gap="sm">
-                <Button
-                  component={Link}
-                  href="/auth/login"
-                  variant="outline"
-                  size="sm"
-                >
-                  Перейти ко входу
-                </Button>
-                <Button
-                  component={Link}
-                  href="/auth/registration"
-                  variant="filled"
-                  size="sm"
-                >
-                  Зарегистрироваться
-                </Button>
-              </Group>
-            </Stack>
-          )}
+          {renderContent()}
         </Paper>
       </Stack>
     </Box>

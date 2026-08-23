@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Настройки профиля",
 };
 
-export const dynamic = "force-dynamic";
+export const dynamic: string = "force-dynamic";
 
 const SettingsPage = async (): Promise<ReactNode> => {
   const [error, data] = await api.getMe();

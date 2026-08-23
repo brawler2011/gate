@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Alert,
   Anchor,
   Badge,
   Button,
@@ -38,7 +37,7 @@ import {TruncatedWithCopy} from "@/components/shared/TruncatedWithCopy";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {UserModel} from "@/contracts/core/v1";
+import type {UpdateUserRequestModel, UserModel} from "@/contracts/core/v1";
 
 type Props = {
   user: UserModel;
@@ -81,12 +80,14 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
   const [resendVerificationLoading, setResendVerificationLoading] = useState(false);
 
   const handleUpdateRole = async () => {
-    if (role === user.role) return;
+    if (role === user.role) {
+      return;
+    }
     setRoleLoading(true);
     try {
       const [error] = await api.updateUser({
         username: user.username,
-        requestBody: {role: role as any},
+        requestBody: {role: role as UpdateUserRequestModel.role},
       });
 
       if (error) {
@@ -247,7 +248,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
   };
 
   const handleResendVerification = async () => {
-    if (!user.email) return;
+    if (!user.email) {
+      return;
+    }
 
     setResendVerificationLoading(true);
     try {

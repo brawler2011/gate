@@ -83,7 +83,9 @@ const LoginPageContent = () => {
   };
 
   const handleResend = async () => {
-    if (!identifier) return;
+    if (!identifier) {
+      return;
+    }
     setResendLoading(true);
     try {
       const [err] = await api.resendVerification({

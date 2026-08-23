@@ -74,6 +74,14 @@ func (s *IntegrationTestSuite) TestWorkshopCheckerEndpointsCRUD() {
 
 	problemID := createResp.JSON200.Id
 
+	// Delete initial checker created by the builtin template
+	delInitResp, err := s.client.DeleteProblemCheckerWithResponse(s.ctx, problemID, "checker.cpp", func(ctx context.Context, req *http.Request) error {
+		req.Header.Set("X-Test-User-ID", admin.Id.String())
+		return nil
+	})
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, delInitResp.StatusCode())
+
 	params := &corev1.CreateProblemCheckerParams{Name: "checker.cpp"}
 	checkerSource := []byte("int main(){return 0;}")
 	createCheckerResp, err := s.client.CreateProblemCheckerWithBodyWithResponse(

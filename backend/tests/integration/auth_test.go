@@ -33,20 +33,6 @@ func (s *IntegrationTestSuite) TestAuth() {
 		s.Equal(username, resp.JSON200.User.Username)
 		s.Require().NotNil(resp.JSON200.User.Email)
 		s.Equal(email, *resp.JSON200.User.Email)
-		s.NotEmpty(resp.JSON200.SessionId)
-
-		// Verify cookie is set on the response
-		cookies := resp.HTTPResponse.Cookies()
-		var sessionCookie *http.Cookie
-		for _, c := range cookies {
-			if c.Name == "session_id" {
-				sessionCookie = c
-				break
-			}
-		}
-		s.Require().NotNil(sessionCookie)
-		s.Equal(resp.JSON200.SessionId.String(), sessionCookie.Value)
-		s.True(sessionCookie.HttpOnly)
 
 		// Test Duplicate Registration (should fail)
 		respDup, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
@@ -82,6 +68,18 @@ func (s *IntegrationTestSuite) TestAuth() {
 		s.Require().NoError(err)
 		s.Equal(http.StatusOK, regResp.StatusCode())
 
+		// Unverified user login should fail with Bad Request
+		unverifiedLoginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+			Identifier: username,
+			Password:   password,
+		})
+		s.Require().NoError(err)
+		s.Equal(http.StatusBadRequest, unverifiedLoginResp.StatusCode())
+
+		// Mark email as verified
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.JSON200.User.Id)
+		s.Require().NoError(err)
+
 		// Test successful Login via Username
 		loginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
 			Identifier: username,
@@ -90,7 +88,21 @@ func (s *IntegrationTestSuite) TestAuth() {
 		s.Require().NoError(err)
 		s.Equal(http.StatusOK, loginResp.StatusCode())
 		s.Equal(username, loginResp.JSON200.User.Username)
+		s.Require().NotNil(loginResp.JSON200.SessionId)
 		s.NotEmpty(loginResp.JSON200.SessionId)
+
+		// Verify cookie is set on the response
+		cookies := loginResp.HTTPResponse.Cookies()
+		var sessionCookie *http.Cookie
+		for _, c := range cookies {
+			if c.Name == "session_id" {
+				sessionCookie = c
+				break
+			}
+		}
+		s.Require().NotNil(sessionCookie)
+		s.Equal(loginResp.JSON200.SessionId.String(), sessionCookie.Value)
+		s.True(sessionCookie.HttpOnly)
 
 		// Test successful Login via Email
 		loginRespEmail, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
@@ -123,7 +135,7 @@ func (s *IntegrationTestSuite) TestAuth() {
 		email := username + "@example.com"
 		password := "anotherpassword"
 
-		// Register and login to get a session
+		// Register and verify email
 		regResp, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
 			Username: username,
 			Email:    types.Email(email),
@@ -131,7 +143,19 @@ func (s *IntegrationTestSuite) TestAuth() {
 		})
 		s.Require().NoError(err)
 		s.Equal(http.StatusOK, regResp.StatusCode())
-		sessionID := regResp.JSON200.SessionId
+
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.JSON200.User.Id)
+		s.Require().NoError(err)
+
+		// Login to get a session
+		loginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+			Identifier: username,
+			Password:   password,
+		})
+		s.Require().NoError(err)
+		s.Equal(http.StatusOK, loginResp.StatusCode())
+		s.Require().NotNil(loginResp.JSON200.SessionId)
+		sessionID := *loginResp.JSON200.SessionId
 
 		// Logout
 		logoutResp, err := s.client.LogoutWithResponse(s.ctx, func(ctx context.Context, req *http.Request) error {
@@ -170,7 +194,19 @@ func (s *IntegrationTestSuite) TestAuth() {
 			Password: password,
 		})
 		s.Require().NoError(err)
-		sessionID := regResp.JSON200.SessionId
+		s.Require().Equal(http.StatusOK, regResp.StatusCode())
+
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.JSON200.User.Id)
+		s.Require().NoError(err)
+
+		loginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+			Identifier: username,
+			Password:   password,
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusOK, loginResp.StatusCode())
+		s.Require().NotNil(loginResp.JSON200.SessionId)
+		sessionID := *loginResp.JSON200.SessionId
 
 		// Directly query DB to get the initial expires_at
 		var initialExpiry time.Time
@@ -211,8 +247,20 @@ func (s *IntegrationTestSuite) TestAuth() {
 			Password: password,
 		})
 		s.Require().NoError(err)
-		sessionID := regResp.JSON200.SessionId
-		userID := regResp.JSON200.User.Id
+		s.Require().Equal(http.StatusOK, regResp.StatusCode())
+
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.JSON200.User.Id)
+		s.Require().NoError(err)
+
+		loginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+			Identifier: username,
+			Password:   password,
+		})
+		s.Require().NoError(err)
+		s.Require().Equal(http.StatusOK, loginResp.StatusCode())
+		s.Require().NotNil(loginResp.JSON200.SessionId)
+		sessionID := *loginResp.JSON200.SessionId
+		userID := loginResp.JSON200.User.Id
 
 		authRepo := pg.NewAuthRepo(s.dbPool)
 		txManager := pg.NewTransactor(s.dbPool)

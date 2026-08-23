@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -225,18 +226,26 @@ func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, in
 	}
 
 	// Generated test or manual test without pre-computed answer -> run correct solution
-	var okSol string
+	var candidateSols []string
 	for solFile, tag := range s.pkg.Problem.Solutions {
 		if tag == "OK" || tag == "Accepted" || tag == "main" {
-			okSol = solFile
+			candidateSols = append(candidateSols, solFile)
+		}
+	}
+	if len(candidateSols) == 0 {
+		return nil, fmt.Errorf("no test answer file or correct solution found to generate answer")
+	}
+	sort.Strings(candidateSols)
+	okSol := candidateSols[0]
+	for _, sol := range candidateSols {
+		if s.pkg.Problem.Solutions[sol] == "main" {
+			okSol = sol
 			break
 		}
 	}
-	if okSol == "" {
-		return nil, fmt.Errorf("no test answer file or correct solution found to generate answer")
-	}
 
-	solExec, exists := s.compiledComponents["correct_sol"]
+	cacheKey := "solution_" + okSol
+	solExec, exists := s.compiledComponents[cacheKey]
 	if !exists {
 		data, err := os.ReadFile(filepath.Join(s.pkg.Path, "solutions", okSol))
 		if err != nil {
@@ -248,7 +257,7 @@ func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, in
 			return nil, fmt.Errorf("failed to compile correct solution %s: %w", okSol, err)
 		}
 		solExec = compiled
-		s.compiledComponents["correct_sol"] = solExec
+		s.compiledComponents[cacheKey] = solExec
 	}
 
 	runRes, err := s.sandbox.Test(ctx, solExec, detectLanguage(filepath.Ext(okSol)), input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
@@ -517,11 +526,14 @@ func collectFlatTests(prob *gfmt.Problem) []FlatTest {
 	if _, exists := prob.Subtasks["samples"]; exists {
 		subtaskNames = append(subtaskNames, "samples")
 	}
+	var otherSubtasks []string
 	for k := range prob.Subtasks {
 		if k != "samples" {
-			subtaskNames = append(subtaskNames, k)
+			otherSubtasks = append(otherSubtasks, k)
 		}
 	}
+	sort.Strings(otherSubtasks)
+	subtaskNames = append(subtaskNames, otherSubtasks...)
 
 	testIdx := 1
 	for _, subName := range subtaskNames {

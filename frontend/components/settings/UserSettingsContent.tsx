@@ -18,7 +18,6 @@ import {
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
 import {
-  IconAlertCircle,
   IconCheck,
   IconKey,
   IconMail,
@@ -156,7 +155,9 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
   };
 
   const handleResendCurrentEmailVerification = async () => {
-    if (!user.email) return;
+    if (!user.email) {
+      return;
+    }
     setResendLoading(true);
     try {
       const [error] = await api.resendVerification({
@@ -307,7 +308,8 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
                 title="Запрос на смену email отправлен"
                 radius="md"
               >
-                Мы отправили ссылку для подтверждения на адрес <b>{emailChangeSuccess}</b>, а также оповещение на ваш текущий email. Перейдите по ссылке для завершения смены.
+                Мы отправили ссылку для подтверждения на адрес <b>{emailChangeSuccess}</b>,
+                а также оповещение на ваш текущий email. Перейдите по ссылке для завершения смены.
               </Alert>
             )}
 
@@ -329,7 +331,8 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
                 />
 
                 <Text c="dimmed" fz={12}>
-                  На новый адрес будет отправлена ссылка для подтверждения. До момента перехода по ссылке старый адрес останется активным.
+                  На новый адрес будет отправлена ссылка для подтверждения.
+                  До момента перехода по ссылке старый адрес останется активным.
                 </Text>
 
                 <Group justify="flex-end">

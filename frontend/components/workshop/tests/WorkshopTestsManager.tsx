@@ -187,6 +187,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problemId]);
 
   // Check for gaps in ordinals (e.g. [1, 2, 4])

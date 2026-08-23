@@ -3,7 +3,6 @@
 import {ActionIcon, Group, Select, Stack, Table, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconFileCode, IconSettings} from "@tabler/icons-react";
-
 import {useRouter} from "next/navigation";
 import {useState} from "react";
 

@@ -6,10 +6,9 @@ import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrapAndCache} from "@/lib/api";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
+import type {ContestClarificationModel} from "@/contracts/core/v1";
 import type {Metadata} from "next";
 import type {ReactNode} from "react";
-
-import type {ContestClarificationModel} from "@/contracts/core/v1";
 
 export const metadata: Metadata = {
   title: "Сообщения контеста",

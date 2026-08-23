@@ -12,7 +12,7 @@ type Props = {
   params: Promise<{ username: string }>;
 };
 
-export const dynamic = "force-dynamic";
+export const dynamic: string = "force-dynamic";
 
 export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
   const {username} = await params;
