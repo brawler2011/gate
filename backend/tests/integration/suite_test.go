@@ -267,6 +267,9 @@ type testTransport struct {
 }
 
 func (t *testTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Body != nil && req.ContentLength == 0 {
+		req.ContentLength = -1
+	}
 	if uid, ok := req.Context().Value(testUserHeaderKey).(string); ok && uid != "" {
 		req.Header.Set("X-Test-User-ID", uid)
 	}

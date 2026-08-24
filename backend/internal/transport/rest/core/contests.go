@@ -920,11 +920,13 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 	}
 
 	var since int64
-	lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.natsJS)
-	if seqErr != nil {
-		slog.Warn("failed to get submissions last sequence", "error", seqErr)
-	} else {
-		since = safeInt64(lastSeq)
+	if h.natsJS != nil {
+		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.natsJS)
+		if seqErr != nil {
+			slog.Warn("failed to get submissions last sequence", "error", seqErr)
+		} else {
+			since = safeInt64(lastSeq)
+		}
 	}
 
 	resp := SubmissionsListToDTO(submissionsList)

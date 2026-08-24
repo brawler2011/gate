@@ -11,6 +11,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
+	"github.com/ogen-go/ogen/ogenerrors"
 )
 
 type errorResponse struct {
@@ -131,6 +132,11 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 			resp.Msg = cErr.Message
 		} else {
 			statusCode = pkg.ToREST(err)
+			if statusCode == http.StatusInternalServerError {
+				if code := ogenerrors.ErrorCode(err); code != http.StatusInternalServerError {
+					statusCode = code
+				}
+			}
 			resp.Err = http.StatusText(statusCode)
 			resp.Msg = err.Error()
 		}
