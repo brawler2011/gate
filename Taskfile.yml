@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 includes:
   be:
@@ -18,17 +18,6 @@ tasks:
   default:
     cmds:
       - task -a
-
-  worktree:
-    desc: "Create a worktree and start an isolated agy session: task worktree -- <branch-name>"
-    cmds:
-      - git worktree add ../gate-{{.CLI_ARGS}} -b {{.CLI_ARGS}}
-      - cd ../gate-{{.CLI_ARGS}} && agy --dangerously-skip-permissions
-
-  worktree:clean:
-    desc: "Remove a worktree: task worktree:clean -- <branch-name>"
-    cmds:
-      - git worktree remove ../gate-{{.CLI_ARGS}}
 
   precommit:
     desc: "Run pre-commit checks across all components"
