@@ -1,11 +1,14 @@
 package core
 
 import (
+	"encoding/json"
 	"math"
 	"strings"
+	"time"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/go-faster/jx"
 	"github.com/google/uuid"
 )
 
@@ -24,6 +27,55 @@ func safeInt64[T ~uint64](v T) int64 {
 		return math.MaxInt64
 	}
 	return int64(v)
+}
+
+func timePtrToOptNilDateTime(t *time.Time) corev1.OptNilDateTime {
+	if t == nil {
+		return corev1.OptNilDateTime{}
+	}
+	return corev1.NewOptNilDateTime(*t)
+}
+
+func timePtrToOptDateTime(t *time.Time) corev1.OptDateTime {
+	if t == nil {
+		return corev1.OptDateTime{}
+	}
+	return corev1.NewOptDateTime(*t)
+}
+
+func stringPtrToOptNilString(s *string) corev1.OptNilString {
+	if s == nil {
+		return corev1.OptNilString{}
+	}
+	return corev1.NewOptNilString(*s)
+}
+
+func stringPtrToOptString(s *string) corev1.OptString {
+	if s == nil {
+		return corev1.OptString{}
+	}
+	return corev1.NewOptString(*s)
+}
+
+func stringToOptString(s string) corev1.OptString {
+	if s == "" {
+		return corev1.OptString{}
+	}
+	return corev1.NewOptString(s)
+}
+
+func uuidPtrToOptUUID(u *uuid.UUID) corev1.OptUUID {
+	if u == nil || *u == uuid.Nil {
+		return corev1.OptUUID{}
+	}
+	return corev1.NewOptUUID(*u)
+}
+
+func int32PtrToOptNilInt32(i *int32) corev1.OptNilInt32 {
+	if i == nil {
+		return corev1.OptNilInt32{}
+	}
+	return corev1.NewOptNilInt32(*i)
 }
 
 func PaginationDTO(p models.Pagination) corev1.PaginationModel {
@@ -109,16 +161,16 @@ func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem 
 
 	return &corev1.GetContestProblemResponseModel{
 		Problem: corev1.ContestProblemModel{
-			ProblemId:        contestProblem.ProblemID,
+			ProblemID:        contestProblem.ProblemID,
 			Title:            title,
 			TimeLimit:        safeInt32(problem.TimeLimitMs),
 			MemoryLimit:      safeInt32(problem.MemoryLimitMb),
 			Position:         safeInt32(contestProblem.Ordinal),
-			LegendHtml:       statementField(statement, func(s models.Statement) string { return s.Legend }),
-			InputFormatHtml:  statementField(statement, func(s models.Statement) string { return s.InputFormat }),
-			OutputFormatHtml: statementField(statement, func(s models.Statement) string { return s.OutputFormat }),
-			NotesHtml:        statementField(statement, func(s models.Statement) string { return s.Notes }),
-			ScoringHtml:      statementField(statement, func(s models.Statement) string { return s.Scoring }),
+			LegendHTML:       statementField(statement, func(s models.Statement) string { return s.Legend }),
+			InputFormatHTML:  statementField(statement, func(s models.Statement) string { return s.InputFormat }),
+			OutputFormatHTML: statementField(statement, func(s models.Statement) string { return s.OutputFormat }),
+			NotesHTML:        statementField(statement, func(s models.Statement) string { return s.Notes }),
+			ScoringHTML:      statementField(statement, func(s models.Statement) string { return s.Scoring }),
 			CreatedAt:        problem.CreatedAt,
 			UpdatedAt:        problem.UpdatedAt,
 			Samples:          samples,
@@ -168,20 +220,20 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		submissionDetailsScope = settings.SubmissionDetailsScope
 	}
 
-	freezeDurationMinutes := c.GetFreezeDurationMinutes()
+	freezeDurationMinutes := int32PtrToOptNilInt32(c.GetFreezeDurationMinutes())
 	freezeStatus := corev1.ContestModelFreezeStatus(c.GetFreezeStatus())
 
-	enableDrafts := settings.GetEnableDrafts()
-	allowClarifications := settings.GetAllowClarifications()
-	enableUpsolving := settings.GetEnableUpsolving()
-	enableVirtualContests := settings.GetEnableVirtualContests()
-	participationMode := corev1.ContestModelParticipationMode(settings.GetParticipationMode())
-	hideStatements := settings.GetHideStatements()
+	enableDrafts := corev1.NewOptBool(settings.GetEnableDrafts())
+	allowClarifications := corev1.NewOptBool(settings.GetAllowClarifications())
+	enableUpsolving := corev1.NewOptBool(settings.GetEnableUpsolving())
+	enableVirtualContests := corev1.NewOptBool(settings.GetEnableVirtualContests())
+	participationMode := corev1.NewOptContestModelParticipationMode(corev1.ContestModelParticipationMode(settings.GetParticipationMode()))
+	hideStatements := corev1.NewOptBool(settings.GetHideStatements())
 
 	model := corev1.ContestModel{
-		Id:                     c.ID,
+		ID:                     c.ID,
 		Login:                  c.Login,
-		OrganizationId:         c.OrganizationID,
+		OrganizationID:         c.OrganizationID,
 		OrganizationLogin:      c.OrganizationLogin,
 		Title:                  title,
 		Description:            c.Description,
@@ -192,22 +244,22 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		SubmissionDetailsScope: submissionDetailsScope,
 		FreezeDurationMinutes:  freezeDurationMinutes,
 		FreezeStatus:           freezeStatus,
-		EnableDrafts:          &enableDrafts,
-		AllowClarifications:   &allowClarifications,
-		EnableUpsolving:        &enableUpsolving,
-		EnableVirtualContests: &enableVirtualContests,
-		ParticipationMode:     &participationMode,
-		HideStatements:        &hideStatements,
+		EnableDrafts:          enableDrafts,
+		AllowClarifications:   allowClarifications,
+		EnableUpsolving:        enableUpsolving,
+		EnableVirtualContests: enableVirtualContests,
+		ParticipationMode:     participationMode,
+		HideStatements:        hideStatements,
 		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,
-		StartTime:              c.StartTime,
-		EndTime:                c.EndTime,
+		StartTime:              timePtrToOptNilDateTime(c.StartTime),
+		EndTime:                timePtrToOptNilDateTime(c.EndTime),
 	}
 
 	if owner != nil {
 		ownerModel := UserDTO(*owner)
-		model.Owner = &ownerModel
+		model.Owner = corev1.NewOptUserModel(ownerModel)
 	}
 
 	return model
@@ -232,7 +284,7 @@ func ContestProblemsListItemDTO(t models.ContestProblem, problem *models.Problem
 	}
 
 	return corev1.ContestProblemListItemModel{
-		ProblemId:   t.ProblemID,
+		ProblemID:   t.ProblemID,
 		Position:    safeInt32(t.Ordinal),
 		Title:       title,
 		MemoryLimit: memoryLimit,
@@ -243,18 +295,12 @@ func ContestProblemsListItemDTO(t models.ContestProblem, problem *models.Problem
 }
 
 func UserDTO(u models.User) corev1.UserModel {
-	return corev1.UserModel{
-		Id:        u.Id,
-		Username:  u.Username,
-		Role:      string(u.Role),
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
-	}
+	return userDTO(u)
 }
 
 func ParticipantDTO(p models.ContestMember) corev1.UserModel {
 	return corev1.UserModel{
-		Id:        p.UserID,
+		ID:        p.UserID,
 		Username:  p.Username,
 		Role:      string(p.Role),
 		CreatedAt: p.CreatedAt,
@@ -266,11 +312,11 @@ func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
 	title := p.Title
 
 	return corev1.ProblemsListItemModel{
-		Id:                p.ID,
-		OrganizationId:    p.OrganizationID,
+		ID:                p.ID,
+		OrganizationID:    p.OrganizationID,
 		OrganizationLogin: p.OrganizationLogin,
 		Title:             title,
-		Visibility:        &p.Visibility,
+		Visibility:        stringToOptString(p.Visibility),
 		MemoryLimit:       safeInt32(p.MemoryLimitMb),
 		TimeLimit:         safeInt32(p.TimeLimitMs),
 		IsTemplate:        p.IsTemplate,
@@ -317,8 +363,8 @@ func ProblemDTO(p models.Problem, statement *models.Statement, samples []corev1.
 	}
 
 	return &corev1.ProblemModel{
-		Id:                p.ID,
-		OrganizationId:    p.OrganizationID,
+		ID:                p.ID,
+		OrganizationID:    p.OrganizationID,
 		OrganizationLogin: p.OrganizationLogin,
 		Title:             title,
 		Visibility:        p.Visibility,
@@ -332,11 +378,11 @@ func ProblemDTO(p models.Problem, statement *models.Statement, samples []corev1.
 		Notes:        notes,
 		Scoring:      scoring,
 
-		LegendHtml:       legend,
-		InputFormatHtml:  inputFormat,
-		OutputFormatHtml: outputFormat,
-		NotesHtml:        notes,
-		ScoringHtml:      scoring,
+		LegendHTML:       legend,
+		InputFormatHTML:  inputFormat,
+		OutputFormatHTML: outputFormat,
+		NotesHTML:        notes,
+		ScoringHTML:      scoring,
 
 		IsTemplate: p.IsTemplate,
 		CreatedAt:  p.CreatedAt,
@@ -354,14 +400,9 @@ func statementField(statement *models.Statement, getter func(models.Statement) s
 }
 
 func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel {
-	var orgLogin *string
-	if s.OrganizationLogin != "" {
-		orgLogin = &s.OrganizationLogin
-	}
-
 	return corev1.SubmissionsListItemModel{
-		Id:     s.ID,
-		UserId: uuidPtrToUUID(s.CreatedBy),
+		ID:     s.ID,
+		UserID: uuidPtrToUUID(s.CreatedBy),
 
 		Username: s.Username,
 
@@ -371,18 +412,18 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 		TimeStat:   s.TimeStat,
 		MemoryStat: s.MemoryStat,
 		Language:   s.Language,
-		FailedTest: s.FailedTest,
+		FailedTest: int32PtrToOptNilInt32(s.FailedTest),
 
-		ProblemId:    uuidPtrToUUID(s.ProblemID),
+		ProblemID:    uuidPtrToUUID(s.ProblemID),
 		ProblemTitle: s.ProblemTitle,
 
 		Position: int32PtrToInt32(s.Position),
 
-		ContestId:         uuidPtrToUUID(s.ContestID),
+		ContestID:         uuidPtrToUUID(s.ContestID),
 		ContestLogin:      s.ContestLogin,
 		ContestTitle:      s.ContestTitle,
-		OrganizationLogin: orgLogin,
-		BanReason:         s.BanReason,
+		OrganizationLogin: stringToOptString(s.OrganizationLogin),
+		BanReason:         stringPtrToOptNilString(s.BanReason),
 
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
@@ -402,14 +443,14 @@ func SubmissionTestDetailsDTO(td *models.SubmissionTestDetails) *corev1.Submissi
 				TestIndex: t.TestIndex,
 				Verdict:   t.Verdict,
 				TimeMs:    t.TimeMs,
-				MemoryKb:  t.MemoryKb,
+				MemoryKB:  t.MemoryKb,
 			}
 		}
 	}
 
-	var failedTestDetails *corev1.FailedTestDetailModel
+	var failedTestDetails corev1.OptFailedTestDetailModel
 	if td.FailedTestDetails != nil {
-		failedTestDetails = &corev1.FailedTestDetailModel{
+		failedTestDetails = corev1.NewOptFailedTestDetailModel(corev1.FailedTestDetailModel{
 			TestIndex:     td.FailedTestDetails.TestIndex,
 			Input:         td.FailedTestDetails.Input,
 			Output:        td.FailedTestDetails.Output,
@@ -417,26 +458,26 @@ func SubmissionTestDetailsDTO(td *models.SubmissionTestDetails) *corev1.Submissi
 			CheckerOutput: td.FailedTestDetails.CheckerOutput,
 			ErrorMessage:  td.FailedTestDetails.ErrorMessage,
 			IsTruncated:   td.FailedTestDetails.IsTruncated,
-		}
+		})
 	}
 
 	return &corev1.SubmissionTestDetailsModel{
-		CompilerOutput:    td.CompilerOutput,
-		ErrorLine:         td.ErrorLine,
-		Tests:             &tests,
+		CompilerOutput:    stringPtrToOptNilString(td.CompilerOutput),
+		ErrorLine:         int32PtrToOptNilInt32(td.ErrorLine),
+		Tests:             tests,
 		FailedTestDetails: failedTestDetails,
 	}
 }
 
 func SolutionDTO(s models.Submission) corev1.SubmissionModel {
-	var orgLogin *string
-	if s.OrganizationLogin != "" {
-		orgLogin = &s.OrganizationLogin
+	var testDetailsOpt corev1.OptSubmissionTestDetailsModel
+	if td := SubmissionTestDetailsDTO(s.TestDetails); td != nil {
+		testDetailsOpt = corev1.NewOptSubmissionTestDetailsModel(*td)
 	}
 
 	return corev1.SubmissionModel{
-		Id:     s.ID,
-		UserId: uuidPtrToUUID(s.CreatedBy),
+		ID:     s.ID,
+		UserID: uuidPtrToUUID(s.CreatedBy),
 
 		Username: s.Username,
 
@@ -448,19 +489,19 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 		TimeStat:    s.TimeStat,
 		MemoryStat:  s.MemoryStat,
 		Language:    s.Language,
-		FailedTest:  s.FailedTest,
-		TestDetails: SubmissionTestDetailsDTO(s.TestDetails),
+		FailedTest:  int32PtrToOptNilInt32(s.FailedTest),
+		TestDetails: testDetailsOpt,
 
-		ProblemId:    uuidPtrToUUID(s.ProblemID),
+		ProblemID:    uuidPtrToUUID(s.ProblemID),
 		ProblemTitle: s.ProblemTitle,
 
 		Position: int32PtrToInt32(s.Position),
 
-		ContestId:         uuidPtrToUUID(s.ContestID),
+		ContestID:         uuidPtrToUUID(s.ContestID),
 		ContestLogin:      s.ContestLogin,
 		ContestTitle:      s.ContestTitle,
-		OrganizationLogin: orgLogin,
-		BanReason:         s.BanReason,
+		OrganizationLogin: stringToOptString(s.OrganizationLogin),
+		BanReason:         stringPtrToOptNilString(s.BanReason),
 
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
@@ -468,27 +509,26 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 }
 
 func userDTO(u models.User) corev1.UserModel {
-	var imgID *uuid.UUID
+	var imgID corev1.OptUUID
 	if u.AvatarUrl != nil && *u.AvatarUrl != "" {
 		if parsed, err := uuid.Parse(*u.AvatarUrl); err == nil {
-			imgID = &parsed
+			imgID = corev1.NewOptUUID(parsed)
 		}
 	}
 
 	return corev1.UserModel{
-		Id:              u.Id,
+		ID:              u.Id,
 		Username:        u.Username,
-		Role:            u.Role,
-		Email:           u.Email,
+		Role:            string(u.Role),
+		Email:           stringPtrToOptString(u.Email),
 		ImgId:           imgID,
-		ExpiresAt:       u.ExpiresAt,
-		ClaimedByUserId: u.ClaimedByUserID,
-		ClaimedAt:       u.ClaimedAt,
-		IsEmailVerified: &u.IsEmailVerified,
+		ExpiresAt:       timePtrToOptDateTime(u.ExpiresAt),
+		ClaimedByUserID: uuidPtrToOptUUID(u.ClaimedByUserID),
+		ClaimedAt:       timePtrToOptDateTime(u.ClaimedAt),
+		IsEmailVerified: corev1.NewOptBool(u.IsEmailVerified),
 		CreatedAt:       u.CreatedAt,
 		UpdatedAt:       u.UpdatedAt,
 	}
-
 }
 
 func usersListDTO(ul *models.UsersList) corev1.ListUsersResponseModel {
@@ -506,55 +546,19 @@ func usersListDTO(ul *models.UsersList) corev1.ListUsersResponseModel {
 	}
 }
 
-func listUserSubmissionsParamsToFilter(userId uuid.UUID, params corev1.ListUserSubmissionsParams) models.SubmissionsFilter {
-	var state *models.State = nil
-	if params.State != nil {
-		s := models.State(*params.State)
-		state = &s
-	}
-
-	// Convert sortOrder string to integer: -1 for desc, 0 for asc
-	var order *int32 = nil
-	if params.SortOrder != nil {
-		var orderVal int32
-		if *params.SortOrder == corev1.ListUserSubmissionsParamsSortOrderDesc {
-			orderVal = -1
-		} else {
-			orderVal = 0
-		}
-		order = &orderVal
-	}
-
-	return models.SubmissionsFilter{
-		ContestId: params.ContestId,
-		Page:      params.Page,
-		PageSize:  params.PageSize,
-		ProblemId: params.ProblemId,
-		UserId:    &userId,
-		Language:  nil,
-		Order:     order,
-		State:     state,
-	}
-}
-
 // Organizations DTOs
 
 func organizationDTO(o models.Organization) corev1.OrganizationModel {
-	description := ""
-	if o.Description != "" {
-		description = o.Description
-	}
-
 	joinPolicy := corev1.OrganizationModelJoinPolicyByRequest
 	if o.JoinPolicy != "" {
 		joinPolicy = corev1.OrganizationModelJoinPolicy(o.JoinPolicy)
 	}
 
 	return corev1.OrganizationModel{
-		Id:          o.ID,
+		ID:          o.ID,
 		Login:       o.Login,
 		Name:        o.Name,
-		Description: &description,
+		Description: stringToOptString(o.Description),
 		JoinPolicy:  joinPolicy,
 		CreatedAt:   o.CreatedAt,
 		UpdatedAt:   o.UpdatedAt,
@@ -576,8 +580,8 @@ func listOrganizationsDTO(ol *models.OrganizationList) *corev1.ListOrganizations
 
 func organizationMemberDTO(m models.OrganizationMember) corev1.OrganizationMemberModel {
 	return corev1.OrganizationMemberModel{
-		UserId:         m.UserID,
-		OrganizationId: m.OrganizationID,
+		UserID:         m.UserID,
+		OrganizationID: m.OrganizationID,
 		Username:       m.Username,
 		Role:           string(m.Role),
 		CreatedAt:      m.CreatedAt,
@@ -603,16 +607,11 @@ func listOrganizationMembersDTO(members []models.OrganizationMember, page, total
 // Teams DTOs
 
 func teamDTO(t models.Team) corev1.TeamModel {
-	description := ""
-	if t.Description != "" {
-		description = t.Description
-	}
-
 	return corev1.TeamModel{
-		Id:             t.ID,
+		ID:             t.ID,
 		Name:           t.Name,
-		OrganizationId: t.OrganizationID,
-		Description:    &description,
+		OrganizationID: t.OrganizationID,
+		Description:    stringToOptString(t.Description),
 		CreatedAt:      t.CreatedAt,
 		UpdatedAt:      t.UpdatedAt,
 	}
@@ -636,8 +635,8 @@ func listTeamsDTO(teams []models.Team, page, total int32) *corev1.ListTeamsRespo
 
 func teamMemberDTO(m models.TeamMember) corev1.TeamMemberModel {
 	return corev1.TeamMemberModel{
-		UserId:    m.UserID,
-		TeamId:    m.TeamID,
+		UserID:    m.UserID,
+		TeamID:    m.TeamID,
 		Username:  m.Username,
 		Role:      string(m.Role),
 		CreatedAt: m.CreatedAt,
@@ -661,14 +660,13 @@ func listTeamMembersDTO(members []models.TeamMember, page, total int32) *corev1.
 }
 
 func contestTeamDTO(ct models.ContestTeam) corev1.ContestTeamModel {
-	var mask *int64
+	var mask corev1.OptInt64
 	if ct.PermissionsMask != nil {
-		m := int64(*ct.PermissionsMask) // #nosec G115
-		mask = &m
+		mask = corev1.NewOptInt64(int64(*ct.PermissionsMask)) //nolint:gosec // bitmask conversion
 	}
 	return corev1.ContestTeamModel{
-		ContestId:       ct.ContestID,
-		TeamId:          ct.TeamID,
+		ContestID:       ct.ContestID,
+		TeamID:          ct.TeamID,
 		TeamName:        ct.TeamName,
 		TeamSlug:        ct.TeamSlug,
 		ContestRole:     string(ct.Role),
@@ -689,8 +687,8 @@ func listContestTeamsDTO(teams []models.ContestTeam) *corev1.ListContestTeamsRes
 
 func problemTeamDTO(pt models.ProblemTeam) corev1.ProblemTeamModel {
 	return corev1.ProblemTeamModel{
-		ProblemId:  pt.ProblemID,
-		TeamId:     pt.TeamID,
+		ProblemID:  pt.ProblemID,
+		TeamID:     pt.TeamID,
 		TeamName:   pt.TeamName,
 		TeamSlug:   pt.TeamSlug,
 		Permission: string(pt.Permission),
@@ -710,8 +708,8 @@ func listProblemTeamsDTO(teams []models.ProblemTeam) *corev1.ListProblemTeamsRes
 
 func problemMemberDTO(pm models.ProblemMember) corev1.ProblemMemberModel {
 	return corev1.ProblemMemberModel{
-		ProblemId: pm.ProblemID,
-		UserId:    pm.UserID,
+		ProblemID: pm.ProblemID,
+		UserID:    pm.UserID,
 		Username:  pm.Username,
 		Role:      string(pm.Role),
 		CreatedAt: pm.CreatedAt,
@@ -734,25 +732,25 @@ func listProblemMembersDTO(members []models.ProblemMember, page, total int32) *c
 
 func DashboardContestDTO(c models.DashboardContest) corev1.DashboardContestModel {
 	return corev1.DashboardContestModel{
-		Id:                 c.ID,
+		ID:                 c.ID,
 		Login:              c.Login,
 		Title:              c.Title,
-		OrganizationId:     c.OrganizationID,
+		OrganizationID:     c.OrganizationID,
 		OrganizationName:   c.OrganizationName,
 		OrganizationLogin:  c.OrganizationLogin,
 		UserRole:           c.UserRole,
-		StartTime:          c.StartTime,
-		EndTime:            c.EndTime,
-		LastSubmissionTime: c.LastSubmissionTime,
+		StartTime:          timePtrToOptNilDateTime(c.StartTime),
+		EndTime:            timePtrToOptNilDateTime(c.EndTime),
+		LastSubmissionTime: timePtrToOptNilDateTime(c.LastSubmissionTime),
 		CreatedAt:          c.CreatedAt,
 	}
 }
 
 func DashboardProblemDTO(p models.DashboardProblem) corev1.DashboardProblemModel {
 	return corev1.DashboardProblemModel{
-		Id:                p.ID,
+		ID:                p.ID,
 		Title:             p.Title,
-		OrganizationId:    p.OrganizationID,
+		OrganizationID:    p.OrganizationID,
 		OrganizationName:  p.OrganizationName,
 		OrganizationLogin: p.OrganizationLogin,
 		TimeLimit:         safeInt32(p.TimeLimitMs),
@@ -786,7 +784,7 @@ func GetScoreboardResponseDTO(sb *models.ScoreboardResponse) *corev1.ScoreboardR
 	problems := make([]corev1.ScoreboardProblemHeaderModel, len(sb.Problems))
 	for i, p := range sb.Problems {
 		problems[i] = corev1.ScoreboardProblemHeaderModel{
-			ProblemId: p.ProblemID,
+			ProblemID: p.ProblemID,
 			Title:     p.Title,
 			ShortName: p.ShortName,
 			Ordinal:   p.Ordinal,
@@ -797,51 +795,52 @@ func GetScoreboardResponseDTO(sb *models.ScoreboardResponse) *corev1.ScoreboardR
 	for i, item := range sb.Items {
 		pResults := make([]corev1.ScoreboardProblemResultModel, len(item.ProblemResults))
 		for j, r := range item.ProblemResults {
+			penaltyOpt := corev1.NewOptInt32(int32(r.Penalty))
+
+			var timeMinOpt corev1.OptInt32
+			if r.TimeMinutes != nil {
+				timeMinOpt = corev1.NewOptInt32(*r.TimeMinutes)
+			}
+
 			pResults[j] = corev1.ScoreboardProblemResultModel{
-				ProblemId:       r.ProblemID,
+				ProblemID:       r.ProblemID,
 				Solved:          r.Solved,
 				FailedAttempts:  r.FailedAttempts,
 				PendingAttempts: r.PendingAttempts,
-				FirstAcTime:     r.FirstACTime,
-				TimeMinutes:     r.TimeMinutes,
-				Penalty:         &r.Penalty,
+				FirstAcTime:     timePtrToOptDateTime(r.FirstACTime),
+				TimeMinutes:     timeMinOpt,
+				Penalty:         penaltyOpt,
 			}
 		}
 
 		items[i] = corev1.ScoreboardItemModel{
-			UserId:         item.UserID,
+			UserID:         item.UserID,
 			Username:       item.Username,
 			ProblemsSolved: item.ProblemsSolved,
 			TotalPenalty:   item.TotalPenalty,
-			LastAcceptedAt: item.LastAcceptedAt,
+			LastAcceptedAt: timePtrToOptDateTime(item.LastAcceptedAt),
 			ProblemResults: pResults,
 		}
 	}
 
 	return &corev1.ScoreboardResponseModel{
-		ContestId:         sb.ContestID,
+		ContestID:         sb.ContestID,
 		ContestLogin:      sb.ContestLogin,
 		OrganizationLogin: sb.OrganizationLogin,
 		PenaltyPerAttempt: sb.PenaltyPerAttempt,
 		IsFrozen:          sb.IsFrozen,
-		FreezeTime:        sb.FreezeTime,
+		FreezeTime:        timePtrToOptNilDateTime(sb.FreezeTime),
 		Problems:          problems,
 		Items:             items,
 	}
 }
 
 func ContestDraftDTO(draft models.ContestDraft) corev1.ContestDraftModel {
-	var username *string
-	if draft.Username != "" {
-		u := draft.Username
-		username = &u
-	}
-
 	return corev1.ContestDraftModel{
-		Id:        draft.ID,
-		UserId:    draft.UserID,
-		Username:  username,
-		ContestId: draft.ContestID,
+		ID:        draft.ID,
+		UserID:    draft.UserID,
+		Username:  stringToOptString(draft.Username),
+		ContestID: draft.ContestID,
 		Code:      draft.Code,
 		CreatedAt: draft.CreatedAt,
 		UpdatedAt: draft.UpdatedAt,
@@ -871,14 +870,25 @@ func ListContestDraftsResponseDTO(list *models.ContestDraftsList) *corev1.ListCo
 }
 
 func NotificationDTO(n models.Notification) corev1.NotificationModel {
+	var optData corev1.OptNotificationModelData
+	if len(n.Data) > 0 {
+		dataMap := make(corev1.NotificationModelData)
+		for k, v := range n.Data {
+			if b, err := json.Marshal(v); err == nil {
+				dataMap[k] = jx.Raw(b)
+			}
+		}
+		optData = corev1.NewOptNotificationModelData(dataMap)
+	}
+
 	return corev1.NotificationModel{
-		Id:        n.ID,
-		UserId:    n.UserID,
+		ID:        n.ID,
+		UserID:    n.UserID,
 		Type:      string(n.Type),
 		Title:     n.Title,
 		Body:      n.Body,
-		Link:      n.Link,
-		Data:      &n.Data,
+		Link:      stringPtrToOptString(n.Link),
+		Data:      optData,
 		IsRead:    n.IsRead,
 		CreatedAt: n.CreatedAt,
 	}
@@ -907,21 +917,16 @@ func NotificationsListResponseDTO(list *models.NotificationsList) *corev1.Notifi
 }
 
 func OrganizationInvitationDTO(inv models.OrganizationInvitation) corev1.OrganizationInvitationModel {
-	var email *string
-	if inv.Email != "" {
-		email = &inv.Email
-	}
-
 	return corev1.OrganizationInvitationModel{
-		Id:                    inv.ID,
-		OrganizationId:        inv.OrganizationID,
+		ID:                    inv.ID,
+		OrganizationID:        inv.OrganizationID,
 		OrganizationName:      inv.OrganizationName,
 		OrganizationLogin:     inv.OrganizationLogin,
-		OrganizationAvatarUrl: inv.OrganizationAvatarURL,
-		UserId:                inv.UserID,
+		OrganizationAvatarURL: stringPtrToOptString(inv.OrganizationAvatarURL),
+		UserID:                inv.UserID,
 		Username:              inv.Username,
-		Email:                 email,
-		InviterId:             inv.InviterID,
+		Email:                 stringToOptString(inv.Email),
+		InviterID:             inv.InviterID,
 		InviterUsername:       inv.InviterUsername,
 		Role:                  string(inv.Role),
 		Status:                string(inv.Status),
@@ -941,22 +946,17 @@ func ListOrganizationInvitationsResponseDTO(invs []models.OrganizationInvitation
 }
 
 func OrganizationJoinRequestDTO(req models.OrganizationJoinRequest) corev1.OrganizationJoinRequestModel {
-	var email *string
-	if req.Email != "" {
-		email = &req.Email
-	}
-
 	return corev1.OrganizationJoinRequestModel{
-		Id:                req.ID,
-		OrganizationId:    req.OrganizationID,
+		ID:                req.ID,
+		OrganizationID:    req.OrganizationID,
 		OrganizationName:  req.OrganizationName,
 		OrganizationLogin: req.OrganizationLogin,
-		UserId:            req.UserID,
+		UserID:            req.UserID,
 		Username:          req.Username,
-		Email:             email,
-		Message:           req.Message,
+		Email:             stringToOptString(req.Email),
+		Message:           stringPtrToOptString(req.Message),
 		Status:            string(req.Status),
-		ReviewerUsername:  req.ReviewerUsername,
+		ReviewerUsername:  stringPtrToOptString(req.ReviewerUsername),
 		CreatedAt:         req.CreatedAt,
 		UpdatedAt:         req.UpdatedAt,
 	}
@@ -973,23 +973,18 @@ func ListOrganizationJoinRequestsResponseDTO(reqs []models.OrganizationJoinReque
 }
 
 func ContestJoinRequestDTO(req models.ContestJoinRequest) corev1.ContestJoinRequestModel {
-	var email *string
-	if req.Email != "" {
-		email = &req.Email
-	}
-
 	return corev1.ContestJoinRequestModel{
-		Id:                req.ID,
-		ContestId:         req.ContestID,
+		ID:                req.ID,
+		ContestID:         req.ContestID,
 		ContestTitle:      req.ContestTitle,
 		ContestLogin:      req.ContestLogin,
 		OrganizationLogin: req.OrganizationLogin,
-		UserId:            req.UserID,
+		UserID:            req.UserID,
 		Username:          req.Username,
-		Email:             email,
-		Message:           req.Message,
+		Email:             stringToOptString(req.Email),
+		Message:           stringPtrToOptString(req.Message),
 		Status:            string(req.Status),
-		ReviewerUsername:  req.ReviewerUsername,
+		ReviewerUsername:  stringPtrToOptString(req.ReviewerUsername),
 		CreatedAt:         req.CreatedAt,
 		UpdatedAt:         req.UpdatedAt,
 	}
@@ -1010,12 +1005,12 @@ func ContestAnnouncementDTO(a *models.ContestAnnouncement) *corev1.ContestAnnoun
 		return nil
 	}
 	return &corev1.ContestAnnouncementModel{
-		Id:             a.ID,
-		ContestId:      a.ContestID,
-		ProblemId:      a.ProblemID,
-		ProblemTitle:   a.ProblemTitle,
-		ProblemLetter:  a.ProblemLetter,
-		AuthorId:       a.AuthorID,
+		ID:             a.ID,
+		ContestID:      a.ContestID,
+		ProblemID:      uuidPtrToOptUUID(a.ProblemID),
+		ProblemTitle:   stringPtrToOptString(a.ProblemTitle),
+		ProblemLetter:  stringPtrToOptString(a.ProblemLetter),
+		AuthorID:       a.AuthorID,
 		AuthorUsername: a.AuthorUsername,
 		Title:          a.Title,
 		Body:           a.Body,
@@ -1048,20 +1043,20 @@ func ContestClarificationDTO(c *models.ContestClarification) *corev1.ContestClar
 		return nil
 	}
 	return &corev1.ContestClarificationModel{
-		Id:                 c.ID,
-		ContestId:          c.ContestID,
-		ProblemId:          c.ProblemID,
-		ProblemTitle:       c.ProblemTitle,
-		ProblemLetter:      c.ProblemLetter,
-		UserId:             c.UserID,
+		ID:                 c.ID,
+		ContestID:          c.ContestID,
+		ProblemID:          uuidPtrToOptUUID(c.ProblemID),
+		ProblemTitle:       stringPtrToOptString(c.ProblemTitle),
+		ProblemLetter:      stringPtrToOptString(c.ProblemLetter),
+		UserID:             c.UserID,
 		Username:           c.Username,
 		Question:           c.Question,
-		Answer:             c.Answer,
-		AnsweredBy:         c.AnsweredBy,
-		AnsweredByUsername: c.AnsweredByUsername,
+		Answer:             stringPtrToOptString(c.Answer),
+		AnsweredBy:         uuidPtrToOptUUID(c.AnsweredBy),
+		AnsweredByUsername: stringPtrToOptString(c.AnsweredByUsername),
 		Status:             string(c.Status),
 		CreatedAt:          c.CreatedAt,
-		AnsweredAt:         c.AnsweredAt,
+		AnsweredAt:         timePtrToOptDateTime(c.AnsweredAt),
 		UpdatedAt:          c.UpdatedAt,
 	}
 }
@@ -1084,6 +1079,7 @@ func ContestClarificationsListResponseDTO(list *models.ContestClarificationsList
 		Pagination:     PaginationDTO(list.Pagination),
 	}
 }
+
 
 
 

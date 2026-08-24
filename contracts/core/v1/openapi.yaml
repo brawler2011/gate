@@ -4647,6 +4647,11 @@ paths:
           description: Email change confirmed successfully
           content: {}
 components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
 
   schemas:
     Error:

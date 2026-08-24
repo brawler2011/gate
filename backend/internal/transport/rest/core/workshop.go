@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -38,39 +37,42 @@ const (
 )
 
 // GetProblemLimits handles GET /problems/{problemId}/limits
-func (h *CoreServer) GetProblemLimits(ctx context.Context, request corev1.GetProblemLimitsRequestObject) (corev1.GetProblemLimitsResponseObject, error) {
-	manifest, err := h.readWorkshopManifest(ctx, request.ProblemId)
+func (h *CoreServer) GetProblemLimits(ctx context.Context, params corev1.GetProblemLimitsParams) (*corev1.ProblemLimits, error) {
+	manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
 	if err != nil {
 		return nil, err
 	}
 
-	return corev1.GetProblemLimits200JSONResponse(h.toContractLimits(manifest)), nil
+	return h.toContractLimits(manifest), nil
 }
 
 // UpdateProblemLimits handles PATCH /problems/{problemId}/limits
-func (h *CoreServer) UpdateProblemLimits(ctx context.Context, request corev1.UpdateProblemLimitsRequestObject) (corev1.UpdateProblemLimitsResponseObject, error) {
-	if request.Body == nil {
+func (h *CoreServer) UpdateProblemLimits(ctx context.Context, req *corev1.UpdateProblemLimitsRequest, params corev1.UpdateProblemLimitsParams) (*corev1.ProblemLimits, error) {
+	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
 
-	manifest, err := h.readWorkshopManifest(ctx, request.ProblemId)
+	manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
 	if err != nil {
 		return nil, err
 	}
 
-	body := request.Body
-	if body.ProblemType != nil {
-		manifest.ProblemType = *body.ProblemType
+	if req.ProblemType.IsSet() {
+		manifest.ProblemType = req.ProblemType.Value
 	}
-	if body.TimeLimitMs != nil {
-		manifest.TimeLimitMs = *body.TimeLimitMs
+	if req.TimeLimitMs.IsSet() {
+		manifest.TimeLimitMs = req.TimeLimitMs.Value
 	}
-	if body.MemoryLimitMb != nil {
-		manifest.MemoryLimitMb = *body.MemoryLimitMb
+	if req.MemoryLimitMB.IsSet() {
+		manifest.MemoryLimitMb = req.MemoryLimitMB.Value
 	}
-	if body.MaxScore != nil {
-		score := *body.MaxScore
-		manifest.MaxScore = &score
+	if req.MaxScore.IsSet() {
+		if req.MaxScore.Null {
+			manifest.MaxScore = nil
+		} else {
+			score := req.MaxScore.Value
+			manifest.MaxScore = &score
+		}
 	}
 	if manifest.ProblemType != "scoring" {
 		manifest.MaxScore = nil
@@ -80,28 +82,25 @@ func (h *CoreServer) UpdateProblemLimits(ctx context.Context, request corev1.Upd
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid limits update")
 	}
 
-	if err := h.saveWorkshopManifest(ctx, request.ProblemId, manifest); err != nil {
+	if err := h.saveWorkshopManifest(ctx, params.ProblemId, manifest); err != nil {
 		return nil, err
 	}
 
-	return corev1.UpdateProblemLimits200JSONResponse(h.toContractLimits(manifest)), nil
+	return h.toContractLimits(manifest), nil
 }
 
 // GetProblemStatement handles GET /problems/{problemId}/statement
-func (h *CoreServer) GetProblemStatement(ctx context.Context, request corev1.GetProblemStatementRequestObject) (corev1.GetProblemStatementResponseObject, error) {
-	manifest, err := h.readWorkshopManifest(ctx, request.ProblemId)
+func (h *CoreServer) GetProblemStatement(ctx context.Context, params corev1.GetProblemStatementParams) (*corev1.ProblemStatement, error) {
+	manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
 	if err != nil {
 		return nil, err
 	}
 
-	lang := "en"
-	if request.Params.Lang != nil && *request.Params.Lang != "" {
-		lang = *request.Params.Lang
-	}
+	lang := params.Lang.Or("en")
 
 	// 1. Get list of available languages from statements/ folder
 	var languages []string
-	if files, err := h.workshopUC.ListProblemFiles(ctx, request.ProblemId, "statements"); err == nil {
+	if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
 		for _, f := range files {
 			if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
 				base := filepath.Base(f.Path)
@@ -122,7 +121,7 @@ func (h *CoreServer) GetProblemStatement(ctx context.Context, request corev1.Get
 	// 2. Read statement for specific language from workspace
 	var stmt models.Statement
 	filePath := fmt.Sprintf("statements/%s.md", lang)
-	fileData, err := h.workshopUC.ReadProblemFile(ctx, request.ProblemId, filePath)
+	fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
 	if err == nil {
 		stmt = usecase.ParseStatementMarkdown(string(fileData))
 		// If title tag is empty, fallback to the manifest title
@@ -139,30 +138,26 @@ func (h *CoreServer) GetProblemStatement(ctx context.Context, request corev1.Get
 		}
 	}
 
-	resp := h.toContractStatementForLang(stmt, languages, lang)
-	return corev1.GetProblemStatement200JSONResponse(resp), nil
+	return h.toContractStatementForLang(stmt, languages, lang), nil
 }
 
 // UpdateProblemStatement handles PATCH /problems/{problemId}/statement
-func (h *CoreServer) UpdateProblemStatement(ctx context.Context, request corev1.UpdateProblemStatementRequestObject) (corev1.UpdateProblemStatementResponseObject, error) {
-	if request.Body == nil {
+func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.UpdateProblemStatementRequest, params corev1.UpdateProblemStatementParams) (*corev1.ProblemStatement, error) {
+	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
 
-	manifest, err := h.readWorkshopManifest(ctx, request.ProblemId)
+	manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
 	if err != nil {
 		return nil, err
 	}
 
-	lang := "en"
-	if request.Params.Lang != nil && *request.Params.Lang != "" {
-		lang = *request.Params.Lang
-	}
+	lang := params.Lang.Or("en")
 
 	// 1. Get existing statement for this language to apply patch
 	var stmt models.Statement
 	filePath := fmt.Sprintf("statements/%s.md", lang)
-	fileData, err := h.workshopUC.ReadProblemFile(ctx, request.ProblemId, filePath)
+	fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
 	if err == nil {
 		stmt = usecase.ParseStatementMarkdown(string(fileData))
 		if strings.TrimSpace(stmt.Title) == "" {
@@ -176,27 +171,26 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, request corev1.
 		}
 	}
 
-	body := request.Body
-	if body.Title != nil {
-		stmt.Title = *body.Title
+	if req.Title.IsSet() {
+		stmt.Title = req.Title.Value
 	}
-	if body.Legend != nil {
-		stmt.Legend = *body.Legend
+	if req.Legend.IsSet() {
+		stmt.Legend = req.Legend.Value
 	}
-	if body.InputFormat != nil {
-		stmt.InputFormat = *body.InputFormat
+	if req.InputFormat.IsSet() {
+		stmt.InputFormat = req.InputFormat.Value
 	}
-	if body.OutputFormat != nil {
-		stmt.OutputFormat = *body.OutputFormat
+	if req.OutputFormat.IsSet() {
+		stmt.OutputFormat = req.OutputFormat.Value
 	}
-	if body.Notes != nil {
-		stmt.Notes = *body.Notes
+	if req.Notes.IsSet() {
+		stmt.Notes = req.Notes.Value
 	}
-	if body.Interaction != nil {
-		stmt.Interaction = *body.Interaction
+	if req.Interaction.IsSet() {
+		stmt.Interaction = req.Interaction.Value
 	}
-	if body.Scoring != nil {
-		stmt.Scoring = *body.Scoring
+	if req.Scoring.IsSet() {
+		stmt.Scoring = req.Scoring.Value
 	}
 
 	// 2. Write statement back to workspace storage
@@ -206,7 +200,7 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, request corev1.
 	}
 	user := middleware.GetUser(ctx)
 	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
-		ProblemID: request.ProblemId,
+		ProblemID: params.ProblemId,
 		UserID:    user.Id,
 		Path:      filePath,
 		Content:   stmtBytes,
@@ -221,17 +215,17 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, request corev1.
 			return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
 		}
 
-		if err := h.saveWorkshopManifest(ctx, request.ProblemId, manifest); err != nil {
+		if err := h.saveWorkshopManifest(ctx, params.ProblemId, manifest); err != nil {
 			return nil, err
 		}
-		if err := h.syncProblemTitleIfNeeded(ctx, request.ProblemId, manifest.Statement.Title); err != nil {
+		if err := h.syncProblemTitleIfNeeded(ctx, params.ProblemId, manifest.Statement.Title); err != nil {
 			return nil, err
 		}
 	}
 
 	// 4. Retrieve list of languages for response
 	var languages []string
-	if files, err := h.workshopUC.ListProblemFiles(ctx, request.ProblemId, "statements"); err == nil {
+	if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
 		for _, f := range files {
 			if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
 				base := filepath.Base(f.Path)
@@ -247,297 +241,257 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, request corev1.
 		languages = []string{"en"}
 	}
 
-	resp := h.toContractStatementForLang(stmt, languages, lang)
-	return corev1.UpdateProblemStatement200JSONResponse(resp), nil
+	return h.toContractStatementForLang(stmt, languages, lang), nil
 }
 
 // ListProblemCheckers handles GET /problems/{problemId}/checkers
-func (h *CoreServer) ListProblemCheckers(ctx context.Context, request corev1.ListProblemCheckersRequestObject) (corev1.ListProblemCheckersResponseObject, error) {
-	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, checkerDir)
+func (h *CoreServer) ListProblemCheckers(ctx context.Context, params corev1.ListProblemCheckersParams) (*corev1.WorkshopFileListResponse, error) {
+	resp, err := h.listWorkshopCollection(ctx, params.ProblemId, checkerDir)
 	if err != nil {
 		return nil, err
 	}
-	return corev1.ListProblemCheckers200JSONResponse(resp), nil
+	return &resp, nil
 }
 
 // CreateProblemChecker handles POST /problems/{problemId}/checkers
-func (h *CoreServer) CreateProblemChecker(ctx context.Context, request corev1.CreateProblemCheckerRequestObject) (corev1.CreateProblemCheckerResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) CreateProblemChecker(ctx context.Context, req corev1.CreateProblemCheckerReq, params corev1.CreateProblemCheckerParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, checkerDir, request.Params.Name, content); err != nil {
+	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, checkerDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.CreateProblemChecker200JSONResponse{Message: strPtr("Checker created successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Checker created successfully")}, nil
 }
 
 // GetProblemChecker handles GET /problems/{problemId}/checkers/{name}
-func (h *CoreServer) GetProblemChecker(ctx context.Context, request corev1.GetProblemCheckerRequestObject) (corev1.GetProblemCheckerResponseObject, error) {
-	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, checkerDir, request.Name)
+func (h *CoreServer) GetProblemChecker(ctx context.Context, params corev1.GetProblemCheckerParams) (corev1.GetProblemCheckerOK, error) {
+	content, err := h.getWorkshopCollectionFile(ctx, params.ProblemId, checkerDir, params.Name)
 	if err != nil {
-		return nil, err
+		return corev1.GetProblemCheckerOK{}, err
 	}
-	return corev1.GetProblemChecker200TextResponse(string(content)), nil
+	return corev1.GetProblemCheckerOK{Data: bytes.NewReader(content)}, nil
 }
 
 // UpdateProblemChecker handles PUT /problems/{problemId}/checkers/{name}
-func (h *CoreServer) UpdateProblemChecker(ctx context.Context, request corev1.UpdateProblemCheckerRequestObject) (corev1.UpdateProblemCheckerResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) UpdateProblemChecker(ctx context.Context, req corev1.UpdateProblemCheckerReq, params corev1.UpdateProblemCheckerParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, checkerDir, request.Name, content); err != nil {
+	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, checkerDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.UpdateProblemChecker200JSONResponse{Message: strPtr("Checker updated successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Checker updated successfully")}, nil
 }
 
 // DeleteProblemChecker handles DELETE /problems/{problemId}/checkers/{name}
-func (h *CoreServer) DeleteProblemChecker(ctx context.Context, request corev1.DeleteProblemCheckerRequestObject) (corev1.DeleteProblemCheckerResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, checkerDir, request.Name); err != nil {
+func (h *CoreServer) DeleteProblemChecker(ctx context.Context, params corev1.DeleteProblemCheckerParams) (*corev1.MessageResponse, error) {
+	if err := h.deleteWorkshopCollectionFile(ctx, params.ProblemId, checkerDir, params.Name); err != nil {
 		return nil, err
 	}
-	return corev1.DeleteProblemChecker200JSONResponse{Message: strPtr("Checker deleted successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Checker deleted successfully")}, nil
 }
 
 // ListProblemGenerators handles GET /problems/{problemId}/generators
-func (h *CoreServer) ListProblemGenerators(ctx context.Context, request corev1.ListProblemGeneratorsRequestObject) (corev1.ListProblemGeneratorsResponseObject, error) {
-	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, generatorDir)
+func (h *CoreServer) ListProblemGenerators(ctx context.Context, params corev1.ListProblemGeneratorsParams) (*corev1.WorkshopFileListResponse, error) {
+	resp, err := h.listWorkshopCollection(ctx, params.ProblemId, generatorDir)
 	if err != nil {
 		return nil, err
 	}
-	return corev1.ListProblemGenerators200JSONResponse(resp), nil
+	return &resp, nil
 }
 
 // CreateProblemGenerator handles POST /problems/{problemId}/generators
-func (h *CoreServer) CreateProblemGenerator(ctx context.Context, request corev1.CreateProblemGeneratorRequestObject) (corev1.CreateProblemGeneratorResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) CreateProblemGenerator(ctx context.Context, req corev1.CreateProblemGeneratorReq, params corev1.CreateProblemGeneratorParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, generatorDir, request.Params.Name, content); err != nil {
+	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, generatorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.CreateProblemGenerator200JSONResponse{Message: strPtr("Generator created successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Generator created successfully")}, nil
 }
 
 // GetProblemGenerator handles GET /problems/{problemId}/generators/{name}
-func (h *CoreServer) GetProblemGenerator(ctx context.Context, request corev1.GetProblemGeneratorRequestObject) (corev1.GetProblemGeneratorResponseObject, error) {
-	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, generatorDir, request.Name)
+func (h *CoreServer) GetProblemGenerator(ctx context.Context, params corev1.GetProblemGeneratorParams) (corev1.GetProblemGeneratorOK, error) {
+	content, err := h.getWorkshopCollectionFile(ctx, params.ProblemId, generatorDir, params.Name)
 	if err != nil {
-		return nil, err
+		return corev1.GetProblemGeneratorOK{}, err
 	}
-	return corev1.GetProblemGenerator200TextResponse(string(content)), nil
+	return corev1.GetProblemGeneratorOK{Data: bytes.NewReader(content)}, nil
 }
 
 // UpdateProblemGenerator handles PUT /problems/{problemId}/generators/{name}
-func (h *CoreServer) UpdateProblemGenerator(ctx context.Context, request corev1.UpdateProblemGeneratorRequestObject) (corev1.UpdateProblemGeneratorResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) UpdateProblemGenerator(ctx context.Context, req corev1.UpdateProblemGeneratorReq, params corev1.UpdateProblemGeneratorParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, generatorDir, request.Name, content); err != nil {
+	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, generatorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.UpdateProblemGenerator200JSONResponse{Message: strPtr("Generator updated successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Generator updated successfully")}, nil
 }
 
 // DeleteProblemGenerator handles DELETE /problems/{problemId}/generators/{name}
-func (h *CoreServer) DeleteProblemGenerator(ctx context.Context, request corev1.DeleteProblemGeneratorRequestObject) (corev1.DeleteProblemGeneratorResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, generatorDir, request.Name); err != nil {
+func (h *CoreServer) DeleteProblemGenerator(ctx context.Context, params corev1.DeleteProblemGeneratorParams) (*corev1.MessageResponse, error) {
+	if err := h.deleteWorkshopCollectionFile(ctx, params.ProblemId, generatorDir, params.Name); err != nil {
 		return nil, err
 	}
-	return corev1.DeleteProblemGenerator200JSONResponse{Message: strPtr("Generator deleted successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Generator deleted successfully")}, nil
 }
 
 // ListProblemInteractors handles GET /problems/{problemId}/interactors
-func (h *CoreServer) ListProblemInteractors(ctx context.Context, request corev1.ListProblemInteractorsRequestObject) (corev1.ListProblemInteractorsResponseObject, error) {
-	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, interactorDir)
+func (h *CoreServer) ListProblemInteractors(ctx context.Context, params corev1.ListProblemInteractorsParams) (*corev1.WorkshopFileListResponse, error) {
+	resp, err := h.listWorkshopCollection(ctx, params.ProblemId, interactorDir)
 	if err != nil {
 		return nil, err
 	}
-	return corev1.ListProblemInteractors200JSONResponse(resp), nil
+	return &resp, nil
 }
 
 // CreateProblemInteractor handles POST /problems/{problemId}/interactors
-func (h *CoreServer) CreateProblemInteractor(ctx context.Context, request corev1.CreateProblemInteractorRequestObject) (corev1.CreateProblemInteractorResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) CreateProblemInteractor(ctx context.Context, req corev1.CreateProblemInteractorReq, params corev1.CreateProblemInteractorParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, interactorDir, request.Params.Name, content); err != nil {
+	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, interactorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.CreateProblemInteractor200JSONResponse{Message: strPtr("Interactor created successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Interactor created successfully")}, nil
 }
 
 // GetProblemInteractor handles GET /problems/{problemId}/interactors/{name}
-func (h *CoreServer) GetProblemInteractor(ctx context.Context, request corev1.GetProblemInteractorRequestObject) (corev1.GetProblemInteractorResponseObject, error) {
-	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, interactorDir, request.Name)
+func (h *CoreServer) GetProblemInteractor(ctx context.Context, params corev1.GetProblemInteractorParams) (corev1.GetProblemInteractorOK, error) {
+	content, err := h.getWorkshopCollectionFile(ctx, params.ProblemId, interactorDir, params.Name)
 	if err != nil {
-		return nil, err
+		return corev1.GetProblemInteractorOK{}, err
 	}
-	return corev1.GetProblemInteractor200TextResponse(string(content)), nil
+	return corev1.GetProblemInteractorOK{Data: bytes.NewReader(content)}, nil
 }
 
 // UpdateProblemInteractor handles PUT /problems/{problemId}/interactors/{name}
-func (h *CoreServer) UpdateProblemInteractor(ctx context.Context, request corev1.UpdateProblemInteractorRequestObject) (corev1.UpdateProblemInteractorResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) UpdateProblemInteractor(ctx context.Context, req corev1.UpdateProblemInteractorReq, params corev1.UpdateProblemInteractorParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, interactorDir, request.Name, content); err != nil {
+	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, interactorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.UpdateProblemInteractor200JSONResponse{Message: strPtr("Interactor updated successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Interactor updated successfully")}, nil
 }
 
 // DeleteProblemInteractor handles DELETE /problems/{problemId}/interactors/{name}
-func (h *CoreServer) DeleteProblemInteractor(ctx context.Context, request corev1.DeleteProblemInteractorRequestObject) (corev1.DeleteProblemInteractorResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, interactorDir, request.Name); err != nil {
+func (h *CoreServer) DeleteProblemInteractor(ctx context.Context, params corev1.DeleteProblemInteractorParams) (*corev1.MessageResponse, error) {
+	if err := h.deleteWorkshopCollectionFile(ctx, params.ProblemId, interactorDir, params.Name); err != nil {
 		return nil, err
 	}
-	return corev1.DeleteProblemInteractor200JSONResponse{Message: strPtr("Interactor deleted successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Interactor deleted successfully")}, nil
 }
 
 // ListProblemValidators handles GET /problems/{problemId}/validators
-func (h *CoreServer) ListProblemValidators(ctx context.Context, request corev1.ListProblemValidatorsRequestObject) (corev1.ListProblemValidatorsResponseObject, error) {
-	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, validatorDir)
+func (h *CoreServer) ListProblemValidators(ctx context.Context, params corev1.ListProblemValidatorsParams) (*corev1.WorkshopFileListResponse, error) {
+	resp, err := h.listWorkshopCollection(ctx, params.ProblemId, validatorDir)
 	if err != nil {
 		return nil, err
 	}
-	return corev1.ListProblemValidators200JSONResponse(resp), nil
+	return &resp, nil
 }
 
 // CreateProblemValidator handles POST /problems/{problemId}/validators
-func (h *CoreServer) CreateProblemValidator(ctx context.Context, request corev1.CreateProblemValidatorRequestObject) (corev1.CreateProblemValidatorResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) CreateProblemValidator(ctx context.Context, req corev1.CreateProblemValidatorReq, params corev1.CreateProblemValidatorParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, validatorDir, request.Params.Name, content); err != nil {
+	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, validatorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.CreateProblemValidator200JSONResponse{Message: strPtr("Validator created successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Validator created successfully")}, nil
 }
 
 // GetProblemValidator handles GET /problems/{problemId}/validators/{name}
-func (h *CoreServer) GetProblemValidator(ctx context.Context, request corev1.GetProblemValidatorRequestObject) (corev1.GetProblemValidatorResponseObject, error) {
-	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, validatorDir, request.Name)
+func (h *CoreServer) GetProblemValidator(ctx context.Context, params corev1.GetProblemValidatorParams) (corev1.GetProblemValidatorOK, error) {
+	content, err := h.getWorkshopCollectionFile(ctx, params.ProblemId, validatorDir, params.Name)
 	if err != nil {
-		return nil, err
+		return corev1.GetProblemValidatorOK{}, err
 	}
-	return corev1.GetProblemValidator200TextResponse(string(content)), nil
+	return corev1.GetProblemValidatorOK{Data: bytes.NewReader(content)}, nil
 }
 
 // UpdateProblemValidator handles PUT /problems/{problemId}/validators/{name}
-func (h *CoreServer) UpdateProblemValidator(ctx context.Context, request corev1.UpdateProblemValidatorRequestObject) (corev1.UpdateProblemValidatorResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) UpdateProblemValidator(ctx context.Context, req corev1.UpdateProblemValidatorReq, params corev1.UpdateProblemValidatorParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, validatorDir, request.Name, content); err != nil {
+	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, validatorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.UpdateProblemValidator200JSONResponse{Message: strPtr("Validator updated successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Validator updated successfully")}, nil
 }
 
 // DeleteProblemValidator handles DELETE /problems/{problemId}/validators/{name}
-func (h *CoreServer) DeleteProblemValidator(ctx context.Context, request corev1.DeleteProblemValidatorRequestObject) (corev1.DeleteProblemValidatorResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, validatorDir, request.Name); err != nil {
+func (h *CoreServer) DeleteProblemValidator(ctx context.Context, params corev1.DeleteProblemValidatorParams) (*corev1.MessageResponse, error) {
+	if err := h.deleteWorkshopCollectionFile(ctx, params.ProblemId, validatorDir, params.Name); err != nil {
 		return nil, err
 	}
-	return corev1.DeleteProblemValidator200JSONResponse{Message: strPtr("Validator deleted successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Validator deleted successfully")}, nil
 }
 
 // ListProblemLibs handles GET /problems/{problemId}/lib
-func (h *CoreServer) ListProblemLibs(ctx context.Context, request corev1.ListProblemLibsRequestObject) (corev1.ListProblemLibsResponseObject, error) {
-	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, libDir)
+func (h *CoreServer) ListProblemLibs(ctx context.Context, params corev1.ListProblemLibsParams) (*corev1.WorkshopFileListResponse, error) {
+	resp, err := h.listWorkshopCollection(ctx, params.ProblemId, libDir)
 	if err != nil {
 		return nil, err
 	}
-	return corev1.ListProblemLibs200JSONResponse(resp), nil
+	return &resp, nil
 }
 
 // CreateProblemLib handles POST /problems/{problemId}/lib
-func (h *CoreServer) CreateProblemLib(ctx context.Context, request corev1.CreateProblemLibRequestObject) (corev1.CreateProblemLibResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) CreateProblemLib(ctx context.Context, req corev1.CreateProblemLibReq, params corev1.CreateProblemLibParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, libDir, request.Params.Name, content); err != nil {
+	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, libDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.CreateProblemLib200JSONResponse{Message: strPtr("Library file created successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Library file created successfully")}, nil
 }
 
 // GetProblemLib handles GET /problems/{problemId}/lib/{name}
-func (h *CoreServer) GetProblemLib(ctx context.Context, request corev1.GetProblemLibRequestObject) (corev1.GetProblemLibResponseObject, error) {
-	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Name)
+func (h *CoreServer) GetProblemLib(ctx context.Context, params corev1.GetProblemLibParams) (corev1.GetProblemLibOK, error) {
+	content, err := h.getWorkshopCollectionFile(ctx, params.ProblemId, libDir, params.Name)
 	if err != nil {
-		return nil, err
+		return corev1.GetProblemLibOK{}, err
 	}
-	return corev1.GetProblemLib200TextResponse(string(content)), nil
+	return corev1.GetProblemLibOK{Data: bytes.NewReader(content)}, nil
 }
 
 // UpdateProblemLib handles PUT /problems/{problemId}/lib/{name}
-func (h *CoreServer) UpdateProblemLib(ctx context.Context, request corev1.UpdateProblemLibRequestObject) (corev1.UpdateProblemLibResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) UpdateProblemLib(ctx context.Context, req corev1.UpdateProblemLibReq, params corev1.UpdateProblemLibParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, libDir, request.Name, content); err != nil {
+	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, libDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.UpdateProblemLib200JSONResponse{Message: strPtr("Library file updated successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Library file updated successfully")}, nil
 }
 
 // DeleteProblemLib handles DELETE /problems/{problemId}/lib/{name}
-func (h *CoreServer) DeleteProblemLib(ctx context.Context, request corev1.DeleteProblemLibRequestObject) (corev1.DeleteProblemLibResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, libDir, request.Name); err != nil {
+func (h *CoreServer) DeleteProblemLib(ctx context.Context, params corev1.DeleteProblemLibParams) (*corev1.MessageResponse, error) {
+	if err := h.deleteWorkshopCollectionFile(ctx, params.ProblemId, libDir, params.Name); err != nil {
 		return nil, err
 	}
-	return corev1.DeleteProblemLib200JSONResponse{Message: strPtr("Library file deleted successfully")}, nil
-}
-
-type mediaFileResponse struct {
-	content     []byte
-	contentType string
-}
-
-func (r mediaFileResponse) VisitGetProblemMediaFileResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", r.contentType)
-	w.Header().Set("Content-Length", fmt.Sprint(len(r.content)))
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	if strings.HasPrefix(r.contentType, "image/svg") {
-		w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'")
-	}
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write(r.content)
-	return err
-}
-
-func getMediaContentType(filename string) string {
-	ext := strings.ToLower(filepath.Ext(filename))
-	switch ext {
-	case ".png":
-		return "image/png"
-	case ".jpg", ".jpeg":
-		return "image/jpeg"
-	case ".gif":
-		return "image/gif"
-	case ".svg":
-		return "image/svg+xml"
-	case ".webp":
-		return "image/webp"
-	case ".ico":
-		return "image/x-icon"
-	case ".pdf":
-		return "application/pdf"
-	default:
-		return "application/octet-stream"
-	}
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Library file deleted successfully")}, nil
 }
 
 func sanitizeSVG(content []byte) []byte {
@@ -552,141 +506,138 @@ func sanitizeSVG(content []byte) []byte {
 }
 
 // ListProblemMediaFiles handles GET /problems/{problemId}/media
-func (h *CoreServer) ListProblemMediaFiles(ctx context.Context, request corev1.ListProblemMediaFilesRequestObject) (corev1.ListProblemMediaFilesResponseObject, error) {
-	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, mediaDir)
+func (h *CoreServer) ListProblemMediaFiles(ctx context.Context, params corev1.ListProblemMediaFilesParams) (*corev1.WorkshopFileListResponse, error) {
+	resp, err := h.listWorkshopCollection(ctx, params.ProblemId, mediaDir)
 	if err != nil {
 		return nil, err
 	}
-	return corev1.ListProblemMediaFiles200JSONResponse(resp), nil
+	return &resp, nil
 }
 
 // CreateProblemMediaFile handles POST /problems/{problemId}/media
-func (h *CoreServer) CreateProblemMediaFile(ctx context.Context, request corev1.CreateProblemMediaFileRequestObject) (corev1.CreateProblemMediaFileResponseObject, error) {
-	var bodyReader io.Reader = request.Body
-	if strings.HasSuffix(strings.ToLower(request.Params.Name), ".svg") {
-		if bodyBytes, err := io.ReadAll(request.Body); err == nil {
+func (h *CoreServer) CreateProblemMediaFile(ctx context.Context, req corev1.CreateProblemMediaFileReq, params corev1.CreateProblemMediaFileParams) (*corev1.MessageResponse, error) {
+	var bodyReader io.Reader = req.Data
+	if strings.HasSuffix(strings.ToLower(params.Name), ".svg") {
+		if bodyBytes, err := io.ReadAll(req.Data); err == nil {
 			sanitized := sanitizeSVG(bodyBytes)
 			bodyReader = bytes.NewReader(sanitized)
 		}
 	}
-	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Params.Name, bodyReader); err != nil {
+	if err := h.createWorkshopCollectionFile(ctx, params.ProblemId, mediaDir, params.Name, bodyReader); err != nil {
 		return nil, err
 	}
-	return corev1.CreateProblemMediaFile200JSONResponse{Message: strPtr("Media file created successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Media file created successfully")}, nil
 }
 
 // GetProblemMediaFile handles GET /problems/{problemId}/media/{name}
-func (h *CoreServer) GetProblemMediaFile(ctx context.Context, request corev1.GetProblemMediaFileRequestObject) (corev1.GetProblemMediaFileResponseObject, error) {
-	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Name)
+func (h *CoreServer) GetProblemMediaFile(ctx context.Context, params corev1.GetProblemMediaFileParams) (corev1.GetProblemMediaFileOK, error) {
+	content, err := h.getWorkshopCollectionFile(ctx, params.ProblemId, mediaDir, params.Name)
 	if err != nil {
-		return nil, err
+		return corev1.GetProblemMediaFileOK{}, err
 	}
-	return mediaFileResponse{
-		content:     content,
-		contentType: getMediaContentType(request.Name),
-	}, nil
+	return corev1.GetProblemMediaFileOK{Data: bytes.NewReader(content)}, nil
 }
 
 // UpdateProblemMediaFile handles PUT /problems/{problemId}/media/{name}
-func (h *CoreServer) UpdateProblemMediaFile(ctx context.Context, request corev1.UpdateProblemMediaFileRequestObject) (corev1.UpdateProblemMediaFileResponseObject, error) {
-	var bodyReader io.Reader = request.Body
-	if strings.HasSuffix(strings.ToLower(request.Name), ".svg") {
-		if bodyBytes, err := io.ReadAll(request.Body); err == nil {
+func (h *CoreServer) UpdateProblemMediaFile(ctx context.Context, req corev1.UpdateProblemMediaFileReq, params corev1.UpdateProblemMediaFileParams) (*corev1.MessageResponse, error) {
+	var bodyReader io.Reader = req.Data
+	if strings.HasSuffix(strings.ToLower(params.Name), ".svg") {
+		if bodyBytes, err := io.ReadAll(req.Data); err == nil {
 			sanitized := sanitizeSVG(bodyBytes)
 			bodyReader = bytes.NewReader(sanitized)
 		}
 	}
-	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Name, bodyReader); err != nil {
+	if err := h.updateWorkshopCollectionFile(ctx, params.ProblemId, mediaDir, params.Name, bodyReader); err != nil {
 		return nil, err
 	}
-	return corev1.UpdateProblemMediaFile200JSONResponse{Message: strPtr("Media file updated successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Media file updated successfully")}, nil
 }
 
 // DeleteProblemMediaFile handles DELETE /problems/{problemId}/media/{name}
-func (h *CoreServer) DeleteProblemMediaFile(ctx context.Context, request corev1.DeleteProblemMediaFileRequestObject) (corev1.DeleteProblemMediaFileResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, mediaDir, request.Name); err != nil {
+func (h *CoreServer) DeleteProblemMediaFile(ctx context.Context, params corev1.DeleteProblemMediaFileParams) (*corev1.MessageResponse, error) {
+	if err := h.deleteWorkshopCollectionFile(ctx, params.ProblemId, mediaDir, params.Name); err != nil {
 		return nil, err
 	}
-	return corev1.DeleteProblemMediaFile200JSONResponse{Message: strPtr("Media file deleted successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Media file deleted successfully")}, nil
 }
 
 // ListProblemWorkshopSubmissions handles GET /problems/{problemId}/submissions
-func (h *CoreServer) ListProblemWorkshopSubmissions(ctx context.Context, request corev1.ListProblemWorkshopSubmissionsRequestObject) (corev1.ListProblemWorkshopSubmissionsResponseObject, error) {
-	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, solutionDir)
+func (h *CoreServer) ListProblemWorkshopSubmissions(ctx context.Context, params corev1.ListProblemWorkshopSubmissionsParams) (*corev1.WorkshopFileListResponse, error) {
+	resp, err := h.listWorkshopCollection(ctx, params.ProblemId, solutionDir)
 	if err != nil {
 		return nil, err
 	}
-	return corev1.ListProblemWorkshopSubmissions200JSONResponse(resp), nil
+	return &resp, nil
 }
 
 // CreateProblemWorkshopSubmission handles POST /problems/{problemId}/submissions
-func (h *CoreServer) CreateProblemWorkshopSubmission(ctx context.Context, request corev1.CreateProblemWorkshopSubmissionRequestObject) (corev1.CreateProblemWorkshopSubmissionResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) CreateProblemWorkshopSubmission(ctx context.Context, req corev1.CreateProblemWorkshopSubmissionReq, params corev1.CreateProblemWorkshopSubmissionParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.createWorkshopCollectionTextFile(ctx, request.ProblemId, solutionDir, request.Params.Name, content); err != nil {
+	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, solutionDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.CreateProblemWorkshopSubmission200JSONResponse{Message: strPtr("Author solution file created successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Author solution file created successfully")}, nil
 }
 
 // GetProblemWorkshopSubmission handles GET /problems/{problemId}/submissions/{name}
-func (h *CoreServer) GetProblemWorkshopSubmission(ctx context.Context, request corev1.GetProblemWorkshopSubmissionRequestObject) (corev1.GetProblemWorkshopSubmissionResponseObject, error) {
-	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, solutionDir, request.Name)
+func (h *CoreServer) GetProblemWorkshopSubmission(ctx context.Context, params corev1.GetProblemWorkshopSubmissionParams) (corev1.GetProblemWorkshopSubmissionOK, error) {
+	content, err := h.getWorkshopCollectionFile(ctx, params.ProblemId, solutionDir, params.Name)
 	if err != nil {
-		return nil, err
+		return corev1.GetProblemWorkshopSubmissionOK{}, err
 	}
-	return corev1.GetProblemWorkshopSubmission200TextResponse(string(content)), nil
+	return corev1.GetProblemWorkshopSubmissionOK{Data: bytes.NewReader(content)}, nil
 }
 
 // UpdateProblemWorkshopSubmission handles PUT /problems/{problemId}/submissions/{name}
-func (h *CoreServer) UpdateProblemWorkshopSubmission(ctx context.Context, request corev1.UpdateProblemWorkshopSubmissionRequestObject) (corev1.UpdateProblemWorkshopSubmissionResponseObject, error) {
-	content := ""
-	if request.Body != nil {
-		content = string(*request.Body)
+func (h *CoreServer) UpdateProblemWorkshopSubmission(ctx context.Context, req corev1.UpdateProblemWorkshopSubmissionReq, params corev1.UpdateProblemWorkshopSubmissionParams) (*corev1.MessageResponse, error) {
+	contentBytes, err := io.ReadAll(req.Data)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
 	}
-	if err := h.updateWorkshopCollectionTextFile(ctx, request.ProblemId, solutionDir, request.Name, content); err != nil {
+	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, solutionDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
 	}
-	return corev1.UpdateProblemWorkshopSubmission200JSONResponse{Message: strPtr("Author solution file updated successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Author solution file updated successfully")}, nil
 }
 
 // DeleteProblemWorkshopSubmission handles DELETE /problems/{problemId}/submissions/{name}
-func (h *CoreServer) DeleteProblemWorkshopSubmission(ctx context.Context, request corev1.DeleteProblemWorkshopSubmissionRequestObject) (corev1.DeleteProblemWorkshopSubmissionResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, solutionDir, request.Name); err != nil {
+func (h *CoreServer) DeleteProblemWorkshopSubmission(ctx context.Context, params corev1.DeleteProblemWorkshopSubmissionParams) (*corev1.MessageResponse, error) {
+	if err := h.deleteWorkshopCollectionFile(ctx, params.ProblemId, solutionDir, params.Name); err != nil {
 		return nil, err
 	}
-	return corev1.DeleteProblemWorkshopSubmission200JSONResponse{Message: strPtr("Author solution file deleted successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Author solution file deleted successfully")}, nil
 }
 
 // ListProblemTests handles GET /problems/{problemId}/tests
-func (h *CoreServer) ListProblemTests(ctx context.Context, request corev1.ListProblemTestsRequestObject) (corev1.ListProblemTestsResponseObject, error) {
-	resp, err := h.listWorkshopCollection(ctx, request.ProblemId, testDir)
+func (h *CoreServer) ListProblemTests(ctx context.Context, params corev1.ListProblemTestsParams) (*corev1.WorkshopFileListResponse, error) {
+	resp, err := h.listWorkshopCollection(ctx, params.ProblemId, testDir)
 	if err != nil {
 		return nil, err
 	}
-	return corev1.ListProblemTests200JSONResponse(resp), nil
+	return &resp, nil
 }
 
 // CreateProblemTestFile handles POST /problems/{problemId}/tests
-func (h *CoreServer) CreateProblemTestFile(ctx context.Context, request corev1.CreateProblemTestFileRequestObject) (corev1.CreateProblemTestFileResponseObject, error) {
-	if err := h.createWorkshopCollectionFile(ctx, request.ProblemId, testDir, request.Params.Name, request.Body); err != nil {
+func (h *CoreServer) CreateProblemTestFile(ctx context.Context, req corev1.CreateProblemTestFileReq, params corev1.CreateProblemTestFileParams) (*corev1.MessageResponse, error) {
+	if err := h.createWorkshopCollectionFile(ctx, params.ProblemId, testDir, params.Name, req.Data); err != nil {
 		return nil, err
 	}
-	return corev1.CreateProblemTestFile200JSONResponse{Message: strPtr("Test file created successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Test file created successfully")}, nil
 }
 
 // UpdateProblemTestsConfig handles PATCH /problems/{problemId}/tests/config
-func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, request corev1.UpdateProblemTestsConfigRequestObject) (corev1.UpdateProblemTestsConfigResponseObject, error) {
-	if request.Body == nil {
+func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, req corev1.UpdateProblemTestsConfigRequest, params corev1.UpdateProblemTestsConfigParams) (*corev1.MessageResponse, error) {
+	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
-	if !h.workshopUC.IsInitialized(ctx, request.ProblemId) {
+	if !h.workshopUC.IsInitialized(ctx, params.ProblemId) {
 		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
 
-	bodyBytes, err := json.Marshal(request.Body)
+	bodyBytes, err := json.Marshal(req)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config payload")
 	}
@@ -699,57 +650,57 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, request corev
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config")
 	}
 
-	if err := h.workshopUC.UpdateTestsConfig(ctx, request.ProblemId, &testsMeta); err != nil {
+	if err := h.workshopUC.UpdateTestsConfig(ctx, params.ProblemId, &testsMeta); err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to update tests config")
 	}
 
-	return corev1.UpdateProblemTestsConfig200JSONResponse{Message: strPtr("Tests config updated successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Tests config updated successfully")}, nil
 }
 
 // GetProblemTestFile handles GET /problems/{problemId}/tests/{name}
-func (h *CoreServer) GetProblemTestFile(ctx context.Context, request corev1.GetProblemTestFileRequestObject) (corev1.GetProblemTestFileResponseObject, error) {
-	if request.Name == "tests.json" {
-		testsMeta, err := h.workshopUC.GetTestsConfig(ctx, request.ProblemId)
+func (h *CoreServer) GetProblemTestFile(ctx context.Context, params corev1.GetProblemTestFileParams) (corev1.GetProblemTestFileOK, error) {
+	if params.Name == "tests.json" {
+		testsMeta, err := h.workshopUC.GetTestsConfig(ctx, params.ProblemId)
 		if err != nil {
-			return nil, pkg.Wrap(pkg.ErrNotFound, err, "tests config not found")
+			return corev1.GetProblemTestFileOK{}, pkg.Wrap(pkg.ErrNotFound, err, "tests config not found")
 		}
 		content, err := json.MarshalIndent(testsMeta, "", "  ")
 		if err != nil {
-			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to marshal tests config")
+			return corev1.GetProblemTestFileOK{}, pkg.Wrap(pkg.ErrInternal, err, "failed to marshal tests config")
 		}
-		return corev1.GetProblemTestFile200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+		return corev1.GetProblemTestFileOK{Data: bytes.NewReader(content)}, nil
 	}
 
-	content, err := h.getWorkshopCollectionFile(ctx, request.ProblemId, testDir, request.Name)
+	content, err := h.getWorkshopCollectionFile(ctx, params.ProblemId, testDir, params.Name)
 	if err != nil {
-		return nil, err
+		return corev1.GetProblemTestFileOK{}, err
 	}
-	return corev1.GetProblemTestFile200ApplicationoctetStreamResponse{Body: bytes.NewReader(content), ContentLength: int64(len(content))}, nil
+	return corev1.GetProblemTestFileOK{Data: bytes.NewReader(content)}, nil
 }
 
 // UpdateProblemTestFile handles PUT /problems/{problemId}/tests/{name}
-func (h *CoreServer) UpdateProblemTestFile(ctx context.Context, request corev1.UpdateProblemTestFileRequestObject) (corev1.UpdateProblemTestFileResponseObject, error) {
-	if err := h.updateWorkshopCollectionFile(ctx, request.ProblemId, testDir, request.Name, request.Body); err != nil {
+func (h *CoreServer) UpdateProblemTestFile(ctx context.Context, req corev1.UpdateProblemTestFileReq, params corev1.UpdateProblemTestFileParams) (*corev1.MessageResponse, error) {
+	if err := h.updateWorkshopCollectionFile(ctx, params.ProblemId, testDir, params.Name, req.Data); err != nil {
 		return nil, err
 	}
-	return corev1.UpdateProblemTestFile200JSONResponse{Message: strPtr("Test file updated successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Test file updated successfully")}, nil
 }
 
 // DeleteProblemTestFile handles DELETE /problems/{problemId}/tests/{name}
-func (h *CoreServer) DeleteProblemTestFile(ctx context.Context, request corev1.DeleteProblemTestFileRequestObject) (corev1.DeleteProblemTestFileResponseObject, error) {
-	if err := h.deleteWorkshopCollectionFile(ctx, request.ProblemId, testDir, request.Name); err != nil {
+func (h *CoreServer) DeleteProblemTestFile(ctx context.Context, params corev1.DeleteProblemTestFileParams) (*corev1.MessageResponse, error) {
+	if err := h.deleteWorkshopCollectionFile(ctx, params.ProblemId, testDir, params.Name); err != nil {
 		return nil, err
 	}
-	return corev1.DeleteProblemTestFile200JSONResponse{Message: strPtr("Test file deleted successfully")}, nil
+	return &corev1.MessageResponse{Message: corev1.NewOptString("Test file deleted successfully")}, nil
 }
 
 // CompileProblemComponent handles POST /problems/{problemId}/workshop/components/{componentType}/compile
-func (h *CoreServer) CompileProblemComponent(ctx context.Context, request corev1.CompileProblemComponentRequestObject) (corev1.CompileProblemComponentResponseObject, error) {
+func (h *CoreServer) CompileProblemComponent(ctx context.Context, params corev1.CompileProblemComponentParams) (*corev1.CompileResult, error) {
 	user := middleware.GetUser(ctx)
 
 	compileReq := models.CompileComponentRequest{
-		ProblemID:     request.ProblemId,
-		ComponentType: string(request.ComponentType),
+		ProblemID:     params.ProblemId,
+		ComponentType: string(params.ComponentType),
 		UserID:        user.Id,
 	}
 
@@ -758,31 +709,31 @@ func (h *CoreServer) CompileProblemComponent(ctx context.Context, request corev1
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to compile component")
 	}
 
-	return corev1.CompileProblemComponent200JSONResponse{
-		CompileError: strPtr(result.CompileError),
-		CompileLog:   strPtr(result.CompileLog),
-		FileId:       strPtr(result.FileID),
-		Sha256:       strPtr(result.SHA256),
-		Success:      boolPtr(result.Success),
+	return &corev1.CompileResult{
+		CompileError: stringToOptString(result.CompileError),
+		CompileLog:   stringToOptString(result.CompileLog),
+		FileID:       stringToOptString(result.FileID),
+		SHA256:       stringToOptString(result.SHA256),
+		Success:      corev1.NewOptBool(result.Success),
 	}, nil
 }
 
 // GenerateTests handles POST /problems/{problemId}/workshop/tests/generate
-func (h *CoreServer) GenerateTests(ctx context.Context, request corev1.GenerateTestsRequestObject) (corev1.GenerateTestsResponseObject, error) {
+func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTestsReq, params corev1.GenerateTestsParams) (*corev1.GenerateTestsOK, error) {
 	user := middleware.GetUser(ctx)
 
-	testNumbers := make([]int, len(request.Body.TestNumbers))
-	copy(testNumbers, request.Body.TestNumbers)
+	testNumbers := make([]int, len(req.TestNumbers))
+	copy(testNumbers, req.TestNumbers)
 
 	var arguments [][]string
-	if request.Body.Arguments != nil {
-		arguments = make([][]string, len(*request.Body.Arguments))
-		copy(arguments, *request.Body.Arguments)
+	if req.Arguments != nil {
+		arguments = make([][]string, len(req.Arguments))
+		copy(arguments, req.Arguments)
 	}
 
 	generateReq := models.GenerateTestsRequest{
-		ProblemID:     request.ProblemId,
-		GeneratorName: request.Body.GeneratorName,
+		ProblemID:     params.ProblemId,
+		GeneratorName: req.GeneratorName,
 		TestNumbers:   testNumbers,
 		Arguments:     arguments,
 		UserID:        user.Id,
@@ -792,14 +743,14 @@ func (h *CoreServer) GenerateTests(ctx context.Context, request corev1.GenerateT
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to generate tests")
 	}
 
-	return corev1.GenerateTests200JSONResponse{Message: strPtr("Tests generated successfully")}, nil
+	return &corev1.GenerateTestsOK{Message: corev1.NewOptString("Tests generated successfully")}, nil
 }
 
 // ValidateAllTests handles POST /problems/{problemId}/workshop/tests/validate
-func (h *CoreServer) ValidateAllTests(ctx context.Context, request corev1.ValidateAllTestsRequestObject) (corev1.ValidateAllTestsResponseObject, error) {
+func (h *CoreServer) ValidateAllTests(ctx context.Context, params corev1.ValidateAllTestsParams) (*corev1.ValidationReport, error) {
 	user := middleware.GetUser(ctx)
 
-	report, err := h.workshopUC.ValidateAllTests(ctx, request.ProblemId, user.Id)
+	report, err := h.workshopUC.ValidateAllTests(ctx, params.ProblemId, user.Id)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to validate tests")
 	}
@@ -807,34 +758,34 @@ func (h *CoreServer) ValidateAllTests(ctx context.Context, request corev1.Valida
 	results := make([]corev1.TestValidationResult, len(report.Results))
 	for i, r := range report.Results {
 		results[i] = corev1.TestValidationResult{
-			Error:      strPtr(r.Error),
-			Message:    strPtr(r.Message),
-			TestNumber: intPtr(r.TestNumber),
-			Valid:      boolPtr(r.Valid),
+			Error:      stringToOptString(r.Error),
+			Message:    stringToOptString(r.Message),
+			TestNumber: corev1.NewOptInt(r.TestNumber),
+			Valid:      corev1.NewOptBool(r.Valid),
 		}
 	}
 
-	return corev1.ValidateAllTests200JSONResponse{
-		InvalidTests: intPtr(report.InvalidTests),
-		Results:      &results,
-		TotalTests:   intPtr(report.TotalTests),
-		ValidTests:   intPtr(report.ValidTests),
+	return &corev1.ValidationReport{
+		InvalidTests: corev1.NewOptInt(report.InvalidTests),
+		Results:      results,
+		TotalTests:   corev1.NewOptInt(report.TotalTests),
+		ValidTests:   corev1.NewOptInt(report.ValidTests),
 	}, nil
 }
 
 // TestSolution handles POST /problems/{problemId}/workshop/solutions/test
-func (h *CoreServer) TestSolution(ctx context.Context, request corev1.TestSolutionRequestObject) (corev1.TestSolutionResponseObject, error) {
+func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionReq, params corev1.TestSolutionParams) (*corev1.TestReport, error) {
 	user := middleware.GetUser(ctx)
 
 	var testNumbers []int
-	if request.Body.TestNumbers != nil {
-		testNumbers = make([]int, len(*request.Body.TestNumbers))
-		copy(testNumbers, *request.Body.TestNumbers)
+	if req.TestNumbers != nil {
+		testNumbers = make([]int, len(req.TestNumbers))
+		copy(testNumbers, req.TestNumbers)
 	}
 
 	testReq := models.TestSolutionRequest{
-		ProblemID:    request.ProblemId,
-		SolutionPath: request.Body.SolutionPath,
+		ProblemID:    params.ProblemId,
+		SolutionPath: req.SolutionPath,
 		TestNumbers:  testNumbers,
 		UserID:       user.Id,
 	}
@@ -847,19 +798,19 @@ func (h *CoreServer) TestSolution(ctx context.Context, request corev1.TestSoluti
 	results := make([]corev1.TestResult, len(report.Results))
 	for i, r := range report.Results {
 		results[i] = corev1.TestResult{
-			Memory:     int64Ptr(r.Memory),
-			Message:    strPtr(r.Message),
-			TestNumber: intPtr(r.TestNumber),
-			Time:       int64Ptr(r.Time),
-			Verdict:    strPtr(r.Verdict),
+			Memory:     corev1.NewOptInt64(r.Memory),
+			Message:    stringToOptString(r.Message),
+			TestNumber: corev1.NewOptInt(r.TestNumber),
+			Time:       corev1.NewOptInt64(r.Time),
+			Verdict:    stringToOptString(r.Verdict),
 		}
 	}
 
-	return corev1.TestSolution200JSONResponse{
-		FailedTests: intPtr(report.FailedTests),
-		PassedTests: intPtr(report.PassedTests),
-		Results:     &results,
-		TotalTests:  intPtr(report.TotalTests),
+	return &corev1.TestReport{
+		FailedTests: corev1.NewOptInt(report.FailedTests),
+		PassedTests: corev1.NewOptInt(report.PassedTests),
+		Results:     results,
+		TotalTests:  corev1.NewOptInt(report.TotalTests),
 	}, nil
 }
 
@@ -879,7 +830,7 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 	}
 
 	contractFiles := toContractFileEntries(files, manifest)
-	return corev1.WorkshopFileListResponse{Files: &contractFiles}, nil
+	return corev1.WorkshopFileListResponse{Files: contractFiles}, nil
 }
 
 func validateCollectionFileExtension(dir, name string) error {
@@ -1102,26 +1053,30 @@ func (h *CoreServer) syncProblemTitleIfNeeded(ctx context.Context, problemID uui
 	return nil
 }
 
-func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) corev1.ProblemLimits {
-	return corev1.ProblemLimits{
-		MaxScore:      manifest.MaxScore,
-		MemoryLimitMb: manifest.MemoryLimitMb,
+func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) *corev1.ProblemLimits {
+	var maxScoreOpt corev1.OptNilInt
+	if manifest.MaxScore != nil {
+		maxScoreOpt = corev1.NewOptNilInt(*manifest.MaxScore)
+	}
+	return &corev1.ProblemLimits{
+		MaxScore:      maxScoreOpt,
+		MemoryLimitMB: manifest.MemoryLimitMb,
 		ProblemType:   manifest.ProblemType,
 		TimeLimitMs:   manifest.TimeLimitMs,
 	}
 }
 
-func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages []string, currentLang string) corev1.ProblemStatement {
-	return corev1.ProblemStatement{
+func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages []string, currentLang string) *corev1.ProblemStatement {
+	return &corev1.ProblemStatement{
 		InputFormat:  stmt.InputFormat,
-		Interaction:  optionalString(stmt.Interaction),
+		Interaction:  stringToOptString(stmt.Interaction),
 		Legend:       stmt.Legend,
-		Notes:        optionalString(stmt.Notes),
+		Notes:        stringToOptString(stmt.Notes),
 		OutputFormat: stmt.OutputFormat,
-		Scoring:      optionalString(stmt.Scoring),
+		Scoring:      stringToOptString(stmt.Scoring),
 		Title:        stmt.Title,
-		Languages:    &languages,
-		CurrentLang:  &currentLang,
+		Languages:    languages,
+		CurrentLang:  stringToOptString(currentLang),
 	}
 }
 
@@ -1161,10 +1116,10 @@ func toContractFileEntries(files []models.FileEntry, manifest *models.ProblemMan
 			}
 		}
 		contractFiles[i] = corev1.FileEntry{
-			Path:        strPtr(f.Path),
-			IsDirectory: boolPtr(f.IsDirectory),
-			Size:        int64Ptr(f.Size),
-			IsMain:      boolPtr(isMain),
+			Path:        corev1.NewOptString(f.Path),
+			IsDirectory: corev1.NewOptBool(f.IsDirectory),
+			Size:        corev1.NewOptInt64(f.Size),
+			IsMain:      corev1.NewOptBool(isMain),
 		}
 	}
 	return contractFiles
@@ -1196,27 +1151,4 @@ func sanitizeFileName(name string) (string, error) {
 		return "", fmt.Errorf("path separators are not allowed")
 	}
 	return clean, nil
-}
-
-func optionalString(value string) *string {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	return &value
-}
-
-func strPtr(s string) *string {
-	return &s
-}
-
-func intPtr(i int) *int {
-	return &i
-}
-
-func int64Ptr(i int64) *int64 {
-	return &i
-}
-
-func boolPtr(b bool) *bool {
-	return &b
 }

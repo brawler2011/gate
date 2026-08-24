@@ -76,9 +76,6 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		},
 	}
 
-	boolTrue := true
-	boolFalse := false
-
 	t.Run("Participant Requesting unfrozen=true Is Rejected (403 Forbidden)", func(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
@@ -96,12 +93,10 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		// But DOES NOT have permission to manage contest (cannot view unfrozen scoreboard)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionManageContest).Return(false, nil)
 
-		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardRequestObject{
+		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "test-contest",
-			Params: corev1.GetContestScoreboardParams{
-				Unfrozen: &boolTrue,
-			},
+			Unfrozen:     corev1.NewOptBool(true),
 		})
 
 		require.Error(t, err)
@@ -137,20 +132,17 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		}
 		mockContests.On("GetContestScoreboard", mock.Anything, contestID, participantID, false).Return(expectedScoreboard, nil)
 
-		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardRequestObject{
+		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "test-contest",
-			Params: corev1.GetContestScoreboardParams{
-				Unfrozen: &boolFalse,
-			},
+			Unfrozen:     corev1.NewOptBool(false),
 		})
 
 		require.NoError(t, err)
 		require.NotNil(t, resp)
-		jsonResp, ok := resp.(corev1.GetContestScoreboard200JSONResponse)
-		require.True(t, ok)
-		assert.True(t, jsonResp.IsFrozen)
-		assert.Equal(t, &freezeTime, jsonResp.FreezeTime)
+		assert.True(t, resp.IsFrozen)
+		assert.True(t, resp.FreezeTime.IsSet())
+		assert.Equal(t, freezeTime.Unix(), resp.FreezeTime.Value.Unix())
 	})
 
 	t.Run("Moderator Requesting unfrozen=true Receives Live Scoreboard with is_frozen=true", func(t *testing.T) {
@@ -180,20 +172,17 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		}
 		mockContests.On("GetContestScoreboard", mock.Anything, contestID, moderatorID, true).Return(expectedScoreboard, nil)
 
-		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardRequestObject{
+		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "test-contest",
-			Params: corev1.GetContestScoreboardParams{
-				Unfrozen: &boolTrue,
-			},
+			Unfrozen:     corev1.NewOptBool(true),
 		})
 
 		require.NoError(t, err)
 		require.NotNil(t, resp)
-		jsonResp, ok := resp.(corev1.GetContestScoreboard200JSONResponse)
-		require.True(t, ok)
-		assert.True(t, jsonResp.IsFrozen) // Preserves is_frozen: true
-		assert.Equal(t, &freezeTime, jsonResp.FreezeTime)
+		assert.True(t, resp.IsFrozen) // Preserves is_frozen: true
+		assert.True(t, resp.FreezeTime.IsSet())
+		assert.Equal(t, freezeTime.Unix(), resp.FreezeTime.Value.Unix())
 	})
 
 	t.Run("Admin Requesting unfrozen=true Receives Live Scoreboard", func(t *testing.T) {
@@ -223,12 +212,10 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		}
 		mockContests.On("GetContestScoreboard", mock.Anything, contestID, adminID, true).Return(expectedScoreboard, nil)
 
-		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardRequestObject{
+		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "test-contest",
-			Params: corev1.GetContestScoreboardParams{
-				Unfrozen: &boolTrue,
-			},
+			Unfrozen:     corev1.NewOptBool(true),
 		})
 
 		require.NoError(t, err)
@@ -259,7 +246,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(futureContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionGetMonitor).Return(true, nil)
 
-		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardRequestObject{
+		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "test-contest",
 		})
@@ -298,7 +285,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		mockContests.On("GetContestScoreboard", mock.Anything, contestID, ownerID, false).
 			Return(&models.ScoreboardResponse{ContestID: contestID, ContestLogin: "test-contest", OrganizationLogin: "test-org"}, nil)
 
-		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardRequestObject{
+		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "test-contest",
 		})
@@ -321,7 +308,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionGetMonitor).Return(false, nil)
 
-		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardRequestObject{
+		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "test-contest",
 		})

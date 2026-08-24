@@ -4,34 +4,24 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"time"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/pkg"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // ImportProblem handles POST /problems/{id}/import
-func (h *CoreServer) ImportProblem(ctx context.Context, request corev1.ImportProblemRequestObject) (corev1.ImportProblemResponseObject, error) {
-	// Parse multipart form
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
-	}
-
-	// Read the multipart form
-	part, err := request.Body.NextPart()
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read form part")
-	}
-	defer part.Close()
-
-	// Check field name
-	if part.FormName() != "package" {
+func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProblemReq, params corev1.ImportProblemParams) (*corev1.ImportProblemOK, error) {
+	if req == nil || !req.Package.IsSet() {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "expected 'package' field")
 	}
 
+	mpFile := req.Package.Value
+	if mpFile.File == nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing file content")
+	}
+
 	// Read file into memory (limited to MaxPackageZipSize + 1)
-	limitedReader := io.LimitReader(part, MaxPackageZipSize+1)
+	limitedReader := io.LimitReader(mpFile.File, MaxPackageZipSize+1)
 	fileBytes, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to read file")
@@ -41,78 +31,61 @@ func (h *CoreServer) ImportProblem(ctx context.Context, request corev1.ImportPro
 	}
 
 	// Import problem
-	_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), request.Id)
+	_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), params.ID)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import problem")
 	}
 
-	message := "Problem package imported successfully"
-	return corev1.ImportProblem200JSONResponse{
-		Message: &message,
+	return &corev1.ImportProblemOK{
+		Message: corev1.NewOptString("Problem package imported successfully"),
 	}, nil
 }
 
 // PublishProblem handles POST /problems/{id}/publish
-func (h *CoreServer) PublishProblem(ctx context.Context, request corev1.PublishProblemRequestObject) (corev1.PublishProblemResponseObject, error) {
-	result, err := h.publishUC.PublishProblem(ctx, request.Id)
+func (h *CoreServer) PublishProblem(ctx context.Context, params corev1.PublishProblemParams) (*corev1.PublishProblemOK, error) {
+	result, err := h.publishUC.PublishProblem(ctx, params.ID)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to publish problem")
 	}
 
-	message := "Problem published successfully"
-	return corev1.PublishProblem200JSONResponse{
-		Version: &result.Version,
-		Message: &message,
+	return &corev1.PublishProblemOK{
+		Version: corev1.NewOptInt32(result.Version),
+		Message: corev1.NewOptString("Problem published successfully"),
 	}, nil
 }
 
 // ListProblemPackages handles GET /problems/{id}/packages
-func (h *CoreServer) ListProblemPackages(ctx context.Context, request corev1.ListProblemPackagesRequestObject) (corev1.ListProblemPackagesResponseObject, error) {
-	packages, err := h.publishUC.ListPackages(ctx, request.Id)
+func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.ListProblemPackagesParams) (*corev1.ListProblemPackagesOK, error) {
+	packages, err := h.publishUC.ListPackages(ctx, params.ID)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list packages")
 	}
 
-	resp := corev1.ListProblemPackages200JSONResponse{}
-	items := make([]struct {
-		CompiledAt  *time.Time          `json:"compiled_at,omitempty"`
-		CreatedAt   *time.Time          `json:"created_at,omitempty"`
-		Id          *openapi_types.UUID `json:"id,omitempty"`
-		PackageHash *string             `json:"package_hash,omitempty"`
-		Status      *string             `json:"status,omitempty"`
-		Version     *int32              `json:"version,omitempty"`
-	}, len(packages))
+	items := make([]corev1.ListProblemPackagesOKPackagesItem, len(packages))
 	for i, p := range packages {
-		id := openapi_types.UUID(p.ID)
-		hash := p.PackageHash
-		status := p.Status
-		version := p.Version
-		createdAt := p.CreatedAt
-		items[i].Id = &id
-		items[i].PackageHash = &hash
-		items[i].Status = &status
-		items[i].Version = &version
-		items[i].CreatedAt = &createdAt
+		items[i] = corev1.ListProblemPackagesOKPackagesItem{
+			ID:          corev1.NewOptUUID(p.ID),
+			Version:     corev1.NewOptInt32(p.Version),
+			Status:      corev1.NewOptString(p.Status),
+			PackageHash: corev1.NewOptString(p.PackageHash),
+			CreatedAt:   corev1.NewOptDateTime(p.CreatedAt),
+		}
 		if p.CompiledAt != nil {
-			items[i].CompiledAt = p.CompiledAt
+			items[i].CompiledAt = corev1.NewOptDateTime(*p.CompiledAt)
 		}
 	}
-	resp.Packages = &items
-	return resp, nil
+	return &corev1.ListProblemPackagesOK{Packages: items}, nil
 }
 
 // GetPublishedPackage handles GET /problems/{id}/package/{version}
-func (h *CoreServer) GetPublishedPackage(ctx context.Context, request corev1.GetPublishedPackageRequestObject) (corev1.GetPublishedPackageResponseObject, error) {
+func (h *CoreServer) GetPublishedPackage(ctx context.Context, params corev1.GetPublishedPackageParams) (*corev1.GetPublishedPackageFound, error) {
 	// Get presigned URL
-	packageURL, err := h.publishUC.GetPublishedPackageURL(ctx, request.Id, request.Version)
+	packageURL, err := h.publishUC.GetPublishedPackageURL(ctx, params.ID, params.Version)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get package URL")
 	}
 
-	// Return 302 redirect to S3 presigned URL
-	return corev1.GetPublishedPackage302Response{
-		Headers: corev1.GetPublishedPackage302ResponseHeaders{
-			Location: packageURL,
-		},
+	return &corev1.GetPublishedPackageFound{
+		Location: corev1.NewOptString(packageURL),
 	}, nil
 }

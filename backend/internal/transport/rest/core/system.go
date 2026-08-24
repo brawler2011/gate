@@ -9,7 +9,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 )
 
-func (h *CoreServer) GetLanguages(ctx context.Context, request corev1.GetLanguagesRequestObject) (corev1.GetLanguagesResponseObject, error) {
+func (h *CoreServer) GetLanguages(ctx context.Context) (*corev1.SupportedLanguagesResponse, error) {
 	cfg, err := sandbox.LoadConfig("languages.yaml")
 	if err != nil {
 		cfg, _ = sandbox.LoadConfig("../../languages.yaml")
@@ -22,11 +22,10 @@ func (h *CoreServer) GetLanguages(ctx context.Context, request corev1.GetLanguag
 			if ext == "" || key == "cpp" {
 				ext = key
 			}
-			langType := l.Type
 			langItems = append(langItems, corev1.SupportedLanguage{
 				Name:      key,
 				Extension: ext,
-				Type:      &langType,
+				Type:      corev1.NewOptString(l.Type),
 			})
 		}
 	} else {
@@ -38,7 +37,7 @@ func (h *CoreServer) GetLanguages(ctx context.Context, request corev1.GetLanguag
 		}
 	}
 
-	return corev1.GetLanguages200JSONResponse{
+	return &corev1.SupportedLanguagesResponse{
 		Languages: langItems,
 	}, nil
 }

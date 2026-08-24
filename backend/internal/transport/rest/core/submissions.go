@@ -7,15 +7,15 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
 )
 
-func (h *CoreServer) CreateSubmission(ctx context.Context, request corev1.CreateSubmissionRequestObject) (corev1.CreateSubmissionResponseObject, error) {
+func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSubmissionRequestModel, params corev1.CreateSubmissionParams) (*corev1.CreationResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	if request.Body == nil {
+	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
-	req := *request.Body
 
 	// Validate solution size
 	solutionSize := int64(len(req.Submission))
@@ -23,19 +23,19 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, request corev1.Create
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid solution size")
 	}
 
-	langName := models.LanguageName(request.Params.Language)
+	langName := models.LanguageName(params.Language)
 	if err := models.LanguageNameValid(langName); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid language")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.Params.OrganizationLogin, request.Params.ContestLogin)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrganizationLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
 	solutionCreation := &models.SubmissionCreation{
 		UserId:    user.Id,
-		ProblemId: request.Params.ProblemId,
+		ProblemId: params.ProblemID,
 		ContestId: contest.ID,
 		Language:  langName,
 		Solution:  req.Submission,
@@ -47,11 +47,11 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, request corev1.Create
 		return nil, err
 	}
 
-	return corev1.CreateSubmission200JSONResponse{Id: solutionID}, nil
+	return &corev1.CreationResponseModel{ID: solutionID}, nil
 }
 
-func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmissionRequestObject) (corev1.GetSubmissionResponseObject, error) {
-	submission, err := h.submissionsUC.GetSubmission(ctx, request.SubmissionId)
+func (h *CoreServer) GetSubmission(ctx context.Context, params corev1.GetSubmissionParams) (*corev1.GetSubmissionResponseModel, error) {
+	submission, err := h.submissionsUC.GetSubmission(ctx, params.SubmissionID)
 	if err != nil {
 		return nil, err
 	}
@@ -80,71 +80,71 @@ func (h *CoreServer) GetSubmission(ctx context.Context, request corev1.GetSubmis
 		submission.TestDetails = nil
 	}
 
-	return corev1.GetSubmission200JSONResponse{Submission: SolutionDTO(submission)}, nil
+	return &corev1.GetSubmissionResponseModel{Submission: SolutionDTO(submission)}, nil
 }
 
-func (h *CoreServer) BlockSubmission(ctx context.Context, request corev1.BlockSubmissionRequestObject) (corev1.BlockSubmissionResponseObject, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+func (h *CoreServer) BlockSubmission(ctx context.Context, req corev1.OptBlockSubmissionRequestModel, params corev1.BlockSubmissionParams) error {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var reason *string
-	if request.Body != nil && request.Body.Reason != nil {
-		reason = request.Body.Reason
+	if req.IsSet() && req.Value.Reason.IsSet() {
+		reason = &req.Value.Reason.Value
 	}
 
-	err = h.submissionsUC.BlockSubmission(ctx, contest.ID, request.SubmissionId, reason)
+	err = h.submissionsUC.BlockSubmission(ctx, contest.ID, params.SubmissionID, reason)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.BlockSubmission200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) UnblockSubmission(ctx context.Context, request corev1.UnblockSubmissionRequestObject) (corev1.UnblockSubmissionResponseObject, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+func (h *CoreServer) UnblockSubmission(ctx context.Context, params corev1.UnblockSubmissionParams) error {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = h.submissionsUC.UnblockSubmission(ctx, contest.ID, request.SubmissionId)
+	err = h.submissionsUC.UnblockSubmission(ctx, contest.ID, params.SubmissionID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.UnblockSubmission200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) ListSubmissions(ctx context.Context, request corev1.ListSubmissionsRequestObject) (corev1.ListSubmissionsResponseObject, error) {
-	filter := ListSolutionsParamsDTO(request.Params)
+func (h *CoreServer) ListSubmissions(ctx context.Context, params corev1.ListSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
+	filter := ListSolutionsParamsDTO(params)
 
 	solutionsList, err := h.submissionsUC.ListSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	return corev1.ListSubmissions200JSONResponse(*ListSolutionsResponseDTO(solutionsList)), nil
+	return ListSolutionsResponseDTO(solutionsList), nil
 }
 
 func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) models.SubmissionsFilter {
 	var langName *models.LanguageName = nil
-	if params.Language != nil {
-		t := models.LanguageName(*params.Language)
+	if params.Language.IsSet() {
+		t := models.LanguageName(params.Language.Value)
 		langName = &t
 	}
 
 	var state *models.State = nil
-	if params.State != nil {
-		t := models.State(*params.State)
+	if params.State.IsSet() {
+		t := models.State(params.State.Value)
 		state = &t
 	}
 
 	// Convert sortOrder string to integer: -1 for desc, 0 for asc
 	var order *int32 = nil
-	if params.SortOrder != nil {
+	if params.SortOrder.IsSet() {
 		var orderVal int32
-		if *params.SortOrder == corev1.ListSubmissionsParamsSortOrderDesc {
+		if params.SortOrder.Value == corev1.ListSubmissionsSortOrderDesc {
 			orderVal = -1
 		} else {
 			orderVal = 0
@@ -152,11 +152,27 @@ func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) models.Submissi
 		order = &orderVal
 	}
 
+	var contestID *uuid.UUID
+	if params.ContestId.IsSet() {
+		contestID = &params.ContestId.Value
+	}
+
+	var userID *uuid.UUID
+	if params.UserId.IsSet() {
+		userID = &params.UserId.Value
+	}
+
+	var problemID *uuid.UUID
+	if params.ProblemId.IsSet() {
+		problemID = &params.ProblemId.Value
+	}
+
 	return models.SubmissionsFilter{
-		ContestId: params.ContestId,
+		ContestId: contestID,
 		Page:      params.Page,
 		PageSize:  params.PageSize,
-		ProblemId: params.ProblemId,
+		UserId:    userID,
+		ProblemId: problemID,
 		Language:  langName,
 		Order:     order,
 		State:     state,
@@ -176,48 +192,48 @@ func ListSolutionsResponseDTO(solutionsList *models.SubmissionsList) *corev1.Lis
 	return &resp
 }
 
-func (h *CoreServer) RejudgeSubmission(ctx context.Context, request corev1.RejudgeSubmissionRequestObject) (corev1.RejudgeSubmissionResponseObject, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+func (h *CoreServer) RejudgeSubmission(ctx context.Context, params corev1.RejudgeSubmissionParams) error {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	filter := models.RejudgeFilter{
 		ContestID:    contest.ID,
-		SubmissionID: &request.SubmissionId,
+		SubmissionID: &params.SubmissionID,
 	}
 
 	_, err = h.submissionsUC.RejudgeSubmissions(ctx, filter)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.RejudgeSubmission200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) RejudgeContestProblem(ctx context.Context, request corev1.RejudgeContestProblemRequestObject) (corev1.RejudgeContestProblemResponseObject, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+func (h *CoreServer) RejudgeContestProblem(ctx context.Context, params corev1.RejudgeContestProblemParams) error {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	filter := models.RejudgeFilter{
 		ContestID: contest.ID,
-		ProblemID: &request.ProblemId,
+		ProblemID: &params.ProblemID,
 	}
 
 	_, err = h.submissionsUC.RejudgeSubmissions(ctx, filter)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.RejudgeContestProblem200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) RejudgeContest(ctx context.Context, request corev1.RejudgeContestRequestObject) (corev1.RejudgeContestResponseObject, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+func (h *CoreServer) RejudgeContest(ctx context.Context, params corev1.RejudgeContestParams) error {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	filter := models.RejudgeFilter{
@@ -226,9 +242,9 @@ func (h *CoreServer) RejudgeContest(ctx context.Context, request corev1.RejudgeC
 
 	_, err = h.submissionsUC.RejudgeSubmissions(ctx, filter)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.RejudgeContest200Response{}, nil
+	return nil
 }
 

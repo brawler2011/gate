@@ -7,38 +7,33 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
 )
 
-func (h *CoreServer) ListContestAnnouncements(ctx context.Context, request corev1.ListContestAnnouncementsRequestObject) (corev1.ListContestAnnouncementsResponseObject, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1.ListContestAnnouncementsParams) (*corev1.ListContestAnnouncementsResponseModel, error) {
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
-	page := int32(1)
-	if request.Params.Page != nil && *request.Params.Page > 0 {
-		page = *request.Params.Page
-	}
-	pageSize := int32(50)
-	if request.Params.PageSize != nil && *request.Params.PageSize > 0 {
-		pageSize = *request.Params.PageSize
-	}
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 
 	list, err := h.announcementsUC.ListAnnouncements(ctx, contest.ID, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	return corev1.ListContestAnnouncements200JSONResponse(*ContestAnnouncementsListResponseDTO(list)), nil
+	return ContestAnnouncementsListResponseDTO(list), nil
 }
 
-func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, request corev1.CreateContestAnnouncementRequestObject) (corev1.CreateContestAnnouncementResponseObject, error) {
+func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.CreateContestAnnouncementRequestModel, params corev1.CreateContestAnnouncementParams) (*corev1.ContestAnnouncementModel, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -51,47 +46,51 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, request core
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied: only contest moderators can create announcements")
 	}
 
-	body := request.Body
-	if body == nil {
+	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+	}
+
+	var problemID *uuid.UUID
+	if req.ProblemID.IsSet() {
+		problemID = &req.ProblemID.Value
 	}
 
 	announcement, err := h.announcementsUC.CreateAnnouncement(ctx, &models.CreateContestAnnouncementInput{
 		ContestID: contest.ID,
-		ProblemID: body.ProblemId,
+		ProblemID: problemID,
 		AuthorID:  user.Id,
-		Title:     body.Title,
-		Body:      body.Body,
+		Title:     req.Title,
+		Body:      req.Body,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return corev1.CreateContestAnnouncement200JSONResponse(*ContestAnnouncementDTO(announcement)), nil
+	return ContestAnnouncementDTO(announcement), nil
 }
 
-func (h *CoreServer) DeleteContestAnnouncement(ctx context.Context, request corev1.DeleteContestAnnouncementRequestObject) (corev1.DeleteContestAnnouncementResponseObject, error) {
+func (h *CoreServer) DeleteContestAnnouncement(ctx context.Context, params corev1.DeleteContestAnnouncementParams) error {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !allowed {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied: only contest moderators can delete announcements")
+		return pkg.Wrap(pkg.NoPermission, nil, "permission denied: only contest moderators can delete announcements")
 	}
 
-	if err := h.announcementsUC.DeleteAnnouncement(ctx, request.AnnouncementId, contest.ID); err != nil {
-		return nil, err
+	if err := h.announcementsUC.DeleteAnnouncement(ctx, params.AnnouncementID, contest.ID); err != nil {
+		return err
 	}
 
-	return corev1.DeleteContestAnnouncement200Response{}, nil
+	return nil
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -48,21 +47,19 @@ func TestReorderContestProblems(t *testing.T) {
 			{ProblemID: p1, Position: 2},
 		}).Return(nil)
 
-		body := corev1.ReorderContestProblemsJSONRequestBody{
+		body := &corev1.ReorderContestProblemsRequestModel{
 			Problems: []corev1.ContestProblemReorderItemModel{
-				{ProblemId: p2, Position: 1},
-				{ProblemId: p1, Position: 2},
+				{ProblemID: p2, Position: 1},
+				{ProblemID: p1, Position: 2},
 			},
 		}
 
-		resp, err := server.ReorderContestProblems(ctx, corev1.ReorderContestProblemsRequestObject{
+		err := server.ReorderContestProblems(ctx, body, corev1.ReorderContestProblemsParams{
 			OrgLogin:     "org-1",
 			ContestLogin: "round-1",
-			Body:         &body,
 		})
 
 		require.NoError(t, err)
-		assert.IsType(t, corev1.ReorderContestProblems200Response{}, resp)
 		mockContests.AssertExpectations(t)
 	})
 
@@ -73,13 +70,11 @@ func TestReorderContestProblems(t *testing.T) {
 
 		ctx := context.Background()
 
-		resp, err := server.ReorderContestProblems(ctx, corev1.ReorderContestProblemsRequestObject{
+		err := server.ReorderContestProblems(ctx, nil, corev1.ReorderContestProblemsParams{
 			OrgLogin:     "org-1",
 			ContestLogin: "round-1",
-			Body:         nil,
 		})
 
 		require.Error(t, err)
-		assert.Nil(t, resp)
 	})
 }

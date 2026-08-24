@@ -9,26 +9,15 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
-func (h *CoreServer) ListNotifications(ctx context.Context, request corev1.ListNotificationsRequestObject) (corev1.ListNotificationsResponseObject, error) {
+func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNotificationsParams) (*corev1.NotificationsListResponseModel, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	page := int32(1)
-	if request.Params.Page != nil && *request.Params.Page > 0 {
-		page = *request.Params.Page
-	}
-
-	pageSize := int32(20)
-	if request.Params.PageSize != nil && *request.Params.PageSize > 0 {
-		pageSize = *request.Params.PageSize
-	}
-
-	unreadOnly := false
-	if request.Params.UnreadOnly != nil {
-		unreadOnly = *request.Params.UnreadOnly
-	}
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(20)
+	unreadOnly := params.UnreadOnly.Or(false)
 
 	list, err := h.notificationsUC.ListNotifications(ctx, user.Id, &models.NotificationFilter{
 		Page:       page,
@@ -39,13 +28,13 @@ func (h *CoreServer) ListNotifications(ctx context.Context, request corev1.ListN
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list notifications")
 	}
 
-	return corev1.ListNotifications200JSONResponse(*NotificationsListResponseDTO(list)), nil
+	return NotificationsListResponseDTO(list), nil
 }
 
-func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context, request corev1.GetUnreadNotificationsCountRequestObject) (corev1.GetUnreadNotificationsCountResponseObject, error) {
+func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.UnreadNotificationsCountResponseModel, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return corev1.GetUnreadNotificationsCount200JSONResponse{Count: 0}, nil
+		return &corev1.UnreadNotificationsCountResponseModel{Count: 0}, nil
 	}
 
 	count, err := h.notificationsUC.GetUnreadCount(ctx, user.Id)
@@ -53,33 +42,33 @@ func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context, request co
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get unread notifications count")
 	}
 
-	return corev1.GetUnreadNotificationsCount200JSONResponse{Count: count}, nil
+	return &corev1.UnreadNotificationsCountResponseModel{Count: count}, nil
 }
 
-func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, request corev1.MarkNotificationAsReadRequestObject) (corev1.MarkNotificationAsReadResponseObject, error) {
+func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, params corev1.MarkNotificationAsReadParams) error {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	err := h.notificationsUC.MarkAsRead(ctx, request.Id, user.Id)
+	err := h.notificationsUC.MarkAsRead(ctx, params.ID, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to mark notification as read")
+		return pkg.Wrap(pkg.ErrInternal, err, "failed to mark notification as read")
 	}
 
-	return corev1.MarkNotificationAsRead200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) MarkAllNotificationsAsRead(ctx context.Context, request corev1.MarkAllNotificationsAsReadRequestObject) (corev1.MarkAllNotificationsAsReadResponseObject, error) {
+func (h *CoreServer) MarkAllNotificationsAsRead(ctx context.Context) error {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
 	err := h.notificationsUC.MarkAllAsRead(ctx, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to mark all notifications as read")
+		return pkg.Wrap(pkg.ErrInternal, err, "failed to mark all notifications as read")
 	}
 
-	return corev1.MarkAllNotificationsAsRead200Response{}, nil
+	return nil
 }

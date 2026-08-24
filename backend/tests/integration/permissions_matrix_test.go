@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -60,43 +59,44 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		s.Require().NoError(err)
 
 		s.Run("Participant cannot view problem of unstarted contest", func() {
-			resp, err := s.client.GetContestProblemWithResponse(s.ctx, org.Login, "unstarted-"+suffix, uuid.New(), func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", partUser.Id.String())
-				return nil
+			_, err := s.client.GetContestProblem(withTestUser(s.ctx, partUser.Id), corev1.GetContestProblemParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "unstarted-" + suffix,
+				ProblemID:    uuid.New(),
 			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusForbidden, resp.StatusCode())
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
 		})
 
 		s.Run("Moderator can view problem of unstarted contest", func() {
-			resp, err := s.client.GetContestProblemWithResponse(s.ctx, org.Login, "unstarted-"+suffix, uuid.New(), func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", modUser.Id.String())
-				return nil
+			_, err := s.client.GetContestProblem(withTestUser(s.ctx, modUser.Id), corev1.GetContestProblemParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "unstarted-" + suffix,
+				ProblemID:    uuid.New(),
 			})
-			s.Require().NoError(err)
 			// Problem ID does not exist, so middleware passes (allowing access) and handler returns 404/internal error
-			s.NotEqual(http.StatusForbidden, resp.StatusCode())
-			s.NotEqual(http.StatusUnauthorized, resp.StatusCode())
+			s.NotEqual(http.StatusForbidden, s.getStatusCode(err))
+			s.NotEqual(http.StatusUnauthorized, s.getStatusCode(err))
 		})
 
 		s.Run("Owner can view problem of unstarted contest", func() {
-			resp, err := s.client.GetContestProblemWithResponse(s.ctx, org.Login, "unstarted-"+suffix, uuid.New(), func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-				return nil
+			_, err := s.client.GetContestProblem(withTestUser(s.ctx, ownerUser.Id), corev1.GetContestProblemParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "unstarted-" + suffix,
+				ProblemID:    uuid.New(),
 			})
-			s.Require().NoError(err)
-			s.NotEqual(http.StatusForbidden, resp.StatusCode())
-			s.NotEqual(http.StatusUnauthorized, resp.StatusCode())
+			s.NotEqual(http.StatusForbidden, s.getStatusCode(err))
+			s.NotEqual(http.StatusUnauthorized, s.getStatusCode(err))
 		})
 
 		s.Run("Admin can view problem of unstarted contest", func() {
-			resp, err := s.client.GetContestProblemWithResponse(s.ctx, org.Login, "unstarted-"+suffix, uuid.New(), func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", adminUser.Id.String())
-				return nil
+			_, err := s.client.GetContestProblem(withTestUser(s.ctx, adminUser.Id), corev1.GetContestProblemParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "unstarted-" + suffix,
+				ProblemID:    uuid.New(),
 			})
-			s.Require().NoError(err)
-			s.NotEqual(http.StatusForbidden, resp.StatusCode())
-			s.NotEqual(http.StatusUnauthorized, resp.StatusCode())
+			s.NotEqual(http.StatusForbidden, s.getStatusCode(err))
+			s.NotEqual(http.StatusUnauthorized, s.getStatusCode(err))
 		})
 	})
 
@@ -118,65 +118,57 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		s.Require().NoError(err)
 
 		s.Run("Regular non-owner user cannot delete contest", func() {
-			resp, err := s.client.DeleteContestWithResponse(s.ctx, org.Login, "del-target-"+suffix, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", otherUser.Id.String())
-				return nil
+			err := s.client.DeleteContest(withTestUser(s.ctx, otherUser.Id), corev1.DeleteContestParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "del-target-" + suffix,
 			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusForbidden, resp.StatusCode())
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
 		})
 
 		s.Run("Contest Owner can delete contest", func() {
-			resp, err := s.client.DeleteContestWithResponse(s.ctx, org.Login, "del-target-"+suffix, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-				return nil
+			err := s.client.DeleteContest(withTestUser(s.ctx, ownerUser.Id), corev1.DeleteContestParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "del-target-" + suffix,
 			})
 			s.Require().NoError(err)
-			s.Equal(http.StatusOK, resp.StatusCode())
 		})
 	})
 
 	// 3. Organization Mutation Matrix
 	s.Run("Organization Operations Matrix", func() {
-		newTitle := "Updated Title " + suffix
-		updateBody := corev1.UpdateOrganizationJSONRequestBody{
-			Name: &newTitle,
+		updateBody := &corev1.UpdateOrganizationRequestModel{
+			Name: corev1.NewOptString("Updated Title " + suffix),
 		}
 
 		s.Run("Non-member cannot update organization", func() {
-			resp, err := s.client.UpdateOrganizationWithResponse(s.ctx, org.Login, updateBody, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", otherUser.Id.String())
-				return nil
+			err := s.client.UpdateOrganization(withTestUser(s.ctx, otherUser.Id), updateBody, corev1.UpdateOrganizationParams{
+				Login: org.Login,
 			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusForbidden, resp.StatusCode())
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
 		})
 
 		s.Run("Org Owner can update organization", func() {
-			resp, err := s.client.UpdateOrganizationWithResponse(s.ctx, org.Login, updateBody, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-				return nil
+			err := s.client.UpdateOrganization(withTestUser(s.ctx, ownerUser.Id), updateBody, corev1.UpdateOrganizationParams{
+				Login: org.Login,
 			})
 			s.Require().NoError(err)
-			s.Equal(http.StatusOK, resp.StatusCode())
 		})
 
 		s.Run("Non-owner cannot delete organization", func() {
-			resp, err := s.client.DeleteOrganizationWithResponse(s.ctx, org.Login, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", otherUser.Id.String())
-				return nil
+			err := s.client.DeleteOrganization(withTestUser(s.ctx, otherUser.Id), corev1.DeleteOrganizationParams{
+				Login: org.Login,
 			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusForbidden, resp.StatusCode())
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
 		})
 
 		s.Run("Org Owner can delete organization", func() {
-			resp, err := s.client.DeleteOrganizationWithResponse(s.ctx, org.Login, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-				return nil
+			err := s.client.DeleteOrganization(withTestUser(s.ctx, ownerUser.Id), corev1.DeleteOrganizationParams{
+				Login: org.Login,
 			})
 			s.Require().NoError(err)
-			s.Equal(http.StatusOK, resp.StatusCode())
 		})
 	})
 }

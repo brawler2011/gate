@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"context"
 	"net/http"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
@@ -57,61 +56,58 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		s.Require().NoError(err)
 
 		// Before adding team, teamMemberUser has empty role in private contest
-		roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "priv-"+suffix, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", teamMemberUser.Id.String())
-			return nil
+		roleResp, err := s.client.GetMyContestRole(withTestUser(s.ctx, teamMemberUser.Id), corev1.GetMyContestRoleParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "priv-" + suffix,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, roleResp.StatusCode())
-		s.Equal("", roleResp.JSON200.Role)
+		s.Require().NotNil(roleResp)
+		s.Equal("", roleResp.Role)
 
 		// Add team to contest with role "participant"
-		addTeamResp, err := s.client.CreateContestTeamWithResponse(s.ctx, org.Login, "priv-"+suffix, &corev1.CreateContestTeamParams{
-			TeamId: team.ID,
-			Role:   ptrString("participant"),
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-			return nil
+		err = s.client.CreateContestTeam(withTestUser(s.ctx, ownerUser.Id), corev1.CreateContestTeamParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "priv-" + suffix,
+			TeamID:       team.ID,
+			Role:         corev1.NewOptString("participant"),
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, addTeamResp.StatusCode())
 
 		// List contest teams
-		listTeamsResp, err := s.client.ListContestTeamsWithResponse(s.ctx, org.Login, "priv-"+suffix, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-			return nil
+		listTeamsResp, err := s.client.ListContestTeams(withTestUser(s.ctx, ownerUser.Id), corev1.ListContestTeamsParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "priv-" + suffix,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, listTeamsResp.StatusCode())
-		s.Len(listTeamsResp.JSON200.Teams, 1)
-		s.Equal(team.ID, listTeamsResp.JSON200.Teams[0].TeamId)
+		s.Require().NotNil(listTeamsResp)
+		s.Len(listTeamsResp.Teams, 1)
+		s.Equal(team.ID, listTeamsResp.Teams[0].TeamID)
 
 		// Now teamMemberUser inherits role "participant" in contest
-		roleResp, err = s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "priv-"+suffix, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", teamMemberUser.Id.String())
-			return nil
+		roleResp, err = s.client.GetMyContestRole(withTestUser(s.ctx, teamMemberUser.Id), corev1.GetMyContestRoleParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "priv-" + suffix,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, roleResp.StatusCode())
-		s.Equal("participant", roleResp.JSON200.Role)
+		s.Require().NotNil(roleResp)
+		s.Equal("participant", roleResp.Role)
 
 		// Remove team from contest
-		delTeamResp, err := s.client.DeleteContestTeamWithResponse(s.ctx, org.Login, "priv-"+suffix, &corev1.DeleteContestTeamParams{
-			TeamId: team.ID,
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-			return nil
+		err = s.client.DeleteContestTeam(withTestUser(s.ctx, ownerUser.Id), corev1.DeleteContestTeamParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "priv-" + suffix,
+			TeamID:       team.ID,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, delTeamResp.StatusCode())
 
 		// Access revoked
-		roleResp, err = s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "priv-"+suffix, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", teamMemberUser.Id.String())
-			return nil
+		roleResp, err = s.client.GetMyContestRole(withTestUser(s.ctx, teamMemberUser.Id), corev1.GetMyContestRoleParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "priv-" + suffix,
 		})
 		s.Require().NoError(err)
-		s.Equal("", roleResp.JSON200.Role)
+		s.Require().NotNil(roleResp)
+		s.Equal("", roleResp.Role)
 	})
 
 	// 2. Problem Team Access Test
@@ -130,63 +126,49 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		s.Require().NoError(err)
 
 		// Before adding team, teamMemberUser cannot get private problem
-		probResp, err := s.client.GetProblemWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", teamMemberUser.Id.String())
-			return nil
+		_, err = s.client.GetProblem(withTestUser(s.ctx, teamMemberUser.Id), corev1.GetProblemParams{
+			ID: problemID,
 		})
-		s.Require().NoError(err)
-		s.Equal(http.StatusForbidden, probResp.StatusCode())
+		s.Require().Error(err)
+		s.Equal(http.StatusForbidden, s.getStatusCode(err))
 
 		// Add team to problem with permission "read"
-		addProbTeamResp, err := s.client.CreateProblemTeamWithResponse(s.ctx, problemID, &corev1.CreateProblemTeamParams{
-			TeamId:     team.ID,
-			Permission: ptrString("read"),
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-			return nil
+		err = s.client.CreateProblemTeam(withTestUser(s.ctx, ownerUser.Id), corev1.CreateProblemTeamParams{
+			ID:         problemID,
+			TeamID:     team.ID,
+			Permission: corev1.NewOptString("read"),
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, addProbTeamResp.StatusCode())
 
 		// List problem teams
-		listProbTeamsResp, err := s.client.ListProblemTeamsWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-			return nil
+		listProbTeamsResp, err := s.client.ListProblemTeams(withTestUser(s.ctx, ownerUser.Id), corev1.ListProblemTeamsParams{
+			ID: problemID,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, listProbTeamsResp.StatusCode())
-		s.Len(listProbTeamsResp.JSON200.Teams, 1)
+		s.Require().NotNil(listProbTeamsResp)
+		s.Len(listProbTeamsResp.Teams, 1)
 
 		// Now teamMemberUser can view private problem
-		probResp, err = s.client.GetProblemWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", teamMemberUser.Id.String())
-			return nil
+		probResp, err := s.client.GetProblem(withTestUser(s.ctx, teamMemberUser.Id), corev1.GetProblemParams{
+			ID: problemID,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, probResp.StatusCode())
+		s.Require().NotNil(probResp)
 
 		// Delete problem team access
-		delProbTeamResp, err := s.client.DeleteProblemTeamWithResponse(s.ctx, problemID, &corev1.DeleteProblemTeamParams{
-			TeamId: team.ID,
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", ownerUser.Id.String())
-			return nil
+		err = s.client.DeleteProblemTeam(withTestUser(s.ctx, ownerUser.Id), corev1.DeleteProblemTeamParams{
+			ID:     problemID,
+			TeamID: team.ID,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, delProbTeamResp.StatusCode())
 
 		// Access revoked again
-		probResp, err = s.client.GetProblemWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", teamMemberUser.Id.String())
-			return nil
+		_, err = s.client.GetProblem(withTestUser(s.ctx, teamMemberUser.Id), corev1.GetProblemParams{
+			ID: problemID,
 		})
-		s.Require().NoError(err)
-		s.Equal(http.StatusForbidden, probResp.StatusCode())
+		s.Require().Error(err)
+		s.Equal(http.StatusForbidden, s.getStatusCode(err))
 	})
 
 	_ = adminUser
-}
-
-func ptrString(s string) *string {
-	return &s
 }

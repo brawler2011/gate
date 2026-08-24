@@ -5,116 +5,108 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"io"
-	"mime/multipart"
-	"net/http"
+	"net/textproto"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
+	ht "github.com/ogen-go/ogen/http"
 )
-
-func createMultipartBody(fieldName, filename, contentType string, content []byte) (string, io.Reader, error) {
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, err := writer.CreateFormFile(fieldName, filename)
-	if err != nil {
-		return "", nil, err
-	}
-	_, err = part.Write(content)
-	if err != nil {
-		return "", nil, err
-	}
-	err = writer.Close()
-	if err != nil {
-		return "", nil, err
-	}
-	return writer.FormDataContentType(), &body, nil
-}
 
 func (s *IntegrationTestSuite) TestUserAvatar() {
 	user := s.createUser("avataruser", models.UserRoleUser)
 
 	avatarContent := []byte("fake image content")
-	contentType, body, err := createMultipartBody("avatar", "avatar.png", "image/png", avatarContent)
-	s.Require().NoError(err)
+	file := ht.MultipartFile{
+		Name:   "avatar.png",
+		File:   bytes.NewReader(avatarContent),
+		Size:   int64(len(avatarContent)),
+		Header: textproto.MIMEHeader{"Content-Type": []string{"image/png"}},
+	}
 
 	// 1. Upload Avatar
 	var imgID uuid.UUID
 	s.Run("UploadAvatar", func() {
-		resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, user.Username, contentType, body, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user.Id.String())
-			return nil
+		resp, err := s.client.UploadAvatar(withTestUser(s.ctx, user.Id), &corev1.UploadAvatarReq{
+			Avatar: corev1.NewOptMultipartFile(file),
+		}, corev1.UploadAvatarParams{
+			Username: user.Username,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Require().NotNil(resp.JSON200)
-		s.Require().NotNil(resp.JSON200.ImgId)
-		imgID = *resp.JSON200.ImgId
+		s.Require().NotNil(resp)
+		s.Require().True(resp.ImgId.IsSet())
+		imgID = resp.ImgId.Value
 		s.NotEmpty(imgID.String())
 	})
 
 	// 2. Get User Profile and Check ImgId
 	s.Run("GetUserProfileWithImgId", func() {
-		resp, err := s.client.GetUserWithResponse(s.ctx, user.Username, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user.Id.String())
-			return nil
+		resp, err := s.client.GetUser(withTestUser(s.ctx, user.Id), corev1.GetUserParams{
+			Username: user.Username,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Require().NotNil(resp.JSON200.User.ImgId)
-		s.Equal(imgID, *resp.JSON200.User.ImgId)
+		s.Require().NotNil(resp)
+		s.Require().True(resp.User.ImgId.IsSet())
+		s.Equal(imgID, resp.User.ImgId.Value)
 	})
 
 	// 3. Get Avatar Image
 	var etag string
 	s.Run("GetAvatarImage", func() {
-		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Username, &corev1.GetUserAvatarParams{})
+		resp, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{
+			Username: user.Username,
+		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Equal("image/png", resp.HTTPResponse.Header.Get("Content-Type"))
-		etag = resp.HTTPResponse.Header.Get("ETag")
+		s.Require().NotNil(resp)
+		okResp, ok := resp.(*corev1.GetUserAvatarOKHeaders)
+		s.Require().True(ok)
+		s.True(okResp.ETag.IsSet())
+		etag = okResp.ETag.Value
 		s.NotEmpty(etag)
 
-		s.Equal(avatarContent, resp.Body)
+		data, err := io.ReadAll(okResp.Response.Data)
+		s.Require().NoError(err)
+		s.Equal(avatarContent, data)
 	})
 
 	// 4. Get Avatar Image with If-None-Match (304 Not Modified)
 	s.Run("GetAvatarImage304", func() {
-		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Username, &corev1.GetUserAvatarParams{
-			IfNoneMatch: &etag,
+		resp, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{
+			Username:    user.Username,
+			IfNoneMatch: corev1.NewOptString(etag),
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusNotModified, resp.StatusCode())
+		_, isNotModified := resp.(*corev1.GetUserAvatarNotModified)
+		s.True(isNotModified)
 	})
 
 	// 5. Delete Avatar
 	s.Run("DeleteAvatar", func() {
-		resp, err := s.client.DeleteAvatarWithResponse(s.ctx, user.Username, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user.Id.String())
-			return nil
+		err := s.client.DeleteAvatar(withTestUser(s.ctx, user.Id), corev1.DeleteAvatarParams{
+			Username: user.Username,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
 	})
 
 	// 6. Get User Profile and Check ImgId is nil
 	s.Run("GetUserProfileWithImgIdNil", func() {
-		resp, err := s.client.GetUserWithResponse(s.ctx, user.Username, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user.Id.String())
-			return nil
+		resp, err := s.client.GetUser(withTestUser(s.ctx, user.Id), corev1.GetUserParams{
+			Username: user.Username,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Nil(resp.JSON200.User.ImgId)
+		s.Require().NotNil(resp)
+		s.False(resp.User.ImgId.IsSet())
 	})
 
 	// 7. Get Avatar Image (404 Not Found)
 	s.Run("GetAvatarImage404", func() {
-		resp, err := s.client.GetUserAvatarWithResponse(s.ctx, user.Username, &corev1.GetUserAvatarParams{})
+		resp, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{
+			Username: user.Username,
+		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusNotFound, resp.StatusCode())
+		_, isNotFound := resp.(*corev1.GetUserAvatarNotFound)
+		s.True(isNotFound)
 	})
 }
 
@@ -125,26 +117,22 @@ func (s *IntegrationTestSuite) TestUsers() {
 
 	// 2. GetMe
 	s.Run("GetMe", func() {
-		resp, err := s.client.GetMeWithResponse(s.ctx, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user1.Id.String())
-			return nil
-		})
+		resp, err := s.client.GetMe(withTestUser(s.ctx, user1.Id))
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Equal(user1.Id, resp.JSON200.User.Id)
-		s.Equal(user1.Username, resp.JSON200.User.Username)
+		s.Require().NotNil(resp)
+		s.Equal(user1.Id, resp.User.ID)
+		s.Equal(user1.Username, resp.User.Username)
 	})
 
 	// 3. GetUser
 	s.Run("GetUser", func() {
-		resp, err := s.client.GetUserWithResponse(s.ctx, user2.Username, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user1.Id.String())
-			return nil
+		resp, err := s.client.GetUser(withTestUser(s.ctx, user1.Id), corev1.GetUserParams{
+			Username: user2.Username,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Equal(user2.Id, resp.JSON200.User.Id)
-		s.Equal(user2.Username, resp.JSON200.User.Username)
+		s.Require().NotNil(resp)
+		s.Equal(user2.Id, resp.User.ID)
+		s.Equal(user2.Username, resp.User.Username)
 	})
 
 	// 4. ListUsers
@@ -154,24 +142,17 @@ func (s *IntegrationTestSuite) TestUsers() {
 		searchUser2 := s.createUser(searchPrefix+"beta", models.UserRoleAdmin)
 		search := searchPrefix
 
-		resp, err := s.client.ListUsersWithResponse(s.ctx, &corev1.ListUsersParams{
+		resp, err := s.client.ListUsers(withTestUser(s.ctx, user1.Id), corev1.ListUsersParams{
 			Page:     1,
 			PageSize: 10,
-			Search:   &search,
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user1.Id.String())
-			return nil
+			Search:   corev1.NewOptString(search),
 		})
 		s.Require().NoError(err)
-		if resp.StatusCode() != http.StatusOK {
-			s.T().Logf("ListUsers failed: %s", string(resp.Body))
-		}
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Require().NotNil(resp.JSON200)
+		s.Require().NotNil(resp)
 
 		hasSearchUser1 := false
 		hasSearchUser2 := false
-		for _, user := range resp.JSON200.Users {
+		for _, user := range resp.Users {
 			if user.Username == searchUser1.Username {
 				hasSearchUser1 = true
 			}
@@ -182,8 +163,8 @@ func (s *IntegrationTestSuite) TestUsers() {
 
 		s.True(hasSearchUser1)
 		s.True(hasSearchUser2)
-		s.GreaterOrEqual(len(resp.JSON200.Users), 2)
-		s.Equal(int32(1), resp.JSON200.Pagination.Total)
+		s.GreaterOrEqual(len(resp.Users), 2)
+		s.Equal(int32(1), resp.Pagination.Total)
 	})
 }
 

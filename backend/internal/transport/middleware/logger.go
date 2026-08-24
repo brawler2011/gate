@@ -105,11 +105,13 @@ func RequestLoggerMiddleware(logger *slog.Logger) func(http.Handler) http.Handle
 	}
 }
 
-// ResponseErrorHandler handles errors returned by strict handlers
-func ResponseErrorHandler(logger *slog.Logger) func(w http.ResponseWriter, r *http.Request, err error) {
-	return func(w http.ResponseWriter, r *http.Request, err error) {
+// ResponseErrorHandler handles errors returned by handlers and ogen validation/decoding
+func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
 		// Retrieve Request Id from context
-		ctx := r.Context()
+		if ctx == nil {
+			ctx = r.Context()
+		}
 		requestID, _ := ctx.Value(requestIDKey).(string)
 		if requestID == "" {
 			requestID = r.Header.Get("X-Request-ID")
@@ -128,7 +130,6 @@ func ResponseErrorHandler(logger *slog.Logger) func(w http.ResponseWriter, r *ht
 			resp.Err = http.StatusText(statusCode)
 			resp.Msg = cErr.Message
 		} else {
-			// Handle sentinel errors (e.g. pkg.ErrUnauthenticated returned directly without Wrap)
 			statusCode = pkg.ToREST(err)
 			resp.Err = http.StatusText(statusCode)
 			resp.Msg = err.Error()

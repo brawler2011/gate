@@ -5,14 +5,12 @@ package integration
 
 import (
 	"bytes"
-	"context"
-	"mime/multipart"
 	"net/http"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
-	openapi_types "github.com/oapi-codegen/runtime/types"
+	ht "github.com/ogen-go/ogen/http"
 )
 
 func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
@@ -21,48 +19,44 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 	target := s.createUser("authz_target", models.UserRoleUser)
 
 	s.Run("Public endpoint without auth", func() {
-		resp, err := s.client.ListPublicContestsWithResponse(s.ctx, &corev1.ListPublicContestsParams{
+		resp, err := s.client.ListPublicContests(s.ctx, corev1.ListPublicContestsParams{
 			Page:     1,
 			PageSize: 10,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Require().NotNil(resp)
 	})
 
 	s.Run("Protected endpoint without auth", func() {
-		resp, err := s.client.GetMeWithResponse(s.ctx)
-		s.Require().NoError(err)
-		s.Equal(http.StatusUnauthorized, resp.StatusCode())
+		_, err := s.client.GetMe(s.ctx)
+		s.Require().Error(err)
+		s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
 	})
 
 	s.Run("Admin endpoint with user role", func() {
-		resp, err := s.client.ListAdminContestsWithResponse(s.ctx, &corev1.ListAdminContestsParams{
+		_, err := s.client.ListAdminContests(withTestUser(s.ctx, user.Id), corev1.ListAdminContestsParams{
 			Page:     1,
 			PageSize: 10,
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user.Id.String())
-			return nil
 		})
-		s.Require().NoError(err)
-		s.Equal(http.StatusForbidden, resp.StatusCode())
+		s.Require().Error(err)
+		s.Equal(http.StatusForbidden, s.getStatusCode(err))
 	})
 
 	s.Run("Admin endpoint with admin role", func() {
-		resp, err := s.client.ListAdminContestsWithResponse(s.ctx, &corev1.ListAdminContestsParams{
+		resp, err := s.client.ListAdminContests(withTestUser(s.ctx, admin.Id), corev1.ListAdminContestsParams{
 			Page:     1,
 			PageSize: 10,
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", admin.Id.String())
-			return nil
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Require().NotNil(resp)
 	})
 
 	s.Run("DeleteAvatar requires authentication", func() {
-		resp, err := s.client.DeleteAvatarWithResponse(s.ctx, target.Username)
-		s.Require().NoError(err)
-		s.Equal(http.StatusUnauthorized, resp.StatusCode())
+		err := s.client.DeleteAvatar(s.ctx, corev1.DeleteAvatarParams{
+			Username: target.Username,
+		})
+		s.Require().Error(err)
+		s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
 	})
 
 	s.Run("UploadAvatar custom check self/admin", func() {
@@ -71,43 +65,42 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		otherUser := s.createUser("authz_avatar_other_"+suffix, models.UserRoleUser)
 		adminUser := s.createUser("authz_avatar_admin_"+suffix, models.UserRoleAdmin)
 
-		newEmptyMultipartBody := func() (string, []byte) {
-			var body bytes.Buffer
-			writer := multipart.NewWriter(&body)
-			s.Require().NoError(writer.Close())
-			return writer.FormDataContentType(), body.Bytes()
+		sampleFile := ht.MultipartFile{
+			Name: "avatar.png",
+			File: bytes.NewReader([]byte("test")),
+			Size: 4,
 		}
 
 		s.Run("Non-owner and non-admin denied", func() {
-			contentType, body := newEmptyMultipartBody()
-			resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, targetUser.Username, contentType, bytes.NewReader(body), func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", otherUser.Id.String())
-				return nil
+			_, err := s.client.UploadAvatar(withTestUser(s.ctx, otherUser.Id), &corev1.UploadAvatarReq{
+				Avatar: corev1.NewOptMultipartFile(sampleFile),
+			}, corev1.UploadAvatarParams{
+				Username: targetUser.Username,
 			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusForbidden, resp.StatusCode())
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
 		})
 
 		s.Run("Self request passes middleware", func() {
-			contentType, body := newEmptyMultipartBody()
-			resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, targetUser.Username, contentType, bytes.NewReader(body), func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", targetUser.Id.String())
-				return nil
+			// Middleware passes (not 401/403)
+			_, err := s.client.UploadAvatar(withTestUser(s.ctx, targetUser.Id), &corev1.UploadAvatarReq{
+				Avatar: corev1.NewOptMultipartFile(sampleFile),
+			}, corev1.UploadAvatarParams{
+				Username: targetUser.Username,
 			})
-			s.Require().NoError(err)
-			// Empty multipart body is rejected by handler, but middleware check must pass.
-			s.Equal(http.StatusBadRequest, resp.StatusCode())
+			s.NotEqual(http.StatusForbidden, s.getStatusCode(err))
+			s.NotEqual(http.StatusUnauthorized, s.getStatusCode(err))
 		})
 
 		s.Run("Admin request passes middleware", func() {
-			contentType, body := newEmptyMultipartBody()
-			resp, err := s.client.UploadAvatarWithBodyWithResponse(s.ctx, targetUser.Username, contentType, bytes.NewReader(body), func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", adminUser.Id.String())
-				return nil
+			// Middleware passes (not 401/403)
+			_, err := s.client.UploadAvatar(withTestUser(s.ctx, adminUser.Id), &corev1.UploadAvatarReq{
+				Avatar: corev1.NewOptMultipartFile(sampleFile),
+			}, corev1.UploadAvatarParams{
+				Username: targetUser.Username,
 			})
-			s.Require().NoError(err)
-			// Empty multipart body is rejected by handler, but middleware check must pass.
-			s.Equal(http.StatusBadRequest, resp.StatusCode())
+			s.NotEqual(http.StatusForbidden, s.getStatusCode(err))
+			s.NotEqual(http.StatusUnauthorized, s.getStatusCode(err))
 		})
 	})
 
@@ -162,55 +155,45 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Require().NoError(err)
 
 		s.Run("User cannot list another user submissions", func() {
-			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, anotherUser.Username, &corev1.ListUserSubmissionsParams{
+			_, err := s.client.ListUserSubmissions(withTestUser(s.ctx, requestUser.Id), corev1.ListUserSubmissionsParams{
+				Username: anotherUser.Username,
 				Page:     1,
 				PageSize: 10,
-			}, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", requestUser.Id.String())
-				return nil
 			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusForbidden, resp.StatusCode())
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
 		})
 
 		s.Run("Admin can list another user submissions", func() {
-			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, anotherUser.Username, &corev1.ListUserSubmissionsParams{
+			resp, err := s.client.ListUserSubmissions(withTestUser(s.ctx, adminUser.Id), corev1.ListUserSubmissionsParams{
+				Username: anotherUser.Username,
 				Page:     1,
 				PageSize: 10,
-			}, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", adminUser.Id.String())
-				return nil
 			})
 			s.Require().NoError(err)
-			s.Equal(http.StatusOK, resp.StatusCode())
+			s.Require().NotNil(resp)
 		})
 
 		s.Run("User can list own submissions when contest policy allows", func() {
-			contestID := openapi_types.UUID(allowedContestID)
-			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, requestUser.Username, &corev1.ListUserSubmissionsParams{
+			resp, err := s.client.ListUserSubmissions(withTestUser(s.ctx, requestUser.Id), corev1.ListUserSubmissionsParams{
+				Username:  requestUser.Username,
 				Page:      1,
 				PageSize:  10,
-				ContestId: &contestID,
-			}, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", requestUser.Id.String())
-				return nil
+				ContestId: corev1.NewOptUUID(allowedContestID),
 			})
 			s.Require().NoError(err)
-			s.Equal(http.StatusOK, resp.StatusCode())
+			s.Require().NotNil(resp)
 		})
 
 		s.Run("User cannot list submissions when not a member of private contest", func() {
-			contestID := openapi_types.UUID(allowedContestID)
-			resp, err := s.client.ListUserSubmissionsWithResponse(s.ctx, anotherUser.Username, &corev1.ListUserSubmissionsParams{
+			_, err := s.client.ListUserSubmissions(withTestUser(s.ctx, anotherUser.Id), corev1.ListUserSubmissionsParams{
+				Username:  anotherUser.Username,
 				Page:      1,
 				PageSize:  10,
-				ContestId: &contestID,
-			}, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", anotherUser.Id.String())
-				return nil
+				ContestId: corev1.NewOptUUID(allowedContestID),
 			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusForbidden, resp.StatusCode())
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
 		})
 	})
 
@@ -252,57 +235,49 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Require().NoError(err)
 
 		s.Run("Participant cannot list all contest submissions", func() {
-			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "lcs-contest-"+suffix, &corev1.ListContestSubmissionsParams{
-				Page:     1,
-				PageSize: 10,
-			}, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", participant.Id.String())
-				return nil
+			_, err := s.client.ListContestSubmissions(withTestUser(s.ctx, participant.Id), corev1.ListContestSubmissionsParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "lcs-contest-" + suffix,
+				Page:         1,
+				PageSize:     10,
 			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusForbidden, resp.StatusCode())
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
 		})
 
 		s.Run("Participant own submissions branch passes middleware", func() {
-			selfID := openapi_types.UUID(participant.Id)
-			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "lcs-contest-"+suffix, &corev1.ListContestSubmissionsParams{
-				Page:     0,
-				PageSize: 10,
-				UserId:   &selfID,
-			}, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", participant.Id.String())
-				return nil
+			resp, err := s.client.ListContestSubmissions(withTestUser(s.ctx, participant.Id), corev1.ListContestSubmissionsParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "lcs-contest-" + suffix,
+				Page:         1,
+				PageSize:     10,
+				UserId:       corev1.NewOptUUID(participant.Id),
 			})
 			s.Require().NoError(err)
-			// page=0 forces repository error before sequence lookup; middleware must allow this branch.
-			s.Equal(http.StatusInternalServerError, resp.StatusCode())
+			s.Require().NotNil(resp)
 		})
 
 		s.Run("Participant cannot list other user submissions", func() {
-			otherID := openapi_types.UUID(otherUser.Id)
-			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "lcs-contest-"+suffix, &corev1.ListContestSubmissionsParams{
-				Page:     1,
-				PageSize: 10,
-				UserId:   &otherID,
-			}, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", participant.Id.String())
-				return nil
+			_, err := s.client.ListContestSubmissions(withTestUser(s.ctx, participant.Id), corev1.ListContestSubmissionsParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "lcs-contest-" + suffix,
+				Page:         1,
+				PageSize:     10,
+				UserId:       corev1.NewOptUUID(otherUser.Id),
 			})
-			s.Require().NoError(err)
-			s.Equal(http.StatusForbidden, resp.StatusCode())
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
 		})
 
 		s.Run("Moderator all submissions branch passes middleware", func() {
-			resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "lcs-contest-"+suffix, &corev1.ListContestSubmissionsParams{
-				Page:     0,
-				PageSize: 10,
-			}, func(ctx context.Context, req *http.Request) error {
-				req.Header.Set("X-Test-User-ID", moderator.Id.String())
-				return nil
+			resp, err := s.client.ListContestSubmissions(withTestUser(s.ctx, moderator.Id), corev1.ListContestSubmissionsParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "lcs-contest-" + suffix,
+				Page:         1,
+				PageSize:     10,
 			})
 			s.Require().NoError(err)
-			// page=0 forces repository error before sequence lookup; middleware must allow this branch.
-			s.Equal(http.StatusInternalServerError, resp.StatusCode())
+			s.Require().NotNil(resp)
 		})
 	})
 
@@ -350,12 +325,12 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		err = s.contestsRepo.CreateContestTeam(s.ctx, contestID, teamID, models.ContestRoleParticipant)
 		s.Require().NoError(err)
 
-		resp, err := s.client.GetContestWithResponse(s.ctx, org.Login, "team-contest-"+suffix, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", teamMember.Id.String())
-			return nil
+		resp, err := s.client.GetContest(withTestUser(s.ctx, teamMember.Id), corev1.GetContestParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "team-contest-" + suffix,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Require().NotNil(resp)
 	})
 
 	s.Run("Higher contest role resolved from team with mask persistence", func() {
@@ -410,27 +385,23 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		err = s.contestsRepo.CreateContestTeam(s.ctx, contestID, teamID, models.ContestRoleModerator)
 		s.Require().NoError(err)
 
-		roleResp, err := s.client.GetMyContestRoleWithResponse(s.ctx, org.Login, "mixed-role-"+suffix, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", mixedUser.Id.String())
-			return nil
+		roleResp, err := s.client.GetMyContestRole(withTestUser(s.ctx, mixedUser.Id), corev1.GetMyContestRoleParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "mixed-role-" + suffix,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, roleResp.StatusCode())
-		s.Require().NotNil(roleResp.JSON200)
-		s.Equal(string(models.ContestRoleModerator), roleResp.JSON200.Role)
+		s.Require().NotNil(roleResp)
+		s.Equal(string(models.ContestRoleModerator), roleResp.Role)
 
-		otherUserID := openapi_types.UUID(otherUser.Id)
-		resp, err := s.client.ListContestSubmissionsWithResponse(s.ctx, org.Login, "mixed-role-"+suffix, &corev1.ListContestSubmissionsParams{
-			Page:     0,
-			PageSize: 10,
-			UserId:   &otherUserID,
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", mixedUser.Id.String())
-			return nil
+		resp, err := s.client.ListContestSubmissions(withTestUser(s.ctx, mixedUser.Id), corev1.ListContestSubmissionsParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "mixed-role-" + suffix,
+			Page:         1,
+			PageSize:     10,
+			UserId:       corev1.NewOptUUID(otherUser.Id),
 		})
 		s.Require().NoError(err)
-		// page=0 forces repository error before sequence lookup; middleware must allow this branch.
-		s.Equal(http.StatusInternalServerError, resp.StatusCode())
+		s.Require().NotNil(resp)
 	})
 
 	s.Run("Problem access through team permission", func() {
@@ -481,12 +452,11 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		)
 		s.Require().NoError(err)
 
-		resp, err := s.client.GetProblemWithResponse(s.ctx, problemID, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", teamMember.Id.String())
-			return nil
+		resp, err := s.client.GetProblem(withTestUser(s.ctx, teamMember.Id), corev1.GetProblemParams{
+			ID: problemID,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
+		s.Require().NotNil(resp)
 	})
 
 	s.Run("Non-member cannot view private contest", func() {
@@ -510,11 +480,11 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 		s.Require().NoError(err)
 
-		resp, err := s.client.GetContestWithResponse(s.ctx, org.Login, "policy-contest-"+suffix, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", nonMember.Id.String())
-			return nil
+		_, err = s.client.GetContest(withTestUser(s.ctx, nonMember.Id), corev1.GetContestParams{
+			OrgLogin:     org.Login,
+			ContestLogin: "policy-contest-" + suffix,
 		})
-		s.Require().NoError(err)
-		s.Equal(http.StatusForbidden, resp.StatusCode())
+		s.Require().Error(err)
+		s.Equal(http.StatusForbidden, s.getStatusCode(err))
 	})
 }
