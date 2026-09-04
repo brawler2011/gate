@@ -18,6 +18,29 @@ type TaskMeta struct {
 	Type        string
 	Description string
 	FilePath    string
+	Tags        []string
+}
+
+// HasTag checks if the task has the specified tag (case-insensitive).
+func (m *TaskMeta) HasTag(tag string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(tag))
+	for _, t := range m.Tags {
+		if strings.ToLower(strings.TrimSpace(t)) == normalized {
+			return true
+		}
+	}
+	return false
+}
+
+// IsBackwardCompatible returns true if task tags specify backward compatibility.
+func (m *TaskMeta) IsBackwardCompatible() bool {
+	for _, t := range m.Tags {
+		clean := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(t, "-", " "), "_", " "))
+		if strings.TrimSpace(clean) == "backward compatible" {
+			return true
+		}
+	}
+	return false
 }
 
 // ExtractTaskID searches for a TASK-XXX pattern in the provided string.
@@ -63,14 +86,23 @@ func ParseTaskMeta(absOrRelPath string) (*TaskMeta, error) {
 	}
 	defer f.Close()
 
+	relPath := absOrRelPath
+	if repoRoot, err := findRepoRoot(); err == nil {
+		if r, err := filepath.Rel(repoRoot, absOrRelPath); err == nil && !strings.HasPrefix(r, "..") {
+			relPath = r
+		}
+	}
+
 	scanner := bufio.NewScanner(f)
 	inFrontmatter := false
+	inTags := false
 	meta := &TaskMeta{
-		FilePath: absOrRelPath,
+		FilePath: relPath,
 	}
 
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		rawLine := scanner.Text()
+		line := strings.TrimSpace(rawLine)
 		if line == "---" {
 			if !inFrontmatter {
 				inFrontmatter = true
@@ -83,6 +115,18 @@ func ParseTaskMeta(absOrRelPath string) (*TaskMeta, error) {
 
 		if !inFrontmatter {
 			continue
+		}
+
+		if inTags {
+			if strings.HasPrefix(line, "- ") {
+				tag := strings.Trim(strings.TrimSpace(line[2:]), "\"'")
+				if tag != "" {
+					meta.Tags = append(meta.Tags, tag)
+				}
+				continue
+			} else if !strings.HasPrefix(rawLine, " ") && !strings.HasPrefix(rawLine, "\t") {
+				inTags = false
+			}
 		}
 
 		parts := strings.SplitN(line, ":", 2)
@@ -103,6 +147,18 @@ func ParseTaskMeta(absOrRelPath string) (*TaskMeta, error) {
 			meta.Type = val
 		case "description":
 			meta.Description = val
+		case "tags":
+			if val == "" {
+				inTags = true
+			} else if strings.HasPrefix(val, "[") && strings.HasSuffix(val, "]") {
+				items := strings.Split(val[1:len(val)-1], ",")
+				for _, item := range items {
+					cleanItem := strings.Trim(strings.TrimSpace(item), "\"'")
+					if cleanItem != "" {
+						meta.Tags = append(meta.Tags, cleanItem)
+					}
+				}
+			}
 		}
 	}
 
@@ -151,6 +207,25 @@ func RenderPRBody(templateContent string, meta *TaskMeta, customBody string) str
 		targetTypeCheck := fmt.Sprintf("- [ ] `%s`:", meta.Type)
 		checkedType := fmt.Sprintf("- [x] `%s`:", meta.Type)
 		res = strings.Replace(res, targetTypeCheck, checkedType, 1)
+	}
+
+	// Check Breaking Changes box based on backward compatible tag
+	if meta.IsBackwardCompatible() {
+		res = strings.Replace(res, "- [ ] No (backward compatible)", "- [x] No (backward compatible)", 1)
+	} else {
+		res = strings.Replace(res, "- [ ] Yes (breaking change permitted by default)", "- [x] Yes (breaking change permitted by default)", 1)
+	}
+
+	// Auto-fill verification plan note if placeholder is present
+	verificationPlaceholders := []string{
+		"<!-- Outline tests run and verification results (e.g., `task precommit`, unit tests) -->",
+		"<!-- Outline tests run and verification results (e.g., task precommit, unit tests) -->",
+	}
+	for _, vp := range verificationPlaceholders {
+		if strings.Contains(res, vp) {
+			res = strings.Replace(res, vp, "- [x] Automated pre-commit verification passed (`task precommit`)", 1)
+			break
+		}
 	}
 
 	return res

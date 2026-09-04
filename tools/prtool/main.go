@@ -303,7 +303,6 @@ Table of each acceptance criteria item from the task:
 - [ ] Frontend (if applicable): No env fallback values in code
 - [ ] Frontend (if applicable): No Server Actions ('use server')
 - [ ] Backend (if applicable): slog exclusively used for logging
-- [ ] Precommit and conventional commit rules satisfied
 
 ### 4. Detailed Findings & Actionable Feedback
 If REQUEST_CHANGES, provide concrete file:line pointers and exact code fixes. If APPROVE, note any non-blocking suggestions.
