@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "bun --env-file=../deploy/local/.env next dev",
+    "build": "next build",
     "build:local": "NODE_ENV=production bun --env-file=../deploy/local/.env next build",
     "build:prod": "NODE_ENV=production bun --env-file=../deploy/prod/.env next build",
     "start": "next start",
