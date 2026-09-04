@@ -125,3 +125,83 @@ func TestValidatePRTitle_ScopeCasingMessage(t *testing.T) {
 		t.Errorf("expected error message to contain 'must be lowercase', got: %v", err)
 	}
 }
+
+func TestRenderPRBody_BreakingChangesAndVerification(t *testing.T) {
+	template := `## Breaking Changes
+- [ ] Yes (breaking change permitted by default)
+- [ ] No (backward compatible)
+
+## Verification Plan
+<!-- Outline tests run and verification results (e.g., ` + "`task precommit`" + `, unit tests) -->
+`
+
+	// 1. Default (breaking allowed by default)
+	metaDefault := &TaskMeta{
+		ID:       "TASK-100",
+		FilePath: ".tasks/TASK-100.md",
+		Tags:     []string{"tooling"},
+	}
+	res1 := RenderPRBody(template, metaDefault, "")
+	if !strings.Contains(res1, "- [x] Yes (breaking change permitted by default)") {
+		t.Errorf("expected default to mark breaking change permitted, got:\n%s", res1)
+	}
+	if strings.Contains(res1, "- [x] No (backward compatible)") {
+		t.Errorf("expected backward compatible NOT to be checked, got:\n%s", res1)
+	}
+	if !strings.Contains(res1, "- [x] Automated pre-commit verification passed (`task precommit`)") {
+		t.Errorf("expected verification plan auto-filled, got:\n%s", res1)
+	}
+
+	// 2. Backward compatible tag
+	metaCompat := &TaskMeta{
+		ID:       "TASK-101",
+		FilePath: ".tasks/TASK-101.md",
+		Tags:     []string{"tooling", "backward-compatible"},
+	}
+	res2 := RenderPRBody(template, metaCompat, "")
+	if !strings.Contains(res2, "- [x] No (backward compatible)") {
+		t.Errorf("expected backward-compatible tag to check No, got:\n%s", res2)
+	}
+	if strings.Contains(res2, "- [x] Yes (breaking change permitted by default)") {
+		t.Errorf("expected breaking change permitted NOT to be checked, got:\n%s", res2)
+	}
+}
+
+func TestParseTaskMeta_RelativePathGuaranteed(t *testing.T) {
+	repoRoot, err := findRepoRoot()
+	if err != nil {
+		t.Fatalf("findRepoRoot failed: %v", err)
+	}
+
+	absPath := filepath.Join(repoRoot, ".tasks", "TASK-001-setup-lefthook-and-task-validator.md")
+	meta, err := ParseTaskMeta(absPath)
+	if err != nil {
+		t.Fatalf("ParseTaskMeta failed: %v", err)
+	}
+
+	if filepath.IsAbs(meta.FilePath) {
+		t.Errorf("expected relative FilePath, got absolute: %s", meta.FilePath)
+	}
+	if !strings.HasPrefix(meta.FilePath, ".tasks") {
+		t.Errorf("expected FilePath to start with .tasks, got: %s", meta.FilePath)
+	}
+}
+
+func TestParseTaskMeta_Tags(t *testing.T) {
+	repoRoot, err := findRepoRoot()
+	if err != nil {
+		t.Fatalf("findRepoRoot failed: %v", err)
+	}
+
+	meta, err := ParseTaskMeta(filepath.Join(repoRoot, ".tasks", "TASK-003-optimize-pr-and-review-workflow.md"))
+	if err != nil {
+		t.Fatalf("ParseTaskMeta failed: %v", err)
+	}
+
+	if !meta.HasTag("tooling") {
+		t.Errorf("expected tag 'tooling' in meta.Tags: %v", meta.Tags)
+	}
+	if !meta.HasTag("workflow") {
+		t.Errorf("expected tag 'workflow' in meta.Tags: %v", meta.Tags)
+	}
+}
