@@ -139,6 +139,7 @@ func handleCreate(args []string) {
 		fmt.Fprintf(os.Stderr, "Error parsing task %s: %v\n", relTaskPath, err)
 		os.Exit(1)
 	}
+	taskMeta.FilePath = relTaskPath
 
 	// 4. Determine PR title
 	prTitle := *titleFlag
@@ -237,10 +238,21 @@ func handleReviewPrompt(args []string) {
 	var taskMeta *TaskMeta
 	if taskID != "" {
 		taskPath, err := FindTaskFile(repoRoot, taskID)
-		if err == nil {
-			b, _ := os.ReadFile(filepath.Join(repoRoot, taskPath))
-			taskContent = string(b)
-			taskMeta, _ = ParseTaskMeta(filepath.Join(repoRoot, taskPath))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to find task file for '%s': %v\n", taskID, err)
+		} else {
+			b, readErr := os.ReadFile(filepath.Join(repoRoot, taskPath))
+			if readErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to read task file '%s': %v\n", taskPath, readErr)
+			} else {
+				taskContent = string(b)
+			}
+			taskMeta, err = ParseTaskMeta(filepath.Join(repoRoot, taskPath))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to parse task '%s': %v\n", taskPath, err)
+			} else {
+				taskMeta.FilePath = taskPath
+			}
 		}
 	}
 

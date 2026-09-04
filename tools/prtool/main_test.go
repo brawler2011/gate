@@ -115,3 +115,13 @@ func TestFindTaskFileAndParse(t *testing.T) {
 		t.Errorf("expected Type 'chore', got %q", meta.Type)
 	}
 }
+
+func TestValidatePRTitle_ScopeCasingMessage(t *testing.T) {
+	err := ValidatePRTitle("feat(Tooling): uppercase scope")
+	if err == nil {
+		t.Fatalf("expected error for uppercase scope, got nil")
+	}
+	if !strings.Contains(err.Error(), "must be lowercase") {
+		t.Errorf("expected error message to contain 'must be lowercase', got: %v", err)
+	}
+}

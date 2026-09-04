@@ -61,6 +61,11 @@ tasks:
       - gh pr status
       - gh pr checks || true
 
+  pr:review-comment:
+    desc: "Post Reviewer Agent feedback to GitHub PR via gh"
+    cmds:
+      - go -C tools/prtool run . review-comment {{.CLI_ARGS}}
+
   hooks:install:
     desc: "Install Lefthook and setup git pre-commit hooks"
     cmds:

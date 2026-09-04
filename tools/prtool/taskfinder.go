@@ -45,7 +45,8 @@ func FindTaskFile(repoRoot, taskID string) (string, error) {
 		if strings.EqualFold(entry.Name(), "TEMPLATE.md") {
 			continue
 		}
-		if strings.HasPrefix(strings.ToUpper(entry.Name()), prefix) {
+		upper := strings.ToUpper(entry.Name())
+		if upper == prefix+".MD" || strings.HasPrefix(upper, prefix+"-") || strings.HasPrefix(upper, prefix+"_") {
 			relPath := filepath.Join(".tasks", entry.Name())
 			return relPath, nil
 		}

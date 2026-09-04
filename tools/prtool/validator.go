@@ -28,7 +28,7 @@ var AllowedTypes = map[string]struct{}{
 }
 
 var (
-	conventionalCommitRegex = regexp.MustCompile(`^([a-z0-9]+)(?:\(([a-z0-9_./-]+)\))?(!)?:\s*(.*)$`)
+	conventionalCommitRegex = regexp.MustCompile(`^([a-z0-9]+)(?:\(([A-Za-z0-9_./-]+)\))?(!)?:\s*(.*)$`)
 	looseColonRegex         = regexp.MustCompile(`^([a-z0-9]+)(?:\([a-z0-9_./-]+\))?(!)?:[^\s]`)
 )
 
