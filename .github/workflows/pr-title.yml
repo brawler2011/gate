@@ -1,0 +1,32 @@
+name: PR Title
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+
+jobs:
+  validate-pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Validate PR Title Format & Length
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          go -C tools/commitvalidator run . -title="$PR_TITLE"

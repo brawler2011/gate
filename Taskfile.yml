@@ -32,6 +32,11 @@ tasks:
     cmds:
       - go -C tools/taskvalidator run . {{.CLI_ARGS}}
 
+  commit:validate:
+    desc: "Validate commit message or PR title format and length"
+    cmds:
+      - go -C tools/commitvalidator run . {{.CLI_ARGS}}
+
   hooks:install:
     desc: "Install Lefthook and setup git pre-commit hooks"
     cmds:
