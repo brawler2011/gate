@@ -23,8 +23,25 @@ tasks:
     desc: "Run pre-commit checks across all components"
     cmds:
       - task: verify-codegen
+      - task: tasks:validate
       - task: precommit:be
       - task: precommit:fe
+
+  tasks:validate:
+    desc: "Validate task markdown files against schema and rules"
+    cmds:
+      - go -C tools/taskvalidator run . {{.CLI_ARGS}}
+
+  hooks:install:
+    desc: "Install Lefthook and setup git pre-commit hooks"
+    cmds:
+      - |
+        if ! command -v lefthook >/dev/null 2>&1; then
+          echo "Installing lefthook via go install..."
+          go install github.com/evilmartians/lefthook@latest
+        fi
+        PATH="$PATH:$(go env GOPATH)/bin" lefthook install
+
 
   precommit:be:
     desc: "Run backend pre-commit verification (lint + tests)"

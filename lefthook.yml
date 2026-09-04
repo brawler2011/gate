@@ -1,0 +1,12 @@
+pre-commit:
+  parallel: true
+  commands:
+    validate-tasks:
+      glob: ".tasks/*.md"
+      run: task tasks:validate -- {staged_files}
+    backend-lint:
+      glob: "backend/**/*.{go,sql}"
+      run: task be:lint
+    frontend-lint:
+      glob: "frontend/**/*.{ts,tsx,js,jsx}"
+      run: task fe:lint
