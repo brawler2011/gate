@@ -11,6 +11,7 @@ import (
 )
 
 func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev1.ListContestClarificationsParams) (*corev1.ListContestClarificationsResponseModel, error) {
+	// FIXME: в middleware уже должно быть
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -21,15 +22,20 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 		return nil, err
 	}
 
+	// FIXME: должно быть в middleware
 	isModerator, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}
 
+	// FIXME: openapi defaults
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
 
 	var list *models.ContestClarificationsList
+
+	// FIXME: здесь происходит смешивание модераторского и юзерского эндпоинтов, так не должно быть
+	// возможно нужна какая-то декомпозиция
 	if isModerator {
 		var problemID *uuid.UUID
 		if params.ProblemID.IsSet() {
@@ -57,6 +63,7 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 }
 
 func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1.CreateContestClarificationRequestModel, params corev1.CreateContestClarificationParams) (*corev1.ContestClarificationModel, error) {
+	// FIXME: должно быть в middleware
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -67,10 +74,7 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 		return nil, err
 	}
 
-	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
-	}
-
+	// FIXME: OptUUID
 	var problemID *uuid.UUID
 	if req.ProblemID.IsSet() {
 		problemID = &req.ProblemID.Value
@@ -90,6 +94,7 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 }
 
 func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1.AnswerContestClarificationRequestModel, params corev1.AnswerContestClarificationParams) (*corev1.ContestClarificationModel, error) {
+	// FIXME: должно быть в middleware
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -100,16 +105,13 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1
 		return nil, err
 	}
 
+	// FIXME:
 	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}
 	if !allowed {
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied: only contest moderators can answer clarifications")
-	}
-
-	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
 	publishAsAnnouncement := req.PublishAsAnnouncement.Or(false)

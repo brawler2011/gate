@@ -18,6 +18,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// ----------------------------------------------------------------------------------
+// FIXME: логика slugify не относится к транспортному слою, это нужно куда-то вынести
+
 func ordinalToLetter(ordinal int) string {
 	if ordinal <= 0 {
 		return "A"
@@ -101,7 +104,11 @@ func (h *CoreServer) generateUniqueContestLogin(ctx context.Context, orgLogin, t
 	}
 }
 
+// ----------------------------------------------------------------------------------
+
 func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateContestParams) (*corev1.CreationResponseModel, error) {
+
+	// FIXME: валидация не должна быть ручной
 	err := validateCreateContestParams(params.Title, params.Login)
 	if err != nil {
 		return nil, err
@@ -114,6 +121,7 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
 	}
 
+	// NOTE: сложновато, что-то где-то не додумано
 	var login string
 	if params.Login.IsSet() && params.Login.Value != "" {
 		login = strings.ToLower(params.Login.Value)
@@ -144,13 +152,14 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 
 	return &corev1.CreationResponseModel{
 		ID:    contestID,
-		Login: corev1.NewOptString(login),
+		Login: corev1.NewOptString(login), // FIXME: required
 	}, nil
 }
 
 func (h *CoreServer) ListOrganizationContests(ctx context.Context, params corev1.ListOrganizationContestsParams) (*corev1.ListContestsResponseModel, error) {
-	page := params.Page
-	pageSize := params.PageSize
+	// FIXME: бойлерплейт
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
 	user := middleware.GetUser(ctx)
@@ -159,6 +168,7 @@ func (h *CoreServer) ListOrganizationContests(ctx context.Context, params corev1
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
 	}
 
+	// FIXME: это не зона отвественности транспортного слоя
 	isMember := false
 	if user.Role == models.UserRoleAdmin {
 		isMember = true
@@ -169,6 +179,7 @@ func (h *CoreServer) ListOrganizationContests(ctx context.Context, params corev1
 		}
 	}
 
+	// FIXME: тоже не зона отвественности
 	visibility := ""
 	if !isMember {
 		visibility = "public"
@@ -363,8 +374,8 @@ func (h *CoreServer) DeleteContest(ctx context.Context, params corev1.DeleteCont
 }
 
 func (h *CoreServer) ListAdminContests(ctx context.Context, params corev1.ListAdminContestsParams) (*corev1.ListContestsResponseModel, error) {
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
 	var visibility *string
@@ -399,8 +410,8 @@ func (h *CoreServer) ListAdminContests(ctx context.Context, params corev1.ListAd
 }
 
 func (h *CoreServer) ListUserContests(ctx context.Context, params corev1.ListUserContestsParams) (*corev1.ListUserContestsResponseModel, error) {
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
 	var sortBy string
@@ -435,8 +446,8 @@ func (h *CoreServer) ListUserContests(ctx context.Context, params corev1.ListUse
 }
 
 func (h *CoreServer) ListWorkshopContests(ctx context.Context, params corev1.ListWorkshopContestsParams) (*corev1.ListContestsResponseModel, error) {
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
 	user := middleware.GetUser(ctx)
@@ -472,8 +483,8 @@ func (h *CoreServer) ListWorkshopContests(ctx context.Context, params corev1.Lis
 }
 
 func (h *CoreServer) ListPublicContests(ctx context.Context, params corev1.ListPublicContestsParams) (*corev1.ListContestsResponseModel, error) {
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
 	var sortBy string
@@ -806,8 +817,8 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, params corev1.ListC
 		return nil, err
 	}
 
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 
 	participantsList, err := h.contestsUC.ListParticipants(ctx, models.ParticipantsFilter{
 		Page:      page,
@@ -874,8 +885,8 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		filterUserId = &params.UserId.Value
 	}
 
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 
 	var order *int32
 	if params.SortOrder.IsSet() {
@@ -1249,6 +1260,3 @@ func wrapContestUCError(err error, fallbackMsg string) error {
 	}
 	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
 }
-
-
-

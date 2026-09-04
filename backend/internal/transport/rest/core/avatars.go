@@ -10,15 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// UploadAvatar handles POST /users/{username}/avatar
 func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarReq, params corev1.UploadAvatarParams) (*corev1.UploadAvatarOK, error) {
-	if req == nil || !req.Avatar.IsSet() {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "avatar file is required")
-	}
-
-	file := req.Avatar.Value
+	file := req.Avatar
 	filename := file.Name
 	contentType := file.Header.Get("Content-Type")
+	// FIXME: эта проверка уже есть в Header.Get,
+	// NOTE: вообще стоит изучить как правильно загружать медиа файлы
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
@@ -28,17 +25,17 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarR
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to upload avatar")
 	}
 
+	// FIXME: бля так а нахуя сначала uuid->string, а потом обратно??
 	parsedUUID, err := uuid.Parse(imgIDStr)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to parse uploaded avatar uuid")
 	}
 
 	return &corev1.UploadAvatarOK{
-		ImgId: corev1.NewOptUUID(parsedUUID),
+		ImgId: parsedUUID,
 	}, nil
 }
 
-// DeleteAvatar handles DELETE /users/{username}/avatar
 func (h *CoreServer) DeleteAvatar(ctx context.Context, params corev1.DeleteAvatarParams) error {
 	err := h.avatarsUC.DeleteAvatar(ctx, params.Username)
 	if err != nil {
@@ -48,7 +45,7 @@ func (h *CoreServer) DeleteAvatar(ctx context.Context, params corev1.DeleteAvata
 	return nil
 }
 
-// GetUserAvatar handles GET /users/{username}/avatar
+// FIXME: блядь здесь происходит что-то не то
 func (h *CoreServer) GetUserAvatar(ctx context.Context, params corev1.GetUserAvatarParams) (corev1.GetUserAvatarRes, error) {
 	var ifNoneMatch *string
 	if params.IfNoneMatch.IsSet() {

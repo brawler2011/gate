@@ -873,10 +873,8 @@ func encodeUploadAvatarRequest(
 
 	q := uri.NewFormEncoder(map[string]string{})
 	body, boundary := ht.CreateMultipartBody(func(w *multipart.Writer) error {
-		if val, ok := request.Avatar.Get(); ok {
-			if err := val.WriteMultipart("avatar", w); err != nil {
-				return errors.Wrap(err, "write \"avatar\"")
-			}
+		if err := request.Avatar.WriteMultipart("avatar", w); err != nil {
+			return errors.Wrap(err, "write \"avatar\"")
 		}
 		if err := q.WriteMultipart(w); err != nil {
 			return errors.Wrap(err, "write multipart")

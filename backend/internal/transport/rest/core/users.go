@@ -47,8 +47,8 @@ func (h *CoreServer) GetMyDashboard(ctx context.Context) (*corev1.GetUserDashboa
 }
 
 func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParams) (*corev1.ListUsersResponseModel, error) {
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 	role := params.Role.Or("")
 
@@ -74,8 +74,8 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 		return nil, err
 	}
 
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 
 	var contestID *uuid.UUID
 	if params.ContestId.IsSet() {

@@ -96,6 +96,8 @@ export type { OrganizationJoinRequestNullableResponseModel } from './models/Orga
 export type { OrganizationJoinRequestResponseModel } from './models/OrganizationJoinRequestResponseModel';
 export type { OrganizationMemberModel } from './models/OrganizationMemberModel';
 export { OrganizationModel } from './models/OrganizationModel';
+export type { PageQuery } from './models/PageQuery';
+export type { PageSizeQuery } from './models/PageSizeQuery';
 export type { PaginationModel } from './models/PaginationModel';
 export type { PostModel } from './models/PostModel';
 export type { PostPatchRequestModel } from './models/PostPatchRequestModel';

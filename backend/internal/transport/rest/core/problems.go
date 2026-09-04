@@ -18,8 +18,8 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 	searchStr := params.Search.Or("")
 
 	filter := &models.ProblemsFilter{
-		Page:     params.Page,
-		PageSize: params.PageSize,
+		Page:     params.Page.Or(1),
+		PageSize: params.PageSize.Or(50),
 		Search:   searchStr,
 	}
 
@@ -377,7 +377,7 @@ func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListP
 	}
 
 	total := safeInt32(len(members))
-	page := params.Page
+	page := params.Page.Or(1)
 	return listProblemMembersDTO(members, page, total), nil
 }
 

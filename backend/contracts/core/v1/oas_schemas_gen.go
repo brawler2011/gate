@@ -10777,30 +10777,30 @@ func (s *UpdateUserRequestModelRole) UnmarshalText(data []byte) error {
 }
 
 type UploadAvatarOK struct {
-	ImgId OptUUID `json:"imgId"`
+	ImgId uuid.UUID `json:"imgId"`
 }
 
 // GetImgId returns the value of ImgId.
-func (s *UploadAvatarOK) GetImgId() OptUUID {
+func (s *UploadAvatarOK) GetImgId() uuid.UUID {
 	return s.ImgId
 }
 
 // SetImgId sets the value of ImgId.
-func (s *UploadAvatarOK) SetImgId(val OptUUID) {
+func (s *UploadAvatarOK) SetImgId(val uuid.UUID) {
 	s.ImgId = val
 }
 
 type UploadAvatarReq struct {
-	Avatar OptMultipartFile `json:"avatar"`
+	Avatar ht.MultipartFile `json:"avatar"`
 }
 
 // GetAvatar returns the value of Avatar.
-func (s *UploadAvatarReq) GetAvatar() OptMultipartFile {
+func (s *UploadAvatarReq) GetAvatar() ht.MultipartFile {
 	return s.Avatar
 }
 
 // SetAvatar sets the value of Avatar.
-func (s *UploadAvatarReq) SetAvatar(val OptMultipartFile) {
+func (s *UploadAvatarReq) SetAvatar(val ht.MultipartFile) {
 	s.Avatar = val
 }
 

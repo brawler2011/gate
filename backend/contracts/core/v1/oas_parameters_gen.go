@@ -10760,8 +10760,10 @@ func decodeInviteOrganizationMemberParams(args [1]string, argsEscaped bool, r *h
 
 // ListAdminContestsParams is parameters of ListAdminContests operation.
 type ListAdminContestsParams struct {
-	Page       int32
-	PageSize   int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize   OptInt32                       `json:",omitempty,omitzero"`
 	Search     OptString                      `json:",omitempty,omitzero"`
 	Visibility OptListAdminContestsVisibility `json:",omitempty,omitzero"`
 	SortBy     OptListAdminContestsSortBy     `json:",omitempty,omitzero"`
@@ -10774,14 +10776,18 @@ func unpackListAdminContestsParams(packed middleware.Parameters) (params ListAdm
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -10824,6 +10830,11 @@ func unpackListAdminContestsParams(packed middleware.Parameters) (params ListAdm
 
 func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListAdminContestsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -10834,23 +10845,53 @@ func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Req
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -10859,6 +10900,11 @@ func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Req
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -10870,23 +10916,53 @@ func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Req
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -11112,8 +11188,10 @@ func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Req
 type ListContestAnnouncementsParams struct {
 	OrgLogin     string
 	ContestLogin string
-	Page         OptInt32 `json:",omitempty,omitzero"`
-	PageSize     OptInt32 `json:",omitempty,omitzero"`
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackListContestAnnouncementsParams(packed middleware.Parameters) (params ListContestAnnouncementsParams) {
@@ -11281,6 +11359,31 @@ func decodeListContestAnnouncementsParams(args [2]string, argsEscaped bool, r *h
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -11327,6 +11430,31 @@ func decodeListContestAnnouncementsParams(args [2]string, argsEscaped bool, r *h
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -11345,8 +11473,10 @@ type ListContestClarificationsParams struct {
 	ContestLogin string
 	ProblemID    OptUUID   `json:",omitempty,omitzero"`
 	Status       OptString `json:",omitempty,omitzero"`
-	Page         OptInt32  `json:",omitempty,omitzero"`
-	PageSize     OptInt32  `json:",omitempty,omitzero"`
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackListContestClarificationsParams(packed middleware.Parameters) (params ListContestClarificationsParams) {
@@ -11614,6 +11744,31 @@ func decodeListContestClarificationsParams(args [2]string, argsEscaped bool, r *
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -11660,6 +11815,31 @@ func decodeListContestClarificationsParams(args [2]string, argsEscaped bool, r *
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -11676,8 +11856,10 @@ func decodeListContestClarificationsParams(args [2]string, argsEscaped bool, r *
 type ListContestDraftsParams struct {
 	OrgLogin     string
 	ContestLogin string
-	Page         OptInt32 `json:",omitempty,omitzero"`
-	PageSize     OptInt32 `json:",omitempty,omitzero"`
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackListContestDraftsParams(packed middleware.Parameters) (params ListContestDraftsParams) {
@@ -11808,6 +11990,11 @@ func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Req
 			Err:  err,
 		}
 	}
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -11840,6 +12027,31 @@ func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Req
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -11848,6 +12060,11 @@ func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Req
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -11879,6 +12096,31 @@ func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Req
 				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		}
@@ -12015,8 +12257,10 @@ func decodeListContestJoinRequestsParams(args [2]string, argsEscaped bool, r *ht
 type ListContestMembersParams struct {
 	OrgLogin     string
 	ContestLogin string
-	Page         int32
-	PageSize     int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackListContestMembersParams(packed middleware.Parameters) (params ListContestMembersParams) {
@@ -12039,14 +12283,18 @@ func unpackListContestMembersParams(packed middleware.Parameters) (params ListCo
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	return params
 }
@@ -12143,6 +12391,11 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 			Err:  err,
 		}
 	}
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -12153,23 +12406,53 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -12178,6 +12461,11 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -12189,23 +12477,53 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -12222,13 +12540,15 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 type ListContestSubmissionsParams struct {
 	OrgLogin     string
 	ContestLogin string
-	Page         int32
-	PageSize     int32
-	UserId       OptUUID                            `json:",omitempty,omitzero"`
-	ProblemId    OptUUID                            `json:",omitempty,omitzero"`
-	State        OptInt32                           `json:",omitempty,omitzero"`
-	SortOrder    OptListContestSubmissionsSortOrder `json:",omitempty,omitzero"`
-	Language     OptInt32                           `json:",omitempty,omitzero"`
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize  OptInt32                           `json:",omitempty,omitzero"`
+	UserId    OptUUID                            `json:",omitempty,omitzero"`
+	ProblemId OptUUID                            `json:",omitempty,omitzero"`
+	State     OptInt32                           `json:",omitempty,omitzero"`
+	SortOrder OptListContestSubmissionsSortOrder `json:",omitempty,omitzero"`
+	Language  OptInt32                           `json:",omitempty,omitzero"`
 }
 
 func unpackListContestSubmissionsParams(packed middleware.Parameters) (params ListContestSubmissionsParams) {
@@ -12251,14 +12571,18 @@ func unpackListContestSubmissionsParams(packed middleware.Parameters) (params Li
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -12400,6 +12724,11 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 			Err:  err,
 		}
 	}
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -12410,23 +12739,53 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -12435,6 +12794,11 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -12446,23 +12810,53 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -12815,7 +13209,9 @@ func decodeListContestTeamsParams(args [2]string, argsEscaped bool, r *http.Requ
 
 // ListNotificationsParams is parameters of ListNotifications operation.
 type ListNotificationsParams struct {
-	Page       OptInt32 `json:",omitempty,omitzero"`
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
 	PageSize   OptInt32 `json:",omitempty,omitzero"`
 	UnreadOnly OptBool  `json:",omitempty,omitzero"`
 }
@@ -12890,6 +13286,31 @@ func decodeListNotificationsParams(args [0]string, argsEscaped bool, r *http.Req
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -12901,7 +13322,7 @@ func decodeListNotificationsParams(args [0]string, argsEscaped bool, r *http.Req
 	}
 	// Set default value for query: pageSize.
 	{
-		val := int32(20)
+		val := int32(50)
 		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
@@ -12934,6 +13355,31 @@ func decodeListNotificationsParams(args [0]string, argsEscaped bool, r *http.Req
 				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		}
@@ -12992,8 +13438,10 @@ func decodeListNotificationsParams(args [0]string, argsEscaped bool, r *http.Req
 // ListOrganizationContestsParams is parameters of ListOrganizationContests operation.
 type ListOrganizationContestsParams struct {
 	OrgLogin string
-	Page     int32
-	PageSize int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32  `json:",omitempty,omitzero"`
 	Search   OptString `json:",omitempty,omitzero"`
 }
 
@@ -13010,14 +13458,18 @@ func unpackListOrganizationContestsParams(packed middleware.Parameters) (params 
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -13078,6 +13530,11 @@ func decodeListOrganizationContestsParams(args [1]string, argsEscaped bool, r *h
 			Err:  err,
 		}
 	}
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -13088,23 +13545,53 @@ func decodeListOrganizationContestsParams(args [1]string, argsEscaped bool, r *h
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -13113,6 +13600,11 @@ func decodeListOrganizationContestsParams(args [1]string, argsEscaped bool, r *h
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -13124,23 +13616,53 @@ func decodeListOrganizationContestsParams(args [1]string, argsEscaped bool, r *h
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -13326,9 +13848,11 @@ func decodeListOrganizationJoinRequestsParams(args [1]string, argsEscaped bool, 
 
 // ListOrganizationMembersParams is parameters of ListOrganizationMembers operation.
 type ListOrganizationMembersParams struct {
-	Login    string
-	Page     int32
-	PageSize int32
+	Login string
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackListOrganizationMembersParams(packed middleware.Parameters) (params ListOrganizationMembersParams) {
@@ -13344,14 +13868,18 @@ func unpackListOrganizationMembersParams(packed middleware.Parameters) (params L
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	return params
 }
@@ -13403,6 +13931,11 @@ func decodeListOrganizationMembersParams(args [1]string, argsEscaped bool, r *ht
 			Err:  err,
 		}
 	}
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -13413,23 +13946,53 @@ func decodeListOrganizationMembersParams(args [1]string, argsEscaped bool, r *ht
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -13438,6 +14001,11 @@ func decodeListOrganizationMembersParams(args [1]string, argsEscaped bool, r *ht
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -13449,23 +14017,53 @@ func decodeListOrganizationMembersParams(args [1]string, argsEscaped bool, r *ht
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -13480,8 +14078,10 @@ func decodeListOrganizationMembersParams(args [1]string, argsEscaped bool, r *ht
 
 // ListOrganizationsParams is parameters of ListOrganizations operation.
 type ListOrganizationsParams struct {
-	Page     int32
-	PageSize int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32  `json:",omitempty,omitzero"`
 	Search   OptString `json:",omitempty,omitzero"`
 }
 
@@ -13491,14 +14091,18 @@ func unpackListOrganizationsParams(packed middleware.Parameters) (params ListOrg
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -13514,6 +14118,11 @@ func unpackListOrganizationsParams(packed middleware.Parameters) (params ListOrg
 
 func decodeListOrganizationsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListOrganizationsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -13524,23 +14133,53 @@ func decodeListOrganizationsParams(args [0]string, argsEscaped bool, r *http.Req
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -13549,6 +14188,11 @@ func decodeListOrganizationsParams(args [0]string, argsEscaped bool, r *http.Req
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -13560,23 +14204,53 @@ func decodeListOrganizationsParams(args [0]string, argsEscaped bool, r *http.Req
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -13632,8 +14306,10 @@ func decodeListOrganizationsParams(args [0]string, argsEscaped bool, r *http.Req
 
 // ListPostsParams is parameters of ListPosts operation.
 type ListPostsParams struct {
-	Page      OptInt                `json:",omitempty,omitzero"`
-	PageSize  OptInt                `json:",omitempty,omitzero"`
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize  OptInt32              `json:",omitempty,omitzero"`
 	SortOrder OptListPostsSortOrder `json:",omitempty,omitzero"`
 }
 
@@ -13644,16 +14320,16 @@ func unpackListPostsParams(packed middleware.Parameters) (params ListPostsParams
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.Page = v.(OptInt)
+			params.Page = v.(OptInt32)
 		}
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "page_size",
+			Name: "pageSize",
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.PageSize = v.(OptInt)
+			params.PageSize = v.(OptInt32)
 		}
 	}
 	{
@@ -13672,7 +14348,7 @@ func decodeListPostsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 	q := uri.NewQueryDecoder(r.URL.Query())
 	// Set default value for query: page.
 	{
-		val := int(1)
+		val := int32(1)
 		params.Page.SetTo(val)
 	}
 	// Decode query: page.
@@ -13685,14 +14361,14 @@ func decodeListPostsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageVal int
+				var paramsDotPageVal int32
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
 						return err
 					}
 
-					c, err := conv.ToInt(val)
+					c, err := conv.ToInt32(val)
 					if err != nil {
 						return err
 					}
@@ -13707,6 +14383,31 @@ func decodeListPostsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -13716,29 +14417,29 @@ func decodeListPostsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 			Err:  err,
 		}
 	}
-	// Set default value for query: page_size.
+	// Set default value for query: pageSize.
 	{
-		val := int(10)
+		val := int32(50)
 		params.PageSize.SetTo(val)
 	}
-	// Decode query: page_size.
+	// Decode query: pageSize.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "page_size",
+			Name:    "pageSize",
 			Style:   uri.QueryStyleForm,
 			Explode: true,
 		}
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageSizeVal int
+				var paramsDotPageSizeVal int32
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
 						return err
 					}
 
-					c, err := conv.ToInt(val)
+					c, err := conv.ToInt32(val)
 					if err != nil {
 						return err
 					}
@@ -13753,11 +14454,36 @@ func decodeListPostsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "page_size",
+			Name: "pageSize",
 			In:   "query",
 			Err:  err,
 		}
@@ -14153,9 +14879,11 @@ func decodeListProblemMediaFilesParams(args [1]string, argsEscaped bool, r *http
 
 // ListProblemMembersParams is parameters of ListProblemMembers operation.
 type ListProblemMembersParams struct {
-	ID       uuid.UUID
-	Page     int32
-	PageSize int32
+	ID uuid.UUID
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackListProblemMembersParams(packed middleware.Parameters) (params ListProblemMembersParams) {
@@ -14171,14 +14899,18 @@ func unpackListProblemMembersParams(packed middleware.Parameters) (params ListPr
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	return params
 }
@@ -14233,7 +14965,7 @@ func decodeListProblemMembersParams(args [1]string, argsEscaped bool, r *http.Re
 	// Set default value for query: page.
 	{
 		val := int32(1)
-		params.Page = val
+		params.Page.SetTo(val)
 	}
 	// Decode query: page.
 	if err := func() error {
@@ -14245,23 +14977,53 @@ func decodeListProblemMembersParams(args [1]string, argsEscaped bool, r *http.Re
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -14273,8 +15035,8 @@ func decodeListProblemMembersParams(args [1]string, argsEscaped bool, r *http.Re
 	}
 	// Set default value for query: pageSize.
 	{
-		val := int32(10)
-		params.PageSize = val
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -14286,23 +15048,53 @@ func decodeListProblemMembersParams(args [1]string, argsEscaped bool, r *http.Re
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -14706,8 +15498,10 @@ func decodeListProblemWorkshopSubmissionsParams(args [1]string, argsEscaped bool
 
 // ListProblemsParams is parameters of ListProblems operation.
 type ListProblemsParams struct {
-	Page           int32
-	PageSize       int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize       OptInt32  `json:",omitempty,omitzero"`
 	Search         OptString `json:",omitempty,omitzero"`
 	Descending     OptBool   `json:",omitempty,omitzero"`
 	Owner          OptBool   `json:",omitempty,omitzero"`
@@ -14721,14 +15515,18 @@ func unpackListProblemsParams(packed middleware.Parameters) (params ListProblems
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -14780,6 +15578,11 @@ func unpackListProblemsParams(packed middleware.Parameters) (params ListProblems
 
 func decodeListProblemsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListProblemsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -14790,23 +15593,53 @@ func decodeListProblemsParams(args [0]string, argsEscaped bool, r *http.Request)
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -14815,6 +15648,11 @@ func decodeListProblemsParams(args [0]string, argsEscaped bool, r *http.Request)
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -14826,23 +15664,53 @@ func decodeListProblemsParams(args [0]string, argsEscaped bool, r *http.Request)
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -15062,8 +15930,10 @@ func decodeListProblemsParams(args [0]string, argsEscaped bool, r *http.Request)
 
 // ListPublicContestsParams is parameters of ListPublicContests operation.
 type ListPublicContestsParams struct {
-	Page      int32
-	PageSize  int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize  OptInt32                       `json:",omitempty,omitzero"`
 	Search    OptString                      `json:",omitempty,omitzero"`
 	SortBy    OptListPublicContestsSortBy    `json:",omitempty,omitzero"`
 	SortOrder OptListPublicContestsSortOrder `json:",omitempty,omitzero"`
@@ -15075,14 +15945,18 @@ func unpackListPublicContestsParams(packed middleware.Parameters) (params ListPu
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -15116,6 +15990,11 @@ func unpackListPublicContestsParams(packed middleware.Parameters) (params ListPu
 
 func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListPublicContestsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -15126,23 +16005,53 @@ func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Re
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -15151,6 +16060,11 @@ func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Re
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -15162,23 +16076,53 @@ func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Re
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -15346,8 +16290,10 @@ func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Re
 
 // ListSubmissionsParams is parameters of ListSubmissions operation.
 type ListSubmissionsParams struct {
-	Page      int32
-	PageSize  int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize  OptInt32                    `json:",omitempty,omitzero"`
 	ContestId OptUUID                     `json:",omitempty,omitzero"`
 	UserId    OptUUID                     `json:",omitempty,omitzero"`
 	ProblemId OptUUID                     `json:",omitempty,omitzero"`
@@ -15362,14 +16308,18 @@ func unpackListSubmissionsParams(packed middleware.Parameters) (params ListSubmi
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -15430,6 +16380,11 @@ func unpackListSubmissionsParams(packed middleware.Parameters) (params ListSubmi
 
 func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListSubmissionsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -15440,23 +16395,53 @@ func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Reque
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -15465,6 +16450,11 @@ func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Reque
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -15476,23 +16466,53 @@ func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Reque
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -15768,8 +16788,10 @@ func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Reque
 
 // ListTeamContestsParams is parameters of ListTeamContests operation.
 type ListTeamContestsParams struct {
-	ID       uuid.UUID
-	Page     OptInt32 `json:",omitempty,omitzero"`
+	ID uuid.UUID
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
 	PageSize OptInt32 `json:",omitempty,omitzero"`
 }
 
@@ -15886,6 +16908,31 @@ func decodeListTeamContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -15897,7 +16944,7 @@ func decodeListTeamContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 	}
 	// Set default value for query: pageSize.
 	{
-		val := int32(10)
+		val := int32(50)
 		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
@@ -15932,6 +16979,31 @@ func decodeListTeamContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -15946,9 +17018,11 @@ func decodeListTeamContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // ListTeamMembersParams is parameters of ListTeamMembers operation.
 type ListTeamMembersParams struct {
-	ID       uuid.UUID
-	Page     int32
-	PageSize int32
+	ID uuid.UUID
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackListTeamMembersParams(packed middleware.Parameters) (params ListTeamMembersParams) {
@@ -15964,14 +17038,18 @@ func unpackListTeamMembersParams(packed middleware.Parameters) (params ListTeamM
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	return params
 }
@@ -16023,6 +17101,11 @@ func decodeListTeamMembersParams(args [1]string, argsEscaped bool, r *http.Reque
 			Err:  err,
 		}
 	}
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -16033,23 +17116,53 @@ func decodeListTeamMembersParams(args [1]string, argsEscaped bool, r *http.Reque
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -16058,6 +17171,11 @@ func decodeListTeamMembersParams(args [1]string, argsEscaped bool, r *http.Reque
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -16069,23 +17187,53 @@ func decodeListTeamMembersParams(args [1]string, argsEscaped bool, r *http.Reque
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -16100,8 +17248,10 @@ func decodeListTeamMembersParams(args [1]string, argsEscaped bool, r *http.Reque
 
 // ListTeamProblemsParams is parameters of ListTeamProblems operation.
 type ListTeamProblemsParams struct {
-	ID       uuid.UUID
-	Page     OptInt32 `json:",omitempty,omitzero"`
+	ID uuid.UUID
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
 	PageSize OptInt32 `json:",omitempty,omitzero"`
 }
 
@@ -16218,6 +17368,31 @@ func decodeListTeamProblemsParams(args [1]string, argsEscaped bool, r *http.Requ
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -16229,7 +17404,7 @@ func decodeListTeamProblemsParams(args [1]string, argsEscaped bool, r *http.Requ
 	}
 	// Set default value for query: pageSize.
 	{
-		val := int32(10)
+		val := int32(50)
 		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
@@ -16264,6 +17439,31 @@ func decodeListTeamProblemsParams(args [1]string, argsEscaped bool, r *http.Requ
 			}); err != nil {
 				return err
 			}
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -16278,8 +17478,10 @@ func decodeListTeamProblemsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // ListTeamsParams is parameters of ListTeams operation.
 type ListTeamsParams struct {
-	Page           int32
-	PageSize       int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize       OptInt32  `json:",omitempty,omitzero"`
 	Search         OptString `json:",omitempty,omitzero"`
 	OrganizationID OptUUID   `json:",omitempty,omitzero"`
 }
@@ -16290,14 +17492,18 @@ func unpackListTeamsParams(packed middleware.Parameters) (params ListTeamsParams
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -16322,6 +17528,11 @@ func unpackListTeamsParams(packed middleware.Parameters) (params ListTeamsParams
 
 func decodeListTeamsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListTeamsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -16332,23 +17543,53 @@ func decodeListTeamsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -16357,6 +17598,11 @@ func decodeListTeamsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -16368,23 +17614,53 @@ func decodeListTeamsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -16481,9 +17757,11 @@ func decodeListTeamsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 
 // ListUserContestsParams is parameters of ListUserContests operation.
 type ListUserContestsParams struct {
-	Username  string
-	Page      int32
-	PageSize  int32
+	Username string
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize  OptInt32                     `json:",omitempty,omitzero"`
 	Search    OptString                    `json:",omitempty,omitzero"`
 	SortBy    OptListUserContestsSortBy    `json:",omitempty,omitzero"`
 	SortOrder OptListUserContestsSortOrder `json:",omitempty,omitzero"`
@@ -16502,14 +17780,18 @@ func unpackListUserContestsParams(packed middleware.Parameters) (params ListUser
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -16588,6 +17870,11 @@ func decodeListUserContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 			Err:  err,
 		}
 	}
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -16598,23 +17885,53 @@ func decodeListUserContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -16623,6 +17940,11 @@ func decodeListUserContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -16634,23 +17956,53 @@ func decodeListUserContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -16818,9 +18170,11 @@ func decodeListUserContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // ListUserSubmissionsParams is parameters of ListUserSubmissions operation.
 type ListUserSubmissionsParams struct {
-	Username  string
-	Page      int32
-	PageSize  int32
+	Username string
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize  OptInt32                        `json:",omitempty,omitzero"`
 	ContestId OptUUID                         `json:",omitempty,omitzero"`
 	ProblemId OptUUID                         `json:",omitempty,omitzero"`
 	State     OptInt32                        `json:",omitempty,omitzero"`
@@ -16840,14 +18194,18 @@ func unpackListUserSubmissionsParams(packed middleware.Parameters) (params ListU
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -16935,6 +18293,11 @@ func decodeListUserSubmissionsParams(args [1]string, argsEscaped bool, r *http.R
 			Err:  err,
 		}
 	}
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -16945,23 +18308,53 @@ func decodeListUserSubmissionsParams(args [1]string, argsEscaped bool, r *http.R
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -16970,6 +18363,11 @@ func decodeListUserSubmissionsParams(args [1]string, argsEscaped bool, r *http.R
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -16981,23 +18379,53 @@ func decodeListUserSubmissionsParams(args [1]string, argsEscaped bool, r *http.R
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -17191,8 +18619,10 @@ func decodeListUserSubmissionsParams(args [1]string, argsEscaped bool, r *http.R
 
 // ListUsersParams is parameters of ListUsers operation.
 type ListUsersParams struct {
-	Page     int32
-	PageSize int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32  `json:",omitempty,omitzero"`
 	Search   OptString `json:",omitempty,omitzero"`
 	Role     OptString `json:",omitempty,omitzero"`
 }
@@ -17203,14 +18633,18 @@ func unpackListUsersParams(packed middleware.Parameters) (params ListUsersParams
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -17235,6 +18669,11 @@ func unpackListUsersParams(packed middleware.Parameters) (params ListUsersParams
 
 func decodeListUsersParams(args [0]string, argsEscaped bool, r *http.Request) (params ListUsersParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -17245,23 +18684,53 @@ func decodeListUsersParams(args [0]string, argsEscaped bool, r *http.Request) (p
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -17270,6 +18739,11 @@ func decodeListUsersParams(args [0]string, argsEscaped bool, r *http.Request) (p
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -17281,23 +18755,53 @@ func decodeListUsersParams(args [0]string, argsEscaped bool, r *http.Request) (p
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -17394,8 +18898,10 @@ func decodeListUsersParams(args [0]string, argsEscaped bool, r *http.Request) (p
 
 // ListWorkshopContestsParams is parameters of ListWorkshopContests operation.
 type ListWorkshopContestsParams struct {
-	Page           int32
-	PageSize       int32
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize       OptInt32                         `json:",omitempty,omitzero"`
 	Search         OptString                        `json:",omitempty,omitzero"`
 	SortBy         OptListWorkshopContestsSortBy    `json:",omitempty,omitzero"`
 	SortOrder      OptListWorkshopContestsSortOrder `json:",omitempty,omitzero"`
@@ -17408,14 +18914,18 @@ func unpackListWorkshopContestsParams(packed middleware.Parameters) (params List
 			Name: "page",
 			In:   "query",
 		}
-		params.Page = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
 			Name: "pageSize",
 			In:   "query",
 		}
-		params.PageSize = packed[key].(int32)
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
 	}
 	{
 		key := middleware.ParameterKey{
@@ -17458,6 +18968,11 @@ func unpackListWorkshopContestsParams(packed middleware.Parameters) (params List
 
 func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListWorkshopContestsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
 	// Decode query: page.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -17468,23 +18983,53 @@ func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.Page = c
+				params.Page.SetTo(paramsDotPageVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -17493,6 +19038,11 @@ func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.
 			In:   "query",
 			Err:  err,
 		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
 	}
 	// Decode query: pageSize.
 	if err := func() error {
@@ -17504,23 +19054,53 @@ func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
 					return err
 				}
-
-				c, err := conv.ToInt32(val)
-				if err != nil {
-					return err
-				}
-
-				params.PageSize = c
+				params.PageSize.SetTo(paramsDotPageSizeVal)
 				return nil
 			}); err != nil {
 				return err
 			}
-		} else {
-			return err
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {

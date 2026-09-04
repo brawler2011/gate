@@ -25,8 +25,8 @@ func generateLogin(name string) string {
 func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOrganizationsParams) (*corev1.ListOrganizationsResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
 	filter := &models.OrganizationFilter{
@@ -163,7 +163,7 @@ func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.Delet
 func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.ListOrganizationMembersParams) (*corev1.ListOrganizationMembersResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	page := params.Page
+	page := params.Page.Or(1)
 
 	members, err := h.organizationsUC.ListMembersByLogin(ctx, params.Login, user.Id)
 	if err != nil {

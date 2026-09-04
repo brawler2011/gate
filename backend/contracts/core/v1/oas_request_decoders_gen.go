@@ -3648,7 +3648,7 @@ func (s *Server) decodeUploadAvatarRequest(r *http.Request) (
 			if err := func() error {
 				files, ok := r.MultipartForm.File["avatar"]
 				if !ok || len(files) < 1 {
-					return nil
+					return validate.ErrFieldRequired
 				}
 				fh := files[0]
 
@@ -3657,12 +3657,12 @@ func (s *Server) decodeUploadAvatarRequest(r *http.Request) (
 					return errors.Wrap(err, "open")
 				}
 				closers = append(closers, f.Close)
-				request.Avatar.SetTo(ht.MultipartFile{
+				request.Avatar = ht.MultipartFile{
 					Name:   fh.Filename,
 					File:   f,
 					Size:   fh.Size,
 					Header: fh.Header,
-				})
+				}
 				return nil
 			}(); err != nil {
 				return req, rawBody, close, errors.Wrap(err, "decode \"avatar\"")

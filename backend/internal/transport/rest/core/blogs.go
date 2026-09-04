@@ -12,8 +12,9 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/storage"
 )
 
-// ListPosts implements the ListPosts operation
 func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParams) (*corev1.ListPostsResponseModel, error) {
+	// FIXME: нужно использовать готовые модели пагинации в openapi.yaml
+	// FIXME: удалить этот бойлерплейт
 	page := int(params.Page.Or(1))
 	pageSize := int(params.PageSize.Or(10))
 	sortOrder := string(params.SortOrder.Or("desc"))
@@ -41,8 +42,8 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 
 	return &corev1.ListPostsResponseModel{
 		Pagination: corev1.PaginationModel{
-			Total: safeInt32(result.TotalPages),
-			Page:  safeInt32(result.Page),
+			Total: safeInt32(result.TotalPages), // FIXME: разобраться где возникает проблема типов
+			Page:  safeInt32(result.Page),       // FIXME: аналогично
 		},
 		Posts: posts,
 	}, nil
@@ -50,40 +51,45 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 
 // CreatePost implements the CreatePost operation
 func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) (corev1.CreatePostRes, error) {
+	// FIXME: эти провери должны быть в мидлваре
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
+	// FIXME: req не может быть nil, остальное надо сделать required в openapi
 	if req == nil || !req.Title.IsSet() || !req.Description.IsSet() || !req.Text.IsSet() || !req.PreviewImage.IsSet() {
 		return &corev1.CreatePostBadRequest{
 			Error: corev1.NewOptString("title, description, text, and preview_image are required"),
 		}, nil
 	}
 
-	file := req.PreviewImage.Value
+	file := req.PreviewImage.Value // FIXME: эта хуйня не должна быть optional
 	title := req.Title.Value
 	description := req.Description.Value
 	text := req.Text.Value
 
-	// Create post
 	postID, err := s.blogsUC.CreatePost(ctx, title, text, description, user.Id, user.Username, file.File, file.Name)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to create post")
 	}
 
+	// FIXME: вроде как в схеме есть reusable структура для таких ответов
 	return &corev1.CreatedPost{
-		PostID: corev1.NewOptUUID(postID),
+		PostID: corev1.NewOptUUID(postID), // FIXME: эта хуйня тоже не должна быть optional
 	}, nil
 }
 
-// GetPostById implements the GetPostById operation
 func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdParams) (corev1.GetPostByIdRes, error) {
 	post, err := s.blogsUC.GetPost(ctx, params.ID)
 	if err != nil {
+
+		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, err
 		}
+
+		// FIXME: в проекте не приянто создавать касатомные ошибки внутри схемы апи
 		return &corev1.GetPostByIdNotFound{
 			Error: corev1.NewOptString("post not found"),
 		}, nil
@@ -102,12 +108,13 @@ func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdP
 	}, nil
 }
 
-// PatchPostById implements the PatchPostById operation
 func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostByIdReq, params corev1.PatchPostByIdParams) (corev1.PatchPostByIdRes, error) {
+	// FIXME: антипаттерн, эти поля нужно объединить в структуру или тп
 	var titlePtr, descriptionPtr, textPtr *string
 	var imageReader io.Reader
 	var filename string
 
+	// FIXME: req должен быть required, поля мапяться в структуру
 	if req.IsSet() {
 		r := req.Value
 		if r.Title.IsSet() {
@@ -126,42 +133,46 @@ func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostB
 		}
 	}
 
-	// Update post
 	err := s.blogsUC.UpdatePost(ctx, params.ID, titlePtr, textPtr, descriptionPtr, imageReader, filename)
 	if err != nil {
+		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, err
 		}
+		// FIXME: в проекте так не принято
 		return &corev1.PatchPostByIdNotFound{
 			Error: corev1.NewOptString("post not found"),
 		}, nil
 	}
-
+	// FIXME: в проекте так не принято
 	return &corev1.PatchPostByIdOK{}, nil
 }
 
-// DeletePostById implements the DeletePostById operation
 func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePostByIdParams) (corev1.DeletePostByIdRes, error) {
 	err := s.blogsUC.DeletePost(ctx, params.ID)
 	if err != nil {
+		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, err
 		}
+		// FIXME: в проекте так не принято
 		return &corev1.DeletePostByIdNotFound{
 			Error: corev1.NewOptString("post not found"),
 		}, nil
 	}
 
+	// FIXME: в проекте так не принято
 	return &corev1.DeletePostByIdOK{}, nil
 }
 
-// GetPostImage implements the GetPostImage operation
 func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImageParams) (corev1.GetPostImageRes, error) {
 	post, err := s.blogsUC.GetPost(ctx, params.ID)
 	if err != nil {
+		// FIXME:
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, err
 		}
+		// FIXME:
 		return &corev1.GetPostImageNotFound{
 			Error: corev1.NewOptString("post not found"),
 		}, nil
@@ -180,14 +191,17 @@ func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImag
 			ETag: params.IfNoneMatch,
 		}, nil
 	} else if imageErr != nil {
+		// FIXME:
 		if errors.Is(imageErr, context.DeadlineExceeded) || errors.Is(imageErr, context.Canceled) {
 			return nil, imageErr
 		}
+		// FIXME:
 		return &corev1.GetPostImageNotFound{
 			Error: corev1.NewOptString("image not found"),
 		}, nil
 	}
 
+	// FIXME:
 	return &corev1.GetPostImageOKHeaders{
 		Response: corev1.GetPostImageOK{
 			Data: postImage.ReadCloser(),

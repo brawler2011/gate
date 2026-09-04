@@ -16,8 +16,8 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 	// Get current user
 	user := middleware.GetUser(ctx)
 
-	page := params.Page
-	pageSize := params.PageSize
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
 	var teams []models.Team
@@ -178,7 +178,7 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeam
 	// Get current user
 	user := middleware.GetUser(ctx)
 
-	page := params.Page
+	page := params.Page.Or(1)
 
 	// Get members
 	members, err := h.teamsUC.ListTeamMembers(ctx, params.ID, user.Id)

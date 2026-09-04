@@ -169,8 +169,8 @@ func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) models.Submissi
 
 	return models.SubmissionsFilter{
 		ContestId: contestID,
-		Page:      params.Page,
-		PageSize:  params.PageSize,
+		Page:      params.Page.Or(1),
+		PageSize:  params.PageSize.Or(50),
 		UserId:    userID,
 		ProblemId: problemID,
 		Language:  langName,

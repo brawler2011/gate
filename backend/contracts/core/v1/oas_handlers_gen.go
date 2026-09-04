@@ -17658,7 +17658,7 @@ func (s *Server) handleListPostsRequest(args [0]string, argsEscaped bool, w http
 					In:   "query",
 				}: params.Page,
 				{
-					Name: "page_size",
+					Name: "pageSize",
 					In:   "query",
 				}: params.PageSize,
 				{

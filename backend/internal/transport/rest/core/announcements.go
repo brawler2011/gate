@@ -16,10 +16,7 @@ func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1
 		return nil, err
 	}
 
-	page := params.Page.Or(1)
-	pageSize := params.PageSize.Or(50)
-
-	list, err := h.announcementsUC.ListAnnouncements(ctx, contest.ID, page, pageSize)
+	list, err := h.announcementsUC.ListAnnouncements(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +25,7 @@ func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1
 }
 
 func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.CreateContestAnnouncementRequestModel, params corev1.CreateContestAnnouncementParams) (*corev1.ContestAnnouncementModel, error) {
+	// FIXME: должно быть в middleware, а не здесь
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -38,6 +36,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 		return nil, err
 	}
 
+	// FIXME: должно быть в middleware, а не здесь
 	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
 	if err != nil {
 		return nil, err
@@ -46,10 +45,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied: only contest moderators can create announcements")
 	}
 
-	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
-	}
-
+	// FIXME: create OptUUID struct instead of using pointer
 	var problemID *uuid.UUID
 	if req.ProblemID.IsSet() {
 		problemID = &req.ProblemID.Value
@@ -70,6 +66,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 }
 
 func (h *CoreServer) DeleteContestAnnouncement(ctx context.Context, params corev1.DeleteContestAnnouncementParams) error {
+	// FIXME: должно быть в middleware, а не здесь
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -80,6 +77,7 @@ func (h *CoreServer) DeleteContestAnnouncement(ctx context.Context, params corev
 		return err
 	}
 
+	// FIXME: должно быть в middleware, а не здесь
 	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
 	if err != nil {
 		return err
