@@ -6,6 +6,7 @@
 .github/*
 !.github/workflows/
 !.github/workflows/**
+!.github/*.md
 !.tasks/
 !.tasks/**
 *.log

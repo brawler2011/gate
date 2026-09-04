@@ -145,6 +145,34 @@ When managing or working with tasks in `.tasks/`:
    - Leave the second line empty.
    - Put detailed descriptions, rationale, and bullet lists in the commit **body** or PR description.
 
+## Pull Request & Agent Workflow Guidelines
+
+1. **Task Association & Branching**
+   - Every PR MUST be bound to a task in `.tasks/` (e.g. branch `task/TASK-002-slug` or flag `-task TASK-002`).
+   - Branch naming convention: `task/TASK-NNN-<short-slug>`.
+   - Never commit or open PRs directly from `main`.
+
+2. **Automated PR Creation (`task pr:create`)**
+   - Always create pull requests using `task pr:create` or ensure compliance with `.github/pull_request_template.md`.
+   - `task pr:create` enforces `task precommit`, validates Conventional Commits title (<= 65 chars), fills the PR template with task metadata, pushes the branch, and creates the PR via GitHub CLI (`gh`).
+
+3. **Adversarial Code Review Workflow (Reviewer Agent)**
+   - **Context Isolation**: Code review MUST be performed in an isolated context/session (or via an isolated reviewer subagent). Never review code in the same saturated session that wrote it.
+   - **Reviewer Inputs**: Only task specification (`.tasks/TASK-XXX.md`), `git diff origin/main...HEAD`, and `AGENTS.md`.
+   - **Reviewer Audit Focus**:
+     1. Acceptance Criteria: All items genuinely verified and tested.
+     2. `AGENTS.md` compliance: `slog` only, no env fallback values, no server actions, untouched `next.config.mjs`, no symlinks.
+     3. Surgical changes: no unrelated edits, no leftover dead code.
+     4. Test coverage and edge cases.
+   - **Verdict Format**: Output `APPROVE` or `REQUEST_CHANGES` with actionable file:line pointers. Post review comment to GitHub PR via `gh pr review --comment`.
+
+4. **Semi-Autonomous Merge Policy**
+   - Agents DO NOT auto-merge to `main`.
+   - Final merge is executed by a human engineer (or an agent upon explicit human instruction) only after:
+     1. Reviewer Agent verdict is `APPROVE`.
+     2. All GitHub Actions CI checks (`ci.yml`, `pr-title.yml`) are passing.
+     3. Merge strategy is squash-and-merge (`gh pr merge --squash --delete-branch`).
+
 ---
 
 ## Tags
@@ -152,3 +180,4 @@ When managing or working with tasks in `.tasks/`:
 1. **Breaking Changes (Default: Enabled)**
    - By default, tasks **ARE PERMITTED** to introduce breaking changes (API signature updates, contract modifications, DB schema changes) without maintaining backward compatibility layers.
    - If backward compatibility is required, the task will explicitly specify the **`BACKWARD COMPATIBLE`** tag.
+

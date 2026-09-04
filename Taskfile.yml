@@ -24,6 +24,7 @@ tasks:
     cmds:
       - task: verify-codegen
       - task: tasks:validate
+      - task: tools:test
       - task: precommit:be
       - task: precommit:fe
 
@@ -36,6 +37,29 @@ tasks:
     desc: "Validate commit message or PR title format and length"
     cmds:
       - go -C tools/commitvalidator run . {{.CLI_ARGS}}
+
+  tools:test:
+    desc: "Run tests across all repository tools"
+    cmds:
+      - go -C tools/taskvalidator test ./...
+      - go -C tools/commitvalidator test ./...
+      - go -C tools/prtool test ./...
+
+  pr:create:
+    desc: "Create GitHub PR with precommit checks and template"
+    cmds:
+      - go -C tools/prtool run . create {{.CLI_ARGS}}
+
+  pr:review-prompt:
+    desc: "Generate prompt for Reviewer Agent with task and diff"
+    cmds:
+      - go -C tools/prtool run . review-prompt {{.CLI_ARGS}}
+
+  pr:status:
+    desc: "Show GitHub PR status and CI checks for current branch"
+    cmds:
+      - gh pr status
+      - gh pr checks || true
 
   hooks:install:
     desc: "Install Lefthook and setup git pre-commit hooks"
