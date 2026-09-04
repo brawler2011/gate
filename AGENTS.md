@@ -114,10 +114,11 @@ When working with the backend codebase, adhere strictly to the following rules:
 When managing or working with tasks in `.tasks/`:
 
 1. **Task Lifecycle: `draft` -> `todo` -> `done`**
+   - **Closed state machine**: Tasks have only three valid states: `draft`, `todo`, `done`.
    - `draft`: Task definition is being formulated or under discussion. Not ready for execution.
    - `todo`: Task specification is complete with clear context and criteria. Ready for development.
    - `done`: All acceptance criteria are fulfilled and verified.
-   - **No intermediate states**: Do NOT use `in_progress` or `review`. Development and review states are tracked via Git branches and Pull Requests.
+   - **Execution tracking**: Tasks are static specifications, not an issue tracker. Work-in-progress and review states are tracked exclusively via Git branches and Pull Requests.
 
 2. **Definition of Done Enforcement**
    - When marking `status: done`, ALL items in `## Acceptance Criteria` MUST be marked as completed (`- [x]`).
