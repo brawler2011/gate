@@ -18,9 +18,11 @@ import (
 var embeddedSchema []byte
 
 var (
-	h2ContextRegex = regexp.MustCompile(`(?m)^##\s+(Context|Summary)\s*$`)
+	h2ContextRegex  = regexp.MustCompile(`(?m)^##\s+(Context|Summary)\s*$`)
 	h2CriteriaRegex = regexp.MustCompile(`(?m)^##\s+Acceptance Criteria\s*$`)
+	h2HeadingRegex  = regexp.MustCompile(`(?m)^##\s+`)
 	checklistRegex  = regexp.MustCompile(`(?m)^\s*-\s*\[[ xX]\]\s+\S+`)
+	uncheckedRegex  = regexp.MustCompile(`(?m)^\s*-\s*\[ \]\s+\S+`)
 )
 
 // Validator validates task markdown files.
@@ -112,7 +114,8 @@ func (v *Validator) ValidateContent(filePath string, content []byte) error {
 	}
 
 	// Validate Markdown body structure
-	if err := validateBody(bodyBytes); err != nil {
+	taskStatus, _ := rawMap["status"].(string)
+	if err := validateBody(bodyBytes, taskStatus); err != nil {
 		return fmt.Errorf("%s: body structure validation failed: %w", filePath, err)
 	}
 
@@ -157,7 +160,7 @@ func validateFilename(filePath string, taskID string) error {
 	return nil
 }
 
-func validateBody(bodyBytes []byte) error {
+func validateBody(bodyBytes []byte, taskStatus string) error {
 	body := string(bodyBytes)
 
 	// Check ## Context or ## Summary
@@ -183,10 +186,25 @@ func validateBody(bodyBytes []byte) error {
 		return fmt.Errorf("section '## Context' (or '## Summary') must not be empty")
 	}
 
+	// Extract Acceptance Criteria section up to next H2 heading or EOF
+	criteriaStart := criteriaLoc[1]
+	criteriaEnd := len(body)
+	if loc := h2HeadingRegex.FindStringIndex(body[criteriaStart:]); loc != nil {
+		criteriaEnd = criteriaStart + loc[0]
+	}
+	criteriaContent := body[criteriaStart:criteriaEnd]
+
 	// Check for at least one checklist item in Acceptance Criteria
-	criteriaContent := body[criteriaLoc[1]:]
 	if !checklistRegex.MatchString(criteriaContent) {
 		return fmt.Errorf("section '## Acceptance Criteria' must contain at least one checklist item (e.g. '- [ ] ...')")
+	}
+
+	// If status is 'done', ensure all criteria items are completed
+	if taskStatus == "done" {
+		unchecked := uncheckedRegex.FindAllString(criteriaContent, -1)
+		if len(unchecked) > 0 {
+			return fmt.Errorf("task status is 'done', but contains %d unchecked acceptance criteria: all items must be marked as completed '- [x]'", len(unchecked))
+		}
 	}
 
 	return nil

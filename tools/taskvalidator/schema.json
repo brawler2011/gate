@@ -24,7 +24,7 @@
     },
     "status": {
       "type": "string",
-      "enum": ["draft", "ready", "in_progress", "review", "done"],
+      "enum": ["draft", "todo", "done"],
       "description": "Current lifecycle status of the task"
     },
     "type": {

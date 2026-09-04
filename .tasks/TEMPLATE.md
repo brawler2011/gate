@@ -5,8 +5,8 @@ id: TASK-000
 # Short, human-readable title (min 5 characters)
 title: "Task title here"
 
-# Current status: draft | ready | in_progress | review | done
-status: draft
+# Current status: draft | todo | done (when done, all acceptance criteria must be [x])
+status: todo
 
 # Type of work: fix | feat | refactor | chore | docs | impr
 type: feat
