@@ -20,8 +20,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("Public endpoint without auth", func() {
 		resp, err := s.client.ListPublicContests(s.ctx, corev1.ListPublicContestsParams{
-			Page:     1,
-			PageSize: 10,
+			Page:     corev1.NewOptInt32(1),
+			PageSize: corev1.NewOptInt32(10),
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
@@ -35,8 +35,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("Admin endpoint with user role", func() {
 		_, err := s.client.ListAdminContests(withTestUser(s.ctx, user.Id), corev1.ListAdminContestsParams{
-			Page:     1,
-			PageSize: 10,
+			Page:     corev1.NewOptInt32(1),
+			PageSize: corev1.NewOptInt32(10),
 		})
 		s.Require().Error(err)
 		s.Equal(http.StatusForbidden, s.getStatusCode(err))
@@ -44,8 +44,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("Admin endpoint with admin role", func() {
 		resp, err := s.client.ListAdminContests(withTestUser(s.ctx, admin.Id), corev1.ListAdminContestsParams{
-			Page:     1,
-			PageSize: 10,
+			Page:     corev1.NewOptInt32(1),
+			PageSize: corev1.NewOptInt32(10),
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
@@ -73,7 +73,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 		s.Run("Non-owner and non-admin denied", func() {
 			_, err := s.client.UploadAvatar(withTestUser(s.ctx, otherUser.Id), &corev1.UploadAvatarReq{
-				Avatar: corev1.NewOptMultipartFile(sampleFile),
+				Avatar: sampleFile,
 			}, corev1.UploadAvatarParams{
 				Username: targetUser.Username,
 			})
@@ -84,7 +84,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Run("Self request passes middleware", func() {
 			// Middleware passes (not 401/403)
 			_, err := s.client.UploadAvatar(withTestUser(s.ctx, targetUser.Id), &corev1.UploadAvatarReq{
-				Avatar: corev1.NewOptMultipartFile(sampleFile),
+				Avatar: sampleFile,
 			}, corev1.UploadAvatarParams{
 				Username: targetUser.Username,
 			})
@@ -95,7 +95,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Run("Admin request passes middleware", func() {
 			// Middleware passes (not 401/403)
 			_, err := s.client.UploadAvatar(withTestUser(s.ctx, adminUser.Id), &corev1.UploadAvatarReq{
-				Avatar: corev1.NewOptMultipartFile(sampleFile),
+				Avatar: sampleFile,
 			}, corev1.UploadAvatarParams{
 				Username: targetUser.Username,
 			})
@@ -157,8 +157,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Run("User cannot list another user submissions", func() {
 			_, err := s.client.ListUserSubmissions(withTestUser(s.ctx, requestUser.Id), corev1.ListUserSubmissionsParams{
 				Username: anotherUser.Username,
-				Page:     1,
-				PageSize: 10,
+				Page:     corev1.NewOptInt32(1),
+				PageSize: corev1.NewOptInt32(10),
 			})
 			s.Require().Error(err)
 			s.Equal(http.StatusForbidden, s.getStatusCode(err))
@@ -167,8 +167,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Run("Admin can list another user submissions", func() {
 			resp, err := s.client.ListUserSubmissions(withTestUser(s.ctx, adminUser.Id), corev1.ListUserSubmissionsParams{
 				Username: anotherUser.Username,
-				Page:     1,
-				PageSize: 10,
+				Page:     corev1.NewOptInt32(1),
+				PageSize: corev1.NewOptInt32(10),
 			})
 			s.Require().NoError(err)
 			s.Require().NotNil(resp)
@@ -177,8 +177,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Run("User can list own submissions when contest policy allows", func() {
 			resp, err := s.client.ListUserSubmissions(withTestUser(s.ctx, requestUser.Id), corev1.ListUserSubmissionsParams{
 				Username:  requestUser.Username,
-				Page:      1,
-				PageSize:  10,
+				Page:      corev1.NewOptInt32(1),
+				PageSize:  corev1.NewOptInt32(10),
 				ContestId: corev1.NewOptUUID(allowedContestID),
 			})
 			s.Require().NoError(err)
@@ -188,8 +188,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		s.Run("User cannot list submissions when not a member of private contest", func() {
 			_, err := s.client.ListUserSubmissions(withTestUser(s.ctx, anotherUser.Id), corev1.ListUserSubmissionsParams{
 				Username:  anotherUser.Username,
-				Page:      1,
-				PageSize:  10,
+				Page:      corev1.NewOptInt32(1),
+				PageSize:  corev1.NewOptInt32(10),
 				ContestId: corev1.NewOptUUID(allowedContestID),
 			})
 			s.Require().Error(err)
@@ -238,8 +238,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			_, err := s.client.ListContestSubmissions(withTestUser(s.ctx, participant.Id), corev1.ListContestSubmissionsParams{
 				OrgLogin:     org.Login,
 				ContestLogin: "lcs-contest-" + suffix,
-				Page:         1,
-				PageSize:     10,
+				Page:         corev1.NewOptInt32(1),
+				PageSize:     corev1.NewOptInt32(10),
 			})
 			s.Require().Error(err)
 			s.Equal(http.StatusForbidden, s.getStatusCode(err))
@@ -249,8 +249,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			resp, err := s.client.ListContestSubmissions(withTestUser(s.ctx, participant.Id), corev1.ListContestSubmissionsParams{
 				OrgLogin:     org.Login,
 				ContestLogin: "lcs-contest-" + suffix,
-				Page:         1,
-				PageSize:     10,
+				Page:         corev1.NewOptInt32(1),
+				PageSize:     corev1.NewOptInt32(10),
 				UserId:       corev1.NewOptUUID(participant.Id),
 			})
 			s.Require().NoError(err)
@@ -261,8 +261,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			_, err := s.client.ListContestSubmissions(withTestUser(s.ctx, participant.Id), corev1.ListContestSubmissionsParams{
 				OrgLogin:     org.Login,
 				ContestLogin: "lcs-contest-" + suffix,
-				Page:         1,
-				PageSize:     10,
+				Page:         corev1.NewOptInt32(1),
+				PageSize:     corev1.NewOptInt32(10),
 				UserId:       corev1.NewOptUUID(otherUser.Id),
 			})
 			s.Require().Error(err)
@@ -273,8 +273,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			resp, err := s.client.ListContestSubmissions(withTestUser(s.ctx, moderator.Id), corev1.ListContestSubmissionsParams{
 				OrgLogin:     org.Login,
 				ContestLogin: "lcs-contest-" + suffix,
-				Page:         1,
-				PageSize:     10,
+				Page:         corev1.NewOptInt32(1),
+				PageSize:     corev1.NewOptInt32(10),
 			})
 			s.Require().NoError(err)
 			s.Require().NotNil(resp)
@@ -396,8 +396,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		resp, err := s.client.ListContestSubmissions(withTestUser(s.ctx, mixedUser.Id), corev1.ListContestSubmissionsParams{
 			OrgLogin:     org.Login,
 			ContestLogin: "mixed-role-" + suffix,
-			Page:         1,
-			PageSize:     10,
+			Page:         corev1.NewOptInt32(1),
+			PageSize:     corev1.NewOptInt32(10),
 			UserId:       corev1.NewOptUUID(otherUser.Id),
 		})
 		s.Require().NoError(err)

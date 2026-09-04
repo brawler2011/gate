@@ -104,8 +104,8 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	// 5. List Submissions
 	s.Run("ListSubmissions", func() {
 		resp, err := s.client.ListSubmissions(withTestUser(s.ctx, admin.Id), corev1.ListSubmissionsParams{
-			Page:     1,
-			PageSize: 10,
+			Page:     corev1.NewOptInt32(1),
+			PageSize: corev1.NewOptInt32(10),
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)

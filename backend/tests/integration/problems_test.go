@@ -57,8 +57,8 @@ func (s *IntegrationTestSuite) TestProblems() {
 	// 4. List Problems
 	s.Run("ListProblems", func() {
 		resp, err := s.client.ListProblems(withTestUser(s.ctx, admin.Id), corev1.ListProblemsParams{
-			Page:     1,
-			PageSize: 10,
+			Page:     corev1.NewOptInt32(1),
+			PageSize: corev1.NewOptInt32(10),
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)

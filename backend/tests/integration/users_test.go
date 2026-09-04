@@ -29,14 +29,13 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 	var imgID uuid.UUID
 	s.Run("UploadAvatar", func() {
 		resp, err := s.client.UploadAvatar(withTestUser(s.ctx, user.Id), &corev1.UploadAvatarReq{
-			Avatar: corev1.NewOptMultipartFile(file),
+			Avatar: file,
 		}, corev1.UploadAvatarParams{
 			Username: user.Username,
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
-		s.Require().True(resp.ImgId.IsSet())
-		imgID = resp.ImgId.Value
+		imgID = resp.ImgId
 		s.NotEmpty(imgID.String())
 	})
 
@@ -143,8 +142,8 @@ func (s *IntegrationTestSuite) TestUsers() {
 		search := searchPrefix
 
 		resp, err := s.client.ListUsers(withTestUser(s.ctx, user1.Id), corev1.ListUsersParams{
-			Page:     1,
-			PageSize: 10,
+			Page:     corev1.NewOptInt32(1),
+			PageSize: corev1.NewOptInt32(10),
 			Search:   corev1.NewOptString(search),
 		})
 		s.Require().NoError(err)
