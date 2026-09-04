@@ -107,6 +107,24 @@ When working with the backend codebase, adhere strictly to the following rules:
 1. **Use `task` instead of `go-task`**
    - Always invoke Task commands as `task` (e.g., `task build`, `task test`). Do not use `go-task`.
 
+## Git & Commit Guidelines
+
+1. **Conventional Commits Format**
+   - Format: `<type>(<scope>): <subject>` or `<type>: <subject>`
+   - Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+   - Scope should be lowercase (e.g., `backend`, `frontend`, `contracts`, `tooling`, `ci`, `auth`).
+   - Do NOT end the subject line with a period (`.`).
+
+2. **Subject & PR Title Length Limit (Max 65 Chars)**
+   - The first line (subject / PR title) MUST NOT exceed **65 characters**.
+   - GitHub web UI truncates commit messages beyond ~65-72 characters in table views and adds ` (#<pr>)` on squash merges.
+   - Keep the subject line concise and punchy.
+
+3. **Separation of Header and Body**
+   - Do NOT cram multiple changes or full changelogs into the subject line.
+   - Leave the second line empty.
+   - Put detailed descriptions, rationale, and bullet lists in the commit **body** or PR description.
+
 ---
 
 ## Tags

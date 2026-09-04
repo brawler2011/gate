@@ -10,3 +10,8 @@ pre-commit:
     frontend-lint:
       glob: "frontend/**/*.{ts,tsx,js,jsx}"
       run: task fe:lint
+
+commit-msg:
+  commands:
+    validate-commit-msg:
+      run: task commit:validate -- {1}
