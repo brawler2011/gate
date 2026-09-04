@@ -13,7 +13,7 @@ func TestValidator_Valid(t *testing.T) {
 	validContent := `---
 id: TASK-001
 title: "Implement Lefthook integration"
-status: ready
+status: todo
 type: feat
 description: "Integrate lefthook for automated pre-commit task checks"
 priority: high
@@ -73,7 +73,7 @@ func TestValidator_InvalidSchema(t *testing.T) {
 			file: "TASK-001.md",
 			content: `---
 id: TASK-001
-status: ready
+status: todo
 type: feat
 description: "Valid description here"
 created_at: 2026-09-04
@@ -92,7 +92,7 @@ Some context
 			content: `---
 id: TASK-1
 title: "Valid title"
-status: ready
+status: todo
 type: feat
 description: "Valid description here"
 created_at: 2026-09-04
@@ -125,12 +125,69 @@ Some context
 `,
 		},
 		{
-			name: "short description",
+			name: "deprecated ready status",
 			file: "TASK-001.md",
 			content: `---
 id: TASK-001
 title: "Valid title"
 status: ready
+type: feat
+description: "Valid description here"
+created_at: 2026-09-04
+---
+
+## Context
+Some context
+
+## Acceptance Criteria
+- [ ] Criterion
+`,
+		},
+		{
+			name: "deprecated in_progress status",
+			file: "TASK-001.md",
+			content: `---
+id: TASK-001
+title: "Valid title"
+status: in_progress
+type: feat
+description: "Valid description here"
+created_at: 2026-09-04
+---
+
+## Context
+Some context
+
+## Acceptance Criteria
+- [ ] Criterion
+`,
+		},
+		{
+			name: "deprecated review status",
+			file: "TASK-001.md",
+			content: `---
+id: TASK-001
+title: "Valid title"
+status: review
+type: feat
+description: "Valid description here"
+created_at: 2026-09-04
+---
+
+## Context
+Some context
+
+## Acceptance Criteria
+- [ ] Criterion
+`,
+		},
+		{
+			name: "short description",
+			file: "TASK-001.md",
+			content: `---
+id: TASK-001
+title: "Valid title"
+status: todo
 type: feat
 description: "Too short"
 created_at: 2026-09-04
@@ -164,7 +221,7 @@ func TestValidator_FilenameMismatch(t *testing.T) {
 	content := `---
 id: TASK-001
 title: "Valid title"
-status: ready
+status: todo
 type: feat
 description: "Valid description here"
 created_at: 2026-09-04
@@ -198,7 +255,7 @@ func TestValidator_MissingSections(t *testing.T) {
 			content: `---
 id: TASK-001
 title: "Valid title"
-status: ready
+status: todo
 type: feat
 description: "Valid description here"
 created_at: 2026-09-04
@@ -213,7 +270,7 @@ created_at: 2026-09-04
 			content: `---
 id: TASK-001
 title: "Valid title"
-status: ready
+status: todo
 type: feat
 description: "Valid description here"
 created_at: 2026-09-04
@@ -230,7 +287,7 @@ created_at: 2026-09-04
 			content: `---
 id: TASK-001
 title: "Valid title"
-status: ready
+status: todo
 type: feat
 description: "Valid description here"
 created_at: 2026-09-04
@@ -245,7 +302,7 @@ Some valid context.
 			content: `---
 id: TASK-001
 title: "Valid title"
-status: ready
+status: todo
 type: feat
 description: "Valid description here"
 created_at: 2026-09-04
@@ -269,3 +326,102 @@ Just some text without check boxes
 		})
 	}
 }
+
+func TestValidator_DoneStatusAndLifecycle(t *testing.T) {
+	v, err := NewValidator()
+	if err != nil {
+		t.Fatalf("failed to create validator: %v", err)
+	}
+
+	t.Run("valid done task with all criteria completed", func(t *testing.T) {
+		content := `---
+id: TASK-001
+title: "Valid completed task"
+status: done
+type: feat
+description: "Everything in this task was verified and completed"
+created_at: 2026-09-04
+---
+
+## Context
+Task context here.
+
+## Acceptance Criteria
+- [x] Criterion 1
+- [X] Criterion 2
+
+## Implementation Notes
+Notes go here.
+`
+		if err := v.ValidateContent("TASK-001.md", []byte(content)); err != nil {
+			t.Errorf("expected valid done task, got error: %v", err)
+		}
+	})
+
+	t.Run("invalid done task with unchecked criteria", func(t *testing.T) {
+		content := `---
+id: TASK-001
+title: "Incomplete done task"
+status: done
+type: feat
+description: "Task marked done but has unfinished items"
+created_at: 2026-09-04
+---
+
+## Context
+Task context here.
+
+## Acceptance Criteria
+- [x] Done item
+- [ ] Still incomplete item
+`
+		err := v.ValidateContent("TASK-001.md", []byte(content))
+		if err == nil {
+			t.Errorf("expected error for done task with unchecked item, got nil")
+		}
+	})
+
+	t.Run("valid todo task with unchecked criteria", func(t *testing.T) {
+		content := `---
+id: TASK-001
+title: "Todo task"
+status: todo
+type: feat
+description: "Task ready to be worked on"
+created_at: 2026-09-04
+---
+
+## Context
+Task context here.
+
+## Acceptance Criteria
+- [ ] Not yet started
+- [x] Pre-completed requirement
+`
+		if err := v.ValidateContent("TASK-001.md", []byte(content)); err != nil {
+			t.Errorf("expected valid todo task, got error: %v", err)
+		}
+	})
+
+	t.Run("valid draft task", func(t *testing.T) {
+		content := `---
+id: TASK-001
+title: "Draft task"
+status: draft
+type: feat
+description: "Draft task undergoing discussion"
+created_at: 2026-09-04
+---
+
+## Context
+Initial draft idea.
+
+## Acceptance Criteria
+- [ ] Preliminary idea
+`
+		if err := v.ValidateContent("TASK-001.md", []byte(content)); err != nil {
+			t.Errorf("expected valid draft task, got error: %v", err)
+		}
+	})
+}
+

@@ -107,6 +107,25 @@ When working with the backend codebase, adhere strictly to the following rules:
 1. **Use `task` instead of `go-task`**
    - Always invoke Task commands as `task` (e.g., `task build`, `task test`). Do not use `go-task`.
 
+---
+
+## Task Specification Guidelines (.tasks/)
+
+When managing or working with tasks in `.tasks/`:
+
+1. **Task Lifecycle: `draft` -> `todo` -> `done`**
+   - `draft`: Task definition is being formulated or under discussion. Not ready for execution.
+   - `todo`: Task specification is complete with clear context and criteria. Ready for development.
+   - `done`: All acceptance criteria are fulfilled and verified.
+   - **No intermediate states**: Do NOT use `in_progress` or `review`. Development and review states are tracked via Git branches and Pull Requests.
+
+2. **Definition of Done Enforcement**
+   - When marking `status: done`, ALL items in `## Acceptance Criteria` MUST be marked as completed (`- [x]`).
+   - If any criteria remain unchecked (`- [ ]`), validation will fail.
+
+3. **Validation and Pre-Commit**
+   - Always ensure modified tasks pass `task tasks:validate` before committing.
+
 ## Git & Commit Guidelines
 
 1. **Conventional Commits Format**
