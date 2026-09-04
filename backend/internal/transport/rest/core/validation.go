@@ -12,19 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-func isLengthBetween(s string, min, max int) bool {
-	length := utf8.RuneCountInString(s)
-	return length >= min && length <= max
-}
-
-const (
-	minPage         = 1
-	minPageSize     = 1
-	maxPageSize     = 100
-	maxSearchLength = 50
-	maxArchiveSize  = 10 * 1024 * 1024 // 10 MB
-)
-
 var (
 	contestLoginRegex     = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 	reservedContestLogins = map[string]struct{}{
@@ -57,18 +44,18 @@ func validateContestLogin(login string) error {
 	return nil
 }
 
-func validateCreateContestParams(params corev1.CreateContestParams) error {
-	if params.Title == "" {
+func validateCreateContestParams(title string, login corev1.OptString) error {
+	if title == "" {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
 	}
 
-	titleLength := utf8.RuneCountInString(params.Title)
+	titleLength := utf8.RuneCountInString(title)
 	if titleLength < 3 || titleLength > 64 {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "title must be between 3 and 64 characters")
 	}
 
-	if params.Login != nil && *params.Login != "" {
-		if err := validateContestLogin(*params.Login); err != nil {
+	if login.IsSet() && login.Value != "" {
+		if err := validateContestLogin(login.Value); err != nil {
 			return err
 		}
 	}
@@ -89,66 +76,56 @@ func checkLength(s string, min, max int) bool {
 	return length >= min && length <= max
 }
 
-func validateUpdateContestRequest(params corev1.UpdateContestRequestModel) error {
-	if params.Login != nil {
-		if err := validateContestLogin(*params.Login); err != nil {
+func validateUpdateContestRequest(params *corev1.UpdateContestRequestModel) error {
+	if params == nil {
+		return nil
+	}
+
+	if params.Login.IsSet() {
+		if err := validateContestLogin(params.Login.Value); err != nil {
 			return err
 		}
 	}
 
-	if params.Title != nil && !checkLength(*params.Title, 3, 64) {
+	if params.Title.IsSet() && !checkLength(params.Title.Value, 3, 64) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "title must be between 3 and 64 characters")
 	}
 
-	if params.Description != nil && !checkLength(*params.Description, 0, 2048) {
+	if params.Description.IsSet() && !checkLength(params.Description.Value, 0, 2048) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "description length must be less than 2048 characters")
 	}
 
-	if params.Visibility != nil && !publicOrPrivate(*params.Visibility) {
+	if params.Visibility.IsSet() && !publicOrPrivate(params.Visibility.Value) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid visibility value")
 	}
 
-	if params.MonitorScope != nil && !checkScope(*params.MonitorScope) {
+	if params.MonitorScope.IsSet() && !checkScope(params.MonitorScope.Value) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid monitor scope value")
 	}
 
-	if params.SubmissionsListScope != nil && !checkScope(*params.SubmissionsListScope) {
+	if params.SubmissionsListScope.IsSet() && !checkScope(params.SubmissionsListScope.Value) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid submissions list scope value")
 	}
 
-	if params.SubmissionsReviewScope != nil && !checkScope(*params.SubmissionsReviewScope) {
+	if params.SubmissionsReviewScope.IsSet() && !checkScope(params.SubmissionsReviewScope.Value) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid submissions review scope value")
 	}
 
-	if params.StartTime != nil && params.EndTime != nil && !params.EndTime.After(*params.StartTime) {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "end_time must be after start_time")
-	}
-
-	if params.FreezeDurationMinutes != nil && *params.FreezeDurationMinutes < 0 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "freeze_duration_minutes must be non-negative")
-	}
-
-	if params.FreezeStatus != nil {
-		status := string(*params.FreezeStatus)
-		if status != models.FreezeStatusAuto && status != models.FreezeStatusFrozen && status != models.FreezeStatusUnfrozen {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid freeze_status value")
+	if params.StartTime.IsSet() && params.EndTime.IsSet() && !params.EndTime.Null && !params.StartTime.Null {
+		if !params.EndTime.Value.After(params.StartTime.Value) {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "end_time must be after start_time")
 		}
 	}
 
-	return nil
-}
-
-func validateListContestsParams(page, pageSize int32, search *string) error {
-	if page < 1 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "page must be greater than 0")
+	if params.FreezeDurationMinutes.IsSet() && !params.FreezeDurationMinutes.Null && params.FreezeDurationMinutes.Value < 0 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "freeze_duration_minutes must be non-negative")
 	}
 
-	if pageSize < 1 || pageSize > 100 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "page size must be between 1 and 100")
-	}
-
-	if search != nil && !checkLength(*search, 0, 64) {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "search length must be less than 64 characters")
+	if params.FreezeStatus.IsSet() {
+		status := string(params.FreezeStatus.Value)
+		if status != models.FreezeStatusAuto && status != models.FreezeStatusFrozen && status != models.FreezeStatusUnfrozen {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid freeze_status value")
+		}
 	}
 
 	return nil
@@ -158,79 +135,7 @@ const (
 	maxSolutionSize int64 = 10 * 1024 * 1024 // 10 MB
 )
 
-func badInput(msg string) error {
-	return pkg.Wrap(pkg.ErrBadInput, nil, msg)
-}
-
-var (
-	badPageSize = badInput(
-		fmt.Sprintf("page_size parameter must be between %d and %d", minPageSize, maxPageSize),
-	)
-	badPage = badInput(
-		fmt.Sprintf("page parameter must be >= %d", minPage),
-	)
-	badSearch = badInput(
-		fmt.Sprintf("search parameter length must be between 0 and %d characters", maxSearchLength),
-	)
-	badRole = badInput(
-		"role parameter must be either 'user' or 'admin'",
-	)
-)
-
-func validateGetUsersParams(params corev1.ListUsersParams) (*models.UsersListFilter, error) {
-	filter := &models.UsersListFilter{
-		Page:     params.Page,
-		PageSize: params.PageSize,
-		Search:   "",
-		Role:     "",
-	}
-
-	if params.PageSize < minPageSize || params.PageSize > maxPageSize {
-		return nil, badPageSize
-	}
-
-	if params.Page < minPage {
-		return nil, badPage
-	}
-
-	if params.Search != nil {
-		if !pkg.IsLengthBetween(*params.Search, 0, maxSearchLength) {
-			return nil, badSearch
-		}
-		filter.Search = *params.Search
-	}
-
-	if params.Role != nil {
-		if !isUserOrAdmin(*params.Role) {
-			return nil, badRole
-		}
-		filter.Role = *params.Role
-	}
-
-	return filter, nil
-}
-
-func isUserOrAdmin(role string) bool {
-	return role == string(models.UserRoleUser) || role == string(models.UserRoleAdmin)
-}
-
 // Organizations validation
-
-func validateListOrganizationsParams(page, pageSize int32, search *string) error {
-	if page < 1 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "page must be greater than 0")
-	}
-
-	if pageSize < 1 || pageSize > 100 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "page size must be between 1 and 100")
-	}
-
-	if search != nil && !checkLength(*search, 0, 64) {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "search length must be less than 64 characters")
-	}
-
-	return nil
-}
 
 var (
 	orgLoginRegex     = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$`)
@@ -283,18 +188,22 @@ func validateCreateOrganizationParams(name string) error {
 	return nil
 }
 
-func validateUpdateOrganizationRequest(params corev1.UpdateOrganizationRequestModel) error {
-	if params.Login != nil {
-		if err := validateOrgLogin(*params.Login); err != nil {
+func validateUpdateOrganizationRequest(params *corev1.UpdateOrganizationRequestModel) error {
+	if params == nil {
+		return nil
+	}
+
+	if params.Login.IsSet() {
+		if err := validateOrgLogin(params.Login.Value); err != nil {
 			return err
 		}
 	}
 
-	if params.Name != nil && !checkLength(*params.Name, 3, 64) {
+	if params.Name.IsSet() && !checkLength(params.Name.Value, 3, 64) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "name must be between 3 and 64 characters")
 	}
 
-	if params.Description != nil && !checkLength(*params.Description, 0, 2048) {
+	if params.Description.IsSet() && !checkLength(params.Description.Value, 0, 2048) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "description length must be less than 2048 characters")
 	}
 
@@ -309,22 +218,6 @@ func validateOrganizationRole(role string) bool {
 
 // Teams validation
 
-func validateListTeamsParams(page, pageSize int32, search *string) error {
-	if page < 1 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "page must be greater than 0")
-	}
-
-	if pageSize < 1 || pageSize > 100 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "page size must be between 1 and 100")
-	}
-
-	if search != nil && !checkLength(*search, 0, 64) {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "search length must be less than 64 characters")
-	}
-
-	return nil
-}
-
 func validateCreateTeamRequest(name string, organizationID uuid.UUID) error {
 	if !checkLength(name, 3, 64) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "name must be between 3 and 64 characters")
@@ -337,12 +230,16 @@ func validateCreateTeamRequest(name string, organizationID uuid.UUID) error {
 	return nil
 }
 
-func validateUpdateTeamRequest(params corev1.UpdateTeamRequestModel) error {
-	if params.Name != nil && !checkLength(*params.Name, 3, 64) {
+func validateUpdateTeamRequest(params *corev1.UpdateTeamRequestModel) error {
+	if params == nil {
+		return nil
+	}
+
+	if params.Name.IsSet() && !checkLength(params.Name.Value, 3, 64) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "name must be between 3 and 64 characters")
 	}
 
-	if params.Description != nil && !checkLength(*params.Description, 0, 2048) {
+	if params.Description.IsSet() && !checkLength(params.Description.Value, 0, 2048) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "description length must be less than 2048 characters")
 	}
 

@@ -53,14 +53,14 @@ func (uc *AvatarsUseCase) UploadAvatar(
 	filename string,
 	contentType string,
 ) (string, error) {
-	username = strings.TrimPrefix(username, "@")
+	username = strings.TrimPrefix(username, "@") // FIXME: зачем?? Как это вообще возможно?
 	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return "", fmt.Errorf("failed to get user: %w", err)
 	}
 
 	// Validate file extension
-	ext := strings.ToLower(filepath.Ext(filename))
+	ext := strings.ToLower(filepath.Ext(filename)) // FIXME: че? почему мы по filename определяем контент? что насчёт contentType???
 	allowedExts := map[string]bool{
 		".jpg":  true,
 		".jpeg": true,
@@ -74,7 +74,7 @@ func (uc *AvatarsUseCase) UploadAvatar(
 
 	// Generate unique image ID
 	imgID := uuid.New().String()
-	key := imgID
+	key := imgID // FIXME: зачем просто так переменную копировать?
 
 	// Upload to storage
 	err = uc.storage.UploadFile(ctx, uc.avatarBucket, key, fileReader, contentType)
@@ -89,7 +89,7 @@ func (uc *AvatarsUseCase) UploadAvatar(
 	})
 	if err != nil {
 		// Try to clean up uploaded file
-		_ = uc.storage.DeleteFile(ctx, uc.avatarBucket, key)
+		_ = uc.storage.DeleteFile(ctx, uc.avatarBucket, key) // FIXME: dont ignore, join it
 		return "", fmt.Errorf("failed to update user avatar: %w", err)
 	}
 
@@ -98,12 +98,14 @@ func (uc *AvatarsUseCase) UploadAvatar(
 
 // DeleteAvatar deletes a user's avatar from storage and updates the user record
 func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) error {
-	username = strings.TrimPrefix(username, "@")
+	username = strings.TrimPrefix(username, "@") // FIXME: блядь что??
 	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return fmt.Errorf("failed to get user: %w", err)
 	}
 
+	// FIXME: если в схеме бд пустая строка и null эквивалентны по логике, то значение стоит сделать NOT NULL
+	// FIXME: ну и название поля оч кривое, это же не url, а id
 	if user.AvatarUrl == nil || *user.AvatarUrl == "" {
 		return fmt.Errorf("user has no avatar")
 	}
@@ -129,12 +131,13 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) err
 
 // GetAvatar retrieves a user's avatar from storage
 func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNoneMatch *string) (AvatarImage, error) {
-	username = strings.TrimPrefix(username, "@")
+	username = strings.TrimPrefix(username, "@") // FIXME: бред!
 	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return AvatarImage{}, fmt.Errorf("failed to get user: %w", err)
 	}
 
+	// FIXME: invariant: null eq ""
 	if user.AvatarUrl == nil || *user.AvatarUrl == "" {
 		return AvatarImage{}, storage.ErrNotFound
 	}

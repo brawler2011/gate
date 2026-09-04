@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/repository/pg"
 	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/google/uuid"
-	"github.com/oapi-codegen/runtime/types"
 )
 
 func (s *IntegrationTestSuite) TestAuth() {
@@ -22,48 +20,47 @@ func (s *IntegrationTestSuite) TestAuth() {
 		email := username + "@example.com"
 		password := "password123"
 
-		resp, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+		resp, err := s.client.Register(s.ctx, &corev1.RegisterRequestModel{
 			Username: username,
-			Email:    types.Email(email),
+			Email:    email,
 			Password: password,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Require().NotNil(resp.JSON200)
-		s.Equal(username, resp.JSON200.User.Username)
-		s.Require().NotNil(resp.JSON200.User.Email)
-		s.Equal(email, *resp.JSON200.User.Email)
+		s.Require().NotNil(resp)
+		s.Equal(username, resp.User.Username)
+		s.Require().True(resp.User.Email.IsSet())
+		s.Equal(email, resp.User.Email.Value)
 
 		// Test Unverified Re-Registration (should succeed and update token/email)
-		respDup, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+		respDup, err := s.client.Register(s.ctx, &corev1.RegisterRequestModel{
 			Username: username,
-			Email:    types.Email(email),
+			Email:    email,
 			Password: "newpassword123",
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, respDup.StatusCode())
+		s.Require().NotNil(respDup)
 
 		// Mark email as verified
-		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", resp.JSON200.User.Id)
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", resp.User.ID)
 		s.Require().NoError(err)
 
 		// Test Duplicate Registration after verification (should fail with conflict)
-		respVerifiedDup, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+		_, err = s.client.Register(s.ctx, &corev1.RegisterRequestModel{
 			Username: username,
-			Email:    types.Email(email),
+			Email:    email,
 			Password: password,
 		})
-		s.Require().NoError(err)
-		s.Equal(http.StatusConflict, respVerifiedDup.StatusCode())
+		s.Require().Error(err)
+		s.Equal(http.StatusConflict, s.getStatusCode(err))
 
 		// Test short password validation (min 8 characters)
-		respShort, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+		_, err = s.client.Register(s.ctx, &corev1.RegisterRequestModel{
 			Username: "shortpassuser",
-			Email:    types.Email("short@example.com"),
+			Email:    "short@example.com",
 			Password: "short",
 		})
-		s.Require().NoError(err)
-		s.Equal(http.StatusBadRequest, respShort.StatusCode())
+		s.Require().Error(err)
+		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
 	})
 
 	// 2. Login
@@ -73,39 +70,37 @@ func (s *IntegrationTestSuite) TestAuth() {
 		password := "securepassword"
 
 		// First register the user
-		regResp, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+		regResp, err := s.client.Register(s.ctx, &corev1.RegisterRequestModel{
 			Username: username,
-			Email:    types.Email(email),
+			Email:    email,
 			Password: password,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, regResp.StatusCode())
 
 		// Unverified user login should fail with Bad Request
-		unverifiedLoginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+		_, err = s.client.Login(s.ctx, &corev1.LoginRequestModel{
 			Identifier: username,
 			Password:   password,
 		})
-		s.Require().NoError(err)
-		s.Equal(http.StatusBadRequest, unverifiedLoginResp.StatusCode())
+		s.Require().Error(err)
+		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
 
 		// Mark email as verified
-		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.JSON200.User.Id)
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.User.ID)
 		s.Require().NoError(err)
 
 		// Test successful Login via Username
-		loginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+		loginResp, err := s.client.Login(s.ctx, &corev1.LoginRequestModel{
 			Identifier: username,
 			Password:   password,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, loginResp.StatusCode())
-		s.Equal(username, loginResp.JSON200.User.Username)
-		s.Require().NotNil(loginResp.JSON200.SessionId)
-		s.NotEmpty(loginResp.JSON200.SessionId)
+		s.Equal(username, loginResp.User.Username)
+		s.Require().True(loginResp.SessionID.IsSet())
+		s.NotEmpty(loginResp.SessionID.Value)
 
 		// Verify cookie is set on the response
-		cookies := loginResp.HTTPResponse.Cookies()
+		cookies := s.transport.lastResponse.Cookies()
 		var sessionCookie *http.Cookie
 		for _, c := range cookies {
 			if c.Name == "session_id" {
@@ -114,32 +109,32 @@ func (s *IntegrationTestSuite) TestAuth() {
 			}
 		}
 		s.Require().NotNil(sessionCookie)
-		s.Equal(loginResp.JSON200.SessionId.String(), sessionCookie.Value)
+		s.Equal(loginResp.SessionID.Value.String(), sessionCookie.Value)
 		s.True(sessionCookie.HttpOnly)
 
 		// Test successful Login via Email
-		loginRespEmail, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+		loginRespEmail, err := s.client.Login(s.ctx, &corev1.LoginRequestModel{
 			Identifier: email,
 			Password:   password,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, loginRespEmail.StatusCode())
+		s.Require().NotNil(loginRespEmail)
 
 		// Test Login with invalid password
-		loginRespFail, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+		_, err = s.client.Login(s.ctx, &corev1.LoginRequestModel{
 			Identifier: username,
 			Password:   "wrongpassword",
 		})
-		s.Require().NoError(err)
-		s.Equal(http.StatusUnauthorized, loginRespFail.StatusCode())
+		s.Require().Error(err)
+		s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
 
 		// Test Login with non-existent user
-		loginRespMissing, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+		_, err = s.client.Login(s.ctx, &corev1.LoginRequestModel{
 			Identifier: "non_existent_user",
 			Password:   password,
 		})
-		s.Require().NoError(err)
-		s.Equal(http.StatusUnauthorized, loginRespMissing.StatusCode())
+		s.Require().Error(err)
+		s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
 	})
 
 	// 3. Logout
@@ -149,41 +144,31 @@ func (s *IntegrationTestSuite) TestAuth() {
 		password := "anotherpassword"
 
 		// Register and verify email
-		regResp, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+		regResp, err := s.client.Register(s.ctx, &corev1.RegisterRequestModel{
 			Username: username,
-			Email:    types.Email(email),
+			Email:    email,
 			Password: password,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, regResp.StatusCode())
 
-		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.JSON200.User.Id)
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.User.ID)
 		s.Require().NoError(err)
 
 		// Login to get a session
-		loginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+		loginResp, err := s.client.Login(s.ctx, &corev1.LoginRequestModel{
 			Identifier: username,
 			Password:   password,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, loginResp.StatusCode())
-		s.Require().NotNil(loginResp.JSON200.SessionId)
-		sessionID := *loginResp.JSON200.SessionId
+		s.Require().True(loginResp.SessionID.IsSet())
+		sessionID := loginResp.SessionID.Value
 
 		// Logout
-		logoutResp, err := s.client.LogoutWithResponse(s.ctx, func(ctx context.Context, req *http.Request) error {
-			// Attach session cookie
-			req.AddCookie(&http.Cookie{
-				Name:  "session_id",
-				Value: sessionID.String(),
-			})
-			return nil
-		})
+		err = s.client.Logout(withTestCookie(s.ctx, sessionID))
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, logoutResp.StatusCode())
 
 		// Verify cookie is cleared on response (MaxAge < 0 or empty value)
-		cookies := logoutResp.HTTPResponse.Cookies()
+		cookies := s.transport.lastResponse.Cookies()
 		var sessionCookie *http.Cookie
 		for _, c := range cookies {
 			if c.Name == "session_id" {
@@ -201,25 +186,23 @@ func (s *IntegrationTestSuite) TestAuth() {
 		email := username + "@example.com"
 		password := "slidingpass"
 
-		regResp, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+		regResp, err := s.client.Register(s.ctx, &corev1.RegisterRequestModel{
 			Username: username,
-			Email:    types.Email(email),
+			Email:    email,
 			Password: password,
 		})
 		s.Require().NoError(err)
-		s.Require().Equal(http.StatusOK, regResp.StatusCode())
 
-		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.JSON200.User.Id)
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.User.ID)
 		s.Require().NoError(err)
 
-		loginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+		loginResp, err := s.client.Login(s.ctx, &corev1.LoginRequestModel{
 			Identifier: username,
 			Password:   password,
 		})
 		s.Require().NoError(err)
-		s.Require().Equal(http.StatusOK, loginResp.StatusCode())
-		s.Require().NotNil(loginResp.JSON200.SessionId)
-		sessionID := *loginResp.JSON200.SessionId
+		s.Require().True(loginResp.SessionID.IsSet())
+		sessionID := loginResp.SessionID.Value
 
 		// Directly query DB to get the initial expires_at
 		var initialExpiry time.Time
@@ -254,26 +237,24 @@ func (s *IntegrationTestSuite) TestAuth() {
 		email := username + "@example.com"
 		password := "lifetimespass"
 
-		regResp, err := s.client.RegisterWithResponse(s.ctx, corev1.RegisterJSONRequestBody{
+		regResp, err := s.client.Register(s.ctx, &corev1.RegisterRequestModel{
 			Username: username,
-			Email:    types.Email(email),
+			Email:    email,
 			Password: password,
 		})
 		s.Require().NoError(err)
-		s.Require().Equal(http.StatusOK, regResp.StatusCode())
 
-		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.JSON200.User.Id)
+		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.User.ID)
 		s.Require().NoError(err)
 
-		loginResp, err := s.client.LoginWithResponse(s.ctx, corev1.LoginJSONRequestBody{
+		loginResp, err := s.client.Login(s.ctx, &corev1.LoginRequestModel{
 			Identifier: username,
 			Password:   password,
 		})
 		s.Require().NoError(err)
-		s.Require().Equal(http.StatusOK, loginResp.StatusCode())
-		s.Require().NotNil(loginResp.JSON200.SessionId)
-		sessionID := *loginResp.JSON200.SessionId
-		userID := loginResp.JSON200.User.Id
+		s.Require().True(loginResp.SessionID.IsSet())
+		sessionID := loginResp.SessionID.Value
+		userID := regResp.User.ID
 
 		authRepo := pg.NewAuthRepo(s.dbPool)
 		txManager := pg.NewTransactor(s.dbPool)

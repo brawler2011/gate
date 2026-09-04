@@ -4,9 +4,6 @@
 package integration
 
 import (
-	"context"
-	"net/http"
-
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
@@ -42,19 +39,15 @@ func (s *IntegrationTestSuite) TestListContests() {
 	s.Require().NoError(err)
 
 	// 5. Make Request
-	resp, err := s.client.ListPublicContestsWithResponse(s.ctx, &corev1.ListPublicContestsParams{
+	resp, err := s.client.ListPublicContests(withTestUser(s.ctx, user.Id), corev1.ListPublicContestsParams{
 		Page:     1,
 		PageSize: 10,
-	}, func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-Test-User-ID", user.Id.String())
-		return nil
 	})
 	s.Require().NoError(err)
 
 	// 6. Assert Response
-	s.Equal(http.StatusOK, resp.StatusCode())
-	s.NotNil(resp.JSON200)
-	s.Len(resp.JSON200.Contests, 1)
-	s.Equal(contestID, resp.JSON200.Contests[0].Id)
-	s.Equal("Test Contest", resp.JSON200.Contests[0].Title)
+	s.NotNil(resp)
+	s.Len(resp.Contests, 1)
+	s.Equal(contestID, resp.Contests[0].ID)
+	s.Equal("Test Contest", resp.Contests[0].Title)
 }

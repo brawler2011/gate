@@ -10,26 +10,26 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *CoreServer) GetUser(ctx context.Context, request corev1.GetUserRequestObject) (corev1.GetUserResponseObject, error) {
-	user, err := h.usersUC.GetUserByUsername(ctx, request.Username)
+func (h *CoreServer) GetUser(ctx context.Context, params corev1.GetUserParams) (*corev1.GetUserResponseModel, error) {
+	user, err := h.usersUC.GetUserByUsername(ctx, params.Username)
 	if err != nil {
 		return nil, err
 	}
 
-	return corev1.GetUser200JSONResponse{
+	return &corev1.GetUserResponseModel{
 		User: userDTO(user),
 	}, nil
 }
 
-func (h *CoreServer) GetMe(ctx context.Context, request corev1.GetMeRequestObject) (corev1.GetMeResponseObject, error) {
+func (h *CoreServer) GetMe(ctx context.Context) (*corev1.GetUserResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	return corev1.GetMe200JSONResponse{
+	return &corev1.GetUserResponseModel{
 		User: userDTO(user),
 	}, nil
 }
 
-func (h *CoreServer) GetMyDashboard(ctx context.Context, request corev1.GetMyDashboardRequestObject) (corev1.GetMyDashboardResponseObject, error) {
+func (h *CoreServer) GetMyDashboard(ctx context.Context) (*corev1.GetUserDashboardResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
 	contests, err := h.contestsUC.ListDashboardContests(ctx, user.Id, 5)
@@ -42,97 +42,146 @@ func (h *CoreServer) GetMyDashboard(ctx context.Context, request corev1.GetMyDas
 		return nil, err
 	}
 
-	return corev1.GetMyDashboard200JSONResponse(DashboardResponseDTO(contests, problems)), nil
+	resp := DashboardResponseDTO(contests, problems)
+	return &resp, nil
 }
 
-func (h *CoreServer) ListUsers(ctx context.Context, request corev1.ListUsersRequestObject) (corev1.ListUsersResponseObject, error) {
-	filter, err := validateGetUsersParams(request.Params)
+func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParams) (*corev1.ListUsersResponseModel, error) {
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
+	search := params.Search.Or("")
+	role := params.Role.Or("")
+
+	filter := models.UsersListFilter{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+		Role:     role,
+	}
+
+	users, err := h.usersUC.ListUsers(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	users, err := h.usersUC.ListUsers(ctx, *filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return corev1.ListUsers200JSONResponse(usersListDTO(&users)), nil
+	resp := usersListDTO(&users)
+	return &resp, nil
 }
 
-func (h *CoreServer) ListUserSubmissions(ctx context.Context, request corev1.ListUserSubmissionsRequestObject) (corev1.ListUserSubmissionsResponseObject, error) {
-	user, err := h.usersUC.GetUserByUsername(ctx, request.Username)
+func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.ListUserSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
+	user, err := h.usersUC.GetUserByUsername(ctx, params.Username)
 	if err != nil {
 		return nil, err
 	}
 
-	filter := listUserSubmissionsParamsToFilter(user.Id, request.Params)
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
+
+	var contestID *uuid.UUID
+	if params.ContestId.IsSet() {
+		contestID = &params.ContestId.Value
+	}
+
+	var problemID *uuid.UUID
+	if params.ProblemId.IsSet() {
+		problemID = &params.ProblemId.Value
+	}
+
+	var state *models.State
+	if params.State.IsSet() {
+		s := models.State(params.State.Value)
+		state = &s
+	}
+
+	var order *int32
+	if params.SortOrder.IsSet() {
+		var orderVal int32
+		if params.SortOrder.Value == corev1.ListUserSubmissionsSortOrderDesc {
+			orderVal = -1
+		} else {
+			orderVal = 0
+		}
+		order = &orderVal
+	}
+
+	filter := models.SubmissionsFilter{
+		ContestId: contestID,
+		Page:      page,
+		PageSize:  pageSize,
+		ProblemId: problemID,
+		UserId:    &user.Id,
+		Order:     order,
+		State:     state,
+	}
 
 	submissions, err := h.submissionsUC.ListSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	return corev1.ListUserSubmissions200JSONResponse(*ListSolutionsResponseDTO(submissions)), nil
+	return SubmissionsListToDTO(submissions), nil
 }
 
-func (h *CoreServer) UpdateUser(ctx context.Context, request corev1.UpdateUserRequestObject) (corev1.UpdateUserResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
+func (h *CoreServer) UpdateUser(ctx context.Context, req *corev1.UpdateUserRequestModel, params corev1.UpdateUserParams) error {
+	if req == nil {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
 	}
 
-	user, err := h.usersUC.GetUserByUsername(ctx, request.Username)
+	user, err := h.usersUC.GetUserByUsername(ctx, params.Username)
 	if err != nil {
-		return nil, err
+		return err
+	}
+
+	var reqUsername, reqEmail, reqRole *string
+	if req.Username.IsSet() {
+		reqUsername = &req.Username.Value
+	}
+	if req.Email.IsSet() {
+		reqEmail = &req.Email.Value
+	}
+	if req.Role.IsSet() {
+		r := string(req.Role.Value)
+		reqRole = &r
 	}
 
 	input := models.UpdateUserInput{
 		Id:       user.Id,
-		Username: request.Body.Username,
-		Email:    request.Body.Email,
-	}
-	if request.Body.Role != nil {
-		r := string(*request.Body.Role)
-		input.Role = &r
+		Username: reqUsername,
+		Email:    reqEmail,
+		Role:     reqRole,
 	}
 
 	err = h.usersUC.UpdateUser(ctx, input)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.UpdateUser200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, request corev1.ClaimTemporaryUserRequestObject) (corev1.ClaimTemporaryUserResponseObject, error) {
-	if request.Body == nil {
+func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, req *corev1.ClaimTemporaryUserRequestModel) (*corev1.ClaimTemporaryUserResponseModel, error) {
+	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
 	}
 
 	user := middleware.GetUser(ctx)
 
 	result, err := h.usersUC.ClaimTemporaryUser(ctx, user, models.ClaimTemporaryUserInput{
-		Username: request.Body.Username,
-		Password: request.Body.Password,
+		Username: req.Username,
+		Password: req.Password,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	var contestsGranted *[]uuid.UUID
-	if len(result.ContestsGranted) > 0 {
-		cg := make([]uuid.UUID, len(result.ContestsGranted))
-		copy(cg, result.ContestsGranted)
-		contestsGranted = &cg
-	}
-
-	return corev1.ClaimTemporaryUser200JSONResponse{
-		ClaimedUserId:   result.ClaimedUserID,
+	return &corev1.ClaimTemporaryUserResponseModel{
+		ClaimedUserID:   result.ClaimedUserID,
 		ClaimedUsername: result.ClaimedUsername,
-		ContestsGranted: contestsGranted,
+		ContestsGranted: result.ContestsGranted,
 	}, nil
 }
 
-func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context, request corev1.ListMyClaimedAccountsRequestObject) (corev1.ListMyClaimedAccountsResponseObject, error) {
+func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context) (*corev1.ListClaimedAccountsResponseModel, error) {
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -146,20 +195,20 @@ func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context, request corev1.L
 	items := make([]corev1.ClaimedAccountItem, len(accounts))
 	for i, acc := range accounts {
 		items[i] = corev1.ClaimedAccountItem{
-			Id:        acc.ID,
+			ID:        acc.ID,
 			Username:  acc.Username,
 			ClaimedAt: acc.ClaimedAt,
-			ExpiresAt: acc.ExpiresAt,
+			ExpiresAt: timePtrToOptDateTime(acc.ExpiresAt),
 		}
 	}
 
-	return corev1.ListMyClaimedAccounts200JSONResponse{
+	return &corev1.ListClaimedAccountsResponseModel{
 		Accounts: items,
 	}, nil
 }
 
-func (h *CoreServer) ChangePassword(ctx context.Context, request corev1.ChangePasswordRequestObject) (corev1.ChangePasswordResponseObject, error) {
-	if request.Body == nil {
+func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePasswordRequestModel) (*corev1.AuthResponseModel, error) {
+	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
@@ -168,80 +217,79 @@ func (h *CoreServer) ChangePassword(ctx context.Context, request corev1.ChangePa
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	newSessionID, err := h.authUC.ChangePassword(ctx, user.Id, request.Body.OldPassword, request.Body.NewPassword)
+	newSessionID, err := h.authUC.ChangePassword(ctx, user.Id, req.OldPassword, req.NewPassword)
 	if err != nil {
 		return nil, err
 	}
 
-	return customChangePasswordResponse{
+	middleware.SetSessionCookie(ctx, newSessionID)
+
+	return &corev1.AuthResponseModel{
 		User:      userDTO(user),
-		SessionID: newSessionID,
+		SessionID: corev1.NewOptUUID(newSessionID),
 	}, nil
 }
 
-func (h *CoreServer) RequestEmailChange(ctx context.Context, request corev1.RequestEmailChangeRequestObject) (corev1.RequestEmailChangeResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+func (h *CoreServer) RequestEmailChange(ctx context.Context, req *corev1.RequestEmailChangeRequestModel) error {
+	if req == nil {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	err := h.authUC.RequestEmailChange(ctx, user.Id, request.Body.Password, string(request.Body.NewEmail))
+	err := h.authUC.RequestEmailChange(ctx, user.Id, req.Password, req.NewEmail)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.RequestEmailChange200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) AdminChangeEmail(ctx context.Context, request corev1.AdminChangeEmailRequestObject) (corev1.AdminChangeEmailResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+func (h *CoreServer) AdminChangeEmail(ctx context.Context, req *corev1.AdminChangeEmailRequestModel, params corev1.AdminChangeEmailParams) error {
+	if req == nil {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	withConfirmation := true
-	if request.Body.WithConfirmation != nil {
-		withConfirmation = *request.Body.WithConfirmation
-	}
+	withConfirmation := req.WithConfirmation.Or(true)
 
-	err := h.usersUC.AdminChangeEmail(ctx, request.Username, string(request.Body.Email), withConfirmation)
+	err := h.usersUC.AdminChangeEmail(ctx, params.Username, req.Email, withConfirmation)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.AdminChangeEmail200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) AdminSetPassword(ctx context.Context, request corev1.AdminSetPasswordRequestObject) (corev1.AdminSetPasswordResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+func (h *CoreServer) AdminSetPassword(ctx context.Context, req *corev1.AdminSetPasswordRequestModel, params corev1.AdminSetPasswordParams) error {
+	if req == nil {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	err := h.usersUC.AdminSetPassword(ctx, request.Username, request.Body.Password)
+	err := h.usersUC.AdminSetPassword(ctx, params.Username, req.Password)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.AdminSetPassword200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) AdminSendPasswordReset(ctx context.Context, request corev1.AdminSendPasswordResetRequestObject) (corev1.AdminSendPasswordResetResponseObject, error) {
-	err := h.usersUC.AdminSendPasswordReset(ctx, request.Username)
+func (h *CoreServer) AdminSendPasswordReset(ctx context.Context, params corev1.AdminSendPasswordResetParams) error {
+	err := h.usersUC.AdminSendPasswordReset(ctx, params.Username)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.AdminSendPasswordReset200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) AdminResendVerification(ctx context.Context, request corev1.AdminResendVerificationRequestObject) (corev1.AdminResendVerificationResponseObject, error) {
-	err := h.usersUC.AdminResendVerification(ctx, request.Username)
+func (h *CoreServer) AdminResendVerification(ctx context.Context, params corev1.AdminResendVerificationParams) error {
+	err := h.usersUC.AdminResendVerification(ctx, params.Username)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.AdminResendVerification200Response{}, nil
+	return nil
 }

@@ -6,6 +6,7 @@ package integration
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"io"
 	"log"
 	"log/slog"
@@ -29,6 +30,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/ogen-go/ogen/validate"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
@@ -37,14 +39,36 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+type contextKey string
+
+const (
+	testUserHeaderKey contextKey = "test_user_id"
+	testCookieKey     contextKey = "test_cookie"
+)
+
+func withTestUser(ctx context.Context, userID uuid.UUID) context.Context {
+	return context.WithValue(ctx, testUserHeaderKey, userID.String())
+}
+
+func withTestCookie(ctx context.Context, sessionID uuid.UUID) context.Context {
+	return context.WithValue(ctx, testCookieKey, sessionID.String())
+}
+
+type testSecuritySource struct{}
+
+func (testSecuritySource) CookieAuth(ctx context.Context, operationName corev1.OperationName) (corev1.CookieAuth, error) {
+	return corev1.CookieAuth{}, nil
+}
+
 type IntegrationTestSuite struct {
 	suite.Suite
 	ctx         context.Context
 	pgContainer *postgres.PostgresContainer
 	dbPool      *pgxpool.Pool
 	handler     http.Handler
+	transport   *testTransport
 	testServer  *httptest.Server
-	client      *corev1.ClientWithResponses
+	client      *corev1.Client
 
 	ctrl *gomock.Controller
 
@@ -56,6 +80,17 @@ type IntegrationTestSuite struct {
 	organizationsRepo interfaces.OrganizationsRepo
 	teamsRepo         interfaces.TeamsRepo
 	problemsRepo      *pg.ProblemsRepo
+}
+
+func (s *IntegrationTestSuite) getStatusCode(err error) int {
+	if err == nil {
+		return http.StatusOK
+	}
+	var scErr *validate.UnexpectedStatusCodeError
+	if errors.As(err, &scErr) {
+		return scErr.StatusCode
+	}
+	return 0
 }
 
 func TestIntegrationSuite(t *testing.T) {
@@ -98,7 +133,6 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	err = goose.Up(db, migrationsPath)
 	s.Require().NoError(err)
-
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
@@ -197,39 +231,56 @@ func (s *IntegrationTestSuite) initApp() {
 		nil, // bookletCompiler - not needed for integration tests
 	)
 
-	// Strict Handler
+	// Server setup
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, []corev1.StrictMiddlewareFunc{
-		middleware.AuthzStrictMiddleware(permissionsUC, submissionsUC, s.organizationsRepo, s.contestsRepo),
-	}, corev1.StrictHTTPServerOptions{
-		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		},
-		ResponseErrorHandlerFunc: middleware.ResponseErrorHandler(logger),
-	})
+	secHandler := middleware.NewSecurityHandler()
+	authzMw := middleware.AuthzMiddleware(permissionsUC, submissionsUC, s.organizationsRepo, s.contestsRepo)
+	server, err := corev1.NewServer(
+		coreServer,
+		secHandler,
+		corev1.WithMiddleware(authzMw),
+		corev1.WithErrorHandler(middleware.ResponseErrorHandler(logger)),
+	)
+	s.Require().NoError(err)
 
-	mux := http.NewServeMux()
-	corev1.HandlerFromMux(strictHandler, mux)
+	s.transport = &testTransport{}
+	s.handler = middleware.RequestLoggerMiddleware(logger)(
+		middleware.AuthMiddleware(authUC)(
+			middleware.UsersMiddleware(usersUC)(
+				s.testMiddleware(
+					middleware.ResponseWriterMiddleware(server),
+				),
+			),
+		),
+	)
+	s.transport.handler = s.handler
 
-	// Wrap with test middleware
-	s.handler = s.testMiddleware(mux)
-
-	// Initialize Client
-	var err error
-	s.client, err = corev1.NewClientWithResponses("http://test-server", corev1.WithHTTPClient(&http.Client{
-		Transport: &testTransport{handler: s.handler},
+	s.client, err = corev1.NewClient("http://test-server", testSecuritySource{}, corev1.WithClient(&http.Client{
+		Transport: s.transport,
 	}))
 	s.Require().NoError(err)
 }
 
 type testTransport struct {
-	handler http.Handler
+	handler      http.Handler
+	lastResponse *http.Response
 }
 
 func (t *testTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Body != nil && req.ContentLength == 0 {
+		req.ContentLength = -1
+	}
+	if uid, ok := req.Context().Value(testUserHeaderKey).(string); ok && uid != "" {
+		req.Header.Set("X-Test-User-ID", uid)
+	}
+	if sessionID, ok := req.Context().Value(testCookieKey).(string); ok && sessionID != "" {
+		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+	}
 	w := httptest.NewRecorder()
 	t.handler.ServeHTTP(w, req)
-	return w.Result(), nil
+	resp := w.Result()
+	t.lastResponse = resp
+	return resp, nil
 }
 
 func (s *IntegrationTestSuite) testMiddleware(next http.Handler) http.Handler {

@@ -99,22 +99,21 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockProblems.On("GetProblemById", mock.Anything, problemID).Return(problem, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionManageContest).Return(false, nil)
 
-		resp, err := server.GetContestProblem(ctx, corev1.GetContestProblemRequestObject{
+		resp, err := server.GetContestProblem(ctx, corev1.GetContestProblemParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "onsite-contest",
-			ProblemId:    problemID,
+			ProblemID:    problemID,
 		})
 		require.NoError(t, err)
-		jsonResp, ok := resp.(corev1.GetContestProblem200JSONResponse)
-		require.True(t, ok)
+		require.NotNil(t, resp)
 
-		assert.Equal(t, "A + B", jsonResp.Problem.Title)
-		assert.Equal(t, int32(1000), jsonResp.Problem.TimeLimit)
-		assert.Equal(t, int32(256), jsonResp.Problem.MemoryLimit)
-		assert.Empty(t, jsonResp.Problem.LegendHtml)
-		assert.Empty(t, jsonResp.Problem.InputFormatHtml)
-		assert.Empty(t, jsonResp.Problem.OutputFormatHtml)
-		assert.Empty(t, jsonResp.Problem.Samples)
+		assert.Equal(t, "A + B", resp.Problem.Title)
+		assert.Equal(t, int32(1000), resp.Problem.TimeLimit)
+		assert.Equal(t, int32(256), resp.Problem.MemoryLimit)
+		assert.Empty(t, resp.Problem.LegendHTML)
+		assert.Empty(t, resp.Problem.InputFormatHTML)
+		assert.Empty(t, resp.Problem.OutputFormatHTML)
+		assert.Empty(t, resp.Problem.Samples)
 	})
 
 	t.Run("Participant cannot download PDF when hide_statements=true", func(t *testing.T) {
@@ -133,7 +132,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionManageContest).Return(false, nil)
 
-		_, err := server.DownloadContestStatementsPdf(ctx, corev1.DownloadContestStatementsPdfRequestObject{
+		_, err := server.DownloadContestStatementsPdf(ctx, corev1.DownloadContestStatementsPdfParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "onsite-contest",
 		})
@@ -158,14 +157,11 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests.On("GetContestProblems", mock.Anything, contestID).Return([]models.ContestProblem{contestProblem}, nil)
 		mockProblems.On("GetProblemById", mock.Anything, problemID).Return(problem, nil)
 
-		resp, err := server.DownloadContestStatementsPdf(ctx, corev1.DownloadContestStatementsPdfRequestObject{
+		resp, err := server.DownloadContestStatementsPdf(ctx, corev1.DownloadContestStatementsPdfParams{
 			OrgLogin:     "test-org",
 			ContestLogin: "onsite-contest",
 		})
 		require.NoError(t, err)
-		pdfResp, ok := resp.(corev1.DownloadContestStatementsPdf200ApplicationpdfResponse)
-		require.True(t, ok)
-		assert.NotNil(t, pdfResp.Body)
-		assert.Positive(t, pdfResp.ContentLength)
+		assert.NotNil(t, resp.Data)
 	})
 }

@@ -14,62 +14,42 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProblemsRequestObject) (corev1.ListProblemsResponseObject, error) {
-	searchStr := ""
-	if request.Params.Search != nil {
-		searchStr = *request.Params.Search
-	}
+func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
+	searchStr := params.Search.Or("")
 
 	filter := &models.ProblemsFilter{
-		Page:     request.Params.Page,
-		PageSize: request.Params.PageSize,
+		Page:     params.Page.Or(1),
+		PageSize: params.PageSize.Or(50),
 		Search:   searchStr,
 	}
 
-	if request.Params.PageSize < minPageSize || request.Params.PageSize > maxPageSize {
-		return nil, badPageSize
-	}
-
-	if request.Params.Page < minPage {
-		return nil, badPage
-	}
-
-	if request.Params.Search != nil {
-		if !isLengthBetween(*request.Params.Search, 0, maxSearchLength) {
-			return nil, badSearch
-		}
-		filter.Search = *request.Params.Search
-	}
-
-	if request.Params.Owner != nil {
+	if params.Owner.IsSet() && params.Owner.Value {
 		user := middleware.GetUser(ctx)
-
 		filter.OwnerID = &user.Id
 	}
 
-	if request.Params.OrganizationId != nil {
-		orgID, err := uuid.Parse(request.Params.OrganizationId.String())
-		if err == nil {
-			filter.OrganizationID = &orgID
+	if params.OrganizationID.IsSet() {
+		orgID := params.OrganizationID.Value
+		filter.OrganizationID = &orgID
 
-			user := middleware.GetUser(ctx)
-			isMember := false
-			if user.Role == models.UserRoleAdmin {
+		user := middleware.GetUser(ctx)
+		isMember := false
+		if user.Role == models.UserRoleAdmin {
+			isMember = true
+		} else if user.Id != uuid.Nil {
+			_, err := h.organizationsUC.ListMembers(ctx, orgID, user.Id)
+			if err == nil {
 				isMember = true
-			} else if user.Id != uuid.Nil {
-				_, err := h.organizationsUC.ListMembers(ctx, orgID, user.Id)
-				if err == nil {
-					isMember = true
-				}
 			}
-			if !isMember {
-				filter.Visibility = "public"
-			}
+		}
+		if !isMember {
+			filter.Visibility = "public"
 		}
 	}
 
-	if request.Params.IsTemplate != nil {
-		filter.IsTemplate = request.Params.IsTemplate
+	if params.IsTemplate.IsSet() {
+		isTmpl := params.IsTemplate.Value
+		filter.IsTemplate = &isTmpl
 	}
 
 	problemsList, err := h.problemsUC.ListProblems(ctx, filter)
@@ -85,15 +65,15 @@ func (h *CoreServer) ListProblems(ctx context.Context, request corev1.ListProble
 	for i, problem := range problemsList.Problems {
 		resp.Problems[i] = ProblemsListItemDTO(problem)
 	}
-	return corev1.ListProblems200JSONResponse(resp), nil
+	return &resp, nil
 }
 
-func (h *CoreServer) ListProblemTemplates(ctx context.Context, request corev1.ListProblemTemplatesRequestObject) (corev1.ListProblemTemplatesResponseObject, error) {
+func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.ListProblemTemplatesParams) ([]corev1.ProblemTemplateModel, error) {
 	user := middleware.GetUser(ctx)
 
 	var orgID uuid.UUID
-	if request.Params.OrganizationId != nil {
-		orgID = uuid.UUID(*request.Params.OrganizationId)
+	if params.OrganizationID.IsSet() {
+		orgID = params.OrganizationID.Value
 	} else if user.Id != uuid.Nil {
 		orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
 		if err == nil && len(orgs) > 0 {
@@ -107,7 +87,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, request corev1.Li
 	builtinList := templates.ListBuiltinTemplates()
 	for _, b := range builtinList {
 		result = append(result, corev1.ProblemTemplateModel{
-			Id:          b.ID,
+			ID:          b.ID,
 			Title:       b.Title,
 			Description: b.Description,
 			ProblemType: b.ProblemType,
@@ -139,7 +119,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, request corev1.Li
 				}
 
 				result = append(result, corev1.ProblemTemplateModel{
-					Id:          p.ID.String(),
+					ID:          p.ID.String(),
 					Title:       p.Title,
 					Description: desc,
 					ProblemType: probType,
@@ -149,24 +129,24 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, request corev1.Li
 		}
 	}
 
-	return corev1.ListProblemTemplates200JSONResponse(result), nil
+	return result, nil
 }
 
-func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreateProblemRequestObject) (corev1.CreateProblemResponseObject, error) {
+func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProblemParams) (*corev1.CreationResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	if request.Params.Title == "" {
+	if params.Title == "" {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
 	}
 
-	templateIDStr := strings.TrimSpace(request.Params.TemplateId)
+	templateIDStr := strings.TrimSpace(params.TemplateID)
 	if templateIDStr == "" {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "template_id is required")
 	}
 
 	var orgID uuid.UUID
-	if request.Params.OrganizationId != nil {
-		orgID = uuid.UUID(*request.Params.OrganizationId)
+	if params.OrganizationID.IsSet() {
+		orgID = params.OrganizationID.Value
 	} else {
 		orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
 		if err != nil {
@@ -183,7 +163,7 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 	input := &models.CreateProblemInput{
 		OrganizationID: orgID,
 		OwnerID:        &user.Id,
-		Title:          request.Params.Title,
+		Title:          params.Title,
 		ShortName:      shortName,
 		Visibility:     models.ProblemVisibilityPrivate,
 	}
@@ -211,7 +191,7 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 			_ = h.workshopUC.SaveManifest(ctx, problemID, manifest)
 		}
 
-		return corev1.CreateProblem200JSONResponse{Id: problemID}, nil
+		return &corev1.CreationResponseModel{ID: problemID}, nil
 	}
 
 	templateUUID, err := uuid.Parse(templateIDStr)
@@ -265,55 +245,54 @@ func (h *CoreServer) CreateProblem(ctx context.Context, request corev1.CreatePro
 		_ = h.workshopUC.SaveManifest(ctx, problemID, manifest)
 	}
 
-	return corev1.CreateProblem200JSONResponse{Id: problemID}, nil
+	return &corev1.CreationResponseModel{ID: problemID}, nil
 }
 
-func (h *CoreServer) DeleteProblem(ctx context.Context, request corev1.DeleteProblemRequestObject) (corev1.DeleteProblemResponseObject, error) {
-	err := h.problemsUC.DeleteProblem(ctx, request.Id)
+func (h *CoreServer) DeleteProblem(ctx context.Context, params corev1.DeleteProblemParams) error {
+	err := h.problemsUC.DeleteProblem(ctx, params.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemParams) (*corev1.GetProblemResponseModel, error) {
+	problem, err := h.problemsUC.GetProblemById(ctx, params.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	return corev1.DeleteProblem200Response{}, nil
+	statement := h.loadProblemStatement(ctx, params.ID)
+	samples := h.loadProblemSamples(ctx, params.ID)
+
+	return &corev1.GetProblemResponseModel{Problem: *ProblemDTO(problem, statement, samples)}, nil
 }
 
-func (h *CoreServer) GetProblem(ctx context.Context, request corev1.GetProblemRequestObject) (corev1.GetProblemResponseObject, error) {
-	problem, err := h.problemsUC.GetProblemById(ctx, request.Id)
-	if err != nil {
-		return nil, err
+func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProblemRequestModel, params corev1.UpdateProblemParams) error {
+	if req == nil {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
-
-	statement := h.loadProblemStatement(ctx, request.Id)
-	samples := h.loadProblemSamples(ctx, request.Id)
-
-	return corev1.GetProblem200JSONResponse{Problem: *ProblemDTO(problem, statement, samples)}, nil
-}
-
-func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdateProblemRequestObject) (corev1.UpdateProblemResponseObject, error) {
-	if request.Body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
-	}
-	req := *request.Body
 
 	// Build update params
 	update := &models.ProblemUpdate{}
 
 	// Handle title update
-	if req.Title != nil {
-		update.Title = req.Title
+	if req.Title.IsSet() {
+		update.Title = &req.Title.Value
 	}
 
 	// Handle visibility update
-	if req.Visibility != nil {
-		update.Visibility = req.Visibility
+	if req.Visibility.IsSet() {
+		update.Visibility = (*string)(&req.Visibility.Value)
 	}
 
 	// Handle is_template update
-	if req.IsTemplate != nil {
-		if *req.IsTemplate {
-			pkgs, err := h.publishUC.ListPackages(ctx, request.Id)
+	if req.IsTemplate.IsSet() {
+		if req.IsTemplate.Value {
+			pkgs, err := h.publishUC.ListPackages(ctx, params.ID)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			hasReady := false
 			for _, p := range pkgs {
@@ -323,118 +302,119 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, request corev1.UpdatePro
 				}
 			}
 			if !hasReady {
-				return nil, pkg.Wrap(pkg.ErrBadInput, nil, "для перевода задачи в шаблон необходим хотя бы один успешно собранный пакет")
+				return pkg.Wrap(pkg.ErrBadInput, nil, "для перевода задачи в шаблон необходим хотя бы один успешно собранный пакет")
 			}
 		}
-		update.IsTemplate = req.IsTemplate
+		update.IsTemplate = &req.IsTemplate.Value
 	}
 
 	// Note: Other fields (Legend, InputFormat, etc.) are now stored in git repos
 	// and managed through the workshop/publish workflow
 
-	err := h.problemsUC.UpdateProblem(ctx, request.Id, update)
+	err := h.problemsUC.UpdateProblem(ctx, params.ID, update)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.UpdateProblem200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) ListProblemTeams(ctx context.Context, request corev1.ListProblemTeamsRequestObject) (corev1.ListProblemTeamsResponseObject, error) {
+func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListProblemTeamsParams) (*corev1.ListProblemTeamsResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	teams, err := h.problemsUC.GetProblemTeams(ctx, request.Id, user.Id)
+	teams, err := h.problemsUC.GetProblemTeams(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	return corev1.ListProblemTeams200JSONResponse(*listProblemTeamsDTO(teams)), nil
+	return listProblemTeamsDTO(teams), nil
 }
 
-func (h *CoreServer) CreateProblemTeam(ctx context.Context, request corev1.CreateProblemTeamRequestObject) (corev1.CreateProblemTeamResponseObject, error) {
+func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
 	user := middleware.GetUser(ctx)
 
 	permission := models.ProblemPermissionRead
-	if request.Params.Permission != nil && *request.Params.Permission != "" {
-		permission = models.ProblemPermission(*request.Params.Permission)
+	if params.Permission.IsSet() && params.Permission.Value != "" {
+		permission = models.ProblemPermission(params.Permission.Value)
 	}
 
-	err := h.problemsUC.AddProblemTeam(ctx, request.Id, request.Params.TeamId, user.Id, permission)
+	err := h.problemsUC.AddProblemTeam(ctx, params.ID, params.TeamID, user.Id, permission)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.CreateProblemTeam200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) UpdateProblemTeam(ctx context.Context, request corev1.UpdateProblemTeamRequestObject) (corev1.UpdateProblemTeamResponseObject, error) {
+func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.UpdateProblemTeamParams) error {
 	user := middleware.GetUser(ctx)
 
-	err := h.problemsUC.UpdateProblemTeamPermission(ctx, request.Id, request.Params.TeamId, user.Id, models.ProblemPermission(request.Params.Permission))
+	err := h.problemsUC.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, user.Id, models.ProblemPermission(params.Permission))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.UpdateProblemTeam200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) DeleteProblemTeam(ctx context.Context, request corev1.DeleteProblemTeamRequestObject) (corev1.DeleteProblemTeamResponseObject, error) {
+func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.DeleteProblemTeamParams) error {
 	user := middleware.GetUser(ctx)
 
-	err := h.problemsUC.RemoveProblemTeam(ctx, request.Id, request.Params.TeamId, user.Id)
+	err := h.problemsUC.RemoveProblemTeam(ctx, params.ID, params.TeamID, user.Id)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.DeleteProblemTeam200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) ListProblemMembers(ctx context.Context, request corev1.ListProblemMembersRequestObject) (corev1.ListProblemMembersResponseObject, error) {
+func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListProblemMembersParams) (*corev1.ListProblemMembersResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	members, err := h.problemsUC.ListProblemMembers(ctx, request.Id, user.Id)
+	members, err := h.problemsUC.ListProblemMembers(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, err
 	}
 
 	total := safeInt32(len(members))
-	return corev1.ListProblemMembers200JSONResponse(*listProblemMembersDTO(members, request.Params.Page, total)), nil
+	page := params.Page.Or(1)
+	return listProblemMembersDTO(members, page, total), nil
 }
 
-func (h *CoreServer) CreateProblemMember(ctx context.Context, request corev1.CreateProblemMemberRequestObject) (corev1.CreateProblemMemberResponseObject, error) {
+func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {
 	user := middleware.GetUser(ctx)
 
 	role := models.ProblemRoleViewer
-	if request.Params.Role != nil && *request.Params.Role != "" {
-		role = models.ProblemRole(*request.Params.Role)
+	if params.Role.IsSet() && params.Role.Value != "" {
+		role = models.ProblemRole(params.Role.Value)
 	}
 
-	err := h.problemsUC.CreateProblemMember(ctx, request.Id, request.Params.UserId, user.Id, role)
+	err := h.problemsUC.CreateProblemMember(ctx, params.ID, params.UserID, user.Id, role)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.CreateProblemMember200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) UpdateProblemMember(ctx context.Context, request corev1.UpdateProblemMemberRequestObject) (corev1.UpdateProblemMemberResponseObject, error) {
+func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.UpdateProblemMemberParams) error {
 	user := middleware.GetUser(ctx)
 
-	err := h.problemsUC.UpdateProblemMemberRole(ctx, request.Id, request.Params.UserId, user.Id, models.ProblemRole(request.Params.Role))
+	err := h.problemsUC.UpdateProblemMemberRole(ctx, params.ID, params.UserID, user.Id, models.ProblemRole(params.Role))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.UpdateProblemMember200Response{}, nil
+	return nil
 }
 
-func (h *CoreServer) DeleteProblemMember(ctx context.Context, request corev1.DeleteProblemMemberRequestObject) (corev1.DeleteProblemMemberResponseObject, error) {
+func (h *CoreServer) DeleteProblemMember(ctx context.Context, params corev1.DeleteProblemMemberParams) error {
 	user := middleware.GetUser(ctx)
 
-	err := h.problemsUC.RemoveProblemMember(ctx, request.Id, request.Params.UserId, user.Id)
+	err := h.problemsUC.RemoveProblemMember(ctx, params.ID, params.UserID, user.Id)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return corev1.DeleteProblemMember200Response{}, nil
+	return nil
 }

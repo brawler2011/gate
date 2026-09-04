@@ -7,38 +7,47 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
 )
 
-func (h *CoreServer) ListContestClarifications(ctx context.Context, request corev1.ListContestClarificationsRequestObject) (corev1.ListContestClarificationsResponseObject, error) {
+func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev1.ListContestClarificationsParams) (*corev1.ListContestClarificationsResponseModel, error) {
+	// FIXME: в middleware уже должно быть
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
+	// FIXME: должно быть в middleware
 	isModerator, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}
 
-	page := int32(1)
-	if request.Params.Page != nil && *request.Params.Page > 0 {
-		page = *request.Params.Page
-	}
-	pageSize := int32(50)
-	if request.Params.PageSize != nil && *request.Params.PageSize > 0 {
-		pageSize = *request.Params.PageSize
-	}
+	// FIXME: openapi defaults
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(50)
 
 	var list *models.ContestClarificationsList
+
+	// FIXME: здесь происходит смешивание модераторского и юзерского эндпоинтов, так не должно быть
+	// возможно нужна какая-то декомпозиция
 	if isModerator {
+		var problemID *uuid.UUID
+		if params.ProblemID.IsSet() {
+			problemID = &params.ProblemID.Value
+		}
+		var status *string
+		if params.Status.IsSet() {
+			status = &params.Status.Value
+		}
 		filter := &models.ContestClarificationsFilter{
-			ProblemID: request.Params.ProblemId,
-			Status:    request.Params.Status,
+			ProblemID: problemID,
+			Status:    status,
 			Page:      page,
 			PageSize:  pageSize,
 		}
@@ -50,49 +59,53 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, request core
 		return nil, err
 	}
 
-	return corev1.ListContestClarifications200JSONResponse(*ContestClarificationsListResponseDTO(list)), nil
+	return ContestClarificationsListResponseDTO(list), nil
 }
 
-func (h *CoreServer) CreateContestClarification(ctx context.Context, request corev1.CreateContestClarificationRequestObject) (corev1.CreateContestClarificationResponseObject, error) {
+func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1.CreateContestClarificationRequestModel, params corev1.CreateContestClarificationParams) (*corev1.ContestClarificationModel, error) {
+	// FIXME: должно быть в middleware
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
-	body := request.Body
-	if body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+	// FIXME: OptUUID
+	var problemID *uuid.UUID
+	if req.ProblemID.IsSet() {
+		problemID = &req.ProblemID.Value
 	}
 
 	clarification, err := h.clarificationsUC.CreateClarification(ctx, &models.CreateContestClarificationInput{
 		ContestID: contest.ID,
-		ProblemID: body.ProblemId,
+		ProblemID: problemID,
 		UserID:    user.Id,
-		Question:  body.Question,
+		Question:  req.Question,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return corev1.CreateContestClarification200JSONResponse(*ContestClarificationDTO(clarification)), nil
+	return ContestClarificationDTO(clarification), nil
 }
 
-func (h *CoreServer) AnswerContestClarification(ctx context.Context, request corev1.AnswerContestClarificationRequestObject) (corev1.AnswerContestClarificationResponseObject, error) {
+func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1.AnswerContestClarificationRequestModel, params corev1.AnswerContestClarificationParams) (*corev1.ContestClarificationModel, error) {
+	// FIXME: должно быть в middleware
 	user := middleware.GetUser(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
+	// FIXME:
 	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
 	if err != nil {
 		return nil, err
@@ -101,24 +114,13 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, request cor
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied: only contest moderators can answer clarifications")
 	}
 
-	body := request.Body
-	if body == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
-	}
-
-	publishAsAnnouncement := false
-	if body.PublishAsAnnouncement != nil {
-		publishAsAnnouncement = *body.PublishAsAnnouncement
-	}
-	announcementTitle := ""
-	if body.AnnouncementTitle != nil {
-		announcementTitle = *body.AnnouncementTitle
-	}
+	publishAsAnnouncement := req.PublishAsAnnouncement.Or(false)
+	announcementTitle := req.AnnouncementTitle.Or("")
 
 	clarification, err := h.clarificationsUC.AnswerClarification(ctx, &models.AnswerContestClarificationInput{
-		ClarificationID:       request.ClarificationId,
+		ClarificationID:       params.ClarificationID,
 		ContestID:             contest.ID,
-		Answer:                body.Answer,
+		Answer:                req.Answer,
 		AnsweredBy:            user.Id,
 		PublishAsAnnouncement: publishAsAnnouncement,
 		AnnouncementTitle:     announcementTitle,
@@ -127,5 +129,5 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, request cor
 		return nil, err
 	}
 
-	return corev1.AnswerContestClarification200JSONResponse(*ContestClarificationDTO(clarification)), nil
+	return ContestClarificationDTO(clarification), nil
 }

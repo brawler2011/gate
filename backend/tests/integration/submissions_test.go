@@ -4,14 +4,11 @@
 package integration
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func (s *IntegrationTestSuite) TestSubmissions() {
@@ -25,19 +22,14 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 
 	// 1. Create Problem
 	problemTitle := "Submission Problem"
-	problemOrganizationID := openapi_types.UUID(problemOrg.ID)
-	probResp, err := s.client.CreateProblemWithResponse(s.ctx, &corev1.CreateProblemParams{
+	probResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
 		Title:          problemTitle,
-		OrganizationId: &problemOrganizationID,
-		TemplateId:     "builtin:a-plus-b",
-	}, func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-Test-User-ID", admin.Id.String())
-		return nil
+		OrganizationID: corev1.NewOptUUID(problemOrg.ID),
+		TemplateID:     "builtin:a-plus-b",
 	})
 	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, probResp.StatusCode())
-	s.Require().NotNil(probResp.JSON200)
-	problemID := probResp.JSON200.Id
+	s.Require().NotNil(probResp)
+	problemID := probResp.ID
 
 	// Create a dummy problem package (required for contest_problems foreign key)
 	packageID := s.createDummyProblemPackage(problemID, problemOrg.ID)
@@ -86,52 +78,37 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 
 	// 3. Create Submission
 	s.Run("CreateSubmission", func() {
-		// Note: NATS Publish is not called directly during submission creation
-		// It's done asynchronously by the outbox worker
-
-		resp, err := s.client.CreateSubmissionWithResponse(s.ctx, &corev1.CreateSubmissionParams{
-			ProblemId:         problemID,
+		resp, err := s.client.CreateSubmission(withTestUser(s.ctx, user.Id), &corev1.CreateSubmissionRequestModel{
+			Submission: "print('hello')",
+		}, corev1.CreateSubmissionParams{
+			ProblemID:         problemID,
 			OrganizationLogin: contestOrg.Login,
 			ContestLogin:      "submission-contest",
 			Language:          30, // Python
-		}, corev1.CreateSubmissionJSONRequestBody{
-			Submission: "print('hello')",
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user.Id.String())
-			return nil
 		})
 		s.Require().NoError(err)
-		if resp.StatusCode() != http.StatusOK {
-			s.T().Logf("CreateSubmission failed: %s", string(resp.Body))
-		}
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Require().NotNil(resp.JSON200)
-		submissionID = resp.JSON200.Id
+		s.Require().NotNil(resp)
+		submissionID = resp.ID
 	})
 
 	// 4. Get Submission
 	s.Run("GetSubmission", func() {
-		resp, err := s.client.GetSubmissionWithResponse(s.ctx, submissionID, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", user.Id.String())
-			return nil
+		resp, err := s.client.GetSubmission(withTestUser(s.ctx, user.Id), corev1.GetSubmissionParams{
+			SubmissionID: submissionID,
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Equal(submissionID, resp.JSON200.Submission.Id)
+		s.Require().NotNil(resp)
+		s.Equal(submissionID, resp.Submission.ID)
 	})
 
 	// 5. List Submissions
 	s.Run("ListSubmissions", func() {
-		resp, err := s.client.ListSubmissionsWithResponse(s.ctx, &corev1.ListSubmissionsParams{
+		resp, err := s.client.ListSubmissions(withTestUser(s.ctx, admin.Id), corev1.ListSubmissionsParams{
 			Page:     1,
 			PageSize: 10,
-		}, func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("X-Test-User-ID", admin.Id.String())
-			return nil
 		})
 		s.Require().NoError(err)
-		s.Equal(http.StatusOK, resp.StatusCode())
-		s.Require().NotNil(resp.JSON200)
-		s.GreaterOrEqual(len(resp.JSON200.Submissions), 1)
+		s.Require().NotNil(resp)
+		s.GreaterOrEqual(len(resp.Submissions), 1)
 	})
 }

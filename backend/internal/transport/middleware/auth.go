@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -63,3 +64,54 @@ func GetSession(ctx context.Context) (models.Session, error) {
 	}
 	return session, nil
 }
+
+const responseWriterKey contextKey = "response_writer"
+
+// ResponseWriterMiddleware injects the ResponseWriter into the request context
+func ResponseWriterMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), responseWriterKey, w)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func SetSessionCookie(ctx context.Context, sessionID uuid.UUID) {
+	if w, ok := ctx.Value(responseWriterKey).(http.ResponseWriter); ok && w != nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     sessionCookieName,
+			Value:    sessionID.String(),
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+			MaxAge:   7 * 24 * 60 * 60,
+			SameSite: http.SameSiteLaxMode,
+		})
+	}
+}
+
+func ClearSessionCookie(ctx context.Context) {
+	if w, ok := ctx.Value(responseWriterKey).(http.ResponseWriter); ok && w != nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     sessionCookieName,
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+			MaxAge:   -1,
+			SameSite: http.SameSiteLaxMode,
+		})
+	}
+}
+
+type SecurityHandler struct{}
+
+func NewSecurityHandler() *SecurityHandler {
+	return &SecurityHandler{}
+}
+
+func (s *SecurityHandler) HandleCookieAuth(ctx context.Context, operationName corev1.OperationName, t corev1.CookieAuth) (context.Context, error) {
+	return ctx, nil
+}
+
+
+

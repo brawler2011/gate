@@ -11,15 +11,14 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
-func (h *CoreServer) CreateContestDraft(ctx context.Context, request corev1.CreateContestDraftRequestObject) (corev1.CreateContestDraftResponseObject, error) {
+func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateContestDraftRequestModel, params corev1.CreateContestDraftParams) (*corev1.CreationResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	if request.Body == nil {
+	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
-	req := *request.Body
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -53,26 +52,19 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, request corev1.Crea
 
 	slog.Info("contest draft created", "draft_id", draftID, "user_id", user.Id, "contest_id", contest.ID)
 
-	return corev1.CreateContestDraft200JSONResponse{Id: draftID}, nil
+	return &corev1.CreationResponseModel{ID: draftID}, nil
 }
 
-func (h *CoreServer) ListContestDrafts(ctx context.Context, request corev1.ListContestDraftsRequestObject) (corev1.ListContestDraftsResponseObject, error) {
+func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListContestDraftsParams) (*corev1.ListContestDraftsResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
-	var page int32 = 1
-	if request.Params.Page != nil && *request.Params.Page > 0 {
-		page = *request.Params.Page
-	}
-
-	var pageSize int32 = 20
-	if request.Params.PageSize != nil && *request.Params.PageSize > 0 {
-		pageSize = *request.Params.PageSize
-	}
+	page := params.Page.Or(1)
+	pageSize := params.PageSize.Or(20)
 
 	draftsList, err := h.draftsUC.ListDrafts(ctx, models.ContestDraftsFilter{
 		ContestID: contest.ID,
@@ -84,15 +76,15 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, request corev1.ListC
 		return nil, err
 	}
 
-	return corev1.ListContestDrafts200JSONResponse(*ListContestDraftsResponseDTO(draftsList)), nil
+	return ListContestDraftsResponseDTO(draftsList), nil
 }
 
-func (h *CoreServer) DeleteContestDraft(ctx context.Context, request corev1.DeleteContestDraftRequestObject) (corev1.DeleteContestDraftResponseObject, error) {
+func (h *CoreServer) DeleteContestDraft(ctx context.Context, params corev1.DeleteContestDraftParams) error {
 	user := middleware.GetUser(ctx)
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, request.OrgLogin, request.ContestLogin)
+	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	isManager := false
@@ -105,11 +97,11 @@ func (h *CoreServer) DeleteContestDraft(ctx context.Context, request corev1.Dele
 		}
 	}
 
-	if err := h.draftsUC.DeleteDraft(ctx, request.DraftId, user.Id, isManager); err != nil {
-		return nil, err
+	if err := h.draftsUC.DeleteDraft(ctx, params.DraftID, user.Id, isManager); err != nil {
+		return err
 	}
 
-	slog.Info("contest draft deleted", "draft_id", request.DraftId, "user_id", user.Id, "contest_id", contest.ID)
+	slog.Info("contest draft deleted", "draft_id", params.DraftID, "user_id", user.Id, "contest_id", contest.ID)
 
-	return corev1.DeleteContestDraft200Response{}, nil
+	return nil
 }

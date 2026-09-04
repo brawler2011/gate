@@ -328,23 +328,27 @@ func runApp(envFile string) error {
 		sandboxInstance,
 	)
 
-	strictHandler := corev1.NewStrictHandlerWithOptions(coreServer, []corev1.StrictMiddlewareFunc{
-		middleware.AuthzStrictMiddleware(permissionsUC, submissionsUC, orgsRepo, contestsRepo),
-	}, corev1.StrictHTTPServerOptions{
-		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		},
-		ResponseErrorHandlerFunc: middleware.ResponseErrorHandler(logger),
-	})
+	secHandler := middleware.NewSecurityHandler()
+	authzMw := middleware.AuthzMiddleware(permissionsUC, submissionsUC, orgsRepo, contestsRepo)
+	apiServer, err := corev1.NewServer(
+		coreServer,
+		secHandler,
+		corev1.WithMiddleware(authzMw),
+		corev1.WithErrorHandler(middleware.ResponseErrorHandler(logger)),
+	)
+	if err != nil {
+		return fmt.Errorf("create core api server: %w", err)
+	}
 
-	corev1.HandlerWithOptions(strictHandler, corev1.StdHTTPServerOptions{
-		BaseRouter: publicMux,
-		Middlewares: []corev1.MiddlewareFunc{
-			middleware.UsersMiddleware(usersUC),
-			middleware.AuthMiddleware(authUC),
-			middleware.RequestLoggerMiddleware(logger),
-		},
-	})
+	apiHandler := middleware.RequestLoggerMiddleware(logger)(
+		middleware.AuthMiddleware(authUC)(
+			middleware.UsersMiddleware(usersUC)(
+				middleware.ResponseWriterMiddleware(apiServer),
+			),
+		),
+	)
+
+	publicMux.Handle("/", apiHandler)
 
 	publicServer := &http.Server{
 		Addr:              cfg.Address,

@@ -59,6 +59,10 @@ func EnsureContestsStream(ctx context.Context, js jetstream.JetStream) error {
 }
 
 func GetSubmissionsLastSequence(ctx context.Context, js jetstream.JetStream) (uint64, error) {
+	if js == nil {
+		return 0, fmt.Errorf("jetstream is nil")
+	}
+
 	stream, err := js.Stream(ctx, SubmissionsStreamName)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get %s stream: %w", SubmissionsStreamName, err)
@@ -71,3 +75,4 @@ func GetSubmissionsLastSequence(ctx context.Context, js jetstream.JetStream) (ui
 
 	return info.State.LastSeq, nil
 }
+

@@ -113,16 +113,22 @@ export class DefaultService {
      * @throws ApiError
      */
     public listProblems({
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         search,
         descending,
         owner,
         organizationId,
         isTemplate,
     }: {
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         search?: string,
         descending?: boolean,
         owner?: boolean,
@@ -243,15 +249,21 @@ export class DefaultService {
      * @throws ApiError
      */
     public listAdminContests({
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         search,
         visibility,
         sortBy,
         sortOrder,
     }: {
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         search?: string,
         visibility?: 'public' | 'private',
         sortBy?: 'created_at' | 'updated_at' | 'title',
@@ -356,15 +368,21 @@ export class DefaultService {
      */
     public listUserContests({
         username,
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         search,
         sortBy,
         sortOrder,
     }: {
         username: string,
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         search?: string,
         sortBy?: 'last_submission_time' | 'created_at' | 'updated_at' | 'title',
         sortOrder?: 'asc' | 'desc',
@@ -389,15 +407,21 @@ export class DefaultService {
      * @throws ApiError
      */
     public listWorkshopContests({
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         search,
         sortBy,
         sortOrder,
         organizationId,
     }: {
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         search?: string,
         sortBy?: 'created_at' | 'updated_at' | 'title',
         sortOrder?: 'asc' | 'desc',
@@ -421,14 +445,20 @@ export class DefaultService {
      * @throws ApiError
      */
     public listPublicContests({
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         search,
         sortBy,
         sortOrder,
     }: {
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         search?: string,
         sortBy?: 'created_at' | 'updated_at' | 'title',
         sortOrder?: 'asc' | 'desc',
@@ -476,13 +506,19 @@ export class DefaultService {
      */
     public listOrganizationContests({
         orgLogin,
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         search,
     }: {
         orgLogin: string,
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         search?: string,
     }): CancelablePromise<ListContestsResponseModel> {
         return this.httpRequest.request({
@@ -693,13 +729,19 @@ export class DefaultService {
     public listContestMembers({
         orgLogin,
         contestLogin,
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
     }: {
         orgLogin: string,
         contestLogin: string,
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
     }): CancelablePromise<ListContestMembersResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
@@ -920,8 +962,8 @@ export class DefaultService {
     public listContestSubmissions({
         orgLogin,
         contestLogin,
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         userId,
         problemId,
         state,
@@ -930,8 +972,14 @@ export class DefaultService {
     }: {
         orgLogin: string,
         contestLogin: string,
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         userId?: string,
         problemId?: string,
         state?: number,
@@ -1218,12 +1266,18 @@ export class DefaultService {
     public listContestDrafts({
         orgLogin,
         contestLogin,
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
     }: {
         orgLogin: string,
         contestLogin: string,
+        /**
+         * Page number
+         */
         page?: number,
+        /**
+         * Number of items per page
+         */
         pageSize?: number,
     }): CancelablePromise<ListContestDraftsResponseModel> {
         return this.httpRequest.request({
@@ -1411,7 +1465,13 @@ export class DefaultService {
     }: {
         orgLogin: string,
         contestLogin: string,
+        /**
+         * Page number
+         */
         page?: number,
+        /**
+         * Number of items per page
+         */
         pageSize?: number,
     }): CancelablePromise<ListContestAnnouncementsResponseModel> {
         return this.httpRequest.request({
@@ -1493,7 +1553,13 @@ export class DefaultService {
         contestLogin: string,
         problemId?: string,
         status?: string,
+        /**
+         * Page number
+         */
         page?: number,
+        /**
+         * Number of items per page
+         */
         pageSize?: number,
     }): CancelablePromise<ListContestClarificationsResponseModel> {
         return this.httpRequest.request({
@@ -1599,8 +1665,8 @@ export class DefaultService {
      * @throws ApiError
      */
     public listSubmissions({
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         contestId,
         userId,
         problemId,
@@ -1608,8 +1674,14 @@ export class DefaultService {
         sortOrder,
         language,
     }: {
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         contestId?: string,
         userId?: string,
         problemId?: string,
@@ -1664,13 +1736,19 @@ export class DefaultService {
      * @throws ApiError
      */
     public listUsers({
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         search,
         role,
     }: {
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         search?: string,
         role?: string,
     }): CancelablePromise<ListUsersResponseModel> {
@@ -1729,16 +1807,22 @@ export class DefaultService {
      */
     public listUserSubmissions({
         username,
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         contestId,
         problemId,
         state,
         sortOrder,
     }: {
         username: string,
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         contestId?: string,
         problemId?: string,
         state?: number,
@@ -1882,10 +1966,10 @@ export class DefaultService {
     }: {
         username: string,
         formData: {
-            avatar?: Blob;
+            avatar: Blob;
         },
     }): CancelablePromise<{
-        imgId?: string;
+        imgId: string;
     }> {
         return this.httpRequest.request({
             method: 'POST',
@@ -2011,10 +2095,16 @@ export class DefaultService {
     public listProblemMembers({
         id,
         page = 1,
-        pageSize = 10,
+        pageSize = 50,
     }: {
         id: string,
+        /**
+         * Page number
+         */
         page?: number,
+        /**
+         * Number of items per page
+         */
         pageSize?: number,
     }): CancelablePromise<ListProblemMembersResponseModel> {
         return this.httpRequest.request({
@@ -3314,12 +3404,18 @@ export class DefaultService {
      * @throws ApiError
      */
     public listOrganizations({
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         search,
     }: {
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         search?: string,
     }): CancelablePromise<ListOrganizationsResponseModel> {
         return this.httpRequest.request({
@@ -3421,12 +3517,18 @@ export class DefaultService {
      */
     public listOrganizationMembers({
         login,
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
     }: {
         login: string,
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
     }): CancelablePromise<ListOrganizationMembersResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
@@ -3737,10 +3839,16 @@ export class DefaultService {
      */
     public listNotifications({
         page = 1,
-        pageSize = 20,
+        pageSize = 50,
         unreadOnly,
     }: {
+        /**
+         * Page number
+         */
         page?: number,
+        /**
+         * Number of items per page
+         */
         pageSize?: number,
         unreadOnly?: boolean,
     }): CancelablePromise<NotificationsListResponseModel> {
@@ -3800,13 +3908,19 @@ export class DefaultService {
      * @throws ApiError
      */
     public listTeams({
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
         search,
         organizationId,
     }: {
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
         search?: string,
         organizationId?: string,
     }): CancelablePromise<ListTeamsResponseModel> {
@@ -3906,12 +4020,18 @@ export class DefaultService {
      */
     public listTeamMembers({
         id,
-        page,
-        pageSize,
+        page = 1,
+        pageSize = 50,
     }: {
         id: string,
-        page: number,
-        pageSize: number,
+        /**
+         * Page number
+         */
+        page?: number,
+        /**
+         * Number of items per page
+         */
+        pageSize?: number,
     }): CancelablePromise<ListTeamMembersResponseModel> {
         return this.httpRequest.request({
             method: 'GET',
@@ -4008,10 +4128,16 @@ export class DefaultService {
     public listTeamContests({
         id,
         page = 1,
-        pageSize = 10,
+        pageSize = 50,
     }: {
         id: string,
+        /**
+         * Page number
+         */
         page?: number,
+        /**
+         * Number of items per page
+         */
         pageSize?: number,
     }): CancelablePromise<ListContestsResponseModel> {
         return this.httpRequest.request({
@@ -4034,10 +4160,16 @@ export class DefaultService {
     public listTeamProblems({
         id,
         page = 1,
-        pageSize = 10,
+        pageSize = 50,
     }: {
         id: string,
+        /**
+         * Page number
+         */
         page?: number,
+        /**
+         * Number of items per page
+         */
         pageSize?: number,
     }): CancelablePromise<ListProblemsResponseModel> {
         return this.httpRequest.request({
@@ -4059,10 +4191,16 @@ export class DefaultService {
      */
     public listPosts({
         page = 1,
-        pageSize = 10,
+        pageSize = 50,
         sortOrder = 'desc',
     }: {
+        /**
+         * Page number
+         */
         page?: number,
+        /**
+         * Number of items per page
+         */
         pageSize?: number,
         sortOrder?: 'asc' | 'desc',
     }): CancelablePromise<ListPostsResponseModel> {
@@ -4071,7 +4209,7 @@ export class DefaultService {
             url: '/posts',
             query: {
                 'page': page,
-                'page_size': pageSize,
+                'pageSize': pageSize,
                 'sort_order': sortOrder,
             },
         });

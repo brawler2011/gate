@@ -3,254 +3,209 @@ package core
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
-	"mime/multipart"
 
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 )
 
-// ListPosts implements the ListPosts operation
-func (s *CoreServer) ListPosts(ctx context.Context, request corev1.ListPostsRequestObject) (corev1.ListPostsResponseObject, error) {
-	page := 1
-	if request.Params.Page != nil {
-		page = *request.Params.Page
-	}
-
-	pageSize := 10
-	if request.Params.PageSize != nil {
-		pageSize = *request.Params.PageSize
-	}
-
-	sortOrder := "desc"
-	if request.Params.SortOrder != nil {
-		sortOrder = string(*request.Params.SortOrder)
-	}
+func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParams) (*corev1.ListPostsResponseModel, error) {
+	// FIXME: нужно использовать готовые модели пагинации в openapi.yaml
+	// FIXME: удалить этот бойлерплейт
+	page := int(params.Page.Or(1))
+	pageSize := int(params.PageSize.Or(10))
+	sortOrder := string(params.SortOrder.Or("desc"))
 
 	result, err := s.blogsUC.ListPosts(ctx, page, pageSize, sortOrder)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list posts: %w", err)
+		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list posts")
 	}
 
 	// Convert to response model
 	posts := make([]corev1.PostModel, len(result.Posts))
 	for i, post := range result.Posts {
 		posts[i] = corev1.PostModel{
-			Id:             post.ID,
+			ID:             post.ID,
 			CreatedAt:      post.CreatedAt,
 			UpdatedAt:      post.UpdatedAt,
 			Title:          post.Title,
 			Text:           post.Text,
 			Description:    post.Description,
-			PreviewImageId: post.ImageKey,
-			AuthorId:       post.AuthorUUID,
+			PreviewImageID: post.ImageKey,
+			AuthorID:       post.AuthorUUID,
 			AuthorUsername: post.AuthorName,
 		}
 	}
 
-	return corev1.ListPosts200JSONResponse{
+	return &corev1.ListPostsResponseModel{
 		Pagination: corev1.PaginationModel{
-			Total: safeInt32(result.TotalPages),
-			Page:  safeInt32(result.Page),
+			Total: safeInt32(result.TotalPages), // FIXME: разобраться где возникает проблема типов
+			Page:  safeInt32(result.Page),       // FIXME: аналогично
 		},
 		Posts: posts,
 	}, nil
 }
 
 // CreatePost implements the CreatePost operation
-func (s *CoreServer) CreatePost(ctx context.Context, request corev1.CreatePostRequestObject) (corev1.CreatePostResponseObject, error) {
-	// Get user from context
+func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) (corev1.CreatePostRes, error) {
+	// FIXME: эти провери должны быть в мидлваре
 	user := middleware.GetUser(ctx)
+	if user.IsGuest() {
+		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
+	}
 
-	// Parse multipart form
-	title, description, text, imageReader, filename, err := parsePostForm(request.Body)
-	if err != nil {
-		return corev1.CreatePost400JSONResponse{
-			Error: stringPtr(err.Error()),
+	// FIXME: req не может быть nil, остальное надо сделать required в openapi
+	if req == nil || !req.Title.IsSet() || !req.Description.IsSet() || !req.Text.IsSet() || !req.PreviewImage.IsSet() {
+		return &corev1.CreatePostBadRequest{
+			Error: corev1.NewOptString("title, description, text, and preview_image are required"),
 		}, nil
 	}
 
-	// Validate required fields
-	if title == "" || description == "" || text == "" || imageReader == nil {
-		return corev1.CreatePost400JSONResponse{
-			Error: stringPtr("title, description, text, and preview_image are required"),
-		}, nil
-	}
+	file := req.PreviewImage.Value // FIXME: эта хуйня не должна быть optional
+	title := req.Title.Value
+	description := req.Description.Value
+	text := req.Text.Value
 
-	// Create post
-	postID, err := s.blogsUC.CreatePost(ctx, title, text, description, user.Id, user.Username, imageReader, filename)
+	postID, err := s.blogsUC.CreatePost(ctx, title, text, description, user.Id, user.Username, file.File, file.Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create post: %w", err)
+		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to create post")
 	}
 
-	return corev1.CreatePost201JSONResponse{
-		PostId: &postID,
+	// FIXME: вроде как в схеме есть reusable структура для таких ответов
+	return &corev1.CreatedPost{
+		PostID: corev1.NewOptUUID(postID), // FIXME: эта хуйня тоже не должна быть optional
 	}, nil
 }
 
-// GetPostById implements the GetPostById operation
-func (s *CoreServer) GetPostById(ctx context.Context, request corev1.GetPostByIdRequestObject) (corev1.GetPostByIdResponseObject, error) {
-	post, err := s.blogsUC.GetPost(ctx, request.Id)
+func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdParams) (corev1.GetPostByIdRes, error) {
+	post, err := s.blogsUC.GetPost(ctx, params.ID)
 	if err != nil {
+
+		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, err
 		}
-		return corev1.GetPostById404JSONResponse{
-			Error: stringPtr("post not found"),
+
+		// FIXME: в проекте не приянто создавать касатомные ошибки внутри схемы апи
+		return &corev1.GetPostByIdNotFound{
+			Error: corev1.NewOptString("post not found"),
 		}, nil
 	}
 
-	return corev1.GetPostById200JSONResponse{
-		Id:             post.ID,
+	return &corev1.PostModel{
+		ID:             post.ID,
 		CreatedAt:      post.CreatedAt,
 		UpdatedAt:      post.UpdatedAt,
 		Title:          post.Title,
 		Text:           post.Text,
 		Description:    post.Description,
-		PreviewImageId: post.ImageKey,
-		AuthorId:       post.AuthorUUID,
+		PreviewImageID: post.ImageKey,
+		AuthorID:       post.AuthorUUID,
 		AuthorUsername: post.AuthorName,
 	}, nil
 }
 
-// PatchPostById implements the PatchPostById operation
-func (s *CoreServer) PatchPostById(ctx context.Context, request corev1.PatchPostByIdRequestObject) (corev1.PatchPostByIdResponseObject, error) {
-	// Parse multipart form
-	title, description, text, imageReader, filename, err := parsePostForm(request.Body)
-	if err != nil {
-		return corev1.PatchPostById400JSONResponse{
-			Error: stringPtr(err.Error()),
-		}, nil
-	}
-
-	// Convert to pointers for optional fields
+func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostByIdReq, params corev1.PatchPostByIdParams) (corev1.PatchPostByIdRes, error) {
+	// FIXME: антипаттерн, эти поля нужно объединить в структуру или тп
 	var titlePtr, descriptionPtr, textPtr *string
-	if title != "" {
-		titlePtr = &title
-	}
-	if description != "" {
-		descriptionPtr = &description
-	}
-	if text != "" {
-		textPtr = &text
+	var imageReader io.Reader
+	var filename string
+
+	// FIXME: req должен быть required, поля мапяться в структуру
+	if req.IsSet() {
+		r := req.Value
+		if r.Title.IsSet() {
+			titlePtr = &r.Title.Value
+		}
+		if r.Description.IsSet() {
+			descriptionPtr = &r.Description.Value
+		}
+		if r.Text.IsSet() {
+			textPtr = &r.Text.Value
+		}
+		if r.PreviewImage.IsSet() {
+			file := r.PreviewImage.Value
+			imageReader = file.File
+			filename = file.Name
+		}
 	}
 
-	// Update post
-	err = s.blogsUC.UpdatePost(ctx, request.Id, titlePtr, textPtr, descriptionPtr, imageReader, filename)
+	err := s.blogsUC.UpdatePost(ctx, params.ID, titlePtr, textPtr, descriptionPtr, imageReader, filename)
 	if err != nil {
+		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, err
 		}
-		return corev1.PatchPostById404JSONResponse{
-			Error: stringPtr("post not found"),
+		// FIXME: в проекте так не принято
+		return &corev1.PatchPostByIdNotFound{
+			Error: corev1.NewOptString("post not found"),
 		}, nil
 	}
-
-	return corev1.PatchPostById200Response{}, nil
+	// FIXME: в проекте так не принято
+	return &corev1.PatchPostByIdOK{}, nil
 }
 
-// DeletePostById implements the DeletePostById operation
-func (s *CoreServer) DeletePostById(ctx context.Context, request corev1.DeletePostByIdRequestObject) (corev1.DeletePostByIdResponseObject, error) {
-	// Delete post
-	err := s.blogsUC.DeletePost(ctx, request.Id)
+func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePostByIdParams) (corev1.DeletePostByIdRes, error) {
+	err := s.blogsUC.DeletePost(ctx, params.ID)
 	if err != nil {
+		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, err
 		}
-		return corev1.DeletePostById404JSONResponse{
-			Error: stringPtr("post not found"),
+		// FIXME: в проекте так не принято
+		return &corev1.DeletePostByIdNotFound{
+			Error: corev1.NewOptString("post not found"),
 		}, nil
 	}
 
-	return corev1.DeletePostById200Response{}, nil
+	// FIXME: в проекте так не принято
+	return &corev1.DeletePostByIdOK{}, nil
 }
 
-// GetPostImage implements the GetPostImage operation
-func (s *CoreServer) GetPostImage(ctx context.Context, request corev1.GetPostImageRequestObject) (corev1.GetPostImageResponseObject, error) {
-	// First get the post to retrieve the image key
-	post, err := s.blogsUC.GetPost(ctx, request.Id)
+func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImageParams) (corev1.GetPostImageRes, error) {
+	post, err := s.blogsUC.GetPost(ctx, params.ID)
 	if err != nil {
+		// FIXME:
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, err
 		}
-		return corev1.GetPostImage404JSONResponse{
-			Error: stringPtr("post not found"),
+		// FIXME:
+		return &corev1.GetPostImageNotFound{
+			Error: corev1.NewOptString("post not found"),
 		}, nil
 	}
 
-	// Get image from storage
-	postImage, imageErr := s.blogsUC.GetPostImage(ctx, post.ImageKey, request.Params.IfNoneMatch)
+	var ifNoneMatch *string
+	if params.IfNoneMatch.IsSet() {
+		ifNoneMatch = &params.IfNoneMatch.Value
+	}
+
+	postImage, imageErr := s.blogsUC.GetPostImage(ctx, post.ImageKey, ifNoneMatch)
 
 	var re *http.ResponseError
 	if errors.Is(imageErr, storage.ErrNotModified) || (errors.As(imageErr, &re) && re.HTTPStatusCode() == 304) {
-		return corev1.GetPostImage304Response{
-			Headers: corev1.GetPostImage304ResponseHeaders{
-				ETag: *request.Params.IfNoneMatch,
-			},
+		return &corev1.GetPostImageNotModified{
+			ETag: params.IfNoneMatch,
 		}, nil
 	} else if imageErr != nil {
+		// FIXME:
 		if errors.Is(imageErr, context.DeadlineExceeded) || errors.Is(imageErr, context.Canceled) {
 			return nil, imageErr
 		}
-		_ = imageErr
-		return corev1.GetPostImage404JSONResponse{
-			Error: stringPtr("image not found"),
+		// FIXME:
+		return &corev1.GetPostImageNotFound{
+			Error: corev1.NewOptString("image not found"),
 		}, nil
 	}
 
-	return corev1.GetPostImage200ImagepngResponse{
-		Body: postImage.ReadCloser(),
-		Headers: corev1.GetPostImage200ResponseHeaders{
-			ETag: postImage.Etag(),
+	// FIXME:
+	return &corev1.GetPostImageOKHeaders{
+		Response: corev1.GetPostImageOK{
+			Data: postImage.ReadCloser(),
 		},
+		ETag: corev1.NewOptString(postImage.Etag()),
 	}, nil
-}
-
-// parsePostForm parses a multipart form and extracts post fields
-func parsePostForm(reader *multipart.Reader) (title, description, text string, imageReader io.Reader, filename string, err error) {
-	if reader == nil {
-		return "", "", "", nil, "", fmt.Errorf("no multipart data")
-	}
-
-	for {
-		part, err := reader.NextPart()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return "", "", "", nil, "", fmt.Errorf("failed to read multipart part: %w", err)
-		}
-
-		fieldName := part.FormName()
-		switch fieldName {
-		case "title":
-			buf := make([]byte, 1024*10) // 10KB max for title
-			n, _ := part.Read(buf)
-			title = string(buf[:n])
-		case "description":
-			buf := make([]byte, 1024*100) // 100KB max for description
-			n, _ := part.Read(buf)
-			description = string(buf[:n])
-		case "text":
-			buf := make([]byte, 1024*1024) // 1MB max for text
-			n, _ := part.Read(buf)
-			text = string(buf[:n])
-		case "preview_image":
-			filename = part.FileName()
-			imageReader = part
-			// Don't close part here, it will be read later
-			return title, description, text, imageReader, filename, nil
-		}
-		part.Close()
-	}
-
-	return title, description, text, imageReader, filename, nil
-}
-
-// stringPtr is a helper to get a pointer to a string
-func stringPtr(s string) *string {
-	return &s
 }

@@ -90,6 +90,7 @@ func (uc *ContestsUseCase) GetContest(ctx context.Context, id uuid.UUID) (models
 	return contest, nil
 }
 
+// FIXME: ебать, что с названием??
 func (uc *ContestsUseCase) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (models.Contest, error) {
 	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
@@ -951,5 +952,3 @@ func (uc *ContestsUseCase) GetMyPendingJoinRequest(
 	}
 	return uc.contestRepo.GetPendingContestJoinRequest(ctx, contest.ID, userID)
 }
-
-
