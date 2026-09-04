@@ -3,6 +3,8 @@ name: CI
 on:
   workflow_dispatch:
   workflow_call:
+  pull_request:
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -129,3 +131,35 @@ jobs:
 
       - name: Run dead code check (Knip)
         run: task fe:knip
+
+      - name: Run production build check
+        run: task fe:build
+
+  ci-status:
+    name: All CI Checks Passed
+    needs:
+      - codegen-check
+      - backend-lint
+      - backend-unit-tests
+      - backend-integration-tests
+      - frontend-checks
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify All CI Jobs Passed
+        run: |
+          echo "Codegen: ${{ needs.codegen-check.result }}"
+          echo "Backend Lint: ${{ needs.backend-lint.result }}"
+          echo "Backend Unit Tests: ${{ needs.backend-unit-tests.result }}"
+          echo "Backend Integration Tests: ${{ needs.backend-integration-tests.result }}"
+          echo "Frontend Checks: ${{ needs.frontend-checks.result }}"
+
+          if [[ "${{ needs.codegen-check.result }}" != "success" || \
+                "${{ needs.backend-lint.result }}" != "success" || \
+                "${{ needs.backend-unit-tests.result }}" != "success" || \
+                "${{ needs.backend-integration-tests.result }}" != "success" || \
+                "${{ needs.frontend-checks.result }}" != "success" ]]; then
+            echo "ERROR: One or more CI checks failed!"
+            exit 1
+          fi
+          echo "All CI checks completed successfully!"

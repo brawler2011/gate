@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "bun --env-file=../deploy/local/.env next dev",
     "build:local": "NODE_ENV=production bun --env-file=../deploy/local/.env next build",
-    "build:dev": "NODE_ENV=production bun --env-file=../deploy/dev/.env next build",
     "build:prod": "NODE_ENV=production bun --env-file=../deploy/prod/.env next build",
     "start": "next start",
     "lint": "eslint . && stylelint \"**/*.css\"",

@@ -277,3 +277,18 @@ jobs:
             docker compose pull --ignore-buildable
             docker compose up -d --remove-orphans
             docker image prune -f
+            echo "Waiting for services to become healthy..."
+            HEALTHY=0
+            for i in $(seq 1 30); do
+              if curl -kfsS "https://${DOMAIN_NAME}/health" > /dev/null 2>&1; then
+                echo "Healthcheck passed! https://${DOMAIN_NAME}/health is responding."
+                HEALTHY=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$HEALTHY" -ne 1 ]; then
+              echo "ERROR: Healthcheck timed out for https://${DOMAIN_NAME}/health!"
+              docker compose ps
+              exit 1
+            fi
