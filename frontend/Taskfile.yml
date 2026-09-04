@@ -9,7 +9,17 @@ tasks:
   build:
     desc: "Build production bundle"
     cmds:
+      - bun run build
+
+  build:local:
+    desc: "Build production bundle with local env"
+    cmds:
       - bun run build:local
+
+  build:prod:
+    desc: "Build production bundle with prod env"
+    cmds:
+      - bun run build:prod
 
   typecheck:
     desc: "Run TypeScript type check"

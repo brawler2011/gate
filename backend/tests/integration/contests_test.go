@@ -40,8 +40,8 @@ func (s *IntegrationTestSuite) TestListContests() {
 
 	// 5. Make Request
 	resp, err := s.client.ListPublicContests(withTestUser(s.ctx, user.Id), corev1.ListPublicContestsParams{
-		Page:     1,
-		PageSize: 10,
+		Page:     corev1.NewOptInt32(1),
+		PageSize: corev1.NewOptInt32(10),
 	})
 	s.Require().NoError(err)
 
