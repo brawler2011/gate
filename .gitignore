@@ -6,5 +6,9 @@
 .github/*
 !.github/workflows/
 !.github/workflows/**
+!.tasks/
+!.tasks/**
 *.log
+bin/
 poc
+

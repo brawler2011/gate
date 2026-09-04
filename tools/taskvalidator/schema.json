@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TaskFrontmatter",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "status",
+    "type",
+    "description",
+    "created_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^TASK-[0-9]{3,}$",
+      "description": "Unique task identifier starting with TASK- followed by at least 3 digits"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 5,
+      "description": "Short human-readable title for the task"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "ready", "in_progress", "review", "done"],
+      "description": "Current lifecycle status of the task"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["fix", "feat", "refactor", "chore", "docs", "impr"],
+      "description": "Type of work represented by the task"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Brief one-line summary describing the purpose of the task"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high", "critical"],
+      "default": "normal",
+      "description": "Priority level of the task"
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "Date of creation in YYYY-MM-DD format"
+    },
+    "assignee": {
+      "type": "string",
+      "description": "Optional assigned developer username or identifier"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional tags for categorization"
+    }
+  }
+}
