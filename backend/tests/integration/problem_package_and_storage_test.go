@@ -302,7 +302,7 @@ func newMinioBackedS3Client(t *testing.T) (context.Context, storage.Storage) {
 	ctx := context.Background()
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "minio/minio:latest",
+			Image:        "quay.io/minio/minio:latest",
 			ExposedPorts: []string{minioAPIPort},
 			Env: map[string]string{
 				"MINIO_ROOT_USER":     "minioadmin",
