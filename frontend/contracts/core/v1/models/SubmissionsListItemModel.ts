@@ -3,14 +3,15 @@
 /* tslint:disable */
 /* eslint-disable */
 export type SubmissionsListItemModel = {
+    frozen?: boolean;
     id: string;
     user_id: string;
     username: string;
-    state: number;
-    score: number;
-    penalty: number;
-    time_stat: number;
-    memory_stat: number;
+    state?: number;
+    score?: number;
+    penalty?: number;
+    time_stat?: number;
+    memory_stat?: number;
     language: number;
     failed_test?: number | null;
     problem_id: string;

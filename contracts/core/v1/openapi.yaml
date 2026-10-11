@@ -5000,11 +5000,6 @@ components:
         - id
         - user_id
         - username
-        - state
-        - score
-        - penalty
-        - time_stat
-        - memory_stat
         - language
         - problem_id
         - problem_title
@@ -5015,6 +5010,8 @@ components:
         - updated_at
         - created_at
       properties:
+        frozen:
+          type: boolean
         id:
           type: string
           format: uuid
@@ -5163,12 +5160,6 @@ components:
         - id
         - user_id
         - username
-        - submission
-        - state
-        - score
-        - penalty
-        - time_stat
-        - memory_stat
         - language
         - problem_id
         - problem_title
@@ -5179,6 +5170,8 @@ components:
         - updated_at
         - created_at
       properties:
+        frozen:
+          type: boolean
         id:
           type: string
           format: uuid

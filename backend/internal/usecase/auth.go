@@ -23,7 +23,7 @@ const (
 	sessionHardLifetime = 7 * 24 * time.Hour // 7 days
 	sessionSoftLifetime = 40 * time.Minute   // 40 minutes
 
-	verificationTokenTTL = 24 * time.Hour
+	verificationTokenTTL  = 24 * time.Hour
 	passwordResetTokenTTL = 1 * time.Hour
 	emailChangeTokenTTL   = 24 * time.Hour
 )
@@ -224,7 +224,10 @@ func (uc *AuthUseCase) Logout(ctx context.Context, sessionID uuid.UUID) error {
 func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (models.User, error) {
 	session, err := uc.authRepo.GetSession(ctx, sessionID)
 	if err != nil {
-		return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid session")
+		if errors.Is(err, pkg.ErrNotFound) {
+			return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid session")
+		}
+		return models.User{}, fmt.Errorf("get session: %w", err)
 	}
 
 	// 1. Hard lifetime check: expires 7 days after creation
@@ -252,7 +255,10 @@ func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (m
 
 	user, err := uc.usersRepo.GetUserById(ctx, session.UserID)
 	if err != nil {
-		return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, err, "user not found")
+		if errors.Is(err, pkg.ErrNotFound) {
+			return models.User{}, pkg.Wrap(pkg.ErrUnauthenticated, err, "user not found")
+		}
+		return models.User{}, fmt.Errorf("get session user: %w", err)
 	}
 
 	if user.IsExpired() {

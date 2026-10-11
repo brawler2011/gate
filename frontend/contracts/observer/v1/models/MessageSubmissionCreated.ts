@@ -4,8 +4,9 @@
 /* eslint-disable */
 import type { SubmissionEventMeta } from './SubmissionEventMeta';
 export type MessageSubmissionCreated = (SubmissionEventMeta & {
+    frozen?: boolean;
     id: string;
-    state: number;
-    source: string;
+    state?: number;
+    source?: string;
 });
 

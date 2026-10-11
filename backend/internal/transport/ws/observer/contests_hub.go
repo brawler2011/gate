@@ -22,10 +22,8 @@ type ContestSubscriber struct {
 }
 
 type ContestsFilter struct {
-	Since       uint64
-	ContestId   uuid.UUID
-	UserId      *uuid.UUID
-	IsModerator bool
+	Since     uint64
+	ContestId uuid.UUID
 }
 
 func (f *ContestsFilter) Matches(event *WrappedEvent) bool {
@@ -35,21 +33,9 @@ func (f *ContestsFilter) Matches(event *WrappedEvent) bool {
 	case *models.ContestAnnouncementDeletedEvent:
 		return e.ContestID == f.ContestId
 	case *models.ContestClarificationCreatedEvent:
-		if e.ContestID != f.ContestId {
-			return false
-		}
-		if f.IsModerator {
-			return true
-		}
-		return f.UserId != nil && *f.UserId == e.UserID
+		return e.ContestID == f.ContestId
 	case *models.ContestClarificationAnsweredEvent:
-		if e.ContestID != f.ContestId {
-			return false
-		}
-		if f.IsModerator {
-			return true
-		}
-		return f.UserId != nil && *f.UserId == e.UserID
+		return e.ContestID == f.ContestId
 	default:
 		slog.Warn("unknown event type in contest filter match", "type", event.EventType)
 		return false

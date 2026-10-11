@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"time"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -57,27 +58,18 @@ func (h *CoreServer) GetSubmission(ctx context.Context, params corev1.GetSubmiss
 	}
 
 	user := middleware.GetUser(ctx)
-	canViewDetails := false
-
-	switch {
-	case user.IsAdmin():
-		canViewDetails = true
-	case submission.ContestID != nil:
-		allowed, err := h.permissionsUC.HasContestPermission(
-			ctx,
-			*submission.ContestID,
-			user.Id,
-			models.ActionGetSubmissionDetails,
-		)
-		if err == nil && allowed {
-			canViewDetails = true
+	if submission.ContestID != nil {
+		contest, err := h.contestsUC.GetContest(ctx, *submission.ContestID)
+		if err != nil {
+			return nil, err
 		}
-	case submission.CreatedBy != nil && *submission.CreatedBy == user.Id:
-		canViewDetails = true
-	}
-
-	if !canViewDetails {
-		submission.TestDetails = nil
+		permissions, err := h.permissionsUC.GetContestPermissions(ctx, contest.ID, user.Id)
+		if err != nil {
+			return nil, err
+		}
+		submission = models.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
+	} else if !user.IsAdmin() && (submission.CreatedBy == nil || *submission.CreatedBy != user.Id) {
+		return nil, pkg.NoPermission
 	}
 
 	return &corev1.GetSubmissionResponseModel{Submission: SolutionDTO(submission)}, nil
@@ -247,4 +239,3 @@ func (h *CoreServer) RejudgeContest(ctx context.Context, params corev1.RejudgeCo
 
 	return nil
 }
-

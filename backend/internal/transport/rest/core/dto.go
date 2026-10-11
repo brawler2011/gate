@@ -244,12 +244,12 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 		SubmissionDetailsScope: submissionDetailsScope,
 		FreezeDurationMinutes:  freezeDurationMinutes,
 		FreezeStatus:           freezeStatus,
-		EnableDrafts:          enableDrafts,
-		AllowClarifications:   allowClarifications,
+		EnableDrafts:           enableDrafts,
+		AllowClarifications:    allowClarifications,
 		EnableUpsolving:        enableUpsolving,
-		EnableVirtualContests: enableVirtualContests,
-		ParticipationMode:     participationMode,
-		HideStatements:        hideStatements,
+		EnableVirtualContests:  enableVirtualContests,
+		ParticipationMode:      participationMode,
+		HideStatements:         hideStatements,
 		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,
@@ -400,17 +400,17 @@ func statementField(statement *models.Statement, getter func(models.Statement) s
 }
 
 func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel {
-	return corev1.SubmissionsListItemModel{
+	dto := corev1.SubmissionsListItemModel{
 		ID:     s.ID,
 		UserID: uuidPtrToUUID(s.CreatedBy),
 
 		Username: s.Username,
 
-		State:      s.State,
-		Score:      s.Score,
-		Penalty:    s.Penalty,
-		TimeStat:   s.TimeStat,
-		MemoryStat: s.MemoryStat,
+		State:      corev1.NewOptInt32(s.State),
+		Score:      corev1.NewOptInt32(s.Score),
+		Penalty:    corev1.NewOptInt32(s.Penalty),
+		TimeStat:   corev1.NewOptInt32(s.TimeStat),
+		MemoryStat: corev1.NewOptInt32(s.MemoryStat),
 		Language:   s.Language,
 		FailedTest: int32PtrToOptNilInt32(s.FailedTest),
 
@@ -428,6 +428,18 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
 	}
+	if s.Frozen {
+		dto.Frozen = corev1.NewOptBool(true)
+		dto.State.Reset()
+		dto.Score.Reset()
+		dto.Penalty.Reset()
+		dto.TimeStat.Reset()
+		dto.MemoryStat.Reset()
+		dto.FailedTest.Reset()
+		dto.BanReason.Reset()
+	}
+	return dto
+
 }
 
 func SubmissionTestDetailsDTO(td *models.SubmissionTestDetails) *corev1.SubmissionTestDetailsModel {
@@ -475,19 +487,19 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 		testDetailsOpt = corev1.NewOptSubmissionTestDetailsModel(*td)
 	}
 
-	return corev1.SubmissionModel{
+	dto := corev1.SubmissionModel{
 		ID:     s.ID,
 		UserID: uuidPtrToUUID(s.CreatedBy),
 
 		Username: s.Username,
 
-		Submission: s.Submission,
+		Submission: corev1.NewOptString(s.Submission),
 
-		State:       s.State,
-		Score:       s.Score,
-		Penalty:     s.Penalty,
-		TimeStat:    s.TimeStat,
-		MemoryStat:  s.MemoryStat,
+		State:       corev1.NewOptInt32(s.State),
+		Score:       corev1.NewOptInt32(s.Score),
+		Penalty:     corev1.NewOptInt32(s.Penalty),
+		TimeStat:    corev1.NewOptInt32(s.TimeStat),
+		MemoryStat:  corev1.NewOptInt32(s.MemoryStat),
 		Language:    s.Language,
 		FailedTest:  int32PtrToOptNilInt32(s.FailedTest),
 		TestDetails: testDetailsOpt,
@@ -506,6 +518,24 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
 	}
+	if s.Frozen {
+		dto.Frozen = corev1.NewOptBool(true)
+		dto.State.Reset()
+		dto.Score.Reset()
+		dto.Penalty.Reset()
+		dto.TimeStat.Reset()
+		dto.MemoryStat.Reset()
+		dto.FailedTest.Reset()
+		dto.BanReason.Reset()
+	}
+	if s.SourceHidden || s.Frozen {
+		dto.Submission.Reset()
+	}
+	if s.Frozen {
+		dto.TestDetails.Reset()
+	}
+	return dto
+
 }
 
 func userDTO(u models.User) corev1.UserModel {
@@ -1079,8 +1109,3 @@ func ContestClarificationsListResponseDTO(list *models.ContestClarificationsList
 		Pagination:     PaginationDTO(list.Pagination),
 	}
 }
-
-
-
-
-

@@ -2,12 +2,14 @@ package observer
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
 	observerv1 "github.com/brawler2011/contracts/observer/v1"
+	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/google/uuid"
@@ -21,15 +23,21 @@ type Observer struct {
 	handler     http.Handler
 	hub         *Hub
 	contestsHub *ContestsHub
+	auth        interfaces.AuthUC
+	permissions interfaces.PermissionsUC
+	contests    interfaces.ContestsUC
 }
 
-func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler) *Observer {
+func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler, auth interfaces.AuthUC, permissions interfaces.PermissionsUC, contests interfaces.ContestsUC) *Observer {
 	mux := http.NewServeMux()
 
 	observer := &Observer{
 		upgrader:    &websocket.Upgrader{},
 		hub:         hub,
 		contestsHub: contestsHub,
+		auth:        auth,
+		permissions: permissions,
+		contests:    contests,
 	}
 
 	mux.HandleFunc("/ws/submissions", observer.HandleSubmissions)
@@ -52,13 +60,13 @@ type SubmissionsFilter struct {
 }
 
 func metaMatches(meta *models.SubmissionEventMeta, filter *SubmissionsFilter) bool {
-	if filter.ContestId != nil && meta.ContestId != nil && *meta.ContestId != *filter.ContestId {
+	if filter.ContestId != nil && (meta.ContestId == nil || *meta.ContestId != *filter.ContestId) {
 		return false
 	}
-	if filter.UserId != nil && meta.UserId != nil && *meta.UserId != *filter.UserId {
+	if filter.UserId != nil && (meta.UserId == nil || *meta.UserId != *filter.UserId) {
 		return false
 	}
-	if filter.ProblemId != nil && meta.ProblemId != nil && *meta.ProblemId != *filter.ProblemId {
+	if filter.ProblemId != nil && (meta.ProblemId == nil || *meta.ProblemId != *filter.ProblemId) {
 		return false
 	}
 	if filter.Language != nil && meta.Language != *filter.Language {
@@ -87,41 +95,46 @@ func (f *SubmissionsFilter) Matches(event *WrappedEvent) bool {
 	}
 }
 
-func parseSubmissionsFilter(r *http.Request) *SubmissionsFilter {
+func parseSubmissionsFilter(r *http.Request) (*SubmissionsFilter, error) {
 	filter := &SubmissionsFilter{}
-	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
-		since, err := strconv.ParseUint(sinceStr, 10, 64)
-		if err == nil {
-			filter.Since = since
+	q := r.URL.Query()
+	for key, target := range map[string]**uuid.UUID{"contestId": &filter.ContestId, "userId": &filter.UserId, "problemId": &filter.ProblemId} {
+		if values, ok := q[key]; ok {
+			if len(values) != 1 {
+				return nil, fmt.Errorf("invalid %s", key)
+			}
+			id, err := uuid.Parse(values[0])
+			if err != nil || id == uuid.Nil {
+				return nil, fmt.Errorf("invalid %s", key)
+			}
+			*target = &id
 		}
 	}
-
-	if cId := r.URL.Query().Get("contestId"); cId != "" {
-		if id, err := uuid.Parse(cId); err == nil {
-			filter.ContestId = &id
+	if values, ok := q["since"]; ok {
+		if len(values) != 1 {
+			return nil, fmt.Errorf("invalid since")
 		}
-	}
-
-	if uId := r.URL.Query().Get("userId"); uId != "" {
-		if id, err := uuid.Parse(uId); err == nil {
-			filter.UserId = &id
+		value, err := strconv.ParseUint(values[0], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid since: %w", err)
 		}
+		filter.Since = value
 	}
-
-	if pId := r.URL.Query().Get("problemId"); pId != "" {
-		if id, err := uuid.Parse(pId); err == nil {
-			filter.ProblemId = &id
+	if values, ok := q["language"]; ok {
+		if len(values) != 1 {
+			return nil, fmt.Errorf("invalid language")
 		}
-	}
-
-	if langStr := r.URL.Query().Get("language"); langStr != "" {
-		if lang, err := strconv.ParseInt(langStr, 10, 32); err == nil {
-			l32 := int32(lang)
-			filter.Language = &l32
+		value, err := strconv.ParseInt(values[0], 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("invalid language: %w", err)
 		}
+		lang := int32(value)
+		if err := models.LanguageNameValid(lang); err != nil {
+			return nil, err
+		}
+		filter.Language = &lang
 	}
-
-	return filter
+	return filter, nil
 }
 
 func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
@@ -133,22 +146,22 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := parseSubmissionsFilter(r)
-
-	if !user.IsAdmin() {
-		// Non-admins can subscribe only to a specific contest
-		if filter.ContestId == nil {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-
-		// TODO: verify the user is a participant or organizer of the requested contest.
+	filter, err := parseSubmissionsFilter(r)
+	if err != nil {
+		http.Error(w, "invalid filter", http.StatusBadRequest)
+		return
+	}
+	if err := s.checkSubscription(ctx, filter, false); err != nil {
+		subscriptionError(w, err)
+		return
 	}
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("failed to upgrade connection", "error", err)
 		return
 	}
+
+	send := func(event *WrappedEvent) error { return s.sendSubmission(ctx, filter, event, conn) }
 
 	sub := &Subscriber{
 		id:      uuid.New(),
@@ -159,11 +172,9 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		pending: make([]*WrappedEvent, 0),
 	}
 
-	// 1. Set barrier
-	sub.barrierSeq = s.hub.ring.MaxSeq()
-
-	// 2. Register as PAUSED in Hub
+	// Set the barrier and register as PAUSED atomically with broadcast.
 	s.hub.mu.Lock()
+	sub.barrierSeq = s.hub.ring.MaxSeq()
 	s.hub.subscribers[sub.id] = sub
 	s.hub.mu.Unlock()
 
@@ -178,10 +189,13 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 	readDone := startReadPump(conn)
 
 	// 3. Catch-up from ring buffer
-	history, err := s.hub.ring.GetRange(filter.Since, sub.barrierSeq)
+	var history []*WrappedEvent
+	if sub.barrierSeq != 0 {
+		history, err = s.hub.ring.GetRange(filter.Since, sub.barrierSeq)
+	}
 	if err != nil && !errors.Is(err, ErrBufferEmpty) {
 		code, message := getClosingFrameData(err)
-		if err := conn.WriteControl(code, message, time.Now().Add(timeToClose)); err != nil {
+		if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, string(message)), time.Now().Add(timeToClose)); err != nil {
 			handleWriteError(err)
 			return
 		}
@@ -197,33 +211,36 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if filter.Matches(event) {
-			if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+			if err := send(event); err != nil {
 				handleWriteError(err)
 				return
 			}
 		}
 	}
 
-	// 4. Flush pending and transition to LIVE
-	sub.mu.Lock()
-	for _, event := range sub.pending {
-		select {
-		case <-readDone:
+	// Drain batches outside locks; switch to live atomically after the last batch.
+	for {
+		sub.mu.Lock()
+		batch := sub.pending
+		sub.pending = nil
+		if len(batch) == 0 {
+			sub.state = StateLive
 			sub.mu.Unlock()
-			return
-		default:
+			break
 		}
-
-		if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
-			handleWriteError(err)
-			sub.mu.Unlock()
-			return
+		sub.mu.Unlock()
+		for _, event := range batch {
+			select {
+			case <-readDone:
+				return
+			default:
+			}
+			if err := send(event); err != nil {
+				handleWriteError(err)
+				return
+			}
 		}
 	}
-
-	sub.pending = nil
-	sub.state = StateLive
-	sub.mu.Unlock()
 
 	// 5. Main write loop (live events)
 	for {
@@ -233,12 +250,12 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		case event := <-sub.outbox:
 			if event == nil {
 				slog.Error("event is nil")
-				if err := conn.WriteControl(websocket.CloseInternalServerErr, nil, time.Now().Add(timeToClose)); err != nil {
+				if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "internal error"), time.Now().Add(timeToClose)); err != nil {
 					handleWriteError(err)
 				}
 				return
 			}
-			if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+			if err := send(event); err != nil {
 				handleWriteError(err)
 				return
 			}
@@ -308,33 +325,16 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cId := r.URL.Query().Get("contestId")
-	if cId == "" {
-		http.Error(w, "contestId is required", http.StatusBadRequest)
+	parsed, err := parseSubmissionsFilter(r)
+	if err != nil || parsed.ContestId == nil {
+		http.Error(w, "invalid filter", http.StatusBadRequest)
 		return
 	}
-	contestID, err := uuid.Parse(cId)
-	if err != nil {
-		http.Error(w, "invalid contestId", http.StatusBadRequest)
+	if err := s.checkSubscription(ctx, parsed, true); err != nil {
+		subscriptionError(w, err)
 		return
 	}
-
-	var since uint64
-	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
-		if val, err := strconv.ParseUint(sinceStr, 10, 64); err == nil {
-			since = val
-		}
-	}
-
-	userID := user.Id
-	isModerator := user.IsAdmin()
-
-	filter := &ContestsFilter{
-		Since:       since,
-		ContestId:   contestID,
-		UserId:      &userID,
-		IsModerator: isModerator,
-	}
+	filter := &ContestsFilter{Since: parsed.Since, ContestId: *parsed.ContestId}
 
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -342,17 +342,19 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	send := func(event *WrappedEvent) error { return s.sendContest(ctx, parsed, event, conn) }
+
 	sub := &ContestSubscriber{
-		id:         uuid.New(),
-		conn:       conn,
-		filter:     filter,
-		outbox:     make(chan *WrappedEvent, 1000),
-		state:      StatePaused,
-		pending:    make([]*WrappedEvent, 0),
-		barrierSeq: s.contestsHub.ring.MaxSeq(),
+		id:      uuid.New(),
+		conn:    conn,
+		filter:  filter,
+		outbox:  make(chan *WrappedEvent, 1000),
+		state:   StatePaused,
+		pending: make([]*WrappedEvent, 0),
 	}
 
 	s.contestsHub.mu.Lock()
+	sub.barrierSeq = s.contestsHub.ring.MaxSeq()
 	s.contestsHub.subscribers[sub.id] = sub
 	s.contestsHub.mu.Unlock()
 
@@ -366,10 +368,13 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 	readDone := startReadPump(conn)
 
 	// Catch-up from ring buffer
-	history, err := s.contestsHub.ring.GetRange(filter.Since, sub.barrierSeq)
+	var history []*WrappedEvent
+	if sub.barrierSeq != 0 {
+		history, err = s.contestsHub.ring.GetRange(filter.Since, sub.barrierSeq)
+	}
 	if err != nil && !errors.Is(err, ErrBufferEmpty) {
 		code, message := getClosingFrameData(err)
-		if err := conn.WriteControl(code, message, time.Now().Add(timeToClose)); err != nil {
+		if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, string(message)), time.Now().Add(timeToClose)); err != nil {
 			handleWriteError(err)
 			return
 		}
@@ -385,33 +390,36 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if filter.Matches(event) {
-			if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+			if err := send(event); err != nil {
 				handleWriteError(err)
 				return
 			}
 		}
 	}
 
-	// Flush pending and transition to LIVE
-	sub.mu.Lock()
-	for _, event := range sub.pending {
-		select {
-		case <-readDone:
+	// Drain batches outside locks; switch to live atomically after the last batch.
+	for {
+		sub.mu.Lock()
+		batch := sub.pending
+		sub.pending = nil
+		if len(batch) == 0 {
+			sub.state = StateLive
 			sub.mu.Unlock()
-			return
-		default:
+			break
 		}
-
-		if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
-			handleWriteError(err)
-			sub.mu.Unlock()
-			return
+		sub.mu.Unlock()
+		for _, event := range batch {
+			select {
+			case <-readDone:
+				return
+			default:
+			}
+			if err := send(event); err != nil {
+				handleWriteError(err)
+				return
+			}
 		}
 	}
-
-	sub.pending = nil
-	sub.state = StateLive
-	sub.mu.Unlock()
 
 	// Main write loop
 	for {
@@ -421,16 +429,15 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 		case event := <-sub.outbox:
 			if event == nil {
 				slog.Error("contest event is nil")
-				if err := conn.WriteControl(websocket.CloseInternalServerErr, nil, time.Now().Add(timeToClose)); err != nil {
+				if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "internal error"), time.Now().Add(timeToClose)); err != nil {
 					handleWriteError(err)
 				}
 				return
 			}
-			if err := conn.WriteMessage(websocket.TextMessage, event.DTOPayload); err != nil {
+			if err := send(event); err != nil {
 				handleWriteError(err)
 				return
 			}
 		}
 	}
 }
-

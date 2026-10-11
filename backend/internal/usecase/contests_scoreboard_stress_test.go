@@ -413,21 +413,21 @@ func TestGetContestScoreboard_BoundarySubmissionsAndFiltering(t *testing.T) {
 	// - 1ns before FreezeTime -> AC (valid pre-freeze solve at min 59)
 	// - Exactly at FreezeTime -> WA (FROZEN pending attempt)
 	// - 1ns after FreezeTime -> WA (FROZEN pending attempt)
-	// - CE during freeze -> IGNORED
-	// - Saved during freeze -> IGNORED
+	// - CE during freeze -> FROZEN pending attempt
+	// - Saved during freeze -> FROZEN pending attempt
 	// - Exactly at EndTime -> WA (FROZEN pending attempt)
 	// - 1ns after EndTime -> IGNORED (out of contest)
 	mockRepo.On("GetSubmissionsForScoreboard", mock.Anything, contestID, userTest, probA).
 		Return([]models.SubmissionForScoreboard{
-			{State: models.Accepted, CreatedAt: startTime.Add(-1 * time.Nanosecond)}, // Ignored
-			{State: models.GotWA, CreatedAt: startTime},                              // Failed 1
-			{State: models.Accepted, CreatedAt: freezeTime.Add(-1 * time.Nanosecond)},// Solved at min 59
-			{State: models.GotWA, CreatedAt: freezeTime},                             // Pending 1
-			{State: models.GotWA, CreatedAt: freezeTime.Add(1 * time.Nanosecond)},    // Pending 2
-			{State: models.GotCE, CreatedAt: freezeTime.Add(10 * time.Minute)},       // CE Ignored
-			{State: models.Saved, CreatedAt: freezeTime.Add(15 * time.Minute)},       // Saved Ignored
-			{State: models.GotWA, CreatedAt: endTime},                                // Pending 3
-			{State: models.Accepted, CreatedAt: endTime.Add(1 * time.Nanosecond)},    // Ignored
+			{State: models.Accepted, CreatedAt: startTime.Add(-1 * time.Nanosecond)},  // Ignored
+			{State: models.GotWA, CreatedAt: startTime},                               // Failed 1
+			{State: models.Accepted, CreatedAt: freezeTime.Add(-1 * time.Nanosecond)}, // Solved at min 59
+			{State: models.GotWA, CreatedAt: freezeTime},                              // Pending 1
+			{State: models.GotWA, CreatedAt: freezeTime.Add(1 * time.Nanosecond)},     // Pending 2
+			{State: models.GotCE, CreatedAt: freezeTime.Add(10 * time.Minute)},        // Pending (CE hidden)
+			{State: models.Saved, CreatedAt: freezeTime.Add(15 * time.Minute)},        // Pending (Saved hidden)
+			{State: models.GotWA, CreatedAt: endTime},                                 // Pending 3
+			{State: models.Accepted, CreatedAt: endTime.Add(1 * time.Nanosecond)},     // Ignored
 		}, nil)
 
 	// Problem B: All error verdict types before freeze (WA, TL, ML, RE, PE) -> all count towards failedAttempts
@@ -457,7 +457,7 @@ func TestGetContestScoreboard_BoundarySubmissionsAndFiltering(t *testing.T) {
 	resA := resMap[probA]
 	assert.True(t, resA.Solved)
 	assert.Equal(t, int32(1), resA.FailedAttempts)
-	assert.Equal(t, int32(3), resA.PendingAttempts) // Exactly at freezeTime, 1ns after, exactly at endTime
+	assert.Equal(t, int32(5), resA.PendingAttempts) // Includes CE and Saved without inspecting hidden verdict
 	assert.Equal(t, int32(59), *resA.TimeMinutes)
 	assert.Equal(t, int32(20), resA.Penalty)
 
