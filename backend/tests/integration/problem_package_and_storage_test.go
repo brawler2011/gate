@@ -22,13 +22,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
-)
-
-const (
-	minioAPIPort       = "9000/tcp"
-	minioStartupTimout = 60 * time.Second
 )
 
 func TestPolygonParser(t *testing.T) {
@@ -156,7 +149,7 @@ validation:
 }
 
 func TestS3ClientOperations(t *testing.T) {
-	ctx, s3Client := newMinioBackedS3Client(t)
+	ctx, s3Client := newSeaweedBackedS3Storage(t)
 
 	bucket := "test-bucket-" + uuid.New().String()
 
@@ -294,45 +287,4 @@ subtasks:
 	err = usecase.ZipDirectory(tempDir, &zipBuffer)
 	require.NoError(t, err)
 	assert.Greater(t, zipBuffer.Len(), 0)
-}
-
-func newMinioBackedS3Client(t *testing.T) (context.Context, storage.Storage) {
-	t.Helper()
-
-	ctx := context.Background()
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "quay.io/minio/minio:latest",
-			ExposedPorts: []string{minioAPIPort},
-			Env: map[string]string{
-				"MINIO_ROOT_USER":     "minioadmin",
-				"MINIO_ROOT_PASSWORD": "minioadmin",
-			},
-			Cmd: []string{"server", "/data", "--address", ":9000"},
-			WaitingFor: wait.ForHTTP("/minio/health/ready").
-				WithPort(minioAPIPort).
-				WithStartupTimeout(minioStartupTimout),
-		},
-		Started: true,
-	})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		_ = container.Terminate(context.Background())
-	})
-
-	host, err := container.Host(ctx)
-	require.NoError(t, err)
-
-	port, err := container.MappedPort(ctx, minioAPIPort)
-	require.NoError(t, err)
-
-	endpoint := "http://" + host + ":" + port.Port()
-
-	return ctx, storage.NewS3Storage(storage.S3Config{
-		Endpoint:  endpoint,
-		AccessKey: "minioadmin",
-		SecretKey: "minioadmin",
-		Region:    "us-east-1",
-	})
 }
