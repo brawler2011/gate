@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -390,34 +391,66 @@ func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.
 	}
 
 	if validatorMeta == nil {
-		return &models.ValidationReport{TotalTests: 0, ValidTests: 0, Results: []models.TestValidationResult{}}, nil
+		return nil, fmt.Errorf("problem must have a validator")
 	}
 
-	testsMeta, err := uc.readTestsMetadata(ctx, problemID)
+	prob, err := uc.readProblemConfig(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read tests metadata: %w", err)
 	}
 
-	report := &models.ValidationReport{TotalTests: len(testsMeta.Tests), Results: make([]models.TestValidationResult, 0)}
+	source, err := uc.workspaceStorage.ReadFile(ctx, problemID, validatorMeta.Filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read validator %s: %w", validatorMeta.Filename, err)
+	}
+	deps, err := uc.readComponentDependencies(ctx, problemID, validatorMeta)
+	if err != nil {
+		return nil, err
+	}
+	language := detectLanguage(filepath.Ext(validatorMeta.Filename))
+	executable, err := uc.sandbox.Compile(ctx, source, language, deps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile validator %s: %w", validatorMeta.Filename, err)
+	}
 
-	for _, test := range testsMeta.Tests {
-		inputPath := fmt.Sprintf("tests/%02d.in", test.Ordinal)
-		_, err := uc.workspaceStorage.ReadFile(ctx, problemID, inputPath)
+	report := &models.ValidationReport{Results: make([]models.TestValidationResult, 0)}
+	for _, group := range orderedSubtaskNames(prob) {
+		for _, test := range prob.Subtasks[group].Tests {
+			report.TotalTests++
+			inputName := test.Manual
+			if inputName == "" {
+				inputName = fmt.Sprintf("%02d.in", report.TotalTests)
+			}
+			inputPath := filepath.ToSlash(filepath.Join("tests", inputName))
+			input, err := uc.workspaceStorage.ReadFile(ctx, problemID, inputPath)
+			result := models.TestValidationResult{TestNumber: report.TotalTests}
+			switch {
+			case errors.Is(err, storage.ErrNotFound):
+				result.Error = fmt.Sprintf("test file not found: %s", inputPath)
+			case err != nil:
+				return nil, fmt.Errorf("failed to read test input %s: %w", inputPath, err)
+			default:
+				run, err := uc.sandbox.Test(ctx, executable, language, input, 5000, 512)
+				if err != nil {
+					return nil, fmt.Errorf("failed to run validator on test %d (%s): %w", result.TestNumber, inputPath, err)
+				}
+				if run.Status == sandbox.StatusFail {
+					return nil, fmt.Errorf("validator sandbox failure on test %d (%s): %s", result.TestNumber, inputPath, strings.TrimSpace(string(run.Stderr)))
+				}
+				result.Valid = run.Status == sandbox.StatusOK && run.ExitStatus == 0
+				if result.Valid {
+					result.Message = "Validator accepted test input"
+				} else {
+					result.Error = fmt.Sprintf("validator status=%s, exit code=%d: %s", run.Status, run.ExitStatus, strings.TrimSpace(string(run.Stderr)))
+				}
+			}
 
-		if err != nil {
-			report.Results = append(report.Results, models.TestValidationResult{
-				TestNumber: test.Ordinal,
-				Valid:      false,
-				Error:      fmt.Sprintf("test file not found: %s", inputPath),
-			})
-			report.InvalidTests++
-		} else {
-			report.Results = append(report.Results, models.TestValidationResult{
-				TestNumber: test.Ordinal,
-				Valid:      true,
-				Message:    "Test file exists",
-			})
-			report.ValidTests++
+			report.Results = append(report.Results, result)
+			if result.Valid {
+				report.ValidTests++
+			} else {
+				report.InvalidTests++
+			}
 		}
 	}
 
@@ -459,28 +492,9 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 	if err != nil {
 		return nil, fmt.Errorf("failed to read checker %s: %w", checkerMeta.Filename, err)
 	}
-	chkDeps := make(map[string][]byte)
-	for _, dep := range checkerMeta.Dependencies {
-		depPath := filepath.ToSlash(filepath.Join(filepath.Dir(checkerMeta.Filename), dep.Filename))
-		depContent, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, depPath)
-		// CompileProblemComponent records shared lib/ dependencies by basename.
-		if errors.Is(err, storage.ErrNotFound) && filepath.Base(dep.Filename) == dep.Filename {
-			allFiles, listErr := uc.workspaceStorage.ListAllFiles(ctx, req.ProblemID)
-			if listErr != nil {
-				return nil, fmt.Errorf("failed to list checker dependencies: %w", listErr)
-			}
-			depPath = filepath.ToSlash(filepath.Join("lib", dep.Filename))
-			for _, file := range allFiles {
-				if strings.HasPrefix(file, "lib/") && filepath.Base(file) == dep.Filename {
-					depPath = file
-				}
-			}
-			depContent, err = uc.workspaceStorage.ReadFile(ctx, req.ProblemID, depPath)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("failed to read checker dependency %s: %w", depPath, err)
-		}
-		chkDeps[dep.Filename] = depContent
+	chkDeps, err := uc.readComponentDependencies(ctx, req.ProblemID, checkerMeta)
+	if err != nil {
+		return nil, err
 	}
 	chkLang := detectLanguage(filepath.Ext(checkerMeta.Filename))
 	checkerExec, err := uc.sandbox.Compile(ctx, chkSource, chkLang, chkDeps)
@@ -627,7 +641,42 @@ func (uc *WorkshopUseCase) saveManifest(ctx context.Context, problemID uuid.UUID
 	return nil
 }
 
+func (uc *WorkshopUseCase) readComponentDependencies(ctx context.Context, problemID uuid.UUID, meta *models.FileMetadata) (map[string][]byte, error) {
+	deps := make(map[string][]byte)
+	for _, dep := range meta.Dependencies {
+		depPath := filepath.ToSlash(filepath.Join(filepath.Dir(meta.Filename), dep.Filename))
+		depContent, err := uc.workspaceStorage.ReadFile(ctx, problemID, depPath)
+		// CompileProblemComponent records shared lib/ dependencies by basename.
+		if errors.Is(err, storage.ErrNotFound) && filepath.Base(dep.Filename) == dep.Filename {
+			allFiles, listErr := uc.workspaceStorage.ListAllFiles(ctx, problemID)
+			if listErr != nil {
+				return nil, fmt.Errorf("failed to list %s dependencies: %w", meta.Type, listErr)
+			}
+			depPath = filepath.ToSlash(filepath.Join("lib", dep.Filename))
+			for _, file := range allFiles {
+				if strings.HasPrefix(file, "lib/") && filepath.Base(file) == dep.Filename {
+					depPath = file
+				}
+			}
+			depContent, err = uc.workspaceStorage.ReadFile(ctx, problemID, depPath)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %s dependency %s: %w", meta.Type, depPath, err)
+		}
+		deps[dep.Filename] = depContent
+	}
+	return deps, nil
+}
+
 func (uc *WorkshopUseCase) readTestsMetadata(ctx context.Context, problemID uuid.UUID) (*models.TestsMetadata, error) {
+	prob, err := uc.readProblemConfig(ctx, problemID)
+	if err != nil {
+		return nil, err
+	}
+	return GfmtProblemToTestsMetadata(prob), nil
+}
+
+func (uc *WorkshopUseCase) readProblemConfig(ctx context.Context, problemID uuid.UUID) (*gfmt.Problem, error) {
 	yamlBytes, err := uc.workspaceStorage.ReadFile(ctx, problemID, "problem.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read problem.yaml: %w", err)
@@ -638,7 +687,7 @@ func (uc *WorkshopUseCase) readTestsMetadata(ctx context.Context, problemID uuid
 		return nil, fmt.Errorf("failed to parse problem.yaml: %w", err)
 	}
 
-	return GfmtProblemToTestsMetadata(&prob), nil
+	return &prob, nil
 }
 
 func defaultManifest(title string) *models.ProblemManifest {
@@ -704,6 +753,21 @@ func computeSHA256(data []byte) string {
 	return fmt.Sprintf("%x", hash)
 }
 
+// orderedSubtaskNames matches the judge's test numbering: samples first, then names.
+func orderedSubtaskNames(prob *gfmt.Problem) []string {
+	names := make([]string, 0, len(prob.Subtasks))
+	for name := range prob.Subtasks {
+		if name != "samples" {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	if _, exists := prob.Subtasks["samples"]; exists {
+		names = append([]string{"samples"}, names...)
+	}
+	return names
+}
+
 func GfmtProblemToTestsMetadata(prob *gfmt.Problem) *models.TestsMetadata {
 	testsMeta := &models.TestsMetadata{
 		Groups: []models.TestGroup{},
@@ -712,7 +776,8 @@ func GfmtProblemToTestsMetadata(prob *gfmt.Problem) *models.TestsMetadata {
 
 	testOrdinal := 1
 	groupOrdinal := 1
-	for subName, sub := range prob.Subtasks {
+	for _, subName := range orderedSubtaskNames(prob) {
+		sub := prob.Subtasks[subName]
 		startTest := testOrdinal
 		for _, t := range sub.Tests {
 			tc := models.TestCase{
