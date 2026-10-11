@@ -306,7 +306,8 @@ func newWorkshopSandbox(t *testing.T) *sandbox.Sandbox {
 			Dockerfile: dockerfileName,
 			Repo:       "gate-workshop-gojudge",
 			Tag:        "local",
-			KeepImage:  false,
+			// Keep compiler layers cached between isolated sandbox containers.
+			KeepImage: true,
 		}
 	}
 
