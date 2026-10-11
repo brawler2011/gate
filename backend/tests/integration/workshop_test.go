@@ -182,13 +182,14 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 	sb := newWorkshopSandbox(t)
 	ctx := context.Background()
 	for _, tc := range []struct {
-		name      string
-		checker   string
-		output    string
-		files     map[string]string
-		deps      []models.Dependency
-		verdict   string
-		wantError string
+		name         string
+		checker      string
+		output       string
+		files        map[string]string
+		deps         []models.Dependency
+		compileFirst bool
+		verdict      string
+		wantError    string
 	}{
 		{
 			name:    "checker accepts different text",
@@ -214,6 +215,14 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 			files:   map[string]string{"lib/verdict.h": "#define CHECKER_EXIT 1"},
 			deps:    []models.Dependency{{Filename: "verdict.h"}},
 			verdict: "WA",
+		},
+		{
+			name:         "compiled checker with nested shared dependency",
+			checker:      "#include \"verdict.h\"\nint main(){return CHECKER_EXIT;}",
+			output:       "3",
+			files:        map[string]string{"lib/support/verdict.h": "#define CHECKER_EXIT 1"},
+			compileFirst: true,
+			verdict:      "WA",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -242,6 +251,11 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 				require.NoError(t, ws.WriteFile(ctx, problemID, path, []byte(content)))
 			}
 			uc := usecase.NewWorkshopUseCase(repo, ws, sb, nil)
+			if tc.compileFirst {
+				compiled, err := uc.CompileProblemComponent(ctx, models.CompileComponentRequest{ProblemID: problemID, ComponentType: "checker"})
+				require.NoError(t, err)
+				require.True(t, compiled.Success, compiled.CompileError)
+			}
 			report, err := uc.TestSolution(ctx, models.TestSolutionRequest{ProblemID: problemID, SolutionPath: "solutions/main.cpp"})
 			if tc.wantError != "" {
 				require.ErrorContains(t, err, "failed to compile checker checkers/checker.cpp")

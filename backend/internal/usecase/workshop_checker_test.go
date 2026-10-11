@@ -25,6 +25,7 @@ func TestWorkshopTestSolution_CheckerPreparationErrors(t *testing.T) {
 		files     map[string]string
 		deps      []models.Dependency
 		readError error
+		listError error
 		wantError string
 		wantCause error
 	}{
@@ -34,9 +35,11 @@ func TestWorkshopTestSolution_CheckerPreparationErrors(t *testing.T) {
 		{name: "compilation failure", files: map[string]string{"checkers/checker.cpp": "checker"}, wantError: "failed to compile checker checkers/checker.cpp: unsupported language: cpp"},
 		{name: "relative dependency", files: map[string]string{"checkers/checker.cpp": "checker", "checkers/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, wantError: "failed to compile checker"},
 		{name: "shared dependency", files: map[string]string{"checkers/checker.cpp": "checker", "lib/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, wantError: "failed to compile checker"},
+		{name: "nested shared dependency", files: map[string]string{"checkers/checker.cpp": "checker", "lib/support/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, wantError: "failed to compile checker"},
+		{name: "dependency listing failure", files: map[string]string{"checkers/checker.cpp": "checker", "lib/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, listError: storageErr, wantError: "failed to list checker dependencies", wantCause: storageErr},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			store := &workshopCheckerStorage{Storage: storage.NewLocalStorage(t.TempDir()), readError: tc.readError}
+			store := &workshopCheckerStorage{Storage: storage.NewLocalStorage(t.TempDir()), readError: tc.readError, listError: tc.listError}
 			uc, req := newWorkshopCheckerTest(t, store, tc.files, tc.deps)
 			// An empty language config fails compilation without dispatching any execution.
 			uc.sandbox = sandbox.NewSandbox(nil, &sandbox.Config{})
@@ -115,7 +118,15 @@ func newWorkshopCheckerTest(t *testing.T, store storage.Storage, files map[strin
 type workshopCheckerStorage struct {
 	storage.Storage
 	readError error
+	listError error
 	readPaths []string
+}
+
+func (s *workshopCheckerStorage) ListObjects(ctx context.Context, bucket, prefix string) ([]storage.ObjectInfo, error) {
+	if s.listError != nil {
+		return nil, s.listError
+	}
+	return s.Storage.ListObjects(ctx, bucket, prefix)
 }
 
 func (s *workshopCheckerStorage) DownloadFile(ctx context.Context, bucket, key string, etag *string) (io.ReadCloser, string, error) {

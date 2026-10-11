@@ -465,7 +465,16 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 		depContent, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, depPath)
 		// CompileProblemComponent records shared lib/ dependencies by basename.
 		if errors.Is(err, storage.ErrNotFound) && filepath.Base(dep.Filename) == dep.Filename {
+			allFiles, listErr := uc.workspaceStorage.ListAllFiles(ctx, req.ProblemID)
+			if listErr != nil {
+				return nil, fmt.Errorf("failed to list checker dependencies: %w", listErr)
+			}
 			depPath = filepath.ToSlash(filepath.Join("lib", dep.Filename))
+			for _, file := range allFiles {
+				if strings.HasPrefix(file, "lib/") && filepath.Base(file) == dep.Filename {
+					depPath = file
+				}
+			}
 			depContent, err = uc.workspaceStorage.ReadFile(ctx, req.ProblemID, depPath)
 		}
 		if err != nil {
