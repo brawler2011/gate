@@ -1,7 +1,7 @@
 ---
 id: TASK-018
 title: "Protect observer access and frozen submission results"
-status: todo
+status: done
 type: fix
 description: "Authorize observer delivery and prevent frozen result disclosure through WebSocket and REST."
 priority: critical
@@ -30,12 +30,17 @@ Start from origin/main including PR #11. Preserve untracked CODEBASE_REVIEW.md.
 - [x] GetSubmission and ListContestSubmissions apply masking; state filtering during freeze requires moderator or exclusively own selection. Scoreboard counts hidden pending before verdict inspection.
 - [x] Optional contracts are generated with normal commands; frontend displays frozen results, preserves own results, avoids duplicate pending and restores scoreboard after reconnection.
 - [x] Regression tests cover handshake/JSON, role sources, history/pending/live, revocation/demotion/deletion/database errors and freeze boundary/forced/unfrozen cases.
-- [ ] Backend unit/integration, observer race, bun test, task tasks:validate and task precommit pass.
-
+- [x] Backend unit/integration, observer race, bun test, task tasks:validate and task precommit pass.
 
 ## Implementation Notes
 Revalidate on each delivery; idle connections are checked on the next event.
 Previously delivered messages cannot be revoked. Additional database queries are accepted.
+Precommit metadata tests use temporary task fixtures because origin/main removed TASK-001/003.
 
 ## Delivery
 Create the PR with task pr:create, obtain isolated APPROVE for the exact SHA and green CI; leave it unmerged.
+
+## Verification
+Backend unit and full integration suites passed; real PostgreSQL roles and session revocation passed.
+Observer race tests passed; bun test passed (60 tests), including production DOM tests.
+Contracts generated; task tasks:validate and full task precommit passed.
