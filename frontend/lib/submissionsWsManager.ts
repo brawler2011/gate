@@ -353,11 +353,11 @@ class SubmissionsWsManager {
         }
 
         if (event.code === 1000) {
-          void this.reconnectWithoutResync('socket_close:1000');
+          void this.reconnectWithResync('socket_close:1000');
           return;
         }
 
-        void this.reconnectWithoutResync(`socket_close:${event.code}`);
+        void this.reconnectWithResync(`socket_close:${event.code}`);
       };
     } catch (error) {
       this.state = 'idle';
@@ -443,6 +443,7 @@ class SubmissionsWsManager {
       this.resyncCount++;
       log('Resync attempt done', {ok, reason, resyncCount: this.resyncCount});
       if (!ok) {
+        void this.reconnectWithResync('resync_failure');
         return;
       }
 

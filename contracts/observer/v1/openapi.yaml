@@ -136,9 +136,9 @@ components:
         - type: object
           required:
             - id
-            - state
-            - source
           properties:
+            frozen:
+              type: boolean
             id:
               type: string
               format: uuid
@@ -197,12 +197,9 @@ components:
         - type: object
           required:
             - id
-            - state
-            - score
-            - penalty
-            - time_stat
-            - memory_stat
           properties:
+            frozen:
+              type: boolean
             id:
               type: string
               format: uuid

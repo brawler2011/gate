@@ -132,16 +132,17 @@ type MessageSubmissionCompleted struct {
 	ContestTitle *string             `json:"contest_title,omitempty"`
 	CreatedAt    *time.Time          `json:"created_at,omitempty"`
 	FailedTest   *int32              `json:"failed_test"`
+	Frozen       *bool               `json:"frozen,omitempty"`
 	Id           openapi_types.UUID  `json:"id"`
 	Language     *int32              `json:"language,omitempty"`
-	MemoryStat   int32               `json:"memory_stat"`
-	Penalty      int32               `json:"penalty"`
+	MemoryStat   *int32              `json:"memory_stat,omitempty"`
+	Penalty      *int32              `json:"penalty,omitempty"`
 	Position     *int32              `json:"position,omitempty"`
 	ProblemId    *openapi_types.UUID `json:"problem_id,omitempty"`
 	ProblemTitle *string             `json:"problem_title,omitempty"`
-	Score        int32               `json:"score"`
-	State        int32               `json:"state"`
-	TimeStat     int32               `json:"time_stat"`
+	Score        *int32              `json:"score,omitempty"`
+	State        *int32              `json:"state,omitempty"`
+	TimeStat     *int32              `json:"time_stat,omitempty"`
 	UserId       *openapi_types.UUID `json:"user_id,omitempty"`
 	Username     *string             `json:"username,omitempty"`
 }
@@ -151,13 +152,14 @@ type MessageSubmissionCreated struct {
 	ContestId    *openapi_types.UUID `json:"contest_id,omitempty"`
 	ContestTitle *string             `json:"contest_title,omitempty"`
 	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	Frozen       *bool               `json:"frozen,omitempty"`
 	Id           openapi_types.UUID  `json:"id"`
 	Language     *int32              `json:"language,omitempty"`
 	Position     *int32              `json:"position,omitempty"`
 	ProblemId    *openapi_types.UUID `json:"problem_id,omitempty"`
 	ProblemTitle *string             `json:"problem_title,omitempty"`
-	Source       string              `json:"source"`
-	State        int32               `json:"state"`
+	Source       *string             `json:"source,omitempty"`
+	State        *int32              `json:"state,omitempty"`
 	UserId       *openapi_types.UUID `json:"user_id,omitempty"`
 	Username     *string             `json:"username,omitempty"`
 }

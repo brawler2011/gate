@@ -916,6 +916,16 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		problemID = &params.ProblemId.Value
 	}
 
+	user := middleware.GetUser(ctx)
+	permissions, err := h.permissionsUC.GetContestPermissions(ctx, contest.ID, user.Id)
+	if err != nil {
+		return nil, err
+	}
+	ownOnly := filterUserId != nil && *filterUserId == user.Id
+	if state != nil && contest.IsFrozenAt(time.Now()) && !permissions.ManageContest && !ownOnly {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "state filter is unavailable during freeze")
+	}
+
 	submissionsList, err := h.submissionsUC.ListSubmissions(ctx, models.SubmissionsFilter{
 		ContestId: &contest.ID,
 		Page:      page,
@@ -928,6 +938,10 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	for i, submission := range submissionsList.Submissions {
+		submissionsList.Submissions[i] = models.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
 	}
 
 	var since int64

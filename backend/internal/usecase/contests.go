@@ -468,16 +468,16 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, 
 					continue
 				}
 
-				if sub.State == models.Saved || sub.State == models.GotCE {
-					continue
-				}
-
 				if freezeTime != nil && !sub.CreatedAt.Before(*freezeTime) {
 					pendingAttempts++
 					continue
 				}
 				if freezeTime == nil && contest.GetFreezeStatus() == models.FreezeStatusFrozen {
 					pendingAttempts++
+					continue
+				}
+
+				if sub.State == models.Saved || sub.State == models.GotCE {
 					continue
 				}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -89,10 +90,7 @@ Resolves / Task: <!-- e.g. .tasks/TASK-002-pr-automation-and-review-flow.md -->
 }
 
 func TestFindTaskFileAndParse(t *testing.T) {
-	repoRoot, err := findRepoRoot()
-	if err != nil {
-		t.Fatalf("findRepoRoot failed: %v", err)
-	}
+	repoRoot := taskTestRepo(t)
 
 	taskPath, err := FindTaskFile(repoRoot, "TASK-001")
 	if err != nil {
@@ -168,10 +166,7 @@ func TestRenderPRBody_BreakingChangesAndVerification(t *testing.T) {
 }
 
 func TestParseTaskMeta_RelativePathGuaranteed(t *testing.T) {
-	repoRoot, err := findRepoRoot()
-	if err != nil {
-		t.Fatalf("findRepoRoot failed: %v", err)
-	}
+	repoRoot := taskTestRepo(t)
 
 	absPath := filepath.Join(repoRoot, ".tasks", "TASK-001-setup-lefthook-and-task-validator.md")
 	meta, err := ParseTaskMeta(absPath)
@@ -188,12 +183,9 @@ func TestParseTaskMeta_RelativePathGuaranteed(t *testing.T) {
 }
 
 func TestParseTaskMeta_Tags(t *testing.T) {
-	repoRoot, err := findRepoRoot()
-	if err != nil {
-		t.Fatalf("findRepoRoot failed: %v", err)
-	}
+	repoRoot := taskTestRepo(t)
 
-	meta, err := ParseTaskMeta(filepath.Join(repoRoot, ".tasks", "TASK-003-optimize-pr-and-review-workflow.md"))
+	meta, err := ParseTaskMeta(filepath.Join(repoRoot, ".tasks", "TASK-001-setup-lefthook-and-task-validator.md"))
 	if err != nil {
 		t.Fatalf("ParseTaskMeta failed: %v", err)
 	}
@@ -204,4 +196,31 @@ func TestParseTaskMeta_Tags(t *testing.T) {
 	if !meta.HasTag("workflow") {
 		t.Errorf("expected tag 'workflow' in meta.Tags: %v", meta.Tags)
 	}
+}
+
+// Metadata tests must not depend on completed tasks remaining in the backlog.
+func taskTestRepo(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".git"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(root, ".tasks"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	task := `---
+id: TASK-001
+title: Test task
+status: todo
+type: chore
+tags:
+  - tooling
+  - workflow
+---
+`
+	if err := os.WriteFile(filepath.Join(root, ".tasks", "TASK-001-setup-lefthook-and-task-validator.md"), []byte(task), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(root)
+	return root
 }

@@ -131,6 +131,8 @@ type SubmissionListItem struct {
 }
 
 type Submission struct {
+	Frozen            bool                   `json:"-"`
+	SourceHidden      bool                   `json:"-"`
 	ID                uuid.UUID              `json:"id"`
 	CreatedBy         *uuid.UUID             `json:"created_by"`
 	Username          string                 `json:"username"`

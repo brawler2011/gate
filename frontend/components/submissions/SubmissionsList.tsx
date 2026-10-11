@@ -63,6 +63,10 @@ interface VerdictCellProps {
 const VerdictCell = ({submission, onOpenDetails}: VerdictCellProps) => {
   const {state, progress, failed_test} = submission;
 
+  if (submission.frozen) {
+    return <Text c="dimmed">Заморожено</Text>;
+  }
+
   // State 1 = Saved (in queue, not yet testing)
   if (state === 1 && !progress) {
     return (
@@ -185,10 +189,10 @@ const SubmissionRow = ({
             <VerdictCell submission={submission} onOpenDetails={() => onOpenDetails(submission.id)} />
           </TableTd>
           <TableTd ta="center">
-            <Text>{submission.time_stat} ms</Text>
+            <Text>{submission.time_stat === undefined ? "—" : `${submission.time_stat} ms`}</Text>
           </TableTd>
           <TableTd ta="center">
-            <Text>{submission.memory_stat} КБ</Text>
+            <Text>{submission.memory_stat === undefined ? "—" : `${submission.memory_stat} КБ`}</Text>
           </TableTd>
           <TableTd ta="center">
             <Group gap="xs" justify="center" wrap="nowrap">

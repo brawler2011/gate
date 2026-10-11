@@ -45,8 +45,6 @@ export const ContestMonitorTable = ({
   orgLogin,
   contestLogin,
   initialScoreboard,
-  startTime,
-  endTime,
   isManager = false,
 }: ContestMonitorTableProps): React.ReactNode => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,8 +53,6 @@ export const ContestMonitorTable = ({
   const [isFrozen, setIsFrozen] = useState<boolean>(initialScoreboard.is_frozen ?? false);
   const [showRealMonitor, setShowRealMonitor] = useState<boolean>(false);
   const [loadingScoreboard, setLoadingScoreboard] = useState<boolean>(false);
-
-  const penaltyPerAttempt = initialScoreboard.penalty_per_attempt || 20;
 
   const handleToggleRealMonitor = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.currentTarget.checked;
@@ -85,205 +81,52 @@ export const ContestMonitorTable = ({
   };
 
   useEffect(() => {
-    const wsUrl = `${env.getWebSocketUrl()}/submissions`;
-
+    let active = true;
+    let requestVersion = 0;
+    const refresh = async () => {
+      const version = ++requestVersion;
+      const [err, res] = await api.getContestScoreboard({orgLogin, contestLogin, unfrozen: showRealMonitor});
+      if (err) {
+        throw err;
+      }
+      if (active && version === requestVersion && res) {
+        setItems(res.items || []);
+        setIsFrozen(res.is_frozen ?? false);
+      }
+    };
     const handleMessage = (event: MessageEvent) => {
       try {
         const msg: SubmissionsMessage = JSON.parse(event.data);
-        if (msg.event_type !== "submissions.completed" || !msg.payload) {
+        if (msg.event_type !== "submissions.completed") {
           return;
         }
-
         const payload = msg.payload as MessageSubmissionCompleted;
-        if (
-          payload.contest_id !== contestId ||
-          !payload.user_id ||
-          !payload.problem_id ||
-          payload.state === undefined
-        ) {
-          return;
+        if (payload.contest_id === contestId) {
+          void refresh().catch(() => {});
         }
-
-        if (payload.state === 1 || payload.state === 101) {
-          return;
-        }
-
-        if (payload.created_at) {
-          const createdAtTime = new Date(payload.created_at).getTime();
-          if (startTime && createdAtTime < new Date(startTime).getTime()) {
-            return;
-          }
-          if (endTime && createdAtTime > new Date(endTime).getTime()) {
-            return;
-          }
-        }
-
-        if (isFrozen && !showRealMonitor) {
-          setItems((prevItems) => {
-            const userId = payload.user_id;
-            const problemId = payload.problem_id;
-
-            const existingItemIndex = prevItems.findIndex((item) => item.user_id === userId);
-            if (existingItemIndex === -1) {
-              return prevItems;
-            }
-
-            const existingItem = prevItems[existingItemIndex];
-            const pResults = [...existingItem.problem_results];
-            const pIndex = pResults.findIndex((r) => r.problem_id === problemId);
-
-            const pResult: ScoreboardProblemResultModel =
-              pIndex !== -1
-                ? {...pResults[pIndex]}
-                : {
-                  problem_id: problemId!,
-                  solved: false,
-                  failed_attempts: 0,
-                  pending_attempts: 0,
-                };
-
-            pResult.pending_attempts = (pResult.pending_attempts || 0) + 1;
-
-            if (pIndex !== -1) {
-              pResults[pIndex] = pResult;
-            } else {
-              pResults.push(pResult);
-            }
-
-            const updatedItem: ScoreboardItemModel = {
-              ...existingItem,
-              problem_results: pResults,
-            };
-
-            const newItems = [...prevItems];
-            newItems[existingItemIndex] = updatedItem;
-            return newItems;
-          });
-          return;
-        }
-
-        setItems((prevItems) => {
-          const userId = payload.user_id;
-          const problemId = payload.problem_id;
-          const state = payload.state;
-          const createdAtStr = payload.created_at || new Date().toISOString();
-
-          const existingItemIndex = prevItems.findIndex((item) => item.user_id === userId);
-          if (existingItemIndex === -1) {
-            return prevItems;
-          }
-
-          const existingItem = prevItems[existingItemIndex];
-          const pResults = [...existingItem.problem_results];
-          const pIndex = pResults.findIndex((r) => r.problem_id === problemId);
-
-          const pResult: ScoreboardProblemResultModel = pIndex !== -1
-            ? {...pResults[pIndex]}
-            : {
-              problem_id: problemId!,
-              solved: false,
-              failed_attempts: 0,
-              pending_attempts: 0,
-            };
-
-          if (pResult.solved) {
-            return prevItems;
-          }
-
-          if (state === 200) {
-            pResult.solved = true;
-            pResult.first_ac_time = createdAtStr;
-            if (startTime) {
-              const mins = Math.max(
-                0,
-                Math.floor((new Date(createdAtStr).getTime() - new Date(startTime).getTime()) / 60000)
-              );
-              pResult.time_minutes = mins;
-            } else {
-              pResult.time_minutes = 0;
-            }
-            pResult.penalty = pResult.failed_attempts * penaltyPerAttempt;
-          } else if ([102, 103, 104, 105, 106].includes(state)) {
-            pResult.failed_attempts += 1;
-          } else {
-            return prevItems;
-          }
-
-          if (pIndex !== -1) {
-            pResults[pIndex] = pResult;
-          } else {
-            pResults.push(pResult);
-          }
-
-          let solvedCount = 0;
-          let totalPenalty = 0;
-          let lastAC: string | undefined = undefined;
-
-          for (const r of pResults) {
-            if (r.solved) {
-              solvedCount += 1;
-              totalPenalty += (r.time_minutes || 0) + (r.failed_attempts * penaltyPerAttempt);
-              if (r.first_ac_time) {
-                if (!lastAC || new Date(r.first_ac_time).getTime() > new Date(lastAC).getTime()) {
-                  lastAC = r.first_ac_time;
-                }
-              }
-            }
-          }
-
-          const updatedItem: ScoreboardItemModel = {
-            ...existingItem,
-            problems_solved: solvedCount,
-            total_penalty: totalPenalty,
-            last_accepted_at: lastAC,
-            problem_results: pResults,
-          };
-
-          const newItems = [...prevItems];
-          newItems[existingItemIndex] = updatedItem;
-
-          newItems.sort((a, b) => {
-            if (a.problems_solved !== b.problems_solved) {
-              return b.problems_solved - a.problems_solved;
-            }
-            if (a.total_penalty !== b.total_penalty) {
-              return a.total_penalty - b.total_penalty;
-            }
-            if (a.last_accepted_at && b.last_accepted_at) {
-              const diff = new Date(a.last_accepted_at).getTime() - new Date(b.last_accepted_at).getTime();
-              if (diff !== 0) {
-                return diff;
-              }
-            } else if (a.last_accepted_at) {
-              return -1;
-            } else if (b.last_accepted_at) {
-              return 1;
-            }
-            return a.username.localeCompare(b.username);
-          });
-
-          return newItems;
-        });
       } catch {
         // ignore parse error
       }
     };
-
     const listenerId = submissionsWsManager.addListener({
-      key: `monitor-${contestId}`,
-      url: wsUrl,
+      key: `monitor-${contestId}-${showRealMonitor}`,
+      url: `${env.getWebSocketUrl()}/submissions?contestId=${contestId}`,
       enabled: true,
       onMessage: handleMessage,
       onConnectionError: () => {},
       onFatalConnectionError: () => {},
-      onStatusChange: () => {},
-      onResyncRequired: async () => {},
+      onStatusChange: (status) => {
+        if (status.phase === 'connected') {
+          void refresh().catch(() => {});
+        }
+      },
+      onResyncRequired: refresh,
     });
-
     return () => {
+      active = false;
       submissionsWsManager.removeListener(listenerId);
     };
-  }, [contestId, startTime, endTime, penaltyPerAttempt, isFrozen, showRealMonitor]);
+  }, [contestId, orgLogin, contestLogin, showRealMonitor]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) {

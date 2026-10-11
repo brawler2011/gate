@@ -8930,15 +8930,16 @@ func (s *ScoreboardResponseModel) SetItems(val []ScoreboardItemModel) {
 
 // Ref: #/components/schemas/SubmissionModel
 type SubmissionModel struct {
+	Frozen            OptBool                       `json:"frozen"`
 	ID                uuid.UUID                     `json:"id"`
 	UserID            uuid.UUID                     `json:"user_id"`
 	Username          string                        `json:"username"`
-	Submission        string                        `json:"submission"`
-	State             int32                         `json:"state"`
-	Score             int32                         `json:"score"`
-	Penalty           int32                         `json:"penalty"`
-	TimeStat          int32                         `json:"time_stat"`
-	MemoryStat        int32                         `json:"memory_stat"`
+	Submission        OptString                     `json:"submission"`
+	State             OptInt32                      `json:"state"`
+	Score             OptInt32                      `json:"score"`
+	Penalty           OptInt32                      `json:"penalty"`
+	TimeStat          OptInt32                      `json:"time_stat"`
+	MemoryStat        OptInt32                      `json:"memory_stat"`
 	Language          int32                         `json:"language"`
 	FailedTest        OptNilInt32                   `json:"failed_test"`
 	TestDetails       OptSubmissionTestDetailsModel `json:"test_details"`
@@ -8952,6 +8953,11 @@ type SubmissionModel struct {
 	BanReason         OptNilString                  `json:"ban_reason"`
 	UpdatedAt         time.Time                     `json:"updated_at"`
 	CreatedAt         time.Time                     `json:"created_at"`
+}
+
+// GetFrozen returns the value of Frozen.
+func (s *SubmissionModel) GetFrozen() OptBool {
+	return s.Frozen
 }
 
 // GetID returns the value of ID.
@@ -8970,32 +8976,32 @@ func (s *SubmissionModel) GetUsername() string {
 }
 
 // GetSubmission returns the value of Submission.
-func (s *SubmissionModel) GetSubmission() string {
+func (s *SubmissionModel) GetSubmission() OptString {
 	return s.Submission
 }
 
 // GetState returns the value of State.
-func (s *SubmissionModel) GetState() int32 {
+func (s *SubmissionModel) GetState() OptInt32 {
 	return s.State
 }
 
 // GetScore returns the value of Score.
-func (s *SubmissionModel) GetScore() int32 {
+func (s *SubmissionModel) GetScore() OptInt32 {
 	return s.Score
 }
 
 // GetPenalty returns the value of Penalty.
-func (s *SubmissionModel) GetPenalty() int32 {
+func (s *SubmissionModel) GetPenalty() OptInt32 {
 	return s.Penalty
 }
 
 // GetTimeStat returns the value of TimeStat.
-func (s *SubmissionModel) GetTimeStat() int32 {
+func (s *SubmissionModel) GetTimeStat() OptInt32 {
 	return s.TimeStat
 }
 
 // GetMemoryStat returns the value of MemoryStat.
-func (s *SubmissionModel) GetMemoryStat() int32 {
+func (s *SubmissionModel) GetMemoryStat() OptInt32 {
 	return s.MemoryStat
 }
 
@@ -9064,6 +9070,11 @@ func (s *SubmissionModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
+// SetFrozen sets the value of Frozen.
+func (s *SubmissionModel) SetFrozen(val OptBool) {
+	s.Frozen = val
+}
+
 // SetID sets the value of ID.
 func (s *SubmissionModel) SetID(val uuid.UUID) {
 	s.ID = val
@@ -9080,32 +9091,32 @@ func (s *SubmissionModel) SetUsername(val string) {
 }
 
 // SetSubmission sets the value of Submission.
-func (s *SubmissionModel) SetSubmission(val string) {
+func (s *SubmissionModel) SetSubmission(val OptString) {
 	s.Submission = val
 }
 
 // SetState sets the value of State.
-func (s *SubmissionModel) SetState(val int32) {
+func (s *SubmissionModel) SetState(val OptInt32) {
 	s.State = val
 }
 
 // SetScore sets the value of Score.
-func (s *SubmissionModel) SetScore(val int32) {
+func (s *SubmissionModel) SetScore(val OptInt32) {
 	s.Score = val
 }
 
 // SetPenalty sets the value of Penalty.
-func (s *SubmissionModel) SetPenalty(val int32) {
+func (s *SubmissionModel) SetPenalty(val OptInt32) {
 	s.Penalty = val
 }
 
 // SetTimeStat sets the value of TimeStat.
-func (s *SubmissionModel) SetTimeStat(val int32) {
+func (s *SubmissionModel) SetTimeStat(val OptInt32) {
 	s.TimeStat = val
 }
 
 // SetMemoryStat sets the value of MemoryStat.
-func (s *SubmissionModel) SetMemoryStat(val int32) {
+func (s *SubmissionModel) SetMemoryStat(val OptInt32) {
 	s.MemoryStat = val
 }
 
@@ -9224,14 +9235,15 @@ func (s *SubmissionTestDetailsModel) SetFailedTestDetails(val OptFailedTestDetai
 
 // Ref: #/components/schemas/SubmissionsListItemModel
 type SubmissionsListItemModel struct {
+	Frozen            OptBool      `json:"frozen"`
 	ID                uuid.UUID    `json:"id"`
 	UserID            uuid.UUID    `json:"user_id"`
 	Username          string       `json:"username"`
-	State             int32        `json:"state"`
-	Score             int32        `json:"score"`
-	Penalty           int32        `json:"penalty"`
-	TimeStat          int32        `json:"time_stat"`
-	MemoryStat        int32        `json:"memory_stat"`
+	State             OptInt32     `json:"state"`
+	Score             OptInt32     `json:"score"`
+	Penalty           OptInt32     `json:"penalty"`
+	TimeStat          OptInt32     `json:"time_stat"`
+	MemoryStat        OptInt32     `json:"memory_stat"`
 	Language          int32        `json:"language"`
 	FailedTest        OptNilInt32  `json:"failed_test"`
 	ProblemID         uuid.UUID    `json:"problem_id"`
@@ -9244,6 +9256,11 @@ type SubmissionsListItemModel struct {
 	BanReason         OptNilString `json:"ban_reason"`
 	UpdatedAt         time.Time    `json:"updated_at"`
 	CreatedAt         time.Time    `json:"created_at"`
+}
+
+// GetFrozen returns the value of Frozen.
+func (s *SubmissionsListItemModel) GetFrozen() OptBool {
+	return s.Frozen
 }
 
 // GetID returns the value of ID.
@@ -9262,27 +9279,27 @@ func (s *SubmissionsListItemModel) GetUsername() string {
 }
 
 // GetState returns the value of State.
-func (s *SubmissionsListItemModel) GetState() int32 {
+func (s *SubmissionsListItemModel) GetState() OptInt32 {
 	return s.State
 }
 
 // GetScore returns the value of Score.
-func (s *SubmissionsListItemModel) GetScore() int32 {
+func (s *SubmissionsListItemModel) GetScore() OptInt32 {
 	return s.Score
 }
 
 // GetPenalty returns the value of Penalty.
-func (s *SubmissionsListItemModel) GetPenalty() int32 {
+func (s *SubmissionsListItemModel) GetPenalty() OptInt32 {
 	return s.Penalty
 }
 
 // GetTimeStat returns the value of TimeStat.
-func (s *SubmissionsListItemModel) GetTimeStat() int32 {
+func (s *SubmissionsListItemModel) GetTimeStat() OptInt32 {
 	return s.TimeStat
 }
 
 // GetMemoryStat returns the value of MemoryStat.
-func (s *SubmissionsListItemModel) GetMemoryStat() int32 {
+func (s *SubmissionsListItemModel) GetMemoryStat() OptInt32 {
 	return s.MemoryStat
 }
 
@@ -9346,6 +9363,11 @@ func (s *SubmissionsListItemModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
+// SetFrozen sets the value of Frozen.
+func (s *SubmissionsListItemModel) SetFrozen(val OptBool) {
+	s.Frozen = val
+}
+
 // SetID sets the value of ID.
 func (s *SubmissionsListItemModel) SetID(val uuid.UUID) {
 	s.ID = val
@@ -9362,27 +9384,27 @@ func (s *SubmissionsListItemModel) SetUsername(val string) {
 }
 
 // SetState sets the value of State.
-func (s *SubmissionsListItemModel) SetState(val int32) {
+func (s *SubmissionsListItemModel) SetState(val OptInt32) {
 	s.State = val
 }
 
 // SetScore sets the value of Score.
-func (s *SubmissionsListItemModel) SetScore(val int32) {
+func (s *SubmissionsListItemModel) SetScore(val OptInt32) {
 	s.Score = val
 }
 
 // SetPenalty sets the value of Penalty.
-func (s *SubmissionsListItemModel) SetPenalty(val int32) {
+func (s *SubmissionsListItemModel) SetPenalty(val OptInt32) {
 	s.Penalty = val
 }
 
 // SetTimeStat sets the value of TimeStat.
-func (s *SubmissionsListItemModel) SetTimeStat(val int32) {
+func (s *SubmissionsListItemModel) SetTimeStat(val OptInt32) {
 	s.TimeStat = val
 }
 
 // SetMemoryStat sets the value of MemoryStat.
-func (s *SubmissionsListItemModel) SetMemoryStat(val int32) {
+func (s *SubmissionsListItemModel) SetMemoryStat(val OptInt32) {
 	s.MemoryStat = val
 }
 

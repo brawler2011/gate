@@ -4,12 +4,13 @@
 /* eslint-disable */
 import type { SubmissionEventMeta } from './SubmissionEventMeta';
 export type MessageSubmissionCompleted = (SubmissionEventMeta & {
+    frozen?: boolean;
     id: string;
-    state: number;
-    score: number;
-    penalty: number;
-    time_stat: number;
-    memory_stat: number;
+    state?: number;
+    score?: number;
+    penalty?: number;
+    time_stat?: number;
+    memory_stat?: number;
     failed_test?: number | null;
 });
 

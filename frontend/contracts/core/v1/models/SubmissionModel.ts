@@ -4,15 +4,16 @@
 /* eslint-disable */
 import type { SubmissionTestDetailsModel } from './SubmissionTestDetailsModel';
 export type SubmissionModel = {
+    frozen?: boolean;
     id: string;
     user_id: string;
     username: string;
-    submission: string;
-    state: number;
-    score: number;
-    penalty: number;
-    time_stat: number;
-    memory_stat: number;
+    submission?: string;
+    state?: number;
+    score?: number;
+    penalty?: number;
+    time_stat?: number;
+    memory_stat?: number;
     language: number;
     failed_test?: number | null;
     test_details?: SubmissionTestDetailsModel;

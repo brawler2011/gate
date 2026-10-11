@@ -228,6 +228,13 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		return fmt.Errorf("failed to update submission: %w", err)
 	}
 
+	submission.State = verdict.State
+	if uc.contestsUC != nil {
+		if procErr := uc.contestsUC.ProcessSubmissionResult(ctx, &submission); procErr != nil {
+			uc.logger.Error("failed to process contest submission result", "error", procErr)
+		}
+	}
+
 	if err := uc.eventPublisher.PublishCompleted(
 		ctx,
 		submissionID,
@@ -240,13 +247,6 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		meta,
 	); err != nil {
 		uc.logger.Error("failed to publish completed event", "error", err)
-	}
-
-	submission.State = verdict.State
-	if uc.contestsUC != nil {
-		if procErr := uc.contestsUC.ProcessSubmissionResult(ctx, &submission); procErr != nil {
-			uc.logger.Error("failed to process contest submission result", "error", procErr)
-		}
 	}
 
 	verdictStr := stateToVerdictString(verdict.State)

@@ -109,8 +109,8 @@ func SubmissionCreatedDTO(e models.SubmissionCreatedEvent) observerv1.MessageSub
 		Position:     int32Ptr(e.Position),
 		ProblemId:    e.ProblemId,
 		ProblemTitle: strPtrIfNotEmpty(e.ProblemTitle),
-		Source:       e.Source,
-		State:        e.State,
+		Source:       &e.Source,
+		State:        &e.State,
 		UserId:       e.UserId,
 		Username:     strPtrIfNotEmpty(e.Username),
 	}
@@ -184,14 +184,15 @@ func SubmissionCompletedDTO(e models.SubmissionCompletedEvent) observerv1.Messag
 		CreatedAt:    &e.CreatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
-		MemoryStat:   e.MemoryStat,
-		Penalty:      e.Penalty,
+		MemoryStat:   &e.MemoryStat,
+		FailedTest:   e.FailedTest,
+		Penalty:      &e.Penalty,
 		Position:     int32Ptr(e.Position),
 		ProblemId:    e.ProblemId,
 		ProblemTitle: strPtrIfNotEmpty(e.ProblemTitle),
-		Score:        e.Score,
-		State:        e.State,
-		TimeStat:     e.TimeStat,
+		Score:        &e.Score,
+		State:        &e.State,
+		TimeStat:     &e.TimeStat,
 		UserId:       e.UserId,
 		Username:     strPtrIfNotEmpty(e.Username),
 	}
@@ -291,4 +292,3 @@ func ContestEnvelopeDTO(eventType string, event any) ([]byte, error) {
 
 	return data, nil
 }
-

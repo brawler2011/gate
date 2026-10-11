@@ -174,7 +174,7 @@ export const SubmissionDetailsContent = ({
   const [sanctionAction, setSanctionAction] = useState<SanctionActionType | null>(null);
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(submission.submission);
+    navigator.clipboard.writeText(submission.submission ?? "");
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
     notifications.show({
@@ -243,10 +243,10 @@ export const SubmissionDetailsContent = ({
             </Text>
             <Group gap="xs" align="center">
               <Badge color={StateColor(submission.state)} variant="filled" size="md">
-                {ShortVerdictString(submission.state, submission.failed_test)}
+                {submission.frozen ? "Заморожено" : ShortVerdictString(submission.state, submission.failed_test)}
               </Badge>
               <Text size="xs" c={StateColor(submission.state)} fw={500}>
-                {StateString(submission.state, submission.failed_test)}
+                {submission.frozen ? "Результат скрыт до разморозки" : StateString(submission.state, submission.failed_test)}
               </Text>
             </Group>
           </Box>
@@ -255,7 +255,7 @@ export const SubmissionDetailsContent = ({
               Время выполнения
             </Text>
             <Text size="sm" fw={500}>
-              {submission.time_stat} ms
+              {submission.time_stat === undefined ? "—" : `${submission.time_stat} ms`}
             </Text>
           </Box>
           <Box>
@@ -263,7 +263,7 @@ export const SubmissionDetailsContent = ({
               Использованная память
             </Text>
             <Text size="sm" fw={500}>
-              {submission.memory_stat} КБ
+              {submission.memory_stat === undefined ? "—" : `${submission.memory_stat} КБ`}
             </Text>
           </Box>
           <Box>
@@ -271,7 +271,7 @@ export const SubmissionDetailsContent = ({
               Баллы
             </Text>
             <Text size="sm" fw={600}>
-              {submission.score}
+              {submission.score ?? "—"}
             </Text>
           </Box>
         </SimpleGrid>
@@ -550,16 +550,21 @@ export const SubmissionDetailsContent = ({
             color={copiedCode ? "green" : "blue"}
             leftSection={copiedCode ? <IconCheck size={14} /> : <IconCopy size={14} />}
             onClick={handleCopyCode}
+            disabled={submission.submission === undefined}
           >
             {copiedCode ? "Скопировано!" : "Копировать код"}
           </Button>
         </Group>
 
-        <CodeBlock
-          code={submission.submission}
-          language={LangNameToString(submission.language)}
-          highlightLine={errorLine}
-        />
+        {submission.submission === undefined ? (
+          <Text c="dimmed">Исходный код скрыт</Text>
+        ) : (
+          <CodeBlock
+            code={submission.submission}
+            language={LangNameToString(submission.language)}
+            highlightLine={errorLine}
+          />
+        )}
       </Card>
 
       <SubmissionSanctionsModal
