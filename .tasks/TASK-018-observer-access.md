@@ -28,7 +28,7 @@ Start from origin/main including PR #11. Preserve untracked CODEBASE_REVIEW.md.
 - [x] Shared REST/WS policy hides other users' results at/after freeze, all results for forced freeze without boundary; unfrozen and own/moderator views remain complete.
 - [x] Frozen JSON retains metadata and frozen=true, omits result fields, source and test details; completed remains available and hidden intermediate events are suppressed. Source and progress require their existing permissions.
 - [x] GetSubmission and ListContestSubmissions apply masking; state filtering during freeze requires moderator or exclusively own selection. Scoreboard counts hidden pending before verdict inspection.
-- [x] Optional contracts are generated with normal commands; frontend displays frozen results, preserves own results, avoids duplicate pending and restores scoreboard after reconnection.
+- [x] Optional contracts are generated with normal commands; frontend displays frozen results, preserves own results, avoids duplicate pending and restores scoreboard after reconnection; failed snapshots retry with bounded backoff and end in fatal status after exhaustion.
 - [x] Regression tests cover handshake/JSON, role sources, history/pending/live, revocation/demotion/deletion/database errors and freeze boundary/forced/unfrozen cases.
 - [x] Backend unit/integration, observer race, bun test, task tasks:validate and task precommit pass.
 
@@ -42,5 +42,5 @@ Create the PR with task pr:create, obtain isolated APPROVE for the exact SHA and
 
 ## Verification
 Backend unit and full integration suites passed; real PostgreSQL roles and session revocation passed.
-Observer race tests passed; bun test passed (60 tests), including production DOM tests.
+Observer race tests passed; bun test passed (62 tests), including production DOM and manager backoff tests.
 Contracts generated; task tasks:validate and full task precommit passed.

@@ -443,6 +443,7 @@ class SubmissionsWsManager {
       this.resyncCount++;
       log('Resync attempt done', {ok, reason, resyncCount: this.resyncCount});
       if (!ok) {
+        void this.reconnectWithResync('resync_failure');
         return;
       }
 
