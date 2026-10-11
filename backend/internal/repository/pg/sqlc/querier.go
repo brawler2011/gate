@@ -48,7 +48,6 @@ type Querier interface {
 	CountNotificationsByUserID(ctx context.Context, arg CountNotificationsByUserIDParams) (int64, error)
 	CountOrganizations(ctx context.Context, dollar_1 string) (int64, error)
 	CountPosts(ctx context.Context) (int64, error)
-	CountProblems(ctx context.Context, arg CountProblemsParams) (int64, error)
 	CountSubmissions(ctx context.Context, arg CountSubmissionsParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int32, error)
 	CreateAuthToken(ctx context.Context, arg CreateAuthTokenParams) error
@@ -179,7 +178,6 @@ type Querier interface {
 	ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]ListProblemMembersRow, error)
 	ListProblemPackages(ctx context.Context, arg ListProblemPackagesParams) ([]ProblemPackage, error)
 	ListProblemTeams(ctx context.Context, problemID uuid.UUID) ([]ListProblemTeamsRow, error)
-	ListProblems(ctx context.Context, arg ListProblemsParams) ([]ListProblemsRow, error)
 	// Submission listing
 	ListSubmissions(ctx context.Context, arg ListSubmissionsParams) ([]ListSubmissionsRow, error)
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]ListTeamMembersRow, error)

@@ -170,6 +170,8 @@ type UpdateProblemInput struct {
 }
 
 type ProblemsFilter struct {
+	// ViewerID restricts rows to read access; nil is reserved for trusted internal lists.
+	ViewerID       *uuid.UUID
 	Page           int32
 	PageSize       int32
 	OrganizationID *uuid.UUID
