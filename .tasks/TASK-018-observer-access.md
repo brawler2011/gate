@@ -35,6 +35,7 @@ Start from origin/main including PR #11. Preserve untracked CODEBASE_REVIEW.md.
 ## Implementation Notes
 Revalidate on each delivery; idle connections are checked on the next event.
 Previously delivered messages cannot be revoked. Additional database queries are accepted.
+Judge updates standings before publishing completion so monitor snapshots observe the completed result.
 Precommit metadata tests use temporary task fixtures because origin/main removed TASK-001/003.
 
 ## Delivery
