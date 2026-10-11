@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -15,6 +14,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
@@ -443,8 +443,7 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 		return nil, fmt.Errorf("failed to read tests metadata: %w", err)
 	}
 
-	// Compile checker if needed
-	var checkerExec *sandbox.Executable
+	// A checker is required for solution evaluation.
 	var checkerMeta *models.FileMetadata
 	for i := range manifest.FilesMetadata {
 		if manifest.FilesMetadata[i].Type == "checker" {
@@ -453,24 +452,40 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 		}
 	}
 
-	if checkerMeta != nil {
-		chkSource, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, checkerMeta.Filename)
-		if err == nil {
-			chkDeps := make(map[string][]byte)
-			for _, dep := range checkerMeta.Dependencies {
-				depPath := filepath.Join(filepath.Dir(checkerMeta.Filename), dep.Filename)
-				depPath = filepath.ToSlash(depPath)
-				depContent, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, depPath)
-				if err == nil {
-					chkDeps[dep.Filename] = depContent
+	if checkerMeta == nil {
+		return nil, fmt.Errorf("problem must have a checker")
+	}
+	chkSource, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, checkerMeta.Filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read checker %s: %w", checkerMeta.Filename, err)
+	}
+	chkDeps := make(map[string][]byte)
+	for _, dep := range checkerMeta.Dependencies {
+		depPath := filepath.ToSlash(filepath.Join(filepath.Dir(checkerMeta.Filename), dep.Filename))
+		depContent, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, depPath)
+		// CompileProblemComponent records shared lib/ dependencies by basename.
+		if errors.Is(err, storage.ErrNotFound) && filepath.Base(dep.Filename) == dep.Filename {
+			allFiles, listErr := uc.workspaceStorage.ListAllFiles(ctx, req.ProblemID)
+			if listErr != nil {
+				return nil, fmt.Errorf("failed to list checker dependencies: %w", listErr)
+			}
+			depPath = filepath.ToSlash(filepath.Join("lib", dep.Filename))
+			for _, file := range allFiles {
+				if strings.HasPrefix(file, "lib/") && filepath.Base(file) == dep.Filename {
+					depPath = file
 				}
 			}
-			chkLang := detectLanguage(filepath.Ext(checkerMeta.Filename))
-			compiled, err := uc.sandbox.Compile(ctx, chkSource, chkLang, chkDeps)
-			if err == nil {
-				checkerExec = &compiled
-			}
+			depContent, err = uc.workspaceStorage.ReadFile(ctx, req.ProblemID, depPath)
 		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to read checker dependency %s: %w", depPath, err)
+		}
+		chkDeps[dep.Filename] = depContent
+	}
+	chkLang := detectLanguage(filepath.Ext(checkerMeta.Filename))
+	checkerExec, err := uc.sandbox.Compile(ctx, chkSource, chkLang, chkDeps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile checker %s: %w", checkerMeta.Filename, err)
 	}
 
 	// Compile solution
@@ -538,24 +553,13 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 		message := string(runRes.Stderr)
 
 		if runRes.Status == sandbox.StatusOK {
-			if checkerExec != nil {
-				checkRes, err := uc.sandbox.Check(ctx, *checkerExec, input, runRes.Stdout, answer)
-				if err != nil {
-					verdict = "IE"
-					message = fmt.Sprintf("Checker execution failed: %v", err)
-				} else {
-					verdict = string(checkRes.Status)
-					message = checkRes.Message
-				}
+			checkRes, err := uc.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
+			if err != nil {
+				verdict = "IE"
+				message = fmt.Sprintf("Checker execution failed: %v", err)
 			} else {
-				// Simple text comparison if checker is not compiled
-				if string(bytes.TrimSpace(runRes.Stdout)) == string(bytes.TrimSpace(answer)) {
-					verdict = "OK"
-					message = "Answer is correct"
-				} else {
-					verdict = "WA"
-					message = "Output does not match expected answer"
-				}
+				verdict = string(checkRes.Status)
+				message = checkRes.Message
 			}
 		}
 
