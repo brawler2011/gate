@@ -5,6 +5,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -172,6 +173,95 @@ int main() {
 		assert.Contains(t, files, "tests/01.in")
 		assert.Contains(t, files, "tests/01.out")
 	})
+}
+
+func TestWorkshopCheckerEvaluation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	sb := newWorkshopSandbox(t)
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name      string
+		checker   string
+		output    string
+		files     map[string]string
+		deps      []models.Dependency
+		verdict   string
+		wantError string
+	}{
+		{
+			name:    "checker accepts different text",
+			checker: "#include <fstream>\nint main(int argc, char** argv) { int actual, expected; std::ifstream(argv[2]) >> actual; std::ifstream(argv[3]) >> expected; return actual == expected ? 0 : 1; }",
+			output:  "03",
+			verdict: "OK",
+		},
+		{name: "checker rejects identical text", checker: "int main(){return 1;}", output: "3", verdict: "WA"},
+		{name: "checker reports failure", checker: "int main(){return 3;}", output: "3", verdict: "FAIL"},
+		{name: "compiler diagnostics", checker: "#error checker_regression_diagnostic", output: "3", wantError: "checker_regression_diagnostic"},
+		{
+			name:    "relative dependency takes precedence",
+			checker: "#include \"verdict.h\"\nint main(){return CHECKER_EXIT;}",
+			output:  "3",
+			files:   map[string]string{"checkers/verdict.h": "#define CHECKER_EXIT 1", "lib/verdict.h": "#define CHECKER_EXIT 0"},
+			deps:    []models.Dependency{{Filename: "verdict.h"}},
+			verdict: "WA",
+		},
+		{
+			name:    "shared dependency",
+			checker: "#include \"verdict.h\"\nint main(){return CHECKER_EXIT;}",
+			output:  "3",
+			files:   map[string]string{"lib/verdict.h": "#define CHECKER_EXIT 1"},
+			deps:    []models.Dependency{{Filename: "verdict.h"}},
+			verdict: "WA",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			problemID := uuid.New()
+			repo := newMockProblemsRepo()
+			manifest := models.ProblemManifest{
+				TimeLimitMs:   1000,
+				MemoryLimitMb: 256,
+				FilesMetadata: []models.FileMetadata{{Type: "checker", Filename: "checkers/checker.cpp", Dependencies: tc.deps}},
+			}
+			data, err := json.Marshal(manifest)
+			require.NoError(t, err)
+			repo.manifests[problemID] = data
+			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "checker-evaluation")
+			files := map[string]string{
+				"problem.yaml":         "subtasks:\n  samples:\n    tests:\n      - manual: 01.in\n",
+				"tests/01.in":          "1 2\n",
+				"tests/01.out":         "3\n",
+				"solutions/main.cpp":   "#include <iostream>\nint main(){std::cout << \"" + tc.output + "\\n\";}",
+				"checkers/checker.cpp": tc.checker,
+			}
+			for path, content := range tc.files {
+				files[path] = content
+			}
+			for path, content := range files {
+				require.NoError(t, ws.WriteFile(ctx, problemID, path, []byte(content)))
+			}
+			uc := usecase.NewWorkshopUseCase(repo, ws, sb, nil)
+			report, err := uc.TestSolution(ctx, models.TestSolutionRequest{ProblemID: problemID, SolutionPath: "solutions/main.cpp"})
+			if tc.wantError != "" {
+				require.ErrorContains(t, err, "failed to compile checker checkers/checker.cpp")
+				require.ErrorContains(t, err, tc.wantError)
+				require.Nil(t, report)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, report.Results, 1)
+			require.Equal(t, tc.verdict, report.Results[0].Verdict)
+			require.Equal(t, 1, report.TotalTests)
+			if tc.verdict == "OK" {
+				require.Equal(t, 1, report.PassedTests)
+				require.Zero(t, report.FailedTests)
+			} else {
+				require.Zero(t, report.PassedTests)
+				require.Equal(t, 1, report.FailedTests)
+			}
+		})
+	}
 }
 
 func newWorkshopSandbox(t *testing.T) *sandbox.Sandbox {
