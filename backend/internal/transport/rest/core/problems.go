@@ -15,36 +15,23 @@ import (
 )
 
 func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
+	user := middleware.GetUser(ctx)
 	searchStr := params.Search.Or("")
 
 	filter := &models.ProblemsFilter{
+		ViewerID: &user.Id,
 		Page:     params.Page.Or(1),
 		PageSize: params.PageSize.Or(50),
 		Search:   searchStr,
 	}
 
 	if params.Owner.IsSet() && params.Owner.Value {
-		user := middleware.GetUser(ctx)
 		filter.OwnerID = &user.Id
 	}
 
 	if params.OrganizationID.IsSet() {
 		orgID := params.OrganizationID.Value
 		filter.OrganizationID = &orgID
-
-		user := middleware.GetUser(ctx)
-		isMember := false
-		if user.Role == models.UserRoleAdmin {
-			isMember = true
-		} else if user.Id != uuid.Nil {
-			_, err := h.organizationsUC.ListMembers(ctx, orgID, user.Id)
-			if err == nil {
-				isMember = true
-			}
-		}
-		if !isMember {
-			filter.Visibility = "public"
-		}
 	}
 
 	if params.IsTemplate.IsSet() {

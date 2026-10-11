@@ -57,54 +57,27 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 	// Calculate offset
 	offset := (filter.Page - 1) * filter.PageSize
 
-	// If no organization filter, list all problems
-	if filter.OrganizationID == nil {
-		total, err := r.queries.CountAllProblems(ctx, sqlc.CountAllProblemsParams{
-			Column1:    filter.Search,
-			Column2:    filter.Visibility,
-			IsTemplate: filter.IsTemplate,
-		})
-		if err != nil {
-			return nil, 0, HandlePgErr(err)
-		}
-
-		rows, err := r.queries.ListAllProblems(ctx, sqlc.ListAllProblemsParams{
-			Column1:    filter.Search,
-			Column2:    filter.Visibility,
-			Limit:      filter.PageSize,
-			Offset:     offset,
-			IsTemplate: filter.IsTemplate,
-		})
-		if err != nil {
-			return nil, 0, HandlePgErr(err)
-		}
-
-		problems := make([]models.Problem, len(rows))
-		for i, row := range rows {
-			problems[i] = mapListAllProblemsRow(row)
-		}
-
-		return problems, safeInt32(total), nil
-	}
-
-	// Filter by organization
-	total, err := r.queries.CountProblems(ctx, sqlc.CountProblemsParams{
-		OrganizationID: *filter.OrganizationID,
-		Column2:        filter.Search,
-		Column3:        filter.Visibility,
+	total, err := r.queries.CountAllProblems(ctx, sqlc.CountAllProblemsParams{
+		OrganizationID: uuidPtrToNullUUID(filter.OrganizationID),
+		OwnerID:        uuidPtrToNullUUID(filter.OwnerID),
+		ViewerID:       uuidPtrToNullUUID(filter.ViewerID),
+		Search:         filter.Search,
+		Visibility:     filter.Visibility,
 		IsTemplate:     filter.IsTemplate,
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}
 
-	rows, err := r.queries.ListProblems(ctx, sqlc.ListProblemsParams{
-		OrganizationID: *filter.OrganizationID,
-		Column2:        filter.Search,
-		Column3:        filter.Visibility,
-		Limit:          filter.PageSize,
-		Offset:         offset,
+	rows, err := r.queries.ListAllProblems(ctx, sqlc.ListAllProblemsParams{
+		OrganizationID: uuidPtrToNullUUID(filter.OrganizationID),
+		OwnerID:        uuidPtrToNullUUID(filter.OwnerID),
+		ViewerID:       uuidPtrToNullUUID(filter.ViewerID),
+		Search:         filter.Search,
+		Visibility:     filter.Visibility,
 		IsTemplate:     filter.IsTemplate,
+		PageLimit:      filter.PageSize,
+		PageOffset:     offset,
 	})
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
@@ -112,7 +85,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 
 	problems := make([]models.Problem, len(rows))
 	for i, row := range rows {
-		problems[i] = mapListProblemsRow(row)
+		problems[i] = mapListAllProblemsRow(row)
 	}
 
 	return problems, safeInt32(total), nil
@@ -287,23 +260,6 @@ func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) models.Problem {
 }
 
 func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) models.Problem {
-	return models.Problem{
-		ID:                p.ID,
-		OrganizationID:    p.OrganizationID,
-		OrganizationLogin: p.OrgLogin,
-		OwnerID:           pgUUIDToUUIDPtr(p.OwnerID),
-		Visibility:        string(p.Visibility),
-		Title:             p.Title,
-		ShortName:         p.ShortName,
-		TimeLimitMs:       int(p.TimeLimitMs),
-		MemoryLimitMb:     int(p.MemoryLimitMb),
-		IsTemplate:        p.IsTemplate,
-		CreatedAt:         p.CreatedAt,
-		UpdatedAt:         p.UpdatedAt,
-	}
-}
-
-func mapListProblemsRow(p sqlc.ListProblemsRow) models.Problem {
 	return models.Problem{
 		ID:                p.ID,
 		OrganizationID:    p.OrganizationID,

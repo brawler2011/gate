@@ -51,45 +51,48 @@ func (q *Queries) CheckUserHasProblemAccess(ctx context.Context, arg CheckUserHa
 
 const countAllProblems = `-- name: CountAllProblems :one
 SELECT COUNT(*) FROM problems p
-WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
-  AND ($2::text = '' OR p.visibility = $2::problem_visibility)
-  AND ($3::boolean IS NULL OR p.is_template = $3::boolean)
+WHERE ($1::uuid IS NULL OR p.organization_id = $1::uuid)
+  AND ($2::uuid IS NULL OR p.owner_id = $2::uuid)
+  AND ($3::text = '' OR p.title ILIKE '%' || $3::text || '%')
+  AND ($4::text = '' OR p.visibility = $4::problem_visibility)
+  AND ($5::boolean IS NULL OR p.is_template = $5::boolean)
+  AND (
+    $6::uuid IS NULL
+    OR p.visibility = 'public'
+    OR ($6::uuid <> '00000000-0000-0000-0000-000000000000'::uuid AND (
+      p.owner_id = $6::uuid
+      OR EXISTS (SELECT 1 FROM users u WHERE u.id = $6::uuid AND u.role = 'admin')
+      OR EXISTS (SELECT 1 FROM organization_members om
+                 WHERE om.organization_id = p.organization_id AND om.user_id = $6::uuid
+                   AND om.role IN ('owner', 'admin'))
+      OR EXISTS (SELECT 1 FROM problem_members pm
+                 WHERE pm.problem_id = p.id AND pm.user_id = $6::uuid)
+      OR EXISTS (SELECT 1 FROM problem_teams pt
+                 JOIN team_members tm ON tm.team_id = pt.team_id
+                 JOIN teams t ON t.id = pt.team_id
+                 WHERE pt.problem_id = p.id AND tm.user_id = $6::uuid
+                   AND t.organization_id = p.organization_id)
+    ))
+  )
 `
 
 type CountAllProblemsParams struct {
-	Column1    string `json:"column_1"`
-	Column2    string `json:"column_2"`
-	IsTemplate *bool  `json:"is_template"`
+	OrganizationID pgtype.UUID `json:"organization_id"`
+	OwnerID        pgtype.UUID `json:"owner_id"`
+	Search         string      `json:"search"`
+	Visibility     string      `json:"visibility"`
+	IsTemplate     *bool       `json:"is_template"`
+	ViewerID       pgtype.UUID `json:"viewer_id"`
 }
 
 func (q *Queries) CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countAllProblems, arg.Column1, arg.Column2, arg.IsTemplate)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countProblems = `-- name: CountProblems :one
-SELECT COUNT(*) FROM problems
-WHERE organization_id = $1
-  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR visibility = $3::problem_visibility)
-  AND ($4::boolean IS NULL OR is_template = $4::boolean)
-`
-
-type CountProblemsParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Column2        string    `json:"column_2"`
-	Column3        string    `json:"column_3"`
-	IsTemplate     *bool     `json:"is_template"`
-}
-
-func (q *Queries) CountProblems(ctx context.Context, arg CountProblemsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countProblems,
+	row := q.db.QueryRow(ctx, countAllProblems,
 		arg.OrganizationID,
-		arg.Column2,
-		arg.Column3,
+		arg.OwnerID,
+		arg.Search,
+		arg.Visibility,
 		arg.IsTemplate,
+		arg.ViewerID,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -279,19 +282,42 @@ const listAllProblems = `-- name: ListAllProblems :many
 SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
 FROM problems p
 JOIN organizations o ON p.organization_id = o.id
-WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
-  AND ($2::text = '' OR p.visibility = $2::problem_visibility)
+WHERE ($1::uuid IS NULL OR p.organization_id = $1::uuid)
+  AND ($2::uuid IS NULL OR p.owner_id = $2::uuid)
+  AND ($3::text = '' OR p.title ILIKE '%' || $3::text || '%')
+  AND ($4::text = '' OR p.visibility = $4::problem_visibility)
   AND ($5::boolean IS NULL OR p.is_template = $5::boolean)
-ORDER BY p.created_at DESC
-LIMIT $3 OFFSET $4
+  AND (
+    $6::uuid IS NULL
+    OR p.visibility = 'public'
+    OR ($6::uuid <> '00000000-0000-0000-0000-000000000000'::uuid AND (
+      p.owner_id = $6::uuid
+      OR EXISTS (SELECT 1 FROM users u WHERE u.id = $6::uuid AND u.role = 'admin')
+      OR EXISTS (SELECT 1 FROM organization_members om
+                 WHERE om.organization_id = p.organization_id AND om.user_id = $6::uuid
+                   AND om.role IN ('owner', 'admin'))
+      OR EXISTS (SELECT 1 FROM problem_members pm
+                 WHERE pm.problem_id = p.id AND pm.user_id = $6::uuid)
+      OR EXISTS (SELECT 1 FROM problem_teams pt
+                 JOIN team_members tm ON tm.team_id = pt.team_id
+                 JOIN teams t ON t.id = pt.team_id
+                 WHERE pt.problem_id = p.id AND tm.user_id = $6::uuid
+                   AND t.organization_id = p.organization_id)
+    ))
+  )
+ORDER BY p.created_at DESC, p.id DESC
+LIMIT $8 OFFSET $7
 `
 
 type ListAllProblemsParams struct {
-	Column1    string `json:"column_1"`
-	Column2    string `json:"column_2"`
-	Limit      int32  `json:"limit"`
-	Offset     int32  `json:"offset"`
-	IsTemplate *bool  `json:"is_template"`
+	OrganizationID pgtype.UUID `json:"organization_id"`
+	OwnerID        pgtype.UUID `json:"owner_id"`
+	Search         string      `json:"search"`
+	Visibility     string      `json:"visibility"`
+	IsTemplate     *bool       `json:"is_template"`
+	ViewerID       pgtype.UUID `json:"viewer_id"`
+	PageOffset     int32       `json:"page_offset"`
+	PageLimit      int32       `json:"page_limit"`
 }
 
 type ListAllProblemsRow struct {
@@ -312,11 +338,14 @@ type ListAllProblemsRow struct {
 
 func (q *Queries) ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error) {
 	rows, err := q.db.Query(ctx, listAllProblems,
-		arg.Column1,
-		arg.Column2,
-		arg.Limit,
-		arg.Offset,
+		arg.OrganizationID,
+		arg.OwnerID,
+		arg.Search,
+		arg.Visibility,
 		arg.IsTemplate,
+		arg.ViewerID,
+		arg.PageOffset,
+		arg.PageLimit,
 	)
 	if err != nil {
 		return nil, err
@@ -447,84 +476,6 @@ func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) (
 			&i.CreatedAt,
 			&i.Username,
 			&i.Email,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProblems = `-- name: ListProblems :many
-SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
-FROM problems p
-JOIN organizations o ON p.organization_id = o.id
-WHERE p.organization_id = $1
-  AND ($2::text = '' OR p.title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR p.visibility = $3::problem_visibility)
-  AND ($6::boolean IS NULL OR p.is_template = $6::boolean)
-ORDER BY p.created_at DESC
-LIMIT $4 OFFSET $5
-`
-
-type ListProblemsParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Column2        string    `json:"column_2"`
-	Column3        string    `json:"column_3"`
-	Limit          int32     `json:"limit"`
-	Offset         int32     `json:"offset"`
-	IsTemplate     *bool     `json:"is_template"`
-}
-
-type ListProblemsRow struct {
-	ID             uuid.UUID         `json:"id"`
-	OrganizationID uuid.UUID         `json:"organization_id"`
-	OrgLogin       string            `json:"org_login"`
-	OrgName        string            `json:"org_name"`
-	OwnerID        pgtype.UUID       `json:"owner_id"`
-	Visibility     ProblemVisibility `json:"visibility"`
-	Title          string            `json:"title"`
-	ShortName      string            `json:"short_name"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
-	TimeLimitMs    int32             `json:"time_limit_ms"`
-	MemoryLimitMb  int32             `json:"memory_limit_mb"`
-	IsTemplate     bool              `json:"is_template"`
-}
-
-func (q *Queries) ListProblems(ctx context.Context, arg ListProblemsParams) ([]ListProblemsRow, error) {
-	rows, err := q.db.Query(ctx, listProblems,
-		arg.OrganizationID,
-		arg.Column2,
-		arg.Column3,
-		arg.Limit,
-		arg.Offset,
-		arg.IsTemplate,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListProblemsRow{}
-	for rows.Next() {
-		var i ListProblemsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.OrgLogin,
-			&i.OrgName,
-			&i.OwnerID,
-			&i.Visibility,
-			&i.Title,
-			&i.ShortName,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.TimeLimitMs,
-			&i.MemoryLimitMb,
-			&i.IsTemplate,
 		); err != nil {
 			return nil, err
 		}

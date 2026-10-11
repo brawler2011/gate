@@ -17,39 +17,62 @@ FROM problems p
 JOIN organizations o ON p.organization_id = o.id
 WHERE p.organization_id = $1 AND short_name = $2;
 
--- name: ListProblems :many
-SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
-FROM problems p
-JOIN organizations o ON p.organization_id = o.id
-WHERE p.organization_id = $1
-  AND ($2::text = '' OR p.title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR p.visibility = $3::problem_visibility)
-  AND (sqlc.narg('is_template')::boolean IS NULL OR p.is_template = sqlc.narg('is_template')::boolean)
-ORDER BY p.created_at DESC
-LIMIT $4 OFFSET $5;
-
--- name: CountProblems :one
-SELECT COUNT(*) FROM problems
-WHERE organization_id = $1
-  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR visibility = $3::problem_visibility)
-  AND (sqlc.narg('is_template')::boolean IS NULL OR is_template = sqlc.narg('is_template')::boolean);
-
 -- name: ListAllProblems :many
 SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
 FROM problems p
 JOIN organizations o ON p.organization_id = o.id
-WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
-  AND ($2::text = '' OR p.visibility = $2::problem_visibility)
+WHERE (sqlc.narg('organization_id')::uuid IS NULL OR p.organization_id = sqlc.narg('organization_id')::uuid)
+  AND (sqlc.narg('owner_id')::uuid IS NULL OR p.owner_id = sqlc.narg('owner_id')::uuid)
+  AND (sqlc.arg('search')::text = '' OR p.title ILIKE '%' || sqlc.arg('search')::text || '%')
+  AND (sqlc.arg('visibility')::text = '' OR p.visibility = sqlc.arg('visibility')::problem_visibility)
   AND (sqlc.narg('is_template')::boolean IS NULL OR p.is_template = sqlc.narg('is_template')::boolean)
-ORDER BY p.created_at DESC
-LIMIT $3 OFFSET $4;
+  AND (
+    sqlc.narg('viewer_id')::uuid IS NULL
+    OR p.visibility = 'public'
+    OR (sqlc.narg('viewer_id')::uuid <> '00000000-0000-0000-0000-000000000000'::uuid AND (
+      p.owner_id = sqlc.narg('viewer_id')::uuid
+      OR EXISTS (SELECT 1 FROM users u WHERE u.id = sqlc.narg('viewer_id')::uuid AND u.role = 'admin')
+      OR EXISTS (SELECT 1 FROM organization_members om
+                 WHERE om.organization_id = p.organization_id AND om.user_id = sqlc.narg('viewer_id')::uuid
+                   AND om.role IN ('owner', 'admin'))
+      OR EXISTS (SELECT 1 FROM problem_members pm
+                 WHERE pm.problem_id = p.id AND pm.user_id = sqlc.narg('viewer_id')::uuid)
+      OR EXISTS (SELECT 1 FROM problem_teams pt
+                 JOIN team_members tm ON tm.team_id = pt.team_id
+                 JOIN teams t ON t.id = pt.team_id
+                 WHERE pt.problem_id = p.id AND tm.user_id = sqlc.narg('viewer_id')::uuid
+                   AND t.organization_id = p.organization_id)
+    ))
+  )
+ORDER BY p.created_at DESC, p.id DESC
+LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
 -- name: CountAllProblems :one
 SELECT COUNT(*) FROM problems p
-WHERE ($1::text = '' OR p.title ILIKE '%' || $1 || '%')
-  AND ($2::text = '' OR p.visibility = $2::problem_visibility)
-  AND (sqlc.narg('is_template')::boolean IS NULL OR p.is_template = sqlc.narg('is_template')::boolean);
+WHERE (sqlc.narg('organization_id')::uuid IS NULL OR p.organization_id = sqlc.narg('organization_id')::uuid)
+  AND (sqlc.narg('owner_id')::uuid IS NULL OR p.owner_id = sqlc.narg('owner_id')::uuid)
+  AND (sqlc.arg('search')::text = '' OR p.title ILIKE '%' || sqlc.arg('search')::text || '%')
+  AND (sqlc.arg('visibility')::text = '' OR p.visibility = sqlc.arg('visibility')::problem_visibility)
+  AND (sqlc.narg('is_template')::boolean IS NULL OR p.is_template = sqlc.narg('is_template')::boolean)
+  AND (
+    sqlc.narg('viewer_id')::uuid IS NULL
+    OR p.visibility = 'public'
+    OR (sqlc.narg('viewer_id')::uuid <> '00000000-0000-0000-0000-000000000000'::uuid AND (
+      p.owner_id = sqlc.narg('viewer_id')::uuid
+      OR EXISTS (SELECT 1 FROM users u WHERE u.id = sqlc.narg('viewer_id')::uuid AND u.role = 'admin')
+      OR EXISTS (SELECT 1 FROM organization_members om
+                 WHERE om.organization_id = p.organization_id AND om.user_id = sqlc.narg('viewer_id')::uuid
+                   AND om.role IN ('owner', 'admin'))
+      OR EXISTS (SELECT 1 FROM problem_members pm
+                 WHERE pm.problem_id = p.id AND pm.user_id = sqlc.narg('viewer_id')::uuid)
+      OR EXISTS (SELECT 1 FROM problem_teams pt
+                 JOIN team_members tm ON tm.team_id = pt.team_id
+                 JOIN teams t ON t.id = pt.team_id
+                 WHERE pt.problem_id = p.id AND tm.user_id = sqlc.narg('viewer_id')::uuid
+                   AND t.organization_id = p.organization_id)
+    ))
+  )
+;
 
 -- name: UpdateProblem :exec
 UPDATE problems
