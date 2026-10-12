@@ -79,25 +79,3 @@ func DirExists(path string) bool {
 	}
 	return fi.IsDir()
 }
-
-// OutboxEvent mirrors the domain models.OutboxEvent struct for cross-package E2E verification.
-type OutboxEvent struct {
-	Id           string            `json:"id"`
-	AggregateID  string            `json:"aggregate_id"`
-	EventType    string            `json:"event_type"`
-	Payload      []byte            `json:"payload"`
-	Headers      map[string]string `json:"headers"`
-	Status       string            `json:"status"`
-	RetryCount   int32             `json:"retry_count"`
-	ErrorMessage *string           `json:"error_message,omitempty"`
-}
-
-// CreateOutboxEventParams mirrors the domain models.CreateOutboxEventParams struct.
-type CreateOutboxEventParams struct {
-	Id          string            `json:"id"`
-	AggregateID string            `json:"aggregate_id"`
-	EventType   string            `json:"event_type"`
-	Payload     []byte            `json:"payload"`
-	Headers     map[string]string `json:"headers"`
-}
-

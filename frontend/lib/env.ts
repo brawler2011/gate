@@ -27,26 +27,6 @@ export const env = {
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
 
   /**
-   * Browser OTLP trace exporter URL.
-   */
-  NEXT_PUBLIC_OTEL_EXPORTER_URL: process.env.NEXT_PUBLIC_OTEL_EXPORTER_URL,
-
-  /**
-   * Browser OTel service name.
-   */
-  NEXT_PUBLIC_OTEL_SERVICE_NAME: process.env.NEXT_PUBLIC_OTEL_SERVICE_NAME,
-
-  /**
-   * Server OTLP collector endpoint.
-   */
-  OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
-
-  /**
-   * Server OTel service name.
-   */
-  OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
-
-  /**
    * Node execution environment.
    */
   NODE_ENV: process.env.NODE_ENV,
@@ -89,31 +69,4 @@ export const env = {
     return requireEnv("NEXT_PUBLIC_APP_URL", process.env.NEXT_PUBLIC_APP_URL).replace(/\/+$/, "");
   },
 
-  /**
-   * Returns browser OTLP exporter URL.
-   */
-  getOtelExporterUrl: (): string => {
-    return requireEnv("NEXT_PUBLIC_OTEL_EXPORTER_URL", process.env.NEXT_PUBLIC_OTEL_EXPORTER_URL);
-  },
-
-  /**
-   * Returns browser OTel service name.
-   */
-  getOtelServiceName: (): string => {
-    return requireEnv("NEXT_PUBLIC_OTEL_SERVICE_NAME", process.env.NEXT_PUBLIC_OTEL_SERVICE_NAME);
-  },
-
-  /**
-   * Returns server OTLP collector endpoint.
-   */
-  getServerOtelEndpoint: (): string => {
-    return requireEnv("OTEL_EXPORTER_OTLP_ENDPOINT", process.env.OTEL_EXPORTER_OTLP_ENDPOINT);
-  },
-
-  /**
-   * Returns server OTel service name.
-   */
-  getServerOtelServiceName: (): string => {
-    return requireEnv("OTEL_SERVICE_NAME", process.env.OTEL_SERVICE_NAME);
-  },
 } as const;

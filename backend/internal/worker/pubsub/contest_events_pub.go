@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/pkg/telemetry"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -25,7 +25,10 @@ func (h *ContestEventsPublisher) Handle(ctx context.Context, eventType string, p
 		Subject: eventType,
 		Data:    payload,
 	}
-	telemetry.InjectNATSMsg(ctx, msg)
+	msg.Header = nats.Header{}
+	if id := requestid.Get(ctx); id != "" {
+		msg.Header.Set(requestid.Header, id)
+	}
 
 	_, err := h.natsJetStream.PublishMsg(ctx, msg)
 	if err != nil {

@@ -4,6 +4,7 @@ tasks:
   gen-openapi:
     desc: "Generate OpenAPI Go handlers and TS clients"
     sources:
+      - ogen.yml
       - core/v1/openapi.yaml
       - observer/v1/openapi.yaml
     generates:
@@ -13,7 +14,7 @@ tasks:
       - ../frontend/contracts/observer/v1/**/*
     cmds:
       - mkdir -p ../backend/contracts/core/v1
-      - go run github.com/ogen-go/ogen/cmd/ogen@v1.24.0 --package corev1 --target ../backend/contracts/core/v1 --clean core/v1/openapi.yaml
+      - go run github.com/ogen-go/ogen/cmd/ogen@v1.24.0 --config ogen.yml --package corev1 --target ../backend/contracts/core/v1 --clean core/v1/openapi.yaml
       - mkdir -p ../backend/contracts/observer/v1
       - cd ../backend && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.0 -generate std-http-server,models,strict-server,skip-prune -package observerv1 -o contracts/observer/v1/observer.go ../contracts/observer/v1/openapi.yaml
       - rm -rf ../frontend/contracts/core/v1 ../frontend/contracts/observer/v1

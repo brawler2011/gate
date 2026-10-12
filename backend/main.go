@@ -4,10 +4,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
+
+	"github.com/brawler2011/gate/backend/pkg/logging"
 )
 
 func main() {
+	slog.SetDefault(logging.New(os.Stdout))
 	var envFile string
 	var migrate bool
 
@@ -16,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() != 0 {
-		fmt.Fprintf(os.Stderr, "unexpected arguments: %v\n", flag.Args())
+		slog.Error("unexpected arguments", "arguments", flag.Args())
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -32,6 +36,6 @@ func main() {
 		return
 	}
 
-	fmt.Fprintln(os.Stderr, err)
+	slog.Error("application startup failed", "error_type", fmt.Sprintf("%T", err))
 	os.Exit(1)
 }

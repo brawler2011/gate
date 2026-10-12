@@ -3,6 +3,7 @@ package pubsub
 import (
 	"context"
 	"fmt"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"log/slog"
 	"sync"
 	"time"
@@ -114,7 +115,7 @@ func (s *StreamSubscriber) handleMessage(parentCtx context.Context) jetstream.Me
 	return func(msg jetstream.Msg) {
 		const handlerTimeout = 30 * time.Second
 
-		ctx, cancel := context.WithTimeout(context.WithoutCancel(parentCtx), handlerTimeout)
+		ctx, cancel := context.WithTimeout(requestid.With(context.WithoutCancel(parentCtx), msg.Headers().Get(requestid.Header)), handlerTimeout)
 		defer cancel()
 
 		meta, err := msg.Metadata()

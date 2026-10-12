@@ -90,7 +90,7 @@ tasks:
       - task: fe:lint
 
   test:e2e:
-    desc: "Run complete E2E Observability test suite across Tiers 1-4"
+    desc: "Run deployment and diagnostic contract checks"
     cmds:
       - task: e2e:test
 

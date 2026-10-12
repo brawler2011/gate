@@ -32,7 +32,7 @@ func AuthMiddleware(authUC interfaces.AuthUC) func(http.Handler) http.Handler {
 
 			sessionID, err := uuid.Parse(cookie.Value)
 			if err != nil {
-				slog.Error("session cookie found, but failed to parse UUID", "error", err)
+				slog.Error("session cookie found, but failed to parse UUID", "operation", "parse_session_cookie")
 				next.ServeHTTP(w, r)
 				return
 			}

@@ -21,6 +21,12 @@ type ComposePort struct {
 
 // ComposeService represents a service declaration in Docker Compose.
 type ComposeService struct {
+	Logging struct {
+		Driver  string            `yaml:"driver"`
+		Options map[string]string `yaml:"options"`
+	} `yaml:"logging"`
+	DependsOn   interface{}            `yaml:"depends_on"`
+	Command     interface{}            `yaml:"command"`
 	Image       string                 `yaml:"image"`
 	Ports       []interface{}          `yaml:"ports"`
 	Environment interface{}            `yaml:"environment"`
@@ -33,10 +39,10 @@ type ComposeService struct {
 
 // ComposeConfig represents a parsed docker-compose.yml structure.
 type ComposeConfig struct {
-	Version  string                             `yaml:"version"`
-	Services map[string]ComposeService          `yaml:"services"`
-	Networks map[string]interface{}             `yaml:"networks"`
-	Volumes  map[string]interface{}             `yaml:"volumes"`
+	Version  string                    `yaml:"version"`
+	Services map[string]ComposeService `yaml:"services"`
+	Networks map[string]interface{}    `yaml:"networks"`
+	Volumes  map[string]interface{}    `yaml:"volumes"`
 }
 
 // ParseComposeFile reads and parses a Docker Compose YAML file into ComposeConfig.

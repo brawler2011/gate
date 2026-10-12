@@ -1,15 +1,20 @@
 package middleware
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
+	"github.com/felixge/httpsnoop"
 	"github.com/google/uuid"
 	"github.com/ogen-go/ogen/ogenerrors"
 )
@@ -20,88 +25,59 @@ type errorResponse struct {
 	RequestID string `json:"request_id,omitempty"`
 }
 
-const (
-	requestIDKey contextKey = "request_id"
-)
-
-type statusWriter struct {
-	http.ResponseWriter
-	status int
-	length int
-}
-
-func (w *statusWriter) WriteHeader(status int) {
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
-}
-
-func (w *statusWriter) Write(b []byte) (int, error) {
-	if w.status == 0 {
-		w.status = 200
-	}
-	n, err := w.ResponseWriter.Write(b)
-	w.length += n
-	return n, err
-}
-
-// RequestLoggerMiddleware logs all incoming requests with timing and context
-func RequestLoggerMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
+// RequestLoggerMiddleware preserves the writer's optional interfaces for streaming and upgrades.
+func RequestLoggerMiddleware(logger *slog.Logger, route func(*http.Request) string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-
-			// Generate or retrieve request Id
-			requestID := r.Header.Get("X-Request-ID")
-			if requestID == "" {
-				requestID = uuid.New().String()
+			id := r.Header.Get(requestid.Header)
+			if !requestid.Valid(id) {
+				id = uuid.NewString()
 			}
-			w.Header().Set("X-Request-ID", requestID)
-
-			// Store requestID in context so it propagates to the entire app
-			ctx := context.WithValue(r.Context(), requestIDKey, requestID)
+			w.Header().Set(requestid.Header, id)
+			ctx := requestid.With(r.Context(), id)
 			r = r.WithContext(ctx)
-
-			sw := &statusWriter{ResponseWriter: w}
-
+			status := http.StatusOK
+			written := false
+			sw := httpsnoop.Wrap(w, httpsnoop.Hooks{
+				WriteHeader: func(next httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+					return func(code int) {
+						if !written && (code == 101 || code >= 200) {
+							status = code
+							written = true
+						}
+						next(code)
+					}
+				},
+				Write: func(next httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+					return func(p []byte) (int, error) { written = true; return next(p) }
+				},
+				ReadFrom: func(next httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+					return func(r io.Reader) (int64, error) { written = true; return next(r) }
+				},
+				Flush: func(next httpsnoop.FlushFunc) httpsnoop.FlushFunc {
+					return func() { written = true; next() }
+				},
+				Hijack: func(next httpsnoop.HijackFunc) httpsnoop.HijackFunc {
+					return func() (net.Conn, *bufio.ReadWriter, error) {
+						conn, rw, err := next()
+						if err == nil {
+							status = http.StatusSwitchingProtocols
+							written = true
+						}
+						return conn, rw, err
+					}
+				},
+			})
 			next.ServeHTTP(sw, r)
-
-			duration := time.Since(start)
-			statusCode := sw.status
-			if statusCode == 0 {
-				statusCode = 200
+			level := slog.LevelInfo
+			if status >= 500 {
+				level = slog.LevelError
+			} else if status >= 400 {
+				level = slog.LevelWarn
 			}
-
-			// Build log message
-			logMsg := fmt.Sprintf("%s %s -> %d %s (%dms)",
-				r.Method,
-				r.URL.Path,
-				statusCode,
-				http.StatusText(statusCode),
-				duration.Milliseconds(),
-			)
-
-			// Build log attributes
-			logAttrs := []any{
-				slog.String("request_id", requestID),
-				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
-				slog.Int("status", statusCode),
-				slog.Int64("duration_ms", duration.Milliseconds()),
-				slog.String("ip", r.RemoteAddr),
-			}
-
-			if len(r.URL.Query()) > 0 {
-				logAttrs = append(logAttrs, slog.Any("query", r.URL.Query()))
-			}
-
-			// Log based on status code
-			logLevel := slog.LevelInfo
-			if statusCode >= 500 {
-				logLevel = slog.LevelError
-			} else if statusCode >= 400 {
-				logLevel = slog.LevelWarn
-			}
-			logger.Log(ctx, logLevel, logMsg, logAttrs...)
+			logger.Log(ctx, level, "http_request_completed", "event", "http_request_completed",
+				"request_id", id, "method", r.Method, "route", route(r), "status", status, "duration_ms", time.Since(start).Milliseconds())
 		})
 	}
 }
@@ -113,10 +89,7 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 		if ctx == nil {
 			ctx = r.Context()
 		}
-		requestID, _ := ctx.Value(requestIDKey).(string)
-		if requestID == "" {
-			requestID = r.Header.Get("X-Request-ID")
-		}
+		requestID := requestid.Get(ctx)
 
 		statusCode := http.StatusInternalServerError
 		resp := errorResponse{
@@ -141,42 +114,11 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 			resp.Msg = err.Error()
 		}
 
-		logMsg := fmt.Sprintf("%s %s -> %d %s",
-			r.Method,
-			r.URL.Path,
-			statusCode,
-			http.StatusText(statusCode),
-		)
-
 		logAttrs := []any{
 			slog.String("request_id", requestID),
-			slog.String("method", r.Method),
-			slog.String("path", r.URL.Path),
+			slog.String("operation", "http_response"),
 			slog.Int("status", statusCode),
-			slog.String("error", err.Error()),
-			slog.String("ip", r.RemoteAddr),
-		}
-
-		// Add user/session context if available in the context
-		if user := GetUser(ctx); !user.IsGuest() {
-			logAttrs = append(logAttrs, slog.String("user_id", user.Id.String()))
-		}
-		if session, err := GetSession(ctx); err == nil {
-			logAttrs = append(logAttrs, slog.String("session_id", session.ID.String()))
-		}
-
-		if cErr != nil {
-			resp.Msg = cErr.Message
-			logAttrs = append(logAttrs,
-				slog.String("operation", cErr.Op),
-				slog.String("message", cErr.Message),
-			)
-			if cErr.Basic != nil {
-				logAttrs = append(logAttrs, slog.String("error_type", fmt.Sprintf("%T", cErr.Basic)))
-			}
-			if cErr.Cause != nil {
-				logAttrs = append(logAttrs, slog.String("cause", fmt.Sprintf("%v", cErr.Cause)))
-			}
+			slog.String("error_type", fmt.Sprintf("%T", err)),
 		}
 
 		logLevel := slog.LevelError
@@ -186,7 +128,7 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 		if statusCode == http.StatusNotFound {
 			logLevel = slog.LevelInfo
 		}
-		logger.Log(ctx, logLevel, logMsg, logAttrs...)
+		logger.Log(ctx, logLevel, "http_request_error", logAttrs...)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)

@@ -155,7 +155,7 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		subscriptionError(w, err)
 		return
 	}
-	conn, err := s.upgrader.Upgrade(w, r, nil)
+	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Request-ID": w.Header().Values("X-Request-ID")})
 	if err != nil {
 		slog.Error("failed to upgrade connection", "error", err)
 		return
@@ -336,7 +336,7 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 	}
 	filter := &ContestsFilter{Since: parsed.Since, ContestId: *parsed.ContestId}
 
-	conn, err := s.upgrader.Upgrade(w, r, nil)
+	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Request-ID": w.Header().Values("X-Request-ID")})
 	if err != nil {
 		slog.Error("failed to upgrade contest connection", "error", err)
 		return

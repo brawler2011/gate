@@ -4,11 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"time"
-
-	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	pb "github.com/criyle/go-judge/pb"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -24,7 +20,6 @@ func NewClient(addr string) (*Client, error) {
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024)), // 100MB
-		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to go-judge gRPC server: %w", err)
@@ -51,20 +46,9 @@ func (c *Client) Exec(ctx context.Context, req *pb.Request) (*pb.Response, error
 	if c.grpcClient == nil {
 		return nil, fmt.Errorf("gRPC client is not initialized")
 	}
-	telemetry.IncSandboxActive()
-	defer telemetry.DecSandboxActive()
-
-	start := time.Now()
 	resp, err := c.grpcClient.Exec(ctx, req)
-	duration := time.Since(start)
 	if err != nil {
 		return nil, fmt.Errorf("gRPC Exec failed: %w", err)
-	}
-
-	if len(resp.GetResults()) > 0 {
-		for _, r := range resp.GetResults() {
-			telemetry.RecordSandboxExecution(ctx, "", safeInt64(r.GetMemory()), safeDuration(r.GetTime()).Milliseconds(), duration.Seconds())
-		}
 	}
 
 	return resp, nil

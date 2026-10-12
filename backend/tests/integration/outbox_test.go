@@ -16,8 +16,8 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		eventID := uuid.New()
 		aggregateID := uuid.New()
 		headers := map[string]string{
-			"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			"tracestate":  "rojo=1",
+			"X-Request-ID":  "request-123",
+			"custom-header": "rojo=1",
 		}
 
 		err := outboxRepo.CreateEvent(s.ctx, &models.CreateOutboxEventParams{
@@ -46,8 +46,8 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		s.Equal(models.OutboxEventSubmissionCreated, found.EventType)
 		s.JSONEq(`{"test":"data"}`, string(found.Payload))
 		s.NotNil(found.Headers)
-		s.Equal(headers["traceparent"], found.Headers["traceparent"])
-		s.Equal(headers["tracestate"], found.Headers["tracestate"])
+		s.Equal(headers["X-Request-ID"], found.Headers["X-Request-ID"])
+		s.Equal(headers["custom-header"], found.Headers["custom-header"])
 
 		// Clean up
 		err = outboxRepo.MarkAsCompleted(s.ctx, eventID)

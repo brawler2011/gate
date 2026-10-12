@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -28,10 +29,8 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
-	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -106,18 +105,6 @@ func runApp(envFile string) error {
 		return err
 	}
 
-	telShutdown, err := telemetry.InitTelemetry(context.Background(), telemetry.Config{
-		Endpoint:       cfg.OtelEndpoint,
-		ServiceName:    cfg.OtelServiceName,
-		ServiceVersion: cfg.OtelServiceVersion,
-		Environment:    cfg.Env,
-		Insecure:       cfg.OtelInsecure,
-		Enabled:        cfg.OtelEnabled,
-	})
-	if err != nil {
-		return fmt.Errorf("init telemetry: %w", err)
-	}
-
 	logger := slog.Default()
 
 	logger.Info("connecting to postgres")
@@ -126,9 +113,6 @@ func runApp(envFile string) error {
 		return err
 	}
 	defer pool.Close()
-	if err := telemetry.RegisterPGXPoolMetrics(pool); err != nil {
-		logger.Warn("failed to register pgxpool metrics", slog.String("error", err.Error()))
-	}
 	logger.Info("successfully connected to postgres")
 
 	usersRepo := pg.NewUsersRepo(pool)
@@ -155,7 +139,7 @@ func runApp(envFile string) error {
 			SecretKey: cfg.S3SecretKey,
 			Region:    defaultS3Region,
 		})
-		logger.Info("successfully initialized S3 storage client", slog.String("endpoint", cfg.S3Endpoint))
+		logger.Info("successfully initialized S3 storage client")
 	} else {
 		store = storage.NewLocalStorage(cfg.LocalStoragePath)
 		logger.Info("successfully initialized Local filesystem storage client", slog.String("path", cfg.LocalStoragePath))
@@ -222,16 +206,13 @@ func runApp(envFile string) error {
 	if err != nil {
 		return fmt.Errorf("create nats jetstream connection: %w", err)
 	}
-	logger.Info("successfully initialized nats jetstream", slog.String("url", cfg.GetNatsURL()))
+	logger.Info("successfully initialized nats jetstream")
 
 	if err := pkg.EnsureSubmissionsStream(context.Background(), natsJS); err != nil {
 		return fmt.Errorf("ensure submissions stream: %w", err)
 	}
 	if err := pkg.EnsureContestsStream(context.Background(), natsJS); err != nil {
 		return fmt.Errorf("ensure contests stream: %w", err)
-	}
-	if err := telemetry.RegisterNATSMetrics(natsJS); err != nil {
-		logger.Warn("failed to register nats metrics", slog.String("error", err.Error()))
 	}
 	logger.Info("SUBMISSIONS and CONTESTS streams ready")
 
@@ -259,7 +240,6 @@ func runApp(envFile string) error {
 	if err != nil {
 		return fmt.Errorf("create judge worker: %w", err)
 	}
-	telemetry.SetJudgeActiveWorkers(int64(cfg.JudgeWorkerCount))
 
 	submissionDispatcher := outbox.NewEventDispatcher()
 	observerHub := wsobserver.NewHub(submissionsRingBufferSize)
@@ -340,31 +320,33 @@ func runApp(envFile string) error {
 		return fmt.Errorf("create core api server: %w", err)
 	}
 
-	apiHandler := middleware.RequestLoggerMiddleware(logger)(
-		middleware.AuthMiddleware(authUC)(
-			middleware.UsersMiddleware(usersUC)(
-				middleware.ResponseWriterMiddleware(apiServer),
-			),
+	apiHandler := middleware.AuthMiddleware(authUC)(
+		middleware.UsersMiddleware(usersUC)(
+			middleware.ResponseWriterMiddleware(apiServer),
 		),
 	)
 
 	publicMux.Handle("/", apiHandler)
 
 	publicServer := &http.Server{
-		Addr:              cfg.Address,
-		Handler:           otelhttp.NewHandler(publicMux, "gate-backend"),
+		Addr: cfg.Address,
+		Handler: middleware.RequestLoggerMiddleware(logger, func(r *http.Request) string {
+			if strings.HasPrefix(r.URL.Path, "/ws/") {
+				return "/ws/*"
+			}
+			if cfg.StorageType == "local" && strings.HasPrefix(r.URL.Path, "/files/") {
+				return "/files/*"
+			}
+			if route, ok := apiServer.FindRoute(r.Method, r.URL.Path); ok {
+				return route.PathPattern()
+			}
+			return "unmatched"
+		})(publicMux),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), serviceShutdownTimeout)
-		defer cancel()
-		if err := telShutdown(shutdownCtx); err != nil {
-			logger.Error("telemetry shutdown error", slog.String("error", err.Error()))
-		}
-	}()
 
 	services := []appService{
 		newService(
@@ -448,7 +430,6 @@ func loadConfig(envFile string) (config.Config, error) {
 
 	return cfg, nil
 }
-
 
 func newObserverMiddleware(usersUC interfaces.UsersUC, authUC interfaces.AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

@@ -11,7 +11,9 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/pkg/telemetry"
+	"github.com/brawler2011/gate/backend/pkg/queuecontext"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
+	"github.com/google/uuid"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -130,52 +132,70 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logger *slog.Logger) {
 	const handlerTimeout = 5 * time.Minute
 
-	// Extract the W3C trace context propagated via NATS message headers.
-	// This links the judge worker span back to the original HTTP request trace.
-	traceCtx := telemetry.ExtractNATSHeader(context.WithoutCancel(ctx), msg.Headers())
-	judgeCtx, cancel := context.WithTimeout(traceCtx, handlerTimeout)
+	judgeCtx, cancel := context.WithTimeout(requestid.With(context.WithoutCancel(ctx), msg.Headers().Get(requestid.Header)), handlerTimeout)
+	logger = logger.With("request_id", requestid.Get(judgeCtx))
+	diagnosticMeta := queuecontext.Metadata{}
+	if id, err := uuid.Parse(msg.Headers().Get(queuecontext.EventIDHeader)); err == nil && id != uuid.Nil {
+		logger = logger.With("event_id", id)
+		diagnosticMeta.EventID = id
+	}
+	if meta, err := msg.Metadata(); err == nil {
+		logger = logger.With("delivery_attempt", meta.NumDelivered)
+	}
+
 	defer cancel()
 
 	// Parse event
 	var event models.SubmissionCreatedEvent
 	if err := json.Unmarshal(msg.Data(), &event); err != nil {
-		logger.Error("failed to unmarshal event", "error", err)
+		logger.Error("failed to unmarshal event", "operation", "decode_submission", "error_type", fmt.Sprintf("%T", err))
 		if err := msg.Nak(); err != nil {
-			logger.Error("failed to nak message", "error", err)
+			logger.Error("failed to nak message", "operation", "nats_nak", "error_type", fmt.Sprintf("%T", err))
 		}
 		return
 	}
 
-	// Record queue wait duration
-	telemetry.RecordJudgeQueueWait(judgeCtx, time.Since(event.CreatedAt).Seconds())
+	logger = logger.With("submission_id", event.Id)
+	queuedAt, parseErr := time.Parse(time.RFC3339Nano, msg.Headers().Get(queuecontext.QueuedAtHeader))
+	diagnosticMeta.QueuedAt = queuedAt
+	judgeCtx = queuecontext.With(judgeCtx, diagnosticMeta)
+	if parseErr == nil && !queuedAt.IsZero() && !queuedAt.After(time.Now()) {
+		logger.Info("submission_judging_started", "event", "submission_judging_started", "queue_wait_ms", time.Since(queuedAt).Milliseconds())
+	} else {
+		reason := "invalid_queued_at"
+		if msg.Headers().Get(queuecontext.QueuedAtHeader) == "" {
+			reason = "missing_queued_at"
+		}
+		logger.Info("submission_judging_started", "event", "submission_judging_started", "queue_wait_unavailable_reason", reason)
+	}
 
 	// Judge the submission
 	startTime := time.Now()
 	err := w.judgeUC.JudgeSubmission(judgeCtx, event.Id)
 	duration := time.Since(startTime)
-	telemetry.RecordJudgeDuration(judgeCtx, duration.Seconds())
 
 	if err != nil {
-		logger.Error("judging failed",
-			"submission_id", event.Id,
-			"error", err,
-			"duration", duration,
+		errorKind := "judging_error"
+		if errors.Is(err, context.DeadlineExceeded) {
+			errorKind = "timeout"
+		}
+		logger.Error("submission_judging_failed", "error_kind", errorKind, "event", "submission_judging_failed", "operation", "judge_submission",
+			"error_type", fmt.Sprintf("%T", err),
+			"duration_ms", duration.Milliseconds(),
 		)
 		if ackErr := msg.Ack(); ackErr != nil {
-			logger.Error("failed to ack message after judging failure", "error", ackErr)
+			logger.Error("failed to ack message after judging failure", "operation", "nats_ack", "error_type", fmt.Sprintf("%T", ackErr))
 		}
 		return
 	}
 
-	logger.Info("judging completed",
-		"submission_id", event.Id,
-		"duration", duration,
+	logger.Info("submission_judging_completed", "event", "submission_judging_completed",
+		"duration_ms", duration.Milliseconds(),
 	)
 
 	// Acknowledge successful processing
-	telemetry.RecordNATSAck(judgeCtx)
 	if err := msg.Ack(); err != nil {
-		logger.Error("failed to ack message", "error", err)
+		logger.Error("failed to ack message", "operation", "nats_ack", "error_type", fmt.Sprintf("%T", err))
 	}
 }
 

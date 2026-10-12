@@ -7,19 +7,12 @@ import (
 	"io"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/go-faster/errors"
 	"github.com/ogen-go/ogen/conv"
 	ht "github.com/ogen-go/ogen/http"
 	"github.com/ogen-go/ogen/ogenerrors"
-	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func trimTrailingSlashes(u *url.URL) {
@@ -1065,41 +1058,7 @@ func (c *Client) AcceptOrganizationInvitation(ctx context.Context, params Accept
 }
 
 func (c *Client) sendAcceptOrganizationInvitation(ctx context.Context, params AcceptOrganizationInvitationParams) (res *AcceptOrganizationInvitationOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("AcceptOrganizationInvitation"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/invitations/{id}/accept"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, AcceptOrganizationInvitationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/invitations/"
@@ -1124,13 +1083,11 @@ func (c *Client) sendAcceptOrganizationInvitation(ctx context.Context, params Ac
 	pathParts[2] = "/accept"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -1144,7 +1101,6 @@ func (c *Client) sendAcceptOrganizationInvitation(ctx context.Context, params Ac
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeAcceptOrganizationInvitationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -1164,41 +1120,7 @@ func (c *Client) AddOrganizationMember(ctx context.Context, params AddOrganizati
 }
 
 func (c *Client) sendAddOrganizationMember(ctx context.Context, params AddOrganizationMemberParams) (res *AddOrganizationMemberOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("AddOrganizationMember"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{login}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, AddOrganizationMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -1223,7 +1145,6 @@ func (c *Client) sendAddOrganizationMember(ctx context.Context, params AddOrgani
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -1255,13 +1176,11 @@ func (c *Client) sendAddOrganizationMember(ctx context.Context, params AddOrgani
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -1275,7 +1194,6 @@ func (c *Client) sendAddOrganizationMember(ctx context.Context, params AddOrgani
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeAddOrganizationMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -1295,41 +1213,7 @@ func (c *Client) AddTeamMember(ctx context.Context, params AddTeamMemberParams) 
 }
 
 func (c *Client) sendAddTeamMember(ctx context.Context, params AddTeamMemberParams) (res *AddTeamMemberOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("AddTeamMember"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/teams/{id}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, AddTeamMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/teams/"
@@ -1354,7 +1238,6 @@ func (c *Client) sendAddTeamMember(ctx context.Context, params AddTeamMemberPara
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -1389,13 +1272,11 @@ func (c *Client) sendAddTeamMember(ctx context.Context, params AddTeamMemberPara
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -1409,7 +1290,6 @@ func (c *Client) sendAddTeamMember(ctx context.Context, params AddTeamMemberPara
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeAddTeamMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -1429,41 +1309,7 @@ func (c *Client) AdminChangeEmail(ctx context.Context, request *AdminChangeEmail
 }
 
 func (c *Client) sendAdminChangeEmail(ctx context.Context, request *AdminChangeEmailRequestModel, params AdminChangeEmailParams) (res *AdminChangeEmailOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("AdminChangeEmail"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/admin/users/{username}/change-email"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, AdminChangeEmailOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/admin/users/"
@@ -1488,7 +1334,6 @@ func (c *Client) sendAdminChangeEmail(ctx context.Context, request *AdminChangeE
 	pathParts[2] = "/change-email"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -1497,7 +1342,6 @@ func (c *Client) sendAdminChangeEmail(ctx context.Context, request *AdminChangeE
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -1511,7 +1355,6 @@ func (c *Client) sendAdminChangeEmail(ctx context.Context, request *AdminChangeE
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeAdminChangeEmailResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -1531,41 +1374,7 @@ func (c *Client) AdminResendVerification(ctx context.Context, params AdminResend
 }
 
 func (c *Client) sendAdminResendVerification(ctx context.Context, params AdminResendVerificationParams) (res *AdminResendVerificationOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("AdminResendVerification"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/admin/users/{username}/resend-verification"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, AdminResendVerificationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/admin/users/"
@@ -1590,13 +1399,11 @@ func (c *Client) sendAdminResendVerification(ctx context.Context, params AdminRe
 	pathParts[2] = "/resend-verification"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -1610,7 +1417,6 @@ func (c *Client) sendAdminResendVerification(ctx context.Context, params AdminRe
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeAdminResendVerificationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -1630,41 +1436,7 @@ func (c *Client) AdminSendPasswordReset(ctx context.Context, params AdminSendPas
 }
 
 func (c *Client) sendAdminSendPasswordReset(ctx context.Context, params AdminSendPasswordResetParams) (res *AdminSendPasswordResetOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("AdminSendPasswordReset"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/admin/users/{username}/send-reset-password"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, AdminSendPasswordResetOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/admin/users/"
@@ -1689,13 +1461,11 @@ func (c *Client) sendAdminSendPasswordReset(ctx context.Context, params AdminSen
 	pathParts[2] = "/send-reset-password"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -1709,7 +1479,6 @@ func (c *Client) sendAdminSendPasswordReset(ctx context.Context, params AdminSen
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeAdminSendPasswordResetResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -1729,41 +1498,7 @@ func (c *Client) AdminSetPassword(ctx context.Context, request *AdminSetPassword
 }
 
 func (c *Client) sendAdminSetPassword(ctx context.Context, request *AdminSetPasswordRequestModel, params AdminSetPasswordParams) (res *AdminSetPasswordOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("AdminSetPassword"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/admin/users/{username}/set-password"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, AdminSetPasswordOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/admin/users/"
@@ -1788,7 +1523,6 @@ func (c *Client) sendAdminSetPassword(ctx context.Context, request *AdminSetPass
 	pathParts[2] = "/set-password"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -1797,7 +1531,6 @@ func (c *Client) sendAdminSetPassword(ctx context.Context, request *AdminSetPass
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -1811,7 +1544,6 @@ func (c *Client) sendAdminSetPassword(ctx context.Context, request *AdminSetPass
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeAdminSetPasswordResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -1831,41 +1563,7 @@ func (c *Client) AnswerContestClarification(ctx context.Context, request *Answer
 }
 
 func (c *Client) sendAnswerContestClarification(ctx context.Context, request *AnswerContestClarificationRequestModel, params AnswerContestClarificationParams) (res *ContestClarificationModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("AnswerContestClarification"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/clarifications/{clarification_id}/answer"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, AnswerContestClarificationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [7]string
 	pathParts[0] = "/organizations/"
@@ -1928,7 +1626,6 @@ func (c *Client) sendAnswerContestClarification(ctx context.Context, request *An
 	pathParts[6] = "/answer"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -1937,7 +1634,6 @@ func (c *Client) sendAnswerContestClarification(ctx context.Context, request *An
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -1951,7 +1647,6 @@ func (c *Client) sendAnswerContestClarification(ctx context.Context, request *An
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeAnswerContestClarificationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -1971,41 +1666,7 @@ func (c *Client) ApproveContestJoinRequest(ctx context.Context, params ApproveCo
 }
 
 func (c *Client) sendApproveContestJoinRequest(ctx context.Context, params ApproveContestJoinRequestParams) (res *ApproveContestJoinRequestOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ApproveContestJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/requests/{id}/approve"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ApproveContestJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [7]string
 	pathParts[0] = "/organizations/"
@@ -2068,13 +1729,11 @@ func (c *Client) sendApproveContestJoinRequest(ctx context.Context, params Appro
 	pathParts[6] = "/approve"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -2088,7 +1747,6 @@ func (c *Client) sendApproveContestJoinRequest(ctx context.Context, params Appro
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeApproveContestJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -2108,41 +1766,7 @@ func (c *Client) ApproveOrganizationJoinRequest(ctx context.Context, request Opt
 }
 
 func (c *Client) sendApproveOrganizationJoinRequest(ctx context.Context, request OptApproveOrganizationJoinRequestModel, params ApproveOrganizationJoinRequestParams) (res *ApproveOrganizationJoinRequestOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ApproveOrganizationJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{login}/requests/{id}/approve"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ApproveOrganizationJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -2186,7 +1810,6 @@ func (c *Client) sendApproveOrganizationJoinRequest(ctx context.Context, request
 	pathParts[4] = "/approve"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -2195,7 +1818,6 @@ func (c *Client) sendApproveOrganizationJoinRequest(ctx context.Context, request
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -2209,7 +1831,6 @@ func (c *Client) sendApproveOrganizationJoinRequest(ctx context.Context, request
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeApproveOrganizationJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -2229,41 +1850,7 @@ func (c *Client) BatchCreateOrganizationUsers(ctx context.Context, request *Batc
 }
 
 func (c *Client) sendBatchCreateOrganizationUsers(ctx context.Context, request *BatchCreateOrganizationUsersRequestModel, params BatchCreateOrganizationUsersParams) (res *BatchCreateOrganizationUsersResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("BatchCreateOrganizationUsers"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{login}/members/batch"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, BatchCreateOrganizationUsersOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -2288,7 +1875,6 @@ func (c *Client) sendBatchCreateOrganizationUsers(ctx context.Context, request *
 	pathParts[2] = "/members/batch"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -2297,7 +1883,6 @@ func (c *Client) sendBatchCreateOrganizationUsers(ctx context.Context, request *
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -2311,7 +1896,6 @@ func (c *Client) sendBatchCreateOrganizationUsers(ctx context.Context, request *
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeBatchCreateOrganizationUsersResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -2329,41 +1913,7 @@ func (c *Client) BlockProblemForUser(ctx context.Context, request OptBlockProble
 }
 
 func (c *Client) sendBlockProblemForUser(ctx context.Context, request OptBlockProblemRequestModel, params BlockProblemForUserParams) (res *BlockProblemForUserOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("BlockProblemForUser"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, BlockProblemForUserOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [9]string
 	pathParts[0] = "/organizations/"
@@ -2445,7 +1995,6 @@ func (c *Client) sendBlockProblemForUser(ctx context.Context, request OptBlockPr
 	pathParts[8] = "/block"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -2454,7 +2003,6 @@ func (c *Client) sendBlockProblemForUser(ctx context.Context, request OptBlockPr
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -2468,7 +2016,6 @@ func (c *Client) sendBlockProblemForUser(ctx context.Context, request OptBlockPr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeBlockProblemForUserResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -2486,41 +2033,7 @@ func (c *Client) BlockSubmission(ctx context.Context, request OptBlockSubmission
 }
 
 func (c *Client) sendBlockSubmission(ctx context.Context, request OptBlockSubmissionRequestModel, params BlockSubmissionParams) (res *BlockSubmissionOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("BlockSubmission"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, BlockSubmissionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [7]string
 	pathParts[0] = "/organizations/"
@@ -2583,7 +2096,6 @@ func (c *Client) sendBlockSubmission(ctx context.Context, request OptBlockSubmis
 	pathParts[6] = "/block"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -2592,7 +2104,6 @@ func (c *Client) sendBlockSubmission(ctx context.Context, request OptBlockSubmis
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -2606,7 +2117,6 @@ func (c *Client) sendBlockSubmission(ctx context.Context, request OptBlockSubmis
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeBlockSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -2626,41 +2136,7 @@ func (c *Client) CancelContestJoinRequest(ctx context.Context, params CancelCont
 }
 
 func (c *Client) sendCancelContestJoinRequest(ctx context.Context, params CancelContestJoinRequestParams) (res *CancelContestJoinRequestOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CancelContestJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/requests/mine"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CancelContestJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -2704,13 +2180,11 @@ func (c *Client) sendCancelContestJoinRequest(ctx context.Context, params Cancel
 	pathParts[4] = "/requests/mine"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -2724,7 +2198,6 @@ func (c *Client) sendCancelContestJoinRequest(ctx context.Context, params Cancel
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCancelContestJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -2744,41 +2217,7 @@ func (c *Client) CancelOrganizationInvitation(ctx context.Context, params Cancel
 }
 
 func (c *Client) sendCancelOrganizationInvitation(ctx context.Context, params CancelOrganizationInvitationParams) (res *CancelOrganizationInvitationOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CancelOrganizationInvitation"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{login}/invitations/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CancelOrganizationInvitationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/organizations/"
@@ -2821,13 +2260,11 @@ func (c *Client) sendCancelOrganizationInvitation(ctx context.Context, params Ca
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -2841,7 +2278,6 @@ func (c *Client) sendCancelOrganizationInvitation(ctx context.Context, params Ca
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCancelOrganizationInvitationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -2861,41 +2297,7 @@ func (c *Client) CancelOrganizationJoinRequest(ctx context.Context, params Cance
 }
 
 func (c *Client) sendCancelOrganizationJoinRequest(ctx context.Context, params CancelOrganizationJoinRequestParams) (res *CancelOrganizationJoinRequestOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CancelOrganizationJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{login}/requests/mine"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CancelOrganizationJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -2920,13 +2322,11 @@ func (c *Client) sendCancelOrganizationJoinRequest(ctx context.Context, params C
 	pathParts[2] = "/requests/mine"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -2940,7 +2340,6 @@ func (c *Client) sendCancelOrganizationJoinRequest(ctx context.Context, params C
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCancelOrganizationJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -2960,47 +2359,12 @@ func (c *Client) ChangePassword(ctx context.Context, request *ChangePasswordRequ
 }
 
 func (c *Client) sendChangePassword(ctx context.Context, request *ChangePasswordRequestModel) (res *AuthResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ChangePassword"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/users/me/change-password"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ChangePasswordOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/users/me/change-password"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -3009,7 +2373,6 @@ func (c *Client) sendChangePassword(ctx context.Context, request *ChangePassword
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3023,7 +2386,6 @@ func (c *Client) sendChangePassword(ctx context.Context, request *ChangePassword
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeChangePasswordResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -3043,47 +2405,12 @@ func (c *Client) ClaimTemporaryUser(ctx context.Context, request *ClaimTemporary
 }
 
 func (c *Client) sendClaimTemporaryUser(ctx context.Context, request *ClaimTemporaryUserRequestModel) (res *ClaimTemporaryUserResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ClaimTemporaryUser"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/users/claim-temporary"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ClaimTemporaryUserOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/users/claim-temporary"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -3092,7 +2419,6 @@ func (c *Client) sendClaimTemporaryUser(ctx context.Context, request *ClaimTempo
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3106,7 +2432,6 @@ func (c *Client) sendClaimTemporaryUser(ctx context.Context, request *ClaimTempo
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeClaimTemporaryUserResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -3126,41 +2451,7 @@ func (c *Client) CompileProblemComponent(ctx context.Context, params CompileProb
 }
 
 func (c *Client) sendCompileProblemComponent(ctx context.Context, params CompileProblemComponentParams) (res *CompileResult, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CompileProblemComponent"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/workshop/components/{componentType}/compile"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CompileProblemComponentOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/problems/"
@@ -3204,13 +2495,11 @@ func (c *Client) sendCompileProblemComponent(ctx context.Context, params Compile
 	pathParts[4] = "/compile"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3224,7 +2513,6 @@ func (c *Client) sendCompileProblemComponent(ctx context.Context, params Compile
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCompileProblemComponentResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -3242,47 +2530,12 @@ func (c *Client) ConfirmEmailChange(ctx context.Context, request *ConfirmEmailCh
 }
 
 func (c *Client) sendConfirmEmailChange(ctx context.Context, request *ConfirmEmailChangeRequestModel) (res *ConfirmEmailChangeOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ConfirmEmailChange"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/auth/confirm-email-change"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ConfirmEmailChangeOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/auth/confirm-email-change"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -3291,7 +2544,6 @@ func (c *Client) sendConfirmEmailChange(ctx context.Context, request *ConfirmEma
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3305,7 +2557,6 @@ func (c *Client) sendConfirmEmailChange(ctx context.Context, request *ConfirmEma
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeConfirmEmailChangeResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -3323,41 +2574,7 @@ func (c *Client) CreateContest(ctx context.Context, params CreateContestParams) 
 }
 
 func (c *Client) sendCreateContest(ctx context.Context, params CreateContestParams) (res *CreationResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateContest"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateContestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -3382,7 +2599,6 @@ func (c *Client) sendCreateContest(ctx context.Context, params CreateContestPara
 	pathParts[2] = "/contests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "title" parameter.
@@ -3417,13 +2633,11 @@ func (c *Client) sendCreateContest(ctx context.Context, params CreateContestPara
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3437,7 +2651,6 @@ func (c *Client) sendCreateContest(ctx context.Context, params CreateContestPara
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateContestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -3457,41 +2670,7 @@ func (c *Client) CreateContestAnnouncement(ctx context.Context, request *CreateC
 }
 
 func (c *Client) sendCreateContestAnnouncement(ctx context.Context, request *CreateContestAnnouncementRequestModel, params CreateContestAnnouncementParams) (res *ContestAnnouncementModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateContestAnnouncement"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/announcements"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateContestAnnouncementOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -3535,7 +2714,6 @@ func (c *Client) sendCreateContestAnnouncement(ctx context.Context, request *Cre
 	pathParts[4] = "/announcements"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -3544,7 +2722,6 @@ func (c *Client) sendCreateContestAnnouncement(ctx context.Context, request *Cre
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3558,7 +2735,6 @@ func (c *Client) sendCreateContestAnnouncement(ctx context.Context, request *Cre
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateContestAnnouncementResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -3578,41 +2754,7 @@ func (c *Client) CreateContestClarification(ctx context.Context, request *Create
 }
 
 func (c *Client) sendCreateContestClarification(ctx context.Context, request *CreateContestClarificationRequestModel, params CreateContestClarificationParams) (res *ContestClarificationModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateContestClarification"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/clarifications"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateContestClarificationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -3656,7 +2798,6 @@ func (c *Client) sendCreateContestClarification(ctx context.Context, request *Cr
 	pathParts[4] = "/clarifications"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -3665,7 +2806,6 @@ func (c *Client) sendCreateContestClarification(ctx context.Context, request *Cr
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3679,7 +2819,6 @@ func (c *Client) sendCreateContestClarification(ctx context.Context, request *Cr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateContestClarificationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -3697,41 +2836,7 @@ func (c *Client) CreateContestDraft(ctx context.Context, request *CreateContestD
 }
 
 func (c *Client) sendCreateContestDraft(ctx context.Context, request *CreateContestDraftRequestModel, params CreateContestDraftParams) (res *CreationResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateContestDraft"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/drafts"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateContestDraftOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -3775,7 +2880,6 @@ func (c *Client) sendCreateContestDraft(ctx context.Context, request *CreateCont
 	pathParts[4] = "/drafts"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -3784,7 +2888,6 @@ func (c *Client) sendCreateContestDraft(ctx context.Context, request *CreateCont
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3798,7 +2901,6 @@ func (c *Client) sendCreateContestDraft(ctx context.Context, request *CreateCont
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateContestDraftResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -3818,41 +2920,7 @@ func (c *Client) CreateContestJoinRequest(ctx context.Context, request OptCreate
 }
 
 func (c *Client) sendCreateContestJoinRequest(ctx context.Context, request OptCreateContestJoinRequestModel, params CreateContestJoinRequestParams) (res *ContestJoinRequestResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateContestJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/requests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateContestJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -3896,7 +2964,6 @@ func (c *Client) sendCreateContestJoinRequest(ctx context.Context, request OptCr
 	pathParts[4] = "/requests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -3905,7 +2972,6 @@ func (c *Client) sendCreateContestJoinRequest(ctx context.Context, request OptCr
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3919,7 +2985,6 @@ func (c *Client) sendCreateContestJoinRequest(ctx context.Context, request OptCr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateContestJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -3937,41 +3002,7 @@ func (c *Client) CreateContestMember(ctx context.Context, params CreateContestMe
 }
 
 func (c *Client) sendCreateContestMember(ctx context.Context, params CreateContestMemberParams) (res *CreationResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateContestMember"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateContestMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -4015,7 +3046,6 @@ func (c *Client) sendCreateContestMember(ctx context.Context, params CreateConte
 	pathParts[4] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -4033,13 +3063,11 @@ func (c *Client) sendCreateContestMember(ctx context.Context, params CreateConte
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -4053,7 +3081,6 @@ func (c *Client) sendCreateContestMember(ctx context.Context, params CreateConte
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateContestMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -4071,41 +3098,7 @@ func (c *Client) CreateContestProblem(ctx context.Context, params CreateContestP
 }
 
 func (c *Client) sendCreateContestProblem(ctx context.Context, params CreateContestProblemParams) (res *CreationResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateContestProblem"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/problems"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateContestProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -4149,7 +3142,6 @@ func (c *Client) sendCreateContestProblem(ctx context.Context, params CreateCont
 	pathParts[4] = "/problems"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "problem_id" parameter.
@@ -4184,13 +3176,11 @@ func (c *Client) sendCreateContestProblem(ctx context.Context, params CreateCont
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -4204,7 +3194,6 @@ func (c *Client) sendCreateContestProblem(ctx context.Context, params CreateCont
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateContestProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -4222,41 +3211,7 @@ func (c *Client) CreateContestTeam(ctx context.Context, params CreateContestTeam
 }
 
 func (c *Client) sendCreateContestTeam(ctx context.Context, params CreateContestTeamParams) (res *CreateContestTeamOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateContestTeam"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateContestTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -4300,7 +3255,6 @@ func (c *Client) sendCreateContestTeam(ctx context.Context, params CreateContest
 	pathParts[4] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "team_id" parameter.
@@ -4335,13 +3289,11 @@ func (c *Client) sendCreateContestTeam(ctx context.Context, params CreateContest
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -4355,7 +3307,6 @@ func (c *Client) sendCreateContestTeam(ctx context.Context, params CreateContest
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateContestTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -4375,47 +3326,12 @@ func (c *Client) CreateOrganization(ctx context.Context, params CreateOrganizati
 }
 
 func (c *Client) sendCreateOrganization(ctx context.Context, params CreateOrganizationParams) (res *CreateOrganizationResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateOrganization"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateOrganizationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/organizations"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "name" parameter.
@@ -4467,13 +3383,11 @@ func (c *Client) sendCreateOrganization(ctx context.Context, params CreateOrgani
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -4487,7 +3401,6 @@ func (c *Client) sendCreateOrganization(ctx context.Context, params CreateOrgani
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateOrganizationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -4507,41 +3420,7 @@ func (c *Client) CreateOrganizationJoinRequest(ctx context.Context, request OptC
 }
 
 func (c *Client) sendCreateOrganizationJoinRequest(ctx context.Context, request OptCreateOrganizationJoinRequestModel, params CreateOrganizationJoinRequestParams) (res *OrganizationJoinRequestResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateOrganizationJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{login}/requests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateOrganizationJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -4566,7 +3445,6 @@ func (c *Client) sendCreateOrganizationJoinRequest(ctx context.Context, request 
 	pathParts[2] = "/requests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -4575,7 +3453,6 @@ func (c *Client) sendCreateOrganizationJoinRequest(ctx context.Context, request 
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -4589,7 +3466,6 @@ func (c *Client) sendCreateOrganizationJoinRequest(ctx context.Context, request 
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateOrganizationJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -4609,47 +3485,12 @@ func (c *Client) CreatePost(ctx context.Context, request *CreatePostReq) (Create
 }
 
 func (c *Client) sendCreatePost(ctx context.Context, request *CreatePostReq) (res CreatePostRes, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreatePost"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/posts"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreatePostOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/posts"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -4662,7 +3503,7 @@ func (c *Client) sendCreatePost(ctx context.Context, request *CreatePostReq) (re
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:CookieAuth"
+
 			switch err := c.securityCookieAuth(ctx, CreatePostOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
@@ -4691,7 +3532,6 @@ func (c *Client) sendCreatePost(ctx context.Context, request *CreatePostReq) (re
 		}
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -4705,7 +3545,6 @@ func (c *Client) sendCreatePost(ctx context.Context, request *CreatePostReq) (re
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreatePostResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -4723,47 +3562,12 @@ func (c *Client) CreateProblem(ctx context.Context, params CreateProblemParams) 
 }
 
 func (c *Client) sendCreateProblem(ctx context.Context, params CreateProblemParams) (res *CreationResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblem"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/problems"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "title" parameter.
@@ -4812,13 +3616,11 @@ func (c *Client) sendCreateProblem(ctx context.Context, params CreateProblemPara
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -4832,7 +3634,6 @@ func (c *Client) sendCreateProblem(ctx context.Context, params CreateProblemPara
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -4852,41 +3653,7 @@ func (c *Client) CreateProblemChecker(ctx context.Context, request CreateProblem
 }
 
 func (c *Client) sendCreateProblemChecker(ctx context.Context, request CreateProblemCheckerReq, params CreateProblemCheckerParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemChecker"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/checkers"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemCheckerOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -4911,7 +3678,6 @@ func (c *Client) sendCreateProblemChecker(ctx context.Context, request CreatePro
 	pathParts[2] = "/checkers"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "name" parameter.
@@ -4929,7 +3695,6 @@ func (c *Client) sendCreateProblemChecker(ctx context.Context, request CreatePro
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -4938,7 +3703,6 @@ func (c *Client) sendCreateProblemChecker(ctx context.Context, request CreatePro
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -4952,7 +3716,6 @@ func (c *Client) sendCreateProblemChecker(ctx context.Context, request CreatePro
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemCheckerResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -4972,41 +3735,7 @@ func (c *Client) CreateProblemGenerator(ctx context.Context, request CreateProbl
 }
 
 func (c *Client) sendCreateProblemGenerator(ctx context.Context, request CreateProblemGeneratorReq, params CreateProblemGeneratorParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemGenerator"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/generators"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemGeneratorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -5031,7 +3760,6 @@ func (c *Client) sendCreateProblemGenerator(ctx context.Context, request CreateP
 	pathParts[2] = "/generators"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "name" parameter.
@@ -5049,7 +3777,6 @@ func (c *Client) sendCreateProblemGenerator(ctx context.Context, request CreateP
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -5058,7 +3785,6 @@ func (c *Client) sendCreateProblemGenerator(ctx context.Context, request CreateP
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -5072,7 +3798,6 @@ func (c *Client) sendCreateProblemGenerator(ctx context.Context, request CreateP
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemGeneratorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -5092,41 +3817,7 @@ func (c *Client) CreateProblemInteractor(ctx context.Context, request CreateProb
 }
 
 func (c *Client) sendCreateProblemInteractor(ctx context.Context, request CreateProblemInteractorReq, params CreateProblemInteractorParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemInteractor"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/interactors"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemInteractorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -5151,7 +3842,6 @@ func (c *Client) sendCreateProblemInteractor(ctx context.Context, request Create
 	pathParts[2] = "/interactors"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "name" parameter.
@@ -5169,7 +3859,6 @@ func (c *Client) sendCreateProblemInteractor(ctx context.Context, request Create
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -5178,7 +3867,6 @@ func (c *Client) sendCreateProblemInteractor(ctx context.Context, request Create
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -5192,7 +3880,6 @@ func (c *Client) sendCreateProblemInteractor(ctx context.Context, request Create
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemInteractorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -5212,41 +3899,7 @@ func (c *Client) CreateProblemLib(ctx context.Context, request CreateProblemLibR
 }
 
 func (c *Client) sendCreateProblemLib(ctx context.Context, request CreateProblemLibReq, params CreateProblemLibParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemLib"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/lib"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemLibOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -5271,7 +3924,6 @@ func (c *Client) sendCreateProblemLib(ctx context.Context, request CreateProblem
 	pathParts[2] = "/lib"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "name" parameter.
@@ -5289,7 +3941,6 @@ func (c *Client) sendCreateProblemLib(ctx context.Context, request CreateProblem
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -5298,7 +3949,6 @@ func (c *Client) sendCreateProblemLib(ctx context.Context, request CreateProblem
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -5312,7 +3962,6 @@ func (c *Client) sendCreateProblemLib(ctx context.Context, request CreateProblem
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemLibResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -5332,41 +3981,7 @@ func (c *Client) CreateProblemMediaFile(ctx context.Context, request CreateProbl
 }
 
 func (c *Client) sendCreateProblemMediaFile(ctx context.Context, request CreateProblemMediaFileReq, params CreateProblemMediaFileParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemMediaFile"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/media"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemMediaFileOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -5391,7 +4006,6 @@ func (c *Client) sendCreateProblemMediaFile(ctx context.Context, request CreateP
 	pathParts[2] = "/media"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "name" parameter.
@@ -5409,7 +4023,6 @@ func (c *Client) sendCreateProblemMediaFile(ctx context.Context, request CreateP
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -5418,7 +4031,6 @@ func (c *Client) sendCreateProblemMediaFile(ctx context.Context, request CreateP
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -5432,7 +4044,6 @@ func (c *Client) sendCreateProblemMediaFile(ctx context.Context, request CreateP
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemMediaFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -5450,41 +4061,7 @@ func (c *Client) CreateProblemMember(ctx context.Context, params CreateProblemMe
 }
 
 func (c *Client) sendCreateProblemMember(ctx context.Context, params CreateProblemMemberParams) (res *CreateProblemMemberOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemMember"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{id}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -5509,7 +4086,6 @@ func (c *Client) sendCreateProblemMember(ctx context.Context, params CreateProbl
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -5544,13 +4120,11 @@ func (c *Client) sendCreateProblemMember(ctx context.Context, params CreateProbl
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -5564,7 +4138,6 @@ func (c *Client) sendCreateProblemMember(ctx context.Context, params CreateProbl
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -5582,41 +4155,7 @@ func (c *Client) CreateProblemTeam(ctx context.Context, params CreateProblemTeam
 }
 
 func (c *Client) sendCreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) (res *CreateProblemTeamOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemTeam"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{id}/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -5641,7 +4180,6 @@ func (c *Client) sendCreateProblemTeam(ctx context.Context, params CreateProblem
 	pathParts[2] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "team_id" parameter.
@@ -5676,13 +4214,11 @@ func (c *Client) sendCreateProblemTeam(ctx context.Context, params CreateProblem
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -5696,7 +4232,6 @@ func (c *Client) sendCreateProblemTeam(ctx context.Context, params CreateProblem
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -5716,41 +4251,7 @@ func (c *Client) CreateProblemTestFile(ctx context.Context, request CreateProble
 }
 
 func (c *Client) sendCreateProblemTestFile(ctx context.Context, request CreateProblemTestFileReq, params CreateProblemTestFileParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemTestFile"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/tests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemTestFileOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -5775,7 +4276,6 @@ func (c *Client) sendCreateProblemTestFile(ctx context.Context, request CreatePr
 	pathParts[2] = "/tests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "name" parameter.
@@ -5793,7 +4293,6 @@ func (c *Client) sendCreateProblemTestFile(ctx context.Context, request CreatePr
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -5802,7 +4301,6 @@ func (c *Client) sendCreateProblemTestFile(ctx context.Context, request CreatePr
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -5816,7 +4314,6 @@ func (c *Client) sendCreateProblemTestFile(ctx context.Context, request CreatePr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemTestFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -5836,41 +4333,7 @@ func (c *Client) CreateProblemValidator(ctx context.Context, request CreateProbl
 }
 
 func (c *Client) sendCreateProblemValidator(ctx context.Context, request CreateProblemValidatorReq, params CreateProblemValidatorParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemValidator"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/validators"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemValidatorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -5895,7 +4358,6 @@ func (c *Client) sendCreateProblemValidator(ctx context.Context, request CreateP
 	pathParts[2] = "/validators"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "name" parameter.
@@ -5913,7 +4375,6 @@ func (c *Client) sendCreateProblemValidator(ctx context.Context, request CreateP
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -5922,7 +4383,6 @@ func (c *Client) sendCreateProblemValidator(ctx context.Context, request CreateP
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -5936,7 +4396,6 @@ func (c *Client) sendCreateProblemValidator(ctx context.Context, request CreateP
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemValidatorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -5956,41 +4415,7 @@ func (c *Client) CreateProblemWorkshopSubmission(ctx context.Context, request Cr
 }
 
 func (c *Client) sendCreateProblemWorkshopSubmission(ctx context.Context, request CreateProblemWorkshopSubmissionReq, params CreateProblemWorkshopSubmissionParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateProblemWorkshopSubmission"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/submissions"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateProblemWorkshopSubmissionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -6015,7 +4440,6 @@ func (c *Client) sendCreateProblemWorkshopSubmission(ctx context.Context, reques
 	pathParts[2] = "/submissions"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "name" parameter.
@@ -6033,7 +4457,6 @@ func (c *Client) sendCreateProblemWorkshopSubmission(ctx context.Context, reques
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -6042,7 +4465,6 @@ func (c *Client) sendCreateProblemWorkshopSubmission(ctx context.Context, reques
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -6056,7 +4478,6 @@ func (c *Client) sendCreateProblemWorkshopSubmission(ctx context.Context, reques
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateProblemWorkshopSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -6074,47 +4495,12 @@ func (c *Client) CreateSubmission(ctx context.Context, request *CreateSubmission
 }
 
 func (c *Client) sendCreateSubmission(ctx context.Context, request *CreateSubmissionRequestModel, params CreateSubmissionParams) (res *CreationResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateSubmission"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/submissions"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateSubmissionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/submissions"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "problem_id" parameter.
@@ -6174,7 +4560,6 @@ func (c *Client) sendCreateSubmission(ctx context.Context, request *CreateSubmis
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -6183,7 +4568,6 @@ func (c *Client) sendCreateSubmission(ctx context.Context, request *CreateSubmis
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -6197,7 +4581,6 @@ func (c *Client) sendCreateSubmission(ctx context.Context, request *CreateSubmis
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -6217,47 +4600,12 @@ func (c *Client) CreateTeam(ctx context.Context, request *CreateTeamReq) (*Creat
 }
 
 func (c *Client) sendCreateTeam(ctx context.Context, request *CreateTeamReq) (res *CreationResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateTeam"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -6266,7 +4614,6 @@ func (c *Client) sendCreateTeam(ctx context.Context, request *CreateTeamReq) (re
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -6280,7 +4627,6 @@ func (c *Client) sendCreateTeam(ctx context.Context, request *CreateTeamReq) (re
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeCreateTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -6300,41 +4646,7 @@ func (c *Client) DeclineOrganizationInvitation(ctx context.Context, params Decli
 }
 
 func (c *Client) sendDeclineOrganizationInvitation(ctx context.Context, params DeclineOrganizationInvitationParams) (res *DeclineOrganizationInvitationOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeclineOrganizationInvitation"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/invitations/{id}/decline"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeclineOrganizationInvitationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/invitations/"
@@ -6359,13 +4671,11 @@ func (c *Client) sendDeclineOrganizationInvitation(ctx context.Context, params D
 	pathParts[2] = "/decline"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -6379,7 +4689,6 @@ func (c *Client) sendDeclineOrganizationInvitation(ctx context.Context, params D
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeclineOrganizationInvitationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -6399,41 +4708,7 @@ func (c *Client) DeleteAvatar(ctx context.Context, params DeleteAvatarParams) er
 }
 
 func (c *Client) sendDeleteAvatar(ctx context.Context, params DeleteAvatarParams) (res *DeleteAvatarOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteAvatar"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/users/{username}/avatar"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteAvatarOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/users/"
@@ -6458,13 +4733,11 @@ func (c *Client) sendDeleteAvatar(ctx context.Context, params DeleteAvatarParams
 	pathParts[2] = "/avatar"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -6478,7 +4751,6 @@ func (c *Client) sendDeleteAvatar(ctx context.Context, params DeleteAvatarParams
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteAvatarResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -6496,41 +4768,7 @@ func (c *Client) DeleteContest(ctx context.Context, params DeleteContestParams) 
 }
 
 func (c *Client) sendDeleteContest(ctx context.Context, params DeleteContestParams) (res *DeleteContestOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteContest"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteContestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/organizations/"
@@ -6573,13 +4811,11 @@ func (c *Client) sendDeleteContest(ctx context.Context, params DeleteContestPara
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -6593,7 +4829,6 @@ func (c *Client) sendDeleteContest(ctx context.Context, params DeleteContestPara
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteContestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -6613,41 +4848,7 @@ func (c *Client) DeleteContestAnnouncement(ctx context.Context, params DeleteCon
 }
 
 func (c *Client) sendDeleteContestAnnouncement(ctx context.Context, params DeleteContestAnnouncementParams) (res *DeleteContestAnnouncementOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteContestAnnouncement"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/announcements/{announcement_id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteContestAnnouncementOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [6]string
 	pathParts[0] = "/organizations/"
@@ -6709,13 +4910,11 @@ func (c *Client) sendDeleteContestAnnouncement(ctx context.Context, params Delet
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -6729,7 +4928,6 @@ func (c *Client) sendDeleteContestAnnouncement(ctx context.Context, params Delet
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteContestAnnouncementResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -6747,41 +4945,7 @@ func (c *Client) DeleteContestDraft(ctx context.Context, params DeleteContestDra
 }
 
 func (c *Client) sendDeleteContestDraft(ctx context.Context, params DeleteContestDraftParams) (res *DeleteContestDraftOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteContestDraft"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteContestDraftOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [6]string
 	pathParts[0] = "/organizations/"
@@ -6843,13 +5007,11 @@ func (c *Client) sendDeleteContestDraft(ctx context.Context, params DeleteContes
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -6863,7 +5025,6 @@ func (c *Client) sendDeleteContestDraft(ctx context.Context, params DeleteContes
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteContestDraftResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -6881,41 +5042,7 @@ func (c *Client) DeleteContestMember(ctx context.Context, params DeleteContestMe
 }
 
 func (c *Client) sendDeleteContestMember(ctx context.Context, params DeleteContestMemberParams) (res *DeleteContestMemberOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteContestMember"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteContestMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -6959,7 +5086,6 @@ func (c *Client) sendDeleteContestMember(ctx context.Context, params DeleteConte
 	pathParts[4] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -6977,13 +5103,11 @@ func (c *Client) sendDeleteContestMember(ctx context.Context, params DeleteConte
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -6997,7 +5121,6 @@ func (c *Client) sendDeleteContestMember(ctx context.Context, params DeleteConte
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteContestMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -7015,41 +5138,7 @@ func (c *Client) DeleteContestProblem(ctx context.Context, params DeleteContestP
 }
 
 func (c *Client) sendDeleteContestProblem(ctx context.Context, params DeleteContestProblemParams) (res *DeleteContestProblemOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteContestProblem"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteContestProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [6]string
 	pathParts[0] = "/organizations/"
@@ -7111,13 +5200,11 @@ func (c *Client) sendDeleteContestProblem(ctx context.Context, params DeleteCont
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -7131,7 +5218,6 @@ func (c *Client) sendDeleteContestProblem(ctx context.Context, params DeleteCont
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteContestProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -7149,41 +5235,7 @@ func (c *Client) DeleteContestTeam(ctx context.Context, params DeleteContestTeam
 }
 
 func (c *Client) sendDeleteContestTeam(ctx context.Context, params DeleteContestTeamParams) (res *DeleteContestTeamOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteContestTeam"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteContestTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -7227,7 +5279,6 @@ func (c *Client) sendDeleteContestTeam(ctx context.Context, params DeleteContest
 	pathParts[4] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "team_id" parameter.
@@ -7245,13 +5296,11 @@ func (c *Client) sendDeleteContestTeam(ctx context.Context, params DeleteContest
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -7265,7 +5314,6 @@ func (c *Client) sendDeleteContestTeam(ctx context.Context, params DeleteContest
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteContestTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -7285,41 +5333,7 @@ func (c *Client) DeleteOrganization(ctx context.Context, params DeleteOrganizati
 }
 
 func (c *Client) sendDeleteOrganization(ctx context.Context, params DeleteOrganizationParams) (res *DeleteOrganizationOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteOrganization"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{login}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteOrganizationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/organizations/"
@@ -7343,13 +5357,11 @@ func (c *Client) sendDeleteOrganization(ctx context.Context, params DeleteOrgani
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -7363,7 +5375,6 @@ func (c *Client) sendDeleteOrganization(ctx context.Context, params DeleteOrgani
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteOrganizationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -7383,41 +5394,7 @@ func (c *Client) DeletePostById(ctx context.Context, params DeletePostByIdParams
 }
 
 func (c *Client) sendDeletePostById(ctx context.Context, params DeletePostByIdParams) (res DeletePostByIdRes, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeletePostById"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/posts/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeletePostByIdOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/posts/"
@@ -7441,7 +5418,6 @@ func (c *Client) sendDeletePostById(ctx context.Context, params DeletePostByIdPa
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -7451,7 +5427,7 @@ func (c *Client) sendDeletePostById(ctx context.Context, params DeletePostByIdPa
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:CookieAuth"
+
 			switch err := c.securityCookieAuth(ctx, DeletePostByIdOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
@@ -7480,7 +5456,6 @@ func (c *Client) sendDeletePostById(ctx context.Context, params DeletePostByIdPa
 		}
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -7494,7 +5469,6 @@ func (c *Client) sendDeletePostById(ctx context.Context, params DeletePostByIdPa
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeletePostByIdResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -7512,41 +5486,7 @@ func (c *Client) DeleteProblem(ctx context.Context, params DeleteProblemParams) 
 }
 
 func (c *Client) sendDeleteProblem(ctx context.Context, params DeleteProblemParams) (res *DeleteProblemOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblem"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/problems/"
@@ -7570,13 +5510,11 @@ func (c *Client) sendDeleteProblem(ctx context.Context, params DeleteProblemPara
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -7590,7 +5528,6 @@ func (c *Client) sendDeleteProblem(ctx context.Context, params DeleteProblemPara
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -7610,41 +5547,7 @@ func (c *Client) DeleteProblemChecker(ctx context.Context, params DeleteProblemC
 }
 
 func (c *Client) sendDeleteProblemChecker(ctx context.Context, params DeleteProblemCheckerParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemChecker"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/checkers/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemCheckerOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -7687,13 +5590,11 @@ func (c *Client) sendDeleteProblemChecker(ctx context.Context, params DeleteProb
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -7707,7 +5608,6 @@ func (c *Client) sendDeleteProblemChecker(ctx context.Context, params DeleteProb
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemCheckerResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -7727,41 +5627,7 @@ func (c *Client) DeleteProblemGenerator(ctx context.Context, params DeleteProble
 }
 
 func (c *Client) sendDeleteProblemGenerator(ctx context.Context, params DeleteProblemGeneratorParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemGenerator"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/generators/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemGeneratorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -7804,13 +5670,11 @@ func (c *Client) sendDeleteProblemGenerator(ctx context.Context, params DeletePr
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -7824,7 +5688,6 @@ func (c *Client) sendDeleteProblemGenerator(ctx context.Context, params DeletePr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemGeneratorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -7844,41 +5707,7 @@ func (c *Client) DeleteProblemInteractor(ctx context.Context, params DeleteProbl
 }
 
 func (c *Client) sendDeleteProblemInteractor(ctx context.Context, params DeleteProblemInteractorParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemInteractor"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/interactors/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemInteractorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -7921,13 +5750,11 @@ func (c *Client) sendDeleteProblemInteractor(ctx context.Context, params DeleteP
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -7941,7 +5768,6 @@ func (c *Client) sendDeleteProblemInteractor(ctx context.Context, params DeleteP
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemInteractorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -7961,41 +5787,7 @@ func (c *Client) DeleteProblemLib(ctx context.Context, params DeleteProblemLibPa
 }
 
 func (c *Client) sendDeleteProblemLib(ctx context.Context, params DeleteProblemLibParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemLib"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/lib/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemLibOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -8038,13 +5830,11 @@ func (c *Client) sendDeleteProblemLib(ctx context.Context, params DeleteProblemL
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -8058,7 +5848,6 @@ func (c *Client) sendDeleteProblemLib(ctx context.Context, params DeleteProblemL
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemLibResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -8078,41 +5867,7 @@ func (c *Client) DeleteProblemMediaFile(ctx context.Context, params DeleteProble
 }
 
 func (c *Client) sendDeleteProblemMediaFile(ctx context.Context, params DeleteProblemMediaFileParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemMediaFile"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/media/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemMediaFileOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -8155,13 +5910,11 @@ func (c *Client) sendDeleteProblemMediaFile(ctx context.Context, params DeletePr
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -8175,7 +5928,6 @@ func (c *Client) sendDeleteProblemMediaFile(ctx context.Context, params DeletePr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemMediaFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -8193,41 +5945,7 @@ func (c *Client) DeleteProblemMember(ctx context.Context, params DeleteProblemMe
 }
 
 func (c *Client) sendDeleteProblemMember(ctx context.Context, params DeleteProblemMemberParams) (res *DeleteProblemMemberOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemMember"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{id}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -8252,7 +5970,6 @@ func (c *Client) sendDeleteProblemMember(ctx context.Context, params DeleteProbl
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -8270,13 +5987,11 @@ func (c *Client) sendDeleteProblemMember(ctx context.Context, params DeleteProbl
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -8290,7 +6005,6 @@ func (c *Client) sendDeleteProblemMember(ctx context.Context, params DeleteProbl
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -8308,41 +6022,7 @@ func (c *Client) DeleteProblemTeam(ctx context.Context, params DeleteProblemTeam
 }
 
 func (c *Client) sendDeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) (res *DeleteProblemTeamOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemTeam"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{id}/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -8367,7 +6047,6 @@ func (c *Client) sendDeleteProblemTeam(ctx context.Context, params DeleteProblem
 	pathParts[2] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "team_id" parameter.
@@ -8385,13 +6064,11 @@ func (c *Client) sendDeleteProblemTeam(ctx context.Context, params DeleteProblem
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -8405,7 +6082,6 @@ func (c *Client) sendDeleteProblemTeam(ctx context.Context, params DeleteProblem
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -8425,41 +6101,7 @@ func (c *Client) DeleteProblemTestFile(ctx context.Context, params DeleteProblem
 }
 
 func (c *Client) sendDeleteProblemTestFile(ctx context.Context, params DeleteProblemTestFileParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemTestFile"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/tests/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemTestFileOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -8502,13 +6144,11 @@ func (c *Client) sendDeleteProblemTestFile(ctx context.Context, params DeletePro
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -8522,7 +6162,6 @@ func (c *Client) sendDeleteProblemTestFile(ctx context.Context, params DeletePro
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemTestFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -8542,41 +6181,7 @@ func (c *Client) DeleteProblemValidator(ctx context.Context, params DeleteProble
 }
 
 func (c *Client) sendDeleteProblemValidator(ctx context.Context, params DeleteProblemValidatorParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemValidator"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/validators/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemValidatorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -8619,13 +6224,11 @@ func (c *Client) sendDeleteProblemValidator(ctx context.Context, params DeletePr
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -8639,7 +6242,6 @@ func (c *Client) sendDeleteProblemValidator(ctx context.Context, params DeletePr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemValidatorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -8659,41 +6261,7 @@ func (c *Client) DeleteProblemWorkshopSubmission(ctx context.Context, params Del
 }
 
 func (c *Client) sendDeleteProblemWorkshopSubmission(ctx context.Context, params DeleteProblemWorkshopSubmissionParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteProblemWorkshopSubmission"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/submissions/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteProblemWorkshopSubmissionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -8736,13 +6304,11 @@ func (c *Client) sendDeleteProblemWorkshopSubmission(ctx context.Context, params
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -8756,7 +6322,6 @@ func (c *Client) sendDeleteProblemWorkshopSubmission(ctx context.Context, params
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteProblemWorkshopSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -8776,41 +6341,7 @@ func (c *Client) DeleteTeam(ctx context.Context, params DeleteTeamParams) error 
 }
 
 func (c *Client) sendDeleteTeam(ctx context.Context, params DeleteTeamParams) (res *DeleteTeamOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DeleteTeam"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/teams/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/teams/"
@@ -8834,13 +6365,11 @@ func (c *Client) sendDeleteTeam(ctx context.Context, params DeleteTeamParams) (r
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -8854,7 +6383,6 @@ func (c *Client) sendDeleteTeam(ctx context.Context, params DeleteTeamParams) (r
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDeleteTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -8874,41 +6402,7 @@ func (c *Client) DownloadContestStatementsPdf(ctx context.Context, params Downlo
 }
 
 func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (res DownloadContestStatementsPdfOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("DownloadContestStatementsPdf"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/statements.pdf"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DownloadContestStatementsPdfOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -8952,7 +6446,6 @@ func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params Do
 	pathParts[4] = "/statements.pdf"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "lang" parameter.
@@ -8973,13 +6466,11 @@ func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params Do
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -8993,7 +6484,6 @@ func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params Do
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeDownloadContestStatementsPdfResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9011,47 +6501,12 @@ func (c *Client) ForgotPassword(ctx context.Context, request *ForgotPasswordRequ
 }
 
 func (c *Client) sendForgotPassword(ctx context.Context, request *ForgotPasswordRequestModel) (res *ForgotPasswordOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ForgotPassword"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/auth/forgot-password"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ForgotPasswordOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/auth/forgot-password"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -9060,7 +6515,6 @@ func (c *Client) sendForgotPassword(ctx context.Context, request *ForgotPassword
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -9074,7 +6528,6 @@ func (c *Client) sendForgotPassword(ctx context.Context, request *ForgotPassword
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeForgotPasswordResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9094,41 +6547,7 @@ func (c *Client) GenerateTests(ctx context.Context, request *GenerateTestsReq, p
 }
 
 func (c *Client) sendGenerateTests(ctx context.Context, request *GenerateTestsReq, params GenerateTestsParams) (res *GenerateTestsOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GenerateTests"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/workshop/tests/generate"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GenerateTestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -9153,7 +6572,6 @@ func (c *Client) sendGenerateTests(ctx context.Context, request *GenerateTestsRe
 	pathParts[2] = "/workshop/tests/generate"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -9162,7 +6580,6 @@ func (c *Client) sendGenerateTests(ctx context.Context, request *GenerateTestsRe
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -9176,7 +6593,6 @@ func (c *Client) sendGenerateTests(ctx context.Context, request *GenerateTestsRe
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGenerateTestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9194,41 +6610,7 @@ func (c *Client) GetContest(ctx context.Context, params GetContestParams) (*GetC
 }
 
 func (c *Client) sendGetContest(ctx context.Context, params GetContestParams) (res *GetContestResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetContest"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetContestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/organizations/"
@@ -9271,13 +6653,11 @@ func (c *Client) sendGetContest(ctx context.Context, params GetContestParams) (r
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -9291,7 +6671,6 @@ func (c *Client) sendGetContest(ctx context.Context, params GetContestParams) (r
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetContestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9309,41 +6688,7 @@ func (c *Client) GetContestProblem(ctx context.Context, params GetContestProblem
 }
 
 func (c *Client) sendGetContestProblem(ctx context.Context, params GetContestProblemParams) (res *GetContestProblemResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetContestProblem"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetContestProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [6]string
 	pathParts[0] = "/organizations/"
@@ -9405,13 +6750,11 @@ func (c *Client) sendGetContestProblem(ctx context.Context, params GetContestPro
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -9425,7 +6768,6 @@ func (c *Client) sendGetContestProblem(ctx context.Context, params GetContestPro
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetContestProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9443,41 +6785,7 @@ func (c *Client) GetContestScoreboard(ctx context.Context, params GetContestScor
 }
 
 func (c *Client) sendGetContestScoreboard(ctx context.Context, params GetContestScoreboardParams) (res *ScoreboardResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetContestScoreboard"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/scoreboard"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetContestScoreboardOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -9521,7 +6829,6 @@ func (c *Client) sendGetContestScoreboard(ctx context.Context, params GetContest
 	pathParts[4] = "/scoreboard"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "unfrozen" parameter.
@@ -9542,13 +6849,11 @@ func (c *Client) sendGetContestScoreboard(ctx context.Context, params GetContest
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -9562,7 +6867,6 @@ func (c *Client) sendGetContestScoreboard(ctx context.Context, params GetContest
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetContestScoreboardResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9580,53 +6884,17 @@ func (c *Client) GetHealth(ctx context.Context) (*GetHealthResponseModel, error)
 }
 
 func (c *Client) sendGetHealth(ctx context.Context) (res *GetHealthResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetHealth"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/health"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetHealthOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/health"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -9640,7 +6908,6 @@ func (c *Client) sendGetHealth(ctx context.Context) (res *GetHealthResponseModel
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetHealthResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9660,53 +6927,17 @@ func (c *Client) GetLanguages(ctx context.Context) (*SupportedLanguagesResponse,
 }
 
 func (c *Client) sendGetLanguages(ctx context.Context) (res *SupportedLanguagesResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetLanguages"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/languages"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetLanguagesOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/languages"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -9720,7 +6951,6 @@ func (c *Client) sendGetLanguages(ctx context.Context) (res *SupportedLanguagesR
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetLanguagesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9738,53 +6968,17 @@ func (c *Client) GetMe(ctx context.Context) (*GetUserResponseModel, error) {
 }
 
 func (c *Client) sendGetMe(ctx context.Context) (res *GetUserResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetMe"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/users/me"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetMeOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/users/me"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -9798,7 +6992,6 @@ func (c *Client) sendGetMe(ctx context.Context) (res *GetUserResponseModel, err 
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetMeResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9818,41 +7011,7 @@ func (c *Client) GetMyContestJoinRequest(ctx context.Context, params GetMyContes
 }
 
 func (c *Client) sendGetMyContestJoinRequest(ctx context.Context, params GetMyContestJoinRequestParams) (res *ContestJoinRequestNullableResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetMyContestJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/requests/mine"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetMyContestJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -9896,13 +7055,11 @@ func (c *Client) sendGetMyContestJoinRequest(ctx context.Context, params GetMyCo
 	pathParts[4] = "/requests/mine"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -9916,7 +7073,6 @@ func (c *Client) sendGetMyContestJoinRequest(ctx context.Context, params GetMyCo
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetMyContestJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -9934,41 +7090,7 @@ func (c *Client) GetMyContestRole(ctx context.Context, params GetMyContestRolePa
 }
 
 func (c *Client) sendGetMyContestRole(ctx context.Context, params GetMyContestRoleParams) (res *GetMyContestRoleResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetMyContestRole"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/my-role"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetMyContestRoleOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -10012,13 +7134,11 @@ func (c *Client) sendGetMyContestRole(ctx context.Context, params GetMyContestRo
 	pathParts[4] = "/my-role"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -10032,7 +7152,6 @@ func (c *Client) sendGetMyContestRole(ctx context.Context, params GetMyContestRo
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetMyContestRoleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -10050,53 +7169,17 @@ func (c *Client) GetMyDashboard(ctx context.Context) (*GetUserDashboardResponseM
 }
 
 func (c *Client) sendGetMyDashboard(ctx context.Context) (res *GetUserDashboardResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetMyDashboard"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/users/me/dashboard"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetMyDashboardOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/users/me/dashboard"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -10110,7 +7193,6 @@ func (c *Client) sendGetMyDashboard(ctx context.Context) (res *GetUserDashboardR
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetMyDashboardResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -10130,41 +7212,7 @@ func (c *Client) GetMyOrganizationJoinRequest(ctx context.Context, params GetMyO
 }
 
 func (c *Client) sendGetMyOrganizationJoinRequest(ctx context.Context, params GetMyOrganizationJoinRequestParams) (res *OrganizationJoinRequestNullableResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetMyOrganizationJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{login}/requests/mine"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetMyOrganizationJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -10189,13 +7237,11 @@ func (c *Client) sendGetMyOrganizationJoinRequest(ctx context.Context, params Ge
 	pathParts[2] = "/requests/mine"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -10209,7 +7255,6 @@ func (c *Client) sendGetMyOrganizationJoinRequest(ctx context.Context, params Ge
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetMyOrganizationJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -10229,41 +7274,7 @@ func (c *Client) GetOrganization(ctx context.Context, params GetOrganizationPara
 }
 
 func (c *Client) sendGetOrganization(ctx context.Context, params GetOrganizationParams) (res *GetOrganizationResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetOrganization"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{login}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetOrganizationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/organizations/"
@@ -10287,13 +7298,11 @@ func (c *Client) sendGetOrganization(ctx context.Context, params GetOrganization
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -10307,7 +7316,6 @@ func (c *Client) sendGetOrganization(ctx context.Context, params GetOrganization
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetOrganizationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -10327,41 +7335,7 @@ func (c *Client) GetPostById(ctx context.Context, params GetPostByIdParams) (Get
 }
 
 func (c *Client) sendGetPostById(ctx context.Context, params GetPostByIdParams) (res GetPostByIdRes, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetPostById"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/posts/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetPostByIdOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/posts/"
@@ -10385,13 +7359,11 @@ func (c *Client) sendGetPostById(ctx context.Context, params GetPostByIdParams) 
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -10405,7 +7377,6 @@ func (c *Client) sendGetPostById(ctx context.Context, params GetPostByIdParams) 
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetPostByIdResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -10425,41 +7396,7 @@ func (c *Client) GetPostImage(ctx context.Context, params GetPostImageParams) (G
 }
 
 func (c *Client) sendGetPostImage(ctx context.Context, params GetPostImageParams) (res GetPostImageRes, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetPostImage"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/posts/{id}/image"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetPostImageOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/posts/"
@@ -10484,13 +7421,11 @@ func (c *Client) sendGetPostImage(ctx context.Context, params GetPostImageParams
 	pathParts[2] = "/image"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
 	h := uri.NewHeaderEncoder(r.Header)
 	{
 		cfg := uri.HeaderParameterEncodingConfig{
@@ -10507,7 +7442,6 @@ func (c *Client) sendGetPostImage(ctx context.Context, params GetPostImageParams
 		}
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -10521,7 +7455,6 @@ func (c *Client) sendGetPostImage(ctx context.Context, params GetPostImageParams
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetPostImageResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -10539,41 +7472,7 @@ func (c *Client) GetProblem(ctx context.Context, params GetProblemParams) (*GetP
 }
 
 func (c *Client) sendGetProblem(ctx context.Context, params GetProblemParams) (res *GetProblemResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblem"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/problems/"
@@ -10597,13 +7496,11 @@ func (c *Client) sendGetProblem(ctx context.Context, params GetProblemParams) (r
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -10617,7 +7514,6 @@ func (c *Client) sendGetProblem(ctx context.Context, params GetProblemParams) (r
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -10635,41 +7531,7 @@ func (c *Client) GetProblemBlockStatusForUser(ctx context.Context, params GetPro
 }
 
 func (c *Client) sendGetProblemBlockStatusForUser(ctx context.Context, params GetProblemBlockStatusForUserParams) (res *ProblemBlockStatusResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemBlockStatusForUser"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemBlockStatusForUserOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [9]string
 	pathParts[0] = "/organizations/"
@@ -10751,13 +7613,11 @@ func (c *Client) sendGetProblemBlockStatusForUser(ctx context.Context, params Ge
 	pathParts[8] = "/block"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -10771,7 +7631,6 @@ func (c *Client) sendGetProblemBlockStatusForUser(ctx context.Context, params Ge
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemBlockStatusForUserResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -10791,41 +7650,7 @@ func (c *Client) GetProblemChecker(ctx context.Context, params GetProblemChecker
 }
 
 func (c *Client) sendGetProblemChecker(ctx context.Context, params GetProblemCheckerParams) (res GetProblemCheckerOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemChecker"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/checkers/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemCheckerOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -10868,13 +7693,11 @@ func (c *Client) sendGetProblemChecker(ctx context.Context, params GetProblemChe
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -10888,7 +7711,6 @@ func (c *Client) sendGetProblemChecker(ctx context.Context, params GetProblemChe
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemCheckerResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -10908,41 +7730,7 @@ func (c *Client) GetProblemGenerator(ctx context.Context, params GetProblemGener
 }
 
 func (c *Client) sendGetProblemGenerator(ctx context.Context, params GetProblemGeneratorParams) (res GetProblemGeneratorOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemGenerator"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/generators/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemGeneratorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -10985,13 +7773,11 @@ func (c *Client) sendGetProblemGenerator(ctx context.Context, params GetProblemG
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -11005,7 +7791,6 @@ func (c *Client) sendGetProblemGenerator(ctx context.Context, params GetProblemG
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemGeneratorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -11025,41 +7810,7 @@ func (c *Client) GetProblemInteractor(ctx context.Context, params GetProblemInte
 }
 
 func (c *Client) sendGetProblemInteractor(ctx context.Context, params GetProblemInteractorParams) (res GetProblemInteractorOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemInteractor"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/interactors/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemInteractorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -11102,13 +7853,11 @@ func (c *Client) sendGetProblemInteractor(ctx context.Context, params GetProblem
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -11122,7 +7871,6 @@ func (c *Client) sendGetProblemInteractor(ctx context.Context, params GetProblem
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemInteractorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -11142,41 +7890,7 @@ func (c *Client) GetProblemLib(ctx context.Context, params GetProblemLibParams) 
 }
 
 func (c *Client) sendGetProblemLib(ctx context.Context, params GetProblemLibParams) (res GetProblemLibOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemLib"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/lib/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemLibOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -11219,13 +7933,11 @@ func (c *Client) sendGetProblemLib(ctx context.Context, params GetProblemLibPara
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -11239,7 +7951,6 @@ func (c *Client) sendGetProblemLib(ctx context.Context, params GetProblemLibPara
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemLibResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -11259,41 +7970,7 @@ func (c *Client) GetProblemLimits(ctx context.Context, params GetProblemLimitsPa
 }
 
 func (c *Client) sendGetProblemLimits(ctx context.Context, params GetProblemLimitsParams) (res *ProblemLimits, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemLimits"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/limits"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemLimitsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -11318,13 +7995,11 @@ func (c *Client) sendGetProblemLimits(ctx context.Context, params GetProblemLimi
 	pathParts[2] = "/limits"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -11338,7 +8013,6 @@ func (c *Client) sendGetProblemLimits(ctx context.Context, params GetProblemLimi
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemLimitsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -11358,41 +8032,7 @@ func (c *Client) GetProblemMediaFile(ctx context.Context, params GetProblemMedia
 }
 
 func (c *Client) sendGetProblemMediaFile(ctx context.Context, params GetProblemMediaFileParams) (res GetProblemMediaFileOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemMediaFile"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/media/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemMediaFileOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -11435,13 +8075,11 @@ func (c *Client) sendGetProblemMediaFile(ctx context.Context, params GetProblemM
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -11455,7 +8093,6 @@ func (c *Client) sendGetProblemMediaFile(ctx context.Context, params GetProblemM
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemMediaFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -11475,41 +8112,7 @@ func (c *Client) GetProblemStatement(ctx context.Context, params GetProblemState
 }
 
 func (c *Client) sendGetProblemStatement(ctx context.Context, params GetProblemStatementParams) (res *ProblemStatement, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemStatement"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/statement"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemStatementOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -11534,7 +8137,6 @@ func (c *Client) sendGetProblemStatement(ctx context.Context, params GetProblemS
 	pathParts[2] = "/statement"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "lang" parameter.
@@ -11555,13 +8157,11 @@ func (c *Client) sendGetProblemStatement(ctx context.Context, params GetProblemS
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -11575,7 +8175,6 @@ func (c *Client) sendGetProblemStatement(ctx context.Context, params GetProblemS
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemStatementResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -11595,41 +8194,7 @@ func (c *Client) GetProblemTestFile(ctx context.Context, params GetProblemTestFi
 }
 
 func (c *Client) sendGetProblemTestFile(ctx context.Context, params GetProblemTestFileParams) (res GetProblemTestFileOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemTestFile"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/tests/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemTestFileOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -11672,13 +8237,11 @@ func (c *Client) sendGetProblemTestFile(ctx context.Context, params GetProblemTe
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -11692,7 +8255,6 @@ func (c *Client) sendGetProblemTestFile(ctx context.Context, params GetProblemTe
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemTestFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -11712,41 +8274,7 @@ func (c *Client) GetProblemValidator(ctx context.Context, params GetProblemValid
 }
 
 func (c *Client) sendGetProblemValidator(ctx context.Context, params GetProblemValidatorParams) (res GetProblemValidatorOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemValidator"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/validators/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemValidatorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -11789,13 +8317,11 @@ func (c *Client) sendGetProblemValidator(ctx context.Context, params GetProblemV
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -11809,7 +8335,6 @@ func (c *Client) sendGetProblemValidator(ctx context.Context, params GetProblemV
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemValidatorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -11829,41 +8354,7 @@ func (c *Client) GetProblemWorkshopSubmission(ctx context.Context, params GetPro
 }
 
 func (c *Client) sendGetProblemWorkshopSubmission(ctx context.Context, params GetProblemWorkshopSubmissionParams) (res GetProblemWorkshopSubmissionOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetProblemWorkshopSubmission"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/submissions/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetProblemWorkshopSubmissionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -11906,13 +8397,11 @@ func (c *Client) sendGetProblemWorkshopSubmission(ctx context.Context, params Ge
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -11926,7 +8415,6 @@ func (c *Client) sendGetProblemWorkshopSubmission(ctx context.Context, params Ge
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetProblemWorkshopSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -11946,41 +8434,7 @@ func (c *Client) GetPublishedPackage(ctx context.Context, params GetPublishedPac
 }
 
 func (c *Client) sendGetPublishedPackage(ctx context.Context, params GetPublishedPackageParams) (res *GetPublishedPackageFound, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetPublishedPackage"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{id}/package/{version}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetPublishedPackageOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -12023,13 +8477,11 @@ func (c *Client) sendGetPublishedPackage(ctx context.Context, params GetPublishe
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -12043,7 +8495,6 @@ func (c *Client) sendGetPublishedPackage(ctx context.Context, params GetPublishe
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetPublishedPackageResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -12061,41 +8512,7 @@ func (c *Client) GetSubmission(ctx context.Context, params GetSubmissionParams) 
 }
 
 func (c *Client) sendGetSubmission(ctx context.Context, params GetSubmissionParams) (res *GetSubmissionResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetSubmission"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/submissions/{submission_id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetSubmissionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/submissions/"
@@ -12119,13 +8536,11 @@ func (c *Client) sendGetSubmission(ctx context.Context, params GetSubmissionPara
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -12139,7 +8554,6 @@ func (c *Client) sendGetSubmission(ctx context.Context, params GetSubmissionPara
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -12159,41 +8573,7 @@ func (c *Client) GetTeam(ctx context.Context, params GetTeamParams) (*GetTeamRes
 }
 
 func (c *Client) sendGetTeam(ctx context.Context, params GetTeamParams) (res *GetTeamResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetTeam"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/teams/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/teams/"
@@ -12217,13 +8597,11 @@ func (c *Client) sendGetTeam(ctx context.Context, params GetTeamParams) (res *Ge
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -12237,7 +8615,6 @@ func (c *Client) sendGetTeam(ctx context.Context, params GetTeamParams) (res *Ge
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -12257,53 +8634,17 @@ func (c *Client) GetUnreadNotificationsCount(ctx context.Context) (*UnreadNotifi
 }
 
 func (c *Client) sendGetUnreadNotificationsCount(ctx context.Context) (res *UnreadNotificationsCountResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetUnreadNotificationsCount"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/notifications/unread-count"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetUnreadNotificationsCountOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/notifications/unread-count"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -12317,7 +8658,6 @@ func (c *Client) sendGetUnreadNotificationsCount(ctx context.Context) (res *Unre
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetUnreadNotificationsCountResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -12335,41 +8675,7 @@ func (c *Client) GetUser(ctx context.Context, params GetUserParams) (*GetUserRes
 }
 
 func (c *Client) sendGetUser(ctx context.Context, params GetUserParams) (res *GetUserResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetUser"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/users/{username}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetUserOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/users/"
@@ -12393,13 +8699,11 @@ func (c *Client) sendGetUser(ctx context.Context, params GetUserParams) (res *Ge
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -12413,7 +8717,6 @@ func (c *Client) sendGetUser(ctx context.Context, params GetUserParams) (res *Ge
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetUserResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -12433,41 +8736,7 @@ func (c *Client) GetUserAvatar(ctx context.Context, params GetUserAvatarParams) 
 }
 
 func (c *Client) sendGetUserAvatar(ctx context.Context, params GetUserAvatarParams) (res GetUserAvatarRes, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetUserAvatar"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/users/{username}/avatar"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetUserAvatarOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/users/"
@@ -12492,13 +8761,11 @@ func (c *Client) sendGetUserAvatar(ctx context.Context, params GetUserAvatarPara
 	pathParts[2] = "/avatar"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
 	h := uri.NewHeaderEncoder(r.Header)
 	{
 		cfg := uri.HeaderParameterEncodingConfig{
@@ -12515,7 +8782,6 @@ func (c *Client) sendGetUserAvatar(ctx context.Context, params GetUserAvatarPara
 		}
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -12529,7 +8795,6 @@ func (c *Client) sendGetUserAvatar(ctx context.Context, params GetUserAvatarPara
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeGetUserAvatarResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -12549,41 +8814,7 @@ func (c *Client) ImportProblem(ctx context.Context, request *ImportProblemReq, p
 }
 
 func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (res *ImportProblemOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ImportProblem"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{id}/import"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ImportProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -12608,7 +8839,6 @@ func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemRe
 	pathParts[2] = "/import"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -12617,7 +8847,6 @@ func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemRe
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -12631,7 +8860,6 @@ func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemRe
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeImportProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -12651,41 +8879,7 @@ func (c *Client) InviteOrganizationMember(ctx context.Context, request *InviteOr
 }
 
 func (c *Client) sendInviteOrganizationMember(ctx context.Context, request *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (res *OrganizationInvitationModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("InviteOrganizationMember"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{login}/invitations"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, InviteOrganizationMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -12710,7 +8904,6 @@ func (c *Client) sendInviteOrganizationMember(ctx context.Context, request *Invi
 	pathParts[2] = "/invitations"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -12719,7 +8912,6 @@ func (c *Client) sendInviteOrganizationMember(ctx context.Context, request *Invi
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -12733,7 +8925,6 @@ func (c *Client) sendInviteOrganizationMember(ctx context.Context, request *Invi
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeInviteOrganizationMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -12751,47 +8942,12 @@ func (c *Client) ListAdminContests(ctx context.Context, params ListAdminContests
 }
 
 func (c *Client) sendListAdminContests(ctx context.Context, params ListAdminContestsParams) (res *ListContestsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListAdminContests"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/admin/contests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListAdminContestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/admin/contests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -12897,13 +9053,11 @@ func (c *Client) sendListAdminContests(ctx context.Context, params ListAdminCont
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -12917,7 +9071,6 @@ func (c *Client) sendListAdminContests(ctx context.Context, params ListAdminCont
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListAdminContestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -12937,41 +9090,7 @@ func (c *Client) ListContestAnnouncements(ctx context.Context, params ListContes
 }
 
 func (c *Client) sendListContestAnnouncements(ctx context.Context, params ListContestAnnouncementsParams) (res *ListContestAnnouncementsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListContestAnnouncements"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/announcements"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListContestAnnouncementsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -13015,7 +9134,6 @@ func (c *Client) sendListContestAnnouncements(ctx context.Context, params ListCo
 	pathParts[4] = "/announcements"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -13053,13 +9171,11 @@ func (c *Client) sendListContestAnnouncements(ctx context.Context, params ListCo
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -13073,7 +9189,6 @@ func (c *Client) sendListContestAnnouncements(ctx context.Context, params ListCo
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListContestAnnouncementsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -13093,41 +9208,7 @@ func (c *Client) ListContestClarifications(ctx context.Context, params ListConte
 }
 
 func (c *Client) sendListContestClarifications(ctx context.Context, params ListContestClarificationsParams) (res *ListContestClarificationsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListContestClarifications"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/clarifications"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListContestClarificationsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -13171,7 +9252,6 @@ func (c *Client) sendListContestClarifications(ctx context.Context, params ListC
 	pathParts[4] = "/clarifications"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "problem_id" parameter.
@@ -13243,13 +9323,11 @@ func (c *Client) sendListContestClarifications(ctx context.Context, params ListC
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -13263,7 +9341,6 @@ func (c *Client) sendListContestClarifications(ctx context.Context, params ListC
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListContestClarificationsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -13281,41 +9358,7 @@ func (c *Client) ListContestDrafts(ctx context.Context, params ListContestDrafts
 }
 
 func (c *Client) sendListContestDrafts(ctx context.Context, params ListContestDraftsParams) (res *ListContestDraftsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListContestDrafts"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/drafts"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListContestDraftsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -13359,7 +9402,6 @@ func (c *Client) sendListContestDrafts(ctx context.Context, params ListContestDr
 	pathParts[4] = "/drafts"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -13397,13 +9439,11 @@ func (c *Client) sendListContestDrafts(ctx context.Context, params ListContestDr
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -13417,7 +9457,6 @@ func (c *Client) sendListContestDrafts(ctx context.Context, params ListContestDr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListContestDraftsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -13437,41 +9476,7 @@ func (c *Client) ListContestJoinRequests(ctx context.Context, params ListContest
 }
 
 func (c *Client) sendListContestJoinRequests(ctx context.Context, params ListContestJoinRequestsParams) (res *ListContestJoinRequestsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListContestJoinRequests"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/requests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListContestJoinRequestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -13515,13 +9520,11 @@ func (c *Client) sendListContestJoinRequests(ctx context.Context, params ListCon
 	pathParts[4] = "/requests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -13535,7 +9538,6 @@ func (c *Client) sendListContestJoinRequests(ctx context.Context, params ListCon
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListContestJoinRequestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -13553,41 +9555,7 @@ func (c *Client) ListContestMembers(ctx context.Context, params ListContestMembe
 }
 
 func (c *Client) sendListContestMembers(ctx context.Context, params ListContestMembersParams) (res *ListContestMembersResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListContestMembers"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListContestMembersOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -13631,7 +9599,6 @@ func (c *Client) sendListContestMembers(ctx context.Context, params ListContestM
 	pathParts[4] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -13669,13 +9636,11 @@ func (c *Client) sendListContestMembers(ctx context.Context, params ListContestM
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -13689,7 +9654,6 @@ func (c *Client) sendListContestMembers(ctx context.Context, params ListContestM
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListContestMembersResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -13707,41 +9671,7 @@ func (c *Client) ListContestSubmissions(ctx context.Context, params ListContestS
 }
 
 func (c *Client) sendListContestSubmissions(ctx context.Context, params ListContestSubmissionsParams) (res *ListSubmissionsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListContestSubmissions"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/submissions"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListContestSubmissionsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -13785,7 +9715,6 @@ func (c *Client) sendListContestSubmissions(ctx context.Context, params ListCont
 	pathParts[4] = "/submissions"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -13908,13 +9837,11 @@ func (c *Client) sendListContestSubmissions(ctx context.Context, params ListCont
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -13928,7 +9855,6 @@ func (c *Client) sendListContestSubmissions(ctx context.Context, params ListCont
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListContestSubmissionsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -13946,41 +9872,7 @@ func (c *Client) ListContestTeams(ctx context.Context, params ListContestTeamsPa
 }
 
 func (c *Client) sendListContestTeams(ctx context.Context, params ListContestTeamsParams) (res *ListContestTeamsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListContestTeams"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListContestTeamsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -14024,13 +9916,11 @@ func (c *Client) sendListContestTeams(ctx context.Context, params ListContestTea
 	pathParts[4] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -14044,7 +9934,6 @@ func (c *Client) sendListContestTeams(ctx context.Context, params ListContestTea
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListContestTeamsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -14064,53 +9953,17 @@ func (c *Client) ListMyClaimedAccounts(ctx context.Context) (*ListClaimedAccount
 }
 
 func (c *Client) sendListMyClaimedAccounts(ctx context.Context) (res *ListClaimedAccountsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListMyClaimedAccounts"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/users/me/claimed-accounts"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListMyClaimedAccountsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/users/me/claimed-accounts"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -14124,7 +9977,6 @@ func (c *Client) sendListMyClaimedAccounts(ctx context.Context) (res *ListClaime
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListMyClaimedAccountsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -14144,47 +9996,12 @@ func (c *Client) ListNotifications(ctx context.Context, params ListNotifications
 }
 
 func (c *Client) sendListNotifications(ctx context.Context, params ListNotificationsParams) (res *NotificationsListResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListNotifications"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/notifications"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListNotificationsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/notifications"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -14239,13 +10056,11 @@ func (c *Client) sendListNotifications(ctx context.Context, params ListNotificat
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -14259,7 +10074,6 @@ func (c *Client) sendListNotifications(ctx context.Context, params ListNotificat
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListNotificationsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -14277,41 +10091,7 @@ func (c *Client) ListOrganizationContests(ctx context.Context, params ListOrgani
 }
 
 func (c *Client) sendListOrganizationContests(ctx context.Context, params ListOrganizationContestsParams) (res *ListContestsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListOrganizationContests"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListOrganizationContestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -14336,7 +10116,6 @@ func (c *Client) sendListOrganizationContests(ctx context.Context, params ListOr
 	pathParts[2] = "/contests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -14391,13 +10170,11 @@ func (c *Client) sendListOrganizationContests(ctx context.Context, params ListOr
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -14411,7 +10188,6 @@ func (c *Client) sendListOrganizationContests(ctx context.Context, params ListOr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListOrganizationContestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -14431,41 +10207,7 @@ func (c *Client) ListOrganizationInvitations(ctx context.Context, params ListOrg
 }
 
 func (c *Client) sendListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (res *ListOrganizationInvitationsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListOrganizationInvitations"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{login}/invitations"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListOrganizationInvitationsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -14490,13 +10232,11 @@ func (c *Client) sendListOrganizationInvitations(ctx context.Context, params Lis
 	pathParts[2] = "/invitations"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -14510,7 +10250,6 @@ func (c *Client) sendListOrganizationInvitations(ctx context.Context, params Lis
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListOrganizationInvitationsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -14530,41 +10269,7 @@ func (c *Client) ListOrganizationJoinRequests(ctx context.Context, params ListOr
 }
 
 func (c *Client) sendListOrganizationJoinRequests(ctx context.Context, params ListOrganizationJoinRequestsParams) (res *ListOrganizationJoinRequestsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListOrganizationJoinRequests"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{login}/requests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListOrganizationJoinRequestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -14589,13 +10294,11 @@ func (c *Client) sendListOrganizationJoinRequests(ctx context.Context, params Li
 	pathParts[2] = "/requests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -14609,7 +10312,6 @@ func (c *Client) sendListOrganizationJoinRequests(ctx context.Context, params Li
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListOrganizationJoinRequestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -14629,41 +10331,7 @@ func (c *Client) ListOrganizationMembers(ctx context.Context, params ListOrganiz
 }
 
 func (c *Client) sendListOrganizationMembers(ctx context.Context, params ListOrganizationMembersParams) (res *ListOrganizationMembersResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListOrganizationMembers"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations/{login}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListOrganizationMembersOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -14688,7 +10356,6 @@ func (c *Client) sendListOrganizationMembers(ctx context.Context, params ListOrg
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -14726,13 +10393,11 @@ func (c *Client) sendListOrganizationMembers(ctx context.Context, params ListOrg
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -14746,7 +10411,6 @@ func (c *Client) sendListOrganizationMembers(ctx context.Context, params ListOrg
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListOrganizationMembersResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -14766,47 +10430,12 @@ func (c *Client) ListOrganizations(ctx context.Context, params ListOrganizations
 }
 
 func (c *Client) sendListOrganizations(ctx context.Context, params ListOrganizationsParams) (res *ListOrganizationsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListOrganizations"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/organizations"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListOrganizationsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/organizations"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -14861,13 +10490,11 @@ func (c *Client) sendListOrganizations(ctx context.Context, params ListOrganizat
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -14881,7 +10508,6 @@ func (c *Client) sendListOrganizations(ctx context.Context, params ListOrganizat
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListOrganizationsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -14901,47 +10527,12 @@ func (c *Client) ListPosts(ctx context.Context, params ListPostsParams) (*ListPo
 }
 
 func (c *Client) sendListPosts(ctx context.Context, params ListPostsParams) (res *ListPostsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListPosts"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/posts"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListPostsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/posts"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -14996,13 +10587,11 @@ func (c *Client) sendListPosts(ctx context.Context, params ListPostsParams) (res
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15016,7 +10605,6 @@ func (c *Client) sendListPosts(ctx context.Context, params ListPostsParams) (res
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListPostsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15036,41 +10624,7 @@ func (c *Client) ListProblemCheckers(ctx context.Context, params ListProblemChec
 }
 
 func (c *Client) sendListProblemCheckers(ctx context.Context, params ListProblemCheckersParams) (res *WorkshopFileListResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemCheckers"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/checkers"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemCheckersOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -15095,13 +10649,11 @@ func (c *Client) sendListProblemCheckers(ctx context.Context, params ListProblem
 	pathParts[2] = "/checkers"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15115,7 +10667,6 @@ func (c *Client) sendListProblemCheckers(ctx context.Context, params ListProblem
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemCheckersResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15135,41 +10686,7 @@ func (c *Client) ListProblemGenerators(ctx context.Context, params ListProblemGe
 }
 
 func (c *Client) sendListProblemGenerators(ctx context.Context, params ListProblemGeneratorsParams) (res *WorkshopFileListResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemGenerators"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/generators"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemGeneratorsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -15194,13 +10711,11 @@ func (c *Client) sendListProblemGenerators(ctx context.Context, params ListProbl
 	pathParts[2] = "/generators"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15214,7 +10729,6 @@ func (c *Client) sendListProblemGenerators(ctx context.Context, params ListProbl
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemGeneratorsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15234,41 +10748,7 @@ func (c *Client) ListProblemInteractors(ctx context.Context, params ListProblemI
 }
 
 func (c *Client) sendListProblemInteractors(ctx context.Context, params ListProblemInteractorsParams) (res *WorkshopFileListResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemInteractors"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/interactors"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemInteractorsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -15293,13 +10773,11 @@ func (c *Client) sendListProblemInteractors(ctx context.Context, params ListProb
 	pathParts[2] = "/interactors"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15313,7 +10791,6 @@ func (c *Client) sendListProblemInteractors(ctx context.Context, params ListProb
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemInteractorsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15333,41 +10810,7 @@ func (c *Client) ListProblemLibs(ctx context.Context, params ListProblemLibsPara
 }
 
 func (c *Client) sendListProblemLibs(ctx context.Context, params ListProblemLibsParams) (res *WorkshopFileListResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemLibs"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/lib"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemLibsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -15392,13 +10835,11 @@ func (c *Client) sendListProblemLibs(ctx context.Context, params ListProblemLibs
 	pathParts[2] = "/lib"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15412,7 +10853,6 @@ func (c *Client) sendListProblemLibs(ctx context.Context, params ListProblemLibs
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemLibsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15432,41 +10872,7 @@ func (c *Client) ListProblemMediaFiles(ctx context.Context, params ListProblemMe
 }
 
 func (c *Client) sendListProblemMediaFiles(ctx context.Context, params ListProblemMediaFilesParams) (res *WorkshopFileListResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemMediaFiles"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/media"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemMediaFilesOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -15491,13 +10897,11 @@ func (c *Client) sendListProblemMediaFiles(ctx context.Context, params ListProbl
 	pathParts[2] = "/media"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15511,7 +10915,6 @@ func (c *Client) sendListProblemMediaFiles(ctx context.Context, params ListProbl
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemMediaFilesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15529,41 +10932,7 @@ func (c *Client) ListProblemMembers(ctx context.Context, params ListProblemMembe
 }
 
 func (c *Client) sendListProblemMembers(ctx context.Context, params ListProblemMembersParams) (res *ListProblemMembersResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemMembers"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{id}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemMembersOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -15588,7 +10957,6 @@ func (c *Client) sendListProblemMembers(ctx context.Context, params ListProblemM
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -15626,13 +10994,11 @@ func (c *Client) sendListProblemMembers(ctx context.Context, params ListProblemM
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15646,7 +11012,6 @@ func (c *Client) sendListProblemMembers(ctx context.Context, params ListProblemM
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemMembersResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15666,41 +11031,7 @@ func (c *Client) ListProblemPackages(ctx context.Context, params ListProblemPack
 }
 
 func (c *Client) sendListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (res *ListProblemPackagesOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemPackages"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{id}/packages"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemPackagesOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -15725,13 +11056,11 @@ func (c *Client) sendListProblemPackages(ctx context.Context, params ListProblem
 	pathParts[2] = "/packages"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15745,7 +11074,6 @@ func (c *Client) sendListProblemPackages(ctx context.Context, params ListProblem
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemPackagesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15763,41 +11091,7 @@ func (c *Client) ListProblemTeams(ctx context.Context, params ListProblemTeamsPa
 }
 
 func (c *Client) sendListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (res *ListProblemTeamsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemTeams"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{id}/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemTeamsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -15822,13 +11116,11 @@ func (c *Client) sendListProblemTeams(ctx context.Context, params ListProblemTea
 	pathParts[2] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15842,7 +11134,6 @@ func (c *Client) sendListProblemTeams(ctx context.Context, params ListProblemTea
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemTeamsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15860,47 +11151,12 @@ func (c *Client) ListProblemTemplates(ctx context.Context, params ListProblemTem
 }
 
 func (c *Client) sendListProblemTemplates(ctx context.Context, params ListProblemTemplatesParams) (res []ProblemTemplateModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemTemplates"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problem-templates"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemTemplatesOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/problem-templates"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "organization_id" parameter.
@@ -15921,13 +11177,11 @@ func (c *Client) sendListProblemTemplates(ctx context.Context, params ListProble
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -15941,7 +11195,6 @@ func (c *Client) sendListProblemTemplates(ctx context.Context, params ListProble
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemTemplatesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -15961,41 +11214,7 @@ func (c *Client) ListProblemTests(ctx context.Context, params ListProblemTestsPa
 }
 
 func (c *Client) sendListProblemTests(ctx context.Context, params ListProblemTestsParams) (res *WorkshopFileListResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemTests"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/tests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemTestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -16020,13 +11239,11 @@ func (c *Client) sendListProblemTests(ctx context.Context, params ListProblemTes
 	pathParts[2] = "/tests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -16040,7 +11257,6 @@ func (c *Client) sendListProblemTests(ctx context.Context, params ListProblemTes
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemTestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -16060,41 +11276,7 @@ func (c *Client) ListProblemValidators(ctx context.Context, params ListProblemVa
 }
 
 func (c *Client) sendListProblemValidators(ctx context.Context, params ListProblemValidatorsParams) (res *WorkshopFileListResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemValidators"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/validators"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemValidatorsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -16119,13 +11301,11 @@ func (c *Client) sendListProblemValidators(ctx context.Context, params ListProbl
 	pathParts[2] = "/validators"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -16139,7 +11319,6 @@ func (c *Client) sendListProblemValidators(ctx context.Context, params ListProbl
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemValidatorsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -16159,41 +11338,7 @@ func (c *Client) ListProblemWorkshopSubmissions(ctx context.Context, params List
 }
 
 func (c *Client) sendListProblemWorkshopSubmissions(ctx context.Context, params ListProblemWorkshopSubmissionsParams) (res *WorkshopFileListResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblemWorkshopSubmissions"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/submissions"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemWorkshopSubmissionsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -16218,13 +11363,11 @@ func (c *Client) sendListProblemWorkshopSubmissions(ctx context.Context, params 
 	pathParts[2] = "/submissions"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -16238,7 +11381,6 @@ func (c *Client) sendListProblemWorkshopSubmissions(ctx context.Context, params 
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemWorkshopSubmissionsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -16256,47 +11398,12 @@ func (c *Client) ListProblems(ctx context.Context, params ListProblemsParams) (*
 }
 
 func (c *Client) sendListProblems(ctx context.Context, params ListProblemsParams) (res *ListProblemsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListProblems"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/problems"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListProblemsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/problems"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -16419,13 +11526,11 @@ func (c *Client) sendListProblems(ctx context.Context, params ListProblemsParams
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -16439,7 +11544,6 @@ func (c *Client) sendListProblems(ctx context.Context, params ListProblemsParams
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListProblemsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -16457,47 +11561,12 @@ func (c *Client) ListPublicContests(ctx context.Context, params ListPublicContes
 }
 
 func (c *Client) sendListPublicContests(ctx context.Context, params ListPublicContestsParams) (res *ListContestsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListPublicContests"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/public/contests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListPublicContestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/public/contests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -16586,13 +11655,11 @@ func (c *Client) sendListPublicContests(ctx context.Context, params ListPublicCo
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -16606,7 +11673,6 @@ func (c *Client) sendListPublicContests(ctx context.Context, params ListPublicCo
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListPublicContestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -16624,47 +11690,12 @@ func (c *Client) ListSubmissions(ctx context.Context, params ListSubmissionsPara
 }
 
 func (c *Client) sendListSubmissions(ctx context.Context, params ListSubmissionsParams) (res *ListSubmissionsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListSubmissions"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/submissions"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListSubmissionsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/submissions"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -16804,13 +11835,11 @@ func (c *Client) sendListSubmissions(ctx context.Context, params ListSubmissions
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -16824,7 +11853,6 @@ func (c *Client) sendListSubmissions(ctx context.Context, params ListSubmissions
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListSubmissionsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -16844,41 +11872,7 @@ func (c *Client) ListTeamContests(ctx context.Context, params ListTeamContestsPa
 }
 
 func (c *Client) sendListTeamContests(ctx context.Context, params ListTeamContestsParams) (res *ListContestsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListTeamContests"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/teams/{id}/contests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListTeamContestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/teams/"
@@ -16903,7 +11897,6 @@ func (c *Client) sendListTeamContests(ctx context.Context, params ListTeamContes
 	pathParts[2] = "/contests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -16941,13 +11934,11 @@ func (c *Client) sendListTeamContests(ctx context.Context, params ListTeamContes
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -16961,7 +11952,6 @@ func (c *Client) sendListTeamContests(ctx context.Context, params ListTeamContes
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListTeamContestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -16981,41 +11971,7 @@ func (c *Client) ListTeamMembers(ctx context.Context, params ListTeamMembersPara
 }
 
 func (c *Client) sendListTeamMembers(ctx context.Context, params ListTeamMembersParams) (res *ListTeamMembersResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListTeamMembers"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/teams/{id}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListTeamMembersOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/teams/"
@@ -17040,7 +11996,6 @@ func (c *Client) sendListTeamMembers(ctx context.Context, params ListTeamMembers
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -17078,13 +12033,11 @@ func (c *Client) sendListTeamMembers(ctx context.Context, params ListTeamMembers
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -17098,7 +12051,6 @@ func (c *Client) sendListTeamMembers(ctx context.Context, params ListTeamMembers
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListTeamMembersResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -17118,41 +12070,7 @@ func (c *Client) ListTeamProblems(ctx context.Context, params ListTeamProblemsPa
 }
 
 func (c *Client) sendListTeamProblems(ctx context.Context, params ListTeamProblemsParams) (res *ListProblemsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListTeamProblems"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/teams/{id}/problems"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListTeamProblemsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/teams/"
@@ -17177,7 +12095,6 @@ func (c *Client) sendListTeamProblems(ctx context.Context, params ListTeamProble
 	pathParts[2] = "/problems"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -17215,13 +12132,11 @@ func (c *Client) sendListTeamProblems(ctx context.Context, params ListTeamProble
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -17235,7 +12150,6 @@ func (c *Client) sendListTeamProblems(ctx context.Context, params ListTeamProble
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListTeamProblemsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -17255,47 +12169,12 @@ func (c *Client) ListTeams(ctx context.Context, params ListTeamsParams) (*ListTe
 }
 
 func (c *Client) sendListTeams(ctx context.Context, params ListTeamsParams) (res *ListTeamsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListTeams"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListTeamsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -17367,13 +12246,11 @@ func (c *Client) sendListTeams(ctx context.Context, params ListTeamsParams) (res
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -17387,7 +12264,6 @@ func (c *Client) sendListTeams(ctx context.Context, params ListTeamsParams) (res
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListTeamsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -17405,41 +12281,7 @@ func (c *Client) ListUserContests(ctx context.Context, params ListUserContestsPa
 }
 
 func (c *Client) sendListUserContests(ctx context.Context, params ListUserContestsParams) (res *ListUserContestsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListUserContests"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/users/{username}/contests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListUserContestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/users/"
@@ -17464,7 +12306,6 @@ func (c *Client) sendListUserContests(ctx context.Context, params ListUserContes
 	pathParts[2] = "/contests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -17553,13 +12394,11 @@ func (c *Client) sendListUserContests(ctx context.Context, params ListUserContes
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -17573,7 +12412,6 @@ func (c *Client) sendListUserContests(ctx context.Context, params ListUserContes
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListUserContestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -17591,41 +12429,7 @@ func (c *Client) ListUserSubmissions(ctx context.Context, params ListUserSubmiss
 }
 
 func (c *Client) sendListUserSubmissions(ctx context.Context, params ListUserSubmissionsParams) (res *ListSubmissionsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListUserSubmissions"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/users/{username}/submissions"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListUserSubmissionsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/users/"
@@ -17650,7 +12454,6 @@ func (c *Client) sendListUserSubmissions(ctx context.Context, params ListUserSub
 	pathParts[2] = "/submissions"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -17756,13 +12559,11 @@ func (c *Client) sendListUserSubmissions(ctx context.Context, params ListUserSub
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -17776,7 +12577,6 @@ func (c *Client) sendListUserSubmissions(ctx context.Context, params ListUserSub
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListUserSubmissionsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -17794,47 +12594,12 @@ func (c *Client) ListUsers(ctx context.Context, params ListUsersParams) (*ListUs
 }
 
 func (c *Client) sendListUsers(ctx context.Context, params ListUsersParams) (res *ListUsersResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListUsers"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/users"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListUsersOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/users"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -17906,13 +12671,11 @@ func (c *Client) sendListUsers(ctx context.Context, params ListUsersParams) (res
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -17926,7 +12689,6 @@ func (c *Client) sendListUsers(ctx context.Context, params ListUsersParams) (res
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListUsersResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -17944,47 +12706,12 @@ func (c *Client) ListWorkshopContests(ctx context.Context, params ListWorkshopCo
 }
 
 func (c *Client) sendListWorkshopContests(ctx context.Context, params ListWorkshopContestsParams) (res *ListContestsResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ListWorkshopContests"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/workshop/contests"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListWorkshopContestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/workshop/contests"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "page" parameter.
@@ -18090,13 +12817,11 @@ func (c *Client) sendListWorkshopContests(ctx context.Context, params ListWorksh
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -18110,7 +12835,6 @@ func (c *Client) sendListWorkshopContests(ctx context.Context, params ListWorksh
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeListWorkshopContestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -18128,47 +12852,12 @@ func (c *Client) Login(ctx context.Context, request *LoginRequestModel) (*AuthRe
 }
 
 func (c *Client) sendLogin(ctx context.Context, request *LoginRequestModel) (res *AuthResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("Login"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/auth/login"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, LoginOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/auth/login"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -18177,7 +12866,6 @@ func (c *Client) sendLogin(ctx context.Context, request *LoginRequestModel) (res
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -18191,7 +12879,6 @@ func (c *Client) sendLogin(ctx context.Context, request *LoginRequestModel) (res
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeLoginResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -18209,53 +12896,17 @@ func (c *Client) Logout(ctx context.Context) error {
 }
 
 func (c *Client) sendLogout(ctx context.Context) (res *LogoutOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("Logout"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/auth/logout"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, LogoutOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/auth/logout"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -18269,7 +12920,6 @@ func (c *Client) sendLogout(ctx context.Context) (res *LogoutOK, err error) {
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeLogoutResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -18289,53 +12939,17 @@ func (c *Client) MarkAllNotificationsAsRead(ctx context.Context) error {
 }
 
 func (c *Client) sendMarkAllNotificationsAsRead(ctx context.Context) (res *MarkAllNotificationsAsReadOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("MarkAllNotificationsAsRead"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/notifications/read-all"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, MarkAllNotificationsAsReadOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/notifications/read-all"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -18349,7 +12963,6 @@ func (c *Client) sendMarkAllNotificationsAsRead(ctx context.Context) (res *MarkA
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeMarkAllNotificationsAsReadResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -18369,41 +12982,7 @@ func (c *Client) MarkNotificationAsRead(ctx context.Context, params MarkNotifica
 }
 
 func (c *Client) sendMarkNotificationAsRead(ctx context.Context, params MarkNotificationAsReadParams) (res *MarkNotificationAsReadOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("MarkNotificationAsRead"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/notifications/{id}/read"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, MarkNotificationAsReadOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/notifications/"
@@ -18428,13 +13007,11 @@ func (c *Client) sendMarkNotificationAsRead(ctx context.Context, params MarkNoti
 	pathParts[2] = "/read"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -18448,7 +13025,6 @@ func (c *Client) sendMarkNotificationAsRead(ctx context.Context, params MarkNoti
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeMarkNotificationAsReadResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -18468,41 +13044,7 @@ func (c *Client) PatchPostById(ctx context.Context, request OptPatchPostByIdReq,
 }
 
 func (c *Client) sendPatchPostById(ctx context.Context, request OptPatchPostByIdReq, params PatchPostByIdParams) (res PatchPostByIdRes, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("PatchPostById"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/posts/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, PatchPostByIdOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/posts/"
@@ -18526,7 +13068,6 @@ func (c *Client) sendPatchPostById(ctx context.Context, request OptPatchPostById
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -18539,7 +13080,7 @@ func (c *Client) sendPatchPostById(ctx context.Context, request OptPatchPostById
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:CookieAuth"
+
 			switch err := c.securityCookieAuth(ctx, PatchPostByIdOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
@@ -18568,7 +13109,6 @@ func (c *Client) sendPatchPostById(ctx context.Context, request OptPatchPostById
 		}
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -18582,7 +13122,6 @@ func (c *Client) sendPatchPostById(ctx context.Context, request OptPatchPostById
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodePatchPostByIdResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -18602,41 +13141,7 @@ func (c *Client) PublishProblem(ctx context.Context, params PublishProblemParams
 }
 
 func (c *Client) sendPublishProblem(ctx context.Context, params PublishProblemParams) (res *PublishProblemOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("PublishProblem"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{id}/publish"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, PublishProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -18661,13 +13166,11 @@ func (c *Client) sendPublishProblem(ctx context.Context, params PublishProblemPa
 	pathParts[2] = "/publish"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -18681,7 +13184,6 @@ func (c *Client) sendPublishProblem(ctx context.Context, params PublishProblemPa
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodePublishProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -18699,47 +13201,12 @@ func (c *Client) Register(ctx context.Context, request *RegisterRequestModel) (*
 }
 
 func (c *Client) sendRegister(ctx context.Context, request *RegisterRequestModel) (res *AuthResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("Register"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/auth/register"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RegisterOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/auth/register"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -18748,7 +13215,6 @@ func (c *Client) sendRegister(ctx context.Context, request *RegisterRequestModel
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -18762,7 +13228,6 @@ func (c *Client) sendRegister(ctx context.Context, request *RegisterRequestModel
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeRegisterResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -18782,41 +13247,7 @@ func (c *Client) RejectContestJoinRequest(ctx context.Context, params RejectCont
 }
 
 func (c *Client) sendRejectContestJoinRequest(ctx context.Context, params RejectContestJoinRequestParams) (res *RejectContestJoinRequestOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("RejectContestJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/requests/{id}/reject"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RejectContestJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [7]string
 	pathParts[0] = "/organizations/"
@@ -18879,13 +13310,11 @@ func (c *Client) sendRejectContestJoinRequest(ctx context.Context, params Reject
 	pathParts[6] = "/reject"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -18899,7 +13328,6 @@ func (c *Client) sendRejectContestJoinRequest(ctx context.Context, params Reject
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeRejectContestJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -18919,41 +13347,7 @@ func (c *Client) RejectOrganizationJoinRequest(ctx context.Context, params Rejec
 }
 
 func (c *Client) sendRejectOrganizationJoinRequest(ctx context.Context, params RejectOrganizationJoinRequestParams) (res *RejectOrganizationJoinRequestOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("RejectOrganizationJoinRequest"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{login}/requests/{id}/reject"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RejectOrganizationJoinRequestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -18997,13 +13391,11 @@ func (c *Client) sendRejectOrganizationJoinRequest(ctx context.Context, params R
 	pathParts[4] = "/reject"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -19017,7 +13409,6 @@ func (c *Client) sendRejectOrganizationJoinRequest(ctx context.Context, params R
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeRejectOrganizationJoinRequestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -19035,41 +13426,7 @@ func (c *Client) RejudgeContest(ctx context.Context, params RejudgeContestParams
 }
 
 func (c *Client) sendRejudgeContest(ctx context.Context, params RejudgeContestParams) (res *RejudgeContestOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("RejudgeContest"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/rejudge"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RejudgeContestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -19113,13 +13470,11 @@ func (c *Client) sendRejudgeContest(ctx context.Context, params RejudgeContestPa
 	pathParts[4] = "/rejudge"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -19133,7 +13488,6 @@ func (c *Client) sendRejudgeContest(ctx context.Context, params RejudgeContestPa
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeRejudgeContestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -19151,41 +13505,7 @@ func (c *Client) RejudgeContestProblem(ctx context.Context, params RejudgeContes
 }
 
 func (c *Client) sendRejudgeContestProblem(ctx context.Context, params RejudgeContestProblemParams) (res *RejudgeContestProblemOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("RejudgeContestProblem"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RejudgeContestProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [7]string
 	pathParts[0] = "/organizations/"
@@ -19248,13 +13568,11 @@ func (c *Client) sendRejudgeContestProblem(ctx context.Context, params RejudgeCo
 	pathParts[6] = "/rejudge"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -19268,7 +13586,6 @@ func (c *Client) sendRejudgeContestProblem(ctx context.Context, params RejudgeCo
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeRejudgeContestProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -19286,41 +13603,7 @@ func (c *Client) RejudgeSubmission(ctx context.Context, params RejudgeSubmission
 }
 
 func (c *Client) sendRejudgeSubmission(ctx context.Context, params RejudgeSubmissionParams) (res *RejudgeSubmissionOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("RejudgeSubmission"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RejudgeSubmissionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [7]string
 	pathParts[0] = "/organizations/"
@@ -19383,13 +13666,11 @@ func (c *Client) sendRejudgeSubmission(ctx context.Context, params RejudgeSubmis
 	pathParts[6] = "/rejudge"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -19403,7 +13684,6 @@ func (c *Client) sendRejudgeSubmission(ctx context.Context, params RejudgeSubmis
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeRejudgeSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -19423,41 +13703,7 @@ func (c *Client) RemoveOrganizationMember(ctx context.Context, params RemoveOrga
 }
 
 func (c *Client) sendRemoveOrganizationMember(ctx context.Context, params RemoveOrganizationMemberParams) (res *RemoveOrganizationMemberOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("RemoveOrganizationMember"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{login}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RemoveOrganizationMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/organizations/"
@@ -19482,7 +13728,6 @@ func (c *Client) sendRemoveOrganizationMember(ctx context.Context, params Remove
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -19500,13 +13745,11 @@ func (c *Client) sendRemoveOrganizationMember(ctx context.Context, params Remove
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -19520,7 +13763,6 @@ func (c *Client) sendRemoveOrganizationMember(ctx context.Context, params Remove
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeRemoveOrganizationMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -19540,41 +13782,7 @@ func (c *Client) RemoveTeamMember(ctx context.Context, params RemoveTeamMemberPa
 }
 
 func (c *Client) sendRemoveTeamMember(ctx context.Context, params RemoveTeamMemberParams) (res *RemoveTeamMemberOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("RemoveTeamMember"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/teams/{id}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RemoveTeamMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/teams/"
@@ -19599,7 +13807,6 @@ func (c *Client) sendRemoveTeamMember(ctx context.Context, params RemoveTeamMemb
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -19617,13 +13824,11 @@ func (c *Client) sendRemoveTeamMember(ctx context.Context, params RemoveTeamMemb
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -19637,7 +13842,6 @@ func (c *Client) sendRemoveTeamMember(ctx context.Context, params RemoveTeamMemb
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeRemoveTeamMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -19655,41 +13859,7 @@ func (c *Client) ReorderContestProblems(ctx context.Context, request *ReorderCon
 }
 
 func (c *Client) sendReorderContestProblems(ctx context.Context, request *ReorderContestProblemsRequestModel, params ReorderContestProblemsParams) (res *ReorderContestProblemsOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ReorderContestProblems"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/problems/reorder"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ReorderContestProblemsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -19733,7 +13903,6 @@ func (c *Client) sendReorderContestProblems(ctx context.Context, request *Reorde
 	pathParts[4] = "/problems/reorder"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -19742,7 +13911,6 @@ func (c *Client) sendReorderContestProblems(ctx context.Context, request *Reorde
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -19756,7 +13924,6 @@ func (c *Client) sendReorderContestProblems(ctx context.Context, request *Reorde
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeReorderContestProblemsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -19776,47 +13943,12 @@ func (c *Client) RequestEmailChange(ctx context.Context, request *RequestEmailCh
 }
 
 func (c *Client) sendRequestEmailChange(ctx context.Context, request *RequestEmailChangeRequestModel) (res *RequestEmailChangeOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("RequestEmailChange"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/users/me/request-email-change"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RequestEmailChangeOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/users/me/request-email-change"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -19825,7 +13957,6 @@ func (c *Client) sendRequestEmailChange(ctx context.Context, request *RequestEma
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -19839,7 +13970,6 @@ func (c *Client) sendRequestEmailChange(ctx context.Context, request *RequestEma
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeRequestEmailChangeResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -19857,47 +13987,12 @@ func (c *Client) ResendVerification(ctx context.Context, request *ResendVerifica
 }
 
 func (c *Client) sendResendVerification(ctx context.Context, request *ResendVerificationRequestModel) (res *ResendVerificationOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ResendVerification"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/auth/resend-verification"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ResendVerificationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/auth/resend-verification"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -19906,7 +14001,6 @@ func (c *Client) sendResendVerification(ctx context.Context, request *ResendVeri
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -19920,7 +14014,6 @@ func (c *Client) sendResendVerification(ctx context.Context, request *ResendVeri
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeResendVerificationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -19938,47 +14031,12 @@ func (c *Client) ResetPassword(ctx context.Context, request *ResetPasswordReques
 }
 
 func (c *Client) sendResetPassword(ctx context.Context, request *ResetPasswordRequestModel) (res *ResetPasswordOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ResetPassword"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/auth/reset-password"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ResetPasswordOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/auth/reset-password"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -19987,7 +14045,6 @@ func (c *Client) sendResetPassword(ctx context.Context, request *ResetPasswordRe
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -20001,7 +14058,6 @@ func (c *Client) sendResetPassword(ctx context.Context, request *ResetPasswordRe
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeResetPasswordResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -20021,41 +14077,7 @@ func (c *Client) TestSolution(ctx context.Context, request *TestSolutionReq, par
 }
 
 func (c *Client) sendTestSolution(ctx context.Context, request *TestSolutionReq, params TestSolutionParams) (res *TestReport, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("TestSolution"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/workshop/solutions/test"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, TestSolutionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -20080,7 +14102,6 @@ func (c *Client) sendTestSolution(ctx context.Context, request *TestSolutionReq,
 	pathParts[2] = "/workshop/solutions/test"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -20089,7 +14110,6 @@ func (c *Client) sendTestSolution(ctx context.Context, request *TestSolutionReq,
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -20103,7 +14123,6 @@ func (c *Client) sendTestSolution(ctx context.Context, request *TestSolutionReq,
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeTestSolutionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -20121,41 +14140,7 @@ func (c *Client) UnblockProblemForUser(ctx context.Context, params UnblockProble
 }
 
 func (c *Client) sendUnblockProblemForUser(ctx context.Context, params UnblockProblemForUserParams) (res *UnblockProblemForUserOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UnblockProblemForUser"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UnblockProblemForUserOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [9]string
 	pathParts[0] = "/organizations/"
@@ -20237,7 +14222,6 @@ func (c *Client) sendUnblockProblemForUser(ctx context.Context, params UnblockPr
 	pathParts[8] = "/block"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "rejudge_submissions" parameter.
@@ -20258,13 +14242,11 @@ func (c *Client) sendUnblockProblemForUser(ctx context.Context, params UnblockPr
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -20278,7 +14260,6 @@ func (c *Client) sendUnblockProblemForUser(ctx context.Context, params UnblockPr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUnblockProblemForUserResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -20296,41 +14277,7 @@ func (c *Client) UnblockSubmission(ctx context.Context, params UnblockSubmission
 }
 
 func (c *Client) sendUnblockSubmission(ctx context.Context, params UnblockSubmissionParams) (res *UnblockSubmissionOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UnblockSubmission"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UnblockSubmissionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [7]string
 	pathParts[0] = "/organizations/"
@@ -20393,13 +14340,11 @@ func (c *Client) sendUnblockSubmission(ctx context.Context, params UnblockSubmis
 	pathParts[6] = "/unblock"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -20413,7 +14358,6 @@ func (c *Client) sendUnblockSubmission(ctx context.Context, params UnblockSubmis
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUnblockSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -20431,41 +14375,7 @@ func (c *Client) UpdateContest(ctx context.Context, request *UpdateContestReques
 }
 
 func (c *Client) sendUpdateContest(ctx context.Context, request *UpdateContestRequestModel, params UpdateContestParams) (res *UpdateContestOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateContest"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateContestOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/organizations/"
@@ -20508,7 +14418,6 @@ func (c *Client) sendUpdateContest(ctx context.Context, request *UpdateContestRe
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -20517,7 +14426,6 @@ func (c *Client) sendUpdateContest(ctx context.Context, request *UpdateContestRe
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -20531,7 +14439,6 @@ func (c *Client) sendUpdateContest(ctx context.Context, request *UpdateContestRe
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateContestResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -20549,41 +14456,7 @@ func (c *Client) UpdateContestMember(ctx context.Context, params UpdateContestMe
 }
 
 func (c *Client) sendUpdateContestMember(ctx context.Context, params UpdateContestMemberParams) (res *UpdateContestMemberOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateContestMember"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateContestMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -20627,7 +14500,6 @@ func (c *Client) sendUpdateContestMember(ctx context.Context, params UpdateConte
 	pathParts[4] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -20659,13 +14531,11 @@ func (c *Client) sendUpdateContestMember(ctx context.Context, params UpdateConte
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -20679,7 +14549,6 @@ func (c *Client) sendUpdateContestMember(ctx context.Context, params UpdateConte
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateContestMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -20697,41 +14566,7 @@ func (c *Client) UpdateContestTeam(ctx context.Context, params UpdateContestTeam
 }
 
 func (c *Client) sendUpdateContestTeam(ctx context.Context, params UpdateContestTeamParams) (res *UpdateContestTeamOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateContestTeam"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/organizations/{org_login}/contests/{contest_login}/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateContestTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
 	pathParts[0] = "/organizations/"
@@ -20775,7 +14610,6 @@ func (c *Client) sendUpdateContestTeam(ctx context.Context, params UpdateContest
 	pathParts[4] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "team_id" parameter.
@@ -20807,13 +14641,11 @@ func (c *Client) sendUpdateContestTeam(ctx context.Context, params UpdateContest
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -20827,7 +14659,6 @@ func (c *Client) sendUpdateContestTeam(ctx context.Context, params UpdateContest
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateContestTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -20847,41 +14678,7 @@ func (c *Client) UpdateOrganization(ctx context.Context, request *UpdateOrganiza
 }
 
 func (c *Client) sendUpdateOrganization(ctx context.Context, request *UpdateOrganizationRequestModel, params UpdateOrganizationParams) (res *UpdateOrganizationOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateOrganization"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/organizations/{login}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateOrganizationOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/organizations/"
@@ -20905,7 +14702,6 @@ func (c *Client) sendUpdateOrganization(ctx context.Context, request *UpdateOrga
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -20914,7 +14710,6 @@ func (c *Client) sendUpdateOrganization(ctx context.Context, request *UpdateOrga
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -20928,7 +14723,6 @@ func (c *Client) sendUpdateOrganization(ctx context.Context, request *UpdateOrga
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateOrganizationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -20946,41 +14740,7 @@ func (c *Client) UpdateProblem(ctx context.Context, request *UpdateProblemReques
 }
 
 func (c *Client) sendUpdateProblem(ctx context.Context, request *UpdateProblemRequestModel, params UpdateProblemParams) (res *UpdateProblemOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblem"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/problems/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/problems/"
@@ -21004,7 +14764,6 @@ func (c *Client) sendUpdateProblem(ctx context.Context, request *UpdateProblemRe
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -21013,7 +14772,6 @@ func (c *Client) sendUpdateProblem(ctx context.Context, request *UpdateProblemRe
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -21027,7 +14785,6 @@ func (c *Client) sendUpdateProblem(ctx context.Context, request *UpdateProblemRe
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -21047,41 +14804,7 @@ func (c *Client) UpdateProblemChecker(ctx context.Context, request UpdateProblem
 }
 
 func (c *Client) sendUpdateProblemChecker(ctx context.Context, request UpdateProblemCheckerReq, params UpdateProblemCheckerParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemChecker"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/checkers/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemCheckerOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -21124,7 +14847,6 @@ func (c *Client) sendUpdateProblemChecker(ctx context.Context, request UpdatePro
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -21133,7 +14855,6 @@ func (c *Client) sendUpdateProblemChecker(ctx context.Context, request UpdatePro
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -21147,7 +14868,6 @@ func (c *Client) sendUpdateProblemChecker(ctx context.Context, request UpdatePro
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemCheckerResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -21167,41 +14887,7 @@ func (c *Client) UpdateProblemGenerator(ctx context.Context, request UpdateProbl
 }
 
 func (c *Client) sendUpdateProblemGenerator(ctx context.Context, request UpdateProblemGeneratorReq, params UpdateProblemGeneratorParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemGenerator"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/generators/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemGeneratorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -21244,7 +14930,6 @@ func (c *Client) sendUpdateProblemGenerator(ctx context.Context, request UpdateP
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -21253,7 +14938,6 @@ func (c *Client) sendUpdateProblemGenerator(ctx context.Context, request UpdateP
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -21267,7 +14951,6 @@ func (c *Client) sendUpdateProblemGenerator(ctx context.Context, request UpdateP
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemGeneratorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -21287,41 +14970,7 @@ func (c *Client) UpdateProblemInteractor(ctx context.Context, request UpdateProb
 }
 
 func (c *Client) sendUpdateProblemInteractor(ctx context.Context, request UpdateProblemInteractorReq, params UpdateProblemInteractorParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemInteractor"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/interactors/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemInteractorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -21364,7 +15013,6 @@ func (c *Client) sendUpdateProblemInteractor(ctx context.Context, request Update
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -21373,7 +15021,6 @@ func (c *Client) sendUpdateProblemInteractor(ctx context.Context, request Update
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -21387,7 +15034,6 @@ func (c *Client) sendUpdateProblemInteractor(ctx context.Context, request Update
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemInteractorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -21407,41 +15053,7 @@ func (c *Client) UpdateProblemLib(ctx context.Context, request UpdateProblemLibR
 }
 
 func (c *Client) sendUpdateProblemLib(ctx context.Context, request UpdateProblemLibReq, params UpdateProblemLibParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemLib"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/lib/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemLibOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -21484,7 +15096,6 @@ func (c *Client) sendUpdateProblemLib(ctx context.Context, request UpdateProblem
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -21493,7 +15104,6 @@ func (c *Client) sendUpdateProblemLib(ctx context.Context, request UpdateProblem
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -21507,7 +15117,6 @@ func (c *Client) sendUpdateProblemLib(ctx context.Context, request UpdateProblem
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemLibResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -21527,41 +15136,7 @@ func (c *Client) UpdateProblemLimits(ctx context.Context, request *UpdateProblem
 }
 
 func (c *Client) sendUpdateProblemLimits(ctx context.Context, request *UpdateProblemLimitsRequest, params UpdateProblemLimitsParams) (res *ProblemLimits, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemLimits"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/limits"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemLimitsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -21586,7 +15161,6 @@ func (c *Client) sendUpdateProblemLimits(ctx context.Context, request *UpdatePro
 	pathParts[2] = "/limits"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -21595,7 +15169,6 @@ func (c *Client) sendUpdateProblemLimits(ctx context.Context, request *UpdatePro
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -21609,7 +15182,6 @@ func (c *Client) sendUpdateProblemLimits(ctx context.Context, request *UpdatePro
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemLimitsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -21629,41 +15201,7 @@ func (c *Client) UpdateProblemMediaFile(ctx context.Context, request UpdateProbl
 }
 
 func (c *Client) sendUpdateProblemMediaFile(ctx context.Context, request UpdateProblemMediaFileReq, params UpdateProblemMediaFileParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemMediaFile"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/media/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemMediaFileOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -21706,7 +15244,6 @@ func (c *Client) sendUpdateProblemMediaFile(ctx context.Context, request UpdateP
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -21715,7 +15252,6 @@ func (c *Client) sendUpdateProblemMediaFile(ctx context.Context, request UpdateP
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -21729,7 +15265,6 @@ func (c *Client) sendUpdateProblemMediaFile(ctx context.Context, request UpdateP
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemMediaFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -21747,41 +15282,7 @@ func (c *Client) UpdateProblemMember(ctx context.Context, params UpdateProblemMe
 }
 
 func (c *Client) sendUpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) (res *UpdateProblemMemberOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemMember"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/problems/{id}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemMemberOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -21806,7 +15307,6 @@ func (c *Client) sendUpdateProblemMember(ctx context.Context, params UpdateProbl
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -21838,13 +15338,11 @@ func (c *Client) sendUpdateProblemMember(ctx context.Context, params UpdateProbl
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -21858,7 +15356,6 @@ func (c *Client) sendUpdateProblemMember(ctx context.Context, params UpdateProbl
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -21878,41 +15375,7 @@ func (c *Client) UpdateProblemStatement(ctx context.Context, request *UpdateProb
 }
 
 func (c *Client) sendUpdateProblemStatement(ctx context.Context, request *UpdateProblemStatementRequest, params UpdateProblemStatementParams) (res *ProblemStatement, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemStatement"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/statement"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemStatementOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -21937,7 +15400,6 @@ func (c *Client) sendUpdateProblemStatement(ctx context.Context, request *Update
 	pathParts[2] = "/statement"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "lang" parameter.
@@ -21958,7 +15420,6 @@ func (c *Client) sendUpdateProblemStatement(ctx context.Context, request *Update
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -21967,7 +15428,6 @@ func (c *Client) sendUpdateProblemStatement(ctx context.Context, request *Update
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -21981,7 +15441,6 @@ func (c *Client) sendUpdateProblemStatement(ctx context.Context, request *Update
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemStatementResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -21999,41 +15458,7 @@ func (c *Client) UpdateProblemTeam(ctx context.Context, params UpdateProblemTeam
 }
 
 func (c *Client) sendUpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) (res *UpdateProblemTeamOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemTeam"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/problems/{id}/teams"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -22058,7 +15483,6 @@ func (c *Client) sendUpdateProblemTeam(ctx context.Context, params UpdateProblem
 	pathParts[2] = "/teams"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "team_id" parameter.
@@ -22090,13 +15514,11 @@ func (c *Client) sendUpdateProblemTeam(ctx context.Context, params UpdateProblem
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -22110,7 +15532,6 @@ func (c *Client) sendUpdateProblemTeam(ctx context.Context, params UpdateProblem
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -22130,41 +15551,7 @@ func (c *Client) UpdateProblemTestFile(ctx context.Context, request UpdateProble
 }
 
 func (c *Client) sendUpdateProblemTestFile(ctx context.Context, request UpdateProblemTestFileReq, params UpdateProblemTestFileParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemTestFile"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/tests/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemTestFileOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -22207,7 +15594,6 @@ func (c *Client) sendUpdateProblemTestFile(ctx context.Context, request UpdatePr
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -22216,7 +15602,6 @@ func (c *Client) sendUpdateProblemTestFile(ctx context.Context, request UpdatePr
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -22230,7 +15615,6 @@ func (c *Client) sendUpdateProblemTestFile(ctx context.Context, request UpdatePr
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemTestFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -22250,41 +15634,7 @@ func (c *Client) UpdateProblemTestsConfig(ctx context.Context, request UpdatePro
 }
 
 func (c *Client) sendUpdateProblemTestsConfig(ctx context.Context, request UpdateProblemTestsConfigRequest, params UpdateProblemTestsConfigParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemTestsConfig"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/tests/config"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemTestsConfigOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -22309,7 +15659,6 @@ func (c *Client) sendUpdateProblemTestsConfig(ctx context.Context, request Updat
 	pathParts[2] = "/tests/config"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -22318,7 +15667,6 @@ func (c *Client) sendUpdateProblemTestsConfig(ctx context.Context, request Updat
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -22332,7 +15680,6 @@ func (c *Client) sendUpdateProblemTestsConfig(ctx context.Context, request Updat
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemTestsConfigResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -22352,41 +15699,7 @@ func (c *Client) UpdateProblemValidator(ctx context.Context, request UpdateProbl
 }
 
 func (c *Client) sendUpdateProblemValidator(ctx context.Context, request UpdateProblemValidatorReq, params UpdateProblemValidatorParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemValidator"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/validators/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemValidatorOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -22429,7 +15742,6 @@ func (c *Client) sendUpdateProblemValidator(ctx context.Context, request UpdateP
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -22438,7 +15750,6 @@ func (c *Client) sendUpdateProblemValidator(ctx context.Context, request UpdateP
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -22452,7 +15763,6 @@ func (c *Client) sendUpdateProblemValidator(ctx context.Context, request UpdateP
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemValidatorResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -22472,41 +15782,7 @@ func (c *Client) UpdateProblemWorkshopSubmission(ctx context.Context, request Up
 }
 
 func (c *Client) sendUpdateProblemWorkshopSubmission(ctx context.Context, request UpdateProblemWorkshopSubmissionReq, params UpdateProblemWorkshopSubmissionParams) (res *MessageResponse, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateProblemWorkshopSubmission"),
-		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/submissions/{name}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateProblemWorkshopSubmissionOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
 	pathParts[0] = "/problems/"
@@ -22549,7 +15825,6 @@ func (c *Client) sendUpdateProblemWorkshopSubmission(ctx context.Context, reques
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -22558,7 +15833,6 @@ func (c *Client) sendUpdateProblemWorkshopSubmission(ctx context.Context, reques
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -22572,7 +15846,6 @@ func (c *Client) sendUpdateProblemWorkshopSubmission(ctx context.Context, reques
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateProblemWorkshopSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -22592,41 +15865,7 @@ func (c *Client) UpdateTeam(ctx context.Context, request *UpdateTeamRequestModel
 }
 
 func (c *Client) sendUpdateTeam(ctx context.Context, request *UpdateTeamRequestModel, params UpdateTeamParams) (res *UpdateTeamOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateTeam"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/teams/{id}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateTeamOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/teams/"
@@ -22650,7 +15889,6 @@ func (c *Client) sendUpdateTeam(ctx context.Context, request *UpdateTeamRequestM
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -22659,7 +15897,6 @@ func (c *Client) sendUpdateTeam(ctx context.Context, request *UpdateTeamRequestM
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -22673,7 +15910,6 @@ func (c *Client) sendUpdateTeam(ctx context.Context, request *UpdateTeamRequestM
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -22693,41 +15929,7 @@ func (c *Client) UpdateTeamMemberRole(ctx context.Context, params UpdateTeamMemb
 }
 
 func (c *Client) sendUpdateTeamMemberRole(ctx context.Context, params UpdateTeamMemberRoleParams) (res *UpdateTeamMemberRoleOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateTeamMemberRole"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/teams/{id}/members"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateTeamMemberRoleOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/teams/"
@@ -22752,7 +15954,6 @@ func (c *Client) sendUpdateTeamMemberRole(ctx context.Context, params UpdateTeam
 	pathParts[2] = "/members"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeQueryParams"
 	q := uri.NewQueryEncoder()
 	{
 		// Encode "user_id" parameter.
@@ -22784,13 +15985,11 @@ func (c *Client) sendUpdateTeamMemberRole(ctx context.Context, params UpdateTeam
 	}
 	u.RawQuery = q.Values().Encode()
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -22804,7 +16003,6 @@ func (c *Client) sendUpdateTeamMemberRole(ctx context.Context, params UpdateTeam
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateTeamMemberRoleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -22822,41 +16020,7 @@ func (c *Client) UpdateUser(ctx context.Context, request *UpdateUserRequestModel
 }
 
 func (c *Client) sendUpdateUser(ctx context.Context, request *UpdateUserRequestModel, params UpdateUserParams) (res *UpdateUserOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UpdateUser"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/users/{username}"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateUserOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
 	pathParts[0] = "/users/"
@@ -22880,7 +16044,6 @@ func (c *Client) sendUpdateUser(ctx context.Context, request *UpdateUserRequestM
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "PATCH", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -22889,7 +16052,6 @@ func (c *Client) sendUpdateUser(ctx context.Context, request *UpdateUserRequestM
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -22903,7 +16065,6 @@ func (c *Client) sendUpdateUser(ctx context.Context, request *UpdateUserRequestM
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUpdateUserResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -22923,41 +16084,7 @@ func (c *Client) UploadAvatar(ctx context.Context, request *UploadAvatarReq, par
 }
 
 func (c *Client) sendUploadAvatar(ctx context.Context, request *UploadAvatarReq, params UploadAvatarParams) (res *UploadAvatarOK, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("UploadAvatar"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/users/{username}/avatar"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UploadAvatarOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/users/"
@@ -22982,7 +16109,6 @@ func (c *Client) sendUploadAvatar(ctx context.Context, request *UploadAvatarReq,
 	pathParts[2] = "/avatar"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -22991,7 +16117,6 @@ func (c *Client) sendUploadAvatar(ctx context.Context, request *UploadAvatarReq,
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -23005,7 +16130,6 @@ func (c *Client) sendUploadAvatar(ctx context.Context, request *UploadAvatarReq,
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeUploadAvatarResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -23025,41 +16149,7 @@ func (c *Client) ValidateAllTests(ctx context.Context, params ValidateAllTestsPa
 }
 
 func (c *Client) sendValidateAllTests(ctx context.Context, params ValidateAllTestsParams) (res *ValidationReport, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("ValidateAllTests"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/problems/{problemId}/workshop/tests/validate"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ValidateAllTestsOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
@@ -23084,13 +16174,11 @@ func (c *Client) sendValidateAllTests(ctx context.Context, params ValidateAllTes
 	pathParts[2] = "/workshop/tests/validate"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -23104,7 +16192,6 @@ func (c *Client) sendValidateAllTests(ctx context.Context, params ValidateAllTes
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeValidateAllTestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
@@ -23122,47 +16209,12 @@ func (c *Client) VerifyEmail(ctx context.Context, request *VerifyEmailRequestMod
 }
 
 func (c *Client) sendVerifyEmail(ctx context.Context, request *VerifyEmailRequestModel) (res *AuthResponseModel, err error) {
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("VerifyEmail"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/auth/verify-email"),
-	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
-	}()
-
-	// Increment request counter.
-	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-
-	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, VerifyEmailOperation,
-		trace.WithAttributes(otelAttrs...),
-		clientSpanKind,
-	)
-	// Track stage for error reporting.
-	var stage string
-	defer func() {
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, stage)
-			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
-		}
-		span.End()
-	}()
-
-	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/auth/verify-email"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	stage = "EncodeRequest"
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
@@ -23171,7 +16223,6 @@ func (c *Client) sendVerifyEmail(ctx context.Context, request *VerifyEmailReques
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -23185,7 +16236,6 @@ func (c *Client) sendVerifyEmail(ctx context.Context, request *VerifyEmailReques
 		_ = body.Close()
 	}()
 
-	stage = "DecodeResponse"
 	result, err := decodeVerifyEmailResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
