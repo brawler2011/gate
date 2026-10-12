@@ -69,15 +69,23 @@ func RequestLoggerMiddleware(logger *slog.Logger, route func(*http.Request) stri
 					}
 				},
 			})
+			completed := false
+			defer func() {
+				if !completed && !written {
+					status = http.StatusInternalServerError
+				}
+				level := slog.LevelInfo
+				if status >= 500 {
+					level = slog.LevelError
+				} else if status >= 400 {
+					level = slog.LevelWarn
+				}
+				logger.Log(ctx, level, "http_request_completed", "event", "http_request_completed",
+					"request_id", id, "method", r.Method, "route", route(r), "status", status, "duration_ms", time.Since(start).Milliseconds())
+			}()
 			next.ServeHTTP(sw, r)
-			level := slog.LevelInfo
-			if status >= 500 {
-				level = slog.LevelError
-			} else if status >= 400 {
-				level = slog.LevelWarn
-			}
-			logger.Log(ctx, level, "http_request_completed", "event", "http_request_completed",
-				"request_id", id, "method", r.Method, "route", route(r), "status", status, "duration_ms", time.Since(start).Milliseconds())
+			completed = true
+
 		})
 	}
 }

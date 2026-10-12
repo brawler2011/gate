@@ -154,3 +154,30 @@ func TestRequestIDDetachedContext(t *testing.T) {
 	cancel()
 	require.Equal(t, "request-123", requestid.Get(context.WithoutCancel(ctx)))
 }
+
+func TestRequestLoggerPanicCompletion(t *testing.T) {
+	for _, status := range []int{0, http.StatusAccepted} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			var buf bytes.Buffer
+			h := RequestLoggerMiddleware(logging.New(&buf), func(*http.Request) string { return "unmatched" })(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				if status != 0 {
+					w.WriteHeader(status)
+				}
+				panic("panic-secret")
+			}))
+			require.PanicsWithValue(t, "panic-secret", func() {
+				h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/path-secret?token=query-secret", nil))
+			})
+			require.Equal(t, 1, strings.Count(buf.String(), "\n"))
+			var record map[string]interface{}
+			require.NoError(t, json.Unmarshal(buf.Bytes(), &record))
+			expected := status
+			if expected == 0 {
+				expected = http.StatusInternalServerError
+			}
+			require.InDelta(t, expected, record["status"], 0)
+			require.Equal(t, "http_request_completed", record["event"])
+			require.NotContains(t, buf.String(), "secret")
+		})
+	}
+}
