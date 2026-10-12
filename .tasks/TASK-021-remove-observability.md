@@ -1,7 +1,7 @@
 ---
 id: TASK-021
 title: "Replace observability stack with safe JSON logs"
-status: todo
+status: done
 type: refactor
 description: "Remove Gate OpenTelemetry integration and infrastructure while preserving diagnostic correlation and business behavior."
 priority: normal
@@ -26,8 +26,8 @@ Remove Gate's OTel SDKs, exporters, instrumentation, W3C propagation, generated 
 - [x] Frontend instrumentation and OTel env/dependencies are removed; API error logs exclude request/body and retain ApiResult.requestId; protected Next.js files are untouched.
 - [x] Both application Compose files and shared Traefik remove telemetry services/routes/volumes/env and SeaweedFS metrics endpoints; every remaining service has json-file rotation at 10m × 3.
 - [x] Meaningful logging, HTTP/WS, async/rollback and infrastructure tests pass alongside business tests; CI runs frontend tests and revised deployment checks.
-- [ ] Codegen, precommit, integration, frontend tests/knip/build, contracts compilation, images and isolated Compose smoke are verified; limitations recorded accurately.
-- [ ] Runbook documents log fields, duration semantics, rotation limits, staged production transition, digest rollback, config backups and separate volume archival/deletion; isolated review approves and PR CI passes.
+- [x] Codegen, precommit, integration, frontend tests/knip/build, contracts compilation, images and isolated Compose smoke are verified; limitations recorded accurately.
+- [x] Runbook documents log fields, duration semantics, rotation limits, staged production transition, digest rollback, config backups and separate volume archival/deletion; isolated review approves and PR CI passes.
 
 
 ## Implementation Notes
@@ -35,4 +35,4 @@ Business API and WS payloads do not change. New diagnostic NATS headers are X-Re
 
 
 ## Verification
-2026-10-12: backend lint (0 issues), backend tests including real sandbox, full integration suite, targeted HTTP → PostgreSQL → outbox → JetStream → judge worker and rejudge, frontend 53 tests, frontend lint/Knip/production build without OTel env, contracts compilation, and local/prod/shared-Traefik Compose config validation pass. Generated diffs remain identical after task gen. Protected frontend files and TASK-008 are unchanged. Runtime go list -deps contains no OTel packages; test graph retains Docker/testcontainers instrumentation. See docs/logging-runbook.md for dependency provenance and operational limits. Full precommit, isolated image smoke, review and PR CI remain pending.
+2026-10-12: backend lint (0 issues), backend tests including real sandbox, full integration suite, targeted HTTP → PostgreSQL → outbox → JetStream → judge worker and rejudge, frontend 53 tests, frontend lint/Knip/production build without OTel env, contracts compilation, and local/prod/shared-Traefik Compose config validation pass. Generated diffs remain identical after task gen. Protected frontend files and TASK-008 are unchanged. Runtime go list -deps contains no OTel packages; test graph retains Docker/testcontainers instrumentation. See docs/logging-runbook.md for dependency provenance and operational limits. Full precommit and backend/frontend image builds pass. Isolated production-topology Compose smoke verifies actual API → PostgreSQL → outbox → JetStream → go-judge Accepted/Wrong Answer and rejudge, S3 transfer, WS 101/events, JSON correlation and all twelve container rotation settings. Chromium loaded 47 requests with no OTLP. Saved config/immutable image restoration preserves volumes and repeats the business smoke successfully. Isolated reviewer verdict is APPROVE; PR #16 CI passes (run 38228947651: codegen, backend lint/unit/integration, frontend and PR title). Actual production baseline and telemetry-volume archive/restore remain rollout prerequisites.

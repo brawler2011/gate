@@ -13,7 +13,10 @@ HTTP records have `event=http_request_completed`, `request_id`, `method`, `route
 (local storage), or `unmatched`. Request paths, queries, headers, bodies and IPs are
 not recorded. There is one completion record per request; a separate operation
 error may also appear. A WebSocket record appears when its HTTP handler returns
-(normally when the connection closes), with status 101.
+(normally when the connection closes), with status 101; its duration covers the
+connection lifetime. Completion is also logged while a panic unwinds, without
+recovering or recording the panic value. Before headers are written, that record
+uses diagnostic status 500; after headers are written, it preserves their status.
 
 `X-Request-ID` is returned to callers and included as `request_id` in API error
 responses. Valid input is 1–128 ASCII letters, digits or `._:-`; other input gets a
@@ -153,3 +156,24 @@ original volumes until the rollback window ends. Record archive locations,
 permissions, checksums and restore results. Removal requires a separate decision
 with an explicit list of names. Never use `down -v` or volume prune; business
 volumes are outside scope. Removing declarations from Compose does not delete data.
+
+## Isolated verification (2026-10-12)
+
+The `gate-021-smoke` project ran the production service topology with isolated
+volumes, dummy credentials and local ports; a local Traefik routed API/WS/frontend.
+Both final application images built. Real authenticated API submissions produced
+Accepted and Wrong Answer through PostgreSQL, the production outbox worker,
+JetStream and go-judge; rejudge produced a new event ID and outbox queue time.
+WebSocket upgraded with status 101 and transferred a business event. Package
+publishing and judging exercised S3 upload/download. Backend JSON records linked
+request_id/submission_id/event_id and omitted the test session token.
+
+Docker inspect confirmed json-file, max-size=10m and max-file=3 on all twelve
+stand containers. Headless Chromium loaded the frontend (47 requests) without
+OTLP requests. Saved Compose configuration and immutable local image IDs were
+used to recreate backend/frontend with existing volumes; health, API, WS and
+successful/failed judging plus rejudge passed again after restoration.
+
+This validates configuration/image restoration on the stand. Actual production
+image digests, prior telemetry configuration and archival/restoration of the four
+production volumes remain rollout prerequisites; production was not accessed.
