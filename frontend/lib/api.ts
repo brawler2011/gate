@@ -46,18 +46,19 @@ const createApiFacade = (client: core): ApiFacade => {
             return [null, data];
           } catch (error) {
             if (error instanceof CoreApiError) {
-              // FIXME: think of better logging approach
-              if (error.status !== 401) {
-                console.error("API Error:", error);
-              }
               const body = error.body as { message?: string; request_id?: string } | undefined;
+              if (error.status !== 401) {
+                const requestId = typeof body?.request_id === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(body.request_id)
+                  ? body.request_id : undefined;
+                console.error("API Error:", {operation: prop, status: error.status, requestId, errorType: "ApiError"});
+              }
               return [{
                 status: error.status,
                 message: body?.message || error.statusText,
                 requestId: body?.request_id,
               }, null];
             }
-            console.error("Unknown API Error:", error);
+            console.error("Unknown API Error:", {operation: prop, status: 500, errorType: error instanceof Error ? "Error" : "Unknown"});
             return [{status: 500, message: "Неизвестная ошибка"}, null];
           }
         };

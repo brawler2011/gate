@@ -10,52 +10,51 @@ import (
 	"github.com/go-faster/jx"
 	"github.com/ogen-go/ogen/conv"
 	"github.com/ogen-go/ogen/uri"
-	"go.opentelemetry.io/otel/trace"
 )
 
-func encodeAcceptOrganizationInvitationResponse(response *AcceptOrganizationInvitationOK, w http.ResponseWriter, span trace.Span) error {
+func encodeAcceptOrganizationInvitationResponse(response *AcceptOrganizationInvitationOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeAddOrganizationMemberResponse(response *AddOrganizationMemberOK, w http.ResponseWriter, span trace.Span) error {
+func encodeAddOrganizationMemberResponse(response *AddOrganizationMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeAddTeamMemberResponse(response *AddTeamMemberOK, w http.ResponseWriter, span trace.Span) error {
+func encodeAddTeamMemberResponse(response *AddTeamMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeAdminChangeEmailResponse(response *AdminChangeEmailOK, w http.ResponseWriter, span trace.Span) error {
+func encodeAdminChangeEmailResponse(response *AdminChangeEmailOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeAdminResendVerificationResponse(response *AdminResendVerificationOK, w http.ResponseWriter, span trace.Span) error {
+func encodeAdminResendVerificationResponse(response *AdminResendVerificationOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeAdminSendPasswordResetResponse(response *AdminSendPasswordResetOK, w http.ResponseWriter, span trace.Span) error {
+func encodeAdminSendPasswordResetResponse(response *AdminSendPasswordResetOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeAdminSetPasswordResponse(response *AdminSetPasswordOK, w http.ResponseWriter, span trace.Span) error {
+func encodeAdminSetPasswordResponse(response *AdminSetPasswordOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeAnswerContestClarificationResponse(response *ContestClarificationModel, w http.ResponseWriter, span trace.Span) error {
+func encodeAnswerContestClarificationResponse(response *ContestClarificationModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -68,19 +67,19 @@ func encodeAnswerContestClarificationResponse(response *ContestClarificationMode
 	return nil
 }
 
-func encodeApproveContestJoinRequestResponse(response *ApproveContestJoinRequestOK, w http.ResponseWriter, span trace.Span) error {
+func encodeApproveContestJoinRequestResponse(response *ApproveContestJoinRequestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeApproveOrganizationJoinRequestResponse(response *ApproveOrganizationJoinRequestOK, w http.ResponseWriter, span trace.Span) error {
+func encodeApproveOrganizationJoinRequestResponse(response *ApproveOrganizationJoinRequestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeBatchCreateOrganizationUsersResponse(response *BatchCreateOrganizationUsersResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeBatchCreateOrganizationUsersResponse(response *BatchCreateOrganizationUsersResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -93,37 +92,37 @@ func encodeBatchCreateOrganizationUsersResponse(response *BatchCreateOrganizatio
 	return nil
 }
 
-func encodeBlockProblemForUserResponse(response *BlockProblemForUserOK, w http.ResponseWriter, span trace.Span) error {
+func encodeBlockProblemForUserResponse(response *BlockProblemForUserOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeBlockSubmissionResponse(response *BlockSubmissionOK, w http.ResponseWriter, span trace.Span) error {
+func encodeBlockSubmissionResponse(response *BlockSubmissionOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeCancelContestJoinRequestResponse(response *CancelContestJoinRequestOK, w http.ResponseWriter, span trace.Span) error {
+func encodeCancelContestJoinRequestResponse(response *CancelContestJoinRequestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeCancelOrganizationInvitationResponse(response *CancelOrganizationInvitationOK, w http.ResponseWriter, span trace.Span) error {
+func encodeCancelOrganizationInvitationResponse(response *CancelOrganizationInvitationOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeCancelOrganizationJoinRequestResponse(response *CancelOrganizationJoinRequestOK, w http.ResponseWriter, span trace.Span) error {
+func encodeCancelOrganizationJoinRequestResponse(response *CancelOrganizationJoinRequestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeChangePasswordResponse(response *AuthResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeChangePasswordResponse(response *AuthResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -136,7 +135,7 @@ func encodeChangePasswordResponse(response *AuthResponseModel, w http.ResponseWr
 	return nil
 }
 
-func encodeClaimTemporaryUserResponse(response *ClaimTemporaryUserResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeClaimTemporaryUserResponse(response *ClaimTemporaryUserResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -149,7 +148,7 @@ func encodeClaimTemporaryUserResponse(response *ClaimTemporaryUserResponseModel,
 	return nil
 }
 
-func encodeCompileProblemComponentResponse(response *CompileResult, w http.ResponseWriter, span trace.Span) error {
+func encodeCompileProblemComponentResponse(response *CompileResult, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -162,13 +161,13 @@ func encodeCompileProblemComponentResponse(response *CompileResult, w http.Respo
 	return nil
 }
 
-func encodeConfirmEmailChangeResponse(response *ConfirmEmailChangeOK, w http.ResponseWriter, span trace.Span) error {
+func encodeConfirmEmailChangeResponse(response *ConfirmEmailChangeOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeCreateContestResponse(response *CreationResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateContestResponse(response *CreationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -181,7 +180,7 @@ func encodeCreateContestResponse(response *CreationResponseModel, w http.Respons
 	return nil
 }
 
-func encodeCreateContestAnnouncementResponse(response *ContestAnnouncementModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateContestAnnouncementResponse(response *ContestAnnouncementModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -194,7 +193,7 @@ func encodeCreateContestAnnouncementResponse(response *ContestAnnouncementModel,
 	return nil
 }
 
-func encodeCreateContestClarificationResponse(response *ContestClarificationModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateContestClarificationResponse(response *ContestClarificationModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -207,7 +206,7 @@ func encodeCreateContestClarificationResponse(response *ContestClarificationMode
 	return nil
 }
 
-func encodeCreateContestDraftResponse(response *CreationResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateContestDraftResponse(response *CreationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -220,7 +219,7 @@ func encodeCreateContestDraftResponse(response *CreationResponseModel, w http.Re
 	return nil
 }
 
-func encodeCreateContestJoinRequestResponse(response *ContestJoinRequestResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateContestJoinRequestResponse(response *ContestJoinRequestResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -233,7 +232,7 @@ func encodeCreateContestJoinRequestResponse(response *ContestJoinRequestResponse
 	return nil
 }
 
-func encodeCreateContestMemberResponse(response *CreationResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateContestMemberResponse(response *CreationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -246,7 +245,7 @@ func encodeCreateContestMemberResponse(response *CreationResponseModel, w http.R
 	return nil
 }
 
-func encodeCreateContestProblemResponse(response *CreationResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateContestProblemResponse(response *CreationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -259,13 +258,13 @@ func encodeCreateContestProblemResponse(response *CreationResponseModel, w http.
 	return nil
 }
 
-func encodeCreateContestTeamResponse(response *CreateContestTeamOK, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateContestTeamResponse(response *CreateContestTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeCreateOrganizationResponse(response *CreateOrganizationResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateOrganizationResponse(response *CreateOrganizationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -278,7 +277,7 @@ func encodeCreateOrganizationResponse(response *CreateOrganizationResponseModel,
 	return nil
 }
 
-func encodeCreateOrganizationJoinRequestResponse(response *OrganizationJoinRequestResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateOrganizationJoinRequestResponse(response *OrganizationJoinRequestResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -291,7 +290,7 @@ func encodeCreateOrganizationJoinRequestResponse(response *OrganizationJoinReque
 	return nil
 }
 
-func encodeCreatePostResponse(response CreatePostRes, w http.ResponseWriter, span trace.Span) error {
+func encodeCreatePostResponse(response CreatePostRes, w http.ResponseWriter) error {
 	switch response := response.(type) {
 	case *CreatedPost:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -346,7 +345,7 @@ func encodeCreatePostResponse(response CreatePostRes, w http.ResponseWriter, spa
 	}
 }
 
-func encodeCreateProblemResponse(response *CreationResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemResponse(response *CreationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -359,7 +358,7 @@ func encodeCreateProblemResponse(response *CreationResponseModel, w http.Respons
 	return nil
 }
 
-func encodeCreateProblemCheckerResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemCheckerResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -372,7 +371,7 @@ func encodeCreateProblemCheckerResponse(response *MessageResponse, w http.Respon
 	return nil
 }
 
-func encodeCreateProblemGeneratorResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemGeneratorResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -385,7 +384,7 @@ func encodeCreateProblemGeneratorResponse(response *MessageResponse, w http.Resp
 	return nil
 }
 
-func encodeCreateProblemInteractorResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemInteractorResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -398,7 +397,7 @@ func encodeCreateProblemInteractorResponse(response *MessageResponse, w http.Res
 	return nil
 }
 
-func encodeCreateProblemLibResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemLibResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -411,7 +410,7 @@ func encodeCreateProblemLibResponse(response *MessageResponse, w http.ResponseWr
 	return nil
 }
 
-func encodeCreateProblemMediaFileResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemMediaFileResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -424,19 +423,19 @@ func encodeCreateProblemMediaFileResponse(response *MessageResponse, w http.Resp
 	return nil
 }
 
-func encodeCreateProblemMemberResponse(response *CreateProblemMemberOK, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemMemberResponse(response *CreateProblemMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeCreateProblemTeamResponse(response *CreateProblemTeamOK, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemTeamResponse(response *CreateProblemTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeCreateProblemTestFileResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemTestFileResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -449,7 +448,7 @@ func encodeCreateProblemTestFileResponse(response *MessageResponse, w http.Respo
 	return nil
 }
 
-func encodeCreateProblemValidatorResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemValidatorResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -462,7 +461,7 @@ func encodeCreateProblemValidatorResponse(response *MessageResponse, w http.Resp
 	return nil
 }
 
-func encodeCreateProblemWorkshopSubmissionResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateProblemWorkshopSubmissionResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -475,7 +474,7 @@ func encodeCreateProblemWorkshopSubmissionResponse(response *MessageResponse, w 
 	return nil
 }
 
-func encodeCreateSubmissionResponse(response *CreationResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateSubmissionResponse(response *CreationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -488,7 +487,7 @@ func encodeCreateSubmissionResponse(response *CreationResponseModel, w http.Resp
 	return nil
 }
 
-func encodeCreateTeamResponse(response *CreationResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeCreateTeamResponse(response *CreationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -501,61 +500,61 @@ func encodeCreateTeamResponse(response *CreationResponseModel, w http.ResponseWr
 	return nil
 }
 
-func encodeDeclineOrganizationInvitationResponse(response *DeclineOrganizationInvitationOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeclineOrganizationInvitationResponse(response *DeclineOrganizationInvitationOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteAvatarResponse(response *DeleteAvatarOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteAvatarResponse(response *DeleteAvatarOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteContestResponse(response *DeleteContestOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteContestResponse(response *DeleteContestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteContestAnnouncementResponse(response *DeleteContestAnnouncementOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteContestAnnouncementResponse(response *DeleteContestAnnouncementOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteContestDraftResponse(response *DeleteContestDraftOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteContestDraftResponse(response *DeleteContestDraftOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteContestMemberResponse(response *DeleteContestMemberOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteContestMemberResponse(response *DeleteContestMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteContestProblemResponse(response *DeleteContestProblemOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteContestProblemResponse(response *DeleteContestProblemOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteContestTeamResponse(response *DeleteContestTeamOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteContestTeamResponse(response *DeleteContestTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteOrganizationResponse(response *DeleteOrganizationOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteOrganizationResponse(response *DeleteOrganizationOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeletePostByIdResponse(response DeletePostByIdRes, w http.ResponseWriter, span trace.Span) error {
+func encodeDeletePostByIdResponse(response DeletePostByIdRes, w http.ResponseWriter) error {
 	switch response := response.(type) {
 	case *DeletePostByIdOK:
 		w.WriteHeader(200)
@@ -615,13 +614,13 @@ func encodeDeletePostByIdResponse(response DeletePostByIdRes, w http.ResponseWri
 	}
 }
 
-func encodeDeleteProblemResponse(response *DeleteProblemOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemResponse(response *DeleteProblemOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteProblemCheckerResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemCheckerResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -634,7 +633,7 @@ func encodeDeleteProblemCheckerResponse(response *MessageResponse, w http.Respon
 	return nil
 }
 
-func encodeDeleteProblemGeneratorResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemGeneratorResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -647,7 +646,7 @@ func encodeDeleteProblemGeneratorResponse(response *MessageResponse, w http.Resp
 	return nil
 }
 
-func encodeDeleteProblemInteractorResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemInteractorResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -660,7 +659,7 @@ func encodeDeleteProblemInteractorResponse(response *MessageResponse, w http.Res
 	return nil
 }
 
-func encodeDeleteProblemLibResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemLibResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -673,7 +672,7 @@ func encodeDeleteProblemLibResponse(response *MessageResponse, w http.ResponseWr
 	return nil
 }
 
-func encodeDeleteProblemMediaFileResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemMediaFileResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -686,19 +685,19 @@ func encodeDeleteProblemMediaFileResponse(response *MessageResponse, w http.Resp
 	return nil
 }
 
-func encodeDeleteProblemMemberResponse(response *DeleteProblemMemberOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemMemberResponse(response *DeleteProblemMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteProblemTeamResponse(response *DeleteProblemTeamOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemTeamResponse(response *DeleteProblemTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDeleteProblemTestFileResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemTestFileResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -711,7 +710,7 @@ func encodeDeleteProblemTestFileResponse(response *MessageResponse, w http.Respo
 	return nil
 }
 
-func encodeDeleteProblemValidatorResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemValidatorResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -724,7 +723,7 @@ func encodeDeleteProblemValidatorResponse(response *MessageResponse, w http.Resp
 	return nil
 }
 
-func encodeDeleteProblemWorkshopSubmissionResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteProblemWorkshopSubmissionResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -737,13 +736,13 @@ func encodeDeleteProblemWorkshopSubmissionResponse(response *MessageResponse, w 
 	return nil
 }
 
-func encodeDeleteTeamResponse(response *DeleteTeamOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDeleteTeamResponse(response *DeleteTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeDownloadContestStatementsPdfResponse(response DownloadContestStatementsPdfOK, w http.ResponseWriter, span trace.Span) error {
+func encodeDownloadContestStatementsPdfResponse(response DownloadContestStatementsPdfOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.WriteHeader(200)
 
@@ -758,13 +757,13 @@ func encodeDownloadContestStatementsPdfResponse(response DownloadContestStatemen
 	return nil
 }
 
-func encodeForgotPasswordResponse(response *ForgotPasswordOK, w http.ResponseWriter, span trace.Span) error {
+func encodeForgotPasswordResponse(response *ForgotPasswordOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeGenerateTestsResponse(response *GenerateTestsOK, w http.ResponseWriter, span trace.Span) error {
+func encodeGenerateTestsResponse(response *GenerateTestsOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -777,7 +776,7 @@ func encodeGenerateTestsResponse(response *GenerateTestsOK, w http.ResponseWrite
 	return nil
 }
 
-func encodeGetContestResponse(response *GetContestResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetContestResponse(response *GetContestResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -790,7 +789,7 @@ func encodeGetContestResponse(response *GetContestResponseModel, w http.Response
 	return nil
 }
 
-func encodeGetContestProblemResponse(response *GetContestProblemResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetContestProblemResponse(response *GetContestProblemResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -803,7 +802,7 @@ func encodeGetContestProblemResponse(response *GetContestProblemResponseModel, w
 	return nil
 }
 
-func encodeGetContestScoreboardResponse(response *ScoreboardResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetContestScoreboardResponse(response *ScoreboardResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -816,7 +815,7 @@ func encodeGetContestScoreboardResponse(response *ScoreboardResponseModel, w htt
 	return nil
 }
 
-func encodeGetHealthResponse(response *GetHealthResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetHealthResponse(response *GetHealthResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -829,7 +828,7 @@ func encodeGetHealthResponse(response *GetHealthResponseModel, w http.ResponseWr
 	return nil
 }
 
-func encodeGetLanguagesResponse(response *SupportedLanguagesResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeGetLanguagesResponse(response *SupportedLanguagesResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -842,7 +841,7 @@ func encodeGetLanguagesResponse(response *SupportedLanguagesResponse, w http.Res
 	return nil
 }
 
-func encodeGetMeResponse(response *GetUserResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetMeResponse(response *GetUserResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -855,7 +854,7 @@ func encodeGetMeResponse(response *GetUserResponseModel, w http.ResponseWriter, 
 	return nil
 }
 
-func encodeGetMyContestJoinRequestResponse(response *ContestJoinRequestNullableResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetMyContestJoinRequestResponse(response *ContestJoinRequestNullableResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -868,7 +867,7 @@ func encodeGetMyContestJoinRequestResponse(response *ContestJoinRequestNullableR
 	return nil
 }
 
-func encodeGetMyContestRoleResponse(response *GetMyContestRoleResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetMyContestRoleResponse(response *GetMyContestRoleResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -881,7 +880,7 @@ func encodeGetMyContestRoleResponse(response *GetMyContestRoleResponseModel, w h
 	return nil
 }
 
-func encodeGetMyDashboardResponse(response *GetUserDashboardResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetMyDashboardResponse(response *GetUserDashboardResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -894,7 +893,7 @@ func encodeGetMyDashboardResponse(response *GetUserDashboardResponseModel, w htt
 	return nil
 }
 
-func encodeGetMyOrganizationJoinRequestResponse(response *OrganizationJoinRequestNullableResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetMyOrganizationJoinRequestResponse(response *OrganizationJoinRequestNullableResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -907,7 +906,7 @@ func encodeGetMyOrganizationJoinRequestResponse(response *OrganizationJoinReques
 	return nil
 }
 
-func encodeGetOrganizationResponse(response *GetOrganizationResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetOrganizationResponse(response *GetOrganizationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -920,7 +919,7 @@ func encodeGetOrganizationResponse(response *GetOrganizationResponseModel, w htt
 	return nil
 }
 
-func encodeGetPostByIdResponse(response GetPostByIdRes, w http.ResponseWriter, span trace.Span) error {
+func encodeGetPostByIdResponse(response GetPostByIdRes, w http.ResponseWriter) error {
 	switch response := response.(type) {
 	case *PostModel:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -963,7 +962,7 @@ func encodeGetPostByIdResponse(response GetPostByIdRes, w http.ResponseWriter, s
 	}
 }
 
-func encodeGetPostImageResponse(response GetPostImageRes, w http.ResponseWriter, span trace.Span) error {
+func encodeGetPostImageResponse(response GetPostImageRes, w http.ResponseWriter) error {
 	switch response := response.(type) {
 	case *GetPostImageOKHeaders:
 		w.Header().Set("Content-Type", "image/png")
@@ -1053,7 +1052,7 @@ func encodeGetPostImageResponse(response GetPostImageRes, w http.ResponseWriter,
 	}
 }
 
-func encodeGetProblemResponse(response *GetProblemResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemResponse(response *GetProblemResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1066,7 +1065,7 @@ func encodeGetProblemResponse(response *GetProblemResponseModel, w http.Response
 	return nil
 }
 
-func encodeGetProblemBlockStatusForUserResponse(response *ProblemBlockStatusResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemBlockStatusForUserResponse(response *ProblemBlockStatusResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1079,7 +1078,7 @@ func encodeGetProblemBlockStatusForUserResponse(response *ProblemBlockStatusResp
 	return nil
 }
 
-func encodeGetProblemCheckerResponse(response GetProblemCheckerOK, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemCheckerResponse(response GetProblemCheckerOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1094,7 +1093,7 @@ func encodeGetProblemCheckerResponse(response GetProblemCheckerOK, w http.Respon
 	return nil
 }
 
-func encodeGetProblemGeneratorResponse(response GetProblemGeneratorOK, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemGeneratorResponse(response GetProblemGeneratorOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1109,7 +1108,7 @@ func encodeGetProblemGeneratorResponse(response GetProblemGeneratorOK, w http.Re
 	return nil
 }
 
-func encodeGetProblemInteractorResponse(response GetProblemInteractorOK, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemInteractorResponse(response GetProblemInteractorOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1124,7 +1123,7 @@ func encodeGetProblemInteractorResponse(response GetProblemInteractorOK, w http.
 	return nil
 }
 
-func encodeGetProblemLibResponse(response GetProblemLibOK, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemLibResponse(response GetProblemLibOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1139,7 +1138,7 @@ func encodeGetProblemLibResponse(response GetProblemLibOK, w http.ResponseWriter
 	return nil
 }
 
-func encodeGetProblemLimitsResponse(response *ProblemLimits, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemLimitsResponse(response *ProblemLimits, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1152,7 +1151,7 @@ func encodeGetProblemLimitsResponse(response *ProblemLimits, w http.ResponseWrit
 	return nil
 }
 
-func encodeGetProblemMediaFileResponse(response GetProblemMediaFileOK, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemMediaFileResponse(response GetProblemMediaFileOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(200)
 
@@ -1167,7 +1166,7 @@ func encodeGetProblemMediaFileResponse(response GetProblemMediaFileOK, w http.Re
 	return nil
 }
 
-func encodeGetProblemStatementResponse(response *ProblemStatement, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemStatementResponse(response *ProblemStatement, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1180,7 +1179,7 @@ func encodeGetProblemStatementResponse(response *ProblemStatement, w http.Respon
 	return nil
 }
 
-func encodeGetProblemTestFileResponse(response GetProblemTestFileOK, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemTestFileResponse(response GetProblemTestFileOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(200)
 
@@ -1195,7 +1194,7 @@ func encodeGetProblemTestFileResponse(response GetProblemTestFileOK, w http.Resp
 	return nil
 }
 
-func encodeGetProblemValidatorResponse(response GetProblemValidatorOK, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemValidatorResponse(response GetProblemValidatorOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1210,7 +1209,7 @@ func encodeGetProblemValidatorResponse(response GetProblemValidatorOK, w http.Re
 	return nil
 }
 
-func encodeGetProblemWorkshopSubmissionResponse(response GetProblemWorkshopSubmissionOK, w http.ResponseWriter, span trace.Span) error {
+func encodeGetProblemWorkshopSubmissionResponse(response GetProblemWorkshopSubmissionOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1225,7 +1224,7 @@ func encodeGetProblemWorkshopSubmissionResponse(response GetProblemWorkshopSubmi
 	return nil
 }
 
-func encodeGetPublishedPackageResponse(response *GetPublishedPackageFound, w http.ResponseWriter, span trace.Span) error {
+func encodeGetPublishedPackageResponse(response *GetPublishedPackageFound, w http.ResponseWriter) error {
 	w.Header().Set("Access-Control-Expose-Headers", "Location")
 	// Encoding response headers.
 	{
@@ -1251,7 +1250,7 @@ func encodeGetPublishedPackageResponse(response *GetPublishedPackageFound, w htt
 	return nil
 }
 
-func encodeGetSubmissionResponse(response *GetSubmissionResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetSubmissionResponse(response *GetSubmissionResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1264,7 +1263,7 @@ func encodeGetSubmissionResponse(response *GetSubmissionResponseModel, w http.Re
 	return nil
 }
 
-func encodeGetTeamResponse(response *GetTeamResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetTeamResponse(response *GetTeamResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1277,7 +1276,7 @@ func encodeGetTeamResponse(response *GetTeamResponseModel, w http.ResponseWriter
 	return nil
 }
 
-func encodeGetUnreadNotificationsCountResponse(response *UnreadNotificationsCountResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetUnreadNotificationsCountResponse(response *UnreadNotificationsCountResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1290,7 +1289,7 @@ func encodeGetUnreadNotificationsCountResponse(response *UnreadNotificationsCoun
 	return nil
 }
 
-func encodeGetUserResponse(response *GetUserResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeGetUserResponse(response *GetUserResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1303,7 +1302,7 @@ func encodeGetUserResponse(response *GetUserResponseModel, w http.ResponseWriter
 	return nil
 }
 
-func encodeGetUserAvatarResponse(response GetUserAvatarRes, w http.ResponseWriter, span trace.Span) error {
+func encodeGetUserAvatarResponse(response GetUserAvatarRes, w http.ResponseWriter) error {
 	switch response := response.(type) {
 	case *GetUserAvatarOKHeaders:
 		w.Header().Set("Content-Type", "image/png")
@@ -1393,7 +1392,7 @@ func encodeGetUserAvatarResponse(response GetUserAvatarRes, w http.ResponseWrite
 	}
 }
 
-func encodeImportProblemResponse(response *ImportProblemOK, w http.ResponseWriter, span trace.Span) error {
+func encodeImportProblemResponse(response *ImportProblemOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1406,7 +1405,7 @@ func encodeImportProblemResponse(response *ImportProblemOK, w http.ResponseWrite
 	return nil
 }
 
-func encodeInviteOrganizationMemberResponse(response *OrganizationInvitationModel, w http.ResponseWriter, span trace.Span) error {
+func encodeInviteOrganizationMemberResponse(response *OrganizationInvitationModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1419,7 +1418,7 @@ func encodeInviteOrganizationMemberResponse(response *OrganizationInvitationMode
 	return nil
 }
 
-func encodeListAdminContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListAdminContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1432,7 +1431,7 @@ func encodeListAdminContestsResponse(response *ListContestsResponseModel, w http
 	return nil
 }
 
-func encodeListContestAnnouncementsResponse(response *ListContestAnnouncementsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListContestAnnouncementsResponse(response *ListContestAnnouncementsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1445,7 +1444,7 @@ func encodeListContestAnnouncementsResponse(response *ListContestAnnouncementsRe
 	return nil
 }
 
-func encodeListContestClarificationsResponse(response *ListContestClarificationsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListContestClarificationsResponse(response *ListContestClarificationsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1458,7 +1457,7 @@ func encodeListContestClarificationsResponse(response *ListContestClarifications
 	return nil
 }
 
-func encodeListContestDraftsResponse(response *ListContestDraftsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListContestDraftsResponse(response *ListContestDraftsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1471,7 +1470,7 @@ func encodeListContestDraftsResponse(response *ListContestDraftsResponseModel, w
 	return nil
 }
 
-func encodeListContestJoinRequestsResponse(response *ListContestJoinRequestsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListContestJoinRequestsResponse(response *ListContestJoinRequestsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1484,7 +1483,7 @@ func encodeListContestJoinRequestsResponse(response *ListContestJoinRequestsResp
 	return nil
 }
 
-func encodeListContestMembersResponse(response *ListContestMembersResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListContestMembersResponse(response *ListContestMembersResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1497,7 +1496,7 @@ func encodeListContestMembersResponse(response *ListContestMembersResponseModel,
 	return nil
 }
 
-func encodeListContestSubmissionsResponse(response *ListSubmissionsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListContestSubmissionsResponse(response *ListSubmissionsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1510,7 +1509,7 @@ func encodeListContestSubmissionsResponse(response *ListSubmissionsResponseModel
 	return nil
 }
 
-func encodeListContestTeamsResponse(response *ListContestTeamsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListContestTeamsResponse(response *ListContestTeamsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1523,7 +1522,7 @@ func encodeListContestTeamsResponse(response *ListContestTeamsResponseModel, w h
 	return nil
 }
 
-func encodeListMyClaimedAccountsResponse(response *ListClaimedAccountsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListMyClaimedAccountsResponse(response *ListClaimedAccountsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1536,7 +1535,7 @@ func encodeListMyClaimedAccountsResponse(response *ListClaimedAccountsResponseMo
 	return nil
 }
 
-func encodeListNotificationsResponse(response *NotificationsListResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListNotificationsResponse(response *NotificationsListResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1549,7 +1548,7 @@ func encodeListNotificationsResponse(response *NotificationsListResponseModel, w
 	return nil
 }
 
-func encodeListOrganizationContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListOrganizationContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1562,7 +1561,7 @@ func encodeListOrganizationContestsResponse(response *ListContestsResponseModel,
 	return nil
 }
 
-func encodeListOrganizationInvitationsResponse(response *ListOrganizationInvitationsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListOrganizationInvitationsResponse(response *ListOrganizationInvitationsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1575,7 +1574,7 @@ func encodeListOrganizationInvitationsResponse(response *ListOrganizationInvitat
 	return nil
 }
 
-func encodeListOrganizationJoinRequestsResponse(response *ListOrganizationJoinRequestsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListOrganizationJoinRequestsResponse(response *ListOrganizationJoinRequestsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1588,7 +1587,7 @@ func encodeListOrganizationJoinRequestsResponse(response *ListOrganizationJoinRe
 	return nil
 }
 
-func encodeListOrganizationMembersResponse(response *ListOrganizationMembersResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListOrganizationMembersResponse(response *ListOrganizationMembersResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1601,7 +1600,7 @@ func encodeListOrganizationMembersResponse(response *ListOrganizationMembersResp
 	return nil
 }
 
-func encodeListOrganizationsResponse(response *ListOrganizationsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListOrganizationsResponse(response *ListOrganizationsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1614,7 +1613,7 @@ func encodeListOrganizationsResponse(response *ListOrganizationsResponseModel, w
 	return nil
 }
 
-func encodeListPostsResponse(response *ListPostsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListPostsResponse(response *ListPostsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1627,7 +1626,7 @@ func encodeListPostsResponse(response *ListPostsResponseModel, w http.ResponseWr
 	return nil
 }
 
-func encodeListProblemCheckersResponse(response *WorkshopFileListResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemCheckersResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1640,7 +1639,7 @@ func encodeListProblemCheckersResponse(response *WorkshopFileListResponse, w htt
 	return nil
 }
 
-func encodeListProblemGeneratorsResponse(response *WorkshopFileListResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemGeneratorsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1653,7 +1652,7 @@ func encodeListProblemGeneratorsResponse(response *WorkshopFileListResponse, w h
 	return nil
 }
 
-func encodeListProblemInteractorsResponse(response *WorkshopFileListResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemInteractorsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1666,7 +1665,7 @@ func encodeListProblemInteractorsResponse(response *WorkshopFileListResponse, w 
 	return nil
 }
 
-func encodeListProblemLibsResponse(response *WorkshopFileListResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemLibsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1679,7 +1678,7 @@ func encodeListProblemLibsResponse(response *WorkshopFileListResponse, w http.Re
 	return nil
 }
 
-func encodeListProblemMediaFilesResponse(response *WorkshopFileListResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemMediaFilesResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1692,7 +1691,7 @@ func encodeListProblemMediaFilesResponse(response *WorkshopFileListResponse, w h
 	return nil
 }
 
-func encodeListProblemMembersResponse(response *ListProblemMembersResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemMembersResponse(response *ListProblemMembersResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1705,7 +1704,7 @@ func encodeListProblemMembersResponse(response *ListProblemMembersResponseModel,
 	return nil
 }
 
-func encodeListProblemPackagesResponse(response *ListProblemPackagesOK, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemPackagesResponse(response *ListProblemPackagesOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1718,7 +1717,7 @@ func encodeListProblemPackagesResponse(response *ListProblemPackagesOK, w http.R
 	return nil
 }
 
-func encodeListProblemTeamsResponse(response *ListProblemTeamsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemTeamsResponse(response *ListProblemTeamsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1731,7 +1730,7 @@ func encodeListProblemTeamsResponse(response *ListProblemTeamsResponseModel, w h
 	return nil
 }
 
-func encodeListProblemTemplatesResponse(response []ProblemTemplateModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemTemplatesResponse(response []ProblemTemplateModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1748,7 +1747,7 @@ func encodeListProblemTemplatesResponse(response []ProblemTemplateModel, w http.
 	return nil
 }
 
-func encodeListProblemTestsResponse(response *WorkshopFileListResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemTestsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1761,7 +1760,7 @@ func encodeListProblemTestsResponse(response *WorkshopFileListResponse, w http.R
 	return nil
 }
 
-func encodeListProblemValidatorsResponse(response *WorkshopFileListResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemValidatorsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1774,7 +1773,7 @@ func encodeListProblemValidatorsResponse(response *WorkshopFileListResponse, w h
 	return nil
 }
 
-func encodeListProblemWorkshopSubmissionsResponse(response *WorkshopFileListResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemWorkshopSubmissionsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1787,7 +1786,7 @@ func encodeListProblemWorkshopSubmissionsResponse(response *WorkshopFileListResp
 	return nil
 }
 
-func encodeListProblemsResponse(response *ListProblemsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListProblemsResponse(response *ListProblemsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1800,7 +1799,7 @@ func encodeListProblemsResponse(response *ListProblemsResponseModel, w http.Resp
 	return nil
 }
 
-func encodeListPublicContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListPublicContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1813,7 +1812,7 @@ func encodeListPublicContestsResponse(response *ListContestsResponseModel, w htt
 	return nil
 }
 
-func encodeListSubmissionsResponse(response *ListSubmissionsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListSubmissionsResponse(response *ListSubmissionsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1826,7 +1825,7 @@ func encodeListSubmissionsResponse(response *ListSubmissionsResponseModel, w htt
 	return nil
 }
 
-func encodeListTeamContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListTeamContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1839,7 +1838,7 @@ func encodeListTeamContestsResponse(response *ListContestsResponseModel, w http.
 	return nil
 }
 
-func encodeListTeamMembersResponse(response *ListTeamMembersResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListTeamMembersResponse(response *ListTeamMembersResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1852,7 +1851,7 @@ func encodeListTeamMembersResponse(response *ListTeamMembersResponseModel, w htt
 	return nil
 }
 
-func encodeListTeamProblemsResponse(response *ListProblemsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListTeamProblemsResponse(response *ListProblemsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1865,7 +1864,7 @@ func encodeListTeamProblemsResponse(response *ListProblemsResponseModel, w http.
 	return nil
 }
 
-func encodeListTeamsResponse(response *ListTeamsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListTeamsResponse(response *ListTeamsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1878,7 +1877,7 @@ func encodeListTeamsResponse(response *ListTeamsResponseModel, w http.ResponseWr
 	return nil
 }
 
-func encodeListUserContestsResponse(response *ListUserContestsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListUserContestsResponse(response *ListUserContestsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1891,7 +1890,7 @@ func encodeListUserContestsResponse(response *ListUserContestsResponseModel, w h
 	return nil
 }
 
-func encodeListUserSubmissionsResponse(response *ListSubmissionsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListUserSubmissionsResponse(response *ListSubmissionsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1904,7 +1903,7 @@ func encodeListUserSubmissionsResponse(response *ListSubmissionsResponseModel, w
 	return nil
 }
 
-func encodeListUsersResponse(response *ListUsersResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListUsersResponse(response *ListUsersResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1917,7 +1916,7 @@ func encodeListUsersResponse(response *ListUsersResponseModel, w http.ResponseWr
 	return nil
 }
 
-func encodeListWorkshopContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeListWorkshopContestsResponse(response *ListContestsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1930,7 +1929,7 @@ func encodeListWorkshopContestsResponse(response *ListContestsResponseModel, w h
 	return nil
 }
 
-func encodeLoginResponse(response *AuthResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeLoginResponse(response *AuthResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1943,25 +1942,25 @@ func encodeLoginResponse(response *AuthResponseModel, w http.ResponseWriter, spa
 	return nil
 }
 
-func encodeLogoutResponse(response *LogoutOK, w http.ResponseWriter, span trace.Span) error {
+func encodeLogoutResponse(response *LogoutOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeMarkAllNotificationsAsReadResponse(response *MarkAllNotificationsAsReadOK, w http.ResponseWriter, span trace.Span) error {
+func encodeMarkAllNotificationsAsReadResponse(response *MarkAllNotificationsAsReadOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeMarkNotificationAsReadResponse(response *MarkNotificationAsReadOK, w http.ResponseWriter, span trace.Span) error {
+func encodeMarkNotificationAsReadResponse(response *MarkNotificationAsReadOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodePatchPostByIdResponse(response PatchPostByIdRes, w http.ResponseWriter, span trace.Span) error {
+func encodePatchPostByIdResponse(response PatchPostByIdRes, w http.ResponseWriter) error {
 	switch response := response.(type) {
 	case *PatchPostByIdOK:
 		w.WriteHeader(200)
@@ -2021,7 +2020,7 @@ func encodePatchPostByIdResponse(response PatchPostByIdRes, w http.ResponseWrite
 	}
 }
 
-func encodePublishProblemResponse(response *PublishProblemOK, w http.ResponseWriter, span trace.Span) error {
+func encodePublishProblemResponse(response *PublishProblemOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2034,7 +2033,7 @@ func encodePublishProblemResponse(response *PublishProblemOK, w http.ResponseWri
 	return nil
 }
 
-func encodeRegisterResponse(response *AuthResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeRegisterResponse(response *AuthResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2047,73 +2046,73 @@ func encodeRegisterResponse(response *AuthResponseModel, w http.ResponseWriter, 
 	return nil
 }
 
-func encodeRejectContestJoinRequestResponse(response *RejectContestJoinRequestOK, w http.ResponseWriter, span trace.Span) error {
+func encodeRejectContestJoinRequestResponse(response *RejectContestJoinRequestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeRejectOrganizationJoinRequestResponse(response *RejectOrganizationJoinRequestOK, w http.ResponseWriter, span trace.Span) error {
+func encodeRejectOrganizationJoinRequestResponse(response *RejectOrganizationJoinRequestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeRejudgeContestResponse(response *RejudgeContestOK, w http.ResponseWriter, span trace.Span) error {
+func encodeRejudgeContestResponse(response *RejudgeContestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeRejudgeContestProblemResponse(response *RejudgeContestProblemOK, w http.ResponseWriter, span trace.Span) error {
+func encodeRejudgeContestProblemResponse(response *RejudgeContestProblemOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeRejudgeSubmissionResponse(response *RejudgeSubmissionOK, w http.ResponseWriter, span trace.Span) error {
+func encodeRejudgeSubmissionResponse(response *RejudgeSubmissionOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeRemoveOrganizationMemberResponse(response *RemoveOrganizationMemberOK, w http.ResponseWriter, span trace.Span) error {
+func encodeRemoveOrganizationMemberResponse(response *RemoveOrganizationMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeRemoveTeamMemberResponse(response *RemoveTeamMemberOK, w http.ResponseWriter, span trace.Span) error {
+func encodeRemoveTeamMemberResponse(response *RemoveTeamMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeReorderContestProblemsResponse(response *ReorderContestProblemsOK, w http.ResponseWriter, span trace.Span) error {
+func encodeReorderContestProblemsResponse(response *ReorderContestProblemsOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeRequestEmailChangeResponse(response *RequestEmailChangeOK, w http.ResponseWriter, span trace.Span) error {
+func encodeRequestEmailChangeResponse(response *RequestEmailChangeOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeResendVerificationResponse(response *ResendVerificationOK, w http.ResponseWriter, span trace.Span) error {
+func encodeResendVerificationResponse(response *ResendVerificationOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeResetPasswordResponse(response *ResetPasswordOK, w http.ResponseWriter, span trace.Span) error {
+func encodeResetPasswordResponse(response *ResetPasswordOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeTestSolutionResponse(response *TestReport, w http.ResponseWriter, span trace.Span) error {
+func encodeTestSolutionResponse(response *TestReport, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2126,49 +2125,49 @@ func encodeTestSolutionResponse(response *TestReport, w http.ResponseWriter, spa
 	return nil
 }
 
-func encodeUnblockProblemForUserResponse(response *UnblockProblemForUserOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUnblockProblemForUserResponse(response *UnblockProblemForUserOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUnblockSubmissionResponse(response *UnblockSubmissionOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUnblockSubmissionResponse(response *UnblockSubmissionOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateContestResponse(response *UpdateContestOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateContestResponse(response *UpdateContestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateContestMemberResponse(response *UpdateContestMemberOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateContestMemberResponse(response *UpdateContestMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateContestTeamResponse(response *UpdateContestTeamOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateContestTeamResponse(response *UpdateContestTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateOrganizationResponse(response *UpdateOrganizationOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateOrganizationResponse(response *UpdateOrganizationOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateProblemResponse(response *UpdateProblemOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemResponse(response *UpdateProblemOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateProblemCheckerResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemCheckerResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2181,7 +2180,7 @@ func encodeUpdateProblemCheckerResponse(response *MessageResponse, w http.Respon
 	return nil
 }
 
-func encodeUpdateProblemGeneratorResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemGeneratorResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2194,7 +2193,7 @@ func encodeUpdateProblemGeneratorResponse(response *MessageResponse, w http.Resp
 	return nil
 }
 
-func encodeUpdateProblemInteractorResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemInteractorResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2207,7 +2206,7 @@ func encodeUpdateProblemInteractorResponse(response *MessageResponse, w http.Res
 	return nil
 }
 
-func encodeUpdateProblemLibResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemLibResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2220,7 +2219,7 @@ func encodeUpdateProblemLibResponse(response *MessageResponse, w http.ResponseWr
 	return nil
 }
 
-func encodeUpdateProblemLimitsResponse(response *ProblemLimits, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemLimitsResponse(response *ProblemLimits, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2233,7 +2232,7 @@ func encodeUpdateProblemLimitsResponse(response *ProblemLimits, w http.ResponseW
 	return nil
 }
 
-func encodeUpdateProblemMediaFileResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemMediaFileResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2246,13 +2245,13 @@ func encodeUpdateProblemMediaFileResponse(response *MessageResponse, w http.Resp
 	return nil
 }
 
-func encodeUpdateProblemMemberResponse(response *UpdateProblemMemberOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemMemberResponse(response *UpdateProblemMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateProblemStatementResponse(response *ProblemStatement, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemStatementResponse(response *ProblemStatement, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2265,13 +2264,13 @@ func encodeUpdateProblemStatementResponse(response *ProblemStatement, w http.Res
 	return nil
 }
 
-func encodeUpdateProblemTeamResponse(response *UpdateProblemTeamOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemTeamResponse(response *UpdateProblemTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateProblemTestFileResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemTestFileResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2284,7 +2283,7 @@ func encodeUpdateProblemTestFileResponse(response *MessageResponse, w http.Respo
 	return nil
 }
 
-func encodeUpdateProblemTestsConfigResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemTestsConfigResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2297,7 +2296,7 @@ func encodeUpdateProblemTestsConfigResponse(response *MessageResponse, w http.Re
 	return nil
 }
 
-func encodeUpdateProblemValidatorResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemValidatorResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2310,7 +2309,7 @@ func encodeUpdateProblemValidatorResponse(response *MessageResponse, w http.Resp
 	return nil
 }
 
-func encodeUpdateProblemWorkshopSubmissionResponse(response *MessageResponse, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateProblemWorkshopSubmissionResponse(response *MessageResponse, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2323,25 +2322,25 @@ func encodeUpdateProblemWorkshopSubmissionResponse(response *MessageResponse, w 
 	return nil
 }
 
-func encodeUpdateTeamResponse(response *UpdateTeamOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateTeamResponse(response *UpdateTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateTeamMemberRoleResponse(response *UpdateTeamMemberRoleOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateTeamMemberRoleResponse(response *UpdateTeamMemberRoleOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateUserResponse(response *UpdateUserOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUpdateUserResponse(response *UpdateUserOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUploadAvatarResponse(response *UploadAvatarOK, w http.ResponseWriter, span trace.Span) error {
+func encodeUploadAvatarResponse(response *UploadAvatarOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2354,7 +2353,7 @@ func encodeUploadAvatarResponse(response *UploadAvatarOK, w http.ResponseWriter,
 	return nil
 }
 
-func encodeValidateAllTestsResponse(response *ValidationReport, w http.ResponseWriter, span trace.Span) error {
+func encodeValidateAllTestsResponse(response *ValidationReport, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2367,7 +2366,7 @@ func encodeValidateAllTestsResponse(response *ValidationReport, w http.ResponseW
 	return nil
 }
 
-func encodeVerifyEmailResponse(response *AuthResponseModel, w http.ResponseWriter, span trace.Span) error {
+func encodeVerifyEmailResponse(response *AuthResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 

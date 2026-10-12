@@ -26,21 +26,3 @@ http:
       ipAllowList:
         sourceRange:
           - "127.0.0.1/32"
-
-    # OTLP middleware
-    gate-otlp-strip:
-      stripPrefix:
-        prefixes:
-          - "/otlp"
-
-    gate-otlp-cors:
-      headers:
-        accessControlAllowMethods:
-          - "POST"
-          - "OPTIONS"
-          - "GET"
-        accessControlAllowHeaders:
-          - "*"
-        accessControlAllowOriginList:
-          - "*"
-        accessControlMaxAge: 86400

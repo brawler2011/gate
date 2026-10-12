@@ -20,9 +20,9 @@ func TestMapOutboxEvent_HeadersHandling(t *testing.T) {
 
 	t.Run("valid headers JSON", func(t *testing.T) {
 		headersMap := map[string]string{
-			"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			"tracestate":  "rojo=1",
-			"x-custom":    "value",
+			"X-Request-ID":  "request-123",
+			"custom-header": "rojo=1",
+			"x-custom":      "value",
 		}
 		rawJSON, err := json.Marshal(headersMap)
 		require.NoError(t, err)

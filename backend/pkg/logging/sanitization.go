@@ -1,4 +1,4 @@
-package telemetry
+package logging
 
 import (
 	"context"
@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-
-	"go.opentelemetry.io/otel/attribute"
 )
 
 // RedactedValue is the replacement string used for masked sensitive values.
@@ -29,51 +27,51 @@ var sensitiveHeaders = map[string]struct{}{
 
 // exactSensitiveKeys contains lowercase normalized keys that are always redacted.
 var exactSensitiveKeys = map[string]struct{}{
-	"password":       {},
-	"passwd":         {},
-	"pass_word":      {},
-	"password_hash":  {},
-	"passwordhash":   {},
-	"secret":         {},
-	"token":          {},
-	"session_id":     {},
-	"sessionid":      {},
-	"session":        {},
-	"authorization":  {},
-	"auth":           {},
-	"auth_code":      {},
-	"authcode":       {},
-	"cookie":         {},
-	"set_cookie":     {},
-	"setcookie":      {},
-	"api_key":        {},
-	"apikey":         {},
-	"access_token":   {},
-	"accesstoken":    {},
-	"refresh_token":  {},
-	"refreshtoken":   {},
-	"auth_token":     {},
-	"authtoken":      {},
-	"jwt_token":      {},
-	"jwttoken":       {},
-	"id_token":       {},
-	"idtoken":        {},
-	"csrf_token":     {},
-	"csrftoken":      {},
-	"xsrf_token":     {},
-	"xsrftoken":      {},
-	"private_key":    {},
-	"privatekey":     {},
-	"priv_key":       {},
-	"privkey":        {},
-	"client_secret":  {},
-	"clientsecret":   {},
-	"credentials":    {},
-	"credential":     {},
-	"card_number":    {},
-	"cardnumber":     {},
-	"cvv":            {},
-	"ssn":            {},
+	"password":      {},
+	"passwd":        {},
+	"pass_word":     {},
+	"password_hash": {},
+	"passwordhash":  {},
+	"secret":        {},
+	"token":         {},
+	"session_id":    {},
+	"sessionid":     {},
+	"session":       {},
+	"authorization": {},
+	"auth":          {},
+	"auth_code":     {},
+	"authcode":      {},
+	"cookie":        {},
+	"set_cookie":    {},
+	"setcookie":     {},
+	"api_key":       {},
+	"apikey":        {},
+	"access_token":  {},
+	"accesstoken":   {},
+	"refresh_token": {},
+	"refreshtoken":  {},
+	"auth_token":    {},
+	"authtoken":     {},
+	"jwt_token":     {},
+	"jwttoken":      {},
+	"id_token":      {},
+	"idtoken":       {},
+	"csrf_token":    {},
+	"csrftoken":     {},
+	"xsrf_token":    {},
+	"xsrftoken":     {},
+	"private_key":   {},
+	"privatekey":    {},
+	"priv_key":      {},
+	"privkey":       {},
+	"client_secret": {},
+	"clientsecret":  {},
+	"credentials":   {},
+	"credential":    {},
+	"card_number":   {},
+	"cardnumber":    {},
+	"cvv":           {},
+	"ssn":           {},
 }
 
 // sensitiveSuffixes contains suffixes indicating sensitive attributes.
@@ -312,39 +310,6 @@ func SanitizeString(val string) string {
 	return val
 }
 
-// SanitizeSpanAttribute sanitizes an OpenTelemetry span attribute.
-func SanitizeSpanAttribute(kv attribute.KeyValue) attribute.KeyValue {
-	kStr := string(kv.Key)
-	if IsSensitiveKey(kStr) || IsSensitiveHeader(kStr) || strings.HasPrefix(kStr, "http.request.header.") {
-		// Check sub-header key if prefixed
-		headerName := strings.TrimPrefix(kStr, "http.request.header.")
-		if IsSensitiveHeader(headerName) || IsSensitiveKey(kStr) || IsSensitiveKey(headerName) {
-			return attribute.String(kStr, RedactedValue)
-		}
-	}
-
-	if kv.Value.Type() == attribute.STRING {
-		strVal := kv.Value.AsString()
-		if sanitized := SanitizeString(strVal); sanitized != strVal {
-			return attribute.String(kStr, sanitized)
-		}
-	}
-
-	return kv
-}
-
-// SanitizeSpanAttributes sanitizes a slice of OpenTelemetry span attributes.
-func SanitizeSpanAttributes(attrs []attribute.KeyValue) []attribute.KeyValue {
-	if attrs == nil {
-		return nil
-	}
-	sanitized := make([]attribute.KeyValue, len(attrs))
-	for i, kv := range attrs {
-		sanitized[i] = SanitizeSpanAttribute(kv)
-	}
-	return sanitized
-}
-
 // SanitizeAttr masks sensitive slog.Attr keys and nested group attributes.
 func SanitizeAttr(attr slog.Attr) slog.Attr {
 	return RedactSensitiveSlogAttrs(nil, attr)
@@ -364,11 +329,16 @@ func SanitizeAttrs(attrs []slog.Attr) []slog.Attr {
 
 // RedactSensitiveSlogAttrs is a slog.HandlerOptions ReplaceAttr function that masks sensitive attributes.
 func RedactSensitiveSlogAttrs(groups []string, a slog.Attr) slog.Attr {
-	if a.Key == "" {
-		return a
+	if IsSensitiveKey(a.Key) {
+		return slog.String(a.Key, RedactedValue)
 	}
 
 	val := a.Value.Resolve()
+	for _, group := range groups {
+		if IsSensitiveKey(group) {
+			return slog.String(a.Key, RedactedValue)
+		}
+	}
 
 	// Handle nested attribute groups (including groups resolved from slog.LogValuer)
 	if val.Kind() == slog.KindGroup {
@@ -381,11 +351,6 @@ func RedactSensitiveSlogAttrs(groups []string, a slog.Attr) slog.Attr {
 			Key:   a.Key,
 			Value: slog.GroupValue(sanitized...),
 		}
-	}
-
-	// Check if the key is sensitive
-	if IsSensitiveKey(a.Key) {
-		return slog.String(a.Key, RedactedValue)
 	}
 
 	// Check if the string value contains sensitive authentication prefixes
@@ -404,7 +369,8 @@ func RedactSensitiveSlogAttrs(groups []string, a slog.Attr) slog.Attr {
 
 // SanitizingHandler wraps an existing slog.Handler and redacts sensitive attributes.
 type SanitizingHandler struct {
-	next slog.Handler
+	next   slog.Handler
+	groups []string
 }
 
 // NewSanitizingHandler creates a new SanitizingHandler wrapping next.
@@ -421,7 +387,7 @@ func (h *SanitizingHandler) Enabled(ctx context.Context, level slog.Level) bool 
 func (h *SanitizingHandler) Handle(ctx context.Context, r slog.Record) error {
 	newRecord := slog.NewRecord(r.Time, r.Level, r.Message, r.PC)
 	r.Attrs(func(a slog.Attr) bool {
-		newRecord.AddAttrs(RedactSensitiveSlogAttrs(nil, a))
+		newRecord.AddAttrs(RedactSensitiveSlogAttrs(h.groups, a))
 		return true
 	})
 	if err := h.next.Handle(ctx, newRecord); err != nil {
@@ -434,12 +400,13 @@ func (h *SanitizingHandler) Handle(ctx context.Context, r slog.Record) error {
 func (h *SanitizingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	sanitized := make([]slog.Attr, len(attrs))
 	for i, a := range attrs {
-		sanitized[i] = RedactSensitiveSlogAttrs(nil, a)
+		sanitized[i] = RedactSensitiveSlogAttrs(h.groups, a)
 	}
-	return &SanitizingHandler{next: h.next.WithAttrs(sanitized)}
+	return &SanitizingHandler{next: h.next.WithAttrs(sanitized), groups: h.groups}
 }
 
 // WithGroup implements slog.Handler.
 func (h *SanitizingHandler) WithGroup(name string) slog.Handler {
-	return &SanitizingHandler{next: h.next.WithGroup(name)}
+	groups := append(append([]string(nil), h.groups...), name)
+	return &SanitizingHandler{next: h.next.WithGroup(name), groups: groups}
 }

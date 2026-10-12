@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,11 +31,6 @@ func NewPostgresDB(dsn string) (*pgxpool.Pool, error) {
 	config.MaxConnLifetime = maxConnLifetime
 	config.MaxConnIdleTime = maxConnIdleTime
 	config.HealthCheckPeriod = healthCheckPeriod
-	// Instrument all SQL queries with OpenTelemetry spans.
-	// WithDisableSQLStatementInAttributes omits the SQL statement text from span
-	// attributes to avoid accidental exposure of sensitive parameter values.
-	config.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithDisableSQLStatementInAttributes())
-
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create postgres pool: %w", err)

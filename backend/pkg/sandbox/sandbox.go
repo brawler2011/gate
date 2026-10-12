@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/booklet"
-	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	pb "github.com/criyle/go-judge/pb"
 )
 
@@ -379,8 +378,6 @@ func (s *Sandbox) Test(ctx context.Context, sol Executable, langKey string, inpu
 	res := resp.GetResults()[0]
 	statusStr := statusToString(res.GetStatus())
 
-	telemetry.RecordSandboxExecution(ctx, langKey, safeInt64(res.GetMemory()), safeDuration(res.GetTime()).Milliseconds(), 0)
-
 	return &RunResult{
 		Status:     statusStr,
 		ExitStatus: int(res.GetExitStatus()),
@@ -678,4 +675,3 @@ func (s *Sandbox) CompilePDF(ctx context.Context, texSource string) ([]byte, err
 
 	return pdfBytes, nil
 }
-

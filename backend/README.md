@@ -152,3 +152,11 @@ Connect to `GET /ws/submissions` on the main backend server. Supported query par
 | `since` | Sequence number to replay history from |
 
 The server maintains a 10,000-event ring buffer, so clients can catch up on missed events after reconnecting.
+
+## Diagnostic logging
+
+The backend writes sanitized JSON through `slog` to stdout in every environment.
+There are no Gate OTel exporters or metrics providers. HTTP requests use safe route
+patterns and `X-Request-ID`; persisted outbox/NATS headers correlate async judging.
+See the [logging runbook](../docs/logging-runbook.md) for fields, queue wait and
+judging duration semantics, legacy metadata behavior and dependency boundaries.

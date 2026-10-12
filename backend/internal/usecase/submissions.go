@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 )
 
 type SubmissionsUseCase struct {
@@ -77,6 +77,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 			if err == nil && uc.contestsUC != nil {
 				_ = uc.contestsUC.ProcessSubmissionResult(ctx, &submission)
 			}
+			slog.InfoContext(ctx, "submission_accepted", "event", "submission_accepted", "submission_id", id, "request_id", requestid.Get(ctx), "state", models.Disqualified)
 			return id, nil
 		}
 	}
@@ -110,6 +111,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 		return uuid.Nil, err
 	}
 
+	slog.InfoContext(ctx, "submission_accepted", "event", "submission_accepted", "submission_id", id, "request_id", requestid.Get(ctx))
 	return id, nil
 }
 
@@ -168,10 +170,8 @@ func newOutboxEventParams(ctx context.Context, submission models.Submission) (*m
 		return nil, fmt.Errorf("failed to marshal: %w", err)
 	}
 
-	// Inject the current W3C trace context into outbox headers so the
-	// Outbox Worker can continue the distributed trace asynchronously.
 	headers := make(map[string]string)
-	otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(headers))
+	headers[requestid.Header] = requestid.Get(ctx)
 
 	eventParams := &models.CreateOutboxEventParams{
 		Id:          uuid.New(),
@@ -227,6 +227,7 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 	}
 
 	var rejudgedCount int
+	var rejudgedIDs []uuid.UUID
 
 	err = uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		txSubRepo := uc.submissionsRepo.WithTx(tx)
@@ -254,6 +255,7 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 		}
 
 		rejudgedCount = len(resetIDs)
+		rejudgedIDs = resetIDs
 		return nil
 	})
 
@@ -261,6 +263,8 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 		return 0, err
 	}
 
+	for _, id := range rejudgedIDs {
+		slog.InfoContext(ctx, "submission_rejudge_requested", "event", "submission_rejudge_requested", "submission_id", id, "request_id", requestid.Get(ctx))
+	}
 	return rejudgedCount, nil
 }
-

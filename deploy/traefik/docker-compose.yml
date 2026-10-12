@@ -1,5 +1,10 @@
 services:
   traefik:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     image: traefik:v3.7
     container_name: traefik-global
     restart: unless-stopped

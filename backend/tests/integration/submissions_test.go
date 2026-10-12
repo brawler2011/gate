@@ -89,6 +89,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
 		submissionID = resp.ID
+		s.checkDiagnosticDelivery(submissionID, admin.Id, contestOrg.Login)
 	})
 
 	// 4. Get Submission

@@ -244,7 +244,12 @@ func (s *IntegrationTestSuite) initApp() {
 	s.Require().NoError(err)
 
 	s.transport = &testTransport{}
-	s.handler = middleware.RequestLoggerMiddleware(logger)(
+	s.handler = middleware.RequestLoggerMiddleware(logger, func(r *http.Request) string {
+		if route, ok := server.FindRoute(r.Method, r.URL.Path); ok {
+			return route.PathPattern()
+		}
+		return "unmatched"
+	})(
 		middleware.AuthMiddleware(authUC)(
 			middleware.UsersMiddleware(usersUC)(
 				s.testMiddleware(

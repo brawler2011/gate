@@ -17,7 +17,7 @@ import (
 )
 
 // TestOutboxHeaders_ComplexSerialization stress-tests serialization/deserialization
-// with complex header inputs: W3C traceparent/tracestate, UTF-8, special characters,
+// with complex header inputs: W3C X-Request-ID/custom-header, UTF-8, special characters,
 // empty keys/values, large maps, nil vs empty map.
 func TestOutboxHeaders_ComplexSerialization(t *testing.T) {
 	testID := uuid.New()
@@ -32,12 +32,12 @@ func TestOutboxHeaders_ComplexSerialization(t *testing.T) {
 		{
 			name: "W3C Trace Context headers",
 			inputHeaders: map[string]string{
-				"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-				"tracestate":  "rojo=1,congo=t61rcWkgMzE=,vendorname=opaqueValue",
+				"X-Request-ID":  "request-123",
+				"custom-header": "rojo=1,congo=t61rcWkgMzE=,vendorname=opaqueValue",
 			},
 			expectedHeaders: map[string]string{
-				"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-				"tracestate":  "rojo=1,congo=t61rcWkgMzE=,vendorname=opaqueValue",
+				"X-Request-ID":  "request-123",
+				"custom-header": "rojo=1,congo=t61rcWkgMzE=,vendorname=opaqueValue",
 			},
 		},
 		{

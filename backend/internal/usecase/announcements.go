@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 )
 
 type AnnouncementsUseCase struct {
@@ -70,7 +69,7 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *m
 		}
 
 		headers := make(map[string]string)
-		otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(headers))
+		headers[requestid.Header] = requestid.Get(ctx)
 
 		outboxEvent := &models.CreateOutboxEventParams{
 			Id:          uuid.New(),
@@ -114,7 +113,7 @@ func (uc *AnnouncementsUseCase) DeleteAnnouncement(ctx context.Context, id, cont
 		}
 
 		headers := make(map[string]string)
-		otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(headers))
+		headers[requestid.Header] = requestid.Get(ctx)
 
 		outboxEvent := &models.CreateOutboxEventParams{
 			Id:          uuid.New(),

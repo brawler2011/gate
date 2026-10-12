@@ -14,9 +14,10 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/worker/judge"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/queuecontext"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
-	"github.com/brawler2011/gate/backend/pkg/telemetry"
 	"github.com/google/uuid"
 )
 
@@ -129,6 +130,10 @@ func NewJudgeUseCase(
 }
 
 func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.UUID) error {
+	logger := uc.logger.With("submission_id", submissionID, "request_id", requestid.Get(ctx))
+	if meta := queuecontext.Get(ctx); meta.EventID != uuid.Nil {
+		logger = logger.With("event_id", meta.EventID)
+	}
 	submission, err := uc.submissionsRepo.GetSubmission(ctx, submissionID)
 	if err != nil {
 		return fmt.Errorf("failed to get submission: %w", err)
@@ -147,7 +152,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	}
 
 	if err := uc.eventPublisher.PublishQueued(ctx, submissionID, meta); err != nil {
-		uc.logger.Error("failed to publish queued event", "error", err)
+		logger.Error("failed to publish queued event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
 	}
 
 	if submission.ProblemID == nil {
@@ -163,7 +168,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		if err == nil && contestProb.PackageID != uuid.Nil {
 			targetPkg, err = uc.packagesRepo.GetPackageByID(ctx, contestProb.PackageID)
 			if err != nil {
-				uc.logger.Warn("failed to load contest problem package, falling back to ready package", "error", err)
+				logger.Warn("failed to load contest problem package, falling back to ready package", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
 			}
 		}
 	}
@@ -185,7 +190,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	defer pkg.Cleanup()
 
 	if err := uc.eventPublisher.PublishCompilingStarted(ctx, submissionID, meta); err != nil {
-		uc.logger.Error("failed to publish compiling started event", "error", err)
+		logger.Error("failed to publish compiling started event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
 	}
 
 	compiledComponents, err := uc.compileComponents(ctx, pkg.Format, *submission.ProblemID)
@@ -231,7 +236,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	submission.State = verdict.State
 	if uc.contestsUC != nil {
 		if procErr := uc.contestsUC.ProcessSubmissionResult(ctx, &submission); procErr != nil {
-			uc.logger.Error("failed to process contest submission result", "error", procErr)
+			logger.Error("failed to process contest submission result", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", procErr))
 		}
 	}
 
@@ -246,15 +251,10 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		failedTest,
 		meta,
 	); err != nil {
-		uc.logger.Error("failed to publish completed event", "error", err)
+		logger.Error("failed to publish completed event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
 	}
 
-	verdictStr := stateToVerdictString(verdict.State)
-	langStr := languageToString(submission.Language)
-	telemetry.RecordJudgeSubmission(ctx, submission.ContestID.String(), submission.ProblemID.String(), langStr, verdictStr)
-
-	uc.logger.Info("judging completed",
-		"submission_id", submissionID,
+	logger.Info("submission_result", "event", "submission_result",
 		"verdict", verdict.State,
 		"score", verdict.Score,
 		"time", verdict.MaxTime,
@@ -266,7 +266,11 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 }
 
 func (uc *JudgeUseCase) markInternalError(ctx context.Context, submissionID uuid.UUID, penalty int32, meta models.SubmissionEventMeta, err error) {
-	uc.logger.Error("judging failed with internal error", "submission_id", submissionID, "error", err)
+	logger := uc.logger.With("submission_id", submissionID, "request_id", requestid.Get(ctx))
+	if meta := queuecontext.Get(ctx); meta.EventID != uuid.Nil {
+		logger = logger.With("event_id", meta.EventID)
+	}
+	logger.Error("judging failed with internal error", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
 	updateErr := uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
 		State:      models.GotIE,
 		Score:      0,
@@ -274,47 +278,11 @@ func (uc *JudgeUseCase) markInternalError(ctx context.Context, submissionID uuid
 		MemoryStat: 0,
 	})
 	if updateErr != nil {
-		uc.logger.Error("failed to update submission with error", "error", updateErr)
+		logger.Error("failed to update submission with error", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", updateErr))
 	}
 
 	if pubErr := uc.eventPublisher.PublishCompleted(ctx, submissionID, models.GotIE, 0, 0, 0, penalty, nil, meta); pubErr != nil {
-		uc.logger.Error("failed to publish completed event", "error", pubErr)
-	}
-}
-
-func stateToVerdictString(s models.State) string {
-	switch s {
-	case models.Accepted:
-		return "Accepted"
-	case models.GotWA:
-		return "Wrong Answer"
-	case models.GotTL:
-		return "Time Limit Exceeded"
-	case models.GotML:
-		return "Memory Limit Exceeded"
-	case models.GotRE:
-		return "Runtime Error"
-	case models.GotPE:
-		return "Presentation Error"
-	case models.GotCE:
-		return "Compilation Error"
-	case models.GotIE:
-		return "Internal Error"
-	default:
-		return "Unknown"
-	}
-}
-
-func languageToString(l models.LanguageName) string {
-	switch l {
-	case models.Golang:
-		return "Go"
-	case models.Cpp:
-		return "C++"
-	case models.Python:
-		return "Python"
-	default:
-		return fmt.Sprintf("Language(%d)", l)
+		logger.Error("failed to publish completed event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", pubErr))
 	}
 }
 

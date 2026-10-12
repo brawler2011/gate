@@ -4,19 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 )
 
 type ClarificationsUseCase struct {
 	clarificationsRepo interfaces.ClarificationsRepo
-	announcementsRepo   interfaces.AnnouncementsRepo
+	announcementsRepo  interfaces.AnnouncementsRepo
 	contestsUC         interfaces.ContestsUC
 	outboxRepo         interfaces.OutboxRepo
 	transactor         interfaces.Transactor
@@ -31,7 +30,7 @@ func NewClarificationsUseCase(
 ) *ClarificationsUseCase {
 	return &ClarificationsUseCase{
 		clarificationsRepo: clarificationsRepo,
-		announcementsRepo:   announcementsRepo,
+		announcementsRepo:  announcementsRepo,
 		contestsUC:         contestsUC,
 		outboxRepo:         outboxRepo,
 		transactor:         transactor,
@@ -80,7 +79,7 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 		}
 
 		headers := make(map[string]string)
-		otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(headers))
+		headers[requestid.Header] = requestid.Get(ctx)
 
 		outboxEvent := &models.CreateOutboxEventParams{
 			Id:          uuid.New(),
@@ -156,7 +155,7 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 		}
 
 		headers := make(map[string]string)
-		otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(headers))
+		headers[requestid.Header] = requestid.Get(ctx)
 
 		outboxEvent := &models.CreateOutboxEventParams{
 			Id:          uuid.New(),
@@ -211,7 +210,7 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 			}
 
 			annHeaders := make(map[string]string)
-			otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(annHeaders))
+			annHeaders[requestid.Header] = requestid.Get(ctx)
 
 			annOutboxEvent := &models.CreateOutboxEventParams{
 				Id:          uuid.New(),

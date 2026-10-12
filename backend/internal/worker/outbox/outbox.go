@@ -2,14 +2,14 @@ package outbox
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/pkg/telemetry"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
+	"github.com/brawler2011/gate/backend/pkg/queuecontext"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 )
 
 const (
@@ -64,11 +64,9 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 func (w *OutboxWorker) processBatch(ctx context.Context) {
 	events, err := w.outboxRepo.PickEvents(ctx, batchSize, eventTimeoutSec)
 	if err != nil {
-		slog.Error("failed to pick events", "error", err)
+		slog.Error("failed to pick events", "operation", "outbox_pick", "error_type", fmt.Sprintf("%T", err))
 		return
 	}
-
-	telemetry.RecordOutboxPending(int64(len(events)))
 
 	for _, event := range events {
 		w.processEvent(ctx, &event)
@@ -79,37 +77,33 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *models.OutboxEve
 	handlerCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), eventTimeoutSec*time.Second)
 	defer cancel()
 
-	telemetry.RecordOutboxLag(time.Since(event.CreatedAt).Seconds())
+	handlerCtx = requestid.With(handlerCtx, event.Headers[requestid.Header])
+	handlerCtx = queuecontext.With(handlerCtx, queuecontext.Metadata{EventID: event.Id, QueuedAt: event.CreatedAt})
+	logger := slog.Default().With("event_id", event.Id, "aggregate_id", event.AggregateID, "request_id", requestid.Get(handlerCtx))
 
-	// Extract the W3C trace context stored in event.Headers so that the
-	// Outbox Worker continues the distributed trace from the original HTTP
-	// request that created this outbox event.
-	if len(event.Headers) > 0 {
-		handlerCtx = otel.GetTextMapPropagator().Extract(handlerCtx, propagation.MapCarrier(event.Headers))
+	if event.EventType == models.OutboxEventSubmissionCreated {
+		logger = logger.With("submission_id", event.AggregateID)
 	}
-
 	err := w.dispatcher.Dispatch(handlerCtx, event.EventType, event.Payload)
 	if err != nil {
-		telemetry.RecordOutboxFailed(handlerCtx, 1)
-		slog.Error("failed to dispatch event", "event_id", event.Id, "error", err)
+		logger.Error("failed to dispatch event", "operation", "outbox_dispatch", "error_type", fmt.Sprintf("%T", err))
 		if markErr := w.outboxRepo.MarkAsFailed(handlerCtx, event.Id, err.Error()); markErr != nil {
-			slog.Error("failed to mark event as failed", "event_id", event.Id, "error", markErr)
+			logger.Error("failed to mark event as failed", "operation", "outbox_mark_failed", "error_type", fmt.Sprintf("%T", markErr))
 		}
 		return
 	}
 
-	telemetry.RecordOutboxDispatched(handlerCtx, 1)
 	if markErr := w.outboxRepo.MarkAsCompleted(handlerCtx, event.Id); markErr != nil {
-		slog.Error("failed to mark event as completed", "event_id", event.Id, "error", markErr)
+		logger.Error("failed to mark event as completed", "operation", "outbox_mark_completed", "error_type", fmt.Sprintf("%T", markErr))
 	}
 }
 
 func (w *OutboxWorker) runMaintenance(ctx context.Context) {
 	if err := w.outboxRepo.ResetFailedToPending(ctx, maxRetries, retryDelaySec); err != nil {
-		slog.Error("failed to reset failed events", "error", err)
+		slog.Error("failed to reset failed events", "operation", "outbox_reset", "error_type", fmt.Sprintf("%T", err))
 	}
 
 	if err := w.outboxRepo.DeleteOldEvents(ctx, retentionDays); err != nil {
-		slog.Error("failed to delete old events", "error", err)
+		slog.Error("failed to delete old events", "operation", "outbox_delete_old", "error_type", fmt.Sprintf("%T", err))
 	}
 }
