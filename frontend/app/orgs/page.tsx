@@ -10,6 +10,8 @@ import type {ReactNode} from "react";
 
 export const metadata: Metadata = {title: 'Организации'};
 
+export const dynamic: string = "force-dynamic";
+
 const OrgsPage = async (): Promise<ReactNode> => {
   const [, me] = await api.getMe();
   const user = me?.user ?? null;

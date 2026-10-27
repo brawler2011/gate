@@ -14,19 +14,10 @@ import classes from "./styles.module.css";
 import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-export const revalidate: number = 600; // 10 minutes
+export const dynamic: string = "force-dynamic";
 
 type Params = {
   id: string
-};
-
-export const generateStaticParams = async (): Promise<Params[]> => {
-  const [error, data] = await publicApi.listPosts({page: 1, pageSize: 50});
-  if (error) {
-    return [];
-  }
-
-  return data.posts.map((post) => ({id: post.id}));
 };
 
 type Props = {
