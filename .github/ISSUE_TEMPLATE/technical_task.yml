@@ -1,0 +1,35 @@
+name: Technical task
+description: Define scoped engineering work and verifiable outcomes
+labels: [technical-task]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Explain the current behavior, problem, and relevant constraints.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Define the work and its boundaries. Record unresolved design questions explicitly.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use a Markdown checklist of observable, testable outcomes.
+      placeholder: "- [ ] A specific result is verified by a named check or scenario."
+    validations:
+      required: true
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation notes
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Link related issues, PRs, specifications, and evidence.
