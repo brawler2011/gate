@@ -22,6 +22,7 @@ tasks:
   precommit:
     desc: "Run pre-commit checks across all components"
     cmds:
+      - task: contracts:lint
       - task: verify-codegen
       - task: tools:test
       - task: precommit:be

@@ -1,0 +1,3 @@
+# Keep recommended correctness checks and advisory documentation/style warnings.
+# The task fails only on errors; warnings do not require unrelated API changes.
+extends: [[vacuum:oas, recommended]]

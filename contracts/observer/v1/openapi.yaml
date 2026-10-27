@@ -1,5 +1,6 @@
 openapi: 3.0.3
 info:
+  description: Observer service API for submission status and test progress updates.
   title: ObserverService API
   version: 0.0.1
 paths:
