@@ -7,8 +7,8 @@
 !.github/workflows/
 !.github/workflows/**
 !.github/*.md
-!.tasks/
-!.tasks/**
+!.github/ISSUE_TEMPLATE/
+!.github/ISSUE_TEMPLATE/**
 *.log
 bin/
 poc

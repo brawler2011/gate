@@ -109,23 +109,12 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 ---
 
-## Task Specification Guidelines (.tasks/)
+## Issue Guidelines
 
-When managing or working with tasks in `.tasks/`:
-
-1. **Task Lifecycle: `draft` -> `todo` -> `done`**
-   - **Closed state machine**: Tasks have only three valid states: `draft`, `todo`, `done`.
-   - `draft`: Task definition is being formulated or under discussion. Not ready for execution.
-   - `todo`: Task specification is complete with clear context and criteria. Ready for development.
-   - `done`: All acceptance criteria are fulfilled and verified.
-   - **Execution tracking**: Tasks are static specifications, not an issue tracker. Work-in-progress and review states are tracked exclusively via Git branches and Pull Requests.
-
-2. **Definition of Done Enforcement**
-   - When marking `status: done`, ALL items in `## Acceptance Criteria` MUST be marked as completed (`- [x]`).
-   - If any criteria remain unchecked (`- [ ]`), validation will fail.
-
-3. **Validation and Pre-Commit**
-   - Always ensure modified tasks pass `task tasks:validate` before committing.
+- GitHub Issues are the only task specification store. All issues, including those created by agents, MUST follow the appropriate form in `.github/ISSUE_TEMPLATE`.
+- Use `bug`, `enhancement`, or `technical-task` as appropriate. The `backward-compatible` label requires preserving compatibility.
+- Project statuses are Backlog → Ready → In progress → Review → Done. New proposals and unresolved design questions belong in Backlog; Ready requires defined scope and verifiable acceptance criteria.
+- Update In progress and Review explicitly. PR creation or closure does not complete an issue. Closed issues become Done; reopened issues return to Backlog. Preserve the reason when closing as not planned.
 
 ## Git & Commit Guidelines
 
@@ -147,18 +136,20 @@ When managing or working with tasks in `.tasks/`:
 
 ## Pull Request & Agent Workflow Guidelines
 
-1. **Task Association & Branching**
-   - Every PR MUST be bound to a task in `.tasks/` (e.g. branch `task/TASK-002-slug` or flag `-task TASK-002`).
-   - Branch naming convention: `task/TASK-NNN-<short-slug>`.
+1. **Issue Association & Branching**
+   - Every PR MUST reference a GitHub issue. Use `Closes #N` when the PR completes the issue's scope and `Refs #N` for partial work.
+   - Branch naming convention: `issue/<number>-<slug>`.
    - Never commit or open PRs directly from `main`.
 
-2. **Automated PR Creation (`task pr:create`)**
-   - Always create pull requests using `task pr:create` or ensure compliance with `.github/pull_request_template.md`.
-   - `task pr:create` enforces `task precommit`, validates Conventional Commits title (<= 65 chars), fills the PR template with task metadata, pushes the branch, and creates the PR via GitHub CLI (`gh`).
+2. **PR Creation**
+   - Run `task precommit` successfully before creating the PR.
+   - Validate the Conventional Commits title (<= 65 chars) with `task commit:validate -- --title '<title>'`.
+   - Follow `.github/pull_request_template.md`, recording only checks actually performed and their results.
+   - Push the issue branch and create the PR with `gh pr create --body-file <path>`.
 
 3. **Adversarial Code Review Workflow (Reviewer Agent)**
    - **Context Isolation**: Code review MUST be performed in an isolated context/session (or via an isolated reviewer subagent). Never review code in the same saturated session that wrote it.
-   - **Reviewer Inputs**: Only task specification (`.tasks/TASK-XXX.md`), `git diff origin/main...HEAD`, and `AGENTS.md`.
+   - **Reviewer Inputs**: Only the issue description, `git diff origin/main...HEAD`, and `AGENTS.md`.
    - **Reviewer Audit Focus**:
      1. Acceptance Criteria: All items genuinely verified and tested.
      2. `AGENTS.md` compliance: `slog` only, no env fallback values, no server actions, untouched `next.config.mjs`, no symlinks.
@@ -179,5 +170,5 @@ When managing or working with tasks in `.tasks/`:
 
 1. **Breaking Changes (Default: Enabled)**
    - By default, tasks **ARE PERMITTED** to introduce breaking changes (API signature updates, contract modifications, DB schema changes) without maintaining backward compatibility layers.
-   - If backward compatibility is required, the task will explicitly specify the **`BACKWARD COMPATIBLE`** tag.
+   - If backward compatibility is required, the task will explicitly specify the **`backward-compatible`** issue label.
 

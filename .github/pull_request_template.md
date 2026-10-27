@@ -1,5 +1,5 @@
-## Task
-Resolves / Task: <!-- e.g. .tasks/TASK-002-pr-automation-and-review-flow.md -->
+## Issue
+<!-- Use Closes #N for complete delivery, or Refs #N for partial work. -->
 
 ## Description
 <!-- Concise summary of changes and non-obvious rationale. Keep focused. -->
@@ -23,5 +23,5 @@ Resolves / Task: <!-- e.g. .tasks/TASK-002-pr-automation-and-review-flow.md -->
 - [ ] Backend (if applicable): `slog` used exclusively for logging
 - [ ] No symbolic links (symlinks) created
 
-## Verification Plan
-<!-- Outline tests run and verification results (e.g., `task precommit`, unit tests) -->
+## Verification
+<!-- List checks actually run and their results, including task precommit. State any remaining limitations. -->

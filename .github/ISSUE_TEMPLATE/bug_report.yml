@@ -1,0 +1,40 @@
+name: Bug report
+description: Report incorrect behavior in Gate
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the problem and its impact.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: List the steps, or describe the observed scenario if exact steps are not yet known.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Version or commit, browser, operating system, and deployment details if relevant.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Relevant logs, screenshots, or references. Remove secrets before submitting.
