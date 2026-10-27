@@ -14,6 +14,7 @@ import {IconPaperclip, IconTrash} from "@tabler/icons-react";
 import dynamic from "next/dynamic";
 import React, {useRef, useState, useTransition, type ReactNode} from "react";
 
+import {detectSubmissionLanguage} from "@/lib/detectSubmissionLanguage";
 import {highlightCode} from "@/lib/highlightCode";
 import {APP_COLORS} from "@/lib/theme/colors";
 
@@ -33,13 +34,7 @@ const Editor = dynamic(
 
 const TypedEditor = Editor as React.ComponentType<CodeEditorProps>;
 
-const languages = ["python", "cpp", "golang"];
-
-const languageToExtension: Record<string, string> = {
-  python: ".py",
-  cpp: ".cpp",
-  golang: ".go",
-};
+const languages = ["auto", "python", "cpp", "golang"];
 
 type Props = {
   onSubmit: (submission: FormData, language: string) => Promise<number | null>;
@@ -54,6 +49,7 @@ const CreateSubmissionForm = ({
   large = false,
   disabled = false,
 }: Props): ReactNode => {
+  const [automaticLanguage, setAutomaticLanguage] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -71,9 +67,48 @@ const CreateSubmissionForm = ({
     validate: {
       code: (value) => (!value && !file ? "Code or file is required" : null),
       language: (value) =>
-        languages.includes(value) ? null : "Invalid language",
+        languages.includes(value) && value !== "auto"
+          ? null : "Не удалось определить язык. Выберите его вручную.",
     },
   });
+
+  const {setFieldValue} = form;
+  React.useEffect(() => {
+    if (!automaticLanguage) {
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const source = file ? await file.slice(0, 32768).text() : form.values.code;
+        if (!cancelled) {
+          setFieldValue("language", detectSubmissionLanguage(source) ?? "auto");
+        }
+      } catch {
+        if (!cancelled) {
+          setFieldValue("language", "auto");
+        }
+      }
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [automaticLanguage, file, form.values.code, form.values.language, setFieldValue]);
+
+  const setCode = (code: string) => {
+    form.setFieldValue("code", code);
+    if (automaticLanguage) {
+      form.setFieldValue("language", "auto");
+    }
+  };
+
+  const selectLanguage = (language: string | null) => {
+    if (language) {
+      setAutomaticLanguage(language === "auto");
+      form.setFieldValue("language", language);
+    }
+  };
 
   const [isPending, startTransition] = useTransition();
 
@@ -91,6 +126,7 @@ const CreateSubmissionForm = ({
           const data = await onSubmit(formData, values.language);
           if (data) {
             form.reset();
+            setAutomaticLanguage(true);
             setFile(null);
             if (fileInputRef.current) {
               fileInputRef.current.value = "";
@@ -110,7 +146,7 @@ const CreateSubmissionForm = ({
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      form.setFieldValue("code", "");
+      setCode("");
     }
   };
 
@@ -124,7 +160,7 @@ const CreateSubmissionForm = ({
 
     const textData = event.dataTransfer.getData("text/plain");
     if (textData) {
-      form.setFieldValue("code", textData);
+      setCode(textData);
       setFile(null);
       return;
     }
@@ -132,7 +168,7 @@ const CreateSubmissionForm = ({
     const droppedFile = event.dataTransfer.files[0];
     if (droppedFile && /\.(py|cpp|go|txt)$/i.test(droppedFile.name)) {
       setFile(droppedFile);
-      form.setFieldValue("code", "");
+      setCode("");
     }
   };
 
@@ -171,7 +207,7 @@ const CreateSubmissionForm = ({
 
       // Insert tab character at cursor position
       const newValue = value.substring(0, start) + "\t" + value.substring(end);
-      form.setFieldValue("code", newValue);
+      setCode(newValue);
 
       // Set cursor position after the inserted tab
       setTimeout(() => {
@@ -194,10 +230,12 @@ const CreateSubmissionForm = ({
             {problemSelect || (
               <Select
                 data={languages}
+                aria-label="Язык программирования"
                 allowDeselect={false}
                 variant="subtle"
                 classNames={{input: classes.languageSelectInput}}
                 {...form.getInputProps("language")}
+                onChange={selectLanguage}
                 style={{
                   width: `${(form.values.language?.length || 6) + 6}ch`,
                 }}
@@ -209,10 +247,12 @@ const CreateSubmissionForm = ({
             {problemSelect && (
               <Select
                 data={languages}
+                aria-label="Язык программирования"
                 allowDeselect={false}
                 variant="subtle"
                 classNames={{input: classes.languageSelectInput}}
                 {...form.getInputProps("language")}
+                onChange={selectLanguage}
                 style={{
                   width: `${(form.values.language?.length || 6) + 6}ch`,
                 }}
@@ -238,7 +278,7 @@ const CreateSubmissionForm = ({
                 hidden
                 ref={fileInputRef}
                 onChange={handleFileSelect}
-                accept={languageToExtension[form.values.language]}
+                accept=".py,.cpp,.go,.txt"
                 disabled={disabled}
               />
             </Button>
@@ -279,9 +319,7 @@ const CreateSubmissionForm = ({
               {mounted && (
                 <TypedEditor
                   value={form.values.code}
-                  onValueChange={(code: string) =>
-                    form.setFieldValue("code", code)
-                  }
+                  onValueChange={setCode}
                   highlight={(code: string) =>
                     highlightCode(code, form.values.language)
                   }
