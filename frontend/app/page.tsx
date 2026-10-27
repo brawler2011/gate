@@ -23,6 +23,8 @@ export const metadata: Metadata = {
   title: "Главная",
 };
 
+export const dynamic: string = "force-dynamic";
+
 const Page = async (): Promise<ReactNode> => {
   const [, me] = await api.getMe();
   const authenticated = Boolean(me?.user);

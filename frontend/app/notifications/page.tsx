@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   title: "Уведомления",
 };
 
+export const dynamic: string = "force-dynamic";
+
 const NotificationsPage = async (): Promise<ReactNode> => {
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
