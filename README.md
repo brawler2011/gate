@@ -19,7 +19,7 @@ Use the Bug report, Feature request, or Technical task form, including for issue
 created by agents. Apply `backward-compatible` when compatibility is required.
 New proposals and unresolved design questions start in Backlog; Ready requires
 defined scope and verifiable acceptance criteria. Update In progress and Review
-explicitly. Closed issues appear as Done in History; reopened issues return to
+explicitly. Closed issues appear as Done in History. When reopening an issue, move it to
 Backlog. PR events alone do not complete an issue.
 
 Create a branch named `issue/<number>-<slug>`. Run `task precommit`, validate the

@@ -114,7 +114,7 @@ When working with the backend codebase, adhere strictly to the following rules:
 - GitHub Issues are the only task specification store. All issues, including those created by agents, MUST follow the appropriate form in `.github/ISSUE_TEMPLATE`.
 - Use `bug`, `enhancement`, or `technical-task` as appropriate. The `backward-compatible` label requires preserving compatibility.
 - Project statuses are Backlog → Ready → In progress → Review → Done. New proposals and unresolved design questions belong in Backlog; Ready requires defined scope and verifiable acceptance criteria.
-- Update In progress and Review explicitly. PR creation or closure does not complete an issue. Closed issues become Done; reopened issues return to Backlog. Preserve the reason when closing as not planned.
+- Update In progress and Review explicitly. PR creation or closure does not complete an issue. Closed issues become Done. When reopening an issue, move it to Backlog. Preserve the reason when closing as not planned.
 
 ## Git & Commit Guidelines
 
