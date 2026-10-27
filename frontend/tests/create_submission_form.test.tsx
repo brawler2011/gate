@@ -54,6 +54,16 @@ describe("submission language selection", () => {
     await waitFor(() => expect(language.value).toBe("python"));
   });
 
+  it("preserves manual selection of the already detected language", async () => {
+    const {language, drop, select} = renderForm();
+    drop("#include <iostream>\nint main() {}");
+    await waitFor(() => expect(language.value).toBe("cpp"));
+    select("cpp");
+    drop("package main\nfunc main() {}");
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(language.value).toBe("cpp");
+  });
+
   it("does not submit unresolved Auto or stale detection after replacing code", async () => {
     const {view, onSubmit, language, drop} = renderForm();
     drop("func main() {}");

@@ -235,7 +235,7 @@ const CreateSubmissionForm = ({
                 variant="subtle"
                 classNames={{input: classes.languageSelectInput}}
                 {...form.getInputProps("language")}
-                onChange={selectLanguage}
+                onOptionSubmit={selectLanguage}
                 style={{
                   width: `${(form.values.language?.length || 6) + 6}ch`,
                 }}
@@ -252,7 +252,7 @@ const CreateSubmissionForm = ({
                 variant="subtle"
                 classNames={{input: classes.languageSelectInput}}
                 {...form.getInputProps("language")}
-                onChange={selectLanguage}
+                onOptionSubmit={selectLanguage}
                 style={{
                   width: `${(form.values.language?.length || 6) + 6}ch`,
                 }}
