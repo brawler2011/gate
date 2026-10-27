@@ -1,5 +1,6 @@
 openapi: 3.0.3
 info:
+  description: Core service API for programming problems, contests, and submissions.
   title: CoreService API
   version: 0.0.1
 paths:
@@ -5739,7 +5740,8 @@ components:
         message_type:
           $ref: "#/components/schemas/WebSocketMessageType"
         submission:
-          $ref: "#/components/schemas/SubmissionsListItemModel"
+          allOf:
+            - $ref: "#/components/schemas/SubmissionsListItemModel"
           description: Full submission data (for submission_created/submission_updated events)
         message:
           type: string
