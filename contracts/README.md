@@ -18,3 +18,11 @@ task clean
 ```
 
 
+## OpenAPI validation
+
+Run `task contracts:lint` from the repository root. The same task runs in
+`task precommit` and the mandatory CI codegen job. Vacuum is pinned to v0.33.0
+in the contracts Taskfile; `vacuum.yaml` uses its recommended OpenAPI rules.
+Correctness errors block changes. Existing documentation and style warnings
+remain advisory, so API naming and documentation can be improved separately.
+The task shows error details and totals for all severities.
