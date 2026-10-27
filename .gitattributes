@@ -1,0 +1,6 @@
+backend/contracts/core/v1/** linguist-generated=true
+backend/contracts/observer/v1/observer.go linguist-generated=true
+frontend/contracts/core/v1/** linguist-generated=true
+frontend/contracts/observer/v1/** linguist-generated=true
+backend/internal/repository/pg/sqlc/** linguist-generated=true
+backend/tests/mocks/nats_mock.go linguist-generated=true

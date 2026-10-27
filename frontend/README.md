@@ -9,6 +9,5 @@ Ordinary Next.js server errors and safe API-operation console errors remain.
 `ApiResult.requestId` links backend error responses to JSON logs.
 `NEXT_TELEMETRY_DISABLED=1` in Docker disables Next.js's own telemetry.
 
-Local frontend stdout is terminal output, not Docker logs. See the
-[logging runbook](../docs/logging-runbook.md) for troubleshooting and production
-transition/rollback instructions. `next.config.mjs` and `next-env.d.ts` are protected.
+Local frontend stdout is terminal output, not Docker logs.
+`next.config.mjs` and `next-env.d.ts` are protected.
