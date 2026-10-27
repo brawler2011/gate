@@ -1,9 +1,18 @@
 import {NextResponse} from "next/server";
 
+import {env} from "@/lib/env";
+
 import type {NextRequest} from "next/server";
 
 export const proxy = (request: NextRequest): NextResponse => {
   const {pathname} = request.nextUrl;
+
+  if (pathname === "/api" || pathname.startsWith("/api/")) {
+    const backendUrl = new URL(env.getBackendApiUrl());
+    backendUrl.pathname = `${backendUrl.pathname.replace(/\/$/, "")}${pathname.slice(4)}`;
+    backendUrl.search = request.nextUrl.search;
+    return NextResponse.rewrite(backendUrl);
+  }
 
   // Block direct access to internal /user routes from browser
   if (pathname === "/user" || pathname.startsWith("/user/")) {
@@ -34,6 +43,7 @@ export const proxy = (request: NextRequest): NextResponse => {
 
 export const config = {
   matcher: [
+    "/api/:path*",
     /*
      * Match all request paths except for the ones starting with:
      * - api (API routes)
