@@ -22,6 +22,7 @@ type Props = {
   pagination: PaginationModel;
   org: OrganizationModel;
   isAuthenticated: boolean;
+  isMember: boolean;
   search?: string;
 };
 
@@ -30,6 +31,7 @@ export const OrgContestsTab = ({
   pagination,
   org,
   isAuthenticated,
+  isMember,
   search = "",
 }: Props): ReactNode => {
   const router = useRouter();
@@ -92,7 +94,7 @@ export const OrgContestsTab = ({
           style={{flex: 1}}
         />
         <Group gap="sm">
-          <OrgJoinButton org={org} isAuthenticated={isAuthenticated} />
+          <OrgJoinButton org={org} isAuthenticated={isAuthenticated} isMember={isMember} />
           {isAuthenticated && (
             <Button
               title="Создать новый контест"

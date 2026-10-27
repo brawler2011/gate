@@ -23,13 +23,13 @@ import type {OrganizationJoinRequestModel, OrganizationModel} from "@/contracts/
 type Props = {
   org: OrganizationModel;
   isAuthenticated: boolean;
-  isMember?: boolean;
+  isMember: boolean;
 };
 
 export const OrgJoinButton = ({
   org,
   isAuthenticated,
-  isMember = false,
+  isMember,
 }: Props): ReactNode => {
   const router = useRouter();
   const [pendingRequest, setPendingRequest] = useState<OrganizationJoinRequestModel | null>(null);
@@ -56,8 +56,12 @@ export const OrgJoinButton = ({
     checkPendingRequest();
   }, [checkPendingRequest]);
 
-  if (!isAuthenticated || isMember) {
+  if (!isAuthenticated) {
     return null;
+  }
+
+  if (isMember) {
+    return <Badge color="green" variant="light" size="lg">Участник организации</Badge>;
   }
 
   if (org.join_policy === "invite_only" && !pendingRequest) {
