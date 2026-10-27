@@ -144,7 +144,7 @@ type UsersListFilter struct {
 	Role     string
 }
 
-type UpdateUserParams struct {
+type UpdateUserInput struct {
 	Id              uuid.UUID
 	Username        *string
 	Role            *UserRole
@@ -154,7 +154,9 @@ type UpdateUserParams struct {
 	IsEmailVerified *bool
 }
 
-func (p UpdateUserParams) Validate() error {
+type UpdateUserParams = UpdateUserInput
+
+func (p UpdateUserInput) Validate() error {
 	errs := make([]error, 0)
 
 	if p.Username != nil {
@@ -168,16 +170,6 @@ func (p UpdateUserParams) Validate() error {
 	}
 
 	return errors.Join(errs...)
-}
-
-type UpdateUserInput struct {
-	Id              uuid.UUID
-	Username        *string
-	Role            *string
-	Email           *string
-	AvatarUrl       *string
-	ExpiresAt       *time.Time
-	IsEmailVerified *bool
 }
 
 type User struct {
