@@ -65,6 +65,16 @@ const Page = async ({params, searchParams}: Props): Promise<ReactNode> => {
   const contestsPagination = contestsData?.pagination ?? {page: 1, total: 1};
   const isAuthenticated = currentUser !== null;
 
+  let isMember = false;
+  if (currentUser) {
+    // The members endpoint returns the complete list, without server-side pagination.
+    const [membersError, membersData] = await api.listOrganizationMembers({login: org.login});
+    if (membersError && membersError.status !== 403) {
+      return <Container size="lg" py="lg"><ErrorDisplay error={membersError} /></Container>;
+    }
+    isMember = membersData?.members.some((member) => member.user_id === currentUser.id) ?? false;
+  }
+
   return (
     <Container size="lg" py="lg">
       {contestsError ? (
@@ -75,6 +85,7 @@ const Page = async ({params, searchParams}: Props): Promise<ReactNode> => {
           pagination={contestsPagination}
           org={org}
           isAuthenticated={isAuthenticated}
+          isMember={isMember}
           search={search}
         />
       )}
