@@ -100,23 +100,7 @@ func (u *UsersUseCase) ListUsers(ctx context.Context, filter models.UsersListFil
 }
 
 func (u *UsersUseCase) UpdateUser(ctx context.Context, input models.UpdateUserInput) error {
-	var role *models.UserRole
-	if input.Role != nil {
-		r := models.UserRole(*input.Role)
-		role = &r
-	}
-
-	params := models.UpdateUserParams{
-		Id:              input.Id,
-		Username:        input.Username,
-		Role:            role,
-		Email:           input.Email,
-		AvatarUrl:       input.AvatarUrl,
-		ExpiresAt:       input.ExpiresAt,
-		IsEmailVerified: input.IsEmailVerified,
-	}
-
-	return u.usersRepo.UpdateUser(ctx, params)
+	return u.usersRepo.UpdateUser(ctx, input)
 }
 
 func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller models.User, input models.ClaimTemporaryUserInput) (models.ClaimTemporaryUserResult, error) {
