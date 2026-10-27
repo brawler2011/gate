@@ -47,8 +47,14 @@ describe("Organization join status through the organization page", () => {
       const url = new URL(String(input));
       if (url.pathname.endsWith("/members")) {
         return member ? Response.json({
-          members: [{user_id: user.id, organization_id: org.id, username: user.username, role: "member", created_at: "2026-10-01"}],
-          pagination: {page: 1, total: 1},
+          members: [
+            ...Array.from({length: 100}, (_, index) => ({
+              user_id: `other-${index}`, organization_id: org.id, username: `other-${index}`,
+              role: "member", created_at: "2026-10-01",
+            })),
+            {user_id: user.id, organization_id: org.id, username: user.username, role: "member", created_at: "2026-10-01"},
+          ],
+          pagination: {page: 1, total: 101},
         }) : Response.json({message: "Cannot list members"}, {status: membersError});
       }
       if (url.pathname.endsWith("/requests/mine")) {
@@ -89,7 +95,7 @@ describe("Organization join status through the organization page", () => {
     expect(view.getByRole("button", {name: "Отменить заявку"})).toBeTruthy();
   });
 
-  it("passes accepted membership through the tab and skips pending request lookup", async () => {
+  it("recognizes an accepted member after the first 100 entries and skips pending lookup", async () => {
     const {view, fetch} = await renderPage({member: true});
     expect(view.getByText("Участник организации")).toBeTruthy();
     expect(view.queryByRole("button", {name: "Подать заявку на вступление"})).toBeNull();

@@ -67,6 +67,7 @@ const Page = async ({params, searchParams}: Props): Promise<ReactNode> => {
 
   let isMember = false;
   if (currentUser) {
+    // The members endpoint returns the complete list, without server-side pagination.
     const [membersError, membersData] = await api.listOrganizationMembers({login: org.login});
     if (membersError && membersError.status !== 403) {
       return <Container size="lg" py="lg"><ErrorDisplay error={membersError} /></Container>;
