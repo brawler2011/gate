@@ -21,6 +21,7 @@ type ObjectInfo struct {
 // Storage defines a unified interface for file operations across S3 and Local FS backends.
 type Storage interface {
 	UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error
+	// DownloadFile returns a reader that the caller must close on success.
 	DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (io.ReadCloser, string, error)
 	DeleteFile(ctx context.Context, bucket, key string) error
 	ListFiles(ctx context.Context, bucket, prefix string) ([]string, error)
