@@ -151,6 +151,38 @@ jobs:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NEXT_PUBLIC_WEBSOCKET_URL: ws://localhost:8080/ws
 
+  frontend-docker-build:
+    name: Frontend Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build clean frontend image
+        run: |
+          docker build --no-cache --progress=plain \
+            --build-arg BACKEND_API_URL=http://backend:8080 \
+            --build-arg NEXT_PUBLIC_BACKEND_API_URL=/api \
+            --build-arg NEXT_PUBLIC_APP_URL=http://localhost:3000 \
+            --build-arg NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8080/ws \
+            --tag gate-frontend:ci frontend
+
+      - name: Verify frontend runtime configuration
+        run: |
+          docker run --detach --name frontend-config-check \
+            --publish 127.0.0.1:3000:3000 \
+            --env BACKEND_API_URL=http://runtime-backend:8080 \
+            --env NEXT_PUBLIC_APP_URL=http://runtime-override.invalid \
+            gate-frontend:ci
+          trap 'docker logs frontend-config-check; docker rm --force frontend-config-check' EXIT
+          curl --fail --silent --retry 15 --retry-all-errors --retry-delay 1 \
+            http://127.0.0.1:3000/robots.txt > /tmp/frontend-robots.txt
+          grep --fixed-strings 'Sitemap: http://localhost:3000/sitemap.xml' /tmp/frontend-robots.txt
+          if grep --fixed-strings 'runtime-override.invalid' /tmp/frontend-robots.txt; then
+            echo 'Public configuration must stay bound to the built image'
+            exit 1
+          fi
+
   ci-status:
     name: All CI Checks Passed
     needs:
@@ -159,6 +191,7 @@ jobs:
       - backend-unit-tests
       - backend-integration-tests
       - frontend-checks
+      - frontend-docker-build
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -169,12 +202,14 @@ jobs:
           echo "Backend Unit Tests: ${{ needs.backend-unit-tests.result }}"
           echo "Backend Integration Tests: ${{ needs.backend-integration-tests.result }}"
           echo "Frontend Checks: ${{ needs.frontend-checks.result }}"
+          echo "Frontend Docker Build: ${{ needs.frontend-docker-build.result }}"
 
           if [[ "${{ needs.codegen-check.result }}" != "success" || \
                 "${{ needs.backend-lint.result }}" != "success" || \
                 "${{ needs.backend-unit-tests.result }}" != "success" || \
                 "${{ needs.backend-integration-tests.result }}" != "success" || \
-                "${{ needs.frontend-checks.result }}" != "success" ]]; then
+                "${{ needs.frontend-checks.result }}" != "success" || \
+                "${{ needs.frontend-docker-build.result }}" != "success" ]]; then
             echo "ERROR: One or more CI checks failed!"
             exit 1
           fi
