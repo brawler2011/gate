@@ -60,8 +60,8 @@ SET login = COALESCE(sqlc.narg('login'), login),
     description = COALESCE(sqlc.narg('description'), description),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
     settings = COALESCE(sqlc.narg('settings'), settings),
-    start_time = COALESCE(sqlc.narg('start_time'), start_time),
-    end_time = COALESCE(sqlc.narg('end_time'), end_time),
+    start_time = CASE WHEN sqlc.arg('start_time_set')::boolean THEN sqlc.narg('start_time')::timestamptz ELSE start_time END,
+    end_time = CASE WHEN sqlc.arg('end_time_set')::boolean THEN sqlc.narg('end_time')::timestamptz ELSE end_time END,
     owner_id = COALESCE(sqlc.narg('owner_id'), owner_id)
 WHERE id = $1;
 

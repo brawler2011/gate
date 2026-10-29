@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -100,21 +101,25 @@ func TestIntegrationSuite(t *testing.T) {
 func (s *IntegrationTestSuite) SetupSuite() {
 	s.ctx = context.Background()
 
-	// 1. Start Postgres Container
+	// Use an explicit test database when containers are unavailable locally.
+	connStr := os.Getenv("TEST_DATABASE_URL")
 	var err error
-	s.pgContainer, err = postgres.Run(s.ctx,
-		"postgres:18-alpine",
-		postgres.WithDatabase("tester"),
-		postgres.WithUsername("postgres"),
-		postgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(5*time.Second),
-		),
-	)
-	s.Require().NoError(err)
+	if connStr == "" {
+		// 1. Start Postgres Container
+		s.pgContainer, err = postgres.Run(s.ctx,
+			"postgres:18-alpine",
+			postgres.WithDatabase("tester"),
+			postgres.WithUsername("postgres"),
+			postgres.WithPassword("postgres"),
+			testcontainers.WithWaitStrategy(
+				wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(5*time.Second),
+			),
+		)
+		s.Require().NoError(err)
 
-	connStr, err := s.pgContainer.ConnectionString(s.ctx, "sslmode=disable")
-	s.Require().NoError(err)
+		connStr, err = s.pgContainer.ConnectionString(s.ctx, "sslmode=disable")
+		s.Require().NoError(err)
+	}
 
 	// 2. Connect to DB
 	s.dbPool, err = pkg.NewPostgresDB(connStr)
