@@ -52,9 +52,11 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	startTime := time.Now().Add(-1 * time.Hour)
 	endTime := time.Now().Add(1 * time.Hour)
 	err = s.contestsRepo.UpdateContest(s.ctx, models.ContestUpdateParams{
-		ID:        contestID,
-		StartTime: &startTime,
-		EndTime:   &endTime,
+		ID:           contestID,
+		StartTime:    &startTime,
+		StartTimeSet: true,
+		EndTime:      &endTime,
+		EndTimeSet:   true,
 	})
 	s.Require().NoError(err)
 

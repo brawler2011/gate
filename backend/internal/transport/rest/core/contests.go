@@ -342,15 +342,17 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 	}
 
 	err = h.contestsUC.UpdateContest(ctx, models.ContestUpdateInput{
-		ID:          existingContest.ID,
-		Login:       newLogin,
-		Title:       reqTitle,
-		Description: reqDesc,
-		Visibility:  reqVisibility,
-		Settings:    settings,
-		StartTime:   startTime,
-		EndTime:     endTime,
-		OwnerID:     nil,
+		ID:           existingContest.ID,
+		Login:        newLogin,
+		Title:        reqTitle,
+		Description:  reqDesc,
+		Visibility:   reqVisibility,
+		Settings:     settings,
+		StartTime:    startTime,
+		StartTimeSet: req.StartTime.IsSet(),
+		EndTime:      endTime,
+		EndTimeSet:   req.EndTime.IsSet(),
+		OwnerID:      nil,
 	})
 	if err != nil {
 		return err

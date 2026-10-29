@@ -113,15 +113,17 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c models.ContestUpdate
 	}
 
 	err = r.queries.UpdateContest(ctx, sqlc.UpdateContestParams{
-		ID:          c.ID,
-		Login:       c.Login,
-		Title:       c.Title,
-		Description: c.Description,
-		Visibility:  stringToNullContestVisibility(c.Visibility),
-		Settings:    settingsJSON,
-		StartTime:   timePtrToNullTime(c.StartTime),
-		EndTime:     timePtrToNullTime(c.EndTime),
-		OwnerID:     uuidPtrToNullUUID(c.OwnerID),
+		ID:           c.ID,
+		Login:        c.Login,
+		Title:        c.Title,
+		Description:  c.Description,
+		Visibility:   stringToNullContestVisibility(c.Visibility),
+		Settings:     settingsJSON,
+		StartTime:    timePtrToNullTime(c.StartTime),
+		StartTimeSet: c.StartTimeSet,
+		EndTime:      timePtrToNullTime(c.EndTime),
+		EndTimeSet:   c.EndTimeSet,
+		OwnerID:      uuidPtrToNullUUID(c.OwnerID),
 	})
 	if err != nil {
 		return HandlePgErr(err)
