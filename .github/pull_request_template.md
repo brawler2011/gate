@@ -24,4 +24,13 @@
 - [ ] No symbolic links (symlinks) created
 
 ## Verification
-<!-- List checks actually run and their results, including task precommit. State any remaining limitations. -->
+<!-- List checks actually run and their results, including task precommit. State failures, skipped checks, and limitations. Never prefill success. -->
+- Checked head SHA (full):
+- Commands and results (exit status; output/log links):
+
+## Independent Review Evidence
+<!-- Reviewer fills a separate review comment from a fresh context/worktree using AGENTS.md. Do not copy author results as independent evidence. -->
+- Reviewed head SHA / base SHA (full):
+- Review comment and independent check evidence:
+- CI check/run links for this revision:
+<!-- Any new head commit invalidates the evidence and requires renewed checks/review/CI. A changed main base also requires renewed review/CI. Human squash merge only after current-SHA APPROVE and green required CI. -->
