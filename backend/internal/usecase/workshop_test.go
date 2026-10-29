@@ -2,11 +2,14 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
-	"github.com/brawler2011/gate/backend/pkg/formats/polygon"
+	"github.com/brawler2011/gate/backend/pkg/formats"
 	"github.com/stretchr/testify/require"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -76,25 +79,59 @@ func TestManifestAndTestsToGfmtProblem_PreservesIsSample(t *testing.T) {
 }
 
 func TestWorkshopTestsConfig_RoundTrip(t *testing.T) {
-	for _, format := range []string{"gfmt", "polygon"} {
+	for _, format := range []string{"gfmt", "polygon", "pcms2", "icpc"} {
 		for _, name := range []string{"a-plus-b", "subtasks-groups", "max-subarray", "interactive-guess"} {
 			t.Run(format+"/"+name, func(t *testing.T) {
-				var prob *gfmt.Problem
-				dir := "../../pkg/testdata/" + format + "/" + name
-				if format == "gfmt" {
-					pkg, err := gfmt.OpenPackage(dir)
+				ctx := context.Background()
+				src := t.TempDir()
+				require.NoError(t, os.CopyFS(src, os.DirFS("../../pkg/testdata/"+format+"/"+name)))
+				parser, err := formats.GetParser(format)
+				require.NoError(t, err)
+				plan, err := parser.Parse(src)
+				require.NoError(t, err)
+				dst := t.TempDir()
+				require.NoError(t, formats.Import(src, dst, parser))
+				manifest, err := mapImportPlanToManifest(plan, dst)
+				require.NoError(t, err)
+				uc, id := newWorkshopValidatorTest(t, false, nil, nil)
+				require.NoError(t, uc.workspaceStorage.DeleteProblemWorkspace(ctx, id))
+				require.NoError(t, filepath.WalkDir(dst, func(path string, entry fs.DirEntry, walkErr error) error {
+					if walkErr != nil {
+						return walkErr
+					}
+					if entry.IsDir() {
+						return nil
+					}
+					rel, err := filepath.Rel(dst, path)
+					if err != nil {
+						return fmt.Errorf("relative import path: %w", err)
+					}
+					data, err := os.ReadFile(path)
+					if err != nil {
+						return fmt.Errorf("read imported file: %w", err)
+					}
+					return uc.workspaceStorage.WriteFile(ctx, id, filepath.ToSlash(rel), data)
+				}))
+				data, err := json.Marshal(manifest)
+				require.NoError(t, err)
+				require.NoError(t, uc.problemsRepo.UpdateProblemManifest(ctx, id, data))
+				before, err := uc.GetTestsConfig(ctx, id)
+				require.NoError(t, err)
+				original, err := uc.readProblemConfig(ctx, id)
+				require.NoError(t, err)
+				for range 2 {
+					require.NoError(t, uc.UpdateTestsConfig(ctx, id, before))
+					require.NoError(t, uc.saveManifest(ctx, id, manifest))
+					after, err := uc.GetTestsConfig(ctx, id)
 					require.NoError(t, err)
-					prob = pkg.Problem
-				} else {
-					tempDir := t.TempDir()
-					require.NoError(t, os.CopyFS(tempDir, os.DirFS(dir)))
-					plan, err := polygon.NewParser().Parse(tempDir)
+					require.Equal(t, before, after)
+					saved, err := uc.readProblemConfig(ctx, id)
 					require.NoError(t, err)
-					prob = plan.Problem
+					require.Equal(t, original.Checker, saved.Checker)
+					require.Equal(t, original.Validator, saved.Validator)
+					require.Equal(t, original.Interactor, saved.Interactor)
+					require.Equal(t, original.Solutions, saved.Solutions)
 				}
-				before := GfmtProblemToTestsMetadata(prob)
-				after := GfmtProblemToTestsMetadata(ManifestAndTestsToGfmtProblem(defaultManifest("roundtrip"), before))
-				require.Equal(t, before, after)
 			})
 		}
 	}
@@ -137,4 +174,20 @@ subtasks:
 	content, err := uc.workspaceStorage.ReadFile(ctx, id, "tests/edge-case.in")
 	require.NoError(t, err)
 	require.Equal(t, "edge", string(content))
+}
+
+func TestWorkshopSaveManifest_IntentionalComponentSelection(t *testing.T) {
+	uc, id := newWorkshopValidatorTest(t, true, map[string]string{"problem.yaml": "validator: validators/selected.cpp\nsubtasks: {}\n"}, nil)
+	ctx := context.Background()
+	manifest, err := uc.loadManifest(ctx, id)
+	require.NoError(t, err)
+	require.NoError(t, uc.saveManifest(ctx, id, manifest))
+	saved, err := uc.readProblemConfig(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, "validators/selected.cpp", saved.Validator)
+	manifest.FilesMetadata[0].Filename = "validators/replacement.cpp"
+	require.NoError(t, uc.saveManifest(ctx, id, manifest))
+	saved, err = uc.readProblemConfig(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, "validators/replacement.cpp", saved.Validator)
 }

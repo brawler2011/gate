@@ -2,6 +2,7 @@ export type TestItem = {
   id: string;
   ordinal: number;
   filename: string;
+  manifestFilename?: string;
   outFilename: string;
   hasIn: boolean;
   hasOut: boolean;

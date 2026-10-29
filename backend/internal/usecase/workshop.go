@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -634,6 +635,12 @@ func (uc *WorkshopUseCase) saveManifest(ctx context.Context, problemID uuid.UUID
 	gfmtProb := ManifestAndTestsToGfmtProblem(manifest, testsMeta)
 	if previous, err := uc.readProblemConfig(ctx, problemID); err == nil {
 		gfmtProb.Solutions = previous.Solutions
+		stored, err := uc.loadManifest(ctx, problemID)
+		if err == nil && reflect.DeepEqual(stored.FilesMetadata, manifest.FilesMetadata) {
+			gfmtProb.Checker = previous.Checker
+			gfmtProb.Validator = previous.Validator
+			gfmtProb.Interactor = previous.Interactor
+		}
 	}
 	yamlBytes, err := yaml.Marshal(gfmtProb)
 	if err != nil {
@@ -937,9 +944,12 @@ func (uc *WorkshopUseCase) UpdateTestsConfig(ctx context.Context, problemID uuid
 	}
 
 	gfmtProb := ManifestAndTestsToGfmtProblem(manifest, testsMeta)
-	if previous, err := uc.readProblemConfig(ctx, problemID); err == nil {
-		gfmtProb.Solutions = previous.Solutions
+	previous, err := uc.readProblemConfig(ctx, problemID)
+	if err != nil {
+		return fmt.Errorf("failed to read tests config: %w", err)
 	}
+	previous.Subtasks = gfmtProb.Subtasks
+	gfmtProb = previous
 	yamlBytes, err := yaml.Marshal(gfmtProb)
 	if err != nil {
 		return fmt.Errorf("failed to marshal problem.yaml: %w", err)
