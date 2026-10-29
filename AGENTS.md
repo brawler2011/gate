@@ -155,7 +155,8 @@ When working with the backend codebase, adhere strictly to the following rules:
      ```sh
      PR=123
      REVIEW_HEAD=$(gh pr view "$PR" --json headRefOid --jq .headRefOid) || exit 1
-     git fetch origin main "refs/pull/$PR/head" || exit 1
+     git fetch origin main || exit 1
+     git fetch origin "refs/pull/$PR/head" || exit 1
      REVIEW_FETCHED_HEAD=$(git rev-parse FETCH_HEAD) || exit 1
      if [ "$REVIEW_FETCHED_HEAD" != "$REVIEW_HEAD" ]; then
        echo 'PR head changed during preparation; restart review' >&2
