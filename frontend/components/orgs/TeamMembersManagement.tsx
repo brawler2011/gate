@@ -9,6 +9,7 @@ import {
   Center,
   Group,
   Loader,
+  Skeleton,
   Select,
   Stack,
   Table,
@@ -20,8 +21,10 @@ import {IconEdit, IconPlus, IconTrash, IconUsers} from "@tabler/icons-react";
 import {useCallback, useEffect, useState} from "react";
 
 import {ChangeRoleModal} from "@/components/contests/ChangeRoleModal";
+import {LinkAnchor} from "@/components/shared";
+import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {StatusMessage} from "@/components/shared/StatusMessage";
-import {api} from "@/lib/api";
+import {api, type ApiError} from "@/lib/api";
 
 import type {TeamMemberModel} from "@/contracts/core/v1";
 import type {ReactNode} from "react";
@@ -41,6 +44,7 @@ const getRoleDisplay = (role: string) => {
 export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
   const [members, setMembers] = useState<TeamMemberModel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ApiError | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<{ value: string; label: string }[]>([]);
@@ -60,8 +64,9 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [, data] = await api.listTeamMembers({id: teamId, page: 1, pageSize: 100});
+    const [error, data] = await api.listTeamMembers({id: teamId, page: 1, pageSize: 100});
     setLoading(false);
+    setError(error);
     if (data) {
       setMembers(data.members);
     }
@@ -187,11 +192,14 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
         </Card>
 
         {loading && (
-          <Center py="xl">
-            <Loader />
-          </Center>
+          <Stack role="status" aria-label="Загрузка участников">
+            <Skeleton height={40} />
+            <Skeleton height={40} />
+            <Skeleton height={40} />
+          </Stack>
         )}
-        {!loading && members.length === 0 && (
+        {!loading && error && <ErrorDisplay error={error} />}
+        {!loading && !error && members.length === 0 && (
           <Center py="xl">
             <Stack align="center" gap="sm">
               <IconUsers size={32} color="var(--mantine-color-dimmed)" />
@@ -201,7 +209,7 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
             </Stack>
           </Center>
         )}
-        {!loading && members.length > 0 && (
+        {!loading && !error && members.length > 0 && (
           <Table highlightOnHover>
             <Table.Thead>
               <Table.Tr>
@@ -215,9 +223,9 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
               {members.map((m) => (
                 <Table.Tr key={m.user_id}>
                   <Table.Td>
-                    <Text size="sm" fw={500}>
-                      {m.username}
-                    </Text>
+                    <LinkAnchor href={`/@${m.username}`} size="sm" fw={500}>
+                      @{m.username}
+                    </LinkAnchor>
                   </Table.Td>
                   <Table.Td style={{textAlign: "center"}}>
                     <Badge
