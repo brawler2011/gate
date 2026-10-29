@@ -12,6 +12,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	pb "github.com/criyle/go-judge/pb"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -135,4 +136,57 @@ func (s *workshopCheckerStorage) DownloadFile(ctx context.Context, bucket, key s
 		return nil, "", s.readError
 	}
 	return s.Storage.DownloadFile(ctx, bucket, key, etag)
+}
+
+func TestWorkshopTestSolution_ManifestFilesAndGenerators(t *testing.T) {
+	uc, req := newWorkshopCheckerTest(t, storage.NewLocalStorage(t.TempDir()), map[string]string{
+		"checkers/checker.cpp":     "checker",
+		"generators/generator.cpp": "generator",
+		"solutions/reference.cpp":  "reference",
+		"tests/sample.in":          "sample", "tests/sample.ans": "sample answer",
+		"tests/edge-case.in": "edge", "tests/edge-case.a": "edge answer",
+		"tests/03.in": "stale generated input", "tests/03.out": "stale generated answer",
+		"problem.yaml": `limits: {time_ms: 1000, memory_mb: 256}
+solutions: {reference.cpp: main}
+subtasks:
+ z:
+  tests: [{generate: generator 42}]
+ a:
+  tests: [{manual: edge-case.in}]
+ samples:
+  tests: [{manual: sample.in}]
+`,
+	}, nil)
+	var inputs []string
+	uc.sandbox = newWorkshopValidatorSandbox(t, func(_ context.Context, request *pb.Request) (*pb.Response, error) {
+		cmd := request.GetCmd()[0]
+		output := ""
+		switch cmd.GetArgs()[0] {
+		case "./generator":
+			require.Equal(t, []string{"./generator", "42"}, cmd.GetArgs())
+			output = "generated"
+		case "./checker":
+			input := string(cmd.GetCopyIn()["input.txt"].GetMemory().GetContent())
+			answer := string(cmd.GetCopyIn()["answer.txt"].GetMemory().GetContent())
+			require.Equal(t, input+" answer", answer)
+			inputs = append(inputs, input)
+		default:
+			output = string(cmd.GetFiles()[0].GetMemory().GetContent()) + " answer"
+		}
+		return pb.Response_builder{Results: []*pb.Response_Result{pb.Response_Result_builder{Status: pb.Response_Result_Accepted, Files: map[string][]byte{"stdout": []byte(output)}}.Build()}}.Build(), nil
+	})
+	meta, err := uc.GetTestsConfig(context.Background(), req.ProblemID)
+	require.NoError(t, err)
+	require.NoError(t, uc.UpdateTestsConfig(context.Background(), req.ProblemID, meta))
+	report, err := uc.TestSolution(context.Background(), req)
+	require.NoError(t, err)
+	require.Equal(t, 3, report.PassedTests)
+	require.Zero(t, report.FailedTests)
+	require.Equal(t, []string{"sample", "edge", "generated"}, inputs)
+	req.TestNumbers = []int{2}
+	inputs = nil
+	report, err = uc.TestSolution(context.Background(), req)
+	require.NoError(t, err)
+	require.Equal(t, 1, report.PassedTests)
+	require.Equal(t, []string{"edge"}, inputs)
 }

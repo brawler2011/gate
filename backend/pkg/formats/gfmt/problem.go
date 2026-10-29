@@ -1,5 +1,7 @@
 package gfmt
 
+import "sort"
+
 // Problem represents the GFMT problem specification.
 type Problem struct {
 	FormatVersion string             `yaml:"format_version" json:"format_version"`
@@ -44,4 +46,20 @@ type FileMapping struct {
 type ImportPlan struct {
 	Problem  *Problem
 	Mappings []FileMapping
+}
+
+// OrderedSubtaskNames defines test numbering: samples first, then group names;
+// tests retain their manifest list order. Files do not determine membership.
+func (p *Problem) OrderedSubtaskNames() []string {
+	names := make([]string, 0, len(p.Subtasks))
+	for name := range p.Subtasks {
+		if name != "samples" {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	if _, ok := p.Subtasks["samples"]; ok {
+		names = append([]string{"samples"}, names...)
+	}
+	return names
 }

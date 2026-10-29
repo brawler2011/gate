@@ -102,15 +102,8 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
       const rawGroups = configData.groups || [];
       const rawTests = configData.tests || [];
 
-      // Determine ordinals of existing test files (e.g. 01.in -> 1)
+      // The manifest defines membership; unrelated files are not tests.
       const ordinalsSet = new Set<number>();
-      for (const name of existingFiles) {
-        const match = name.match(/^(\d+)\.(in|out)$/);
-        if (match) {
-          ordinalsSet.add(parseInt(match[1], 10));
-        }
-      }
-
       for (const rt of rawTests) {
         if (typeof rt.ordinal === "number") {
           ordinalsSet.add(rt.ordinal);
@@ -135,8 +128,8 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
         return {
           name: (grp.name as string) || `subtask${idx + 1}`,
           points: (grp.points as number) ?? 10,
-          policy: grp.points_policy === "each-test" || grp.policy === "each" ? "each" : "complete",
-          dependencies: dependsArr ? dependsArr.map((d: unknown) => (typeof d === "string" ? d : `subtask${d}`)) : [],
+          policy: grp.points_policy === "each" || grp.points_policy === "each-test" || grp.policy === "each" ? "each" : "complete",
+          dependencies: dependsArr ? dependsArr.map((d: unknown) => (typeof d === "string" ? d : (rawGroups.find((g) => g.ordinal === d)?.name as string) || `subtask${d}`)) : [],
           testIds,
         };
       });
@@ -144,9 +137,11 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
       // Build TestItems
       const loadedTests: TestItem[] = sortedOrdinals.map((ord) => {
         const padded = formatPaddedOrdinal(ord);
-        const inName = `${padded}.in`;
-        const outName = `${padded}.out`;
         const rawT = rawTests.find((t: Record<string, unknown>) => t.ordinal === ord);
+        const inName = (rawT?.filename as string) || `${padded}.in`;
+        const stem = inName.replace(/\.[^/.]+$/, "");
+        const outName = ["out", "ans", "a", "output"]
+          .map((ext) => `${stem}.${ext}`).find((name) => existingFiles.includes(name)) || `${stem}.out`;
 
         const hasIn = existingFiles.includes(inName);
         const hasOut = existingFiles.includes(outName);
@@ -327,7 +322,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
           name: string;
           points: number;
           points_policy: string;
-          depends_on: string[];
+          depends_on: number[];
           tests: number[];
         };
 
@@ -345,8 +340,8 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
               ordinal: idx + 1,
               name: st.name,
               points: st.points,
-              points_policy: st.policy === "each" ? "each-test" : "complete-group",
-              depends_on: st.dependencies,
+              points_policy: st.policy,
+              depends_on: st.dependencies.map((name) => subtasks.findIndex((group) => group.name === name) + 1),
               tests: [ordinals[0], ordinals[ordinals.length - 1]],
             };
           })
@@ -360,7 +355,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
               ordinal: 1,
               name: "subtask1",
               points: maxScore ?? 100,
-              points_policy: problemType === "scoring" ? "each-test" : "complete-group",
+              points_policy: problemType === "scoring" ? "each" : "complete",
               depends_on: [],
               tests: [sortedOrds[0], sortedOrds[sortedOrds.length - 1]],
             },
@@ -390,6 +385,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
 
         const payloadTests = tests.map((t) => ({
           ordinal: t.ordinal,
+          filename: t.method === "manual" ? t.filename : "",
           method: t.method,
           generator: t.method === "generated" && t.generatorCommand ? t.generatorCommand : null,
           is_sample: t.isSample,

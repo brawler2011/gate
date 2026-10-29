@@ -522,18 +522,7 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 
 func collectFlatTests(prob *gfmt.Problem) []FlatTest {
 	var flatTests []FlatTest
-	var subtaskNames []string
-	if _, exists := prob.Subtasks["samples"]; exists {
-		subtaskNames = append(subtaskNames, "samples")
-	}
-	var otherSubtasks []string
-	for k := range prob.Subtasks {
-		if k != "samples" {
-			otherSubtasks = append(otherSubtasks, k)
-		}
-	}
-	sort.Strings(otherSubtasks)
-	subtaskNames = append(subtaskNames, otherSubtasks...)
+	subtaskNames := prob.OrderedSubtaskNames()
 
 	testIdx := 1
 	for _, subName := range subtaskNames {
