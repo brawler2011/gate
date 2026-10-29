@@ -26,9 +26,7 @@ dist/
 *.swo
 
 # Environment files
-.env*.local
-.env.development
-.env.test
+.env*
 
 # OS
 .DS_Store

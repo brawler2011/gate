@@ -23,7 +23,10 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_WEBSOCKET_URL
 ENV NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL
 
-
+RUN : "${BACKEND_API_URL:?BACKEND_API_URL build argument is required}" && \
+    : "${NEXT_PUBLIC_BACKEND_API_URL:?NEXT_PUBLIC_BACKEND_API_URL build argument is required}" && \
+    : "${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL build argument is required}" && \
+    : "${NEXT_PUBLIC_WEBSOCKET_URL:?NEXT_PUBLIC_WEBSOCKET_URL build argument is required}"
 
 RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
   bun run next build

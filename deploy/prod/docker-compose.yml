@@ -107,10 +107,7 @@ services:
     hostname: frontend
     restart: unless-stopped
     environment:
-      - BACKEND_API_URL=${BACKEND_API_URL:-http://gate-backend-prod:8080}
-      - NEXT_PUBLIC_BACKEND_API_URL=${NEXT_PUBLIC_BACKEND_API_URL:-/api}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://${DOMAIN_NAME}}
-      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://${DOMAIN_NAME}/ws}
+      - BACKEND_API_URL=${BACKEND_API_URL:?Set BACKEND_API_URL for server-side API requests}
     networks:
       - gate-prod
       - traefik-network
