@@ -1,4 +1,4 @@
-import {Container, Paper, Stack, Tabs, Text, Title} from "@mantine/core";
+import {Avatar, Badge, Container, Group, Paper, Stack, Tabs, Text, Title} from "@mantine/core";
 import {IconArrowLeft, IconFileCode, IconTrophy, IconUsers} from "@tabler/icons-react";
 import {notFound} from "next/navigation";
 
@@ -57,14 +57,22 @@ const TeamPage = async ({params}: Props): Promise<ReactNode> => {
           Назад к организации
         </LinkAnchor>
 
-        <div>
-          <Title order={2}>{team.name}</Title>
-          {team.description && (
-            <Text c="dimmed" size="sm">
-              {team.description}
-            </Text>
-          )}
-        </div>
+        <Group wrap="nowrap">
+          <Avatar size="lg" radius="xl" color="blue" aria-label={`Значок команды ${team.name}`}>
+            {team.name.trim().slice(0, 2).toUpperCase()}
+          </Avatar>
+          <Stack gap="xs">
+            <Group gap="sm">
+              <Title order={2}>{team.name}</Title>
+              <Badge variant="light">Команда</Badge>
+            </Group>
+            {team.description && (
+              <Text c="dimmed" size="sm">
+                {team.description}
+              </Text>
+            )}
+          </Stack>
+        </Group>
 
         <Paper radius="md" p="md" withBorder>
           <Tabs defaultValue="members">

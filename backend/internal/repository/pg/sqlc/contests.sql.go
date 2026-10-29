@@ -1181,22 +1181,24 @@ SET login = COALESCE($2, login),
     description = COALESCE($4, description),
     visibility = COALESCE($5, visibility),
     settings = COALESCE($6, settings),
-    start_time = COALESCE($7, start_time),
-    end_time = COALESCE($8, end_time),
-    owner_id = COALESCE($9, owner_id)
+    start_time = CASE WHEN $7::boolean THEN $8::timestamptz ELSE start_time END,
+    end_time = CASE WHEN $9::boolean THEN $10::timestamptz ELSE end_time END,
+    owner_id = COALESCE($11, owner_id)
 WHERE id = $1
 `
 
 type UpdateContestParams struct {
-	ID          uuid.UUID             `json:"id"`
-	Login       *string               `json:"login"`
-	Title       *string               `json:"title"`
-	Description *string               `json:"description"`
-	Visibility  NullContestVisibility `json:"visibility"`
-	Settings    []byte                `json:"settings"`
-	StartTime   pgtype.Timestamptz    `json:"start_time"`
-	EndTime     pgtype.Timestamptz    `json:"end_time"`
-	OwnerID     pgtype.UUID           `json:"owner_id"`
+	ID           uuid.UUID             `json:"id"`
+	Login        *string               `json:"login"`
+	Title        *string               `json:"title"`
+	Description  *string               `json:"description"`
+	Visibility   NullContestVisibility `json:"visibility"`
+	Settings     []byte                `json:"settings"`
+	StartTimeSet bool                  `json:"start_time_set"`
+	StartTime    pgtype.Timestamptz    `json:"start_time"`
+	EndTimeSet   bool                  `json:"end_time_set"`
+	EndTime      pgtype.Timestamptz    `json:"end_time"`
+	OwnerID      pgtype.UUID           `json:"owner_id"`
 }
 
 func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) error {
@@ -1207,7 +1209,9 @@ func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) er
 		arg.Description,
 		arg.Visibility,
 		arg.Settings,
+		arg.StartTimeSet,
 		arg.StartTime,
+		arg.EndTimeSet,
 		arg.EndTime,
 		arg.OwnerID,
 	)
