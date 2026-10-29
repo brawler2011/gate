@@ -1,9 +1,11 @@
-import {afterAll, beforeAll, describe, expect, it} from "bun:test";
+import {MantineProvider} from "@mantine/core";
+import {afterAll, afterEach, beforeAll, describe, expect, it} from "bun:test";
 import React from "react";
+import {renderToString} from "react-dom/server";
 
 import {Problem} from "@/components/problems/Problem";
 
-import {renderWithProviders, setupDOMEnvironment} from "./test-utils";
+import {cleanup, renderWithProviders, setupDOMEnvironment} from "./test-utils";
 
 describe("Problem Component DOM baseline test", () => {
   let cleanupDOM: () => void;
@@ -11,6 +13,8 @@ describe("Problem Component DOM baseline test", () => {
   beforeAll(() => {
     cleanupDOM = setupDOMEnvironment();
   });
+
+  afterEach(cleanup);
 
   afterAll(() => {
     cleanupDOM();
@@ -53,4 +57,43 @@ describe("Problem Component DOM baseline test", () => {
     expect(container.textContent).toContain("4");
     expect(container.textContent).toContain("Calculate");
   });
+
+  it("hides all statements and samples for participants while preserving manager access", () => {
+    const view = renderWithProviders(<Problem problem={sampleProblem} hideStatements />);
+    expect(view.getByText("Условия задач скрыты")).toBeTruthy();
+    expect(view.container.textContent).not.toContain("Calculate");
+    expect(view.container.querySelector("pre")).toBeNull();
+    view.rerender(<Problem problem={sampleProblem} hideStatements isManager orgLogin="school" />);
+    expect(view.queryByText("Условия задач скрыты")).toBeNull();
+    expect(view.container.textContent).toContain("Calculate");
+    expect(view.container.querySelector("a")?.getAttribute("href")).toBe("/school/problems/prob-1");
+  });
+
+  it("renders all samples verbatim and omits empty sections", () => {
+    const view = renderWithProviders(<Problem problem={{...sampleProblem,
+      input_format_html: "", output_format_html: "", notes_html: "",
+      samples: [{input: "1 2\n3", output: "6\n"}, {input: "0 0", output: "0"}],
+    }} />);
+    expect(Array.from(view.container.querySelectorAll("pre")).map((node) => node.textContent)).toEqual([
+      "1 2\n3", "6\n", "0 0", "0",
+    ]);
+    expect(view.queryByRole("heading", {name: "Входные данные"})).toBeNull();
+    expect(view.queryByText("Примечание")).toBeNull();
+  });
+
+  it("server renders the decomposed content without requiring client effects", () => {
+    const html = renderToString(<MantineProvider><Problem problem={sampleProblem} letter="B" /></MantineProvider>);
+    expect(html.replaceAll("<!-- -->", "")).toContain("B. A + B Problem");
+    expect(html).toContain("Calculate");
+    expect(html).toContain("2 2");
+  });
+
+  it("renders and replaces statement math after client updates", () => {
+    const view = renderWithProviders(<Problem problem={{...sampleProblem, legend_html: "$x^2$"}} />);
+    expect(view.container.querySelector(".katex")).toBeTruthy();
+    view.rerender(<Problem problem={{...sampleProblem, legend_html: "$y^3$"}} />);
+    expect(view.container.querySelector(".katex")).toBeTruthy();
+    expect(view.container.querySelector(".katex")?.textContent).toContain("y");
+  });
+
 });
