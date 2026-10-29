@@ -16,9 +16,10 @@ import (
 )
 
 func (s *IntegrationTestSuite) TestUpdateContestDates() {
-	owner := s.createUser("contest_dates_owner", models.UserRoleUser)
-	outsider := s.createUser("contest_dates_outsider", models.UserRoleUser)
-	org := s.createOrganization("contest-dates-org", "Contest dates", owner.Id)
+	suffix := uuid.NewString()[:8]
+	owner := s.createUser("dates_owner_"+suffix, models.UserRoleUser)
+	outsider := s.createUser("dates_outsider_"+suffix, models.UserRoleUser)
+	org := s.createOrganization("contest-dates-org-"+suffix, "Contest dates", owner.Id)
 	start := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
 	end := start.Add(2 * time.Hour)
 	newStart := start.Add(15 * time.Minute)
