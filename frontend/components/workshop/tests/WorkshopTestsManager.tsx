@@ -156,7 +156,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
   const handleAddTest = async () => {
     const nextOrd = tests.length > 0 ? Math.max(...tests.map((t) => t.ordinal)) + 1 : 1;
     const padded = formatPaddedOrdinal(nextOrd);
-    const newId = `test-id-${nextOrd}`;
+    const newId = `test-id-${crypto.randomUUID()}`;
     const inFilename = `${padded}.in`;
     const outFilename = `${padded}.out`;
 
