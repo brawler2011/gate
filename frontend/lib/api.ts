@@ -4,6 +4,7 @@ import * as React from "react";
 import {core, type DefaultService} from "@/contracts/core/v1";
 import {ApiError as CoreApiError} from "@/contracts/core/v1/core/ApiError";
 import {env} from "@/lib/env";
+import {TestFilesHttpRequest} from "@/lib/testFilesHttpRequest";
 
 const cache = typeof (React as unknown as {cache?: <T>(fn: T) => T}).cache === "function"
   ? (React as unknown as {cache: <T>(fn: T) => T}).cache
@@ -70,6 +71,7 @@ const createApiFacade = (client: core): ApiFacade => {
 
 const rawAuthClient = new core({
   BASE: getBaseUrl(),
+  ENCODE_PATH: encodeURIComponent,
   CREDENTIALS: "include",
   HEADERS: async (): Promise<Record<string, string>> => {
     if (typeof window === "undefined") {
@@ -88,12 +90,13 @@ const rawAuthClient = new core({
     }
     return {};
   },
-});
+}, TestFilesHttpRequest);
 
 const rawPublicClient = new core({
   BASE: getBaseUrl(),
+  ENCODE_PATH: encodeURIComponent,
   CREDENTIALS: "omit",
-});
+}, TestFilesHttpRequest);
 
 /**
  * Primary authenticated API facade singleton.
