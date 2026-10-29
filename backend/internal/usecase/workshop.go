@@ -877,16 +877,17 @@ func ManifestAndTestsToGfmtProblem(manifest *models.ProblemManifest, testsMeta *
 					}
 				}
 
-				var t gfmt.Test
-				if testCase != nil {
-					t.Manual = testCase.Filename
+				if testCase == nil {
+					continue
 				}
-				if testCase != nil && testCase.Method == "generated" && testCase.Generator != nil {
+
+				t := gfmt.Test{Manual: testCase.Filename}
+				if testCase.Method == "generated" && testCase.Generator != nil {
 					t.Generate = *testCase.Generator
 				} else if t.Manual == "" {
 					t.Manual = fmt.Sprintf("%02d.in", testNum)
 				}
-				if testCase != nil && testCase.IsSample {
+				if testCase.IsSample {
 					t.Sample = true
 				}
 				tests = append(tests, t)

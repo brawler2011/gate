@@ -79,3 +79,15 @@ test("assigns an added test to a trailing empty group without duplicating earlie
   expect(saved.groups).toEqual([group(1, "a", [1, 1]), group(2, "z-empty", [2, 2])]);
   expect(saved.tests.map((test) => test.filename)).toEqual(["a.in", "new.in"]);
 });
+
+test("deleting a middle test emits explicit membership without requiring renumbering", () => {
+  const config = {
+    groups: [group(1, "a", [1, 3]), group(2, "z", [4, 4], [1])],
+    tests: [manual(1, "first.in"), manual(2, "middle.in"), manual(3, "last.in"), manual(4, "tail.in")],
+  };
+  const {loadedTests, loadedSubtasks} = loadTestState(config, ["first.in", "middle.in", "last.in", "tail.in", "02.in"]);
+  const retained = loadedTests.filter((test) => test.ordinal !== 2);
+  const saved = serializeTestState(retained, loadedSubtasks, "scoring", 100);
+  expect(saved.tests).toEqual([manual(1, "first.in"), manual(3, "last.in"), manual(4, "tail.in")]);
+  expect(saved.groups).toEqual(config.groups);
+});

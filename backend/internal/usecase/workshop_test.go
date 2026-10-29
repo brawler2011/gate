@@ -215,3 +215,54 @@ func TestWorkshopSaveManifest_UnrelatedComponentMetadata(t *testing.T) {
 	require.Equal(t, "validators/z-selected.cpp", saved.Validator)
 	require.Equal(t, "interactors/z-selected.cpp", saved.Interactor)
 }
+
+func TestWorkshopTestsConfig_DeleteMiddleWithoutRenumber(t *testing.T) {
+	uc, id := newWorkshopValidatorTest(t, false, map[string]string{
+		"problem.yaml": `subtasks:
+ a:
+  tests:
+   - manual: first.in
+   - manual: middle.in
+   - manual: last.in
+ z:
+  dependencies: [a]
+  tests:
+   - generate: generator 42
+   - manual: tail.in
+`,
+		"tests/first.in": "first", "tests/middle.in": "deleted", "tests/last.in": "last", "tests/tail.in": "tail",
+		"tests/02.in": "unrelated retained file",
+	}, nil)
+	ctx := context.Background()
+	metadata, err := uc.GetTestsConfig(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, metadata.Tests, 5)
+	metadata.Tests = append(metadata.Tests[:1], metadata.Tests[2:]...)
+	// The UI's optional renumber action was not invoked; ranges still contain the gap.
+	require.Equal(t, [2]int{1, 3}, metadata.Groups[0].Tests)
+	require.Equal(t, 3, metadata.Tests[1].Ordinal)
+	require.NoError(t, uc.UpdateTestsConfig(ctx, id, metadata))
+	for range 2 {
+		saved, err := uc.GetTestsConfig(ctx, id)
+		require.NoError(t, err)
+		require.Len(t, saved.Tests, 4)
+		require.Equal(t, []string{"first.in", "last.in", "", "tail.in"}, []string{
+			saved.Tests[0].Filename, saved.Tests[1].Filename, saved.Tests[2].Filename, saved.Tests[3].Filename,
+		})
+		require.Equal(t, "generator 42", *saved.Tests[2].Generator)
+		require.Equal(t, [2]int{1, 2}, saved.Groups[0].Tests)
+		require.Equal(t, [2]int{3, 4}, saved.Groups[1].Tests)
+		require.Equal(t, []int{1}, saved.Groups[1].DependsOn)
+		prob, err := uc.readProblemConfig(ctx, id)
+		require.NoError(t, err)
+		require.Equal(t, []string{"a", "z"}, prob.OrderedSubtaskNames())
+		require.Len(t, prob.Subtasks["a"].Tests, 2)
+		require.Equal(t, []string{"a"}, prob.Subtasks["z"].Dependencies)
+		manifest, err := uc.loadManifest(ctx, id)
+		require.NoError(t, err)
+		require.NoError(t, uc.saveManifest(ctx, id, manifest))
+	}
+	unrelated, err := uc.workspaceStorage.ReadFile(ctx, id, "tests/02.in")
+	require.NoError(t, err)
+	require.Equal(t, "unrelated retained file", string(unrelated))
+}
