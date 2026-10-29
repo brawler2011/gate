@@ -24,11 +24,8 @@ import {api} from "@/lib/api";
 
 import {SubtasksTable} from "./SubtasksTable";
 import {TestRenumberModal} from "./TestRenumberModal";
-import {loadTestState, renumberTests, serializeTestState} from "./testsConfig";
+import {allocateTestFiles, loadTestState, renumberTests, serializeTestState} from "./testsConfig";
 import {TestsListTable} from "./TestsListTable";
-import {
-  formatPaddedOrdinal,
-} from "./types";
 
 import type {
   SubtaskItem,
@@ -155,10 +152,14 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
 
   const handleAddTest = async () => {
     const nextOrd = tests.length > 0 ? Math.max(...tests.map((t) => t.ordinal)) + 1 : 1;
-    const padded = formatPaddedOrdinal(nextOrd);
     const newId = `test-id-${crypto.randomUUID()}`;
-    const inFilename = `${padded}.in`;
-    const outFilename = `${padded}.out`;
+    const [filesErr, filesRes] = await api.listProblemTests({problemId});
+    if (filesErr || !filesRes) {
+      notifications.show({title: "Ошибка создания теста", message: "Не удалось проверить существующие файлы", color: "red"});
+      return;
+    }
+    const existingFiles = (filesRes.files || []).map((file) => (file.path || "").replace(/^tests\//, ""));
+    const {filename: inFilename, outFilename} = allocateTestFiles(tests, existingFiles);
 
     // Automatically create empty .in and .out files for the manual test
     const emptyBlob = new Blob([""], {type: "application/octet-stream"});

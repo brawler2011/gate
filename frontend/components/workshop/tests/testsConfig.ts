@@ -146,8 +146,10 @@ export const serializeTestState = (
 
     if (unassigned.length > 0) {
       const lastGroup = payloadGroups[payloadGroups.length - 1];
-      lastGroup.tests[0] = Math.min(lastGroup.tests[0], unassigned[0]);
-      lastGroup.tests[1] = Math.max(lastGroup.tests[1], unassigned[unassigned.length - 1]);
+      const [start, end] = lastGroup.tests;
+      lastGroup.tests = start > end
+        ? [unassigned[0], unassigned[unassigned.length - 1]]
+        : [Math.min(start, unassigned[0]), Math.max(end, unassigned[unassigned.length - 1])];
     }
   }
 
@@ -169,4 +171,24 @@ export const serializeTestState = (
 // Ordinals are presentation order; filenames and in-memory IDs retain identity.
 export const renumberTests = (tests: TestItem[]): TestItem[] => {
   return tests.map((test, index) => ({...test, ordinal: index + 1}));
+};
+
+// Asset names are independent of presentation numbers and include orphan files.
+export const allocateTestFiles = (
+  tests: TestItem[], existingFiles: string[]
+): {filename: string; outFilename: string} => {
+  const occupied = new Set(existingFiles.map((name) => name.split(".")[0]));
+  for (const test of tests) {
+    occupied.add(test.filename.split(".")[0]);
+    occupied.add(test.outFilename.split(".")[0]);
+    if (test.manifestFilename) {
+      occupied.add(test.manifestFilename.split(".")[0]);
+    }
+  }
+  let number = 1;
+  while (occupied.has(formatPaddedOrdinal(number))) {
+    number++;
+  }
+  const stem = formatPaddedOrdinal(number);
+  return {filename: `${stem}.in`, outFilename: `${stem}.out`};
 };

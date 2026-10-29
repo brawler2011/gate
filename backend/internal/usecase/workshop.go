@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -636,10 +636,16 @@ func (uc *WorkshopUseCase) saveManifest(ctx context.Context, problemID uuid.UUID
 	if previous, err := uc.readProblemConfig(ctx, problemID); err == nil {
 		gfmtProb.Solutions = previous.Solutions
 		stored, err := uc.loadManifest(ctx, problemID)
-		if err == nil && reflect.DeepEqual(stored.FilesMetadata, manifest.FilesMetadata) {
-			gfmtProb.Checker = previous.Checker
-			gfmtProb.Validator = previous.Validator
-			gfmtProb.Interactor = previous.Interactor
+		if err == nil {
+			if slices.Equal(componentFilenames(stored, "checker"), componentFilenames(manifest, "checker")) {
+				gfmtProb.Checker = previous.Checker
+			}
+			if slices.Equal(componentFilenames(stored, "validator"), componentFilenames(manifest, "validator")) {
+				gfmtProb.Validator = previous.Validator
+			}
+			if slices.Equal(componentFilenames(stored, "interactor"), componentFilenames(manifest, "interactor")) {
+				gfmtProb.Interactor = previous.Interactor
+			}
 		}
 	}
 	yamlBytes, err := yaml.Marshal(gfmtProb)
@@ -1077,4 +1083,14 @@ func (uc *WorkshopUseCase) generateTestAnswer(ctx context.Context, problemID uui
 		return nil, fmt.Errorf("correct solution failed to run: %s", result.Status)
 	}
 	return result.Stdout, nil
+}
+
+func componentFilenames(manifest *models.ProblemManifest, kind string) []string {
+	var names []string
+	for _, file := range manifest.FilesMetadata {
+		if file.Type == kind {
+			names = append(names, file.Filename)
+		}
+	}
+	return names
 }

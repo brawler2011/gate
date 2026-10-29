@@ -191,3 +191,27 @@ func TestWorkshopSaveManifest_IntentionalComponentSelection(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "validators/replacement.cpp", saved.Validator)
 }
+
+func TestWorkshopSaveManifest_UnrelatedComponentMetadata(t *testing.T) {
+	uc, id := newWorkshopValidatorTest(t, false, map[string]string{"problem.yaml": "checker: checkers/z-selected.cpp\nvalidator: validators/z-selected.cpp\ninteractor: interactors/z-selected.cpp\nsubtasks: {}\n"}, nil)
+	ctx := context.Background()
+	manifest, err := uc.loadManifest(ctx, id)
+	require.NoError(t, err)
+	for _, kind := range []string{"checker", "validator", "interactor"} {
+		manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{Type: kind, Filename: kind + "s/a-unused.cpp"}, models.FileMetadata{Type: kind, Filename: kind + "s/z-selected.cpp"})
+	}
+	manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{Type: "generator", Filename: "generators/gen.cpp"})
+	data, err := json.Marshal(manifest)
+	require.NoError(t, err)
+	require.NoError(t, uc.problemsRepo.UpdateProblemManifest(ctx, id, data))
+	hash := "compiled"
+	manifest.FilesMetadata[len(manifest.FilesMetadata)-1].BinarySha256 = &hash
+	// Compiling any component changes metadata, not its selected filename.
+	manifest.FilesMetadata[0].BinarySha256 = &hash
+	require.NoError(t, uc.saveManifest(ctx, id, manifest))
+	saved, err := uc.readProblemConfig(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, "checkers/z-selected.cpp", saved.Checker)
+	require.Equal(t, "validators/z-selected.cpp", saved.Validator)
+	require.Equal(t, "interactors/z-selected.cpp", saved.Interactor)
+}
