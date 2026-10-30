@@ -162,15 +162,20 @@ func (uc *WorkshopUseCase) updateProblemFileUnlocked(ctx context.Context, req mo
 		return fmt.Errorf("cannot modify %s directly", req.Path)
 	}
 
+	// Validate legacy configuration before changing files: otherwise a parse error
+	// would leave a pending mutation that cannot be retried or repaired by import.
+	manifest, err := uc.loadManifest(ctx, req.ProblemID)
+	if err != nil {
+		return err
+	}
+	if _, err := uc.readProblemConfig(ctx, req.ProblemID); err != nil {
+		return err
+	}
 	if err := uc.workspaceStorage.WriteFile(ctx, req.ProblemID, req.Path, req.Content); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
 	if req.Path == "statements/en.md" {
-		manifest, err := uc.loadManifest(ctx, req.ProblemID)
-		if err != nil {
-			return err
-		}
 		manifest.Statement = ParseStatementMarkdown(string(req.Content))
 		return uc.saveManifest(ctx, req.ProblemID, manifest)
 	}
@@ -189,10 +194,6 @@ func (uc *WorkshopUseCase) updateProblemFileUnlocked(ctx context.Context, req mo
 	}
 
 	if componentType != "" {
-		manifest, err := uc.loadManifest(ctx, req.ProblemID)
-		if err != nil {
-			return err
-		}
 		foundIdx := -1
 		for i := range manifest.FilesMetadata {
 			if manifest.FilesMetadata[i].Filename == req.Path {
@@ -237,12 +238,14 @@ func (uc *WorkshopUseCase) deleteProblemFileUnlocked(ctx context.Context, proble
 		return fmt.Errorf("cannot delete derived metadata file %s directly", path)
 	}
 
-	if err := uc.workspaceStorage.DeleteFile(ctx, problemID, path); err != nil {
-		return err
-	}
-
 	manifest, err := uc.loadManifest(ctx, problemID)
 	if err != nil {
+		return err
+	}
+	if _, err := uc.readProblemConfig(ctx, problemID); err != nil {
+		return err
+	}
+	if err := uc.workspaceStorage.DeleteFile(ctx, problemID, path); err != nil {
 		return err
 	}
 	newMetadata := make([]models.FileMetadata, 0, len(manifest.FilesMetadata))
@@ -309,6 +312,14 @@ func (uc *WorkshopUseCase) compileProblemComponentUnlocked(ctx context.Context, 
 		return nil, fmt.Errorf("unknown component type: %s", req.ComponentType)
 	}
 
+	manifest, err := uc.loadManifest(ctx, req.ProblemID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := uc.readProblemConfig(ctx, req.ProblemID); err != nil {
+		return nil, err
+	}
+
 	allFiles, err := uc.workspaceStorage.ListAllFiles(ctx, req.ProblemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workspace files: %w", err)
@@ -357,10 +368,6 @@ func (uc *WorkshopUseCase) compileProblemComponentUnlocked(ctx context.Context, 
 
 	sha256Hash := computeSHA256([]byte(binary.PrimaryFileID))
 
-	manifest, err := uc.loadManifest(ctx, req.ProblemID)
-	if err != nil {
-		return nil, err
-	}
 	foundIdx := -1
 	for i := range manifest.FilesMetadata {
 		if manifest.FilesMetadata[i].Type == req.ComponentType {

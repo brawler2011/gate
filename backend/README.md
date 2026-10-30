@@ -167,6 +167,9 @@ corrected content; an import replaces the entire workspace, including removed fi
 Other operations cannot clear the marker. It is removed only after all files and
 metadata are consistent; failure to remove it also returns an error. The marker is
 reserved, excluded from package exports and preserved by import cleanup.
+File edits, deletion and compilation validate the existing YAML before changing
+files. Unreadable legacy YAML leaves files untouched and creates no pending marker,
+so a corrected package can still be imported to repair the workspace.
 
 ## Diagnostic logging
 

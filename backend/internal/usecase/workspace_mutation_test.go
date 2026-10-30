@@ -184,3 +184,80 @@ func TestWorkspaceMutation_InitializationRetryRepairsCommittedState(t *testing.T
 	require.NoError(t, err)
 	require.Equal(t, "Initialized", manifest.Statement.Title)
 }
+
+func TestWorkspaceMutation_LegacyPreflightDoesNotPoisonWorkspace(t *testing.T) {
+	for _, failure := range []string{"malformed", "missing", "unavailable"} {
+		for _, operation := range []string{"update", "statement", "delete", "compile", "initialize"} {
+			t.Run(failure+"/"+operation, func(t *testing.T) {
+				ctx := context.Background()
+				config := "format_version: '1.0'\ntitle: Old\ntype: pass-fail\nlimits: {time_ms: 1000, memory_mb: 256}\nchecker: checkers/check.cpp\nsubtasks: {}\n"
+				uc, id := newWorkshopValidatorTest(t, false, map[string]string{"problem.yaml": config, "checkers/check.cpp": "ORIGINAL", "statements/en.md": "<!-- title --> Old"}, nil)
+				if operation == "initialize" {
+					delete(uc.problemsRepo.(*problemImportMockProblemsRepo).manifests, id)
+				}
+				before, err := uc.problemsRepo.GetProblemManifest(ctx, id)
+				require.NoError(t, err)
+				statementBefore, err := uc.workspaceStorage.ReadFile(ctx, id, "statements/en.md")
+				require.NoError(t, err)
+				originalStorage := uc.workspaceStorage.storage
+				switch failure {
+				case "malformed":
+					require.NoError(t, uc.workspaceStorage.WriteFile(ctx, id, "problem.yaml", []byte("subtasks: [")))
+				case "missing":
+					require.NoError(t, uc.workspaceStorage.DeleteFile(ctx, id, "problem.yaml"))
+				default:
+					uc.workspaceStorage.storage = &manifestFaultStorage{Storage: originalStorage, readPath: "problem.yaml", fault: errors.New("temporary YAML read failure")}
+				}
+				switch operation {
+				case "update":
+					err = uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "checkers/check.cpp", Content: []byte("CHANGED")})
+				case "statement":
+					err = uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "statements/en.md", Content: []byte("<!-- title --> Changed")})
+				case "delete":
+					err = uc.DeleteProblemFile(ctx, id, "checkers/check.cpp")
+				case "compile":
+					_, err = uc.CompileProblemComponent(ctx, models.CompileComponentRequest{ProblemID: id, ComponentType: "checker"})
+				case "initialize":
+					err = uc.InitProblemWorkshop(ctx, id, "Changed")
+				}
+				if operation == "initialize" && failure == "missing" {
+					require.NoError(t, err)
+					return
+				}
+				require.Error(t, err)
+				require.NoError(t, uc.workspaceStorage.checkMutation(ctx, id))
+				uc.workspaceStorage.storage = originalStorage
+				after, err := uc.problemsRepo.GetProblemManifest(ctx, id)
+				require.NoError(t, err)
+				require.Equal(t, before, after)
+				data, err := uc.workspaceStorage.ReadFile(ctx, id, "checkers/check.cpp")
+				require.NoError(t, err)
+				require.Equal(t, "ORIGINAL", string(data))
+				statementAfter, err := uc.workspaceStorage.ReadFile(ctx, id, "statements/en.md")
+				require.NoError(t, err)
+				require.Equal(t, statementBefore, statementAfter)
+				yamlAfter, err := uc.workspaceStorage.ReadFile(ctx, id, "problem.yaml")
+				switch failure {
+				case "malformed":
+					require.NoError(t, err)
+					require.Equal(t, []byte("subtasks: ["), yamlAfter) //nolint:testifylint // Malformed YAML must remain byte-for-byte unchanged.
+				case "missing":
+					require.ErrorIs(t, err, storage.ErrNotFound)
+				default:
+					require.NoError(t, err)
+					require.Equal(t, []byte(config), yamlAfter) //nolint:testifylint // Failed preflight must not rewrite even equivalent YAML.
+				}
+				// Import must remain available to repair corrupt legacy YAML without needing
+				// to bypass a marker created by an operation that could never finish.
+				zipData := createZipBytes(t, map[string]string{"problem.yaml": config, "checkers/check.cpp": "REPAIRED"})
+				_, err = NewProblemImportUseCase(uc.problemsRepo, uc.workspaceStorage).ImportProblemPackage(ctx, bytes.NewReader(zipData), int64(len(zipData)), id)
+				require.NoError(t, err)
+				_, err = uc.GetManifest(ctx, id)
+				require.NoError(t, err)
+				data, err = uc.ReadProblemFile(ctx, id, "checkers/check.cpp")
+				require.NoError(t, err)
+				require.Equal(t, "REPAIRED", string(data))
+			})
+		}
+	}
+}
