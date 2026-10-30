@@ -156,7 +156,7 @@ func runApp(envFile string) error {
 		}
 	}
 
-	workspaceStorage := usecase.NewWorkspaceStorage(store, defaultS3WorkshopBucket)
+	workspaceStorage := usecase.NewWorkspaceStorage(store, defaultS3WorkshopBucket, pg.NewWorkspaceLocker(pool.Config().ConnConfig))
 
 	authRepo := pg.NewAuthRepo(pool)
 	emailService := email.NewEmailService(cfg.Env, cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)

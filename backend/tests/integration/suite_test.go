@@ -173,7 +173,7 @@ func (s *IntegrationTestSuite) initApp() {
 	txManager := pg.NewTransactor(s.dbPool)
 	tempStoragePath := s.T().TempDir()
 	testStorage := storage.NewLocalStorage(tempStoragePath)
-	workspaceStorage := usecase.NewWorkspaceStorage(testStorage, "integration-workshop")
+	workspaceStorage := usecase.NewWorkspaceStorage(testStorage, "integration-workshop", &usecase.WorkspaceMutex{})
 
 	authRepo := pg.NewAuthRepo(s.dbPool)
 	emailService := &email.LogEmailService{}

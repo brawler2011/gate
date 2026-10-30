@@ -44,7 +44,7 @@ func TestWorkshopE2E(t *testing.T) {
 
 	// Initialize Storage-backed Workspace service
 	store := storage.NewLocalStorage(t.TempDir())
-	workspaceStorage := usecase.NewWorkspaceStorage(store, "integration-workshop")
+	workspaceStorage := usecase.NewWorkspaceStorage(store, "integration-workshop", &usecase.WorkspaceMutex{})
 	ctx := context.Background()
 	problemID := uuid.New()
 
@@ -236,7 +236,7 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 			data, err := json.Marshal(manifest)
 			require.NoError(t, err)
 			repo.manifests[problemID] = data
-			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "checker-evaluation")
+			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "checker-evaluation", &usecase.WorkspaceMutex{})
 			files := map[string]string{
 				"problem.yaml":         "subtasks:\n  samples:\n    tests:\n      - manual: 01.in\n",
 				"tests/01.in":          "1 2\n",

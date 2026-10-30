@@ -29,7 +29,7 @@ func TestWorkspaceStorage_ReadFile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rc := &workspaceReadCloser{Reader: tt.reader}
 			store := &workspaceDownloadStorage{reader: rc, err: tt.downloadErr}
-			ws := NewWorkspaceStorage(store, "workspaces")
+			ws := NewWorkspaceStorage(store, "workspaces", &WorkspaceMutex{})
 
 			data, err := ws.ReadFile(context.Background(), uuid.New(), "problem.yaml")
 

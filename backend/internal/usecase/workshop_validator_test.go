@@ -259,7 +259,7 @@ func newWorkshopValidatorTest(t *testing.T, validator bool, files map[string]str
 	data, err := json.Marshal(manifest)
 	require.NoError(t, err)
 	repo.manifests[id] = data
-	ws := NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-test")
+	ws := NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-test", &WorkspaceMutex{})
 	require.NoError(t, ws.WriteFile(context.Background(), id, "problem.yaml", []byte("subtasks:\n  samples:\n    tests:\n      - manual: 01.in\n")))
 	require.NoError(t, ws.WriteFile(context.Background(), id, "tests/01.in", []byte("invalid input\n")))
 	for path, content := range files {

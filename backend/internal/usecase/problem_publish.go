@@ -50,13 +50,26 @@ func NewProblemPublishUseCase(
 	}
 }
 
-func (uc *ProblemPublishUseCase) PublishProblem(
+func (uc *ProblemPublishUseCase) publishProblemUnlocked(
 	ctx context.Context,
 	problemID uuid.UUID,
 ) (*PublishResult, error) {
 	problem, err := uc.problemsRepo.GetProblemById(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get problem: %w", err)
+	}
+
+	// Recover a committed workshop snapshot before copying any files. Legacy
+	// imported workspaces without a snapshot retain their existing package layout.
+	data, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
+	if err != nil {
+		return nil, fmt.Errorf("load publication snapshot: %w", err)
+	}
+	if len(data) > 0 {
+		workshop := NewWorkshopUseCase(uc.problemsRepo, uc.workspaceStorage, nil, nil)
+		if _, err := workshop.loadManifest(ctx, problemID); err != nil {
+			return nil, fmt.Errorf("recover publication snapshot: %w", err)
+		}
 	}
 
 	tempDir, err := os.MkdirTemp("", "problem-publish-*")
@@ -252,4 +265,8 @@ func ZipDirectory(srcDir string, writer io.Writer) error {
 		return fmt.Errorf("failed to zip directory %s: %w", srcDir, err)
 	}
 	return nil
+}
+
+func (uc *ProblemPublishUseCase) PublishProblem(ctx context.Context, problemID uuid.UUID) (*PublishResult, error) {
+	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*PublishResult, error) { return uc.publishProblemUnlocked(ctx, problemID) })
 }

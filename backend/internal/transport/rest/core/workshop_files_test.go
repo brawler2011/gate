@@ -33,7 +33,7 @@ func (workshopFilesSecurity) HandleCookieAuth(ctx context.Context, _ corev1.Oper
 func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
 	ctx := context.Background()
 	id := uuid.New()
-	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test")
+	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", &usecase.WorkspaceMutex{})
 	for path, content := range map[string]string{
 		"problem.yaml":         "subtasks:\n  samples:\n    tests:\n      - manual: nested/edge\n",
 		"tests/nested/edge.in": "original input", "tests/nested/edge.ans": "original answer",

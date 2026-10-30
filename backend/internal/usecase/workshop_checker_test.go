@@ -107,7 +107,7 @@ func newWorkshopCheckerTest(t *testing.T, store storage.Storage, files map[strin
 	data, err := json.Marshal(manifest)
 	require.NoError(t, err)
 	repo.manifests[problemID] = data
-	ws := NewWorkspaceStorage(store, "test-workshop")
+	ws := NewWorkspaceStorage(store, "test-workshop", &WorkspaceMutex{})
 	require.NoError(t, ws.WriteFile(context.Background(), problemID, "solutions/main.cpp", []byte("solution")))
 	require.NoError(t, ws.WriteFile(context.Background(), problemID, "problem.yaml", []byte("subtasks:\n  samples:\n    tests:\n      - manual: 01.in\n")))
 	for path, content := range files {

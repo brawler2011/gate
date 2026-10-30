@@ -33,7 +33,7 @@ func NewProblemImportUseCase(problemsRepo interfaces.ProblemsRepo, workspaceStor
 	}
 }
 
-func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*models.ProblemManifest, error) {
+func (uc *ProblemImportUseCase) importProblemPackageUnlocked(ctx context.Context, zipReader io.Reader, problemID uuid.UUID) (*models.ProblemManifest, error) {
 	tempDir, err := os.MkdirTemp("", "problem-import-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)
@@ -369,4 +369,10 @@ func hasPackageMarker(dir string) bool {
 	}
 
 	return false
+}
+
+func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*models.ProblemManifest, error) {
+	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*models.ProblemManifest, error) {
+		return uc.importProblemPackageUnlocked(ctx, zipReader, problemID)
+	})
 }

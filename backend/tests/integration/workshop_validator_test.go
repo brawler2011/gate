@@ -59,7 +59,7 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 			data, err := json.Marshal(manifest)
 			require.NoError(t, err)
 			repo.manifests[id] = data
-			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-execution")
+			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-execution", &usecase.WorkspaceMutex{})
 			require.NoError(t, ws.WriteFile(ctx, id, "problem.yaml", []byte("subtasks:\n  samples:\n    tests:\n      - manual: 01.in\n")))
 			require.NoError(t, ws.WriteFile(ctx, id, path, []byte(tc.source)))
 			if tc.input != "" {

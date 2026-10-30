@@ -33,7 +33,7 @@ func (fixtureSecurity) HandleCookieAuth(ctx context.Context, _ corev1.OperationN
 
 func run() error {
 	id := uuid.MustParse(os.Args[3])
-	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(os.Args[1]), "fixture")
+	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(os.Args[1]), "fixture", &usecase.WorkspaceMutex{})
 	for _, name := range []string{"nested/edge.in", "nested/edge.ans", "nested/space #?.in"} {
 		if err := ws.WriteFile(context.Background(), id, "tests/"+name, []byte{0, 255, 128, 10}); err != nil {
 			return err

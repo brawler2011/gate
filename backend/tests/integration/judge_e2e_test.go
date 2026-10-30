@@ -154,7 +154,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	packagesRepo := pg.NewPackagesRepo(dbPool)
 
 	// Storage & UseCases
-	workspaceStorage := usecase.NewWorkspaceStorage(s3Store, "problem-workspaces")
+	workspaceStorage := usecase.NewWorkspaceStorage(s3Store, "problem-workspaces", &usecase.WorkspaceMutex{})
 	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, workspaceStorage, sb, txManager)
 	publishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages")
 	contestsUC := usecase.NewContestsUseCase(contestsRepo, nil)
