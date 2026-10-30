@@ -295,9 +295,9 @@ export const TestsListTable = ({
                           color={test.hasIn ? "blue" : "gray"}
                           size="xs"
                           style={{cursor: "pointer"}}
-                          onClick={() => setPreviewFile({name: `${paddedOrd}.in`, size: test.inSize})}
+                          onClick={() => setPreviewFile({name: test.filename, size: test.inSize})}
                         >
-                          {paddedOrd}.in {test.hasIn ? "✓" : "✗"}
+                          {test.filename} {test.hasIn ? "✓" : "✗"}
                         </Badge>
 
                         <Badge
@@ -305,9 +305,9 @@ export const TestsListTable = ({
                           color={test.hasOut ? "green" : "gray"}
                           size="xs"
                           style={{cursor: "pointer"}}
-                          onClick={() => setPreviewFile({name: `${paddedOrd}.out`, size: test.outSize})}
+                          onClick={() => setPreviewFile({name: test.outFilename, size: test.outSize})}
                         >
-                          {paddedOrd}.out {test.hasOut ? "✓" : "✗"}
+                          {test.outFilename} {test.hasOut ? "✓" : "✗"}
                         </Badge>
                       </Group>
                     )}
@@ -420,7 +420,7 @@ export const TestsListTable = ({
                             Удалить тест №{paddedOrd}?
                           </Text>
                           <Text size="xs" c="dimmed">
-                            Файлы {paddedOrd}.in и {paddedOrd}.out будут удалены.
+                            Ссылки на файлы {test.filename} и {test.outFilename} будут удалены из конфигурации.
                           </Text>
                           <Group justify="flex-end" gap={6} mt={4}>
                             <Button
