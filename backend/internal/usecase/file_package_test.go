@@ -354,3 +354,62 @@ func TestFilePackageMetadataRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, string(raw), "<!-- title -->")
 }
+
+func TestFilePackageRejectsStaleMetadataAndStatementPatches(t *testing.T) {
+	ctx := context.Background()
+	uc, id := newWorkshopValidatorTest(t, false, nil, nil)
+	first, err := uc.GetManifest(ctx, id)
+	require.NoError(t, err)
+	stale, err := uc.GetManifest(ctx, id)
+	require.NoError(t, err)
+	first.Statement.Title = "Concurrent title"
+	require.NoError(t, uc.SaveManifest(ctx, id, first))
+	stale.TimeLimitMs = 4321
+	require.ErrorIs(t, uc.SaveManifest(ctx, id, stale), pkg.ErrConflict)
+	require.ErrorIs(t, uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Revision: stale.Revision, Path: "statements/en.md", Content: []byte("<!-- legend -->\nStale statement")}), pkg.ErrConflict)
+	actual, err := uc.GetManifest(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, "Concurrent title", actual.Statement.Title)
+	require.Equal(t, 1000, actual.TimeLimitMs)
+	require.NotEqual(t, "Stale statement", actual.Statement.Legend)
+	require.Equal(t, first.Revision, actual.Revision)
+}
+
+func TestFilePackagePreservesSolutionBuildSettings(t *testing.T) {
+	uc, id := newWorkshopValidatorTest(t, false, map[string]string{
+		"problem.yaml":       "title: Settings\ntype: pass-fail\nlimits: {time_ms: 1000, memory_mb: 256}\nsubtasks: {}\nsolutions: {main.cpp: main}\nsources:\n solutions/main.cpp: {compiler: cpp20, dependencies: [../lib/helper.h]}\n",
+		"solutions/main.cpp": "solution", "lib/helper.h": "header",
+	}, nil)
+	ctx := context.Background()
+	before, err := uc.readProblemConfig(ctx, id)
+	require.NoError(t, err)
+	manifest, err := uc.GetManifest(ctx, id)
+	require.NoError(t, err)
+	manifest.TimeLimitMs = 2345
+	require.NoError(t, uc.SaveManifest(ctx, id, manifest))
+	after, err := uc.readProblemConfig(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, before.Sources["solutions/main.cpp"], after.Sources["solutions/main.cpp"])
+	require.Equal(t, before.Solutions, after.Solutions)
+}
+
+func TestFilePackageRejectsNullAndEmptyYAML(t *testing.T) {
+	for _, content := range []string{"null\n", "", "[]\n", "subtasks: ["} {
+		t.Run(content, func(t *testing.T) {
+			uc, id := newWorkshopValidatorTest(t, false, nil, nil)
+			seedWorkspaceFiles(t, uc.workspaceStorage, id, map[string]string{"problem.yaml": content, "tests/custom.in": "keep"})
+			ctx := context.Background()
+			previous, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
+			require.NoError(t, err)
+			_, err = uc.GetManifest(ctx, id)
+			require.Error(t, err)
+			initialized, err := uc.IsInitialized(ctx, id)
+			require.Error(t, err)
+			require.False(t, initialized)
+			require.Error(t, uc.SaveManifest(ctx, id, defaultManifest("Must not overwrite")))
+			current, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
+			require.NoError(t, err)
+			require.Equal(t, previous, current)
+		})
+	}
+}

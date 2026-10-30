@@ -209,6 +209,7 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 	user := middleware.GetUser(ctx)
 	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
 		ProblemID: params.ProblemId,
+		Revision:  manifest.Revision,
 		UserID:    user.Id,
 		Path:      filePath,
 		Content:   stmtBytes,

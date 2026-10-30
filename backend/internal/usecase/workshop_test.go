@@ -108,14 +108,14 @@ func TestWorkshopTestsConfig_RoundTrip(t *testing.T) {
 					return uc.workspaceStorage.WriteFile(ctx, id, filepath.ToSlash(rel), data)
 				}))
 
-				manifest, err := uc.GetManifest(ctx, id)
-				require.NoError(t, err)
 				before, err := uc.GetTestsConfig(ctx, id)
 				require.NoError(t, err)
 				original, err := uc.readProblemConfig(ctx, id)
 				require.NoError(t, err)
 				for range 2 {
 					require.NoError(t, uc.UpdateTestsConfig(ctx, id, before))
+					manifest, err := uc.GetManifest(ctx, id)
+					require.NoError(t, err)
 					require.NoError(t, uc.saveManifest(ctx, id, manifest))
 					after, err := uc.GetTestsConfig(ctx, id)
 					require.NoError(t, err)

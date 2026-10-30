@@ -292,7 +292,9 @@ func hasPackageMarker(dir string) bool {
 
 func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*models.ProblemManifest, error) {
 	var result *models.ProblemManifest
-	err := uc.workspaceStorage.replacePackage(ctx, problemID, func(ctx context.Context, _ *workspacePackage) error {
+	var committed *workspacePackage
+	err := uc.workspaceStorage.replacePackage(ctx, problemID, func(ctx context.Context, current *workspacePackage) error {
+		committed = current
 		var err error
 		result, err = uc.importProblemPackageFiles(ctx, zipReader, problemID)
 		return err
@@ -300,5 +302,6 @@ func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipRea
 	if err != nil {
 		return nil, err
 	}
+	result.Revision = committed.hash
 	return result, nil
 }

@@ -146,9 +146,12 @@ func (w *WorkspaceStorage) updatePackage(ctx context.Context, id uuid.UUID, pkg 
 	}
 	var metadata *models.WorkspaceMetadata
 	if data, ok := pkg.files["problem.yaml"]; ok {
-		var config gfmt.Problem
+		var config *gfmt.Problem
 		if err := yaml.Unmarshal(data, &config); err != nil {
 			return fmt.Errorf("invalid problem.yaml: %w", err)
+		}
+		if config == nil {
+			return fmt.Errorf("problem.yaml must contain a mapping")
 		}
 		metadata = &models.WorkspaceMetadata{Title: config.Title, TimeLimitMs: config.Limits.TimeMs, MemoryLimitMb: config.Limits.MemoryMb}
 	}
@@ -158,7 +161,7 @@ func (w *WorkspaceStorage) updatePackage(ctx context.Context, id uuid.UUID, pkg 
 	if err := w.repo.CommitWorkspace(ctx, id, pkg.hash, hash, metadata); err != nil {
 		return fmt.Errorf("commit workspace package: %w", err)
 	}
-
+	pkg.hash = hash
 	return nil
 }
 

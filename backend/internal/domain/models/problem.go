@@ -7,6 +7,8 @@ import (
 )
 
 type ProblemManifest struct {
+	// Revision identifies the file package read by the caller; it is not persisted metadata.
+	Revision    string    `json:"-"`
 	LastUpdated time.Time `json:"last_updated"`
 	ProblemType string    `json:"problem_type"` // "pass-fail", "scoring", etc
 

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -148,6 +149,10 @@ func (uc *WorkshopUseCase) initProblemWorkshopFiles(ctx context.Context, problem
 }
 
 func (uc *WorkshopUseCase) updateProblemFileFiles(ctx context.Context, req models.UpdateFileRequest) error {
+	current := ctx.Value(workspacePackageKey{uc.workspaceStorage, req.ProblemID}).(*workspacePackage)
+	if req.Revision != "" && req.Revision != current.hash {
+		return pkg.Wrap(pkg.ErrConflict, nil, "workspace changed; reload before saving")
+	}
 	req.Path = filepath.ToSlash(filepath.Clean(req.Path))
 	if req.Path == "problem.yaml" {
 		return fmt.Errorf("cannot modify problem.yaml directly")
@@ -549,6 +554,7 @@ func (uc *WorkshopUseCase) loadManifestFiles(ctx context.Context, problemID uuid
 		return nil, err
 	}
 	manifest := &models.ProblemManifest{
+		Revision:    ctx.Value(workspacePackageKey{uc.workspaceStorage, problemID}).(*workspacePackage).hash,
 		LastUpdated: config.UpdatedAt, ProblemType: config.Type, MaxScore: config.MaxScore,
 		TimeLimitMs: config.Limits.TimeMs, MemoryLimitMb: config.Limits.MemoryMb,
 		FilesMetadata: []models.FileMetadata{},
@@ -637,7 +643,10 @@ func (uc *WorkshopUseCase) saveManifestFiles(ctx context.Context, problemID uuid
 	if slices.Equal(componentFilenames(stored, "interactor"), componentFilenames(manifest, "interactor")) {
 		config.Interactor = previous.Interactor
 	}
-	config.Sources = make(map[string]gfmt.Source)
+	config.Sources = previous.Sources
+	if config.Sources == nil {
+		config.Sources = make(map[string]gfmt.Source)
+	}
 	for _, meta := range manifest.FilesMetadata {
 		var deps []string
 		for _, dep := range meta.Dependencies {
@@ -703,12 +712,14 @@ func (uc *WorkshopUseCase) readProblemConfig(ctx context.Context, problemID uuid
 		return nil, fmt.Errorf("failed to read problem.yaml: %w", err)
 	}
 
-	var prob gfmt.Problem
+	var prob *gfmt.Problem
 	if err := yaml.Unmarshal(yamlBytes, &prob); err != nil {
 		return nil, fmt.Errorf("failed to parse problem.yaml: %w", err)
 	}
-
-	return &prob, nil
+	if prob == nil {
+		return nil, fmt.Errorf("problem.yaml must contain a mapping")
+	}
+	return prob, nil
 }
 
 func defaultManifest(title string) *models.ProblemManifest {
@@ -1102,9 +1113,18 @@ func (uc *WorkshopUseCase) loadManifest(ctx context.Context, problemID uuid.UUID
 }
 
 func (uc *WorkshopUseCase) saveManifest(ctx context.Context, problemID uuid.UUID, manifest *models.ProblemManifest) error {
-	return uc.workspaceStorage.withPackage(ctx, problemID, func(ctx context.Context, _ *workspacePackage) error {
+	var current *workspacePackage
+	err := uc.workspaceStorage.withPackage(ctx, problemID, func(ctx context.Context, pkgState *workspacePackage) error {
+		if manifest.Revision != pkgState.hash {
+			return pkg.Wrap(pkg.ErrConflict, nil, "workspace changed; reload before saving")
+		}
+		current = pkgState
 		return uc.saveManifestFiles(ctx, problemID, manifest)
 	})
+	if err == nil {
+		manifest.Revision = current.hash
+	}
+	return err
 }
 
 func (uc *WorkshopUseCase) UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *models.TestsMetadata) error {

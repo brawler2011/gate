@@ -118,3 +118,50 @@ func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "outside", string(outside))
 }
+
+type competingWorkshopPatch struct {
+	interfaces.WorkshopUC
+	beforeWrite func()
+}
+
+func (w competingWorkshopPatch) SaveManifest(ctx context.Context, id uuid.UUID, manifest *models.ProblemManifest) error {
+	w.beforeWrite()
+	return w.WorkshopUC.SaveManifest(ctx, id, manifest)
+}
+func (w competingWorkshopPatch) UpdateProblemFile(ctx context.Context, request models.UpdateFileRequest) error {
+	w.beforeWrite()
+	return w.WorkshopUC.UpdateProblemFile(ctx, request)
+}
+
+func TestWorkshopPatchesRejectConcurrentChanges_HTTP409(t *testing.T) {
+	for _, patch := range []string{"limits", "statement"} {
+		t.Run(patch, func(t *testing.T) {
+			ctx := context.Background()
+			id := uuid.New()
+			repo := &workshopFilesRepo{}
+			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", repo)
+			uc := usecase.NewWorkshopUseCase(ws, nil)
+			require.NoError(t, uc.InitProblemWorkshop(ctx, id, "Original"))
+			beforeWrite := func() {
+				current, err := uc.GetManifest(ctx, id)
+				require.NoError(t, err)
+				current.Statement.Title = "Concurrent title"
+				require.NoError(t, uc.SaveManifest(ctx, id, current))
+			}
+			handler := &CoreServer{workshopUC: competingWorkshopPatch{WorkshopUC: uc, beforeWrite: beforeWrite}}
+			var err error
+			if patch == "limits" {
+				_, err = handler.UpdateProblemLimits(ctx, &corev1.UpdateProblemLimitsRequest{TimeLimitMs: corev1.NewOptInt(4321)}, corev1.UpdateProblemLimitsParams{ProblemId: id})
+			} else {
+				_, err = handler.UpdateProblemStatement(ctx, &corev1.UpdateProblemStatementRequest{Legend: corev1.NewOptString("Stale legend")}, corev1.UpdateProblemStatementParams{ProblemId: id})
+			}
+			require.ErrorIs(t, err, pkg.ErrConflict)
+			require.Equal(t, http.StatusConflict, pkg.ToREST(err))
+			actual, err := uc.GetManifest(ctx, id)
+			require.NoError(t, err)
+			require.Equal(t, "Concurrent title", actual.Statement.Title)
+			require.Equal(t, 1000, actual.TimeLimitMs)
+			require.NotEqual(t, "Stale legend", actual.Statement.Legend)
+		})
+	}
+}
