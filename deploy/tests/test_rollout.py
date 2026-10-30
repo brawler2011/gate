@@ -33,6 +33,7 @@ class DockerRolloutTest(unittest.TestCase):
         self.project = Path.cwd().name
         self.tag = self.project + ":release"
         self.addCleanup(self.cleanup)
+        Path("dynamic").mkdir()
         rollout.run("docker", "tag", "nginx:alpine", self.tag)
         config = {"name": self.project, "services": {}}
         for service, port in (("backend", 8080), ("frontend", 3000)):
@@ -54,9 +55,10 @@ class DockerRolloutTest(unittest.TestCase):
             "image": "traefik:v3.7", "pull_policy": "never",
             "command": ["--providers.docker=true", "--providers.docker.exposedbydefault=false",
                         f"--providers.docker.constraints=Label(`gate.rollout.test`, `{self.project}`)",
+                        "--providers.file.directory=/etc/traefik/dynamic",
                         "--entrypoints.web.address=:80"],
             "ports": ["127.0.0.1::80"],
-            "volumes": ["/var/run/docker.sock:/var/run/docker.sock:ro"],
+            "volumes": ["/var/run/docker.sock:/var/run/docker.sock:ro", "./dynamic:/etc/traefik/dynamic:ro"],
         }
         self.config = config
         self.write_config()
@@ -108,6 +110,8 @@ class DockerRolloutTest(unittest.TestCase):
         try:
             with self.assertRaises(RuntimeError):
                 rollout.rollout(self.url)
+            self.assertTrue(rollout.guard_routes_ready(self.url, expected=False))
+            stop.wait(3)  # Keep sampling beyond endpoint removal and Docker-provider refresh.
         finally:
             stop.set()
             monitor.join()
@@ -131,13 +135,60 @@ class DockerRolloutTest(unittest.TestCase):
         self.config["services"]["backend"]["image"] = "nginx:alpine"
         self.config["services"]["backend"]["environment"]["VERSION"] = "new-release"
         self.write_config()
-        rollout.rollout(self.url)
+        failures.clear()
+        stop.clear()
+        monitor = threading.Thread(target=probe)
+        monitor.start()
+        try:
+            rollout.rollout(self.url)
+            self.assertTrue(rollout.guard_routes_ready(self.url, expected=False))
+            stop.wait(3)
+        finally:
+            stop.set()
+            monitor.join()
+        self.assertFalse(failures, f"Traefik lost healthy routing during successful handoff: {failures[:5]}")
         active = rollout.inspect(rollout.compose("ps", "-q", "backend", capture=True).strip())
         self.assertIn("VERSION=new-release", active["Config"]["Env"])
         self.assertEqual(3, len(rollout.compose("ps", "-aq", capture=True).split()))
 
 
 class FailureHandlingTest(unittest.TestCase):
+    def test_deployment_path_expands_home_in_actual_workflow_shell(self):
+        workflow = SCRIPT.parents[1].parent / ".github/workflows/deploy.yml"
+        line = next(line.strip() for line in workflow.read_text().splitlines() if line.strip().startswith('cd "$('))
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "gate/deploy/prod"
+            target.mkdir(parents=True)
+            script = line.replace("${{ inputs.deploy_dir }}", "~/gate/deploy/prod") + '\npwd'
+            result = subprocess.check_output(["sh", "-eu", "-c", script], text=True,
+                                             env={**os.environ, "HOME": directory})
+            self.assertEqual(str(target), result.strip())
+
+    def test_handoff_timeout_restores_routes_before_instances_can_be_removed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "routes.json"
+            path.write_text("stable routes")
+            with patch.object(rollout, "guard_routes_ready", return_value=False), \
+                 patch.object(rollout.time, "sleep"):
+                with self.assertRaisesRegex(RuntimeError, "retaining guard routes"):
+                    rollout.withdraw_guard_routes(path, "https://gate.test/health")
+            self.assertEqual("stable routes", path.read_text())
+
+    def test_unresolved_guard_routes_reject_capture_without_destroying_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            previous = Path.cwd()
+            os.chdir(directory)
+            try:
+                Path(".rollback").mkdir()
+                Path("routes.json").write_text("previous guard routes")
+                Path(".rollback/routing-path").write_text(str(Path("routes.json").resolve()))
+                with self.assertRaisesRegex(RuntimeError, "Unresolved rollover routes"):
+                    rollout.capture("https://gate.test/health")
+                self.assertEqual("previous guard routes", Path("routes.json").read_text())
+                self.assertTrue(Path(".rollback/routing-path").exists())
+            finally:
+                os.chdir(previous)
+
     def test_unhealthy_current_release_retains_previous_recovery_point(self):
         with tempfile.TemporaryDirectory() as directory:
             previous = Path.cwd()
@@ -171,6 +222,7 @@ class FailureHandlingTest(unittest.TestCase):
 
                 with patch.object(rollout, "compose", side_effect=compose), \
                      patch.object(rollout, "guard_config"), \
+                     patch.object(rollout, "install_guard_routes", return_value=None), \
                      patch.object(rollout, "web_healthy", return_value=True), \
                      patch.object(rollout, "service_container", return_value="new"), \
                      patch.object(rollout, "guard_routes_ready", return_value=True), \

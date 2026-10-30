@@ -13,15 +13,19 @@ as an artifact or printed: it contains credentials. Retain it for manual recover
 Images are deliberately not pruned, so moving registry tags cannot break rollback.
 
 Before replacing containers, the script starts temporary backend/frontend instances
-from the captured images. They use separate Traefik router/service names and higher
-router priorities, retaining the previous public routes while the release changes.
+from the captured images. Temporary file-provider routes use separate router/service
+names and higher priorities, retaining the previous public routes while the release changes.
 A frontend using the internal backend URL is pointed at the stable backend guard
 so its server-side API requests also survive the rollover.
 The script probes their bridge addresses from the Docker host and waits for response
 markers proving that Traefik has activated both guards before proceeding.
 The usual 30-attempt, two-second health loop checks the new backend and frontend
 directly, as well as the public `/health` route. A healthy guard cannot mask a broken
-release. On success, guards are removed and the new routes take over. Backend and
+release. On success, the temporary routing file is removed atomically; the script
+waits for healthy public responses without guard markers before removing the still-live
+guard containers. This confirms Traefik has switched routes before endpoints disappear.
+Handoff failure reinstates the guard routes and triggers rollback; failed recovery
+retains the guard instances. Backend and
 frontend Traefik services also have active healthchecks.
 
 Pull, partial startup, or post-deploy health failures restore the captured files,
@@ -31,13 +35,20 @@ Containers added by the failed release are removed without removing their volume
 rollback still fails the deployment job. If rollback fails, guards and recovery
 state remain for the operator; logs distinguish deployment failure, rollback success
 and rollback failure. On the first installation there is no prior release to restore.
-A currently unhealthy deployment is rejected before overwriting its configuration.
+A currently unhealthy deployment or unresolved guard routing is rejected before
+overwriting configuration or recovery state.
 
 Recovery never runs `down -v`, removes volumes, prunes images, or reverses database
 migrations. Take the operational database/storage backups before releasing schema
 changes. Migrations must leave the previous application usable; incompatible data
-or schema changes require operator recovery from those backups. Traefik's external
-configuration is not modified by this workflow. Deploy routing changes within the
+or schema changes require operator recovery from those backups. Traefik must watch
+the host-writable directory bind-mounted at `/etc/traefik/dynamic`, as configured in
+`deploy/traefik/traefik.yml`. The script discovers that mount on the shared Docker
+network and writes one temporary `gate-rollover-<project>.json` file, leaving existing
+configuration files intact. Activation is confirmed through public response markers;
+an absent/unwatched/inaccessible directory fails before replacing release containers.
+After a failed recovery, keep `.rollback` and that file together for operator recovery.
+Deploy routing changes within the
 existing host/path boundaries: guards preserve the old routes until activation.
 
 Run the local failing-release exercise (isolated containers/network, no production
