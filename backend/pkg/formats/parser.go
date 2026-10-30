@@ -10,6 +10,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats/icpc"
 	"github.com/brawler2011/gate/backend/pkg/formats/pcms2"
 	"github.com/brawler2011/gate/backend/pkg/formats/polygon"
+	"gopkg.in/yaml.v3"
 )
 
 // Parser is the interface that all format parsers must implement.
@@ -42,8 +43,14 @@ func DetectFormat(packageDir string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to read problem.yaml: %w", err)
 		}
-		content := string(data)
-		if strings.Contains(content, "format_version:") {
+		var config map[string]any
+		if err := yaml.Unmarshal(data, &config); err != nil {
+			return "", fmt.Errorf("invalid problem.yaml: %w", err)
+		}
+		if config == nil {
+			return "", fmt.Errorf("problem.yaml must contain a mapping")
+		}
+		if _, ok := config["format_version"]; ok {
 			return "gfmt", nil
 		}
 		return "icpc", nil

@@ -174,10 +174,12 @@ func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProb
 
 		manifest, err := h.workshopUC.GetManifest(ctx, problemID)
 		if err != nil {
+			_ = h.problemsUC.DeleteProblem(ctx, problemID)
 			return nil, err
 		}
 		manifest.Statement.Title = input.Title
 		if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
+			_ = h.problemsUC.DeleteProblem(ctx, problemID)
 			return nil, workshopWriteError(err, "save template title")
 		}
 
@@ -231,10 +233,12 @@ func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProb
 
 	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
 	if err != nil {
+		_ = h.problemsUC.DeleteProblem(ctx, problemID)
 		return nil, err
 	}
 	manifest.Statement.Title = input.Title
 	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
+		_ = h.problemsUC.DeleteProblem(ctx, problemID)
 		return nil, workshopWriteError(err, "save template title")
 	}
 

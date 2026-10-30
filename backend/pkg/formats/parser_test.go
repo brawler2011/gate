@@ -311,3 +311,26 @@ func TestImport(t *testing.T) {
 		}
 	}
 }
+
+func TestYAMLParsersRejectNullAndNonMappingConfiguration(t *testing.T) {
+	for _, content := range []string{"null\n", "", "[]\n", "subtasks: ["} {
+		t.Run(content, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "problem.yaml"), []byte(content), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := DetectFormat(dir); err == nil {
+				t.Fatal("invalid YAML accepted during format detection")
+			}
+			for _, format := range []string{"gfmt", "icpc"} {
+				parser, err := GetParser(format)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := parser.Parse(dir); err == nil {
+					t.Fatalf("%s parser accepted invalid YAML", format)
+				}
+			}
+		})
+	}
+}

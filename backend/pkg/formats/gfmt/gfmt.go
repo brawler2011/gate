@@ -24,14 +24,17 @@ func OpenPackage(dir string) (*GateFormat, error) {
 		return nil, fmt.Errorf("failed to read problem.yaml: %w", err)
 	}
 
-	var prob Problem
+	var prob *Problem
 	if err := yaml.Unmarshal(data, &prob); err != nil {
 		return nil, fmt.Errorf("failed to parse problem.yaml: %w", err)
+	}
+	if prob == nil {
+		return nil, fmt.Errorf("problem.yaml must contain a mapping")
 	}
 
 	return &GateFormat{
 		Path:    dir,
-		Problem: &prob,
+		Problem: prob,
 	}, nil
 }
 

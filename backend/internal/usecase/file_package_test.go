@@ -413,3 +413,28 @@ func TestFilePackageRejectsNullAndEmptyYAML(t *testing.T) {
 		})
 	}
 }
+
+func TestFilePackageRejectsInvalidImportBeforeConversion(t *testing.T) {
+	for _, content := range []string{"null\n", "", "[]\n", "subtasks: ["} {
+		t.Run(content, func(t *testing.T) {
+			ctx := context.Background()
+			uc, id := newWorkshopValidatorTest(t, false, map[string]string{"tests/custom.in": "keep"}, nil)
+			previous, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
+			require.NoError(t, err)
+			data := createZipBytes(t, map[string]string{"problem.yaml": content})
+			importer := NewProblemImportUseCase(uc.workspaceStorage.repo.(*problemImportMockProblemsRepo), uc.workspaceStorage)
+			_, err = importer.ImportProblemPackage(ctx, bytes.NewReader(data), int64(len(data)), id)
+			require.Error(t, err)
+			current, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
+			require.NoError(t, err)
+			require.Equal(t, previous, current)
+			fresh := NewWorkshopUseCase(NewWorkspaceStorage(uc.workspaceStorage.storage, uc.workspaceStorage.bucket, uc.workspaceStorage.repo), nil)
+			original, err := fresh.GetManifest(ctx, id)
+			require.NoError(t, err)
+			require.Equal(t, "Validator test", original.Statement.Title)
+			actual, err := fresh.ReadProblemFile(ctx, id, "tests/custom.in")
+			require.NoError(t, err)
+			require.Equal(t, "keep", string(actual))
+		})
+	}
+}
