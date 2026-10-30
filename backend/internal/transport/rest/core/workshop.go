@@ -127,7 +127,7 @@ func (h *CoreServer) GetProblemStatement(ctx context.Context, params corev1.GetP
 	if err == nil {
 		stmt = usecase.ParseStatementMarkdown(string(fileData))
 		// If title tag is empty, fallback to the manifest title
-		if strings.TrimSpace(stmt.Title) == "" {
+		if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
 			stmt.Title = manifest.Statement.Title
 		}
 	} else {
@@ -162,7 +162,7 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 	fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
 	if err == nil {
 		stmt = usecase.ParseStatementMarkdown(string(fileData))
-		if strings.TrimSpace(stmt.Title) == "" {
+		if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
 			stmt.Title = manifest.Statement.Title
 		}
 	} else {

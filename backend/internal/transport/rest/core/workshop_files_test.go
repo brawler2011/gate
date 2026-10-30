@@ -165,3 +165,32 @@ func TestWorkshopPatchesRejectConcurrentChanges_HTTP409(t *testing.T) {
 		})
 	}
 }
+
+func TestEnglishStatementUsesCanonicalTitleAfterRename(t *testing.T) {
+	ctx := context.Background()
+	id := uuid.New()
+	repo := &workshopFilesRepo{}
+	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", repo)
+	uc := usecase.NewWorkshopUseCase(ws, nil)
+	require.NoError(t, uc.InitProblemWorkshop(ctx, id, "Old title"))
+	markdown := "<!-- title -->\nOld title\n\n<!-- legend -->\nOriginal legend\n"
+	require.NoError(t, uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "statements/en.md", Content: []byte(markdown)}))
+	manifest, err := uc.GetManifest(ctx, id)
+	require.NoError(t, err)
+	manifest.Statement.Title = "Renamed title"
+	require.NoError(t, uc.SaveManifest(ctx, id, manifest))
+	original, err := uc.ReadProblemFile(ctx, id, "statements/en.md")
+	require.NoError(t, err)
+	require.Equal(t, markdown, string(original))
+	handler := &CoreServer{workshopUC: uc}
+	statement, err := handler.GetProblemStatement(ctx, corev1.GetProblemStatementParams{ProblemId: id})
+	require.NoError(t, err)
+	require.Equal(t, "Renamed title", statement.Title)
+	statement, err = handler.UpdateProblemStatement(ctx, &corev1.UpdateProblemStatementRequest{Legend: corev1.NewOptString("Changed legend")}, corev1.UpdateProblemStatementParams{ProblemId: id})
+	require.NoError(t, err)
+	require.Equal(t, "Renamed title", statement.Title)
+	actual, err := uc.GetManifest(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, "Renamed title", actual.Statement.Title)
+	require.Equal(t, "Changed legend", actual.Statement.Legend)
+}
