@@ -11,4 +11,4 @@ pre-commit:
 commit-msg:
   commands:
     validate-commit-msg:
-      run: task commit:validate -- {1}
+      run: task commit:validate -- --edit "{1}"

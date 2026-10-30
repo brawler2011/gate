@@ -145,7 +145,7 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 2. **PR Creation**
    - Run `task precommit` successfully before creating the PR.
-   - Validate the Conventional Commits title (<= 65 chars) with `task commit:validate -- --title '<title>'`.
+   - Validate the Conventional Commits title (<= 65 chars) with `printf '%s\n' '<title>' | task commit:validate`.
    - Follow `.github/pull_request_template.md`, recording only checks actually performed and their results.
    - Push the issue branch and create the PR with `gh pr create --body-file <path>`.
 

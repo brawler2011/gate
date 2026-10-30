@@ -24,19 +24,13 @@ tasks:
     cmds:
       - task: contracts:lint
       - task: verify-codegen
-      - task: tools:test
       - task: precommit:be
       - task: precommit:fe
 
   commit:validate:
     desc: "Validate commit message or PR title format and length"
     cmds:
-      - go -C tools/commitvalidator run . {{.CLI_ARGS}}
-
-  tools:test:
-    desc: "Run tests across all repository tools"
-    cmds:
-      - go -C tools/commitvalidator test ./...
+      - bun run commit:validate {{.CLI_ARGS}}
 
   pr:status:
     desc: "Show GitHub PR status and CI checks for current branch"
