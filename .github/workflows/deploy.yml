@@ -188,7 +188,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     concurrency:
-      group: deploy-${{ inputs.environment }}
+      group: deployment-rollout-${{ inputs.environment }}
       cancel-in-progress: false
     permissions:
       contents: read

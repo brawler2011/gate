@@ -96,6 +96,12 @@ def capture(health_url):
         spec["image"] = actual["Image"]
         # SSH receives the NEW release's secrets; restore the running release's values.
         spec["environment"] = dict(item.split("=", 1) for item in actual["Config"]["Env"])
+        # `compose config` keeps shell $$ escapes in argv; inspect contains runtime argv.
+        # Normalize these fields before uniformly escaping literal dollars for reload.
+        spec["command"] = actual["Config"]["Cmd"]
+        spec["entrypoint"] = actual["Config"]["Entrypoint"]
+        if "Healthcheck" in actual["Config"]:
+            spec.setdefault("healthcheck", {})["test"] = actual["Config"]["Healthcheck"]["Test"]
         spec["labels"] = {key: value for key, value in actual["Config"]["Labels"].items()
                           if not key.startswith("com.docker.compose.")}
         spec.pop("build", None)

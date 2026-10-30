@@ -43,6 +43,8 @@ class DockerRolloutTest(unittest.TestCase):
                 "image": self.tag if service == "backend" else "nginx:alpine", "pull_policy": "never",
                 "volumes": [f"./{service}.conf:/etc/nginx/nginx.conf:ro"],
                 "environment": {"LITERAL": "secret$$dollar", "BACKEND_API_URL": "http://backend:8080"},
+                "command": ["sh", "-c", "test \"$$LITERAL\" = 'secret$$dollar' && exec nginx -g 'daemon off;'"],
+                "healthcheck": {"test": ["CMD-SHELL", "test \"$$LITERAL\" = 'secret$$dollar'"], "interval": "1s"},
                 "labels": {
                     "traefik.enable": "true",
                     "gate.rollout.test": self.project,
@@ -153,6 +155,47 @@ class DockerRolloutTest(unittest.TestCase):
 
 
 class FailureHandlingTest(unittest.TestCase):
+    def test_reusable_deploy_and_caller_concurrency_groups_are_distinct(self):
+        workflows = SCRIPT.parents[1].parent / ".github/workflows"
+        deploy = (workflows / "deploy.yml").read_text()
+        group = next(line.strip().removeprefix("group: ") for line in deploy.splitlines()
+                     if line.strip().startswith("group: "))
+        for caller in workflows.glob("deploy-*.yml"):
+            lines = caller.read_text().splitlines()
+            if not any("uses: ./.github/workflows/deploy.yml" in line for line in lines):
+                continue
+            environment = next(line.split(":", 1)[1].strip() for line in lines
+                               if line.strip().startswith("environment: "))
+            caller_group = next(line.strip().removeprefix("group: ") for line in lines
+                                if line.strip().startswith("group: "))
+            self.assertNotEqual(caller_group, group.replace("${{ inputs.environment }}", environment))
+
+    def test_snapshot_preserves_compose_shell_escapes_and_literal_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            previous = Path.cwd()
+            os.chdir(directory)
+            try:
+                service = {"image": "redis:alpine", "environment": {"LITERAL": "secret$$dollar"},
+                           "command": ["sh", "-c", "redis-server --requirepass $$LITERAL"],
+                           "entrypoint": ["sh", "-c", 'exec "$$0" "$$@"'],
+                           "healthcheck": {"test": ["CMD-SHELL", 'test -n "$$LITERAL"']}}
+                Path("docker-compose.yml").write_text(json.dumps({"services": {"redis": service}}))
+                original = json.loads(rollout.compose("config", "--format", "json", capture=True))["services"]["redis"]
+                actual = {"Id": "old-container", "Image": "redis:alpine", "Config": {
+                    "Env": ["LITERAL=secret$dollar"], "Labels": {},
+                    "Cmd": [item.replace("$$", "$") for item in original["command"]],
+                    "Entrypoint": [item.replace("$$", "$") for item in original["entrypoint"]],
+                    "Healthcheck": {"Test": [item.replace("$$", "$") for item in original["healthcheck"]["test"]]}}}
+                with patch.object(rollout, "wait_healthy", return_value=True), \
+                     patch.object(rollout, "service_container", return_value="old-container"), \
+                     patch.object(rollout, "inspect", return_value=actual):
+                    rollout.capture("https://gate.test/health")
+                restored = json.loads(rollout.compose("config", "--format", "json", snapshot=True, capture=True))["services"]["redis"]
+                for field in ("command", "entrypoint", "healthcheck", "environment"):
+                    self.assertEqual(original[field], restored[field], field)
+            finally:
+                os.chdir(previous)
+
     def test_deployment_path_expands_home_in_actual_workflow_shell(self):
         workflow = SCRIPT.parents[1].parent / ".github/workflows/deploy.yml"
         line = next(line.strip() for line in workflow.read_text().splitlines() if line.strip().startswith('cd "$('))
