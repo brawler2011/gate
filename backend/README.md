@@ -171,6 +171,20 @@ File edits, deletion and compilation validate the existing YAML before changing
 files. Unreadable legacy YAML leaves files untouched and creates no pending marker,
 so a corrected package can still be imported to repair the workspace.
 
+The PostgreSQL locker monitors its dedicated session and cancels the operation
+context if the connection is lost. Manifest, limits, title and package writes use
+that same guarded session, serialized with monitoring; a dead owner cannot commit
+through the repository pool. Storage operations check ownership before and after
+I/O, and marker removal requires live ownership. Lost sessions return an error even
+if the callback returns success. Validation and solution testing hold the operation
+lock through all reads and sandbox execution.
+
+This protocol relies on cooperative context cancellation at storage boundaries.
+It cannot stop arbitrary Go callbacks or fence an object-store request already sent
+before session loss. A stronger guarantee would require immutable workspace
+generations or conditional object writes. Direct database/object-store changes
+outside the workspace API also bypass this protocol.
+
 ## Diagnostic logging
 
 The backend writes sanitized JSON through `slog` to stdout in every environment.

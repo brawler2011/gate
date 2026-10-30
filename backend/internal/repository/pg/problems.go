@@ -92,12 +92,14 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 }
 
 func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
-	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
-		ID:         id,
-		Title:      problem.Title,
-		Visibility: stringToNullProblemVisibility(problem.Visibility),
-		OwnerID:    uuidPtrToNullUUID(problem.OwnerID),
-		IsTemplate: problem.IsTemplate,
+	err := withWorkspaceQueries(ctx, r.queries, func(ctx context.Context, queries *sqlc.Queries) error {
+		return queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
+			ID:         id,
+			Title:      problem.Title,
+			Visibility: stringToNullProblemVisibility(problem.Visibility),
+			OwnerID:    uuidPtrToNullUUID(problem.OwnerID),
+			IsTemplate: problem.IsTemplate,
+		})
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -277,10 +279,12 @@ func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) models.Problem {
 }
 
 func (r *ProblemsRepo) UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error {
-	err := r.queries.UpdateProblemLimits(ctx, sqlc.UpdateProblemLimitsParams{
-		ID:            id,
-		TimeLimitMs:   safeInt32(timeLimitMs),
-		MemoryLimitMb: safeInt32(memoryLimitMb),
+	err := withWorkspaceQueries(ctx, r.queries, func(ctx context.Context, queries *sqlc.Queries) error {
+		return queries.UpdateProblemLimits(ctx, sqlc.UpdateProblemLimitsParams{
+			ID:            id,
+			TimeLimitMs:   safeInt32(timeLimitMs),
+			MemoryLimitMb: safeInt32(memoryLimitMb),
+		})
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -300,9 +304,11 @@ func (r *ProblemsRepo) GetProblemManifest(ctx context.Context, id uuid.UUID) ([]
 }
 
 func (r *ProblemsRepo) UpdateProblemManifest(ctx context.Context, id uuid.UUID, manifest []byte) error {
-	err := r.queries.UpdateProblemManifest(ctx, sqlc.UpdateProblemManifestParams{
-		ID:       id,
-		Manifest: manifest,
+	err := withWorkspaceQueries(ctx, r.queries, func(ctx context.Context, queries *sqlc.Queries) error {
+		return queries.UpdateProblemManifest(ctx, sqlc.UpdateProblemManifestParams{
+			ID:       id,
+			Manifest: manifest,
+		})
 	})
 	if err != nil {
 		return HandlePgErr(err)

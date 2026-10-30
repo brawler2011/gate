@@ -22,12 +22,17 @@ func NewPackagesRepo(pool *pgxpool.Pool) *PackagesRepo {
 }
 
 func (r *PackagesRepo) CreatePackage(ctx context.Context, params *models.CreatePackageParams) (models.ProblemPackage, error) {
-	row, err := r.queries.CreateProblemPackage(ctx, sqlc.CreateProblemPackageParams{
-		ID:             params.ID,
-		ProblemID:      params.ProblemID,
-		OrganizationID: params.OrganizationID,
-		PackageHash:    params.PackageHash,
-		Status:         sqlc.PackageStatus(params.Status),
+	var row sqlc.ProblemPackage
+	err := withWorkspaceQueries(ctx, r.queries, func(ctx context.Context, queries *sqlc.Queries) error {
+		var err error
+		row, err = queries.CreateProblemPackage(ctx, sqlc.CreateProblemPackageParams{
+			ID:             params.ID,
+			ProblemID:      params.ProblemID,
+			OrganizationID: params.OrganizationID,
+			PackageHash:    params.PackageHash,
+			Status:         sqlc.PackageStatus(params.Status),
+		})
+		return err
 	})
 	if err != nil {
 		return models.ProblemPackage{}, HandlePgErr(err)
@@ -79,11 +84,13 @@ func (r *PackagesRepo) GetPackageByVersion(ctx context.Context, problemID uuid.U
 }
 
 func (r *PackagesRepo) UpdatePackageStatus(ctx context.Context, params *models.UpdatePackageStatusParams) error {
-	err := r.queries.UpdatePackageStatus(ctx, sqlc.UpdatePackageStatusParams{
-		ID:       params.ID,
-		Status:   sqlc.PackageStatus(params.Status),
-		Url:      params.URL,
-		BuildLog: params.BuildLog,
+	err := withWorkspaceQueries(ctx, r.queries, func(ctx context.Context, queries *sqlc.Queries) error {
+		return queries.UpdatePackageStatus(ctx, sqlc.UpdatePackageStatusParams{
+			ID:       params.ID,
+			Status:   sqlc.PackageStatus(params.Status),
+			Url:      params.URL,
+			BuildLog: params.BuildLog,
+		})
 	})
 	if err != nil {
 		return HandlePgErr(err)

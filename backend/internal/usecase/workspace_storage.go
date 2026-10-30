@@ -94,12 +94,15 @@ func (w *WorkspaceStorage) markMutation(ctx context.Context, id uuid.UUID) error
 	if !ok || m.storage != w || m.id != id || m.started {
 		return nil
 	}
+	if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
+		return err
+	}
 	key := w.getWorkspaceKey(id, pendingMutationPath)
 	if err := w.storage.UploadFile(ctx, w.bucket, key, strings.NewReader(m.operation), "text/plain"); err != nil {
 		return fmt.Errorf("persist workspace mutation intent: %w", err)
 	}
 	m.started = true
-	return nil
+	return interfaces.CheckWorkspaceOwnership(ctx)
 }
 
 func (w *WorkspaceStorage) withMutation(ctx context.Context, id uuid.UUID, operation string, fn func(context.Context) error) error {
@@ -116,8 +119,14 @@ func (w *WorkspaceStorage) withMutation(ctx context.Context, id uuid.UUID, opera
 			return err
 		}
 		if m.started {
+			if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
+				return err
+			}
 			if err := w.storage.DeleteFile(ctx, w.bucket, w.getWorkspaceKey(id, pendingMutationPath)); err != nil {
 				return fmt.Errorf("complete workspace mutation: %w", err)
+			}
+			if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
+				return err
 			}
 		}
 		return nil
@@ -249,13 +258,18 @@ type workspaceLockKey struct {
 }
 
 func (w *WorkspaceStorage) withLock(ctx context.Context, id uuid.UUID, fn func(context.Context) error) error {
+	run := func(ctx context.Context) error {
+		if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
+			return err
+		}
+		err := fn(ctx)
+		return errors.Join(err, interfaces.CheckWorkspaceOwnership(ctx))
+	}
 	key := workspaceLockKey{w, id}
 	if ctx.Value(key) != nil {
-		return fn(ctx)
+		return run(ctx)
 	}
-	return w.locker.WithWorkspaceLock(ctx, id, func(ctx context.Context) error {
-		return fn(context.WithValue(ctx, key, true))
-	})
+	return w.locker.WithWorkspaceLock(ctx, id, func(ctx context.Context) error { return run(context.WithValue(ctx, key, true)) })
 }
 
 func withWorkspaceValue[T any](ctx context.Context, w *WorkspaceStorage, id uuid.UUID, fn func(context.Context) (T, error)) (result T, err error) {

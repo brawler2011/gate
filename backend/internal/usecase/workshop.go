@@ -728,6 +728,9 @@ func (uc *WorkshopUseCase) commitManifest(ctx context.Context, problemID uuid.UU
 	if err != nil {
 		return fmt.Errorf("marshal manifest: %w", err)
 	}
+	if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
+		return err
+	}
 	if err := uc.problemsRepo.UpdateProblemManifest(ctx, problemID, data); err != nil {
 		return fmt.Errorf("commit manifest: %w", err)
 	}

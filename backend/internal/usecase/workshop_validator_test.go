@@ -87,7 +87,7 @@ func TestWorkshopValidateAllTests_RuntimeErrors(t *testing.T) {
 		{name: "dispatch failure", dispatchErr: status.Error(codes.Unavailable, "judge unavailable"), wantError: "judge unavailable"},
 		{name: "no execution result", noResults: true, wantError: "returned no results"},
 		{name: "input storage failure", readErr: storageErr, wantError: "failed to read test input tests/01.in"},
-		{name: "execution cancellation", cancel: true, wantError: "failed to run validator"},
+		{name: "execution cancellation", cancel: true, wantError: "failed to read test input"},
 		{name: "nonzero accepted status", runStatus: pb.Response_Result_Accepted, exitStatus: 1, wantInvalid: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -118,7 +118,7 @@ func TestWorkshopValidateAllTests_RuntimeErrors(t *testing.T) {
 				require.ErrorIs(t, err, storageErr)
 			}
 			if tc.cancel {
-				require.Equal(t, codes.Canceled, status.Code(err))
+				require.ErrorIs(t, err, context.Canceled)
 			}
 		})
 	}
@@ -242,8 +242,8 @@ func TestWorkshopValidateAllTests_Cancellation(t *testing.T) {
 		}
 		cancel()
 		report, err := uc.ValidateAllTests(ctx, id, uuid.Nil)
-		require.ErrorContains(t, err, "failed to compile validator")
-		require.Equal(t, wantCode, status.Code(err))
+		require.ErrorIs(t, err, ctx.Err())
+		require.Equal(t, wantCode, status.Code(status.FromContextError(err).Err()))
 		require.Nil(t, report)
 	}
 }

@@ -80,8 +80,8 @@ func TestWorkshopTestSolution_CheckerCancellation(t *testing.T) {
 			}
 			cancel()
 			report, err := uc.TestSolution(ctx, req)
-			require.ErrorContains(t, err, "failed to compile checker checkers/checker.cpp")
-			require.Equal(t, tc.code, status.Code(err))
+			require.ErrorIs(t, err, ctx.Err())
+			require.Equal(t, tc.code, status.Code(status.FromContextError(err).Err()))
 			require.Nil(t, report)
 		})
 	}

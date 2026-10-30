@@ -136,6 +136,9 @@ func (uc *ProblemPublishUseCase) publishProblemUnlocked(
 	hashBytes := sha256.Sum256(zipBytes)
 	packageHash := fmt.Sprintf("%x", hashBytes)
 	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID.String(), packageHash)
+	if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
+		return nil, err
+	}
 	uploadErr := uc.storage.UploadFile(
 		ctx,
 		uc.packageBucket,
@@ -147,6 +150,9 @@ func (uc *ProblemPublishUseCase) publishProblemUnlocked(
 		return nil, fmt.Errorf("failed to upload package to S3: %w", uploadErr)
 	}
 
+	if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
+		return nil, err
+	}
 	packageID := uuid.New()
 	created, err := uc.packagesRepo.CreatePackage(ctx, &models.CreatePackageParams{
 		ID:             packageID,
@@ -159,8 +165,10 @@ func (uc *ProblemPublishUseCase) publishProblemUnlocked(
 		return nil, fmt.Errorf("failed to create package record: %w", err)
 	}
 
-	bgCtx := context.Background()
-	if err := uc.packagesRepo.UpdatePackageStatus(bgCtx, &models.UpdatePackageStatusParams{
+	if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
+		return nil, err
+	}
+	if err := uc.packagesRepo.UpdatePackageStatus(ctx, &models.UpdatePackageStatusParams{
 		ID:     packageID,
 		Status: "ready",
 		URL:    nil,
