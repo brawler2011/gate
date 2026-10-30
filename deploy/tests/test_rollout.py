@@ -96,7 +96,10 @@ class DockerRolloutTest(unittest.TestCase):
         self.config["services"]["backend"]["command"] = ["python", "-c", "raise SystemExit(1)"]
         self.config["services"]["backend"]["labels"]["traefik.http.routers.backend.rule"] = "PathPrefix(`/changed`)"
         self.write_config()
-        started_after = str(time.time())
+        events = subprocess.Popen(["docker", "events", "--since", str(time.time()),
+                                   "--filter", f"label=com.docker.compose.project={self.project}",
+                                   "--filter", "event=start", "--format", "{{json .}}"],
+                                  text=True, stdout=subprocess.PIPE)
         failures, samples = [], []
         stop = threading.Event()
 
@@ -118,13 +121,12 @@ class DockerRolloutTest(unittest.TestCase):
         finally:
             stop.set()
             monitor.join()
+            events.terminate()
+            event_output, _ = events.communicate(timeout=10)
         self.assertGreater(len(samples), 50)
-        events = rollout.run("docker", "events", "--since", started_after, "--until", str(time.time()),
-                             "--filter", f"label=com.docker.compose.project={self.project}",
-                             "--filter", "event=start", "--format", "{{json .}}", capture=True)
         self.assertTrue(any(json.loads(event)["Actor"]["Attributes"].get("image") == self.tag
                             and json.loads(event)["Actor"]["Attributes"].get("name") == f"{self.project}-backend-1"
-                            for event in events.splitlines()), "The failing release container must actually start before rollback")
+                            for event in event_output.splitlines()), "The failing release container must actually start before rollback")
         self.assertFalse(failures, f"Traefik lost healthy routing: {len(failures)} failures; first: {failures[:5]}")
         guards = json.loads(Path(".rollback/guards.json").read_text())
         self.assertEqual(f"http://gate-rollover-backend-{os.getpid()}:8080",
