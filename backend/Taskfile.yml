@@ -14,7 +14,7 @@ tasks:
   test-integration:
     desc: "Run backend integration tests"
     cmds:
-      - go test -v -tags=integration ./tests/integration/...
+      - go test -v -tags=integration ./tests/integration/... ./internal/repository/pg/...
 
   lint:
     desc: "Run golangci-lint"
