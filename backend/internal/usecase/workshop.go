@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -39,38 +40,44 @@ func (uc *WorkshopUseCase) IsInitialized(ctx context.Context, problemID uuid.UUI
 	})
 }
 
+var statementSection = regexp.MustCompile(`(?i)<!--\s*(title|legend|input|output|notes|interaction|scoring)\s*-->`)
+
 func ParseStatementMarkdown(content string) models.Statement {
-	var stmt models.Statement
-	parts := strings.Split(content, "<!--")
-	for _, part := range parts {
-		if part == "" {
-			continue
+	var statement models.Statement
+	sections := statementSection.FindAllStringSubmatchIndex(content, -1)
+	if len(sections) == 0 {
+		statement.Legend = strings.TrimSpace(content)
+		return statement
+	}
+	statement.Legend = strings.TrimSpace(content[:sections[0][0]])
+	for i, section := range sections {
+		end := len(content)
+		if i+1 < len(sections) {
+			end = sections[i+1][0]
 		}
-		subparts := strings.SplitN(part, "-->", 2)
-		if len(subparts) < 2 {
-			continue
-		}
-		tag := strings.TrimSpace(subparts[0])
-		tag = strings.ToLower(tag)
-		body := strings.TrimSpace(subparts[1])
-		switch tag {
+		body := strings.TrimSpace(content[section[1]:end])
+		switch strings.ToLower(content[section[2]:section[3]]) {
 		case "title":
-			stmt.Title = body
+			statement.Title = body
 		case "legend":
-			stmt.Legend = body
+			if statement.Legend != "" {
+				statement.Legend += "\n\n" + body
+			} else {
+				statement.Legend = body
+			}
 		case "input":
-			stmt.InputFormat = body
+			statement.InputFormat = body
 		case "output":
-			stmt.OutputFormat = body
+			statement.OutputFormat = body
 		case "notes":
-			stmt.Notes = body
+			statement.Notes = body
 		case "interaction":
-			stmt.Interaction = body
+			statement.Interaction = body
 		case "scoring":
-			stmt.Scoring = body
+			statement.Scoring = body
 		}
 	}
-	return stmt
+	return statement
 }
 
 func RenderStatementMarkdown(stmt models.Statement) string {
@@ -167,8 +174,6 @@ func (uc *WorkshopUseCase) updateProblemFileFiles(ctx context.Context, req model
 		if statement.Title != "" {
 			config.Title = statement.Title
 		}
-		statement.Title = ""
-		req.Content = []byte(RenderStatementMarkdown(statement))
 		if err := uc.writeProblemConfig(ctx, req.ProblemID, config); err != nil {
 			return err
 		}
@@ -659,6 +664,11 @@ func (uc *WorkshopUseCase) saveManifestFiles(ctx context.Context, problemID uuid
 	}
 	statement := manifest.Statement
 	statement.Title = ""
+	storedStatement := stored.Statement
+	storedStatement.Title = ""
+	if statement == storedStatement {
+		return nil
+	}
 	return uc.workspaceStorage.WriteFile(ctx, problemID, "statements/en.md", []byte(RenderStatementMarkdown(statement)))
 }
 

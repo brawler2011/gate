@@ -122,7 +122,7 @@ func (uc *ProblemImportUseCase) importProblemPackageFiles(ctx context.Context, z
 		return nil, fmt.Errorf("failed to map import plan to manifest: %w", err)
 	}
 
-	enrichManifestDefaults(ctx, uc.problemsRepo, problemID, manifest, format)
+	enrichManifestDefaults(ctx, uc.problemsRepo, problemID, manifest)
 
 	// Apply import-only defaults to the package itself, never a second manifest.
 	plan.Problem.Title = manifest.Statement.Title
@@ -130,15 +130,10 @@ func (uc *ProblemImportUseCase) importProblemPackageFiles(ctx context.Context, z
 		return nil, err
 	}
 
-	statement := manifest.Statement
-	statement.Title = ""
-	if err := uc.workspaceStorage.WriteFile(ctx, problemID, "statements/en.md", []byte(RenderStatementMarkdown(statement))); err != nil {
-		return nil, err
-	}
 	return workshop.loadManifest(ctx, problemID)
 }
 
-func enrichManifestDefaults(ctx context.Context, problemsRepo interfaces.ProblemsRepo, problemID uuid.UUID, manifest *models.ProblemManifest, format string) {
+func enrichManifestDefaults(ctx context.Context, problemsRepo interfaces.ProblemsRepo, problemID uuid.UUID, manifest *models.ProblemManifest) {
 	problemTitle := ""
 	if problem, err := problemsRepo.GetProblemById(ctx, problemID); err == nil {
 		problemTitle = strings.TrimSpace(problem.Title)
@@ -152,9 +147,6 @@ func enrichManifestDefaults(ctx context.Context, problemsRepo interfaces.Problem
 		}
 	}
 
-	if strings.TrimSpace(manifest.Statement.Legend) == "" {
-		manifest.Statement.Legend = fmt.Sprintf("Imported from %s package.", format)
-	}
 }
 
 func extractZip(r *zip.Reader, destDir string) error {

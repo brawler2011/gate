@@ -352,7 +352,7 @@ func TestFilePackageMetadataRoundTrip(t *testing.T) {
 	require.Equal(t, "Edited legend", actual.Statement.Legend)
 	raw, err := uc.ReadProblemFile(ctx, id, "statements/en.md")
 	require.NoError(t, err)
-	require.NotContains(t, string(raw), "<!-- title -->")
+	require.Contains(t, string(raw), "<!-- title -->")
 }
 
 func TestFilePackageRejectsStaleMetadataAndStatementPatches(t *testing.T) {
@@ -435,6 +435,47 @@ func TestFilePackageRejectsInvalidImportBeforeConversion(t *testing.T) {
 			actual, err := fresh.ReadProblemFile(ctx, id, "tests/custom.in")
 			require.NoError(t, err)
 			require.Equal(t, "keep", string(actual))
+		})
+	}
+}
+
+func TestFilePackagePreservesStatementBytesOnImportAndMetadataSave(t *testing.T) {
+	for _, statement := range []string{
+		"# Plain Markdown\n\nSolve this problem.\n<!-- editorial note -->\nThis paragraph is still part of the statement.\n",
+		"<!-- title -->\nStatement title\n\n<!-- legend -->\nSolve this problem.\n<!-- editorial note -->\nKeep this paragraph.\n\n<!-- input -->\nRead a number.\n",
+	} {
+		t.Run(statement, func(t *testing.T) {
+			ctx := context.Background()
+			repo := newProblemImportMockProblemsRepo()
+			ws := NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "workspace", repo)
+			id := uuid.New()
+			data := createZipBytes(t, map[string]string{
+				"problem.yaml":     "format_version: '1.0'\ntitle: Canonical title\ntype: pass-fail\nlimits: {time_ms: 1000, memory_mb: 256}\nsubtasks: {}\n",
+				"statements/en.md": statement,
+			})
+			_, err := NewProblemImportUseCase(repo, ws).ImportProblemPackage(ctx, bytes.NewReader(data), int64(len(data)), id)
+			require.NoError(t, err)
+			uc := NewWorkshopUseCase(ws, nil)
+			raw, err := uc.ReadProblemFile(ctx, id, "statements/en.md")
+			require.NoError(t, err)
+			require.Equal(t, statement, string(raw))
+			manifest, err := uc.GetManifest(ctx, id)
+			require.NoError(t, err)
+			require.Contains(t, manifest.Statement.Legend, "<!-- editorial note -->")
+			require.Contains(t, manifest.Statement.Legend, "paragraph")
+			manifest.TimeLimitMs = 2345
+			manifest.Statement.Title = "Renamed package"
+			require.NoError(t, uc.SaveManifest(ctx, id, manifest))
+			raw, err = uc.ReadProblemFile(ctx, id, "statements/en.md")
+			require.NoError(t, err)
+			require.Equal(t, statement, string(raw))
+			actual, err := uc.GetManifest(ctx, id)
+			require.NoError(t, err)
+			require.Equal(t, "Renamed package", actual.Statement.Title)
+			require.NoError(t, uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "statements/en.md", Content: []byte(statement)}))
+			raw, err = uc.ReadProblemFile(ctx, id, "statements/en.md")
+			require.NoError(t, err)
+			require.Equal(t, statement, string(raw))
 		})
 	}
 }
