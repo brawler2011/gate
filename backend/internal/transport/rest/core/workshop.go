@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -824,6 +825,27 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 		return corev1.WorkshopFileListResponse{}, pkg.Wrap(pkg.ErrInternal, err, "failed to list files")
 	}
 
+	// Test references may name files in subdirectories; other collections retain their tree listing.
+	if dir == testDir {
+		for i := 0; i < len(files); i++ {
+			if !files[i].IsDirectory {
+				continue
+			}
+			nested, err := h.workshopUC.ListProblemFiles(ctx, problemID, files[i].Path)
+			if err != nil {
+				return corev1.WorkshopFileListResponse{}, pkg.Wrap(pkg.ErrInternal, err, "failed to list nested tests")
+			}
+			files = append(files, nested...)
+		}
+		var testFiles []models.FileEntry
+		for _, file := range files {
+			if !file.IsDirectory {
+				testFiles = append(testFiles, file)
+			}
+		}
+		files = testFiles
+	}
+
 	manifest, err := h.readWorkshopManifest(ctx, problemID)
 	if err != nil {
 		manifest = &models.ProblemManifest{}
@@ -877,7 +899,7 @@ func (h *CoreServer) saveWorkshopCollectionBytes(ctx context.Context, problemID 
 		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
 
-	cleanName, err := sanitizeFileName(name)
+	cleanName, err := sanitizeCollectionFileName(dir, name)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid file name")
 	}
@@ -977,7 +999,7 @@ func (h *CoreServer) getWorkshopCollectionFile(ctx context.Context, problemID uu
 		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
 
-	cleanName, err := sanitizeFileName(name)
+	cleanName, err := sanitizeCollectionFileName(dir, name)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid file name")
 	}
@@ -998,7 +1020,7 @@ func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID
 		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
 
-	cleanName, err := sanitizeFileName(name)
+	cleanName, err := sanitizeCollectionFileName(dir, name)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid file name")
 	}
@@ -1149,6 +1171,18 @@ func sanitizeFileName(name string) (string, error) {
 	}
 	if strings.Contains(clean, "..") || strings.Contains(clean, "/") || strings.Contains(clean, `\\`) {
 		return "", fmt.Errorf("path separators are not allowed")
+	}
+	return clean, nil
+}
+
+// Test assets may use nested paths, but must stay within the tests collection.
+func sanitizeCollectionFileName(dir, name string) (string, error) {
+	if dir != testDir {
+		return sanitizeFileName(name)
+	}
+	clean := strings.TrimSpace(name)
+	if !fs.ValidPath(clean) || clean == "." || strings.ContainsAny(clean, "\\\x00") {
+		return "", fmt.Errorf("invalid relative test file path")
 	}
 	return clean, nil
 }

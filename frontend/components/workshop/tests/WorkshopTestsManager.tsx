@@ -24,10 +24,8 @@ import {api} from "@/lib/api";
 
 import {SubtasksTable} from "./SubtasksTable";
 import {TestRenumberModal} from "./TestRenumberModal";
+import {allocateTestFiles, loadTestState, renumberTests, serializeTestState} from "./testsConfig";
 import {TestsListTable} from "./TestsListTable";
-import {
-  formatPaddedOrdinal,
-} from "./types";
 
 import type {
   SubtaskItem,
@@ -80,7 +78,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
       const [_filesErr, filesRes] = await api.listProblemTests({problemId});
       const fileSizeMap = new Map<string, number>();
       const existingFiles = (filesRes?.files || []).map((f: { path?: string; name?: string; size?: number }) => {
-        const name = (f.path || f.name || "").split("/").pop() || "";
+        const name = (f.path || f.name || "").replace(/^tests\//, "");
         if (name && typeof f.size === "number") {
           fileSizeMap.set(name, f.size);
         }
@@ -99,77 +97,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
         }
       }
 
-      const rawGroups = configData.groups || [];
-      const rawTests = configData.tests || [];
-
-      // Determine ordinals of existing test files (e.g. 01.in -> 1)
-      const ordinalsSet = new Set<number>();
-      for (const name of existingFiles) {
-        const match = name.match(/^(\d+)\.(in|out)$/);
-        if (match) {
-          ordinalsSet.add(parseInt(match[1], 10));
-        }
-      }
-
-      for (const rt of rawTests) {
-        if (typeof rt.ordinal === "number") {
-          ordinalsSet.add(rt.ordinal);
-        }
-      }
-
-      const sortedOrdinals = Array.from(ordinalsSet).sort((a, b) => a - b);
-
-      // Build SubtaskItems
-      const loadedSubtasks: SubtaskItem[] = rawGroups.map((grp: Record<string, unknown>, idx: number) => {
-        const testsArr = grp.tests as number[] | undefined;
-        const start = testsArr?.[0] || 1;
-        const end = testsArr?.[1] || 1;
-        const testIds: string[] = [];
-
-        for (let ord = start; ord <= end; ord++) {
-          testIds.push(`test-id-${ord}`);
-        }
-
-        const dependsArr = grp.depends_on as unknown[] | undefined;
-
-        return {
-          name: (grp.name as string) || `subtask${idx + 1}`,
-          points: (grp.points as number) ?? 10,
-          policy: grp.points_policy === "each-test" || grp.policy === "each" ? "each" : "complete",
-          dependencies: dependsArr ? dependsArr.map((d: unknown) => (typeof d === "string" ? d : `subtask${d}`)) : [],
-          testIds,
-        };
-      });
-
-      // Build TestItems
-      const loadedTests: TestItem[] = sortedOrdinals.map((ord) => {
-        const padded = formatPaddedOrdinal(ord);
-        const inName = `${padded}.in`;
-        const outName = `${padded}.out`;
-        const rawT = rawTests.find((t: Record<string, unknown>) => t.ordinal === ord);
-
-        const hasIn = existingFiles.includes(inName);
-        const hasOut = existingFiles.includes(outName);
-
-        const subtaskNames = loadedSubtasks
-          .filter((st) => st.testIds.includes(`test-id-${ord}`))
-          .map((st) => st.name);
-
-        return {
-          id: `test-id-${ord}`,
-          ordinal: ord,
-          filename: inName,
-          outFilename: outName,
-          hasIn,
-          hasOut,
-          inSize: fileSizeMap.get(inName),
-          outSize: fileSizeMap.get(outName),
-          isSample: !!rawT?.is_sample,
-          method: rawT?.method === "generated" ? "generated" : "manual",
-          generatorCommand: (rawT?.generator as string) || "",
-          subtaskNames,
-        };
-      });
+      const {loadedSubtasks, loadedTests} = loadTestState(configData, existingFiles, fileSizeMap);
 
       setSubtasks(loadedSubtasks);
       setTests(loadedTests);
@@ -224,10 +152,14 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
 
   const handleAddTest = async () => {
     const nextOrd = tests.length > 0 ? Math.max(...tests.map((t) => t.ordinal)) + 1 : 1;
-    const padded = formatPaddedOrdinal(nextOrd);
-    const newId = `test-id-${nextOrd}`;
-    const inFilename = `${padded}.in`;
-    const outFilename = `${padded}.out`;
+    const newId = `test-id-${crypto.randomUUID()}`;
+    const [filesErr, filesRes] = await api.listProblemTests({problemId});
+    if (filesErr || !filesRes) {
+      notifications.show({title: "Ошибка создания теста", message: "Не удалось проверить существующие файлы", color: "red"});
+      return;
+    }
+    const existingFiles = (filesRes.files || []).map((file) => (file.path || "").replace(/^tests\//, ""));
+    const {filename: inFilename, outFilename} = allocateTestFiles(tests, existingFiles);
 
     // Automatically create empty .in and .out files for the manual test
     const emptyBlob = new Blob([""], {type: "application/octet-stream"});
@@ -279,17 +211,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
 
   // Perform full renumbering of tests to 1..N and update subtasks
   const handlePerformRenumbering = () => {
-    const renumberedTests = tests.map((t, idx) => {
-      const newOrd = idx + 1;
-      const padded = formatPaddedOrdinal(newOrd);
-      return {
-        ...t,
-        id: `test-id-${newOrd}`,
-        ordinal: newOrd,
-        filename: `${padded}.in`,
-        outFilename: `${padded}.out`,
-      };
-    });
+    const renumberedTests = renumberTests(tests);
 
     setTests(renumberedTests);
     setIsDirty(true);
@@ -306,99 +228,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
   const handleSave = () => {
     startSaving(async () => {
       try {
-        // Ensure all manual tests have physical .in and .out files on disk
-        for (const t of tests) {
-          if (t.method === "manual") {
-            if (!t.hasIn) {
-              const emptyBlob = new Blob([""], {type: "application/octet-stream"});
-              await api.createProblemTestFile({problemId, name: t.filename, requestBody: emptyBlob});
-              t.hasIn = true;
-            }
-            if (!t.hasOut) {
-              const emptyBlob = new Blob([""], {type: "application/octet-stream"});
-              await api.createProblemTestFile({problemId, name: t.outFilename, requestBody: emptyBlob});
-              t.hasOut = true;
-            }
-          }
-        }
-
-        type PayloadGroup = {
-          ordinal: number;
-          name: string;
-          points: number;
-          points_policy: string;
-          depends_on: string[];
-          tests: number[];
-        };
-
-        let payloadGroups: PayloadGroup[] = subtasks
-          .map((st, idx): PayloadGroup | null => {
-            const stTests = tests.filter(
-              (t) => st.testIds.includes(t.id) || t.subtaskNames.includes(st.name)
-            );
-            const ordinals = stTests.map((t) => t.ordinal).sort((a, b) => a - b);
-            if (ordinals.length === 0) {
-              return null;
-            }
-
-            return {
-              ordinal: idx + 1,
-              name: st.name,
-              points: st.points,
-              points_policy: st.policy === "each" ? "each-test" : "complete-group",
-              depends_on: st.dependencies,
-              tests: [ordinals[0], ordinals[ordinals.length - 1]],
-            };
-          })
-          .filter((g): g is PayloadGroup => g !== null);
-
-        // If subtasks is empty or no subtask covers tests, but tests exist, create a default subtask covering all tests
-        if (payloadGroups.length === 0 && tests.length > 0) {
-          const sortedOrds = tests.map((t) => t.ordinal).sort((a, b) => a - b);
-          payloadGroups = [
-            {
-              ordinal: 1,
-              name: "subtask1",
-              points: maxScore ?? 100,
-              points_policy: problemType === "scoring" ? "each-test" : "complete-group",
-              depends_on: [],
-              tests: [sortedOrds[0], sortedOrds[sortedOrds.length - 1]],
-            },
-          ];
-        }
-
-        // Ensure all tests are covered by groups so backend problem.yaml doesn't drop unassigned tests
-        if (payloadGroups.length > 0 && tests.length > 0) {
-          const covered = new Set<number>();
-          for (const g of payloadGroups) {
-            for (let ord = g.tests[0]; ord <= g.tests[1]; ord++) {
-              covered.add(ord);
-            }
-          }
-
-          const unassigned = tests
-            .map((t) => t.ordinal)
-            .filter((ord) => !covered.has(ord))
-            .sort((a, b) => a - b);
-
-          if (unassigned.length > 0) {
-            const lastGroup = payloadGroups[payloadGroups.length - 1];
-            lastGroup.tests[0] = Math.min(lastGroup.tests[0], unassigned[0]);
-            lastGroup.tests[1] = Math.max(lastGroup.tests[1], unassigned[unassigned.length - 1]);
-          }
-        }
-
-        const payloadTests = tests.map((t) => ({
-          ordinal: t.ordinal,
-          method: t.method,
-          generator: t.method === "generated" && t.generatorCommand ? t.generatorCommand : null,
-          is_sample: t.isSample,
-        }));
-
-        const testsConfig = {
-          groups: payloadGroups,
-          tests: payloadTests,
-        };
+        const testsConfig = serializeTestState(tests, subtasks, problemType, maxScore);
 
         const [err] = await api.updateProblemTestsConfig({problemId, requestBody: testsConfig});
         if (err) {
