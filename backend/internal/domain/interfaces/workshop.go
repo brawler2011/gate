@@ -8,7 +8,7 @@ import (
 )
 
 type WorkshopUC interface {
-	IsInitialized(ctx context.Context, problemID uuid.UUID) bool
+	IsInitialized(ctx context.Context, problemID uuid.UUID) (bool, error)
 	InitProblemWorkshop(ctx context.Context, problemID uuid.UUID, title string) error
 	UpdateProblemFile(ctx context.Context, req models.UpdateFileRequest) error
 	DeleteProblemFile(ctx context.Context, problemID uuid.UUID, path string) error

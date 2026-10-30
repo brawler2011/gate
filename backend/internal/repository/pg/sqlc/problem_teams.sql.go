@@ -53,7 +53,7 @@ func (q *Queries) GetProblemTeam(ctx context.Context, arg GetProblemTeamParams) 
 }
 
 const getTeamProblems = `-- name: GetTeamProblems :many
-SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.time_limit_ms, p.memory_limit_mb, p.manifest, p.created_at, p.updated_at, p.is_template FROM problems p
+SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.time_limit_ms, p.memory_limit_mb, p.created_at, p.updated_at, p.is_template, p.workspace_hash FROM problems p
 INNER JOIN problem_teams pt ON p.id = pt.problem_id
 WHERE pt.team_id = $1
 ORDER BY p.created_at DESC
@@ -77,10 +77,10 @@ func (q *Queries) GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]Prob
 			&i.ShortName,
 			&i.TimeLimitMs,
 			&i.MemoryLimitMb,
-			&i.Manifest,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.IsTemplate,
+			&i.WorkspaceHash,
 		); err != nil {
 			return nil, err
 		}

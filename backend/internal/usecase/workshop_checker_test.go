@@ -2,10 +2,6 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
-	"strings"
 	"testing"
 	"time"
 
@@ -20,27 +16,22 @@ import (
 )
 
 func TestWorkshopTestSolution_CheckerPreparationErrors(t *testing.T) {
-	storageErr := errors.New("storage unavailable")
 	for _, tc := range []struct {
 		name      string
 		files     map[string]string
 		deps      []models.Dependency
-		readError error
-		listError error
 		wantError string
 		wantCause error
 	}{
 		{name: "missing source", wantError: "failed to read checker checkers/checker.cpp", wantCause: storage.ErrNotFound},
 		{name: "missing dependency", files: map[string]string{"checkers/checker.cpp": "checker"}, deps: []models.Dependency{{Filename: "testlib.h"}}, wantError: "failed to read checker dependency lib/testlib.h", wantCause: storage.ErrNotFound},
-		{name: "dependency storage failure", files: map[string]string{"checkers/checker.cpp": "checker", "lib/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, readError: storageErr, wantError: "failed to read checker dependency checkers/testlib.h", wantCause: storageErr},
 		{name: "compilation failure", files: map[string]string{"checkers/checker.cpp": "checker"}, wantError: "failed to compile checker checkers/checker.cpp: unsupported language: cpp"},
 		{name: "relative dependency", files: map[string]string{"checkers/checker.cpp": "checker", "checkers/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, wantError: "failed to compile checker"},
 		{name: "shared dependency", files: map[string]string{"checkers/checker.cpp": "checker", "lib/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, wantError: "failed to compile checker"},
 		{name: "nested shared dependency", files: map[string]string{"checkers/checker.cpp": "checker", "lib/support/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, wantError: "failed to compile checker"},
-		{name: "dependency listing failure", files: map[string]string{"checkers/checker.cpp": "checker", "lib/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, listError: storageErr, wantError: "failed to list checker dependencies", wantCause: storageErr},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			store := &workshopCheckerStorage{Storage: storage.NewLocalStorage(t.TempDir()), readError: tc.readError, listError: tc.listError}
+			store := storage.NewLocalStorage(t.TempDir())
 			uc, req := newWorkshopCheckerTest(t, store, tc.files, tc.deps)
 			// An empty language config fails compilation without dispatching any execution.
 			uc.sandbox = sandbox.NewSandbox(nil, &sandbox.Config{})
@@ -49,9 +40,6 @@ func TestWorkshopTestSolution_CheckerPreparationErrors(t *testing.T) {
 			require.Nil(t, report)
 			if tc.wantCause != nil {
 				require.ErrorIs(t, err, tc.wantCause)
-			}
-			if tc.readError != nil {
-				require.NotContains(t, store.readPaths, uc.workspaceStorage.getWorkspaceKey(req.ProblemID, "lib/testlib.h"))
 			}
 		})
 	}
@@ -89,9 +77,10 @@ func TestWorkshopTestSolution_CheckerCancellation(t *testing.T) {
 
 func TestWorkshopTestSolution_RequiresChecker(t *testing.T) {
 	uc, req := newWorkshopCheckerTest(t, storage.NewLocalStorage(t.TempDir()), nil, nil)
-	data, err := json.Marshal(defaultManifest("No checker"))
+	config, err := uc.readProblemConfig(context.Background(), req.ProblemID)
 	require.NoError(t, err)
-	require.NoError(t, uc.problemsRepo.UpdateProblemManifest(context.Background(), req.ProblemID, data))
+	config.Checker = ""
+	require.NoError(t, uc.writeProblemConfig(context.Background(), req.ProblemID, config))
 	// A nil sandbox would panic if solution compilation were attempted.
 	report, err := uc.TestSolution(context.Background(), req)
 	require.ErrorContains(t, err, "problem must have a checker")
@@ -104,38 +93,12 @@ func newWorkshopCheckerTest(t *testing.T, store storage.Storage, files map[strin
 	repo := newProblemImportMockProblemsRepo()
 	manifest := defaultManifest("Checker test")
 	manifest.FilesMetadata = []models.FileMetadata{{Type: "checker", Filename: "checkers/checker.cpp", Dependencies: deps}}
-	data, err := json.Marshal(manifest)
-	require.NoError(t, err)
-	repo.manifests[problemID] = data
-	ws := NewWorkspaceStorage(store, "test-workshop", &WorkspaceMutex{})
-	require.NoError(t, ws.WriteFile(context.Background(), problemID, "solutions/main.cpp", []byte("solution")))
-	require.NoError(t, ws.WriteFile(context.Background(), problemID, "problem.yaml", []byte("subtasks:\n  samples:\n    tests:\n      - manual: 01.in\n")))
-	for path, content := range files {
-		require.NoError(t, ws.WriteFile(context.Background(), problemID, path, []byte(content)))
-	}
-	return NewWorkshopUseCase(repo, ws, nil, nil), models.TestSolutionRequest{ProblemID: problemID, SolutionPath: "solutions/main.cpp"}
-}
+	ws := NewWorkspaceStorage(store, "test-workshop", repo)
+	fixtureFiles := workshopFixtureFiles(manifest, files)
+	fixtureFiles["solutions/main.cpp"] = "solution"
+	seedWorkspaceFiles(t, ws, problemID, fixtureFiles)
 
-type workshopCheckerStorage struct {
-	storage.Storage
-	readError error
-	listError error
-	readPaths []string
-}
-
-func (s *workshopCheckerStorage) ListObjects(ctx context.Context, bucket, prefix string) ([]storage.ObjectInfo, error) {
-	if s.listError != nil {
-		return nil, s.listError
-	}
-	return s.Storage.ListObjects(ctx, bucket, prefix)
-}
-
-func (s *workshopCheckerStorage) DownloadFile(ctx context.Context, bucket, key string, etag *string) (io.ReadCloser, string, error) {
-	s.readPaths = append(s.readPaths, key)
-	if s.readError != nil && strings.HasSuffix(key, "checkers/testlib.h") {
-		return nil, "", s.readError
-	}
-	return s.Storage.DownloadFile(ctx, bucket, key, etag)
+	return NewWorkshopUseCase(ws, nil), models.TestSolutionRequest{ProblemID: problemID, SolutionPath: "solutions/main.cpp"}
 }
 
 func TestWorkshopTestSolution_ManifestFilesAndGenerators(t *testing.T) {

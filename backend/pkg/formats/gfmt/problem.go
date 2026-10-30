@@ -1,9 +1,15 @@
 package gfmt
 
-import "sort"
+import (
+	"sort"
+	"time"
+)
 
 // Problem represents the GFMT problem specification.
 type Problem struct {
+	UpdatedAt     time.Time          `yaml:"updated_at,omitempty" json:"updated_at,omitempty"`
+	MaxScore      *int               `yaml:"max_score,omitempty" json:"max_score,omitempty"`
+	Sources       map[string]Source  `yaml:"sources,omitempty" json:"sources,omitempty"`
 	FormatVersion string             `yaml:"format_version" json:"format_version"`
 	Title         string             `yaml:"title" json:"title"`
 	Type          string             `yaml:"type" json:"type"` // "pass-fail", "interactive", "scoring"
@@ -62,4 +68,11 @@ func (p *Problem) OrderedSubtaskNames() []string {
 		names = append([]string{"samples"}, names...)
 	}
 	return names
+}
+
+// Source holds explicit build settings; files and component kinds come from
+// the package layout, and component selections remain in checker/validator/interactor.
+type Source struct {
+	Compiler     string   `yaml:"compiler,omitempty" json:"compiler,omitempty"`
+	Dependencies []string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 }

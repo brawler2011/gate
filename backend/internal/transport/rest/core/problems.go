@@ -173,9 +173,12 @@ func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProb
 		}
 
 		manifest, err := h.workshopUC.GetManifest(ctx, problemID)
-		if err == nil {
-			manifest.Statement.Title = input.Title
-			_ = h.workshopUC.SaveManifest(ctx, problemID, manifest)
+		if err != nil {
+			return nil, err
+		}
+		manifest.Statement.Title = input.Title
+		if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
+			return nil, workshopWriteError(err, "save template title")
 		}
 
 		return &corev1.CreationResponseModel{ID: problemID}, nil
@@ -227,9 +230,12 @@ func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProb
 	}
 
 	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
-	if err == nil {
-		manifest.Statement.Title = input.Title
-		_ = h.workshopUC.SaveManifest(ctx, problemID, manifest)
+	if err != nil {
+		return nil, err
+	}
+	manifest.Statement.Title = input.Title
+	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
+		return nil, workshopWriteError(err, "save template title")
 	}
 
 	return &corev1.CreationResponseModel{ID: problemID}, nil

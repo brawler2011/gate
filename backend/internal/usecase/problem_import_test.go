@@ -4,7 +4,10 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"encoding/json"
+	"crypto/sha256"
+	"fmt"
+	"github.com/brawler2011/gate/backend/pkg"
+	"sync"
 	"testing"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -24,7 +27,7 @@ func TestImportProblemPackagePolygonFallback(t *testing.T) {
 	problemsRepo.problems[problemID] = models.Problem{ID: problemID, Title: "Repo Title"}
 
 	store := storage.NewLocalStorage(t.TempDir())
-	workspaceStorage := NewWorkspaceStorage(store, "test-workshop", &WorkspaceMutex{})
+	workspaceStorage := NewWorkspaceStorage(store, "test-workshop", problemsRepo)
 	uc := NewProblemImportUseCase(problemsRepo, workspaceStorage)
 
 	zipBytes := createZipBytes(t, map[string]string{
@@ -66,11 +69,8 @@ func TestImportProblemPackagePolygonFallback(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "3\n", string(out))
 
-	manifestBytes, ok := problemsRepo.manifests[problemID]
-	require.True(t, ok)
-
-	var manifest models.ProblemManifest
-	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+	manifest, err := NewWorkshopUseCase(workspaceStorage, nil).GetManifest(ctx, problemID)
+	require.NoError(t, err)
 	assert.Equal(t, "APlusB", manifest.Statement.Title)
 }
 
@@ -82,7 +82,7 @@ func TestImportProblemPackageICPCFallbackWithNestedRoot(t *testing.T) {
 	problemsRepo.problems[problemID] = models.Problem{ID: problemID, Title: "Repository Problem Title"}
 
 	store := storage.NewLocalStorage(t.TempDir())
-	workspaceStorage := NewWorkspaceStorage(store, "test-workshop", &WorkspaceMutex{})
+	workspaceStorage := NewWorkspaceStorage(store, "test-workshop", problemsRepo)
 	uc := NewProblemImportUseCase(problemsRepo, workspaceStorage)
 
 	zipBytes := createZipBytes(t, map[string]string{
@@ -131,11 +131,8 @@ validation:
 	assert.Equal(t, 1, testsMeta.Tests[0].Ordinal)
 	assert.Equal(t, 2, testsMeta.Tests[1].Ordinal)
 
-	manifestBytes, ok := problemsRepo.manifests[problemID]
-	require.True(t, ok)
-
-	var manifest models.ProblemManifest
-	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+	manifest, err := NewWorkshopUseCase(workspaceStorage, nil).GetManifest(ctx, problemID)
+	require.NoError(t, err)
 	assert.Equal(t, "A + B", manifest.Statement.Title)
 }
 
@@ -156,14 +153,14 @@ func createZipBytes(t *testing.T, files map[string]string) []byte {
 }
 
 type problemImportMockProblemsRepo struct {
-	manifests map[uuid.UUID][]byte
-	problems  map[uuid.UUID]models.Problem
+	workspaceMu     sync.Mutex
+	workspaceHashes map[uuid.UUID]string
+	problems        map[uuid.UUID]models.Problem
 }
 
 func newProblemImportMockProblemsRepo() *problemImportMockProblemsRepo {
 	return &problemImportMockProblemsRepo{
-		manifests: make(map[uuid.UUID][]byte),
-		problems:  make(map[uuid.UUID]models.Problem),
+		problems: make(map[uuid.UUID]models.Problem),
 	}
 }
 
@@ -188,6 +185,8 @@ func (m *problemImportMockProblemsRepo) DeleteProblemTests(_ context.Context, _ 
 }
 
 func (m *problemImportMockProblemsRepo) GetProblemById(_ context.Context, id uuid.UUID) (models.Problem, error) {
+	m.workspaceMu.Lock()
+	defer m.workspaceMu.Unlock()
 	if problem, ok := m.problems[id]; ok {
 		return problem, nil
 	}
@@ -242,15 +241,73 @@ func (m *problemImportMockProblemsRepo) UpdateProblem(_ context.Context, _ uuid.
 	return nil
 }
 
-func (m *problemImportMockProblemsRepo) UpdateProblemLimits(_ context.Context, _ uuid.UUID, _, _ int) error {
+func (m *problemImportMockProblemsRepo) GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	m.workspaceMu.Lock()
+	defer m.workspaceMu.Unlock()
+	return m.workspaceHashes[id], nil
+}
+func (m *problemImportMockProblemsRepo) CommitWorkspace(ctx context.Context, id uuid.UUID, previousHash, hash string, metadata *models.WorkspaceMetadata) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.workspaceMu.Lock()
+	defer m.workspaceMu.Unlock()
+	if m.workspaceHashes[id] != previousHash {
+		return pkg.ErrConflict
+	}
+	if m.workspaceHashes == nil {
+		m.workspaceHashes = make(map[uuid.UUID]string)
+	}
+	m.workspaceHashes[id] = hash
+	if metadata != nil {
+		problem := m.problems[id]
+		problem.Title = metadata.Title
+		problem.TimeLimitMs = metadata.TimeLimitMs
+		problem.MemoryLimitMb = metadata.MemoryLimitMb
+		m.problems[id] = problem
+	}
 	return nil
 }
 
-func (m *problemImportMockProblemsRepo) GetProblemManifest(_ context.Context, id uuid.UUID) ([]byte, error) {
-	return m.manifests[id], nil
+// Seed the stored archive directly so tests can also represent corrupt existing
+// configurations that the normal writer refuses to create.
+func seedWorkspaceFiles(t *testing.T, ws *WorkspaceStorage, id uuid.UUID, files map[string]string) {
+	t.Helper()
+	data := createZipBytes(t, files)
+	hash := fmt.Sprintf("%x", sha256.Sum256(data))
+	previous, err := ws.repo.GetWorkspaceHash(context.Background(), id)
+	require.NoError(t, err)
+	require.NoError(t, ws.storage.UploadFile(context.Background(), ws.bucket, ws.getWorkspaceKey(id, hash), bytes.NewReader(data), "application/zip"))
+	require.NoError(t, ws.repo.CommitWorkspace(context.Background(), id, previous, hash, nil))
 }
 
-func (m *problemImportMockProblemsRepo) UpdateProblemManifest(_ context.Context, id uuid.UUID, manifest []byte) error {
-	m.manifests[id] = append([]byte(nil), manifest...)
-	return nil
+func workshopFixtureFiles(manifest *models.ProblemManifest, files map[string]string) map[string]string {
+	config := ManifestAndTestsToGfmtProblem(manifest, defaultTestsMetadata())
+	config.Sources = make(map[string]gfmt.Source)
+	for _, meta := range manifest.FilesMetadata {
+		var deps []string
+		for _, dep := range meta.Dependencies {
+			deps = append(deps, dep.Filename)
+		}
+		config.Sources[meta.Filename] = gfmt.Source{Compiler: meta.Compiler, Dependencies: deps}
+	}
+	result := map[string]string{"tests/01.in": "invalid input\n"}
+	for path, content := range files {
+		result[path] = content
+	}
+	if content, ok := files["problem.yaml"]; ok {
+		config.Subtasks = nil
+		if err := yaml.Unmarshal([]byte(content), config); err != nil {
+			return result
+		}
+	}
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		panic(err)
+	}
+	result["problem.yaml"] = string(data)
+	return result
 }

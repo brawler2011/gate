@@ -2,6 +2,7 @@ package pg
 
 import (
 	"context"
+	"github.com/brawler2011/gate/backend/pkg"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
@@ -92,14 +93,12 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.Problems
 }
 
 func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
-	err := withWorkspaceQueries(ctx, r.queries, func(ctx context.Context, queries *sqlc.Queries) error {
-		return queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
-			ID:         id,
-			Title:      problem.Title,
-			Visibility: stringToNullProblemVisibility(problem.Visibility),
-			OwnerID:    uuidPtrToNullUUID(problem.OwnerID),
-			IsTemplate: problem.IsTemplate,
-		})
+	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
+		ID:         id,
+		Title:      problem.Title,
+		Visibility: stringToNullProblemVisibility(problem.Visibility),
+		OwnerID:    uuidPtrToNullUUID(problem.OwnerID),
+		IsTemplate: problem.IsTemplate,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -278,40 +277,29 @@ func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) models.Problem {
 	}
 }
 
-func (r *ProblemsRepo) UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error {
-	err := withWorkspaceQueries(ctx, r.queries, func(ctx context.Context, queries *sqlc.Queries) error {
-		return queries.UpdateProblemLimits(ctx, sqlc.UpdateProblemLimitsParams{
-			ID:            id,
-			TimeLimitMs:   safeInt32(timeLimitMs),
-			MemoryLimitMb: safeInt32(memoryLimitMb),
-		})
-	})
+func (r *ProblemsRepo) GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error) {
+	hash, err := r.queries.GetWorkspaceHash(ctx, id)
+	if err != nil {
+		return "", HandlePgErr(err)
+	}
+	return hash, nil
+}
+
+func (r *ProblemsRepo) CommitWorkspace(ctx context.Context, id uuid.UUID, previousHash, hash string, metadata *models.WorkspaceMetadata) error {
+	params := sqlc.CommitWorkspaceParams{ID: id, PreviousHash: previousHash, Hash: hash}
+	if metadata != nil {
+		params.Title = &metadata.Title
+		timeMs := safeInt32(metadata.TimeLimitMs)
+		params.TimeMs = &timeMs
+		memoryMb := safeInt32(metadata.MemoryLimitMb)
+		params.MemoryMb = &memoryMb
+	}
+	rows, err := r.queries.CommitWorkspace(ctx, params)
 	if err != nil {
 		return HandlePgErr(err)
 	}
-	return nil
-}
-
-func (r *ProblemsRepo) GetProblemManifest(ctx context.Context, id uuid.UUID) ([]byte, error) {
-	manifest, err := r.queries.GetProblemManifest(ctx, id)
-	if err != nil {
-		return nil, HandlePgErr(err)
-	}
-	if manifest == nil {
-		return nil, nil
-	}
-	return manifest, nil
-}
-
-func (r *ProblemsRepo) UpdateProblemManifest(ctx context.Context, id uuid.UUID, manifest []byte) error {
-	err := withWorkspaceQueries(ctx, r.queries, func(ctx context.Context, queries *sqlc.Queries) error {
-		return queries.UpdateProblemManifest(ctx, sqlc.UpdateProblemManifestParams{
-			ID:       id,
-			Manifest: manifest,
-		})
-	})
-	if err != nil {
-		return HandlePgErr(err)
+	if rows == 0 {
+		return pkg.Wrap(pkg.ErrConflict, nil, "workspace changed; reload before saving")
 	}
 	return nil
 }

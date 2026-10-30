@@ -4,7 +4,8 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"gopkg.in/yaml.v3"
 	"testing"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -56,11 +57,22 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 				MemoryLimitMb: 1,
 				FilesMetadata: []models.FileMetadata{{Type: "validator", Filename: path, Dependencies: tc.deps}},
 			}
-			data, err := json.Marshal(manifest)
+			config := usecase.ManifestAndTestsToGfmtProblem(&manifest, &models.TestsMetadata{Groups: []models.TestGroup{{Ordinal: 1, Name: "samples", Tests: [2]int{1, 1}}}, Tests: []models.TestCase{{Ordinal: 1, Filename: "01.in", Method: "manual"}}})
+			config.Sources = make(map[string]gfmt.Source)
+			for _, meta := range manifest.FilesMetadata {
+				var deps []string
+				for _, dep := range meta.Dependencies {
+					deps = append(deps, dep.Filename)
+				}
+				if len(deps) > 0 {
+					config.Sources[meta.Filename] = gfmt.Source{Dependencies: deps}
+				}
+			}
+			data, err := yaml.Marshal(config)
 			require.NoError(t, err)
-			repo.manifests[id] = data
-			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-execution", &usecase.WorkspaceMutex{})
-			require.NoError(t, ws.WriteFile(ctx, id, "problem.yaml", []byte("subtasks:\n  samples:\n    tests:\n      - manual: 01.in\n")))
+
+			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-execution", repo)
+			require.NoError(t, ws.WriteFile(ctx, id, "problem.yaml", data))
 			require.NoError(t, ws.WriteFile(ctx, id, path, []byte(tc.source)))
 			if tc.input != "" {
 				require.NoError(t, ws.WriteFile(ctx, id, "tests/01.in", []byte(tc.input)))
@@ -68,7 +80,7 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 			for path, content := range tc.files {
 				require.NoError(t, ws.WriteFile(ctx, id, path, []byte(content)))
 			}
-			uc := usecase.NewWorkshopUseCase(repo, ws, sb, &mockTxManager{})
+			uc := usecase.NewWorkshopUseCase(ws, sb)
 			if tc.compileFirst {
 				compiled, err := uc.CompileProblemComponent(ctx, models.CompileComponentRequest{ProblemID: id, ComponentType: "validator"})
 				require.NoError(t, err)

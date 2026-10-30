@@ -644,10 +644,10 @@ type Problem struct {
 	ShortName      string            `json:"short_name"`
 	TimeLimitMs    int32             `json:"time_limit_ms"`
 	MemoryLimitMb  int32             `json:"memory_limit_mb"`
-	Manifest       []byte            `json:"manifest"`
 	CreatedAt      time.Time         `json:"created_at"`
 	UpdatedAt      time.Time         `json:"updated_at"`
 	IsTemplate     bool              `json:"is_template"`
+	WorkspaceHash  string            `json:"workspace_hash"`
 }
 
 type ProblemMember struct {

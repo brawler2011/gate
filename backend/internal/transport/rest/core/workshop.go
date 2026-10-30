@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -194,6 +195,12 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 		stmt.Scoring = req.Scoring.Value
 	}
 
+	if lang == "en" {
+		manifest.Statement = stmt
+		if err := validateManifest(manifest); err != nil {
+			return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
+		}
+	}
 	// 2. Write statement back to workspace storage
 	stmtBytes := []byte(usecase.RenderStatementMarkdown(stmt))
 	if int64(len(stmtBytes)) > MaxStatementFileSize {
@@ -206,22 +213,7 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 		Path:      filePath,
 		Content:   stmtBytes,
 	}); err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to save statement file")
-	}
-
-	// 3. If saving default language statement (en), sync to DB manifest and problem.yaml
-	if lang == "en" {
-		manifest.Statement = stmt
-		if err := validateManifest(manifest); err != nil {
-			return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
-		}
-
-		if err := h.saveWorkshopManifest(ctx, params.ProblemId, manifest); err != nil {
-			return nil, err
-		}
-		if err := h.syncProblemTitleIfNeeded(ctx, params.ProblemId, manifest.Statement.Title); err != nil {
-			return nil, err
-		}
+		return nil, workshopWriteError(err, "failed to save statement file")
 	}
 
 	// 4. Retrieve list of languages for response
@@ -634,8 +626,8 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, req corev1.Up
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
-	if !h.workshopUC.IsInitialized(ctx, params.ProblemId) {
-		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
+	if err := h.requireWorkshop(ctx, params.ProblemId); err != nil {
+		return nil, err
 	}
 
 	bodyBytes, err := json.Marshal(req)
@@ -652,7 +644,7 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, req corev1.Up
 	}
 
 	if err := h.workshopUC.UpdateTestsConfig(ctx, params.ProblemId, &testsMeta); err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to update tests config")
+		return nil, workshopWriteError(err, "failed to update tests config")
 	}
 
 	return &corev1.MessageResponse{Message: corev1.NewOptString("Tests config updated successfully")}, nil
@@ -667,7 +659,7 @@ func (h *CoreServer) GetProblemTestFile(ctx context.Context, params corev1.GetPr
 		}
 		content, err := json.MarshalIndent(testsMeta, "", "  ")
 		if err != nil {
-			return corev1.GetProblemTestFileOK{}, pkg.Wrap(pkg.ErrInternal, err, "failed to marshal tests config")
+			return corev1.GetProblemTestFileOK{}, workshopWriteError(err, "failed to marshal tests config")
 		}
 		return corev1.GetProblemTestFileOK{Data: bytes.NewReader(content)}, nil
 	}
@@ -707,7 +699,7 @@ func (h *CoreServer) CompileProblemComponent(ctx context.Context, params corev1.
 
 	result, err := h.workshopUC.CompileProblemComponent(ctx, compileReq)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to compile component")
+		return nil, workshopWriteError(err, "failed to compile component")
 	}
 
 	return &corev1.CompileResult{
@@ -741,7 +733,7 @@ func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTest
 	}
 
 	if err := h.workshopUC.GenerateTests(ctx, generateReq); err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to generate tests")
+		return nil, workshopWriteError(err, "failed to generate tests")
 	}
 
 	return &corev1.GenerateTestsOK{Message: corev1.NewOptString("Tests generated successfully")}, nil
@@ -753,7 +745,7 @@ func (h *CoreServer) ValidateAllTests(ctx context.Context, params corev1.Validat
 
 	report, err := h.workshopUC.ValidateAllTests(ctx, params.ProblemId, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to validate tests")
+		return nil, workshopWriteError(err, "failed to validate tests")
 	}
 
 	results := make([]corev1.TestValidationResult, len(report.Results))
@@ -793,7 +785,7 @@ func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionR
 
 	report, err := h.workshopUC.TestSolution(ctx, testReq)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to test solution")
+		return nil, workshopWriteError(err, "failed to test solution")
 	}
 
 	results := make([]corev1.TestResult, len(report.Results))
@@ -816,13 +808,13 @@ func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionR
 }
 
 func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.UUID, dir string) (corev1.WorkshopFileListResponse, error) {
-	if !h.workshopUC.IsInitialized(ctx, problemID) {
-		return corev1.WorkshopFileListResponse{}, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
+	if err := h.requireWorkshop(ctx, problemID); err != nil {
+		return corev1.WorkshopFileListResponse{}, err
 	}
 
 	files, err := h.workshopUC.ListProblemFiles(ctx, problemID, dir)
 	if err != nil {
-		return corev1.WorkshopFileListResponse{}, pkg.Wrap(pkg.ErrInternal, err, "failed to list files")
+		return corev1.WorkshopFileListResponse{}, workshopWriteError(err, "failed to list files")
 	}
 
 	// Test references may name files in subdirectories; other collections retain their tree listing.
@@ -833,7 +825,7 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 			}
 			nested, err := h.workshopUC.ListProblemFiles(ctx, problemID, files[i].Path)
 			if err != nil {
-				return corev1.WorkshopFileListResponse{}, pkg.Wrap(pkg.ErrInternal, err, "failed to list nested tests")
+				return corev1.WorkshopFileListResponse{}, workshopWriteError(err, "failed to list nested tests")
 			}
 			files = append(files, nested...)
 		}
@@ -895,8 +887,8 @@ func validateCollectionFileExtension(dir, name string) error {
 }
 
 func (h *CoreServer) saveWorkshopCollectionBytes(ctx context.Context, problemID uuid.UUID, dir, name string, content []byte, actionErrMsg string) error {
-	if !h.workshopUC.IsInitialized(ctx, problemID) {
-		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
+	if err := h.requireWorkshop(ctx, problemID); err != nil {
+		return err
 	}
 
 	cleanName, err := sanitizeCollectionFileName(dir, name)
@@ -929,7 +921,7 @@ func (h *CoreServer) saveWorkshopCollectionBytes(ctx context.Context, problemID 
 		Path:      filepath.Join(dir, cleanName),
 		Content:   content,
 	}); err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, actionErrMsg)
+		return workshopWriteError(err, actionErrMsg)
 	}
 
 	return nil
@@ -995,8 +987,8 @@ func (h *CoreServer) createWorkshopCollectionFile(ctx context.Context, problemID
 }
 
 func (h *CoreServer) getWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string) ([]byte, error) {
-	if !h.workshopUC.IsInitialized(ctx, problemID) {
-		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
+	if err := h.requireWorkshop(ctx, problemID); err != nil {
+		return nil, err
 	}
 
 	cleanName, err := sanitizeCollectionFileName(dir, name)
@@ -1016,8 +1008,8 @@ func (h *CoreServer) updateWorkshopCollectionFile(ctx context.Context, problemID
 }
 
 func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string) error {
-	if !h.workshopUC.IsInitialized(ctx, problemID) {
-		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
+	if err := h.requireWorkshop(ctx, problemID); err != nil {
+		return err
 	}
 
 	cleanName, err := sanitizeCollectionFileName(dir, name)
@@ -1027,15 +1019,15 @@ func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID
 
 	path := filepath.Join(dir, cleanName)
 	if err := h.workshopUC.DeleteProblemFile(ctx, problemID, path); err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to delete file")
+		return workshopWriteError(err, "failed to delete file")
 	}
 
 	return nil
 }
 
 func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UUID) (*models.ProblemManifest, error) {
-	if !h.workshopUC.IsInitialized(ctx, problemID) {
-		return nil, pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
+	if err := h.requireWorkshop(ctx, problemID); err != nil {
+		return nil, err
 	}
 
 	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
@@ -1048,28 +1040,7 @@ func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UU
 
 func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID uuid.UUID, manifest *models.ProblemManifest) error {
 	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to update manifest")
-	}
-
-	return nil
-}
-
-func (h *CoreServer) syncProblemTitleIfNeeded(ctx context.Context, problemID uuid.UUID, title string) error {
-	title = strings.TrimSpace(title)
-	if title == "" {
-		return nil
-	}
-
-	problem, err := h.problemsUC.GetProblemById(ctx, problemID)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to get problem for title sync")
-	}
-	if strings.TrimSpace(problem.Title) == title {
-		return nil
-	}
-
-	if err := h.problemsUC.UpdateProblem(ctx, problemID, &models.ProblemUpdate{Title: &title}); err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to sync problem title")
+		return workshopWriteError(err, "failed to update manifest")
 	}
 
 	return nil
@@ -1185,4 +1156,23 @@ func sanitizeCollectionFileName(dir, name string) (string, error) {
 		return "", fmt.Errorf("invalid relative test file path")
 	}
 	return clean, nil
+}
+
+func workshopWriteError(err error, message string) error {
+	kind := pkg.ErrInternal
+	if errors.Is(err, pkg.ErrConflict) {
+		kind = pkg.ErrConflict
+	}
+	return pkg.Wrap(kind, err, message)
+}
+
+func (h *CoreServer) requireWorkshop(ctx context.Context, id uuid.UUID) error {
+	initialized, err := h.workshopUC.IsInitialized(ctx, id)
+	if err != nil {
+		return workshopWriteError(err, "read workspace package")
+	}
+	if !initialized {
+		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
+	}
+	return nil
 }

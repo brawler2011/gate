@@ -153,40 +153,41 @@ Connect to `GET /ws/submissions` on the main backend server. Supported query par
 
 The server maintains a 10,000-event ring buffer, so clients can catch up on missed events after reconnecting.
 
-## Workshop save and import recovery
-
-The database manifest stores the authoritative metadata and complete YAML snapshot.
-YAML, statement text, title and limits are repaired from that snapshot after a failed
-projection update. Storage and database failures are returned to the caller.
-
-Import, initialization and file edits persist a hidden `.pending-mutation` marker
-before changing files. An interrupted operation blocks workspace reads and publication,
-including after a server restart. The error identifies the operation to retry: repeat
-the import, initialization, or update/delete for the same path. A retry may supply
-corrected content; an import replaces the entire workspace, including removed files.
-Other operations cannot clear the marker. It is removed only after all files and
-metadata are consistent; failure to remove it also returns an error. The marker is
-reserved, excluded from package exports and preserved by import cleanup.
-File edits, deletion and compilation validate the existing YAML before changing
-files. Unreadable legacy YAML leaves files untouched and creates no pending marker,
-so a corrected package can still be imported to repair the workspace.
-
-The PostgreSQL locker monitors its dedicated session and cancels the operation
-context if the connection is lost. Manifest, limits, title and package writes use
-that same guarded session, serialized with monitoring; a dead owner cannot commit
-through the repository pool. Storage operations check ownership before and after
-I/O, and marker removal requires live ownership. Lost sessions return an error even
-if the callback returns success. Validation and solution testing hold the operation
-lock through all reads and sandbox execution.
-
-This protocol relies on cooperative context cancellation at storage boundaries.
-It cannot stop arbitrary Go callbacks or fence an object-store request already sent
-before session loss. A stronger guarantee would require immutable workspace
-generations or conditional object writes. Direct database/object-store changes
-outside the workspace API also bypass this protocol.
-
 ## Diagnostic logging
 
 The backend writes sanitized JSON through `slog` to stdout in every environment.
 There are no Gate OTel exporters or metrics providers. HTTP requests use safe route
 patterns and `X-Request-ID`; persisted outbox/NATS headers correlate async judging.
+
+## Workshop file packages
+
+The canonical workshop content is a GFMT file tree: `problem.yaml`,
+`statements/<language>.md`, `tests/`, `solutions/`, `checkers/`, `validators/`,
+`interactors/`, `generators/` and `lib/`. The API manifest is assembled from
+these files. The default title is in `problem.yaml`; English Markdown contains
+statement sections. Optional `max_score`, `updated_at` and `sources` entries
+preserve editor/build settings in the same YAML. A source entry is keyed by its
+package path and may specify `compiler` and relative `dependencies`.
+
+Storage keeps each complete revision at `workspaces/<problem-id>/<sha256>.zip`.
+`problems.workspace_hash` identifies the editable revision. A save uploads the
+new immutable archive, then conditionally updates the hash and catalog title/
+limits in one SQL statement. A competing save returns a conflict (HTTP 409);
+reload before retrying. Failed uploads/commits leave the previous revision
+readable. An unreferenced uploaded archive is harmless. Reads never repair
+files or update the database. Validation and publication capture one revision,
+so editors can continue while those operations run.
+
+Each edit reads and rewrites the whole archive in memory. This deliberately
+uses the existing ZIP/object-storage infrastructure; large packages incur
+corresponding memory, compression and upload costs. Old and unreferenced
+archives are retained; automatic garbage collection is not part of this change.
+
+This changes the legacy flat workspace layout and removes the database JSON
+manifest. Before applying migration `20261030000000`, stop workshop writes,
+back up the database and workspace bucket, and export each legacy
+`workspaces/<problem-id>/` file tree as a GFMT ZIP. Preserve any custom compiler,
+dependency and max-score settings from the old manifest in YAML `sources` and
+`max_score`. After upgrading, reimport these ZIPs through the package import
+endpoint. Existing published packages are unchanged. There is no automatic
+legacy adoption or fallback to database metadata.

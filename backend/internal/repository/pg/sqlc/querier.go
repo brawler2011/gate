@@ -38,6 +38,7 @@ type Querier interface {
 	ClaimTemporaryUser(ctx context.Context, arg ClaimTemporaryUserParams) error
 	CleanupExpiredAuthTokens(ctx context.Context) error
 	CleanupExpiredSessions(ctx context.Context, hardLimitCutoff time.Time) error
+	CommitWorkspace(ctx context.Context, arg CommitWorkspaceParams) (int64, error)
 	CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error)
 	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
 	CountContestAnnouncements(ctx context.Context, contestID uuid.UUID) (int64, error)
@@ -127,7 +128,6 @@ type Querier interface {
 	GetPostByID(ctx context.Context, id uuid.UUID) (Post, error)
 	GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemByIDRow, error)
 	GetProblemByShortName(ctx context.Context, arg GetProblemByShortNameParams) (GetProblemByShortNameRow, error)
-	GetProblemManifest(ctx context.Context, id uuid.UUID) ([]byte, error)
 	GetProblemMember(ctx context.Context, arg GetProblemMemberParams) (ProblemMember, error)
 	GetProblemPackageByHash(ctx context.Context, packageHash string) (ProblemPackage, error)
 	GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error)
@@ -150,6 +150,8 @@ type Querier interface {
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]Organization, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]Team, error)
 	GetUserTeamsByOrganization(ctx context.Context, arg GetUserTeamsByOrganizationParams) ([]Team, error)
+	// Workshop integration queries
+	GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) error
 	ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]ListAllContestsRow, error)
 	ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error)
@@ -220,9 +222,6 @@ type Querier interface {
 	UpdatePackageStatus(ctx context.Context, arg UpdatePackageStatusParams) error
 	UpdatePost(ctx context.Context, arg UpdatePostParams) error
 	UpdateProblem(ctx context.Context, arg UpdateProblemParams) error
-	// Workshop integration queries
-	UpdateProblemLimits(ctx context.Context, arg UpdateProblemLimitsParams) error
-	UpdateProblemManifest(ctx context.Context, arg UpdateProblemManifestParams) error
 	UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error
 	UpdateProblemTeamPermission(ctx context.Context, arg UpdateProblemTeamPermissionParams) error
 	UpdateSessionExpiry(ctx context.Context, arg UpdateSessionExpiryParams) error

@@ -27,9 +27,7 @@ type ProblemsRepo interface {
 	RemoveProblemMember(ctx context.Context, problemID, userID uuid.UUID) error
 	ListProblems(ctx context.Context, filter *models.ProblemsFilter) ([]models.Problem, int32, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error
-	UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error
-	GetProblemManifest(ctx context.Context, id uuid.UUID) ([]byte, error)
-	UpdateProblemManifest(ctx context.Context, id uuid.UUID, manifest []byte) error
+	WorkspaceRepo
 	ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error)
 }
 
@@ -43,7 +41,6 @@ type ProblemsUC interface {
 	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTest, error)
 	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error
-	UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error
 	UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error
 	ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error)
 
@@ -56,4 +53,12 @@ type ProblemsUC interface {
 	ListProblemMembers(ctx context.Context, problemID, requestUserID uuid.UUID) ([]models.ProblemMember, error)
 	UpdateProblemMemberRole(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role models.ProblemRole) error
 	RemoveProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID) error
+}
+
+// WorkspaceRepo stores only the location of the canonical GFMT package and its
+// searchable catalog fields. CommitWorkspace atomically checks the old hash,
+// switches the package reference and updates the catalog.
+type WorkspaceRepo interface {
+	GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error)
+	CommitWorkspace(ctx context.Context, id uuid.UUID, previousHash, hash string, metadata *models.WorkspaceMetadata) error
 }

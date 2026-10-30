@@ -5,12 +5,15 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"gopkg.in/yaml.v3"
 	"net"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,7 +22,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -44,22 +46,16 @@ func TestWorkshopE2E(t *testing.T) {
 
 	// Initialize Storage-backed Workspace service
 	store := storage.NewLocalStorage(t.TempDir())
-	workspaceStorage := usecase.NewWorkspaceStorage(store, "integration-workshop", &usecase.WorkspaceMutex{})
+	workspaceStorage := usecase.NewWorkspaceStorage(store, "integration-workshop", newMockProblemsRepo())
 	ctx := context.Background()
 	problemID := uuid.New()
 
 	// Create mock repositories (simplified for testing)
 	problemsRepo := newMockProblemsRepo()
 	problemsRepo.problems[problemID] = models.Problem{ID: problemID, Title: "A+B Problem"}
-	txManager := &mockTxManager{}
 
 	// Initialize WorkshopUseCase
-	workshopUC := usecase.NewWorkshopUseCase(
-		problemsRepo,
-		workspaceStorage,
-		sandboxInst,
-		txManager,
-	)
+	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, sandboxInst)
 
 	// Step 1: Initialize workshop
 	t.Run("InitWorkshop", func(t *testing.T) {
@@ -233,12 +229,23 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 				MemoryLimitMb: 256,
 				FilesMetadata: []models.FileMetadata{{Type: "checker", Filename: "checkers/checker.cpp", Dependencies: tc.deps}},
 			}
-			data, err := json.Marshal(manifest)
+			config := usecase.ManifestAndTestsToGfmtProblem(&manifest, &models.TestsMetadata{Groups: []models.TestGroup{{Ordinal: 1, Name: "samples", Tests: [2]int{1, 1}}}, Tests: []models.TestCase{{Ordinal: 1, Filename: "01.in", Method: "manual"}}})
+			config.Sources = make(map[string]gfmt.Source)
+			for _, meta := range manifest.FilesMetadata {
+				var deps []string
+				for _, dep := range meta.Dependencies {
+					deps = append(deps, dep.Filename)
+				}
+				if len(deps) > 0 {
+					config.Sources[meta.Filename] = gfmt.Source{Dependencies: deps}
+				}
+			}
+			data, err := yaml.Marshal(config)
 			require.NoError(t, err)
-			repo.manifests[problemID] = data
-			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "checker-evaluation", &usecase.WorkspaceMutex{})
+
+			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "checker-evaluation", repo)
 			files := map[string]string{
-				"problem.yaml":         "subtasks:\n  samples:\n    tests:\n      - manual: 01.in\n",
+				"problem.yaml":         string(data),
 				"tests/01.in":          "1 2\n",
 				"tests/01.out":         "3\n",
 				"solutions/main.cpp":   "#include <iostream>\nint main(){std::cout << \"" + tc.output + "\\n\";}",
@@ -250,7 +257,7 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 			for path, content := range files {
 				require.NoError(t, ws.WriteFile(ctx, problemID, path, []byte(content)))
 			}
-			uc := usecase.NewWorkshopUseCase(repo, ws, sb, nil)
+			uc := usecase.NewWorkshopUseCase(ws, sb)
 			if tc.compileFirst {
 				compiled, err := uc.CompileProblemComponent(ctx, models.CompileComponentRequest{ProblemID: problemID, ComponentType: "checker"})
 				require.NoError(t, err)
@@ -379,14 +386,14 @@ func workshopGoJudgeDockerfileContext() (string, string, error) {
 
 // Mock implementations for testing
 type mockProblemsRepo struct {
-	manifests map[uuid.UUID][]byte
-	problems  map[uuid.UUID]models.Problem
+	workspaceMu     sync.Mutex
+	workspaceHashes map[uuid.UUID]string
+	problems        map[uuid.UUID]models.Problem
 }
 
 func newMockProblemsRepo() *mockProblemsRepo {
 	return &mockProblemsRepo{
-		manifests: make(map[uuid.UUID][]byte),
-		problems:  make(map[uuid.UUID]models.Problem),
+		problems: make(map[uuid.UUID]models.Problem),
 	}
 }
 
@@ -466,25 +473,37 @@ func (m *mockProblemsRepo) UpdateProblem(_ context.Context, id uuid.UUID, update
 	return nil
 }
 
-func (m *mockProblemsRepo) UpdateProblemLimits(_ context.Context, _ uuid.UUID, _, _ int) error {
-	return nil
-}
-
-func (m *mockProblemsRepo) GetProblemManifest(_ context.Context, id uuid.UUID) ([]byte, error) {
-	return m.manifests[id], nil
-}
-
-func (m *mockProblemsRepo) UpdateProblemManifest(_ context.Context, id uuid.UUID, manifest []byte) error {
-	m.manifests[id] = append([]byte(nil), manifest...)
-	return nil
-}
-
 func (m *mockProblemsRepo) ListDashboardProblems(_ context.Context, _ uuid.UUID, _ int32) ([]models.DashboardProblem, error) {
 	return nil, nil
 }
 
-type mockTxManager struct{}
-
-func (m *mockTxManager) WithTx(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
-	return fn(ctx, nil)
+func (m *mockProblemsRepo) GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	m.workspaceMu.Lock()
+	defer m.workspaceMu.Unlock()
+	return m.workspaceHashes[id], nil
+}
+func (m *mockProblemsRepo) CommitWorkspace(ctx context.Context, id uuid.UUID, previousHash, hash string, metadata *models.WorkspaceMetadata) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.workspaceMu.Lock()
+	defer m.workspaceMu.Unlock()
+	if m.workspaceHashes[id] != previousHash {
+		return pkg.ErrConflict
+	}
+	if m.workspaceHashes == nil {
+		m.workspaceHashes = make(map[uuid.UUID]string)
+	}
+	m.workspaceHashes[id] = hash
+	if metadata != nil {
+		problem := m.problems[id]
+		problem.Title = metadata.Title
+		problem.TimeLimitMs = metadata.TimeLimitMs
+		problem.MemoryLimitMb = metadata.MemoryLimitMb
+		m.problems[id] = problem
+	}
+	return nil
 }

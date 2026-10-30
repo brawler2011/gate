@@ -50,29 +50,13 @@ func NewProblemPublishUseCase(
 	}
 }
 
-func (uc *ProblemPublishUseCase) publishProblemUnlocked(
+func (uc *ProblemPublishUseCase) publishProblemFiles(
 	ctx context.Context,
 	problemID uuid.UUID,
 ) (*PublishResult, error) {
-	if err := uc.workspaceStorage.checkMutation(ctx, problemID); err != nil {
-		return nil, err
-	}
 	problem, err := uc.problemsRepo.GetProblemById(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get problem: %w", err)
-	}
-
-	// Recover a committed workshop snapshot before copying any files. Legacy
-	// imported workspaces without a snapshot retain their existing package layout.
-	data, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
-	if err != nil {
-		return nil, fmt.Errorf("load publication snapshot: %w", err)
-	}
-	if len(data) > 0 {
-		workshop := NewWorkshopUseCase(uc.problemsRepo, uc.workspaceStorage, nil, nil)
-		if _, err := workshop.loadManifest(ctx, problemID); err != nil {
-			return nil, fmt.Errorf("recover publication snapshot: %w", err)
-		}
 	}
 
 	tempDir, err := os.MkdirTemp("", "problem-publish-*")
@@ -136,9 +120,6 @@ func (uc *ProblemPublishUseCase) publishProblemUnlocked(
 	hashBytes := sha256.Sum256(zipBytes)
 	packageHash := fmt.Sprintf("%x", hashBytes)
 	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID.String(), packageHash)
-	if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
-		return nil, err
-	}
 	uploadErr := uc.storage.UploadFile(
 		ctx,
 		uc.packageBucket,
@@ -150,9 +131,6 @@ func (uc *ProblemPublishUseCase) publishProblemUnlocked(
 		return nil, fmt.Errorf("failed to upload package to S3: %w", uploadErr)
 	}
 
-	if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
-		return nil, err
-	}
 	packageID := uuid.New()
 	created, err := uc.packagesRepo.CreatePackage(ctx, &models.CreatePackageParams{
 		ID:             packageID,
@@ -165,9 +143,6 @@ func (uc *ProblemPublishUseCase) publishProblemUnlocked(
 		return nil, fmt.Errorf("failed to create package record: %w", err)
 	}
 
-	if err := interfaces.CheckWorkspaceOwnership(ctx); err != nil {
-		return nil, err
-	}
 	if err := uc.packagesRepo.UpdatePackageStatus(ctx, &models.UpdatePackageStatusParams{
 		ID:     packageID,
 		Status: "ready",
@@ -239,7 +214,6 @@ func (uc *ProblemPublishUseCase) DownloadPackage(
 
 func ZipDirectory(srcDir string, writer io.Writer) error {
 	archive := zip.NewWriter(writer)
-	defer archive.Close()
 
 	err := filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -275,9 +249,12 @@ func ZipDirectory(srcDir string, writer io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("failed to zip directory %s: %w", srcDir, err)
 	}
+	if err := archive.Close(); err != nil {
+		return fmt.Errorf("close published archive: %w", err)
+	}
 	return nil
 }
 
 func (uc *ProblemPublishUseCase) PublishProblem(ctx context.Context, problemID uuid.UUID) (*PublishResult, error) {
-	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*PublishResult, error) { return uc.publishProblemUnlocked(ctx, problemID) })
+	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*PublishResult, error) { return uc.publishProblemFiles(ctx, problemID) })
 }

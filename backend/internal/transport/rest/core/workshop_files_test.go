@@ -3,10 +3,12 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
@@ -18,10 +20,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type workshopFilesRepo struct{ interfaces.ProblemsRepo }
+type workshopFilesRepo struct {
+	interfaces.ProblemsRepo
+	mu   sync.Mutex
+	hash string
+}
 
-func (workshopFilesRepo) GetProblemManifest(context.Context, uuid.UUID) ([]byte, error) {
-	return []byte(`{}`), nil
+func (r *workshopFilesRepo) GetWorkspaceHash(context.Context, uuid.UUID) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.hash, nil
+}
+func (r *workshopFilesRepo) CommitWorkspace(_ context.Context, _ uuid.UUID, previousHash, hash string, _ *models.WorkspaceMetadata) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.hash != previousHash {
+		return pkg.ErrConflict
+	}
+	r.hash = hash
+	return nil
 }
 
 type workshopFilesSecurity struct{}
@@ -33,7 +50,8 @@ func (workshopFilesSecurity) HandleCookieAuth(ctx context.Context, _ corev1.Oper
 func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
 	ctx := context.Background()
 	id := uuid.New()
-	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", &usecase.WorkspaceMutex{})
+	repo := &workshopFilesRepo{}
+	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", repo)
 	for path, content := range map[string]string{
 		"problem.yaml":         "subtasks:\n  samples:\n    tests:\n      - manual: nested/edge\n",
 		"tests/nested/edge.in": "original input", "tests/nested/edge.ans": "original answer",
@@ -41,7 +59,7 @@ func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
 	} {
 		require.NoError(t, ws.WriteFile(ctx, id, path, []byte(content)))
 	}
-	handler := &CoreServer{workshopUC: usecase.NewWorkshopUseCase(workshopFilesRepo{}, ws, nil, nil)}
+	handler := &CoreServer{workshopUC: usecase.NewWorkshopUseCase(ws, nil)}
 	server, err := corev1.NewServer(handler, workshopFilesSecurity{}, corev1.WithErrorHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, err error) {
 		w.WriteHeader(pkg.ToREST(err))
 	}))

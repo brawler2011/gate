@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -23,11 +22,11 @@ func (h *CoreServer) loadProblemStatement(ctx context.Context, problemID uuid.UU
 }
 
 func (h *CoreServer) loadProblemStatementWithLang(ctx context.Context, problemID uuid.UUID, lang string) *models.Statement {
-	if h.workshopUC == nil || !h.workshopUC.IsInitialized(ctx, problemID) {
+	if h.workshopUC == nil {
 		return nil
 	}
 
-	if lang != "" {
+	if lang != "" && lang != "en" {
 		if mdBytes, err := h.workshopUC.ReadProblemFile(ctx, problemID, "statements/"+lang+".md"); err == nil {
 			parsed := usecase.ParseStatementMarkdown(string(mdBytes))
 			if hasStatementContent(parsed) {
@@ -59,7 +58,7 @@ func hasStatementContent(statement models.Statement) bool {
 }
 
 func (h *CoreServer) loadProblemSamples(ctx context.Context, problemID uuid.UUID) []corev1.ProblemSampleModel {
-	if h.workshopUC == nil || !h.workshopUC.IsInitialized(ctx, problemID) {
+	if h.workshopUC == nil {
 		return []corev1.ProblemSampleModel{}
 	}
 
@@ -182,26 +181,14 @@ func (h *CoreServer) loadPackageStatementAndSamplesWithLang(
 	}
 
 	var statement models.Statement
-	if lang != "" {
-		if mdBytes, err := os.ReadFile(filepath.Join(tempDir, "statements", lang+".md")); err == nil {
-			parsed := usecase.ParseStatementMarkdown(string(mdBytes))
-			if hasStatementContent(parsed) {
-				statement = parsed
-			}
-		}
+	if lang == "" {
+		lang = "en"
 	}
-
-	if !hasStatementContent(statement) {
-		statementBytes, err := os.ReadFile(filepath.Join(tempDir, "statement.json"))
-		if err == nil {
-			_ = json.Unmarshal(statementBytes, &statement)
-		}
+	if data, err := os.ReadFile(filepath.Join(tempDir, "statements", lang+".md")); err == nil {
+		statement = usecase.ParseStatementMarkdown(string(data))
 	}
-
-	if !hasStatementContent(statement) {
-		statement = models.Statement{
-			Title: gfmtPkg.Problem.Title,
-		}
+	if lang == "en" || strings.TrimSpace(statement.Title) == "" {
+		statement.Title = gfmtPkg.Problem.Title
 	}
 
 	var samples []corev1.ProblemSampleModel

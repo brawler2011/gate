@@ -156,7 +156,7 @@ func runApp(envFile string) error {
 		}
 	}
 
-	workspaceStorage := usecase.NewWorkspaceStorage(store, defaultS3WorkshopBucket, pg.NewWorkspaceLocker(pool.Config().ConnConfig))
+	workspaceStorage := usecase.NewWorkspaceStorage(store, defaultS3WorkshopBucket, problemsRepo)
 
 	authRepo := pg.NewAuthRepo(pool)
 	emailService := email.NewEmailService(cfg.Env, cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)
@@ -167,7 +167,7 @@ func runApp(envFile string) error {
 
 	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
 	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
-	problemsUC := usecase.NewProblemsUseCase(problemsRepo, orgsRepo)
+	problemsUC := usecase.NewProblemsUseCase(problemsRepo, workspaceStorage, orgsRepo)
 	contestsUC := usecase.NewContestsUseCase(contestsRepo, orgsRepo, submissionsRepo)
 	contestsUC.SetNotificationsUC(notificationsUC)
 	contestsUC.SetUsersRepo(usersRepo)
@@ -200,7 +200,7 @@ func runApp(envFile string) error {
 	}
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
-	workshopUC := usecase.NewWorkshopUseCase(problemsRepo, workspaceStorage, sandboxInstance, txManager)
+	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, sandboxInstance)
 
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
 	if err != nil {

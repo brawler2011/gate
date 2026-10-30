@@ -16,7 +16,7 @@ func TestPublishProblem_Validation(t *testing.T) {
 	orgID := uuid.New()
 
 	store := storage.NewLocalStorage(t.TempDir())
-	wsStorage := NewWorkspaceStorage(store, "test-workshop", &WorkspaceMutex{})
+	wsStorage := NewWorkspaceStorage(store, "test-workshop", newProblemImportMockProblemsRepo())
 
 	mockRepo := newProblemImportMockProblemsRepo()
 	mockRepo.problems[problemID] = models.Problem{

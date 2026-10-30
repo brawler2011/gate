@@ -5,9 +5,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	corev1 "github.com/brawler2011/contracts/core/v1"
@@ -19,10 +21,25 @@ import (
 	"github.com/google/uuid"
 )
 
-type fixtureRepo struct{ interfaces.ProblemsRepo }
+type fixtureRepo struct {
+	interfaces.ProblemsRepo
+	mu   sync.Mutex
+	hash string
+}
 
-func (fixtureRepo) GetProblemManifest(context.Context, uuid.UUID) ([]byte, error) {
-	return []byte(`{"problem_type":"pass-fail","time_limit_ms":1000,"memory_limit_mb":256,"statement":{"title":"HTTP fixture"},"meta_files":[]}`), nil
+func (r *fixtureRepo) GetWorkspaceHash(context.Context, uuid.UUID) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.hash, nil
+}
+func (r *fixtureRepo) CommitWorkspace(_ context.Context, _ uuid.UUID, previousHash, hash string, _ *models.WorkspaceMetadata) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.hash != previousHash {
+		return pkg.ErrConflict
+	}
+	r.hash = hash
+	return nil
 }
 
 type fixtureSecurity struct{}
@@ -33,8 +50,9 @@ func (fixtureSecurity) HandleCookieAuth(ctx context.Context, _ corev1.OperationN
 
 func run() error {
 	id := uuid.MustParse(os.Args[3])
-	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(os.Args[1]), "fixture", &usecase.WorkspaceMutex{})
-	if err := ws.WriteFile(context.Background(), id, "problem.yaml", []byte("format_version: '1.0'\ntitle: HTTP fixture\ntype: pass-fail\nlimits: {time_ms: 1000, memory_mb: 256}\nsubtasks: {}\n")); err != nil {
+	repo := &fixtureRepo{}
+	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(os.Args[1]), "fixture", repo)
+	if err := ws.WriteFile(context.Background(), id, "problem.yaml", []byte("type: pass-fail\nsubtasks: {}\n")); err != nil {
 		return err
 	}
 	for _, name := range []string{"nested/edge.in", "nested/edge.ans", "nested/space #?.in"} {
@@ -42,7 +60,7 @@ func run() error {
 			return err
 		}
 	}
-	uc := usecase.NewWorkshopUseCase(fixtureRepo{}, ws, nil, nil)
+	uc := usecase.NewWorkshopUseCase(ws, nil)
 	handler := core.NewCoreServer(nil, nil, nil, nil, nil, nil, nil, nil, uc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	router, err := corev1.NewServer(handler, fixtureSecurity{}, corev1.WithErrorHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, err error) {
 		w.WriteHeader(pkg.ToREST(err))

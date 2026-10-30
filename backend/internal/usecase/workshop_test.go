@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -87,12 +86,8 @@ func TestWorkshopTestsConfig_RoundTrip(t *testing.T) {
 				require.NoError(t, os.CopyFS(src, os.DirFS("../../pkg/testdata/"+format+"/"+name)))
 				parser, err := formats.GetParser(format)
 				require.NoError(t, err)
-				plan, err := parser.Parse(src)
-				require.NoError(t, err)
 				dst := t.TempDir()
 				require.NoError(t, formats.Import(src, dst, parser))
-				manifest, err := mapImportPlanToManifest(plan, dst)
-				require.NoError(t, err)
 				uc, id := newWorkshopValidatorTest(t, false, nil, nil)
 				require.NoError(t, uc.workspaceStorage.DeleteProblemWorkspace(ctx, id))
 				require.NoError(t, filepath.WalkDir(dst, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -112,9 +107,9 @@ func TestWorkshopTestsConfig_RoundTrip(t *testing.T) {
 					}
 					return uc.workspaceStorage.WriteFile(ctx, id, filepath.ToSlash(rel), data)
 				}))
-				data, err := json.Marshal(manifest)
+
+				manifest, err := uc.GetManifest(ctx, id)
 				require.NoError(t, err)
-				require.NoError(t, uc.problemsRepo.UpdateProblemManifest(ctx, id, data))
 				before, err := uc.GetTestsConfig(ctx, id)
 				require.NoError(t, err)
 				original, err := uc.readProblemConfig(ctx, id)
@@ -201,9 +196,7 @@ func TestWorkshopSaveManifest_UnrelatedComponentMetadata(t *testing.T) {
 		manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{Type: kind, Filename: kind + "s/a-unused.cpp"}, models.FileMetadata{Type: kind, Filename: kind + "s/z-selected.cpp"})
 	}
 	manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{Type: "generator", Filename: "generators/gen.cpp"})
-	data, err := json.Marshal(manifest)
-	require.NoError(t, err)
-	require.NoError(t, uc.problemsRepo.UpdateProblemManifest(ctx, id, data))
+	require.NoError(t, uc.saveManifest(ctx, id, manifest))
 	hash := "compiled"
 	manifest.FilesMetadata[len(manifest.FilesMetadata)-1].BinarySha256 = &hash
 	// Compiling any component changes metadata, not its selected filename.
