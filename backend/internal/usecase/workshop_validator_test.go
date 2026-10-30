@@ -27,10 +27,15 @@ func TestWorkshopValidateAllTests_InputNamesAndOrder(t *testing.T) {
 		"problem.yaml":             "subtasks:\n  z:\n    tests:\n      - generate: generator 42\n  samples:\n    tests:\n      - manual: sample.in\n  a:\n    tests:\n      - manual: edge-case.in\n",
 		"tests/sample.in":          "sample",
 		"tests/edge-case.in":       "edge",
-		"tests/03.in":              "generated",
+		"tests/03.in":              "stale generated input",
+		"generators/generator.cpp": "generator",
 	}, nil)
 	inputs := make(chan string, 3)
 	uc.sandbox = newWorkshopValidatorSandbox(t, func(_ context.Context, req *pb.Request) (*pb.Response, error) {
+		if req.GetCmd()[0].GetArgs()[0] == "./generator" {
+			require.Equal(t, []string{"./generator", "42"}, req.GetCmd()[0].GetArgs())
+			return pb.Response_builder{Results: []*pb.Response_Result{pb.Response_Result_builder{Status: pb.Response_Result_Accepted, Files: map[string][]byte{"stdout": []byte("generated")}}.Build()}}.Build(), nil
+		}
 		inputs <- string(req.GetCmd()[0].GetFiles()[0].GetMemory().GetContent())
 		return pb.Response_builder{Results: []*pb.Response_Result{pb.Response_Result_builder{Status: pb.Response_Result_Accepted}.Build()}}.Build(), nil
 	})

@@ -85,14 +85,7 @@ func (g *GateFormat) GetLib(name string) ([]byte, error) {
 
 // GetTestInput reads the content of the specified test input file.
 func (g *GateFormat) GetTestInput(name string) ([]byte, error) {
-	candidates := []string{name}
-	ext := filepath.Ext(name)
-	stem := strings.TrimSuffix(name, ext)
-	if stem != "" && stem != name {
-		candidates = append(candidates, stem+".in", stem+".input")
-	} else {
-		candidates = append(candidates, name+".in", name+".input")
-	}
+	candidates := TestInputNames(name)
 
 	for _, cand := range candidates {
 		data, err := readFile(filepath.Join(g.Path, "tests", cand))
@@ -105,6 +98,19 @@ func (g *GateFormat) GetTestInput(name string) ([]byte, error) {
 
 // GetTestOutput reads the content of the specified test output file.
 func (g *GateFormat) GetTestOutput(name string) ([]byte, error) {
+	candidates := TestOutputNames(name)
+
+	for _, cand := range candidates {
+		data, err := readFile(filepath.Join(g.Path, "tests", cand))
+		if err == nil {
+			return data, nil
+		}
+	}
+	return nil, fmt.Errorf("test output file not found for %s", name)
+}
+
+// TestOutputNames lists supported answer names in resolution order.
+func TestOutputNames(name string) []string {
 	var candidates []string
 	ext := filepath.Ext(name)
 	stem := strings.TrimSuffix(name, ext)
@@ -117,11 +123,19 @@ func (g *GateFormat) GetTestOutput(name string) ([]byte, error) {
 	}
 	candidates = append(candidates, name+".out", name+".ans", name+".a", name+".output")
 
-	for _, cand := range candidates {
-		data, err := readFile(filepath.Join(g.Path, "tests", cand))
-		if err == nil {
-			return data, nil
-		}
+	return candidates
+}
+
+// TestInputNames lists supported input names in resolution order.
+func TestInputNames(name string) []string {
+	candidates := []string{name}
+	ext := filepath.Ext(name)
+	stem := strings.TrimSuffix(name, ext)
+	if stem != "" && stem != name {
+		candidates = append(candidates, stem+".in", stem+".input")
+	} else {
+		candidates = append(candidates, name+".in", name+".input")
 	}
-	return nil, fmt.Errorf("test output file not found for %s", name)
+
+	return candidates
 }

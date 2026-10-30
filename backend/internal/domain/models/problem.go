@@ -58,6 +58,7 @@ type TestGroup struct {
 }
 
 type TestCase struct {
+	Filename  string  `json:"filename"` // input name relative to tests/; empty for generated tests
 	Ordinal   int     `json:"ordinal"`
 	Method    string  `json:"method"`    // "manual" или "generated"
 	Generator *string `json:"generator"` // "gen_border 1 2 3" или null

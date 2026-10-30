@@ -12,11 +12,12 @@ import {
 } from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconPlus, IconUsersGroup} from "@tabler/icons-react";
-import {useCallback, useEffect, useState, type ReactNode} from "react";
+import {useCallback, useState, type ReactNode} from "react";
 
 import {ChangeRoleModal} from "@/components/shared/ChangeRoleModal";
 import {EntityManagementTable} from "@/components/shared/EntityManagementTable";
 import {StatusMessage} from "@/components/shared/StatusMessage";
+import {useEntityCollection, useEntityMutation} from "@/hooks/useEntityManagement";
 import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
 
@@ -44,10 +45,9 @@ export const ContestTeamsManagement = ({
   contestLogin,
   orgId,
 }: ContestTeamsManagementProps): ReactNode => {
-  const [teams, setTeams] = useState<corev1.ContestTeamModel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const {pendingId: addingId, run: addTeam} = useEntityMutation();
+  const adding = addingId !== null;
+  const {pendingId: deletingId, run: deleteTeam} = useEntityMutation();
 
   const [editingTeam, setEditingTeam] = useState<{
     teamName: string;
@@ -60,22 +60,15 @@ export const ContestTeamsManagement = ({
     message: string;
   } | null>(null);
 
-  const loadTeams = useCallback(async () => {
-    setLoading(true);
+  const fetchTeams = useCallback(async () => {
     const [error, response] = await api.listContestTeams({orgLogin, contestLogin});
-    setLoading(false);
-
     if (error || !response) {
       console.error("Failed to load contest teams:", error);
       return;
     }
-
-    setTeams(response.teams);
+    return response.teams;
   }, [orgLogin, contestLogin]);
-
-  useEffect(() => {
-    loadTeams();
-  }, [loadTeams]);
+  const {items: teams, loading, reload: loadTeams} = useEntityCollection(fetchTeams);
 
   const searchTeamsFn = useCallback(
     async (query: string) => {
@@ -117,14 +110,12 @@ export const ContestTeamsManagement = ({
       return;
     }
 
-    setAdding(true);
-    const [error] = await api.createContestTeam({
+    const [error] = await addTeam(selectedTeamId, () => api.createContestTeam({
       orgLogin,
       contestLogin,
       teamId: selectedTeamId,
       role: "participant",
-    });
-    setAdding(false);
+    }));
 
     if (error) {
       notifications.show({
@@ -149,9 +140,9 @@ export const ContestTeamsManagement = ({
   };
 
   const handleDeleteTeam = async (team: corev1.ContestTeamModel) => {
-    setDeletingId(team.team_id);
-    const [error] = await api.deleteContestTeam({orgLogin, contestLogin, teamId: team.team_id});
-    setDeletingId(null);
+    const [error] = await deleteTeam(team.team_id, () =>
+      api.deleteContestTeam({orgLogin, contestLogin, teamId: team.team_id})
+    );
 
     if (error) {
       notifications.show({

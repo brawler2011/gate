@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -414,7 +415,7 @@ func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.
 	}
 
 	report := &models.ValidationReport{Results: make([]models.TestValidationResult, 0)}
-	for _, group := range orderedSubtaskNames(prob) {
+	for _, group := range prob.OrderedSubtaskNames() {
 		for _, test := range prob.Subtasks[group].Tests {
 			report.TotalTests++
 			inputName := test.Manual
@@ -422,7 +423,7 @@ func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.
 				inputName = fmt.Sprintf("%02d.in", report.TotalTests)
 			}
 			inputPath := filepath.ToSlash(filepath.Join("tests", inputName))
-			input, err := uc.workspaceStorage.ReadFile(ctx, problemID, inputPath)
+			input, err := uc.readTestInput(ctx, problemID, test, report.TotalTests)
 			result := models.TestValidationResult{TestNumber: report.TotalTests}
 			switch {
 			case errors.Is(err, storage.ErrNotFound):
@@ -526,10 +527,12 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 
 		report.TotalTests++
 
-		inputPath := fmt.Sprintf("tests/%02d.in", test.Ordinal)
-		answerPath := fmt.Sprintf("tests/%02d.out", test.Ordinal)
+		inputName := test.Filename
+		if inputName == "" {
+			inputName = fmt.Sprintf("%02d.in", test.Ordinal)
+		}
 
-		input, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, inputPath)
+		input, err := uc.readTestInput(ctx, req.ProblemID, gfmt.Test{Manual: test.Filename, Generate: stringValue(test.Generator)}, test.Ordinal)
 		if err != nil {
 			report.Results = append(report.Results, models.TestResult{
 				TestNumber: test.Ordinal,
@@ -540,7 +543,14 @@ func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolu
 			continue
 		}
 
-		answer, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, answerPath)
+		var answer []byte
+		err = storage.ErrNotFound
+		if test.Filename != "" {
+			answer, err = uc.readTestAnswer(ctx, req.ProblemID, inputName)
+		}
+		if errors.Is(err, storage.ErrNotFound) {
+			answer, err = uc.generateTestAnswer(ctx, req.ProblemID, input)
+		}
 		if err != nil {
 			report.Results = append(report.Results, models.TestResult{
 				TestNumber: test.Ordinal,
@@ -623,6 +633,21 @@ func (uc *WorkshopUseCase) saveManifest(ctx context.Context, problemID uuid.UUID
 		testsMeta = defaultTestsMetadata()
 	}
 	gfmtProb := ManifestAndTestsToGfmtProblem(manifest, testsMeta)
+	if previous, err := uc.readProblemConfig(ctx, problemID); err == nil {
+		gfmtProb.Solutions = previous.Solutions
+		stored, err := uc.loadManifest(ctx, problemID)
+		if err == nil {
+			if slices.Equal(componentFilenames(stored, "checker"), componentFilenames(manifest, "checker")) {
+				gfmtProb.Checker = previous.Checker
+			}
+			if slices.Equal(componentFilenames(stored, "validator"), componentFilenames(manifest, "validator")) {
+				gfmtProb.Validator = previous.Validator
+			}
+			if slices.Equal(componentFilenames(stored, "interactor"), componentFilenames(manifest, "interactor")) {
+				gfmtProb.Interactor = previous.Interactor
+			}
+		}
+	}
 	yamlBytes, err := yaml.Marshal(gfmtProb)
 	if err != nil {
 		return fmt.Errorf("failed to marshal problem.yaml: %w", err)
@@ -753,21 +778,6 @@ func computeSHA256(data []byte) string {
 	return fmt.Sprintf("%x", hash)
 }
 
-// orderedSubtaskNames matches the judge's test numbering: samples first, then names.
-func orderedSubtaskNames(prob *gfmt.Problem) []string {
-	names := make([]string, 0, len(prob.Subtasks))
-	for name := range prob.Subtasks {
-		if name != "samples" {
-			names = append(names, name)
-		}
-	}
-	sort.Strings(names)
-	if _, exists := prob.Subtasks["samples"]; exists {
-		names = append([]string{"samples"}, names...)
-	}
-	return names
-}
-
 func GfmtProblemToTestsMetadata(prob *gfmt.Problem) *models.TestsMetadata {
 	testsMeta := &models.TestsMetadata{
 		Groups: []models.TestGroup{},
@@ -776,12 +786,13 @@ func GfmtProblemToTestsMetadata(prob *gfmt.Problem) *models.TestsMetadata {
 
 	testOrdinal := 1
 	groupOrdinal := 1
-	for _, subName := range orderedSubtaskNames(prob) {
+	for _, subName := range prob.OrderedSubtaskNames() {
 		sub := prob.Subtasks[subName]
 		startTest := testOrdinal
 		for _, t := range sub.Tests {
 			tc := models.TestCase{
 				Ordinal:  testOrdinal,
+				Filename: t.Manual,
 				IsSample: subName == "samples" || t.Sample,
 			}
 			if t.Generate != "" {
@@ -866,13 +877,17 @@ func ManifestAndTestsToGfmtProblem(manifest *models.ProblemManifest, testsMeta *
 					}
 				}
 
-				var t gfmt.Test
-				if testCase != nil && testCase.Method == "generated" && testCase.Generator != nil {
+				if testCase == nil {
+					continue
+				}
+
+				t := gfmt.Test{Manual: testCase.Filename}
+				if testCase.Method == "generated" && testCase.Generator != nil {
 					t.Generate = *testCase.Generator
-				} else {
+				} else if t.Manual == "" {
 					t.Manual = fmt.Sprintf("%02d.in", testNum)
 				}
-				if testCase != nil && testCase.IsSample {
+				if testCase.IsSample {
 					t.Sample = true
 				}
 				tests = append(tests, t)
@@ -936,6 +951,12 @@ func (uc *WorkshopUseCase) UpdateTestsConfig(ctx context.Context, problemID uuid
 	}
 
 	gfmtProb := ManifestAndTestsToGfmtProblem(manifest, testsMeta)
+	previous, err := uc.readProblemConfig(ctx, problemID)
+	if err != nil {
+		return fmt.Errorf("failed to read tests config: %w", err)
+	}
+	previous.Subtasks = gfmtProb.Subtasks
+	gfmtProb = previous
 	yamlBytes, err := yaml.Marshal(gfmtProb)
 	if err != nil {
 		return fmt.Errorf("failed to marshal problem.yaml: %w", err)
@@ -949,4 +970,128 @@ func (uc *WorkshopUseCase) UpdateTestsConfig(ctx context.Context, problemID uuid
 
 func (uc *WorkshopUseCase) GetTestsConfig(ctx context.Context, problemID uuid.UUID) (*models.TestsMetadata, error) {
 	return uc.readTestsMetadata(ctx, problemID)
+}
+
+func stringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func (uc *WorkshopUseCase) readTestAnswer(ctx context.Context, problemID uuid.UUID, name string) ([]byte, error) {
+	for _, candidate := range gfmt.TestOutputNames(name) {
+		data, err := uc.workspaceStorage.ReadFile(ctx, problemID, "tests/"+candidate)
+		if err == nil {
+			return data, nil
+		}
+		if !errors.Is(err, storage.ErrNotFound) {
+			return nil, err
+		}
+	}
+	return nil, fmt.Errorf("test output file not found for %s: %w", name, storage.ErrNotFound)
+}
+
+func (uc *WorkshopUseCase) readTestInput(ctx context.Context, problemID uuid.UUID, test gfmt.Test, ordinal int) ([]byte, error) {
+	if test.Manual != "" {
+		for _, name := range gfmt.TestInputNames(test.Manual) {
+			data, err := uc.workspaceStorage.ReadFile(ctx, problemID, "tests/"+name)
+			if err == nil {
+				return data, nil
+			}
+			if !errors.Is(err, storage.ErrNotFound) {
+				return nil, err
+			}
+		}
+		return nil, fmt.Errorf("test input file not found for %s: %w", test.Manual, storage.ErrNotFound)
+	}
+	if test.Generate == "" {
+		return uc.workspaceStorage.ReadFile(ctx, problemID, fmt.Sprintf("tests/%02d.in", ordinal))
+	}
+	parts := strings.Fields(test.Generate)
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("empty generate command")
+	}
+	files, err := uc.workspaceStorage.ListAllFiles(ctx, problemID)
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(files)
+	var source string
+	deps := make(map[string][]byte)
+	for _, file := range files {
+		if filepath.Dir(file) == "generators" && strings.HasPrefix(filepath.Base(file), parts[0]) && source == "" {
+			source = file
+		}
+		if filepath.Dir(file) == "lib" {
+			data, err := uc.workspaceStorage.ReadFile(ctx, problemID, file)
+			if err != nil {
+				return nil, err
+			}
+			deps[filepath.Base(file)] = data
+		}
+	}
+	if source == "" {
+		return nil, fmt.Errorf("generator source not found for %s", parts[0])
+	}
+	data, err := uc.workspaceStorage.ReadFile(ctx, problemID, source)
+	if err != nil {
+		return nil, err
+	}
+	executable, err := uc.sandbox.Compile(ctx, data, detectLanguage(filepath.Ext(source)), deps)
+	if err != nil {
+		return nil, err
+	}
+	return uc.sandbox.Generate(ctx, executable, parts[1:])
+}
+
+func (uc *WorkshopUseCase) generateTestAnswer(ctx context.Context, problemID uuid.UUID, input []byte) ([]byte, error) {
+	prob, err := uc.readProblemConfig(ctx, problemID)
+	if err != nil {
+		return nil, err
+	}
+	var candidates []string
+	for name, tag := range prob.Solutions {
+		if tag == "OK" || tag == "Accepted" || tag == "main" {
+			candidates = append(candidates, name)
+		}
+	}
+	sort.Strings(candidates)
+	if len(candidates) == 0 {
+		return nil, fmt.Errorf("no test answer file or correct solution found to generate answer")
+	}
+	name := candidates[0]
+	for _, candidate := range candidates {
+		if prob.Solutions[candidate] == "main" {
+			name = candidate
+			break
+		}
+	}
+	data, err := uc.workspaceStorage.ReadFile(ctx, problemID, "solutions/"+name)
+	if err != nil {
+		return nil, err
+	}
+	language := detectLanguage(filepath.Ext(name))
+	executable, err := uc.sandbox.Compile(ctx, data, language, nil)
+	if err != nil {
+		return nil, err
+	}
+	result, err := uc.sandbox.Test(ctx, executable, language, input, prob.Limits.TimeMs, prob.Limits.MemoryMb)
+	if err != nil {
+		return nil, err
+	}
+	if result.Status != sandbox.StatusOK {
+		return nil, fmt.Errorf("correct solution failed to run: %s", result.Status)
+	}
+	return result.Stdout, nil
+}
+
+func componentFilenames(manifest *models.ProblemManifest, kind string) []string {
+	var names []string
+	for _, file := range manifest.FilesMetadata {
+		if file.Type == kind {
+			names = append(names, file.Filename)
+		}
+	}
+	return names
 }
