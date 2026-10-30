@@ -173,9 +173,14 @@ func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProb
 		}
 
 		manifest, err := h.workshopUC.GetManifest(ctx, problemID)
-		if err == nil {
-			manifest.Statement.Title = input.Title
-			_ = h.workshopUC.SaveManifest(ctx, problemID, manifest)
+		if err != nil {
+			_ = h.problemsUC.DeleteProblem(ctx, problemID)
+			return nil, err
+		}
+		manifest.Statement.Title = input.Title
+		if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
+			_ = h.problemsUC.DeleteProblem(ctx, problemID)
+			return nil, workshopWriteError(err, "save template title")
 		}
 
 		return &corev1.CreationResponseModel{ID: problemID}, nil
@@ -227,9 +232,14 @@ func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProb
 	}
 
 	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
-	if err == nil {
-		manifest.Statement.Title = input.Title
-		_ = h.workshopUC.SaveManifest(ctx, problemID, manifest)
+	if err != nil {
+		_ = h.problemsUC.DeleteProblem(ctx, problemID)
+		return nil, err
+	}
+	manifest.Statement.Title = input.Title
+	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
+		_ = h.problemsUC.DeleteProblem(ctx, problemID)
+		return nil, workshopWriteError(err, "save template title")
 	}
 
 	return &corev1.CreationResponseModel{ID: problemID}, nil
@@ -250,8 +260,30 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 		return nil, err
 	}
 
-	statement := h.loadProblemStatement(ctx, params.ID)
-	samples := h.loadProblemSamples(ctx, params.ID)
+	var statement *models.Statement
+	var samples []corev1.ProblemSampleModel
+	if h.workshopUC != nil {
+		if err := h.workshopUC.WithWorkspace(ctx, params.ID, func(ctx context.Context) error {
+			initialized, err := h.workshopUC.IsInitialized(ctx, params.ID)
+			if err != nil {
+				return err
+			}
+			if !initialized {
+				return nil
+			}
+			manifest, err := h.workshopUC.GetManifest(ctx, params.ID)
+			if err != nil {
+				return err
+			}
+			problem.Title = manifest.Statement.Title
+			problem.TimeLimitMs = manifest.TimeLimitMs
+			problem.MemoryLimitMb = manifest.MemoryLimitMb
+			statement, samples = h.loadWorkspaceStatementAndSamples(ctx, params.ID, "")
+			return nil
+		}); err != nil {
+			return nil, workshopWriteError(err, "read problem package")
+		}
+	}
 
 	return &corev1.GetProblemResponseModel{Problem: *ProblemDTO(problem, statement, samples)}, nil
 }

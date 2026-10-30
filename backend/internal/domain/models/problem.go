@@ -7,6 +7,8 @@ import (
 )
 
 type ProblemManifest struct {
+	// Revision identifies the file package read by the caller; it is not persisted metadata.
+	Revision    string    `json:"-"`
 	LastUpdated time.Time `json:"last_updated"`
 	ProblemType string    `json:"problem_type"` // "pass-fail", "scoring", etc
 
@@ -220,4 +222,12 @@ type DashboardProblem struct {
 	TimeLimitMs       int
 	MemoryLimitMb     int
 	UpdatedAt         time.Time
+}
+
+// WorkspaceMetadata is the searchable catalog entry extracted from problem.yaml.
+// Package readers always use the referenced GFMT archive.
+type WorkspaceMetadata struct {
+	Title         string
+	TimeLimitMs   int
+	MemoryLimitMb int
 }

@@ -39,16 +39,25 @@ func (s *LocalStorage) UploadFile(ctx context.Context, bucket, key string, reade
 		return fmt.Errorf("failed to create directory for local storage: %w", err)
 	}
 
-	destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	destFile, err := os.CreateTemp(filepath.Dir(destPath), ".upload-*")
 	if err != nil {
 		return fmt.Errorf("failed to create local file: %w", err)
 	}
-	defer destFile.Close()
+	defer os.Remove(destFile.Name())
 
 	if _, err := io.Copy(destFile, reader); err != nil {
+		_ = destFile.Close()
 		return fmt.Errorf("failed to write local file: %w", err)
 	}
-
+	if err := destFile.Close(); err != nil {
+		return fmt.Errorf("close local object: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := os.Rename(destFile.Name(), destPath); err != nil {
+		return fmt.Errorf("replace local object: %w", err)
+	}
 	return nil
 }
 

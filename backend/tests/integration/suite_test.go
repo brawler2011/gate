@@ -173,7 +173,7 @@ func (s *IntegrationTestSuite) initApp() {
 	txManager := pg.NewTransactor(s.dbPool)
 	tempStoragePath := s.T().TempDir()
 	testStorage := storage.NewLocalStorage(tempStoragePath)
-	workspaceStorage := usecase.NewWorkspaceStorage(testStorage, "integration-workshop")
+	workspaceStorage := usecase.NewWorkspaceStorage(testStorage, "integration-workshop", s.problemsRepo)
 
 	authRepo := pg.NewAuthRepo(s.dbPool)
 	emailService := &email.LogEmailService{}
@@ -181,7 +181,7 @@ func (s *IntegrationTestSuite) initApp() {
 	// UseCases
 	usersUC := usecase.NewUsersUseCase(s.usersRepo, s.contestsRepo, outboxRepo, txManager, authRepo, emailService)
 	authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager, emailService)
-	problemsUC := usecase.NewProblemsUseCase(s.problemsRepo, s.organizationsRepo)
+	problemsUC := usecase.NewProblemsUseCase(s.problemsRepo, workspaceStorage, s.organizationsRepo)
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, submissionsRepo)
 	permissionsUC := usecase.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
@@ -192,7 +192,7 @@ func (s *IntegrationTestSuite) initApp() {
 	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager, notificationsUC)
 	teamsUC := usecase.NewTeamsUseCase(s.teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
-	workshopUC := usecase.NewWorkshopUseCase(s.problemsRepo, workspaceStorage, nil, txManager)
+	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, nil)
 
 	avatarsUC := usecase.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
 

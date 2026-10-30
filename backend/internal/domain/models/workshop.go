@@ -6,6 +6,8 @@ import (
 
 // UpdateFileRequest represents a request to update a file
 type UpdateFileRequest struct {
+	// Revision is set for read/patch/write operations, such as statement PATCH.
+	Revision  string
 	ProblemID uuid.UUID
 	UserID    uuid.UUID
 	Path      string

@@ -49,6 +49,40 @@ func (q *Queries) CheckUserHasProblemAccess(ctx context.Context, arg CheckUserHa
 	return has_access, err
 }
 
+const commitWorkspace = `-- name: CommitWorkspace :execrows
+UPDATE problems
+SET workspace_hash = $1,
+    title = COALESCE($2::text, title),
+    time_limit_ms = COALESCE($3::integer, time_limit_ms),
+    memory_limit_mb = COALESCE($4::integer, memory_limit_mb),
+    updated_at = NOW()
+WHERE id = $5 AND workspace_hash = $6
+`
+
+type CommitWorkspaceParams struct {
+	Hash         string    `json:"hash"`
+	Title        *string   `json:"title"`
+	TimeMs       *int32    `json:"time_ms"`
+	MemoryMb     *int32    `json:"memory_mb"`
+	ID           uuid.UUID `json:"id"`
+	PreviousHash string    `json:"previous_hash"`
+}
+
+func (q *Queries) CommitWorkspace(ctx context.Context, arg CommitWorkspaceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, commitWorkspace,
+		arg.Hash,
+		arg.Title,
+		arg.TimeMs,
+		arg.MemoryMb,
+		arg.ID,
+		arg.PreviousHash,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const countAllProblems = `-- name: CountAllProblems :one
 SELECT COUNT(*) FROM problems p
 WHERE ($1::uuid IS NULL OR p.organization_id = $1::uuid)
@@ -103,7 +137,7 @@ const createProblem = `-- name: CreateProblem :one
 
 INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, organization_id, owner_id, visibility, title, short_name, time_limit_ms, memory_limit_mb, manifest, created_at, updated_at, is_template
+RETURNING id, organization_id, owner_id, visibility, title, short_name, time_limit_ms, memory_limit_mb, created_at, updated_at, is_template, workspace_hash
 `
 
 type CreateProblemParams struct {
@@ -135,10 +169,10 @@ func (q *Queries) CreateProblem(ctx context.Context, arg CreateProblemParams) (P
 		&i.ShortName,
 		&i.TimeLimitMs,
 		&i.MemoryLimitMb,
-		&i.Manifest,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IsTemplate,
+		&i.WorkspaceHash,
 	)
 	return i, err
 }
@@ -245,17 +279,6 @@ func (q *Queries) GetProblemByShortName(ctx context.Context, arg GetProblemBySho
 	return i, err
 }
 
-const getProblemManifest = `-- name: GetProblemManifest :one
-SELECT manifest FROM problems WHERE id = $1
-`
-
-func (q *Queries) GetProblemManifest(ctx context.Context, id uuid.UUID) ([]byte, error) {
-	row := q.db.QueryRow(ctx, getProblemManifest, id)
-	var manifest []byte
-	err := row.Scan(&manifest)
-	return manifest, err
-}
-
 const getProblemMember = `-- name: GetProblemMember :one
 SELECT problem_id, user_id, role, created_at FROM problem_members
 WHERE problem_id = $1 AND user_id = $2
@@ -276,6 +299,19 @@ func (q *Queries) GetProblemMember(ctx context.Context, arg GetProblemMemberPara
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getWorkspaceHash = `-- name: GetWorkspaceHash :one
+
+SELECT workspace_hash FROM problems WHERE id = $1
+`
+
+// Workshop integration queries
+func (q *Queries) GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getWorkspaceHash, id)
+	var workspace_hash string
+	err := row.Scan(&workspace_hash)
+	return workspace_hash, err
 }
 
 const listAllProblems = `-- name: ListAllProblems :many
@@ -569,7 +605,7 @@ func (q *Queries) RemoveProblemMember(ctx context.Context, arg RemoveProblemMemb
 
 const updateProblem = `-- name: UpdateProblem :exec
 UPDATE problems
-SET title = COALESCE($2, title),
+SET title = CASE WHEN workspace_hash = '' THEN COALESCE($2, title) ELSE title END,
     visibility = COALESCE($3, visibility),
     owner_id = COALESCE($4, owner_id),
     is_template = COALESCE($5, is_template)
@@ -592,39 +628,6 @@ func (q *Queries) UpdateProblem(ctx context.Context, arg UpdateProblemParams) er
 		arg.OwnerID,
 		arg.IsTemplate,
 	)
-	return err
-}
-
-const updateProblemLimits = `-- name: UpdateProblemLimits :exec
-
-UPDATE problems
-SET time_limit_ms = $2, memory_limit_mb = $3
-WHERE id = $1
-`
-
-type UpdateProblemLimitsParams struct {
-	ID            uuid.UUID `json:"id"`
-	TimeLimitMs   int32     `json:"time_limit_ms"`
-	MemoryLimitMb int32     `json:"memory_limit_mb"`
-}
-
-// Workshop integration queries
-func (q *Queries) UpdateProblemLimits(ctx context.Context, arg UpdateProblemLimitsParams) error {
-	_, err := q.db.Exec(ctx, updateProblemLimits, arg.ID, arg.TimeLimitMs, arg.MemoryLimitMb)
-	return err
-}
-
-const updateProblemManifest = `-- name: UpdateProblemManifest :exec
-UPDATE problems SET manifest = $2 WHERE id = $1
-`
-
-type UpdateProblemManifestParams struct {
-	ID       uuid.UUID `json:"id"`
-	Manifest []byte    `json:"manifest"`
-}
-
-func (q *Queries) UpdateProblemManifest(ctx context.Context, arg UpdateProblemManifestParams) error {
-	_, err := q.db.Exec(ctx, updateProblemManifest, arg.ID, arg.Manifest)
 	return err
 }
 

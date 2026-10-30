@@ -1,10 +1,10 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
-	"strings"
 	"testing"
 	"testing/iotest"
 
@@ -22,16 +22,19 @@ func TestWorkspaceStorage_ReadFile(t *testing.T) {
 		downloadErr error
 		wantErr     error
 	}{
-		{name: "success", reader: strings.NewReader("workspace content")},
+		{name: "success", reader: bytes.NewReader(createZipBytes(t, map[string]string{"problem.yaml": "workspace content"}))},
 		{name: "read failure", reader: iotest.ErrReader(readErr), wantErr: readErr},
 		{name: "download failure", downloadErr: downloadErr, wantErr: downloadErr},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			rc := &workspaceReadCloser{Reader: tt.reader}
 			store := &workspaceDownloadStorage{reader: rc, err: tt.downloadErr}
-			ws := NewWorkspaceStorage(store, "workspaces")
+			repo := newProblemImportMockProblemsRepo()
+			id := uuid.New()
+			repo.workspaceHashes = map[uuid.UUID]string{id: "fixture"}
+			ws := NewWorkspaceStorage(store, "workspaces", repo)
 
-			data, err := ws.ReadFile(context.Background(), uuid.New(), "problem.yaml")
+			data, err := ws.ReadFile(context.Background(), id, "problem.yaml")
 
 			if tt.downloadErr != nil {
 				require.ErrorIs(t, err, downloadErr)
@@ -42,7 +45,7 @@ func TestWorkspaceStorage_ReadFile(t *testing.T) {
 			require.Equal(t, 1, rc.closeCalls)
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
-				require.EqualError(t, err, "failed to read workspace file content: read failed")
+				require.EqualError(t, err, "read workspace package: read failed")
 				require.Nil(t, data)
 				return
 			}

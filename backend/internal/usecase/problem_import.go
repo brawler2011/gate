@@ -3,8 +3,6 @@ package usecase
 import (
 	"archive/zip"
 	"context"
-	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,12 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg/formats"
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/google/uuid"
 )
 
@@ -33,7 +29,7 @@ func NewProblemImportUseCase(problemsRepo interfaces.ProblemsRepo, workspaceStor
 	}
 }
 
-func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*models.ProblemManifest, error) {
+func (uc *ProblemImportUseCase) importProblemPackageFiles(ctx context.Context, zipReader io.Reader, problemID uuid.UUID) (*models.ProblemManifest, error) {
 	tempDir, err := os.MkdirTemp("", "problem-import-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)
@@ -120,106 +116,24 @@ func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipRea
 		return nil, fmt.Errorf("failed to upload workspace files: %w", err)
 	}
 
-	// Map and enrich the manifest
-	manifest, err := mapImportPlanToManifest(plan, tempDst)
+	workshop := NewWorkshopUseCase(uc.workspaceStorage, nil)
+	manifest, err := workshop.loadManifest(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map import plan to manifest: %w", err)
 	}
 
-	enrichManifestDefaults(ctx, uc.problemsRepo, problemID, manifest, format)
+	enrichManifestDefaults(ctx, uc.problemsRepo, problemID, manifest)
 
-	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
+	// Apply import-only defaults to the package itself, never a second manifest.
+	plan.Problem.Title = manifest.Statement.Title
+	if err := workshop.writeProblemConfig(ctx, problemID, plan.Problem); err != nil {
+		return nil, err
 	}
 
-	if err := uc.problemsRepo.UpdateProblemManifest(ctx, problemID, manifestBytes); err != nil {
-		return nil, fmt.Errorf("failed to save manifest to database: %w", err)
-	}
-
-	if err := uc.problemsRepo.UpdateProblemLimits(ctx, problemID, manifest.TimeLimitMs, manifest.MemoryLimitMb); err != nil {
-		return nil, fmt.Errorf("failed to save limits to database: %w", err)
-	}
-
-	return manifest, nil
+	return workshop.loadManifest(ctx, problemID)
 }
 
-func mapImportPlanToManifest(plan *gfmt.ImportPlan, tempDst string) (*models.ProblemManifest, error) {
-	manifest := &models.ProblemManifest{
-		LastUpdated:   time.Now(),
-		ProblemType:   plan.Problem.Type,
-		TimeLimitMs:   plan.Problem.Limits.TimeMs,
-		MemoryLimitMb: plan.Problem.Limits.MemoryMb,
-	}
-
-	manifest.Statement.Title = plan.Problem.Title
-	manifest.Statement.Legend = "Imported from unified package."
-
-	// Try to load statement from statements/en.md
-	enStatementPath := filepath.Join(tempDst, "statements", "en.md")
-	if data, err := os.ReadFile(enStatementPath); err == nil {
-		parsedStmt := ParseStatementMarkdown(string(data))
-		manifest.Statement = parsedStmt
-		manifest.Statement.Title = plan.Problem.Title // Always preserve title from problem.yaml
-	}
-
-	// Populate FilesMetadata
-	for _, mapping := range plan.Mappings {
-		target := mapping.TargetPath
-		var fileType string
-		switch {
-		case strings.HasPrefix(target, "checkers/"):
-			fileType = "checker"
-		case strings.HasPrefix(target, "validators/"):
-			fileType = "validator"
-		case strings.HasPrefix(target, "interactors/"):
-			fileType = "interactor"
-		case strings.HasPrefix(target, "generators/"):
-			fileType = "generator"
-		}
-
-		if fileType != "" {
-			// Read file to compute hash
-			absPath := filepath.Join(tempDst, target)
-			data, err := os.ReadFile(absPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read target file %s: %w", absPath, err)
-			}
-			hash := sha256.Sum256(data)
-			hashStr := fmt.Sprintf("%x", hash)
-
-			compiler := "cpp17"
-			if strings.HasSuffix(target, ".py") {
-				compiler = "python3"
-			} else if strings.HasSuffix(target, ".go") {
-				compiler = "go"
-			}
-
-			// Add dependencies if they exist
-			var deps []models.Dependency
-			for _, m := range plan.Mappings {
-				if strings.HasPrefix(m.TargetPath, "lib/") {
-					deps = append(deps, models.Dependency{
-						Filename: filepath.Base(m.TargetPath),
-						Version:  "1.0",
-					})
-				}
-			}
-
-			manifest.FilesMetadata = append(manifest.FilesMetadata, models.FileMetadata{
-				Type:         fileType,
-				Filename:     target,
-				Compiler:     compiler,
-				BinarySha256: &hashStr,
-				Dependencies: deps,
-			})
-		}
-	}
-
-	return manifest, nil
-}
-
-func enrichManifestDefaults(ctx context.Context, problemsRepo interfaces.ProblemsRepo, problemID uuid.UUID, manifest *models.ProblemManifest, format string) {
+func enrichManifestDefaults(ctx context.Context, problemsRepo interfaces.ProblemsRepo, problemID uuid.UUID, manifest *models.ProblemManifest) {
 	problemTitle := ""
 	if problem, err := problemsRepo.GetProblemById(ctx, problemID); err == nil {
 		problemTitle = strings.TrimSpace(problem.Title)
@@ -233,9 +147,6 @@ func enrichManifestDefaults(ctx context.Context, problemsRepo interfaces.Problem
 		}
 	}
 
-	if strings.TrimSpace(manifest.Statement.Legend) == "" {
-		manifest.Statement.Legend = fmt.Sprintf("Imported from %s package.", format)
-	}
 }
 
 func extractZip(r *zip.Reader, destDir string) error {
@@ -369,4 +280,20 @@ func hasPackageMarker(dir string) bool {
 	}
 
 	return false
+}
+
+func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*models.ProblemManifest, error) {
+	var result *models.ProblemManifest
+	var committed *workspacePackage
+	err := uc.workspaceStorage.replacePackage(ctx, problemID, func(ctx context.Context, current *workspacePackage) error {
+		committed = current
+		var err error
+		result, err = uc.importProblemPackageFiles(ctx, zipReader, problemID)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	result.Revision = committed.hash
+	return result, nil
 }

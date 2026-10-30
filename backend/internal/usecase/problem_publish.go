@@ -50,7 +50,7 @@ func NewProblemPublishUseCase(
 	}
 }
 
-func (uc *ProblemPublishUseCase) PublishProblem(
+func (uc *ProblemPublishUseCase) publishProblemFiles(
 	ctx context.Context,
 	problemID uuid.UUID,
 ) (*PublishResult, error) {
@@ -143,8 +143,7 @@ func (uc *ProblemPublishUseCase) PublishProblem(
 		return nil, fmt.Errorf("failed to create package record: %w", err)
 	}
 
-	bgCtx := context.Background()
-	if err := uc.packagesRepo.UpdatePackageStatus(bgCtx, &models.UpdatePackageStatusParams{
+	if err := uc.packagesRepo.UpdatePackageStatus(ctx, &models.UpdatePackageStatusParams{
 		ID:     packageID,
 		Status: "ready",
 		URL:    nil,
@@ -215,7 +214,6 @@ func (uc *ProblemPublishUseCase) DownloadPackage(
 
 func ZipDirectory(srcDir string, writer io.Writer) error {
 	archive := zip.NewWriter(writer)
-	defer archive.Close()
 
 	err := filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -251,5 +249,12 @@ func ZipDirectory(srcDir string, writer io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("failed to zip directory %s: %w", srcDir, err)
 	}
+	if err := archive.Close(); err != nil {
+		return fmt.Errorf("close published archive: %w", err)
+	}
 	return nil
+}
+
+func (uc *ProblemPublishUseCase) PublishProblem(ctx context.Context, problemID uuid.UUID) (*PublishResult, error) {
+	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*PublishResult, error) { return uc.publishProblemFiles(ctx, problemID) })
 }

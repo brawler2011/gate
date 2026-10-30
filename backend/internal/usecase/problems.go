@@ -4,6 +4,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"errors"
+	"github.com/brawler2011/gate/backend/pkg/storage"
 	"io"
 	"math"
 	"path/filepath"
@@ -28,18 +30,20 @@ func safeInt32[T ~int | ~int64](v T) int32 {
 }
 
 type ProblemsUseCase struct {
-	repo     interfaces.ProblemsRepo
-	orgsRepo interfaces.OrganizationsRepo
+	repo      interfaces.ProblemsRepo
+	orgsRepo  interfaces.OrganizationsRepo
+	workspace *WorkspaceStorage
 }
 
-func NewProblemsUseCase(repo interfaces.ProblemsRepo, orgsRepo ...interfaces.OrganizationsRepo) *ProblemsUseCase {
+func NewProblemsUseCase(repo interfaces.ProblemsRepo, workspace *WorkspaceStorage, orgsRepo ...interfaces.OrganizationsRepo) *ProblemsUseCase {
 	var orgRepo interfaces.OrganizationsRepo
 	if len(orgsRepo) > 0 {
 		orgRepo = orgsRepo[0]
 	}
 	return &ProblemsUseCase{
-		repo:     repo,
-		orgsRepo: orgRepo,
+		repo:      repo,
+		workspace: workspace,
+		orgsRepo:  orgRepo,
 	}
 }
 
@@ -80,15 +84,28 @@ func (uc *ProblemsUseCase) GetProblemById(ctx context.Context, id uuid.UUID) (mo
 }
 
 func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
+	if problem.Title != nil {
+		err := uc.workspace.withPackage(ctx, id, func(ctx context.Context, _ *workspacePackage) error {
+			workshop := NewWorkshopUseCase(uc.workspace, nil)
+			config, err := workshop.readProblemConfig(ctx, id)
+			if errors.Is(err, storage.ErrNotFound) {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			config.Title = *problem.Title
+			return workshop.writeProblemConfig(ctx, id, config)
+		})
+		if err != nil {
+			return err
+		}
+	}
 	if err := uc.repo.UpdateProblem(ctx, id, problem); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (uc *ProblemsUseCase) UpdateProblemLimits(ctx context.Context, id uuid.UUID, timeLimitMs, memoryLimitMb int) error {
-	return uc.repo.UpdateProblemLimits(ctx, id, timeLimitMs, memoryLimitMb)
 }
 
 func (uc *ProblemsUseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {

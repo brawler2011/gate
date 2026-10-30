@@ -33,7 +33,7 @@ func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProble
 	// Import problem
 	_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), params.ID)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import problem")
+		return nil, workshopWriteError(err, "failed to import problem")
 	}
 
 	return &corev1.ImportProblemOK{

@@ -569,11 +569,14 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetCon
 			statement, samples = h.loadPackageStatementAndSamples(ctx, params.ProblemID, p.PackageID)
 		}
 
-		if statement == nil {
-			statement = h.loadProblemStatement(ctx, params.ProblemID)
-		}
-		if len(samples) == 0 {
-			samples = h.loadProblemSamples(ctx, params.ProblemID)
+		if statement == nil || len(samples) == 0 {
+			workspaceStatement, workspaceSamples := h.loadWorkspaceStatementAndSamples(ctx, params.ProblemID, "")
+			if statement == nil {
+				statement = workspaceStatement
+			}
+			if len(samples) == 0 {
+				samples = workspaceSamples
+			}
 		}
 	}
 
@@ -621,11 +624,14 @@ func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params co
 		if cp.PackageID != uuid.Nil {
 			statement, samples = h.loadPackageStatementAndSamplesWithLang(ctx, cp.ProblemID, cp.PackageID, lang)
 		}
-		if statement == nil {
-			statement = h.loadProblemStatementWithLang(ctx, cp.ProblemID, lang)
-		}
-		if len(samples) == 0 {
-			samples = h.loadProblemSamples(ctx, cp.ProblemID)
+		if statement == nil || len(samples) == 0 {
+			workspaceStatement, workspaceSamples := h.loadWorkspaceStatementAndSamples(ctx, cp.ProblemID, lang)
+			if statement == nil {
+				statement = workspaceStatement
+			}
+			if len(samples) == 0 {
+				samples = workspaceSamples
+			}
 		}
 
 		title := strings.TrimSpace(prob.Title)

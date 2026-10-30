@@ -76,7 +76,7 @@ WHERE (sqlc.narg('organization_id')::uuid IS NULL OR p.organization_id = sqlc.na
 
 -- name: UpdateProblem :exec
 UPDATE problems
-SET title = COALESCE(sqlc.narg('title'), title),
+SET title = CASE WHEN workspace_hash = '' THEN COALESCE(sqlc.narg('title'), title) ELSE title END,
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
     owner_id = COALESCE(sqlc.narg('owner_id'), owner_id),
     is_template = COALESCE(sqlc.narg('is_template'), is_template)
@@ -126,16 +126,17 @@ LIMIT $2 OFFSET $3;
 
 -- Workshop integration queries
 
--- name: UpdateProblemLimits :exec
+-- name: GetWorkspaceHash :one
+SELECT workspace_hash FROM problems WHERE id = $1;
+
+-- name: CommitWorkspace :execrows
 UPDATE problems
-SET time_limit_ms = $2, memory_limit_mb = $3
-WHERE id = $1;
-
--- name: GetProblemManifest :one
-SELECT manifest FROM problems WHERE id = $1;
-
--- name: UpdateProblemManifest :exec
-UPDATE problems SET manifest = $2 WHERE id = $1;
+SET workspace_hash = sqlc.arg('hash'),
+    title = COALESCE(sqlc.narg('title')::text, title),
+    time_limit_ms = COALESCE(sqlc.narg('time_ms')::integer, time_limit_ms),
+    memory_limit_mb = COALESCE(sqlc.narg('memory_mb')::integer, memory_limit_mb),
+    updated_at = NOW()
+WHERE id = sqlc.arg('id') AND workspace_hash = sqlc.arg('previous_hash');
 
 -- name: ListDashboardProblems :many
 SELECT 

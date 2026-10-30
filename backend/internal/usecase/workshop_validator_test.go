@@ -2,11 +2,8 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"io"
 	"net"
-	"strings"
 	"testing"
 	"time"
 
@@ -71,7 +68,6 @@ func TestWorkshopValidateAllTests_EmptyTestSet(t *testing.T) {
 }
 
 func TestWorkshopValidateAllTests_RuntimeErrors(t *testing.T) {
-	storageErr := errors.New("input storage unavailable")
 	for _, tc := range []struct {
 		name        string
 		runStatus   pb.Response_Result_StatusType
@@ -86,7 +82,7 @@ func TestWorkshopValidateAllTests_RuntimeErrors(t *testing.T) {
 		{name: "sandbox failure", runStatus: pb.Response_Result_InternalError, wantError: "validator sandbox failure"},
 		{name: "dispatch failure", dispatchErr: status.Error(codes.Unavailable, "judge unavailable"), wantError: "judge unavailable"},
 		{name: "no execution result", noResults: true, wantError: "returned no results"},
-		{name: "input storage failure", readErr: storageErr, wantError: "failed to read test input tests/01.in"},
+
 		{name: "execution cancellation", cancel: true, wantError: "failed to run validator"},
 		{name: "nonzero accepted status", runStatus: pb.Response_Result_Accepted, exitStatus: 1, wantInvalid: true},
 	} {
@@ -94,12 +90,12 @@ func TestWorkshopValidateAllTests_RuntimeErrors(t *testing.T) {
 			uc, id := newWorkshopValidatorTest(t, true, map[string]string{"validators/validator.cpp": "validator"}, nil)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			uc.workspaceStorage.storage = &workshopValidatorStorage{Storage: uc.workspaceStorage.storage, suffix: "tests/01.in", readErr: tc.readErr, beforeRead: func() {
+
+			uc.sandbox = newWorkshopValidatorSandbox(t, func(_ context.Context, _ *pb.Request) (*pb.Response, error) {
 				if tc.cancel {
 					cancel()
+					return nil, status.Error(codes.Canceled, "execution canceled")
 				}
-			}}
-			uc.sandbox = newWorkshopValidatorSandbox(t, func(_ context.Context, _ *pb.Request) (*pb.Response, error) {
 				if tc.noResults {
 					return pb.Response_builder{}.Build(), nil
 				}
@@ -115,42 +111,13 @@ func TestWorkshopValidateAllTests_RuntimeErrors(t *testing.T) {
 			require.ErrorContains(t, err, tc.wantError)
 			require.Nil(t, report)
 			if tc.readErr != nil {
-				require.ErrorIs(t, err, storageErr)
+				require.ErrorIs(t, err, tc.readErr)
 			}
 			if tc.cancel {
 				require.Equal(t, codes.Canceled, status.Code(err))
 			}
 		})
 	}
-}
-
-type workshopValidatorStorage struct {
-	storage.Storage
-	suffix     string
-	readErr    error
-	listErr    error
-	readPaths  []string
-	beforeRead func()
-}
-
-func (s *workshopValidatorStorage) DownloadFile(ctx context.Context, bucket, key string, etag *string) (io.ReadCloser, string, error) {
-	s.readPaths = append(s.readPaths, key)
-	if strings.HasSuffix(key, s.suffix) {
-		if s.beforeRead != nil {
-			s.beforeRead()
-		}
-		if s.readErr != nil {
-			return nil, "", s.readErr
-		}
-	}
-	return s.Storage.DownloadFile(ctx, bucket, key, etag)
-}
-
-func (s *workshopValidatorStorage) ListObjects(ctx context.Context, bucket, prefix string) ([]storage.ObjectInfo, error) {
-	if s.listErr != nil {
-		return nil, s.listErr
-	}
-	return s.Storage.ListObjects(ctx, bucket, prefix)
 }
 
 type workshopValidatorExecutor struct {
@@ -191,8 +158,6 @@ func TestWorkshopValidateAllTests_PreparationErrors(t *testing.T) {
 		files     map[string]string
 		deps      []models.Dependency
 		readErr   error
-		readPath  string
-		listErr   error
 		wantError string
 		wantCause error
 	}{
@@ -201,14 +166,11 @@ func TestWorkshopValidateAllTests_PreparationErrors(t *testing.T) {
 		{name: "missing dependency", validator: true, files: map[string]string{"validators/validator.cpp": "validator"}, deps: []models.Dependency{{Filename: "testlib.h"}}, wantError: "failed to read validator dependency lib/testlib.h", wantCause: storage.ErrNotFound},
 		{name: "compilation failure", validator: true, files: map[string]string{"validators/validator.cpp": "validator"}, wantError: "failed to compile validator validators/validator.cpp: unsupported language: cpp"},
 		{name: "invalid metadata", validator: true, files: map[string]string{"problem.yaml": "subtasks: ["}, wantError: "failed to parse problem.yaml"},
-		{name: "metadata storage failure", validator: true, readErr: storageErr, readPath: "problem.yaml", wantError: "failed to read problem.yaml", wantCause: storageErr},
-		{name: "source storage failure", validator: true, readErr: storageErr, readPath: "validators/validator.cpp", wantError: "failed to read validator", wantCause: storageErr},
-		{name: "dependency storage failure", validator: true, files: map[string]string{"validators/validator.cpp": "validator", "lib/testlib.h": "header"}, deps: []models.Dependency{{Filename: "testlib.h"}}, readErr: storageErr, readPath: "validators/testlib.h", wantError: "failed to read validator dependency validators/testlib.h", wantCause: storageErr},
-		{name: "dependency listing failure", validator: true, files: map[string]string{"validators/validator.cpp": "validator"}, deps: []models.Dependency{{Filename: "testlib.h"}}, listErr: storageErr, wantError: "failed to list validator dependencies", wantCause: storageErr},
+		{name: "metadata storage failure", validator: true, readErr: storageErr, wantError: "read workspace package", wantCause: storageErr},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			uc, id := newWorkshopValidatorTest(t, tc.validator, tc.files, tc.deps)
-			store := &workshopValidatorStorage{Storage: uc.workspaceStorage.storage, suffix: tc.readPath, readErr: tc.readErr, listErr: tc.listErr}
+			store := &packageFaultStorage{Storage: uc.workspaceStorage.storage, readErr: tc.readErr}
 			uc.workspaceStorage.storage = store
 			uc.sandbox = sandbox.NewSandbox(nil, &sandbox.Config{})
 			report, err := uc.ValidateAllTests(context.Background(), id, uuid.Nil)
@@ -216,9 +178,6 @@ func TestWorkshopValidateAllTests_PreparationErrors(t *testing.T) {
 			require.Nil(t, report)
 			if tc.wantCause != nil {
 				require.ErrorIs(t, err, tc.wantCause)
-			}
-			if tc.readPath == "validators/testlib.h" {
-				require.NotContains(t, store.readPaths, uc.workspaceStorage.getWorkspaceKey(id, "lib/testlib.h"))
 			}
 		})
 	}
@@ -242,8 +201,8 @@ func TestWorkshopValidateAllTests_Cancellation(t *testing.T) {
 		}
 		cancel()
 		report, err := uc.ValidateAllTests(ctx, id, uuid.Nil)
-		require.ErrorContains(t, err, "failed to compile validator")
-		require.Equal(t, wantCode, status.Code(err))
+		require.ErrorIs(t, err, ctx.Err())
+		require.Equal(t, wantCode, status.Code(status.FromContextError(err).Err()))
 		require.Nil(t, report)
 	}
 }
@@ -256,14 +215,7 @@ func newWorkshopValidatorTest(t *testing.T, validator bool, files map[string]str
 	if validator {
 		manifest.FilesMetadata = []models.FileMetadata{{Type: "validator", Filename: "validators/validator.cpp", Dependencies: deps}}
 	}
-	data, err := json.Marshal(manifest)
-	require.NoError(t, err)
-	repo.manifests[id] = data
-	ws := NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-test")
-	require.NoError(t, ws.WriteFile(context.Background(), id, "problem.yaml", []byte("subtasks:\n  samples:\n    tests:\n      - manual: 01.in\n")))
-	require.NoError(t, ws.WriteFile(context.Background(), id, "tests/01.in", []byte("invalid input\n")))
-	for path, content := range files {
-		require.NoError(t, ws.WriteFile(context.Background(), id, path, []byte(content)))
-	}
-	return NewWorkshopUseCase(repo, ws, nil, nil), id
+	ws := NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-test", repo)
+	seedWorkspaceFiles(t, ws, id, workshopFixtureFiles(manifest, files))
+	return NewWorkshopUseCase(ws, nil), id
 }
