@@ -17,11 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func (h *CoreServer) loadProblemStatement(ctx context.Context, problemID uuid.UUID) *models.Statement {
-	return h.loadProblemStatementWithLang(ctx, problemID, "")
-}
-
-func (h *CoreServer) loadProblemStatementWithLang(ctx context.Context, problemID uuid.UUID, lang string) *models.Statement {
+func (h *CoreServer) loadProblemStatementFiles(ctx context.Context, problemID uuid.UUID, lang string) *models.Statement {
 	if h.workshopUC == nil {
 		return nil
 	}
@@ -57,7 +53,7 @@ func hasStatementContent(statement models.Statement) bool {
 		strings.TrimSpace(statement.Scoring) != ""
 }
 
-func (h *CoreServer) loadProblemSamples(ctx context.Context, problemID uuid.UUID) []corev1.ProblemSampleModel {
+func (h *CoreServer) loadProblemSampleFiles(ctx context.Context, problemID uuid.UUID) []corev1.ProblemSampleModel {
 	if h.workshopUC == nil {
 		return []corev1.ProblemSampleModel{}
 	}
@@ -225,4 +221,21 @@ func (h *CoreServer) loadPackageStatementAndSamplesWithLang(
 	}
 
 	return &statement, samples
+}
+
+func (h *CoreServer) loadWorkspaceStatementAndSamples(ctx context.Context, problemID uuid.UUID, lang string) (*models.Statement, []corev1.ProblemSampleModel) {
+	if h.workshopUC == nil {
+		return nil, nil
+	}
+	var statement *models.Statement
+	var samples []corev1.ProblemSampleModel
+	err := h.workshopUC.WithWorkspace(ctx, problemID, func(ctx context.Context) error {
+		statement = h.loadProblemStatementFiles(ctx, problemID, lang)
+		samples = h.loadProblemSampleFiles(ctx, problemID)
+		return nil
+	})
+	if err != nil {
+		return nil, nil
+	}
+	return statement, samples
 }

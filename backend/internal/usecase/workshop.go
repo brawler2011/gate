@@ -1152,3 +1152,8 @@ func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.
 func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolutionRequest) (*models.TestReport, error) {
 	return withWorkspaceValue(ctx, uc.workspaceStorage, req.ProblemID, func(ctx context.Context) (*models.TestReport, error) { return uc.testSolutionFiles(ctx, req) })
 }
+
+// WithWorkspace keeps composed API reads and edits on one package revision.
+func (uc *WorkshopUseCase) WithWorkspace(ctx context.Context, problemID uuid.UUID, fn func(context.Context) error) error {
+	return uc.workspaceStorage.withPackage(ctx, problemID, func(ctx context.Context, _ *workspacePackage) error { return fn(ctx) })
+}

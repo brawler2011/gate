@@ -93,54 +93,57 @@ func (h *CoreServer) UpdateProblemLimits(ctx context.Context, req *corev1.Update
 
 // GetProblemStatement handles GET /problems/{problemId}/statement
 func (h *CoreServer) GetProblemStatement(ctx context.Context, params corev1.GetProblemStatementParams) (*corev1.ProblemStatement, error) {
-	manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
-	if err != nil {
-		return nil, err
-	}
+	return withWorkshopValue(ctx, h, params.ProblemId, func(ctx context.Context) (*corev1.ProblemStatement, error) {
 
-	lang := params.Lang.Or("en")
+		manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
+		if err != nil {
+			return nil, err
+		}
 
-	// 1. Get list of available languages from statements/ folder
-	var languages []string
-	if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
-		for _, f := range files {
-			if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
-				base := filepath.Base(f.Path)
-				langCode := strings.TrimSuffix(base, ".md")
-				if langCode != "" {
-					languages = append(languages, langCode)
+		lang := params.Lang.Or("en")
+
+		// 1. Get list of available languages from statements/ folder
+		var languages []string
+		if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
+			for _, f := range files {
+				if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
+					base := filepath.Base(f.Path)
+					langCode := strings.TrimSuffix(base, ".md")
+					if langCode != "" {
+						languages = append(languages, langCode)
+					}
 				}
 			}
 		}
-	}
-	sort.Strings(languages)
+		sort.Strings(languages)
 
-	// Ensure the default language is listed if the list is empty
-	if len(languages) == 0 {
-		languages = []string{"en"}
-	}
-
-	// 2. Read statement for specific language from workspace
-	var stmt models.Statement
-	filePath := fmt.Sprintf("statements/%s.md", lang)
-	fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
-	if err == nil {
-		stmt = usecase.ParseStatementMarkdown(string(fileData))
-		// If title tag is empty, fallback to the manifest title
-		if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
-			stmt.Title = manifest.Statement.Title
+		// Ensure the default language is listed if the list is empty
+		if len(languages) == 0 {
+			languages = []string{"en"}
 		}
-	} else {
-		// If requested lang is "en" and en.md is missing, fallback to manifest
-		if lang == "en" {
-			stmt = manifest.Statement
+
+		// 2. Read statement for specific language from workspace
+		var stmt models.Statement
+		filePath := fmt.Sprintf("statements/%s.md", lang)
+		fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
+		if err == nil {
+			stmt = usecase.ParseStatementMarkdown(string(fileData))
+			// If title tag is empty, fallback to the manifest title
+			if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
+				stmt.Title = manifest.Statement.Title
+			}
 		} else {
-			// Return empty statement with title of the main problem
-			stmt.Title = manifest.Statement.Title
+			// If requested lang is "en" and en.md is missing, fallback to manifest
+			if lang == "en" {
+				stmt = manifest.Statement
+			} else {
+				// Return empty statement with title of the main problem
+				stmt.Title = manifest.Statement.Title
+			}
 		}
-	}
 
-	return h.toContractStatementForLang(stmt, languages, lang), nil
+		return h.toContractStatementForLang(stmt, languages, lang), nil
+	})
 }
 
 // UpdateProblemStatement handles PATCH /problems/{problemId}/statement
@@ -148,94 +151,96 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
+	return withWorkshopValue(ctx, h, params.ProblemId, func(ctx context.Context) (*corev1.ProblemStatement, error) {
 
-	manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
-	if err != nil {
-		return nil, err
-	}
-
-	lang := params.Lang.Or("en")
-
-	// 1. Get existing statement for this language to apply patch
-	var stmt models.Statement
-	filePath := fmt.Sprintf("statements/%s.md", lang)
-	fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
-	if err == nil {
-		stmt = usecase.ParseStatementMarkdown(string(fileData))
-		if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
-			stmt.Title = manifest.Statement.Title
+		manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		if lang == "en" {
-			stmt = manifest.Statement
+
+		lang := params.Lang.Or("en")
+
+		// 1. Get existing statement for this language to apply patch
+		var stmt models.Statement
+		filePath := fmt.Sprintf("statements/%s.md", lang)
+		fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
+		if err == nil {
+			stmt = usecase.ParseStatementMarkdown(string(fileData))
+			if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
+				stmt.Title = manifest.Statement.Title
+			}
 		} else {
-			stmt.Title = manifest.Statement.Title
+			if lang == "en" {
+				stmt = manifest.Statement
+			} else {
+				stmt.Title = manifest.Statement.Title
+			}
 		}
-	}
 
-	if req.Title.IsSet() {
-		stmt.Title = req.Title.Value
-	}
-	if req.Legend.IsSet() {
-		stmt.Legend = req.Legend.Value
-	}
-	if req.InputFormat.IsSet() {
-		stmt.InputFormat = req.InputFormat.Value
-	}
-	if req.OutputFormat.IsSet() {
-		stmt.OutputFormat = req.OutputFormat.Value
-	}
-	if req.Notes.IsSet() {
-		stmt.Notes = req.Notes.Value
-	}
-	if req.Interaction.IsSet() {
-		stmt.Interaction = req.Interaction.Value
-	}
-	if req.Scoring.IsSet() {
-		stmt.Scoring = req.Scoring.Value
-	}
-
-	if lang == "en" {
-		manifest.Statement = stmt
-		if err := validateManifest(manifest); err != nil {
-			return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
+		if req.Title.IsSet() {
+			stmt.Title = req.Title.Value
 		}
-	}
-	// 2. Write statement back to workspace storage
-	stmtBytes := []byte(usecase.RenderStatementMarkdown(stmt))
-	if int64(len(stmtBytes)) > MaxStatementFileSize {
-		return nil, pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "statement size exceeds maximum allowed limit of 2MB")
-	}
-	user := middleware.GetUser(ctx)
-	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
-		ProblemID: params.ProblemId,
-		Revision:  manifest.Revision,
-		UserID:    user.Id,
-		Path:      filePath,
-		Content:   stmtBytes,
-	}); err != nil {
-		return nil, workshopWriteError(err, "failed to save statement file")
-	}
+		if req.Legend.IsSet() {
+			stmt.Legend = req.Legend.Value
+		}
+		if req.InputFormat.IsSet() {
+			stmt.InputFormat = req.InputFormat.Value
+		}
+		if req.OutputFormat.IsSet() {
+			stmt.OutputFormat = req.OutputFormat.Value
+		}
+		if req.Notes.IsSet() {
+			stmt.Notes = req.Notes.Value
+		}
+		if req.Interaction.IsSet() {
+			stmt.Interaction = req.Interaction.Value
+		}
+		if req.Scoring.IsSet() {
+			stmt.Scoring = req.Scoring.Value
+		}
 
-	// 4. Retrieve list of languages for response
-	var languages []string
-	if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
-		for _, f := range files {
-			if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
-				base := filepath.Base(f.Path)
-				langCode := strings.TrimSuffix(base, ".md")
-				if langCode != "" {
-					languages = append(languages, langCode)
+		if lang == "en" {
+			manifest.Statement = stmt
+			if err := validateManifest(manifest); err != nil {
+				return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
+			}
+		}
+		// 2. Write statement back to workspace storage
+		stmtBytes := []byte(usecase.RenderStatementMarkdown(stmt))
+		if int64(len(stmtBytes)) > MaxStatementFileSize {
+			return nil, pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "statement size exceeds maximum allowed limit of 2MB")
+		}
+		user := middleware.GetUser(ctx)
+		if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+			ProblemID: params.ProblemId,
+			Revision:  manifest.Revision,
+			UserID:    user.Id,
+			Path:      filePath,
+			Content:   stmtBytes,
+		}); err != nil {
+			return nil, workshopWriteError(err, "failed to save statement file")
+		}
+
+		// 4. Retrieve list of languages for response
+		var languages []string
+		if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
+			for _, f := range files {
+				if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
+					base := filepath.Base(f.Path)
+					langCode := strings.TrimSuffix(base, ".md")
+					if langCode != "" {
+						languages = append(languages, langCode)
+					}
 				}
 			}
 		}
-	}
-	sort.Strings(languages)
-	if len(languages) == 0 {
-		languages = []string{"en"}
-	}
+		sort.Strings(languages)
+		if len(languages) == 0 {
+			languages = []string{"en"}
+		}
 
-	return h.toContractStatementForLang(stmt, languages, lang), nil
+		return h.toContractStatementForLang(stmt, languages, lang), nil
+	})
 }
 
 // ListProblemCheckers handles GET /problems/{problemId}/checkers
@@ -809,43 +814,46 @@ func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionR
 }
 
 func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.UUID, dir string) (corev1.WorkshopFileListResponse, error) {
-	if err := h.requireWorkshop(ctx, problemID); err != nil {
-		return corev1.WorkshopFileListResponse{}, err
-	}
+	return withWorkshopValue(ctx, h, problemID, func(ctx context.Context) (corev1.WorkshopFileListResponse, error) {
 
-	files, err := h.workshopUC.ListProblemFiles(ctx, problemID, dir)
-	if err != nil {
-		return corev1.WorkshopFileListResponse{}, workshopWriteError(err, "failed to list files")
-	}
-
-	// Test references may name files in subdirectories; other collections retain their tree listing.
-	if dir == testDir {
-		for i := 0; i < len(files); i++ {
-			if !files[i].IsDirectory {
-				continue
-			}
-			nested, err := h.workshopUC.ListProblemFiles(ctx, problemID, files[i].Path)
-			if err != nil {
-				return corev1.WorkshopFileListResponse{}, workshopWriteError(err, "failed to list nested tests")
-			}
-			files = append(files, nested...)
+		if err := h.requireWorkshop(ctx, problemID); err != nil {
+			return corev1.WorkshopFileListResponse{}, err
 		}
-		var testFiles []models.FileEntry
-		for _, file := range files {
-			if !file.IsDirectory {
-				testFiles = append(testFiles, file)
-			}
+
+		files, err := h.workshopUC.ListProblemFiles(ctx, problemID, dir)
+		if err != nil {
+			return corev1.WorkshopFileListResponse{}, workshopWriteError(err, "failed to list files")
 		}
-		files = testFiles
-	}
 
-	manifest, err := h.readWorkshopManifest(ctx, problemID)
-	if err != nil {
-		manifest = &models.ProblemManifest{}
-	}
+		// Test references may name files in subdirectories; other collections retain their tree listing.
+		if dir == testDir {
+			for i := 0; i < len(files); i++ {
+				if !files[i].IsDirectory {
+					continue
+				}
+				nested, err := h.workshopUC.ListProblemFiles(ctx, problemID, files[i].Path)
+				if err != nil {
+					return corev1.WorkshopFileListResponse{}, workshopWriteError(err, "failed to list nested tests")
+				}
+				files = append(files, nested...)
+			}
+			var testFiles []models.FileEntry
+			for _, file := range files {
+				if !file.IsDirectory {
+					testFiles = append(testFiles, file)
+				}
+			}
+			files = testFiles
+		}
 
-	contractFiles := toContractFileEntries(files, manifest)
-	return corev1.WorkshopFileListResponse{Files: contractFiles}, nil
+		manifest, err := h.readWorkshopManifest(ctx, problemID)
+		if err != nil {
+			manifest = &models.ProblemManifest{}
+		}
+
+		contractFiles := toContractFileEntries(files, manifest)
+		return corev1.WorkshopFileListResponse{Files: contractFiles}, nil
+	})
 }
 
 func validateCollectionFileExtension(dir, name string) error {
@@ -1176,4 +1184,12 @@ func (h *CoreServer) requireWorkshop(ctx context.Context, id uuid.UUID) error {
 		return pkg.Wrap(pkg.ErrNotFound, nil, "workshop not initialized")
 	}
 	return nil
+}
+
+func withWorkshopValue[T any](ctx context.Context, h *CoreServer, id uuid.UUID, fn func(context.Context) (T, error)) (result T, err error) {
+	err = h.workshopUC.WithWorkspace(ctx, id, func(ctx context.Context) error {
+		result, err = fn(ctx)
+		return err
+	})
+	return result, err
 }

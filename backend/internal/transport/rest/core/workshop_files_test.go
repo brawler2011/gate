@@ -194,3 +194,101 @@ func TestEnglishStatementUsesCanonicalTitleAfterRename(t *testing.T) {
 	require.Equal(t, "Renamed title", actual.Statement.Title)
 	require.Equal(t, "Changed legend", actual.Statement.Legend)
 }
+
+type concurrentStatementRead struct {
+	interfaces.WorkshopUC
+	beforeRead func()
+}
+
+func (w concurrentStatementRead) ReadProblemFile(ctx context.Context, id uuid.UUID, path string) ([]byte, error) {
+	w.beforeRead()
+	return w.WorkshopUC.ReadProblemFile(ctx, id, path)
+}
+
+func TestStatementResponseCapturesOnePackageRevision(t *testing.T) {
+	for _, lang := range []string{"en", "ru"} {
+		t.Run(lang, func(t *testing.T) {
+			ctx := context.Background()
+			id := uuid.New()
+			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", &workshopFilesRepo{})
+			uc := usecase.NewWorkshopUseCase(ws, nil)
+			require.NoError(t, uc.InitProblemWorkshop(ctx, id, "Original title"))
+			require.NoError(t, uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "statements/ru.md", Content: []byte("<!-- legend -->\nOriginal translation\n")}))
+			changed := false
+			beforeRead := func() {
+				if changed {
+					return
+				}
+				changed = true
+				require.NoError(t, uc.WithWorkspace(ctx, id, func(ctx context.Context) error {
+					manifest, err := uc.GetManifest(ctx, id)
+					require.NoError(t, err)
+					manifest.Statement.Title = "New title"
+					manifest.Statement.Legend = "New legend"
+					require.NoError(t, uc.SaveManifest(ctx, id, manifest))
+					return uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "statements/ru.md", Content: []byte("<!-- legend -->\nNew translation\n")})
+				}))
+			}
+			handler := &CoreServer{workshopUC: concurrentStatementRead{WorkshopUC: uc, beforeRead: beforeRead}}
+			statement, err := handler.GetProblemStatement(ctx, corev1.GetProblemStatementParams{ProblemId: id, Lang: corev1.NewOptString(lang)})
+			require.NoError(t, err)
+			require.Equal(t, "Original title", statement.Title)
+			if lang == "en" {
+				require.Equal(t, "Problem description goes here.", statement.Legend)
+			} else {
+				require.Equal(t, "Original translation", statement.Legend)
+			}
+			current, err := uc.GetManifest(ctx, id)
+			require.NoError(t, err)
+			require.Equal(t, "New title", current.Statement.Title)
+		})
+	}
+}
+
+type workspaceProblemCatalog struct {
+	interfaces.ProblemsUC
+	problem models.Problem
+}
+
+func (c workspaceProblemCatalog) GetProblemById(context.Context, uuid.UUID) (models.Problem, error) {
+	return c.problem, nil
+}
+
+func TestProblemDetailsUseOneCanonicalPackage(t *testing.T) {
+	ctx := context.Background()
+	id := uuid.New()
+	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", &workshopFilesRepo{})
+	uc := usecase.NewWorkshopUseCase(ws, nil)
+	require.NoError(t, uc.InitProblemWorkshop(ctx, id, "Original title"))
+	changed := false
+	beforeRead := func() {
+		if changed {
+			return
+		}
+		changed = true
+		require.NoError(t, uc.WithWorkspace(ctx, id, func(ctx context.Context) error {
+			manifest, err := uc.GetManifest(ctx, id)
+			require.NoError(t, err)
+			manifest.Statement.Title = "New title"
+			manifest.Statement.Legend = "New legend"
+			manifest.TimeLimitMs = 4321
+			require.NoError(t, uc.SaveManifest(ctx, id, manifest))
+			return uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "tests/01.in", Content: []byte("new sample")})
+		}))
+	}
+	handler := &CoreServer{
+		workshopUC: concurrentStatementRead{WorkshopUC: uc, beforeRead: beforeRead},
+		problemsUC: workspaceProblemCatalog{problem: models.Problem{ID: id, Title: "Catalog label", TimeLimitMs: 9, MemoryLimitMb: 8}},
+	}
+	response, err := handler.GetProblem(ctx, corev1.GetProblemParams{ID: id})
+	require.NoError(t, err)
+	require.Equal(t, "Original title", response.Problem.Title)
+	require.EqualValues(t, 1000, response.Problem.TimeLimit)
+	require.EqualValues(t, 256, response.Problem.MemoryLimit)
+	require.Equal(t, "Problem description goes here.", response.Problem.Legend)
+	require.Len(t, response.Problem.Samples, 1)
+	require.Equal(t, "1 2\n", response.Problem.Samples[0].Input)
+	actual, err := uc.GetManifest(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, "New title", actual.Statement.Title)
+}
