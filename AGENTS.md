@@ -149,21 +149,24 @@ When working with the backend codebase, adhere strictly to the following rules:
    - Push the issue branch and create the PR with `gh pr create --body-file <path>`.
 
 3. **Adversarial Code Review Workflow (Reviewer Agent)**
-   - **Context Isolation**: Code review MUST be performed in an isolated context/session (or via an isolated reviewer subagent). Never review code in the same saturated session that wrote it.
-   - **Reviewer Inputs**: Only the issue description, `git diff origin/main...HEAD`, and `AGENTS.md`.
+   - **Context Isolation**: Review in a fresh context and clean worktree at the PR head, without the author's conversation or claimed results.
+   - **Reviewer Inputs**: Issue description, `AGENTS.md`, and `git diff <base-sha>...<head-sha>`. Allow access to repository code and tests needed to verify the change. Record the full head SHA and current `main` base SHA; stop and report any failure to obtain the diff.
    - **Reviewer Audit Focus**:
      1. Acceptance Criteria: All items genuinely verified and tested.
      2. `AGENTS.md` compliance: `slog` only, no env fallback values, no server actions, untouched `next.config.mjs`, no symlinks.
      3. Surgical changes: no unrelated edits, no leftover dead code.
      4. Test coverage and edge cases.
-   - **Verdict Format**: Output `APPROVE` or `REQUEST_CHANGES` with actionable file:line pointers. Post review comment to GitHub PR via `gh pr review --comment`.
+   - **Evidence**: Record checks actually run and their results for the reviewed SHA pair; identify failures, skipped checks and modified files. Do not treat author claims as verification.
+   - **Verdict Format**: Output `APPROVE` or `REQUEST_CHANGES`, the reviewed head/base SHAs, and actionable file:line pointers. Post with `gh pr review --comment --body-file <path>`; `APPROVE` in a comment is an agent verdict, not a GitHub approval event.
+   - Any head or base change invalidates prior review and check evidence; obtain a new diff, independent review and CI results.
 
 4. **Semi-Autonomous Merge Policy**
    - Agents DO NOT auto-merge to `main`.
-   - Final merge is executed by a human engineer (or an agent upon explicit human instruction) only after:
-     1. Reviewer Agent verdict is `APPROVE`.
-     2. All GitHub Actions CI checks (`ci.yml`, `pr-title.yml`) are passing.
-     3. Merge strategy is squash-and-merge (`gh pr merge --squash --delete-branch`).
+   - Final merge requires explicit human instruction and all of the following:
+     1. Reviewer Agent verdict is `APPROVE` for the current head/base SHAs.
+     2. All GitHub Actions CI checks (`ci.yml`, `pr-title.yml`) and required checks pass for that revision. If CI tests a synthetic merge, verify its parents match the reviewed head/base.
+     3. Recheck remote head/base immediately before merging; restart verification if either changed.
+     4. Use squash-and-merge: `gh pr merge --squash --delete-branch --match-head-commit <head-sha>`.
 
 ---
 
