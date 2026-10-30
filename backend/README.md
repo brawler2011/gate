@@ -158,36 +158,3 @@ The server maintains a 10,000-event ring buffer, so clients can catch up on miss
 The backend writes sanitized JSON through `slog` to stdout in every environment.
 There are no Gate OTel exporters or metrics providers. HTTP requests use safe route
 patterns and `X-Request-ID`; persisted outbox/NATS headers correlate async judging.
-
-## Workshop file packages
-
-The canonical workshop content is a GFMT file tree: `problem.yaml`,
-`statements/<language>.md`, `tests/`, `solutions/`, `checkers/`, `validators/`,
-`interactors/`, `generators/` and `lib/`. The API manifest is assembled from
-these files. The default title is in `problem.yaml`; English Markdown contains
-statement sections. Optional `max_score`, `updated_at` and `sources` entries
-preserve editor/build settings in the same YAML. A source entry is keyed by its
-package path and may specify `compiler` and relative `dependencies`.
-
-Storage keeps each complete revision at `workspaces/<problem-id>/<sha256>.zip`.
-`problems.workspace_hash` identifies the editable revision. A save uploads the
-new immutable archive, then conditionally updates the hash and catalog title/
-limits in one SQL statement. A competing save returns a conflict (HTTP 409);
-reload before retrying. Failed uploads/commits leave the previous revision
-readable. An unreferenced uploaded archive is harmless. Reads never repair
-files or update the database. Validation and publication capture one revision,
-so editors can continue while those operations run.
-
-Each edit reads and rewrites the whole archive in memory. This deliberately
-uses the existing ZIP/object-storage infrastructure; large packages incur
-corresponding memory, compression and upload costs. Old and unreferenced
-archives are retained; automatic garbage collection is not part of this change.
-
-This changes the legacy flat workspace layout and removes the database JSON
-manifest. Before applying migration `20261030000000`, stop workshop writes,
-back up the database and workspace bucket, and export each legacy
-`workspaces/<problem-id>/` file tree as a GFMT ZIP. Preserve any custom compiler,
-dependency and max-score settings from the old manifest in YAML `sources` and
-`max_score`. After upgrading, reimport these ZIPs through the package import
-endpoint. Existing published packages are unchanged. There is no automatic
-legacy adoption or fallback to database metadata.

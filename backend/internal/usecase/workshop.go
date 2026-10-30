@@ -237,40 +237,28 @@ func (uc *WorkshopUseCase) compileProblemComponentFiles(ctx context.Context, req
 		return nil, fmt.Errorf("unknown component type: %s", req.ComponentType)
 	}
 
-	allFiles, err := uc.workspaceStorage.ListAllFiles(ctx, req.ProblemID)
+	manifest, err := uc.loadManifest(ctx, req.ProblemID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list workspace files: %w", err)
+		return nil, err
 	}
-
-	var sourcePath string
-	for _, file := range allFiles {
-		if strings.HasPrefix(file, folderPrefix) {
-			ext := filepath.Ext(file)
-			if ext == ".cpp" || ext == ".py" || ext == ".go" || ext == ".java" {
-				sourcePath = file
-				break
-			}
+	var component *models.FileMetadata
+	for i := range manifest.FilesMetadata {
+		if manifest.FilesMetadata[i].Type == req.ComponentType {
+			component = &manifest.FilesMetadata[i]
+			break
 		}
 	}
-
-	if sourcePath == "" {
+	if component == nil {
 		return nil, fmt.Errorf("no source file found in %s folder", folderPrefix)
 	}
-
+	sourcePath := component.Filename
 	sourceCode, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, sourcePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read source file %s: %w", sourcePath, err)
 	}
-
-	dependencies := make(map[string][]byte)
-	for _, file := range allFiles {
-		if strings.HasPrefix(file, "lib/") {
-			depContent, err := uc.workspaceStorage.ReadFile(ctx, req.ProblemID, file)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read dependency %s: %w", file, err)
-			}
-			dependencies[filepath.Base(file)] = depContent
-		}
+	dependencies, err := uc.readComponentDependencies(ctx, req.ProblemID, component)
+	if err != nil {
+		return nil, err
 	}
 
 	langKey := detectLanguage(filepath.Ext(sourcePath))
@@ -590,12 +578,12 @@ func (uc *WorkshopUseCase) loadManifestFiles(ctx context.Context, problemID uuid
 	}
 	for _, path := range files {
 		kind := componentKind(path)
-		if kind == "" || detectLanguage(filepath.Ext(path)) == "" {
+		if kind == "" {
 			continue
 		}
-		// Header files are dependencies, not selectable executable components.
 		switch filepath.Ext(path) {
-		case ".h", ".hpp":
+		case ".cpp", ".cc", ".cxx", ".py", ".go", ".java":
+		default:
 			continue
 		}
 		compiler := "cpp17"
