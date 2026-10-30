@@ -86,6 +86,9 @@ jobs:
       - name: Run deployment checks
         run: task test:e2e
 
+      - name: Exercise failed deployment recovery with Docker and Traefik
+        run: python3 -m unittest discover -s deploy/tests -v
+
   backend-integration-tests:
     name: Backend Integration Tests
     runs-on: ubuntu-latest

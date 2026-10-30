@@ -69,6 +69,9 @@ services:
       - "traefik.http.routers.gate-backend-prod-health.tls.certresolver=letsencrypt"
       # Port configuration
       - "traefik.http.services.gate-backend-prod-svc.loadbalancer.server.port=8080"
+      - "traefik.http.services.gate-backend-prod-svc.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.gate-backend-prod-svc.loadbalancer.healthcheck.interval=2s"
+      - "traefik.http.services.gate-backend-prod-svc.loadbalancer.healthcheck.timeout=1s"
 
   backend-migrate:
     logging:
@@ -133,6 +136,9 @@ services:
       - "traefik.http.routers.gate-frontend-prod.tls=true"
       - "traefik.http.routers.gate-frontend-prod.tls.certresolver=letsencrypt"
       - "traefik.http.services.gate-frontend-prod-svc.loadbalancer.server.port=3000"
+      - "traefik.http.services.gate-frontend-prod-svc.loadbalancer.healthcheck.path=/"
+      - "traefik.http.services.gate-frontend-prod-svc.loadbalancer.healthcheck.interval=2s"
+      - "traefik.http.services.gate-frontend-prod-svc.loadbalancer.healthcheck.timeout=1s"
       # Malicious requests block router
       - "traefik.http.routers.gate-malicious-block.rule=Host(`${DOMAIN_NAME}`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\\.env|\\.git)`) || PathRegexp(`.*\\.php$$`))"
       - "traefik.http.routers.gate-malicious-block.entrypoints=websecure"
