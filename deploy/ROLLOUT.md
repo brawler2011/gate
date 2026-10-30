@@ -44,7 +44,7 @@ changes. Migrations must leave the previous application usable; incompatible dat
 or schema changes require operator recovery from those backups. Traefik must watch
 the host-writable directory bind-mounted at `/etc/traefik/dynamic`, as configured in
 `deploy/traefik/traefik.yml`. The script discovers that mount on the shared Docker
-network and writes one temporary `gate-rollover-<project>.json` file, leaving existing
+network and writes one temporary `gate-rollover-<project>.yml` file, leaving existing
 configuration files intact. Activation is confirmed through public response markers;
 an absent/unwatched/inaccessible directory fails before replacing release containers.
 After a failed recovery, keep `.rollback` and that file together for operator recovery.

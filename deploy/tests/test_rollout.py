@@ -96,6 +96,7 @@ class DockerRolloutTest(unittest.TestCase):
         self.config["services"]["backend"]["command"] = ["python", "-c", "raise SystemExit(1)"]
         self.config["services"]["backend"]["labels"]["traefik.http.routers.backend.rule"] = "PathPrefix(`/changed`)"
         self.write_config()
+        started_after = str(time.time())
         failures, samples = [], []
         stop = threading.Event()
 
@@ -110,7 +111,7 @@ class DockerRolloutTest(unittest.TestCase):
         monitor = threading.Thread(target=probe)
         monitor.start()
         try:
-            with self.assertRaises(RuntimeError):
+            with self.assertRaisesRegex(RuntimeError, "^New release failed health verification$"):
                 rollout.rollout(self.url)
             self.assertTrue(rollout.guard_routes_ready(self.url, expected=False))
             stop.wait(3)  # Keep sampling beyond endpoint removal and Docker-provider refresh.
@@ -118,6 +119,12 @@ class DockerRolloutTest(unittest.TestCase):
             stop.set()
             monitor.join()
         self.assertGreater(len(samples), 50)
+        events = rollout.run("docker", "events", "--since", started_after, "--until", str(time.time()),
+                             "--filter", f"label=com.docker.compose.project={self.project}",
+                             "--filter", "event=start", "--format", "{{json .}}", capture=True)
+        self.assertTrue(any(json.loads(event)["Actor"]["Attributes"].get("image") == self.tag
+                            and json.loads(event)["Actor"]["Attributes"].get("name") == f"{self.project}-backend-1"
+                            for event in events.splitlines()), "The failing release container must actually start before rollback")
         self.assertFalse(failures, f"Traefik lost healthy routing: {len(failures)} failures; first: {failures[:5]}")
         guards = json.loads(Path(".rollback/guards.json").read_text())
         self.assertEqual(f"http://gate-rollover-backend-{os.getpid()}:8080",
@@ -155,6 +162,29 @@ class DockerRolloutTest(unittest.TestCase):
 
 
 class FailureHandlingTest(unittest.TestCase):
+    def test_guard_routes_emit_a_provider_supported_yaml_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            previous = Path.cwd()
+            os.chdir(directory)
+            try:
+                Path(".rollback").mkdir()
+                Path("dynamic").mkdir()
+                config = {"name": "test", "services": {service: {"labels": {
+                    f"traefik.http.routers.{service}.rule": "PathPrefix(`/`)"}}
+                    for service in ("backend", "frontend")}}
+                Path(".rollback/compose.json").write_text(json.dumps(config))
+                network = {"NetworkSettings": {"Networks": {"shared": {"IPAddress": "172.20.0.2"}}}, "Mounts": []}
+                provider = {**network, "Mounts": [{"Destination": "/etc/traefik/dynamic", "Type": "bind",
+                                                  "Source": str(Path("dynamic").resolve())}]}
+                with patch.object(rollout, "run", return_value="traefik"), \
+                     patch.object(rollout, "inspect", side_effect=lambda name: provider if name == "traefik" else network):
+                    path = rollout.install_guard_routes([("old-backend", "backend"), ("old-frontend", "frontend")])
+                self.assertEqual(".yml", path.suffix)
+                self.assertEqual(2, len(json.loads(path.read_text())["http"]["routers"]))
+                self.assertFalse(path.with_suffix(".tmp").exists())
+            finally:
+                os.chdir(previous)
+
     def test_reusable_deploy_and_caller_concurrency_groups_are_distinct(self):
         workflows = SCRIPT.parents[1].parent / ".github/workflows"
         deploy = (workflows / "deploy.yml").read_text()

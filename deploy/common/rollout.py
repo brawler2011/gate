@@ -173,7 +173,8 @@ def install_guard_routes(guards):
                 if prefix + "tls.certresolver" in labels:
                     router["tls"]["certResolver"] = labels[prefix + "tls.certresolver"]
             http["routers"][f"{upstream}-{match[1]}"] = router
-    routing_path = directory / f"gate-rollover-{config['name']}.json"
+    # Traefik's directory provider accepts YAML/TOML extensions; JSON is valid YAML.
+    routing_path = directory / f"gate-rollover-{config['name']}.yml"
     if routing_path.exists():
         raise RuntimeError("Existing rollover routing requires operator recovery before another deployment")
     Path(".rollback/routing-path").write_text(str(routing_path))
@@ -228,6 +229,8 @@ def rollout(health_url):
                     break
                 time.sleep(2)
             else:
+                print(f"Guard readiness: direct={[(service, web_healthy(name, service)) for name, service in guards]} "
+                      f"public_markers={guard_routes_ready(health_url)}", flush=True)
                 raise RuntimeError("Stable routing guards did not become healthy")
         compose("pull", "--ignore-buildable")
         compose("up", "-d")
