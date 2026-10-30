@@ -48,6 +48,27 @@ jobs:
       - name: Verify Codegen Freshness
         run: task verify-codegen
 
+  tools-tests:
+    name: Repository Tool Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Task
+        uses: arduino/setup-task@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/commitvalidator/go.mod
+          cache: false
+
+      - name: Run repository tool tests
+        run: task tools:test
+
   backend-lint:
     name: Backend Lint
     runs-on: ubuntu-latest
@@ -187,6 +208,7 @@ jobs:
     name: All CI Checks Passed
     needs:
       - codegen-check
+      - tools-tests
       - backend-lint
       - backend-unit-tests
       - backend-integration-tests
@@ -198,6 +220,7 @@ jobs:
       - name: Verify All CI Jobs Passed
         run: |
           echo "Codegen: ${{ needs.codegen-check.result }}"
+          echo "Repository Tool Tests: ${{ needs.tools-tests.result }}"
           echo "Backend Lint: ${{ needs.backend-lint.result }}"
           echo "Backend Unit Tests: ${{ needs.backend-unit-tests.result }}"
           echo "Backend Integration Tests: ${{ needs.backend-integration-tests.result }}"
@@ -205,6 +228,7 @@ jobs:
           echo "Frontend Docker Build: ${{ needs.frontend-docker-build.result }}"
 
           if [[ "${{ needs.codegen-check.result }}" != "success" || \
+                "${{ needs.tools-tests.result }}" != "success" || \
                 "${{ needs.backend-lint.result }}" != "success" || \
                 "${{ needs.backend-unit-tests.result }}" != "success" || \
                 "${{ needs.backend-integration-tests.result }}" != "success" || \
