@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -19,6 +18,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 )
 
 type ProblemImportUseCase struct {
@@ -108,6 +108,9 @@ func (uc *ProblemImportUseCase) importProblemPackageUnlocked(ctx context.Context
 			return fmt.Errorf("failed to get relative path for %s: %w", path, err)
 		}
 		rel = filepath.ToSlash(rel)
+		if rel == pendingMutationPath {
+			return fmt.Errorf("package contains reserved workspace file %s", rel)
+		}
 
 		content, err := os.ReadFile(path)
 		if err != nil {
@@ -128,17 +131,17 @@ func (uc *ProblemImportUseCase) importProblemPackageUnlocked(ctx context.Context
 
 	enrichManifestDefaults(ctx, uc.problemsRepo, problemID, manifest, format)
 
-	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
+	yamlBytes, err := os.ReadFile(filepath.Join(tempDst, "problem.yaml"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal manifest: %w", err)
+		return nil, fmt.Errorf("read imported YAML: %w", err)
 	}
-
-	if err := uc.problemsRepo.UpdateProblemManifest(ctx, problemID, manifestBytes); err != nil {
-		return nil, fmt.Errorf("failed to save manifest to database: %w", err)
+	var config gfmt.Problem
+	if err := yaml.Unmarshal(yamlBytes, &config); err != nil {
+		return nil, fmt.Errorf("parse imported YAML: %w", err)
 	}
-
-	if err := uc.problemsRepo.UpdateProblemLimits(ctx, problemID, manifest.TimeLimitMs, manifest.MemoryLimitMb); err != nil {
-		return nil, fmt.Errorf("failed to save limits to database: %w", err)
+	workshop := NewWorkshopUseCase(uc.problemsRepo, uc.workspaceStorage, nil, nil)
+	if err := workshop.commitManifest(ctx, problemID, manifest, &config); err != nil {
+		return nil, err
 	}
 
 	return manifest, nil
@@ -372,7 +375,11 @@ func hasPackageMarker(dir string) bool {
 }
 
 func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*models.ProblemManifest, error) {
-	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*models.ProblemManifest, error) {
-		return uc.importProblemPackageUnlocked(ctx, zipReader, problemID)
+	var result *models.ProblemManifest
+	err := uc.workspaceStorage.withMutation(ctx, problemID, "import", func(ctx context.Context) error {
+		var err error
+		result, err = uc.importProblemPackageUnlocked(ctx, zipReader, problemID)
+		return err
 	})
+	return result, err
 }

@@ -50,8 +50,13 @@ func (r *manifestFaultRepo) UpdateProblem(_ context.Context, _ uuid.UUID, update
 
 type manifestFaultStorage struct {
 	storage.Storage
-	readPath, writePath string
+	readPath, writePath, deletePath string
 	fault               error
+}
+
+func (s *manifestFaultStorage) DeleteFile(ctx context.Context, bucket, key string) error {
+	if s.deletePath != "" && strings.HasSuffix(key, s.deletePath) { return s.fault }
+	return s.Storage.DeleteFile(ctx, bucket, key)
 }
 
 func (s *manifestFaultStorage) DownloadFile(ctx context.Context, bucket, key string, tag *string) (io.ReadCloser, string, error) {

@@ -54,6 +54,9 @@ func (uc *ProblemPublishUseCase) publishProblemUnlocked(
 	ctx context.Context,
 	problemID uuid.UUID,
 ) (*PublishResult, error) {
+	if err := uc.workspaceStorage.checkMutation(ctx, problemID); err != nil {
+		return nil, err
+	}
 	problem, err := uc.problemsRepo.GetProblemById(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get problem: %w", err)

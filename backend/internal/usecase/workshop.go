@@ -124,6 +124,10 @@ func (uc *WorkshopUseCase) initProblemWorkshopUnlocked(ctx context.Context, prob
 		return fmt.Errorf("check workshop initialization: %w", err)
 	}
 	if len(existing) > 0 {
+		if m, ok := ctx.Value(workspaceMutationKey{}).(*workspaceMutation); ok && m.started {
+			_, err := uc.loadManifest(ctx, problemID)
+			return err
+		}
 		return fmt.Errorf("workshop already initialized for problem %s", problemID)
 	}
 
@@ -154,8 +158,8 @@ func (uc *WorkshopUseCase) initProblemWorkshopUnlocked(ctx context.Context, prob
 
 func (uc *WorkshopUseCase) updateProblemFileUnlocked(ctx context.Context, req models.UpdateFileRequest) error {
 	req.Path = filepath.ToSlash(filepath.Clean(req.Path))
-	if req.Path == "problem.yaml" {
-		return fmt.Errorf("cannot modify problem.yaml directly")
+	if req.Path == "problem.yaml" || req.Path == pendingMutationPath {
+		return fmt.Errorf("cannot modify %s directly", req.Path)
 	}
 
 	if err := uc.workspaceStorage.WriteFile(ctx, req.ProblemID, req.Path, req.Content); err != nil {
@@ -229,7 +233,7 @@ func (uc *WorkshopUseCase) updateProblemFileUnlocked(ctx context.Context, req mo
 
 func (uc *WorkshopUseCase) deleteProblemFileUnlocked(ctx context.Context, problemID uuid.UUID, path string) error {
 	path = filepath.ToSlash(filepath.Clean(path))
-	if path == "problem.yaml" || path == "statements/en.md" {
+	if path == "problem.yaml" || path == "statements/en.md" || path == pendingMutationPath {
 		return fmt.Errorf("cannot delete derived metadata file %s directly", path)
 	}
 
@@ -263,6 +267,9 @@ func (uc *WorkshopUseCase) deleteProblemFileUnlocked(ctx context.Context, proble
 func (uc *WorkshopUseCase) ReadProblemFile(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error) {
 	path = filepath.ToSlash(filepath.Clean(path))
 	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) ([]byte, error) {
+		if err := uc.workspaceStorage.checkMutation(ctx, problemID); err != nil {
+			return nil, err
+		}
 		if path == "problem.yaml" || path == "statements/en.md" {
 			data, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
 			if err != nil {
@@ -279,7 +286,12 @@ func (uc *WorkshopUseCase) ReadProblemFile(ctx context.Context, problemID uuid.U
 }
 
 func (uc *WorkshopUseCase) ListProblemFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]models.FileEntry, error) {
-	return uc.workspaceStorage.ListFiles(ctx, problemID, dirPath)
+	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) ([]models.FileEntry, error) {
+		if err := uc.workspaceStorage.checkMutation(ctx, problemID); err != nil {
+			return nil, err
+		}
+		return uc.workspaceStorage.ListFiles(ctx, problemID, dirPath)
+	})
 }
 
 func (uc *WorkshopUseCase) compileProblemComponentUnlocked(ctx context.Context, req models.CompileComponentRequest) (*models.CompileResult, error) {
@@ -644,6 +656,9 @@ type persistedManifest struct {
 }
 
 func (uc *WorkshopUseCase) loadManifestUnlocked(ctx context.Context, problemID uuid.UUID) (*models.ProblemManifest, error) {
+	if err := uc.workspaceStorage.checkMutation(ctx, problemID); err != nil {
+		return nil, err
+	}
 	data, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load manifest from database: %w", err)

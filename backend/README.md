@@ -153,6 +153,21 @@ Connect to `GET /ws/submissions` on the main backend server. Supported query par
 
 The server maintains a 10,000-event ring buffer, so clients can catch up on missed events after reconnecting.
 
+## Workshop save and import recovery
+
+The database manifest stores the authoritative metadata and complete YAML snapshot.
+YAML, statement text, title and limits are repaired from that snapshot after a failed
+projection update. Storage and database failures are returned to the caller.
+
+Import, initialization and file edits persist a hidden `.pending-mutation` marker
+before changing files. An interrupted operation blocks workspace reads and publication,
+including after a server restart. The error identifies the operation to retry: repeat
+the import, initialization, or update/delete for the same path. A retry may supply
+corrected content; an import replaces the entire workspace, including removed files.
+Other operations cannot clear the marker. It is removed only after all files and
+metadata are consistent; failure to remove it also returns an error. The marker is
+reserved, excluded from package exports and preserved by import cleanup.
+
 ## Diagnostic logging
 
 The backend writes sanitized JSON through `slog` to stdout in every environment.

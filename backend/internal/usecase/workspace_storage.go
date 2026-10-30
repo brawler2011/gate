@@ -3,6 +3,7 @@ package usecase
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -47,13 +48,80 @@ func (w *WorkspaceStorage) ReadFile(ctx context.Context, problemID uuid.UUID, pa
 }
 
 func (w *WorkspaceStorage) writeFileUnlocked(ctx context.Context, problemID uuid.UUID, path string, content []byte) error {
+	if err := w.markMutation(ctx, problemID); err != nil {
+		return err
+	}
 	key := w.getWorkspaceKey(problemID, path)
 	return w.storage.UploadFile(ctx, w.bucket, key, bytes.NewReader(content), "application/octet-stream")
 }
 
 func (w *WorkspaceStorage) deleteFileUnlocked(ctx context.Context, problemID uuid.UUID, path string) error {
+	if err := w.markMutation(ctx, problemID); err != nil {
+		return err
+	}
 	key := w.getWorkspaceKey(problemID, path)
 	return w.storage.DeleteFile(ctx, w.bucket, key)
+}
+
+const pendingMutationPath = ".pending-mutation"
+
+type workspaceMutationKey struct{}
+type workspaceMutation struct {
+	storage   *WorkspaceStorage
+	id        uuid.UUID
+	operation string
+	started   bool
+}
+
+func (w *WorkspaceStorage) checkMutation(ctx context.Context, id uuid.UUID) error {
+	if m, ok := ctx.Value(workspaceMutationKey{}).(*workspaceMutation); ok && m.storage == w && m.id == id {
+		return nil
+	}
+	pending, err := w.ReadFile(ctx, id, pendingMutationPath)
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("check pending workspace mutation: %w", err)
+	}
+	return fmt.Errorf("workspace mutation %q incomplete; retry it before reading or publishing", string(pending))
+}
+
+// Persist intent before touching files. A failed operation remains blocked across
+// process restarts; only a successful retry of that operation clears its marker.
+func (w *WorkspaceStorage) markMutation(ctx context.Context, id uuid.UUID) error {
+	m, ok := ctx.Value(workspaceMutationKey{}).(*workspaceMutation)
+	if !ok || m.storage != w || m.id != id || m.started {
+		return nil
+	}
+	key := w.getWorkspaceKey(id, pendingMutationPath)
+	if err := w.storage.UploadFile(ctx, w.bucket, key, strings.NewReader(m.operation), "text/plain"); err != nil {
+		return fmt.Errorf("persist workspace mutation intent: %w", err)
+	}
+	m.started = true
+	return nil
+}
+
+func (w *WorkspaceStorage) withMutation(ctx context.Context, id uuid.UUID, operation string, fn func(context.Context) error) error {
+	return w.withLock(ctx, id, func(ctx context.Context) error {
+		pending, err := w.ReadFile(ctx, id, pendingMutationPath)
+		if err != nil && !errors.Is(err, storage.ErrNotFound) {
+			return fmt.Errorf("read pending mutation: %w", err)
+		}
+		if err == nil && string(pending) != operation {
+			return fmt.Errorf("workspace mutation %q incomplete; retry it first", string(pending))
+		}
+		m := &workspaceMutation{storage: w, id: id, operation: operation, started: err == nil}
+		if err := fn(context.WithValue(ctx, workspaceMutationKey{}, m)); err != nil {
+			return err
+		}
+		if m.started {
+			if err := w.storage.DeleteFile(ctx, w.bucket, w.getWorkspaceKey(id, pendingMutationPath)); err != nil {
+				return fmt.Errorf("complete workspace mutation: %w", err)
+			}
+		}
+		return nil
+	})
 }
 
 func (w *WorkspaceStorage) ListAllObjects(ctx context.Context, problemID uuid.UUID) ([]storage.ObjectInfo, error) {

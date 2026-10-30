@@ -2,21 +2,22 @@ package usecase
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
 )
 
 func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uuid.UUID, title string) error {
-	return uc.workspaceStorage.withLock(ctx, problemID, func(ctx context.Context) error { return uc.initProblemWorkshopUnlocked(ctx, problemID, title) })
+	return uc.workspaceStorage.withMutation(ctx, problemID, "initialize", func(ctx context.Context) error { return uc.initProblemWorkshopUnlocked(ctx, problemID, title) })
 }
 
 func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req models.UpdateFileRequest) error {
-	return uc.workspaceStorage.withLock(ctx, req.ProblemID, func(ctx context.Context) error { return uc.updateProblemFileUnlocked(ctx, req) })
+	return uc.workspaceStorage.withMutation(ctx, req.ProblemID, "update:"+filepath.ToSlash(filepath.Clean(req.Path)), func(ctx context.Context) error { return uc.updateProblemFileUnlocked(ctx, req) })
 }
 
 func (uc *WorkshopUseCase) DeleteProblemFile(ctx context.Context, problemID uuid.UUID, path string) error {
-	return uc.workspaceStorage.withLock(ctx, problemID, func(ctx context.Context) error { return uc.deleteProblemFileUnlocked(ctx, problemID, path) })
+	return uc.workspaceStorage.withMutation(ctx, problemID, "delete:"+filepath.ToSlash(filepath.Clean(path)), func(ctx context.Context) error { return uc.deleteProblemFileUnlocked(ctx, problemID, path) })
 }
 
 func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req models.CompileComponentRequest) (*models.CompileResult, error) {
