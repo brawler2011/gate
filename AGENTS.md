@@ -35,6 +35,7 @@ Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, sim
 When editing existing code:
 - Don't "improve" adjacent code, comments, or formatting.
 - Do not modify the root `README.md` unless explicitly requested by the user.
+- Do not create Markdown files or add documentation unless explicitly requested by the user. Keep requested documentation concise and factual; omit filler, duplicated explanations, and unsolicited reports or summaries.
 - Don't refactor things that aren't broken.
 - Match existing style, even if you'd do it differently.
 - If you notice unrelated dead code, mention it - don't delete it.
