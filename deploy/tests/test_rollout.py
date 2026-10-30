@@ -96,10 +96,12 @@ class DockerRolloutTest(unittest.TestCase):
         self.config["services"]["backend"]["command"] = ["python", "-c", "raise SystemExit(1)"]
         self.config["services"]["backend"]["labels"]["traefik.http.routers.backend.rule"] = "PathPrefix(`/changed`)"
         self.write_config()
+        event_log = tempfile.TemporaryFile(mode="w+")
+        self.addCleanup(event_log.close)
         events = subprocess.Popen(["docker", "events", "--since", str(time.time()),
                                    "--filter", f"label=com.docker.compose.project={self.project}",
                                    "--filter", "event=start", "--format", "{{json .}}"],
-                                  text=True, stdout=subprocess.PIPE)
+                                  text=True, stdout=event_log)
         failures, samples = [], []
         stop = threading.Event()
 
@@ -122,7 +124,9 @@ class DockerRolloutTest(unittest.TestCase):
             stop.set()
             monitor.join()
             events.terminate()
-            event_output, _ = events.communicate(timeout=10)
+            events.wait(timeout=10)
+            event_log.seek(0)
+            event_output = event_log.read()
         self.assertGreater(len(samples), 50)
         self.assertTrue(any(json.loads(event)["Actor"]["Attributes"].get("image") == self.tag
                             and json.loads(event)["Actor"]["Attributes"].get("name") == f"{self.project}-backend-1"
