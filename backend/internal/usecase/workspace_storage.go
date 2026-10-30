@@ -33,7 +33,7 @@ func (w *WorkspaceStorage) getWorkspaceKey(problemID uuid.UUID, path string) str
 	return fmt.Sprintf("workspaces/%s/%s", problemID.String(), path)
 }
 
-func (w *WorkspaceStorage) ReadFile(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error) {
+func (w *WorkspaceStorage) readFileUnlocked(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error) {
 	key := w.getWorkspaceKey(problemID, path)
 	rc, _, err := w.storage.DownloadFile(ctx, w.bucket, key, nil)
 	if err != nil {
@@ -124,7 +124,7 @@ func (w *WorkspaceStorage) withMutation(ctx context.Context, id uuid.UUID, opera
 	})
 }
 
-func (w *WorkspaceStorage) ListAllObjects(ctx context.Context, problemID uuid.UUID) ([]storage.ObjectInfo, error) {
+func (w *WorkspaceStorage) listAllObjectsUnlocked(ctx context.Context, problemID uuid.UUID) ([]storage.ObjectInfo, error) {
 	prefix := fmt.Sprintf("workspaces/%s/", problemID.String())
 	objects, err := w.storage.ListObjects(ctx, w.bucket, prefix)
 	if err != nil {
@@ -153,7 +153,7 @@ func (w *WorkspaceStorage) ListAllObjects(ctx context.Context, problemID uuid.UU
 	return filtered, nil
 }
 
-func (w *WorkspaceStorage) ListAllFiles(ctx context.Context, problemID uuid.UUID) ([]string, error) {
+func (w *WorkspaceStorage) listAllFilesUnlocked(ctx context.Context, problemID uuid.UUID) ([]string, error) {
 	objects, err := w.ListAllObjects(ctx, problemID)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,7 @@ func (w *WorkspaceStorage) ListAllFiles(ctx context.Context, problemID uuid.UUID
 	return files, nil
 }
 
-func (w *WorkspaceStorage) ListFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]models.FileEntry, error) {
+func (w *WorkspaceStorage) listFilesUnlocked(ctx context.Context, problemID uuid.UUID, dirPath string) ([]models.FileEntry, error) {
 	allObjects, err := w.ListAllObjects(ctx, problemID)
 	if err != nil {
 		return nil, err
@@ -276,4 +276,24 @@ func (w *WorkspaceStorage) DeleteFile(ctx context.Context, problemID uuid.UUID, 
 
 func (w *WorkspaceStorage) DeleteProblemWorkspace(ctx context.Context, problemID uuid.UUID) error {
 	return w.withLock(ctx, problemID, func(ctx context.Context) error { return w.deleteProblemWorkspaceUnlocked(ctx, problemID) })
+}
+
+func (w *WorkspaceStorage) ReadFile(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error) {
+	return withWorkspaceValue(ctx, w, problemID, func(ctx context.Context) ([]byte, error) { return w.readFileUnlocked(ctx, problemID, path) })
+}
+
+func (w *WorkspaceStorage) ListAllObjects(ctx context.Context, problemID uuid.UUID) ([]storage.ObjectInfo, error) {
+	return withWorkspaceValue(ctx, w, problemID, func(ctx context.Context) ([]storage.ObjectInfo, error) {
+		return w.listAllObjectsUnlocked(ctx, problemID)
+	})
+}
+
+func (w *WorkspaceStorage) ListAllFiles(ctx context.Context, problemID uuid.UUID) ([]string, error) {
+	return withWorkspaceValue(ctx, w, problemID, func(ctx context.Context) ([]string, error) { return w.listAllFilesUnlocked(ctx, problemID) })
+}
+
+func (w *WorkspaceStorage) ListFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]models.FileEntry, error) {
+	return withWorkspaceValue(ctx, w, problemID, func(ctx context.Context) ([]models.FileEntry, error) {
+		return w.listFilesUnlocked(ctx, problemID, dirPath)
+	})
 }

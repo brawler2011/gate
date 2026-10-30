@@ -45,3 +45,12 @@ func (uc *WorkshopUseCase) GetTestsConfig(ctx context.Context, problemID uuid.UU
 		return uc.getTestsConfigUnlocked(ctx, problemID)
 	})
 }
+
+func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.UUID, userID uuid.UUID) (*models.ValidationReport, error) {
+	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*models.ValidationReport, error) {
+		return uc.validateAllTestsUnlocked(ctx, problemID)
+	})
+}
+func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolutionRequest) (*models.TestReport, error) {
+	return withWorkspaceValue(ctx, uc.workspaceStorage, req.ProblemID, func(ctx context.Context) (*models.TestReport, error) { return uc.testSolutionUnlocked(ctx, req) })
+}

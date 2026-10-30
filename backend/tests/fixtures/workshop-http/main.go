@@ -22,7 +22,7 @@ import (
 type fixtureRepo struct{ interfaces.ProblemsRepo }
 
 func (fixtureRepo) GetProblemManifest(context.Context, uuid.UUID) ([]byte, error) {
-	return []byte(`{}`), nil
+	return []byte(`{"problem_type":"pass-fail","time_limit_ms":1000,"memory_limit_mb":256,"statement":{"title":"HTTP fixture"},"meta_files":[]}`), nil
 }
 
 type fixtureSecurity struct{}
@@ -34,6 +34,9 @@ func (fixtureSecurity) HandleCookieAuth(ctx context.Context, _ corev1.OperationN
 func run() error {
 	id := uuid.MustParse(os.Args[3])
 	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(os.Args[1]), "fixture", &usecase.WorkspaceMutex{})
+	if err := ws.WriteFile(context.Background(), id, "problem.yaml", []byte("format_version: '1.0'\ntitle: HTTP fixture\ntype: pass-fail\nlimits: {time_ms: 1000, memory_mb: 256}\nsubtasks: {}\n")); err != nil {
+		return err
+	}
 	for _, name := range []string{"nested/edge.in", "nested/edge.ans", "nested/space #?.in"} {
 		if err := ws.WriteFile(context.Background(), id, "tests/"+name, []byte{0, 255, 128, 10}); err != nil {
 			return err

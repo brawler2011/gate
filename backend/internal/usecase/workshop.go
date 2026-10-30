@@ -44,8 +44,14 @@ func NewWorkshopUseCase(
 }
 
 func (uc *WorkshopUseCase) IsInitialized(ctx context.Context, problemID uuid.UUID) bool {
-	manifest, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
-	return err == nil && len(manifest) > 0
+	initialized, err := withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (bool, error) {
+		if err := uc.workspaceStorage.checkMutation(ctx, problemID); err != nil {
+			return false, err
+		}
+		manifest, err := uc.problemsRepo.GetProblemManifest(ctx, problemID)
+		return len(manifest) > 0, err
+	})
+	return err == nil && initialized
 }
 
 func ParseStatementMarkdown(content string) models.Statement {
@@ -425,7 +431,7 @@ func (uc *WorkshopUseCase) GenerateTests(ctx context.Context, req models.Generat
 	return fmt.Errorf("test generation not yet fully implemented")
 }
 
-func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.UUID, userID uuid.UUID) (*models.ValidationReport, error) {
+func (uc *WorkshopUseCase) validateAllTestsUnlocked(ctx context.Context, problemID uuid.UUID) (*models.ValidationReport, error) {
 	manifest, err := uc.loadManifest(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load manifest: %w", err)
@@ -506,7 +512,7 @@ func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.
 	return report, nil
 }
 
-func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req models.TestSolutionRequest) (*models.TestReport, error) {
+func (uc *WorkshopUseCase) testSolutionUnlocked(ctx context.Context, req models.TestSolutionRequest) (*models.TestReport, error) {
 	manifest, err := uc.loadManifest(ctx, req.ProblemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load manifest: %w", err)
