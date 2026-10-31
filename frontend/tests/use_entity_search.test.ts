@@ -1,6 +1,6 @@
 import "./setup-dom";
 
-import {act, cleanup, renderHook} from "@testing-library/react";
+import {act, cleanup, renderHook, waitFor} from "@testing-library/react";
 import {afterAll, beforeAll, describe, expect, it} from "bun:test";
 
 import {useEntitySearch} from "@/hooks/useEntitySearch";
@@ -68,41 +68,23 @@ describe("useEntitySearch Hook test", () => {
     unmount();
   });
 
-  it("does not cause infinite re-render loop when inline searchFn and mapToItem are passed", async () => {
-    let renderCount = 0;
-    const mockItems = [{id: "1", name: "Item 1"}];
-
-    const {result, rerender, unmount} = renderHook(() => {
-      renderCount++;
-      // Fresh inline functions on every render (identical to unmemoized component renders)
-      return useEntitySearch({
-        searchFn: async (query) => {
-          return mockItems.filter((item) => item.name.includes(query));
-        },
-        mapToItem: (item) => ({value: item.id, label: item.name}),
-        debounceMs: 0,
-        minQueryLength: 2,
-      });
+  it("uses the latest inline search and mapping functions after rerender", async () => {
+    const items = [{id: "1", name: "Alpha"}, {id: "2", name: "Beta"}];
+    const {result, rerender, unmount} = renderHook(({prefix}) => useEntitySearch({
+      searchFn: async (query) => items.filter((item) => item.name.includes(query)),
+      mapToItem: (item) => ({value: item.id, label: `${prefix}: ${item.name}`}),
+      debounceMs: 0,
+      minQueryLength: 2,
+    }), {initialProps: {prefix: "first"}});
+    act(() => {
+      result.current.setSearchQuery("Al");
     });
-
-    // Initial render
-    expect(result.current.searchQuery).toBe("");
-    expect(result.current.results).toEqual([]);
-
-    // Force multiple re-renders
-    rerender();
-    rerender();
-    rerender();
-
-    // Small delay to ensure no async loops triggered
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 30));
+    await waitFor(() => expect(result.current.results).toEqual([{value: "1", label: "first: Alpha"}]));
+    rerender({prefix: "second"});
+    act(() => {
+      result.current.setSearchQuery("Be");
     });
-
-    // Rerenders should stay bounded and not trigger an infinite cascade
-    expect(renderCount).toBeLessThan(10);
-    expect(result.current.results).toEqual([]);
-
+    await waitFor(() => expect(result.current.results).toEqual([{value: "2", label: "second: Beta"}]));
     unmount();
   });
 

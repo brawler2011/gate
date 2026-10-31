@@ -6,7 +6,8 @@ import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp';
 import go from 'react-syntax-highlighter/dist/esm/languages/prism/go';
 import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light';
-import {oneDark, oneLight} from 'react-syntax-highlighter/dist/esm/styles/prism';
+import oneDark from 'react-syntax-highlighter/dist/esm/styles/prism/one-dark';
+import oneLight from 'react-syntax-highlighter/dist/esm/styles/prism/one-light';
 
 import type {ReactNode} from "react";
 

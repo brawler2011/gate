@@ -1,50 +1,24 @@
-"use client";
-
-import {
-  Anchor,
-  Badge,
-  Button,
-  Container,
-  Divider,
-  Group,
-  Paper,
-  PasswordInput,
-  Select,
-  Stack,
-  Switch,
-  Text,
-  TextInput,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import {Anchor, Badge, Button, Container, Divider, Group, Paper, PasswordInput, Select, Stack, Switch, Text, TextInput, ThemeIcon, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
-import {
-  IconAlertCircle,
-  IconArrowLeft,
-  IconCheck,
-  IconFileCode,
-  IconKey,
-  IconMail,
-  IconShield,
-  IconUser,
-} from "@tabler/icons-react";
-import Link from "next/link";
-import {useRouter} from "next/navigation";
+import {IconAlertCircle, IconArrowLeft, IconCheck, IconFileCode, IconKey, IconMail, IconShield, IconUser} from "@tabler/icons-react";
+import {useQueryClient} from "@tanstack/react-query";
 import {useState, type ReactNode} from "react";
+import {useRevalidator, Link} from "react-router-dom";
 
 import {TruncatedWithCopy} from "@/components/shared/TruncatedWithCopy";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {UpdateUserRequestModel, UserModel} from "@/contracts/core/v1";
+import type {UpdateUserRequestModel, UserModel} from "@/contracts/core/v1/schema";
 
 type Props = {
   user: UserModel;
 };
 
 export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
-  const router = useRouter();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<UserModel>(initialUser);
 
   // Role form
@@ -85,9 +59,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
     }
     setRoleLoading(true);
     try {
-      const [error] = await api.updateUser({
-        username: user.username,
-        requestBody: {role: role as UpdateUserRequestModel.role},
+      const {error} = await api.PATCH("/users/{username}", {
+        params: {path: {username: user.username}},
+        body: {role: role as UpdateUserRequestModel["role"]},
       });
 
       if (error) {
@@ -106,7 +80,10 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
         color: "green",
         icon: <IconCheck size={18} />,
       });
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users/{username}", {params: {path: {username: user.username}}}).queryKey});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users").queryKey});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users/me").queryKey});
+      void revalidator.revalidate();
     } catch {
       notifications.show({
         title: "Ошибка",
@@ -121,9 +98,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
   const handleChangeEmail = async (values: typeof emailForm.values) => {
     setEmailLoading(true);
     try {
-      const [error] = await api.adminChangeEmail({
-        username: user.username,
-        requestBody: {
+      const {error} = await api.POST("/admin/users/{username}/change-email", {
+        params: {path: {username: user.username}},
+        body: {
           email: values.email.trim(),
           with_confirmation: values.withConfirmation,
         },
@@ -158,7 +135,10 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
           icon: <IconCheck size={18} />,
         });
       }
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users/{username}", {params: {path: {username: user.username}}}).queryKey});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users").queryKey});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users/me").queryKey});
+      void revalidator.revalidate();
     } catch {
       notifications.show({
         title: "Ошибка",
@@ -173,9 +153,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
   const handleSetPassword = async (values: typeof passwordForm.values) => {
     setSetPasswordLoading(true);
     try {
-      const [error] = await api.adminSetPassword({
-        username: user.username,
-        requestBody: {password: values.password},
+      const {error} = await api.POST("/admin/users/{username}/set-password", {
+        params: {path: {username: user.username}},
+        body: {password: values.password},
       });
 
       if (error) {
@@ -217,8 +197,8 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
 
     setResetEmailLoading(true);
     try {
-      const [error] = await api.adminSendPasswordReset({
-        username: user.username,
+      const {error} = await api.POST("/admin/users/{username}/send-reset-password", {
+        params: {path: {username: user.username}},
       });
 
       if (error) {
@@ -254,8 +234,8 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
 
     setResendVerificationLoading(true);
     try {
-      const [error] = await api.adminResendVerification({
-        username: user.username,
+      const {error} = await api.POST("/admin/users/{username}/resend-verification", {
+        params: {path: {username: user.username}},
       });
 
       if (error) {
@@ -290,7 +270,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
         <Group justify="space-between" align="center">
           <Anchor
             component={Link}
-            href="/admin/users"
+            to="/admin/users"
             c="dimmed"
             fz={14}
             style={{display: "inline-flex", alignItems: "center", gap: 6}}
@@ -300,7 +280,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
 
           <Button
             component={Link}
-            href={`/admin/submissions?userId=${user.id}`}
+            to={`/admin/submissions?userId=${user.id}`}
             variant="light"
             size="xs"
             leftSection={<IconFileCode size={16} />}
@@ -314,7 +294,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
             <Title order={1} fz={26}>
               @{user.username}
             </Title>
-            <Anchor component={Link} href={`/@${user.username}`} fz={13} c="dimmed">
+            <Anchor component={Link} to={`/@${user.username}`} fz={13} c="dimmed">
               (открыть профиль)
             </Anchor>
           </Group>

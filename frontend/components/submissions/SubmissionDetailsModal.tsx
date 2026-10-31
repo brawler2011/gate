@@ -1,19 +1,8 @@
-"use client";
-
-import {
-  Button,
-  Center,
-  Group,
-  Loader,
-  Modal,
-  Stack,
-  Text,
-  Tooltip,
-} from "@mantine/core";
+import {Button, Center, Group, Loader, Modal, Stack, Text, Tooltip} from "@mantine/core";
 import {IconExternalLink} from "@tabler/icons-react";
-import Link from "next/link";
+import {useQuery} from "@tanstack/react-query";
 import React from "react";
-import useSWR from "swr";
+import {Link} from "react-router-dom";
 
 import {api} from "@/lib/api";
 
@@ -38,19 +27,21 @@ export const SubmissionDetailsModal = ({
   onRejudge,
   isRejudging,
 }: SubmissionDetailsModalProps): ReactNode => {
-  const {data, error, isLoading} = useSWR(
-    opened && submissionId ? ["submission-details", submissionId] : null,
-    async () => {
-      if (!submissionId) {
-        return null;
-      }
-      const [err, res] = await api.getSubmission({submissionId});
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить данные посылки");
-      }
-      return res?.submission ?? null;
+  const {data, error, isLoading} = useQuery({queryKey: [opened && submissionId ? ["submission-details", submissionId] : null], queryFn: async () => {
+    if (!submissionId) {
+      return null;
     }
-  );
+    const {data: res, error: err} = await api.GET(
+      "/submissions/{submission_id}",
+      {
+        params: {path: {submission_id: submissionId}},
+      },
+    );
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить данные посылки");
+    }
+    return res?.submission ?? null;
+  }, enabled: Boolean(opened && submissionId ? ["submission-details", submissionId] : null)});
 
   return (
     <Modal
@@ -66,7 +57,7 @@ export const SubmissionDetailsModal = ({
             <Tooltip label="Открыть на отдельной странице">
               <Button
                 component={Link}
-                href={`/submissions/${submissionId}`}
+                to={`/submissions/${submissionId}`}
                 target="_blank"
                 size="xs"
                 variant="subtle"

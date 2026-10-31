@@ -1,13 +1,11 @@
-"use client";
-
 import {Anchor, Center, Group, Input, Stack, Table, Text} from "@mantine/core";
 import {IconSearch} from "@tabler/icons-react";
-import Link from "next/link";
 import {useState} from "react";
+import {Link} from "react-router-dom";
 
 import {CreateTeamModal} from "./CreateTeamModal";
 
-import type {TeamModel} from "@/contracts/core/v1";
+import type {TeamModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -58,7 +56,7 @@ export const OrgTeamsTab = ({teams, orgLogin, orgId, canManage = true}: Props): 
             {filteredTeams.map((t) => (
               <Table.Tr key={t.id}>
                 <Table.Td>
-                  <Anchor component={Link} href={`/${orgLogin}/teams/${t.id}`} size="sm" fw={500}>
+                  <Anchor component={Link} to={`/${orgLogin}/teams/${t.id}`} size="sm" fw={500}>
                     {t.name}
                   </Anchor>
                 </Table.Td>

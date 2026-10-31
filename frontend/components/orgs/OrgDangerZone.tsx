@@ -1,11 +1,9 @@
-"use client";
-
 import {Alert, Button, Group, Modal, Stack, Text, TextInput} from '@mantine/core';
 import {useDisclosure} from '@mantine/hooks';
 import {notifications} from '@mantine/notifications';
 import {IconAlertTriangle} from '@tabler/icons-react';
-import {useRouter} from 'next/navigation';
 import {useState} from 'react';
+import {useNavigate} from "react-router-dom";
 
 import {api} from '@/lib/api';
 
@@ -17,17 +15,19 @@ export const OrgDangerZone = ({orgLogin, orgName}: Props): ReactNode => {
   const [opened, {open, close}] = useDisclosure(false);
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleDelete = async () => {
     setLoading(true);
-    const [error] = await api.deleteOrganization({login: orgLogin});
+    const {error} = await api.DELETE("/organizations/{login}", {
+      params: {path: {login: orgLogin}},
+    });
     setLoading(false);
     if (error) {
       notifications.show({title: 'Ошибка', message: error.message, color: 'red'});
       return;
     }
-    router.push('/orgs');
+    navigate('/orgs');
   };
 
   return (

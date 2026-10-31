@@ -1,38 +1,21 @@
 "use client";
 
-import {
-  ActionIcon,
-  Button,
-  Center,
-  Code,
-  Group,
-  Loader,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Textarea,
-  Title,
-} from "@mantine/core";
+import {ActionIcon, Button, Center, Code, Group, Loader, Modal, Select, Stack, Text, TextInput, Textarea, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconFile, IconPlus, IconRefresh, IconTrash} from "@tabler/icons-react";
+import {useQuery} from "@tanstack/react-query";
 import {useEffect, useRef, useState, useTransition} from "react";
-import useSWR from "swr";
 
 import {api} from "@/lib/api";
 
 import classes from "./WorkshopFolderTab.module.css";
 
-import type {FileEntry} from "@/contracts/core/v1";
-import type {ApiError} from "@/lib/api";
+import type {FileEntry} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
-type ListFilesResult = Promise<
-  [ApiError | null, { files?: FileEntry[] } | null]
->;
-type GetFileResult = Promise<[ApiError | null, string | null]>;
-type SaveFileResult = Promise<[ApiError | null, unknown | null]>;
+type ListFilesResult = Promise<{data?: {files?: FileEntry[]}; error?: {message?: string}}>;
+type GetFileResult = Promise<{data?: string | Blob | unknown; error?: {message?: string}}>;
+type SaveFileResult = Promise<{data?: unknown; error?: {message?: string}}>;
 
 type Props = {
   problemId: string;
@@ -91,13 +74,13 @@ export const WorkshopCollectionTab = ({
   const getFileName = (path: string) => path.split("/").pop() ?? path;
 
   // Fetch languages dynamically from backend API
-  const {data: languagesData} = useSWR("supported-languages", async () => {
-    const [err, res] = await api.getLanguages();
+  const {data: languagesData} = useQuery({queryKey: ["supported-languages"], queryFn: async () => {
+    const {data: res, error: err} = await api.GET("/languages");
     if (err || !res?.languages) {
       return null;
     }
     return res.languages;
-  });
+  }});
 
   const baseLangOptions = languagesData?.length
     ? languagesData.map((lang) => {
@@ -132,30 +115,24 @@ export const WorkshopCollectionTab = ({
 
   const allowedExtensions = uniqueExtensionOptions.map((o) => o.value);
 
-  const {data: filesData, isLoading: isLoadingFiles, mutate: mutateFiles} = useSWR(
-    ["workshop-files", problemId, folderName],
-    async () => {
-      const [err, res] = await listFiles(problemId);
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить список файлов");
-      }
-      return res;
+  const {data: filesData, isLoading: isLoadingFiles, refetch: mutateFiles} = useQuery({queryKey: ["workshop-files", problemId, folderName], queryFn: async () => {
+    const {data: res, error: err} = await listFiles(problemId);
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить список файлов");
     }
-  );
+    return res;
+  }});
 
   const files = filesData?.files || [];
 
   const fileName = selectedFile ? getFileName(selectedFile) : null;
-  const {data: fileContent, isLoading: isLoadingFile, mutate: mutateContent} = useSWR(
-    fileName ? ["workshop-file-content", problemId, folderName, fileName] : null,
-    async () => {
-      const [err, res] = await getFile(problemId, fileName!);
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить файл");
-      }
-      return res;
+  const {data: fileContent, isLoading: isLoadingFile, refetch: mutateContent} = useQuery({queryKey: [fileName ? ["workshop-file-content", problemId, folderName, fileName] : null], queryFn: async () => {
+    const {data: res, error: err} = await getFile(problemId, fileName!);
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить файл");
     }
-  );
+    return typeof res === "string" ? res : "";
+  }, enabled: Boolean(fileName ? ["workshop-file-content", problemId, folderName, fileName] : null)});
 
   const leafFiles = files.filter(
     (file) => !file.is_directory && file.path && file.path !== "tests.json" && !getFileName(file.path).startsWith(".")
@@ -215,7 +192,7 @@ export const WorkshopCollectionTab = ({
         (file) => file.path === selectedFile,
       );
       const saveFile = isExistingFile ? updateFile : createFile;
-      const [error] = await saveFile(problemId, fileName, content);
+      const {error} = await saveFile(problemId, fileName, content);
 
       if (error) {
         notifications.show({
@@ -280,7 +257,7 @@ export const WorkshopCollectionTab = ({
     const fullPath = `${folderName}/${finalFileName}`;
 
     startCreatingFile(async () => {
-      const [error] = await createFile(problemId, finalFileName, "");
+      const {error} = await createFile(problemId, finalFileName, "");
       if (error) {
         notifications.show({
           title: "Ошибка создания файла",
@@ -304,7 +281,7 @@ export const WorkshopCollectionTab = ({
 
     startDeleting(async () => {
       const targetFileName = getFileName(selectedFile);
-      const [error] = await deleteFile(problemId, targetFileName);
+      const {error} = await deleteFile(problemId, targetFileName);
 
       if (error) {
         notifications.show({
@@ -510,7 +487,7 @@ export const WorkshopCollectionTab = ({
                     disabled={isMain || isSaving || isLoadingFile}
                     onClick={async () => {
                       const fileName = getFileName(selectedFile);
-                      const [error] = await setMain(problemId, fileName);
+                      const {error} = await setMain(problemId, fileName);
                       if (error) {
                         notifications.show({
                           title: "Ошибка",

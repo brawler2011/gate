@@ -1,24 +1,6 @@
-"use client";
-
-import {
-  Card,
-  Container,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
-import {
-  IconBuilding,
-  IconFileCode,
-  IconNews,
-  IconPuzzle,
-  IconTrophy,
-  IconUsers,
-} from "@tabler/icons-react";
-import Link from "next/link";
+import {Card, Container, Group, SimpleGrid, Stack, Text, ThemeIcon, Title} from "@mantine/core";
+import {IconBuilding, IconFileCode, IconNews, IconPuzzle, IconTrophy, IconUsers} from "@tabler/icons-react";
+import {Link} from "react-router-dom";
 
 import type {ReactNode} from "react";
 
@@ -86,7 +68,7 @@ export const AdminDashboardContent = (): ReactNode => {
                   padding="md"
                   radius="md"
                   component={Link}
-                  href={nav.href}
+                  to={nav.href}
                   style={{textDecoration: "none"}}
                 >
                   <Group gap="sm" mb="xs">

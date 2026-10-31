@@ -78,20 +78,29 @@ During active discussion and planning:
 
 ---
 
+## Repository Layout
+
+- `backend/`: Go application, migrations, SQL queries, and backend tests. The main Go module is at the repository root.
+- `src/main.tsx`: React SPA entry point; `src/App.tsx`: React Router route definitions.
+- `frontend/`: pages, components, hooks, API client, and Bun tests. The `@/` alias resolves here; `frontend/app/` filenames do not define routes automatically.
+- `contracts/`: core and observer OpenAPI specifications and generator configuration.
+- `deploy/`: local and production configuration, Compose services, and environment examples.
+- `package.json`, `bun.lock`, `vite.config.ts`, and `Taskfile.yml` live at the repository root. Run commands from there.
+
 ## Frontend Guidelines
 
-When working with the frontend codebase (`/frontend` directory), adhere strictly to the following rules:
+These rules apply to `frontend/`, `src/`, and frontend configuration at the repository root.
 
-1. **Never modify `next.config.mjs`**
-2. **Never modify `next-env.d.ts`**
-3. **Use `bun` instead of `npm`**
-   - Always use `bun` for package management, running scripts, and development commands (e.g., `bun run dev`, `bun add <package>`, `bun install`, `bun run typecheck`, `bun run build:local`). Do not use `npm`, `npx`, `yarn`, or `pnpm`.
+1. **Use `bun` instead of `npm`**
+   - Use `bun` for package management, scripts, and development commands. Do not use `npm`, `npx`, `yarn`, or `pnpm`.
+2. **Keep the React/Vite SPA architecture**
+   - Use React Router for routing and loaders, TanStack Query for query state, and Mantine for UI.
+   - Do not introduce Next.js, React Server Components, or Server Actions (`'use server'`).
+3. **Use the shared API client**
+   - Import `api` and, when needed, `unwrap` from `@/lib/api` in components, hooks, and route loaders.
+   - Browser requests use same-origin `/api` and `/ws`; Vite proxies these paths to `BACKEND_API_URL` during development.
 4. **Never override or set fallback values for environment variables in code**
-   - Do not use fallback values for environment variables (e.g., `return process.env.BACKEND_API_URL || "http://localhost:8080";`).
-5. **Do not use or create Server Actions (`'use server'`)**
-   - In this architecture, Server Actions are unnecessary and prohibited.
-   - **Client Components (`"use client"`)**: Perform direct API calls via `@/lib/api` (`api.<method>(...)`).
-   - **Server Components (RSC)**: Fetch data directly during component/page render using `@/lib/api` (e.g., `await unwrap(api.<method>)(...)` or `await api.<method>(...)`).
+   - Local configuration is in `deploy/local/.env`; available variables are listed in `deploy/local/.env.example`.
 
 ---
 
@@ -106,8 +115,23 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 ## Task Guidelines
 
-1. **Use `task` instead of `go-task`**
-   - Always invoke Task commands as `task` (e.g., `task build`, `task test`). Do not use `go-task`.
+- Use `task` instead of `go-task`. `task -a` lists available tasks.
+- Install JavaScript dependencies with `bun install --frozen-lockfile`.
+- Development: `task dev` runs the Go backend with Air and the Vite frontend; `task be:dev` and `task fe:dev` run them separately. Start required services separately using `deploy/local/docker-compose.yml`.
+- Database migrations: `task be:migrate` uses `deploy/local/.env`.
+- Checks: `task be:test`, `task be:lint`, `task fe:typecheck`, `task fe:lint`, `task fe:knip`, and `bun run test`. `task test` runs backend and frontend tests.
+- Integration tests: `task be:test-integration` requires Docker for Testcontainers.
+- Build: `task build` builds Go packages and the static SPA. `task fe:build:local` loads local environment settings; the application Docker image includes the Go binary and SPA bundle.
+- `task precommit` runs contract lint, codegen freshness, backend lint/tests, and frontend typecheck/lint. It does not include frontend tests, Knip, integration tests, or the production build; run relevant checks separately.
+
+## Generated Code
+
+- Edit OpenAPI sources in `contracts/core/v1/openapi.yaml` and `contracts/observer/v1/openapi.yaml`, then run `task contracts:gen-openapi` to regenerate Go and TypeScript contracts.
+- `task contracts:lint` validates both specifications using the pinned Vacuum version and `contracts/vacuum.yaml`; correctness errors block changes, while style/documentation warnings are advisory.
+- Edit SQL queries in `backend/internal/repository/pg/*.sql` and migrations in `backend/migrations/`, then run `task be:gen-sqlc`.
+- `task be:gen-mocks` regenerates mocks; `task gen` runs all generators.
+- Do not hand-edit generated files in `backend/contracts/core/v1/`, `backend/contracts/observer/v1/`, `frontend/contracts/`, `backend/internal/repository/pg/sqlc/`, or `backend/tests/mocks/`.
+- `task verify-codegen` regenerates code and fails if those generated paths have tracked or untracked changes.
 
 ---
 
@@ -154,7 +178,7 @@ When working with the backend codebase, adhere strictly to the following rules:
    - **Reviewer Inputs**: Issue description, `AGENTS.md`, and `git diff <base-sha>...<head-sha>`. Allow access to repository code and tests needed to verify the change. Record the full head SHA and current `main` base SHA; stop and report any failure to obtain the diff.
    - **Reviewer Audit Focus**:
      1. Acceptance Criteria: All items genuinely verified and tested.
-     2. `AGENTS.md` compliance: `slog` only, no env fallback values, no server actions, untouched `next.config.mjs`, no symlinks.
+     2. `AGENTS.md` compliance: `slog` only, no env fallback values, no Server Actions, React/Vite SPA architecture, no symlinks.
      3. Surgical changes: no unrelated edits, no leftover dead code.
      4. Test coverage and edge cases.
    - **Evidence**: Record checks actually run and their results for the reviewed SHA pair; identify failures, skipped checks and modified files. Do not treat author claims as verification.

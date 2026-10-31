@@ -1,24 +1,15 @@
-"use client";
-
-import {
-  Badge,
-  Button,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
+import {Badge, Button, Group, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconUserPlus, IconX} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
+import {useQueryClient} from "@tanstack/react-query";
 import {useCallback, useEffect, useState, type ReactNode} from "react";
+import {useRevalidator} from "react-router-dom";
 
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
 
-import type {OrganizationJoinRequestModel, OrganizationModel} from "@/contracts/core/v1";
+import type {OrganizationJoinRequestModel, OrganizationModel} from "@/contracts/core/v1/schema";
 
 type Props = {
   org: OrganizationModel;
@@ -31,7 +22,8 @@ export const OrgJoinButton = ({
   isAuthenticated,
   isMember,
 }: Props): ReactNode => {
-  const router = useRouter();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
   const [pendingRequest, setPendingRequest] = useState<OrganizationJoinRequestModel | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -43,7 +35,9 @@ export const OrgJoinButton = ({
       return;
     }
     setLoading(true);
-    const [, data] = await api.getMyOrganizationJoinRequest({login: org.login});
+    const {data} = await api.GET("/organizations/{login}/requests/mine", {
+      params: {path: {login: org.login}},
+    });
     setLoading(false);
     if (data?.request) {
       setPendingRequest(data.request);
@@ -70,8 +64,8 @@ export const OrgJoinButton = ({
 
   const handleJoinOpen = async () => {
     setActionLoading(true);
-    const [error, data] = await api.createOrganizationJoinRequest({
-      login: org.login,
+    const {data, error} = await api.POST("/organizations/{login}/requests", {
+      params: {path: {login: org.login}},
     });
     setActionLoading(false);
     if (error) {
@@ -87,17 +81,16 @@ export const OrgJoinButton = ({
         message: `Вы успешно вступили в организацию ${org.name}!`,
         color: "green",
       });
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: ["org-members-permission", org.login]});
+      void revalidator.revalidate();
     }
   };
 
   const handleRequestSubmit = async () => {
     setActionLoading(true);
-    const [error, data] = await api.createOrganizationJoinRequest({
-      login: org.login,
-      requestBody: {
-        message: message.trim() || undefined,
-      },
+    const {data, error} = await api.POST("/organizations/{login}/requests", {
+      params: {path: {login: org.login}},
+      body: {message: message.trim() || undefined},
     });
     setActionLoading(false);
     closeModal();
@@ -117,7 +110,8 @@ export const OrgJoinButton = ({
         message: `Вы вступили в организацию ${org.name}!`,
         color: "green",
       });
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: ["org-members-permission", org.login]});
+      void revalidator.revalidate();
     } else if (data?.request) {
       notifications.show({
         message: "Заявка отправлена администраторам организации",
@@ -130,7 +124,9 @@ export const OrgJoinButton = ({
 
   const handleCancelRequest = async () => {
     setActionLoading(true);
-    const [error] = await api.cancelOrganizationJoinRequest({login: org.login});
+    const {error} = await api.DELETE("/organizations/{login}/requests/mine", {
+      params: {path: {login: org.login}},
+    });
     setActionLoading(false);
     if (error) {
       notifications.show({

@@ -1,24 +1,8 @@
-"use client";
-
-import {
-  ActionIcon,
-  Badge,
-  Box,
-  Group,
-  Table,
-  Text,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Badge, Box, Group, Table, Text, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {
-  IconDeviceDesktop,
-  IconEdit,
-  IconFileCode,
-  IconRefresh,
-  IconTrash,
-} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
+import {IconDeviceDesktop, IconEdit, IconFileCode, IconRefresh, IconTrash} from "@tabler/icons-react";
 import {useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
@@ -26,7 +10,7 @@ import {api} from "@/lib/api";
 import classes from "./AdminPage.module.css";
 import {DeleteContestModal} from "./DeleteContestModal";
 
-import type {ContestModel} from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type AdminContestsTableProps = {
@@ -42,36 +26,46 @@ const getVisibilityDisplay = (visibility: string) => {
 };
 
 export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTableProps): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [contestToDelete, setContestToDelete] = useState<ContestModel | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
 
   const handleRowClick = (contest: ContestModel) => {
-    router.push(`/${contest.organization_login}/${contest.login}`);
+    navigate(`/${contest.organization_login}/${contest.login}`);
   };
 
   const handleEditClick = (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
-    router.push(`/${contest.organization_login}/${contest.login}/settings`);
+    navigate(`/${contest.organization_login}/${contest.login}/settings`);
   };
 
   const handleSubmissionsClick = (e: React.MouseEvent, contestId: string) => {
     e.stopPropagation();
-    router.push(`/admin/submissions?contestId=${contestId}`);
+    navigate(`/admin/submissions?contestId=${contestId}`);
   };
 
   const handleMonitorClick = (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
-    router.push(`/${contest.organization_login}/${contest.login}/monitor`);
+    navigate(`/${contest.organization_login}/${contest.login}/monitor`);
   };
 
   const handleRejudgeContest = async (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
     setRejudgingId(contest.id);
     try {
-      const [err] = await api.rejudgeContest({orgLogin: contest.organization_login, contestLogin: contest.login});
+      const {error: err} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/rejudge",
+        {
+          params: {
+            path: {
+              org_login: contest.organization_login,
+              contest_login: contest.login,
+            },
+          },
+        },
+      );
       if (err) {
         notifications.show({
           title: "Ошибка",
@@ -93,7 +87,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
   const handleAuthorClick = (e: React.MouseEvent, authorUsername?: string) => {
     e.stopPropagation();
     if (authorUsername) {
-      router.push(`/@${authorUsername}`);
+      navigate(`/@${authorUsername}`);
     }
   };
 
@@ -107,7 +101,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
     if (!contestToDelete) {
       return;
     }
-    
+
     setDeletingId(contestToDelete.id);
     try {
       await onDeleteContest(contestToDelete);

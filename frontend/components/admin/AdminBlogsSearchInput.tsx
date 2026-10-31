@@ -1,18 +1,16 @@
-"use client";
-
 import {TextInput} from "@mantine/core";
 import {IconSearch} from "@tabler/icons-react";
-import {useRouter, useSearchParams} from "next/navigation";
 import {useEffect, useRef, useState} from "react";
+import {useNavigate, useSearchParams} from "react-router-dom";
 
 import type {ReactNode} from "react";
 
 export const AdminBlogsSearchInput = (): ReactNode => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
   const [search, setSearch] = useState(initialSearch);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isFirstRender = useRef(true);
 
   // Sync state with URL when searchParams change externally (e.g., browser back)
@@ -60,9 +58,9 @@ export const AdminBlogsSearchInput = (): ReactNode => {
       }
 
       const query = params.toString();
-      router.push(`/admin/blogs${query ? `?${query}` : ""}`);
+      navigate(`/admin/blogs${query ? `?${query}` : ""}`);
     }, 300);
-  }, [search, searchParams, router]);
+  }, [search, searchParams, navigate]);
 
   return (
     <TextInput

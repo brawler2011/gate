@@ -14,11 +14,34 @@ export const WorkshopValidatorsTab = (props: WorkshopFileTabProps): ReactNode =>
       componentType="validator"
       componentTitle="Валидатор"
       defaultFileName="validator"
-      listFiles={(problemId) => api.listProblemValidators({problemId})}
-      getFile={(problemId, name) => api.getProblemValidator({problemId, name})}
-      createFile={(problemId, name, requestBody) => api.createProblemValidator({problemId, name, requestBody})}
-      updateFile={(problemId, name, requestBody) => api.updateProblemValidator({problemId, name, requestBody})}
-      deleteFile={(problemId, name) => api.deleteProblemValidator({problemId, name})}
+      listFiles={(problemId) =>
+        api.GET("/problems/{problemId}/validators", {
+          params: {path: {problemId}},
+        })
+      }
+      getFile={(problemId, name) =>
+        api.GET("/problems/{problemId}/validators/{name}", {
+          params: {path: {problemId, name}},
+          parseAs: "text",
+        })
+      }
+      createFile={(problemId, name, requestBody) =>
+        api.POST("/problems/{problemId}/validators", {
+          params: {path: {problemId}, query: {name}},
+          body: requestBody,
+        })
+      }
+      updateFile={(problemId, name, requestBody) =>
+        api.PUT("/problems/{problemId}/validators/{name}", {
+          params: {path: {problemId, name}},
+          body: requestBody,
+        })
+      }
+      deleteFile={(problemId, name) =>
+        api.DELETE("/problems/{problemId}/validators/{name}", {
+          params: {path: {problemId, name}},
+        })
+      }
     />
   );
 };

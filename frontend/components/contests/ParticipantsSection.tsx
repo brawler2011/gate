@@ -1,32 +1,9 @@
 "use client";
 
-import {
-  ActionIcon,
-  Autocomplete,
-  Badge,
-  Button,
-  Card,
-  Center,
-  Group,
-  Loader,
-  Pagination,
-  Stack,
-  Table,
-  Tabs,
-  Text,
-} from "@mantine/core";
+import {ActionIcon, Autocomplete, Badge, Button, Card, Center, Group, Loader, Pagination, Stack, Table, Tabs, Text} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {
-  IconCheck,
-  IconEdit,
-  IconPlus,
-  IconTrash,
-  IconUser,
-  IconUserCheck,
-  IconUsersGroup,
-  IconX,
-} from "@tabler/icons-react";
+import {IconCheck, IconEdit, IconPlus, IconTrash, IconUser, IconUserCheck, IconUsersGroup, IconX} from "@tabler/icons-react";
 import {useCallback, useEffect, useState} from "react";
 
 import {StatusMessage} from '@/components/shared/StatusMessage';
@@ -35,7 +12,7 @@ import {api} from "@/lib/api";
 import {ChangeRoleModal} from "./ChangeRoleModal";
 import {ContestTeamsManagement} from "./ContestTeamsManagement";
 
-import type * as corev1 from "@/contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 const ROLE_OPTIONS = [
@@ -97,7 +74,15 @@ export const ParticipantsSection = ({
   // Load participants
   const loadParticipants = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listContestMembers({orgLogin, contestLogin, page, pageSize});
+    const {data: response, error} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/members",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {page, pageSize},
+        },
+      },
+    );
     setLoading(false);
 
     if (error || !response) {
@@ -113,7 +98,12 @@ export const ParticipantsSection = ({
   // Load requests
   const loadRequests = useCallback(async () => {
     setLoadingRequests(true);
-    const [, data] = await api.listContestJoinRequests({orgLogin, contestLogin});
+    const {data} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/requests",
+      {
+        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+      },
+    );
     setLoadingRequests(false);
     if (data) {
       setRequests(data.requests);
@@ -134,7 +124,11 @@ export const ParticipantsSection = ({
       }
 
       setSearching(true);
-      const [error, response] = await api.listUsers({page: 1, pageSize: 10, search: debouncedQuery});
+      const {data: response, error} = await api.GET("/users", {
+        params: {
+          query: {page: 1, pageSize: 10, search: debouncedQuery},
+        },
+      });
       setSearching(false);
 
       if (error || !response) {
@@ -154,7 +148,15 @@ export const ParticipantsSection = ({
     }
 
     setAdding(true);
-    const [error] = await api.createContestMember({orgLogin, contestLogin, userId: selectedUserId});
+    const {error} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/members",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {user_id: selectedUserId},
+        },
+      },
+    );
     setAdding(false);
 
     if (error) {
@@ -183,7 +185,15 @@ export const ParticipantsSection = ({
 
   const handleDeleteParticipant = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await api.deleteContestMember({orgLogin, contestLogin, userId});
+    const {error} = await api.DELETE(
+      "/organizations/{org_login}/contests/{contest_login}/members",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {user_id: userId},
+        },
+      },
+    );
     setDeletingId(null);
 
     if (error) {
@@ -222,12 +232,15 @@ export const ParticipantsSection = ({
       return;
     }
 
-    const [error] = await api.updateContestMember({
-      orgLogin,
-      contestLogin,
-      userId: editingParticipant.userId,
-      role: newRole,
-    });
+    const {error} = await api.PATCH(
+      "/organizations/{org_login}/contests/{contest_login}/members",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {user_id: editingParticipant.userId, role: newRole},
+        },
+      },
+    );
 
     setModalOpened(false);
 
@@ -255,11 +268,18 @@ export const ParticipantsSection = ({
 
   const handleApproveRequest = async (requestId: string, username: string) => {
     setProcessingRequestId(requestId);
-    const [error] = await api.approveContestJoinRequest({
-      orgLogin,
-      contestLogin,
-      id: requestId,
-    });
+    const {error} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/requests/{id}/approve",
+      {
+        params: {
+          path: {
+            org_login: orgLogin,
+            contest_login: contestLogin,
+            id: requestId,
+          },
+        },
+      },
+    );
     setProcessingRequestId(null);
 
     if (error) {
@@ -281,11 +301,18 @@ export const ParticipantsSection = ({
 
   const handleRejectRequest = async (requestId: string, username: string) => {
     setProcessingRequestId(requestId);
-    const [error] = await api.rejectContestJoinRequest({
-      orgLogin,
-      contestLogin,
-      id: requestId,
-    });
+    const {error} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/requests/{id}/reject",
+      {
+        params: {
+          path: {
+            org_login: orgLogin,
+            contest_login: contestLogin,
+            id: requestId,
+          },
+        },
+      },
+    );
     setProcessingRequestId(null);
 
     if (error) {

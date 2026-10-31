@@ -1,17 +1,7 @@
-"use client";
-
-import {
-  Alert,
-  Box,
-  Button,
-  FileInput,
-  Group,
-  Stack,
-  Text,
-} from "@mantine/core";
+import {Alert, Box, Button, FileInput, Group, Stack, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconInfoCircle, IconUpload} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
+import {useQueryClient} from "@tanstack/react-query";
 import {useState, useTransition} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
@@ -24,7 +14,7 @@ type Props = {
 };
 
 export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const [isImporting, startImport] = useTransition();
 
@@ -34,7 +24,12 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
     }
 
     startImport(async () => {
-      const [error] = await api.importProblem({id: problemId, formData: {package: packageFile}});
+      const body = new FormData();
+      body.append("package", packageFile);
+      const {error} = await api.POST("/problems/{id}/import", {
+        params: {path: {id: problemId}},
+        body: body as unknown as {package?: string},
+      });
       if (error) {
         notifications.show({
           title: "Ошибка импорта",
@@ -50,7 +45,15 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
         color: "green",
       });
       setPackageFile(null);
-      router.refresh();
+      void queryClient.invalidateQueries({
+        queryKey: api.queryOptions("get", "/problems/{id}", {
+          params: {path: {id: problemId}},
+        }).queryKey,
+      });
+      void queryClient.invalidateQueries({queryKey: ["problem", problemId]});
+      void queryClient.invalidateQueries({queryKey: ["problem-limits", problemId]});
+      void queryClient.invalidateQueries({queryKey: ["workshop-files", problemId]});
+      void queryClient.invalidateQueries({queryKey: ["workshop-single-component-files", problemId]});
     });
   };
 

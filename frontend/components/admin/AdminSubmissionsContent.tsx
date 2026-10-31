@@ -1,36 +1,18 @@
-"use client";
-
-import {
-  ActionIcon,
-  Badge,
-  Box,
-  Center,
-  Container,
-  Group,
-  Select,
-  Skeleton,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Badge, Box, Center, Container, Group, Select, Skeleton, Stack, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconRefresh, IconSearch, IconX} from "@tabler/icons-react";
-import Link from "next/link";
-import {usePathname, useRouter, useSearchParams} from "next/navigation";
+import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
-import useSWR from "swr";
+import {useLocation, useNavigate, useSearchParams, Link} from "react-router-dom";
 
-import {NextPagination} from '@/components/shared/Pagination';
+import {RoutePagination} from '@/components/shared/Pagination';
 import {SubmissionDetailsModal} from '@/components/submissions';
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 import {LangString, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 
-import type {SubmissionModel} from "@/contracts/core/v1";
+import type {SubmissionModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type AdminSubmissionsContentProps = {
@@ -50,9 +32,9 @@ export const AdminSubmissionsContent = ({
   problemId,
   userId,
 }: AdminSubmissionsContentProps): ReactNode => {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const {pathname} = useLocation();
+  const [searchParams] = useSearchParams();
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
 
@@ -75,7 +57,7 @@ export const AdminSubmissionsContent = ({
       }
     });
 
-    router.push(`${pathname}?${params.toString()}`);
+    navigate(`${pathname}?${params.toString()}`);
   };
 
   const handleClearFilters = () => {
@@ -84,28 +66,28 @@ export const AdminSubmissionsContent = ({
     setContestFilter("");
     setProblemFilter("");
     setUserFilter("");
-    router.push(pathname);
+    navigate(pathname);
   };
 
   // Fetch submissions
-  const {data, error, isLoading, mutate} = useSWR(
-    ["admin-submissions", page, state, language, contestId, problemId, userId],
-    async () => {
-      const [err, res] = await api.listSubmissions({
-        page,
-        pageSize: 10,
-        state: state as Parameters<typeof api.listSubmissions>[0]["state"],
-        language: language as Parameters<typeof api.listSubmissions>[0]["language"],
-        contestId: contestId || undefined,
-        problemId: problemId || undefined,
-      });
-
-      if (err) {
-        throw new Error(err.message);
-      }
-      return res;
-    }
-  );
+  const {data, error, isLoading, refetch: mutate} = useQuery({
+    queryKey: ["admin-submissions", page, state, language, contestId, problemId, userId],
+    queryFn: () =>
+      unwrap(
+        api.GET("/submissions", {
+          params: {
+            query: {
+              page,
+              pageSize: 10,
+              contestId: contestId || undefined,
+              problemId: problemId || undefined,
+              state: state ? Number(state) : undefined,
+              language: language ? Number(language) : undefined,
+            },
+          },
+        }),
+      ),
+  });
 
   const submissions = (data?.submissions || []) as unknown as SubmissionModel[];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -117,11 +99,18 @@ export const AdminSubmissionsContent = ({
     }
     setRejudgingId(submission.id);
     try {
-      const [err] = await api.rejudgeSubmission({
-        submissionId: submission.id,
-        orgLogin: submission.organization_login,
-        contestLogin: submission.contest_login,
-      });
+      const {error: err} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge",
+        {
+          params: {
+            path: {
+              org_login: submission.organization_login,
+              contest_login: submission.contest_login,
+              submission_id: submission.id,
+            },
+          },
+        },
+      );
 
       if (err) {
         notifications.show({
@@ -339,7 +328,7 @@ export const AdminSubmissionsContent = ({
                       </Table.Td>
                       <Table.Td>
                         <Link
-                          href={
+                          to={
                             submission.organization_login
                               ? `/${submission.organization_login}/problems/${submission.problem_id}`
                               : `/problems/${submission.problem_id}`
@@ -354,7 +343,7 @@ export const AdminSubmissionsContent = ({
                       <Table.Td>
                         {submission.contest_login ? (
                           <Link
-                            href={
+                            to={
                               submission.organization_login
                                 ? `/${submission.organization_login}/${submission.contest_login}`
                                 : `/${submission.contest_login}`
@@ -370,7 +359,7 @@ export const AdminSubmissionsContent = ({
                         )}
                       </Table.Td>
                       <Table.Td>
-                        <Link href={`/@${submission.username}`} style={{textDecoration: "none"}}>
+                        <Link to={`/@${submission.username}`} style={{textDecoration: "none"}}>
                           <Text c="blue" lineClamp={1}>
                             {submission.username}
                           </Text>
@@ -418,7 +407,7 @@ export const AdminSubmissionsContent = ({
 
             {totalPages > 1 && (
               <Stack align="center" gap="md">
-                <NextPagination
+                <RoutePagination
                   pagination={{
                     page: page,
                     total: totalPages,

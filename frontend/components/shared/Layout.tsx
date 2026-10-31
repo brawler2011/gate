@@ -1,6 +1,6 @@
 "use client";
 
-import {AppShell, AppShellFooter, AppShellHeader, AppShellMain, Box,} from "@mantine/core";
+import {AppShell, AppShellFooter, AppShellHeader, AppShellMain, Box} from "@mantine/core";
 import React, {type ReactNode} from "react";
 
 import {Footer} from '@/components/shared/Footer';

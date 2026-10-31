@@ -3,22 +3,13 @@
 import {notifications} from '@mantine/notifications';
 import {useEffect, useRef, useState, useCallback, useMemo} from 'react';
 
-import {
-  SubmissionsEventType,
-  type SubmissionsMessage,
-  type MessageSubmissionCreated,
-  type MessageSubmissionQueued,
-  type MessageSubmissionCompilingStarted,
-  type MessageSubmissionTestingStarted,
-  type MessageSubmissionTestStarted,
-  type MessageSubmissionCompleted,
-} from '@/contracts/observer/v1';
+import {SubmissionsEventType, type SubmissionsMessage, type MessageSubmissionCreated, type MessageSubmissionQueued, type MessageSubmissionCompilingStarted, type MessageSubmissionTestingStarted, type MessageSubmissionTestStarted, type MessageSubmissionCompleted} from '@/contracts/observer/v1/schema';
 
-import {api, type ApiError} from './api';
+import {api} from './api';
 import {env} from './env';
 import {submissionsWsManager, type WsManagerStatus} from './submissionsWsManager';
 
-import type {ListSubmissionsResponseModel, SubmissionsListItemModel} from '@/contracts/core/v1';
+import type {ListSubmissionsResponseModel, SubmissionsListItemModel} from '@/contracts/core/v1/schema';
 
 // Progress info for a submission being tested
 interface TestProgress {
@@ -194,7 +185,7 @@ export const useSubmissionsWebSocket = ({
 }: UseSubmissionsWebSocketOptions): UseSubmissionsWebSocketReturn => {
   // Calculate filterKey first - used for initialization and change detection
   const filterKey = `${filter.orgLogin}-${filter.contestLogin}-${filter.contestId}-${filter.userId}-${filter.problemId}`;
-  
+
   const [submissions, setSubmissions] = useState<SubmissionWithProgress[]>(
     () => initialSubmissions.map(s => ({...s}))
   );
@@ -383,31 +374,47 @@ export const useSubmissionsWebSocket = ({
       throw new Error('snapshot scope "mine" requires userId');
     }
 
-    let error: ApiError | null = null;
-    let data: ListSubmissionsResponseModel | null = null;
+    let error: {message?: string} | null | undefined = null;
+    let data: ListSubmissionsResponseModel | null | undefined = null;
 
     if (snapshotScope === 'mine') {
-      [error, data] = await api.listContestSubmissions({
-        orgLogin: params.orgLogin,
-        contestLogin: params.contestLogin,
-        userId: userId!,
-        problemId: params.problemId,
-        page: 1,
-        pageSize,
-        sortOrder: 'desc',
-      });
+      const res = await api.GET(
+        "/organizations/{org_login}/contests/{contest_login}/submissions",
+        {
+          params: {
+            path: {org_login: params.orgLogin, contest_login: params.contestLogin},
+            query: {
+              page: 1,
+              pageSize,
+              userId: userId!,
+              problemId: params.problemId,
+              sortOrder: 'desc',
+            },
+          },
+        },
+      );
+      error = res.error;
+      data = res.data;
     } else {
-      [error, data] = await api.listContestSubmissions({
-        orgLogin: params.orgLogin,
-        contestLogin: params.contestLogin,
-        problemId: params.problemId,
-        userId: params.userId,
-        state: params.state,
-        sortOrder: params.sortOrder,
-        language: params.language,
-        page: params.page,
-        pageSize: params.pageSize,
-      });
+      const res = await api.GET(
+        "/organizations/{org_login}/contests/{contest_login}/submissions",
+        {
+          params: {
+            path: {org_login: params.orgLogin, contest_login: params.contestLogin},
+            query: {
+              page: params.page,
+              pageSize: params.pageSize,
+              userId: params.userId,
+              problemId: params.problemId,
+              state: params.state,
+              sortOrder: params.sortOrder,
+              language: params.language,
+            },
+          },
+        },
+      );
+      error = res.error;
+      data = res.data;
     }
 
     if (error || !data || !data.submissions) {
@@ -464,7 +471,7 @@ export const useSubmissionsWebSocket = ({
     }
 
     switch (data.event_type) {
-      case SubmissionsEventType.SUBMISSIONS_CREATED: {
+      case SubmissionsEventType.submissions_created: {
         const p = data.payload as MessageSubmissionCreated;
         const newSubmission = buildSubmissionFromCreated(p);
         setSubmissions(prev => {
@@ -479,18 +486,18 @@ export const useSubmissionsWebSocket = ({
         break;
       }
 
-      case SubmissionsEventType.SUBMISSIONS_QUEUED:
-      case SubmissionsEventType.SUBMISSIONS_COMPILING_STARTED:
-      case SubmissionsEventType.SUBMISSIONS_TESTING_STARTED: {
+      case SubmissionsEventType.submissions_queued:
+      case SubmissionsEventType.submissions_compiling_started:
+      case SubmissionsEventType.submissions_testing_started: {
         type QueuedUnion =
           | MessageSubmissionQueued
           | MessageSubmissionCompilingStarted
           | MessageSubmissionTestingStarted;
         const p = data.payload as QueuedUnion;
         let phase: TestProgress['phase'];
-        if (data.event_type === SubmissionsEventType.SUBMISSIONS_QUEUED) {
+        if (data.event_type === SubmissionsEventType.submissions_queued) {
           phase = 'queued';
-        } else if (data.event_type === SubmissionsEventType.SUBMISSIONS_COMPILING_STARTED) {
+        } else if (data.event_type === SubmissionsEventType.submissions_compiling_started) {
           phase = 'compiling';
         } else {
           phase = 'testing';
@@ -522,7 +529,7 @@ export const useSubmissionsWebSocket = ({
         break;
       }
 
-      case SubmissionsEventType.SUBMISSIONS_TEST_STARTED: {
+      case SubmissionsEventType.submissions_test_started: {
         const p = data.payload as MessageSubmissionTestStarted;
         const progress: TestProgress = {
           phase: 'testing',
@@ -554,7 +561,7 @@ export const useSubmissionsWebSocket = ({
         break;
       }
 
-      case SubmissionsEventType.SUBMISSIONS_COMPLETED: {
+      case SubmissionsEventType.submissions_completed: {
         const p = data.payload as MessageSubmissionCompleted;
         progressMapRef.current.delete(p.id);
 

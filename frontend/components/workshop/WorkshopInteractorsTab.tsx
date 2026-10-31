@@ -14,11 +14,34 @@ export const WorkshopInteractorsTab = (props: WorkshopFileTabProps): ReactNode =
       componentType="interactor"
       componentTitle="Интерактор"
       defaultFileName="interactor"
-      listFiles={(problemId) => api.listProblemInteractors({problemId})}
-      getFile={(problemId, name) => api.getProblemInteractor({problemId, name})}
-      createFile={(problemId, name, requestBody) => api.createProblemInteractor({problemId, name, requestBody})}
-      updateFile={(problemId, name, requestBody) => api.updateProblemInteractor({problemId, name, requestBody})}
-      deleteFile={(problemId, name) => api.deleteProblemInteractor({problemId, name})}
+      listFiles={(problemId) =>
+        api.GET("/problems/{problemId}/interactors", {
+          params: {path: {problemId}},
+        })
+      }
+      getFile={(problemId, name) =>
+        api.GET("/problems/{problemId}/interactors/{name}", {
+          params: {path: {problemId, name}},
+          parseAs: "text",
+        })
+      }
+      createFile={(problemId, name, requestBody) =>
+        api.POST("/problems/{problemId}/interactors", {
+          params: {path: {problemId}, query: {name}},
+          body: requestBody,
+        })
+      }
+      updateFile={(problemId, name, requestBody) =>
+        api.PUT("/problems/{problemId}/interactors/{name}", {
+          params: {path: {problemId, name}},
+          body: requestBody,
+        })
+      }
+      deleteFile={(problemId, name) =>
+        api.DELETE("/problems/{problemId}/interactors/{name}", {
+          params: {path: {problemId, name}},
+        })
+      }
     />
   );
 };

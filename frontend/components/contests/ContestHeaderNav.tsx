@@ -1,23 +1,12 @@
-"use client";
-
-import {
-  IconDeviceDesktop,
-  IconFileCode,
-  IconMail,
-  IconMessageDots,
-  IconPuzzle,
-  IconSend,
-  IconSettings,
-  IconUser,
-} from "@tabler/icons-react";
-import {usePathname} from "next/navigation";
+import {IconDeviceDesktop, IconFileCode, IconMail, IconMessageDots, IconPuzzle, IconSend, IconSettings, IconUser} from "@tabler/icons-react";
 import {type ReactNode} from "react";
+import {useLocation} from "react-router-dom";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 import {useSession} from "@/contexts/SessionContext";
 import {PermissionChecker, type ContestRoleResponse} from "@/lib/permissions";
 
-import type {ContestModel, UserModel} from "@/contracts/core/v1";
+import type {ContestModel, UserModel} from "@/contracts/core/v1/schema";
 
 export type ContestHeaderNavProps = {
   contest: ContestModel;
@@ -32,7 +21,7 @@ export const ContestHeaderNav = ({
   orgLogin,
   user: propUser,
 }: ContestHeaderNavProps): ReactNode => {
-  const pathname = usePathname();
+  const {pathname} = useLocation();
   const {user: sessionUser} = useSession();
   const user = propUser !== undefined ? propUser : sessionUser;
 

@@ -12,8 +12,8 @@ export type AdaptiveTabItem = {
 };
 
 export type UseAdaptiveTabsResult = {
-  containerRef: React.RefObject<HTMLElement>;
-  moreButtonRef: React.RefObject<HTMLButtonElement>;
+  containerRef: React.RefObject<HTMLElement | null>;
+  moreButtonRef: React.RefObject<HTMLButtonElement | null>;
   registerItem: (key: string, node: HTMLElement | null) => void;
   visibleItems: AdaptiveTabItem[];
   overflowItems: AdaptiveTabItem[];

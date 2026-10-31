@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Badge,
-  Box,
-  Button,
-  Code,
-  Group,
-  Modal,
-  Stack,
-  Text,
-} from "@mantine/core";
+import {Badge, Box, Button, Code, Group, Modal, Stack, Text} from "@mantine/core";
 
 import type {ReactNode} from "react";
 

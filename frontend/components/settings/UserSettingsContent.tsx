@@ -1,28 +1,9 @@
 "use client";
 
-import {
-  Alert,
-  Badge,
-  Button,
-  Container,
-  Divider,
-  Group,
-  Paper,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import {Alert, Badge, Button, Container, Divider, Group, Paper, PasswordInput, Stack, Text, TextInput, ThemeIcon, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
-import {
-  IconCheck,
-  IconKey,
-  IconMail,
-  IconUser,
-} from "@tabler/icons-react";
+import {IconCheck, IconKey, IconMail, IconUser} from "@tabler/icons-react";
 import {useState, type ReactNode} from "react";
 
 import {ClaimTemporaryAccountSection} from "@/components/users/ClaimTemporaryAccountSection";
@@ -30,7 +11,7 @@ import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {UserModel} from "@/contracts/core/v1";
+import type {UserModel} from "@/contracts/core/v1/schema";
 
 type Props = {
   initialUser: UserModel;
@@ -77,8 +58,8 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
   const handleChangePassword = async (values: typeof passwordForm.values) => {
     setPasswordLoading(true);
     try {
-      const [error, data] = await api.changePassword({
-        requestBody: {
+      const {data, error} = await api.POST("/users/me/change-password", {
+        body: {
           old_password: values.oldPassword,
           new_password: values.newPassword,
         },
@@ -119,8 +100,8 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
     setEmailLoading(true);
     setEmailChangeSuccess(null);
     try {
-      const [error] = await api.requestEmailChange({
-        requestBody: {
+      const {error} = await api.POST("/users/me/request-email-change", {
+        body: {
           password: values.currentPassword,
           new_email: values.newEmail.trim(),
         },
@@ -160,8 +141,8 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
     }
     setResendLoading(true);
     try {
-      const [error] = await api.resendVerification({
-        requestBody: {identifier: user.email},
+      const {error} = await api.POST("/auth/resend-verification", {
+        body: {identifier: user.email},
       });
       if (!error) {
         notifications.show({

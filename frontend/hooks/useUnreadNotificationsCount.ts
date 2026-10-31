@@ -27,7 +27,7 @@ export const useUnreadNotificationsCount = (
       setUnreadCount(0);
       return;
     }
-    const [error, data] = await api.getUnreadNotificationsCount();
+    const {error, data} = await api.GET("/notifications/unread-count");
     if (!error && data) {
       setUnreadCount(data.count);
     }

@@ -1,26 +1,14 @@
 "use client";
 
-import {
-  Button,
-  Center,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import {Button, Center, Group, SimpleGrid, Stack, Text, TextInput} from "@mantine/core";
 import {IconPlus, IconSearch} from "@tabler/icons-react";
 import {useMemo, useState} from "react";
 
 import {ProblemCard} from "@/components/problems/ProblemCard";
-import {NextPagination} from "@/components/shared/Pagination";
+import {RoutePagination} from "@/components/shared/Pagination";
 import {CreateProblemModal} from "@/components/workshop/CreateProblemModal";
 
-import type {
-  OrganizationModel,
-  PaginationModel,
-  ProblemsListItemModel,
-} from "@/contracts/core/v1";
+import type {OrganizationModel, PaginationModel, ProblemsListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -93,7 +81,7 @@ export const OrgProblemsTab = ({
 
       {pagination.total > 1 && (
         <Stack align="center">
-          <NextPagination
+          <RoutePagination
             pagination={pagination}
             baseUrl={`/${org.login}/problems`}
           />

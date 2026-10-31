@@ -1,48 +1,12 @@
-"use client";
-
-import {
-  ActionIcon,
-  Group,
-  Loader,
-  Menu,
-  MenuDropdown,
-  MenuItem,
-  MenuTarget,
-  Table,
-  TableScrollContainer,
-  TableTbody,
-  TableTd,
-  TableTh,
-  TableThead,
-  TableTr,
-  Text,
-  Tooltip,
-  Transition,
-} from "@mantine/core";
-import {
-  IconBan,
-  IconDots,
-  IconLockOpen,
-  IconRefresh,
-} from "@tabler/icons-react";
-import Link from "next/link";
+import {ActionIcon, Group, Loader, Menu, MenuDropdown, MenuItem, MenuTarget, Table, TableScrollContainer, TableTbody, TableTd, TableTh, TableThead, TableTr, Text, Tooltip, Transition} from "@mantine/core";
+import {IconBan, IconDots, IconLockOpen, IconRefresh} from "@tabler/icons-react";
 import React, {useEffect, useState, type ReactNode} from "react";
+import {Link} from "react-router-dom";
 
-import {
-  LangString,
-  numberToLetters,
-  ProblemTitle,
-  ShortVerdictString,
-  StateColor,
-  StateString,
-  TimeBeautify,
-} from "@/lib/lib";
+import {LangString, numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
-import {
-  SubmissionSanctionsModal,
-  type SanctionActionType,
-} from "./SubmissionSanctionsModal";
+import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
 import styles from "./SubmissionsList.module.css";
 
 import type {SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";
@@ -162,7 +126,7 @@ const SubmissionRow = ({
             <Text>{TimeBeautify(submission.created_at)}</Text>
           </TableTd>
           <TableTd ta="center">
-            <Link href={`/@${submission.username}`} style={{color: 'inherit'}}>
+            <Link to={`/@${submission.username}`} style={{color: 'inherit'}}>
               <Text span td="underline">
                 {submission.username}
               </Text>
@@ -170,7 +134,7 @@ const SubmissionRow = ({
           </TableTd>
           <TableTd ta="center">
             <Link
-              href={
+              to={
                 submission.organization_login && submission.contest_login
                   ? `/${submission.organization_login}/${submission.contest_login}/${numberToLetters(submission.position)}`
                   : `/${submission.contest_login}/${numberToLetters(submission.position)}`

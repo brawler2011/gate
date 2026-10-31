@@ -1,125 +1,30 @@
 package pg
 
 import (
-	"encoding/json"
 	"testing"
-	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestMapOutboxEvent_HeadersHandling(t *testing.T) {
-	testID := uuid.New()
-	testAggregateID := uuid.New()
-	now := time.Now().UTC()
-	errMsg := "some error"
-
-	t.Run("valid headers JSON", func(t *testing.T) {
-		headersMap := map[string]string{
-			"X-Request-ID":  "request-123",
-			"custom-header": "rojo=1",
-			"x-custom":      "value",
-		}
-		rawJSON, err := json.Marshal(headersMap)
-		require.NoError(t, err)
-
-		sqlcEvent := sqlc.OutboxEvent{
-			ID:           testID,
-			AggregateID:  testAggregateID,
-			EventType:    models.OutboxEventSubmissionCreated,
-			Payload:      []byte(`{"key":"value"}`),
-			Status:       models.OutboxEventStatusPending,
-			RetryCount:   1,
-			ErrorMessage: &errMsg,
-			CreatedAt:    now,
-			ProcessedAt:  &now,
-			LockedAt:     &now,
-			DeadlineAt:   &now,
-			Headers:      rawJSON,
-		}
-
-		result := mapOutboxEvent(sqlcEvent)
-
-		assert.Equal(t, testID, result.Id)
-		assert.Equal(t, testAggregateID, result.AggregateID)
-		assert.Equal(t, models.OutboxEventSubmissionCreated, result.EventType)
-		assert.JSONEq(t, `{"key":"value"}`, string(result.Payload))
-		assert.Equal(t, models.OutboxEventStatusPending, result.Status)
-		assert.Equal(t, int32(1), result.RetryCount)
-		assert.Equal(t, &errMsg, result.ErrorMessage)
-		assert.Equal(t, now, result.CreatedAt)
-		assert.Equal(t, &now, result.ProcessedAt)
-		assert.Equal(t, &now, result.LockedAt)
-		assert.Equal(t, &now, result.DeadlineAt)
-		assert.NotNil(t, result.Headers)
-		assert.Equal(t, headersMap, result.Headers)
-	})
-
-	t.Run("empty headers bytes returns non-nil map", func(t *testing.T) {
-		sqlcEvent := sqlc.OutboxEvent{
-			ID:          testID,
-			AggregateID: testAggregateID,
-			EventType:   models.OutboxEventSubmissionCreated,
-			Payload:     []byte(`{}`),
-			Status:      models.OutboxEventStatusPending,
-			Headers:     nil,
-		}
-
-		result := mapOutboxEvent(sqlcEvent)
-
-		assert.NotNil(t, result.Headers)
-		assert.Empty(t, result.Headers)
-	})
-
-	t.Run("empty JSON object returns non-nil map", func(t *testing.T) {
-		sqlcEvent := sqlc.OutboxEvent{
-			ID:          testID,
-			AggregateID: testAggregateID,
-			EventType:   models.OutboxEventSubmissionCreated,
-			Payload:     []byte(`{}`),
-			Status:      models.OutboxEventStatusPending,
-			Headers:     []byte("{}"),
-		}
-
-		result := mapOutboxEvent(sqlcEvent)
-
-		assert.NotNil(t, result.Headers)
-		assert.Empty(t, result.Headers)
-	})
-
-	t.Run("null JSON returns non-nil map", func(t *testing.T) {
-		sqlcEvent := sqlc.OutboxEvent{
-			ID:          testID,
-			AggregateID: testAggregateID,
-			EventType:   models.OutboxEventSubmissionCreated,
-			Payload:     []byte(`{}`),
-			Status:      models.OutboxEventStatusPending,
-			Headers:     []byte("null"),
-		}
-
-		result := mapOutboxEvent(sqlcEvent)
-
-		assert.NotNil(t, result.Headers)
-		assert.Empty(t, result.Headers)
-	})
-
-	t.Run("invalid JSON returns non-nil empty map without error", func(t *testing.T) {
-		sqlcEvent := sqlc.OutboxEvent{
-			ID:          testID,
-			AggregateID: testAggregateID,
-			EventType:   models.OutboxEventSubmissionCreated,
-			Payload:     []byte(`{}`),
-			Status:      models.OutboxEventStatusPending,
-			Headers:     []byte("invalid-json{"),
-		}
-
-		result := mapOutboxEvent(sqlcEvent)
-
-		assert.NotNil(t, result.Headers)
-		assert.Empty(t, result.Headers)
-	})
+func TestMapOutboxEventNormalizesHeaders(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		raw  []byte
+		want map[string]string
+	}{
+		{"request metadata", []byte(`{"X-Request-ID":"request-123","custom-header":"Привет\n\"quoted\""}`), map[string]string{"X-Request-ID": "request-123", "custom-header": "Привет\n\"quoted\""}},
+		{"absent", nil, map[string]string{}},
+		{"empty object", []byte(`{}`), map[string]string{}},
+		{"null", []byte(`null`), map[string]string{}},
+		{"malformed", []byte(`{"key":`), map[string]string{}},
+		{"wrong container", []byte(`["value"]`), map[string]string{}},
+		{"wrong value type discards partial headers", []byte(`{"valid":"value","invalid":42}`), map[string]string{}},
+		{"null value", []byte(`{"key":null}`), map[string]string{"key": ""}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result := mapOutboxEvent(sqlc.OutboxEvent{Headers: tc.raw})
+			require.Equal(t, tc.want, result.Headers)
+		})
+	}
 }

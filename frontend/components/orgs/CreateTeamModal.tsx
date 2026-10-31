@@ -1,11 +1,9 @@
-"use client";
-
 import {Alert, Button, Modal, Stack, TextInput} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconAlertCircle, IconPlus} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
 import {useState} from "react";
+import {useRevalidator} from "react-router-dom";
 
 import {api} from "@/lib/api";
 
@@ -21,7 +19,7 @@ export const CreateTeamModal = ({orgId}: Props): ReactNode => {
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const router = useRouter();
+  const revalidator = useRevalidator();
 
   const handleClose = () => {
     close();
@@ -42,8 +40,8 @@ export const CreateTeamModal = ({orgId}: Props): ReactNode => {
     }
 
     setLoading(true);
-    const [error] = await api.createTeam({
-      requestBody: {
+    const {error} = await api.POST("/teams", {
+      body: {
         name: trimmed,
         organization_id: orgId,
       },
@@ -62,7 +60,7 @@ export const CreateTeamModal = ({orgId}: Props): ReactNode => {
     });
 
     handleClose();
-    router.refresh();
+    void revalidator.revalidate();
   };
 
   return (

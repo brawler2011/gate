@@ -1,29 +1,22 @@
-import {afterEach, describe, expect, it} from "bun:test";
+import {describe, expect, it} from 'bun:test';
 
-import {env} from "../lib/env";
+import {env} from '../lib/env';
 
-const originalEnv = {...process.env};
-afterEach(() => {
-  process.env = {...originalEnv};
-});
-
-describe("Required application environment", () => {
-  for (const [name, getter] of [
-    ["BACKEND_API_URL", env.getBackendApiUrl],
-    ["NEXT_PUBLIC_WEBSOCKET_URL", env.getWebSocketUrl],
-    ["NEXT_PUBLIC_APP_URL", env.getAppUrl],
-  ] as const) {
-    it(`${name} rejects missing and blank values`, () => {
-      for (const value of [undefined, "", " \t\n"]) {
-        if (value === undefined) {
-          delete process.env[name];
-        } else {
-          process.env[name] = value;
-        }
-        expect(getter).toThrow(name);
+describe('Same-origin SPA URLs', () => {
+  it('derives public and WebSocket URLs from the browser location', () => {
+    const previous = Object.getOwnPropertyDescriptor(globalThis, 'window');
+    try {
+      for (const [origin, ws] of [['https://gate.test', 'wss://gate.test/ws'], ['http://localhost:5173', 'ws://localhost:5173/ws']]) {
+        Object.defineProperty(globalThis, 'window', {value: {location: {origin}}, configurable: true});
+        expect(env.getAppUrl()).toBe(origin!);
+        expect(env.getWebSocketUrl()).toBe(ws!);
       }
-      process.env[name] = "https://gate.test";
-      expect(getter()).toBe("https://gate.test");
-    });
-  }
+    } finally {
+      if (previous) {
+        Object.defineProperty(globalThis, 'window', previous);
+      } else {
+        Reflect.deleteProperty(globalThis, 'window');
+      }
+    }
+  });
 });

@@ -1,14 +1,12 @@
-"use client";
-
 import {Badge, Card, Center, Skeleton, Stack, Table, Text} from "@mantine/core";
 import {IconTrophy} from "@tabler/icons-react";
-import Link from "next/link";
-import useSWR from "swr";
+import {useQuery} from "@tanstack/react-query";
+import {Link} from "react-router-dom";
 
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
 
-import type {ContestModel} from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 interface TeamContestsTabProps {
@@ -26,10 +24,15 @@ const getContestStatus = (contest: ContestModel, now: number): string => {
 };
 
 export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
-  const {data, isLoading} = useSWR(["team-contests", teamId], async () => ({
-    result: await api.listTeamContests({id: teamId}),
-    loadedAt: Date.now(),
-  }));
+  const {data, isLoading} = useQuery({
+    queryKey: ["team-contests", teamId],
+    queryFn: async () => ({
+      result: await api.GET("/teams/{id}/contests", {
+        params: {path: {id: teamId}},
+      }),
+      loadedAt: Date.now(),
+    }),
+  });
 
   if (isLoading || !data) {
     return (
@@ -41,9 +44,19 @@ export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
     );
   }
 
-  const [error, response] = data.result;
+  const {error, data: response, response: rawResponse} = data.result;
   if (error) {
-    return <ErrorDisplay error={error} />;
+    return (
+      <ErrorDisplay
+        error={{
+          status: rawResponse.status,
+          message:
+            (error as {message?: string})?.message ||
+            rawResponse.statusText ||
+            "Ошибка",
+        }}
+      />
+    );
   }
   const contests = response.contests;
 
@@ -79,7 +92,7 @@ export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
               <Table.Td>
                 <Text
                   component={Link}
-                  href={`/${c.organization_login}/${c.login || c.id}`}
+                  to={`/${c.organization_login}/${c.login || c.id}`}
                   size="sm"
                   fw={500}
                   c="blue"

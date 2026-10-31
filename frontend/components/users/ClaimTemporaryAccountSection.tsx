@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  Badge,
-  Button,
-  Group,
-  Paper,
-  PasswordInput,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
+import {Badge, Button, Group, Paper, PasswordInput, Stack, Table, Text, TextInput, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconLink} from "@tabler/icons-react";
@@ -19,7 +8,7 @@ import {useCallback, useEffect, useState} from "react";
 
 import {api} from "@/lib/api";
 
-import type {ClaimedAccountItem} from "@/contracts/core/v1";
+import type {ClaimedAccountItem} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 export const ClaimTemporaryAccountSection = (): ReactNode => {
@@ -40,7 +29,7 @@ export const ClaimTemporaryAccountSection = (): ReactNode => {
 
   const loadClaimedAccounts = useCallback(async () => {
     setFetchingList(true);
-    const [error, data] = await api.listMyClaimedAccounts();
+    const {data, error} = await api.GET("/users/me/claimed-accounts");
     setFetchingList(false);
     if (!error && data?.accounts) {
       setClaimedAccounts(data.accounts);
@@ -53,8 +42,8 @@ export const ClaimTemporaryAccountSection = (): ReactNode => {
 
   const handleClaim = async (values: typeof form.values) => {
     setLoading(true);
-    const [error, data] = await api.claimTemporaryUser({
-      requestBody: {
+    const {data, error} = await api.POST("/users/claim-temporary", {
+      body: {
         username: values.username.trim(),
         password: values.password,
       },

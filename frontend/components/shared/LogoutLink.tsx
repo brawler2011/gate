@@ -1,8 +1,6 @@
-"use client";
-
 import {Button} from "@mantine/core";
-import {useRouter} from "next/navigation";
 import {useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
@@ -13,21 +11,19 @@ import type {ReactNode} from "react";
 type LogoutLinkProps = ButtonProps & { children?: ReactNode };
 
 const LogoutLink = (props: LogoutLinkProps): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const {setUser} = useSession();
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await api.logout();
+      await api.POST("/auth/logout");
       setUser(null);
-      router.push("/auth/login");
-      router.refresh();
+      navigate("/auth/login");
     } catch {
       setUser(null);
-      router.push("/auth/login");
-      router.refresh();
+      navigate("/auth/login");
     } finally {
       setLoading(false);
     }

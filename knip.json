@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [
+    "frontend/contracts/**"
+  ],
+  "ignoreDependencies": [
+    "ajv"
+  ],
+  "rules": {
+    "exports": "error",
+    "types": "error"
+  },
+  "entry": [
+    "frontend/tests/**/*.{test,spec}.{ts,tsx}"
+  ]
+}

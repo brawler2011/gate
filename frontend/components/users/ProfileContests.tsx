@@ -1,13 +1,11 @@
-"use client";
-
 import {Anchor, Badge, Center, Stack, Table, Tabs, Text} from "@mantine/core";
 import {IconTrophy} from "@tabler/icons-react";
-import Link from "next/link";
+import {Link} from "react-router-dom";
 
-import {NextPagination} from "@/components/shared/Pagination";
+import {RoutePagination} from "@/components/shared/Pagination";
 import {TimeBeautify} from "@/lib/lib";
 
-import type {ContestModel} from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type ProfileContestsProps = {
@@ -46,7 +44,7 @@ export const ProfileContests = ({
                 {contests.map((contest) => (
                   <Table.Tr key={contest.id}>
                     <Table.Td>
-                      <Anchor component={Link} href={`/${contest.organization_login}/${contest.login || contest.id}`} size="sm">
+                      <Anchor component={Link} to={`/${contest.organization_login}/${contest.login || contest.id}`} size="sm">
                         {contest.title}
                       </Anchor>
                     </Table.Td>
@@ -70,7 +68,7 @@ export const ProfileContests = ({
             </Table>
             {contestsPagination && contestsPagination.total > 1 && (
               <Stack align="center" mt="md">
-                <NextPagination
+                <RoutePagination
                   pagination={{page: contestsPage, total: contestsPagination.total}}
                   baseUrl={`/@${username}`}
                   queryParams={{contestsPage}}

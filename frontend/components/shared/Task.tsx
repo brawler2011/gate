@@ -1,34 +1,15 @@
-"use client";
-
-import {
-  Box,
-  Container,
-  NavLink,
-  Paper,
-  Stack,
-  Title,
-} from "@mantine/core";
-import Link from "next/link";
+import {Box, Container, NavLink, Paper, Stack, Title} from "@mantine/core";
 import React, {type ReactNode} from "react";
+import {Link} from "react-router-dom";
 
 import {Problem} from "@/components/problems/Problem";
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
 import {RecentSubmissionsTable} from "@/components/submissions/RecentSubmissionsTable";
 import {api} from "@/lib/api";
-import {
-  CONTEST_SIDEBAR_LEFT_WIDTH,
-  CONTEST_SIDEBAR_RIGHT_WIDTH,
-  LANGUAGE_MAP,
-} from "@/lib/constants";
+import {CONTEST_SIDEBAR_LEFT_WIDTH, CONTEST_SIDEBAR_RIGHT_WIDTH, LANGUAGE_MAP} from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
 
-import type {
-  ContestModel,
-  ContestProblemListItemModel,
-  ContestProblemModel,
-  SubmissionsListItemModel,
-  UserModel,
-} from "@/contracts/core/v1";
+import type {ContestModel, ContestProblemListItemModel, ContestProblemModel, SubmissionsListItemModel, UserModel} from "@/contracts/core/v1/schema";
 
 type PageProps = {
   tasks: ContestProblemListItemModel[];
@@ -73,12 +54,16 @@ const Task = ({
       submissionContent = submissionData;
     }
 
-    const [error, response] = await api.createSubmission({
-      problemId,
-      organizationLogin: contest.organization_login,
-      contestLogin: contest.login,
-      language: languageCode,
-      requestBody: {
+    const {data: response, error} = await api.POST("/submissions", {
+      params: {
+        query: {
+          problem_id: problemId,
+          organization_login: contest.organization_login,
+          contest_login: contest.login,
+          language: languageCode,
+        },
+      },
+      body: {
         submission: submissionContent,
       },
     });
@@ -133,7 +118,7 @@ const Task = ({
                     <NavLink
                       key={t.problem_id || index}
                       component={Link}
-                      href={`/${contest.organization_login}/${contest.login}/${letter}`}
+                      to={`/${contest.organization_login}/${contest.login}/${letter}`}
                       label={`${letter}. ${t.title}`}
                       active={isActive}
                       styles={{

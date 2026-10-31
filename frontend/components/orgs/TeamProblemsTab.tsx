@@ -1,13 +1,11 @@
-"use client";
-
 import {Badge, Card, Center, Loader, Stack, Table, Text} from "@mantine/core";
 import {IconFileCode} from "@tabler/icons-react";
-import Link from "next/link";
 import {useCallback, useEffect, useState} from "react";
+import {Link} from "react-router-dom";
 
 import {api} from "@/lib/api";
 
-import type * as corev1 from "@/contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 interface TeamProblemsTabProps {
@@ -20,7 +18,9 @@ export const TeamProblemsTab = ({teamId}: TeamProblemsTabProps): ReactNode => {
 
   const loadProblems = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listTeamProblems({id: teamId});
+    const {data: response, error} = await api.GET("/teams/{id}/problems", {
+      params: {path: {id: teamId}},
+    });
     setLoading(false);
 
     if (error || !response) {
@@ -74,7 +74,7 @@ export const TeamProblemsTab = ({teamId}: TeamProblemsTabProps): ReactNode => {
               <Table.Td>
                 <Text
                   component={Link}
-                  href={`/${p.organization_login}/problems/${p.id}`}
+                  to={`/${p.organization_login}/problems/${p.id}`}
                   size="sm"
                   fw={500}
                   c="blue"

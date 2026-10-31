@@ -1,17 +1,15 @@
-"use client";
-
 import {Card, Text, Title, Group} from '@mantine/core';
 import {IconBuilding} from '@tabler/icons-react';
-import Link from 'next/link';
+import {Link} from "react-router-dom";
 
-import type {OrganizationModel} from '@/contracts/core/v1';
+import type {OrganizationModel} from '@/contracts/core/v1/schema';
 import type {ReactNode} from "react";
 
 type Props = { org: OrganizationModel };
 
 export const OrgCard = ({org}: Props): ReactNode => {
   return (
-    <Card component={Link} href={`/${org.login}`} withBorder radius="md" padding="md">
+    <Card component={Link} to={`/${org.login}`} withBorder radius="md" padding="md">
       <Group mb="xs" gap="xs">
         <IconBuilding size={18} color="var(--mantine-color-teal-6)" />
         <Title order={5} lineClamp={1}>{org.name}</Title>

@@ -17,7 +17,7 @@
 
 ## Guidelines Compliance (`AGENTS.md`)
 - [ ] Surgical changes: only relevant files and lines touched, no extraneous formatting
-- [ ] Frontend (if applicable): `next.config.mjs` and `next-env.d.ts` untouched
+- [ ] Frontend (if applicable): React/Vite SPA architecture preserved
 - [ ] Frontend (if applicable): No fallback values for environment variables in code
 - [ ] Frontend (if applicable): No Server Actions (`'use server'`)
 - [ ] Backend (if applicable): `slog` used exclusively for logging

@@ -1,10 +1,8 @@
-"use client";
-
 import {Group, Stack, Text, Title, Badge, Card, ThemeIcon} from "@mantine/core";
 import {IconTrophy, IconChevronRight} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
+import {useNavigate} from "react-router-dom";
 
-import type {DashboardContestModel} from "@/contracts/core/v1";
+import type {DashboardContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type DashboardContestsListProps = {
@@ -12,7 +10,7 @@ type DashboardContestsListProps = {
 };
 
 export const DashboardContestsList = ({contests}: DashboardContestsListProps): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   if (contests.length === 0) {
     return (
@@ -68,7 +66,7 @@ export const DashboardContestsList = ({contests}: DashboardContestsListProps): R
               cursor: "pointer",
               transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
             }}
-            onClick={() => router.push(`/${contest.organization_login}/${contest.login}`)}
+            onClick={() => navigate(`/${contest.organization_login}/${contest.login}`)}
             onMouseEnter={(e) => {
               const el = e.currentTarget;
               el.style.transform = "translateY(-2px)";

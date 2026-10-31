@@ -1,6 +1,6 @@
 "use client";
 
-import {SubmissionsWsCloseCode} from '@/contracts/observer/v1';
+import {SubmissionsWsCloseCode} from '@/contracts/observer/v1/schema';
 
 import {env} from './env';
 

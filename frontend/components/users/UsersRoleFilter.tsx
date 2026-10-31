@@ -1,7 +1,5 @@
-"use client";
-
 import {Badge, Select, Text} from "@mantine/core";
-import {useRouter, useSearchParams} from "next/navigation";
+import {useNavigate, useSearchParams} from "react-router-dom";
 
 import type {ReactNode} from "react";
 
@@ -11,8 +9,8 @@ const ROLE_OPTIONS = [
 ] as const;
 
 export const UsersRoleFilter = (): ReactNode => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const currentRole = searchParams.get("role") || "";
 
   const handleChange = (value: string | null) => {
@@ -30,7 +28,7 @@ export const UsersRoleFilter = (): ReactNode => {
     params.delete("page"); // Reset to first page on filter change
 
     const query = params.toString();
-    router.push(`/admin/users${query ? `?${query}` : ""}`);
+    navigate(`/admin/users${query ? `?${query}` : ""}`);
   };
 
   const selectedRole = ROLE_OPTIONS.find((r) => r.value === currentRole);

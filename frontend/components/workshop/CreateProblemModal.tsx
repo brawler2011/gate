@@ -1,20 +1,11 @@
-"use client";
-
-import {
-  Button,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import {Button, Modal, Select, Stack, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 import {api} from "@/lib/api";
 
-import type {OrganizationModel, ProblemTemplateModel} from "@/contracts/core/v1";
+import type {OrganizationModel, ProblemTemplateModel} from "@/contracts/core/v1/schema";
 import type {ComboboxItem, ComboboxItemGroup} from "@mantine/core";
 import type {ReactNode} from "react";
 
@@ -33,7 +24,7 @@ export const CreateProblemModal = ({
   defaultOrgId,
   lockOrganization = false,
 }: Props): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("New Problem");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
   const [templateId, setTemplateId] = useState<string | null>("builtin:a-plus-b");
@@ -56,8 +47,12 @@ export const CreateProblemModal = ({
   useEffect(() => {
     if (opened && orgId) {
       setLoadingTemplates(true);
-      api.listProblemTemplates({organizationId: orgId})
-        .then(([err, res]) => {
+      api.GET("/problem-templates", {
+        params: {
+          query: {organization_id: orgId},
+        },
+      })
+        .then(({data: res, error: err}) => {
           if (!err && res) {
             setTemplateList(res);
 
@@ -117,11 +112,18 @@ export const CreateProblemModal = ({
 
     setLoading(true);
     try {
-      const [createError, createResponse] = await api.createProblem({
-        title: title.trim() || "New Problem",
-        organizationId: orgId,
-        templateId: templateId,
-      });
+      const {data: createResponse, error: createError} = await api.POST(
+        "/problems",
+        {
+          params: {
+            query: {
+              title: title.trim() || "New Problem",
+              organization_id: orgId || undefined,
+              template_id: templateId,
+            },
+          },
+        },
+      );
       if (createError) {
         throw new Error(createError.message);
       }
@@ -134,7 +136,7 @@ export const CreateProblemModal = ({
       const orgSlug = selectedOrg?.login || selectedOrg?.id || "org";
 
       onClose();
-      router.push(`/${orgSlug}/problems/${problemId}`);
+      navigate(`/${orgSlug}/problems/${problemId}`);
     } catch (err) {
       notifications.show({
         title: "Ошибка",

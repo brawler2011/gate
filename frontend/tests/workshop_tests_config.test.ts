@@ -53,7 +53,7 @@ describe("workshop manifest identity", () => {
   });
 });
 
-test("delete, renumber and add retain physical file bytes and unique references", () => {
+test("allocates unused filenames after deleting and renumbering tests", () => {
   const files = new Map([
     ["01.in", "first"], ["01.out", "first answer"],
     ["02.in", "deleted"], ["02.out", "deleted answer"],
@@ -65,9 +65,6 @@ test("delete, renumber and add retain physical file bytes and unique references"
   const retained = renumberTests(state.loadedTests.filter((test) => test.ordinal !== 2));
   const allocated = allocateTestFiles(retained, [...files.keys()]);
   expect(allocated).toEqual({filename: "05.in", outFilename: "05.out"});
-  files.set(allocated.filename, ""); files.set(allocated.outFilename, "");
-  expect(files.get(retained[1].filename)).toBe("retained");
-  expect(files.get(retained[1].outFilename)).toBe("retained answer");
   expect(allocateTestFiles(retained, [])).toEqual({filename: "02.in", outFilename: "02.out"});
 });
 

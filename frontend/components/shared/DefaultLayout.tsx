@@ -3,12 +3,8 @@ import {Header} from "@/components/shared/Header";
 import {DefaultLayoutClient} from "./Layout";
 
 import type {AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
-import type {
-  HeaderContest,
-  HeaderOrganization,
-  HeaderProblem,
-} from "@/components/shared/Header";
-import type {UserModel} from "@/contracts/core/v1";
+import type {HeaderContest, HeaderOrganization, HeaderProblem} from "@/components/shared/Header";
+import type {UserModel} from "@/contracts/core/v1/schema";
 import type {AppShellProps} from "@mantine/core";
 import type {ReactNode} from "react";
 

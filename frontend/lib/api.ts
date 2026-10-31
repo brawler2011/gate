@@ -1,134 +1,230 @@
-import {notFound, redirect} from "next/navigation";
-import * as React from "react";
+import createFetchClient from "openapi-fetch";
+import createClient from "openapi-react-query";
+import {redirect} from "react-router-dom";
 
-import {core, type DefaultService} from "@/contracts/core/v1";
-import {ApiError as CoreApiError} from "@/contracts/core/v1/core/ApiError";
-import {env} from "@/lib/env";
-import {TestFilesHttpRequest} from "@/lib/testFilesHttpRequest";
+import type {paths} from "@/contracts/core/v1/schema";
+import type {Client, MaybeOptionalInit, ParseAsResponse} from "openapi-fetch";
+import type {
+  ErrorResponse,
+  HttpMethod,
+  MediaType,
+  PathsWithMethod,
+  Readable,
+  RequiredKeysOf,
+  SuccessResponse,
+} from "openapi-typescript-helpers";
 
-const cache = typeof (React as unknown as {cache?: <T>(fn: T) => T}).cache === "function"
-  ? (React as unknown as {cache: <T>(fn: T) => T}).cache
-  : <T>(fn: T): T => fn;
+export type ApiError = {status: number; message: string; requestId?: string};
 
-const sessionCookieName = "session_id";
+class ApiRequest {
+  url: string;
+  method: string;
+  headers: Headers;
+  init?: RequestInit;
+  body?: BodyInit | null;
+  signal?: AbortSignal | null;
 
-const getBaseUrl = () => {
-  return env.getBackendApiUrl();
-};
+  constructor(input: string | {url: string}, init?: RequestInit) {
+    this.url = typeof input === "string" ? input : input.url;
+    this.method = init?.method || "GET";
+    this.headers = new Headers(init?.headers);
+    this.init = init;
+    this.body = init?.body;
+    this.signal = init?.signal;
+  }
 
-/**
- * API error info returned from methods
- */
-export type ApiError = {
-  status: number;
-  message: string;
-  requestId?: string;
-};
+  clone(): ApiRequest {
+    return new ApiRequest(this.url, this.init);
+  }
+}
 
-export type ApiResult<R> = [error: ApiError, data: null] | [error: null, data: R];
+const fetchClient = createFetchClient<paths>({
+  baseUrl: "/api",
+  credentials: "include",
+  Request: ApiRequest as unknown as typeof Request,
+  bodySerializer: (body) => {
+    if (typeof body === "string") {
+      return new Blob([body], {type: "text/plain"});
+    }
+    if (
+      (body as unknown) instanceof Blob ||
+      (body as unknown) instanceof ArrayBuffer ||
+      ArrayBuffer.isView(body) ||
+      (body as unknown) instanceof FormData
+    ) {
+      return body as unknown as BodyInit;
+    }
+    return JSON.stringify(body);
+  },
+  fetch: (req: unknown, init?: RequestInit) => {
+    const request = req as ApiRequest;
+    const url = typeof req === "string" ? req : request.url;
+    const options: RequestInit = {
+      credentials: "include",
+      signal: request.signal,
+      method: request.method,
+      headers: request.headers,
+      body: request.body,
+      ...init,
+    };
+    return globalThis.fetch(url, options);
+  },
+});
 
-export type ApiFacade = {
-  [K in keyof DefaultService]: DefaultService[K] extends (...args: infer A) => Promise<infer R>
-  ? (...args: A) => Promise<ApiResult<R>>
-  : DefaultService[K];
-};
-
-const createApiFacade = (client: core): ApiFacade => {
-  return new Proxy(client, {
-    get: (target, prop: string) => {
-      const service = target.default as unknown as Record<string, unknown>;
-      const targetObj = target as unknown as Record<string, unknown>;
-      const fn = typeof service[prop] === "function" ? service[prop] : targetObj[prop];
-
-      if (typeof fn === "function") {
-        return async (...args: unknown[]) => {
-          try {
-            const data = await (fn as (...a: unknown[]) => unknown).apply(service || target, args);
-            return [null, data];
-          } catch (error) {
-            if (error instanceof CoreApiError) {
-              const body = error.body as { message?: string; request_id?: string } | undefined;
-              if (error.status !== 401) {
-                const requestId = typeof body?.request_id === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(body.request_id)
-                  ? body.request_id : undefined;
-                console.error("API Error:", {operation: prop, status: error.status, requestId, errorType: "ApiError"});
-              }
-              return [{
-                status: error.status,
-                message: body?.message || error.statusText,
-                requestId: body?.request_id,
-              }, null];
-            }
-            console.error("Unknown API Error:", {operation: prop, status: 500, errorType: error instanceof Error ? "Error" : "Unknown"});
-            return [{status: 500, message: "Неизвестная ошибка"}, null];
-          }
-        };
+fetchClient.use({
+  onRequest: async ({request}) => {
+    const body = request.body as unknown;
+    if (body instanceof Blob) {
+      if (body.type) {
+        request.headers.set("Content-Type", body.type);
+      } else if (
+        !request.headers.get("Content-Type") ||
+        request.headers.get("Content-Type") === "application/json"
+      ) {
+        request.headers.set("Content-Type", "application/octet-stream");
       }
-      return fn;
-    },
-  }) as unknown as ApiFacade;
-};
-
-const rawAuthClient = new core({
-  BASE: getBaseUrl(),
-  ENCODE_PATH: encodeURIComponent,
-  CREDENTIALS: "include",
-  HEADERS: async (): Promise<Record<string, string>> => {
-    if (typeof window === "undefined") {
+    } else if (body instanceof ArrayBuffer || ArrayBuffer.isView(body)) {
+      if (
+        !request.headers.get("Content-Type") ||
+        request.headers.get("Content-Type") === "application/json"
+      ) {
+        request.headers.set("Content-Type", "application/octet-stream");
+      }
+    }
+  },
+  onResponse: async ({response, schemaPath}) => {
+    if (response.status >= 400) {
+      let info: Record<string, unknown> | undefined;
       try {
-        const {cookies} = await import("next/headers");
-        const requestCookies = await cookies();
-        if (requestCookies.has(sessionCookieName)) {
-          const cookie = requestCookies.get(sessionCookieName);
-          if (cookie?.name && cookie?.value) {
-            return {Cookie: `${sessionCookieName}=${cookie.value}`};
-          }
+        const cloned = response.clone();
+        const body: unknown = await cloned.json();
+        if (body && typeof body === "object" && !Array.isArray(body)) {
+          info = body as Record<string, unknown>;
         }
       } catch {
-        // Outside HTTP request context
+        // ignore
       }
+      const requestId = typeof info?.request_id === "string" ? info.request_id : undefined;
+      if (response.status !== 401) {
+        console.error("API Error:", {
+          operation: schemaPath,
+          status: response.status,
+          requestId: requestId && /^[A-Za-z0-9._:-]{1,128}$/.test(requestId) ? requestId : undefined,
+          errorType: "ApiError",
+        });
+      }
+      const headers = new Headers(response.headers);
+      headers.delete("Content-Length");
+      headers.delete("Content-Encoding");
+      headers.set("Content-Type", "application/json");
+      return Response.json({
+        ...info,
+        status: response.status,
+        message: typeof info?.message === "string" ? info.message : response.statusText || "API Error",
+        requestId,
+      }, {status: response.status, statusText: response.statusText, headers});
     }
-    return {};
   },
-}, TestFilesHttpRequest);
+  onError: async ({error}) => {
+    if (error instanceof Error && error.name === "AbortError") {
+      return;
+    }
+    return Response.json({message: "Не удалось выполнить запрос"}, {status: 500});
+  },
+});
 
-const rawPublicClient = new core({
-  BASE: getBaseUrl(),
-  ENCODE_PATH: encodeURIComponent,
-  CREDENTIALS: "omit",
-}, TestFilesHttpRequest);
+type SafeError<E> = ([E] extends [never] ? object : E) & {
+  message?: string;
+  request_id?: string;
+  [key: string]: unknown;
+};
 
-/**
- * Primary authenticated API facade singleton.
- * Direct method access without .default or .auth, returning [error, data] tuples.
- */
-export const api = createApiFacade(rawAuthClient);
+type SafeResponseMap<Op> = Op extends {responses: Record<string | number, unknown>}
+  ? Op["responses"]
+  : Record<string | number, unknown>;
 
-/**
- * Public API facade singleton without session cookies for SSG / ISR.
- */
-export const publicApi = createApiFacade(rawPublicClient);
+type ApiResponse<Op, Init> =
+  | {
+      data: ParseAsResponse<
+        Readable<SuccessResponse<SafeResponseMap<Op>, MediaType>>,
+        Init
+      >;
+      error?: never;
+      response: Response;
+    }
+  | {
+      data?: never;
+      error: SafeError<
+        Readable<ErrorResponse<SafeResponseMap<Op>, MediaType>>
+      >;
+      response: Response;
+    };
 
-export const unwrap = <A extends unknown[], R>(
-  fn: (...args: A) => Promise<ApiResult<R>>
-): ((...args: A) => Promise<R>) => {
-  return async (...args: A): Promise<R> => {
-    const [error, data] = await fn(...args);
-    if (error) {
-      if (error.status === 404) {
-        notFound();
+type InitParam<Init> =
+  RequiredKeysOf<Init> extends never
+    ? [(Init & {[key: string]: unknown})?]
+    : [Init & {[key: string]: unknown}];
+
+type ApiClientMethod<Method extends HttpMethod> = <
+  Path extends PathsWithMethod<paths, Method>,
+  Init extends MaybeOptionalInit<paths[Path], Method>,
+>(
+  url: Path,
+  ...init: InitParam<Init>
+) => Promise<ApiResponse<paths[Path][Method], Init>>;
+
+interface ApiClient {
+  GET: ApiClientMethod<"get">;
+  POST: ApiClientMethod<"post">;
+  PUT: ApiClientMethod<"put">;
+  DELETE: ApiClientMethod<"delete">;
+  PATCH: ApiClientMethod<"patch">;
+  HEAD: ApiClientMethod<"head">;
+  OPTIONS: ApiClientMethod<"options">;
+  use: Client<paths>["use"];
+  eject: Client<paths>["eject"];
+}
+
+export type Api = ReturnType<typeof createClient<paths>> & ApiClient;
+
+export const api = Object.assign(createClient(fetchClient), fetchClient) as unknown as Api;
+
+type FetchPromise<T> = Promise<{
+  data?: T;
+  error?: {message?: string; request_id?: string} | unknown;
+  response: Response;
+}>;
+
+type UnwrapFn = {
+  <T>(promise: FetchPromise<T>): Promise<T>;
+  <A extends unknown[], T>(fn: (...args: A) => FetchPromise<T>): (...args: A) => Promise<T>;
+};
+
+export const unwrap: UnwrapFn = ((
+  arg: FetchPromise<unknown> | ((...args: unknown[]) => FetchPromise<unknown>),
+) => {
+  if (typeof arg === "function") {
+    return async (...args: unknown[]) => unwrap(arg(...args));
+  }
+  return (async () => {
+    const {data, error, response} = await arg;
+    if (!response.ok || error || !data) {
+      const info = (error && typeof error === "object")
+        ? error as {message?: string; request_id?: string}
+        : undefined;
+      const message = info?.message || response.statusText || "API Error";
+      if (response.status === 404) {
+        throw new Response(message, {status: 404});
       }
-      if (error.status === 401) {
-        redirect("/auth/login");
+      if (response.status === 401) {
+        throw redirect("/auth/login");
       }
-      throw error;
+      const err = new Error(message) as Error & {status?: number; info?: unknown; requestId?: string};
+      err.status = response.status;
+      err.info = error;
+      err.requestId = info?.request_id;
+      throw err;
     }
     return data;
-  };
-};
-
-export const unwrapAndCache = <A extends unknown[], R>(
-  fn: (...args: A) => Promise<ApiResult<R>>
-): ((...args: A) => Promise<R>) => {
-  return cache(unwrap(fn)) as (...args: A) => Promise<R>;
-};
+  })();
+}) as UnwrapFn;

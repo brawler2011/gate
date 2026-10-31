@@ -1,15 +1,9 @@
-"use client";
-
-import {
-  Box,
-  Table,
-  Text,
-} from "@mantine/core";
-import {useRouter} from "next/navigation";
+import {Box, Table, Text} from "@mantine/core";
+import {useNavigate} from "react-router-dom";
 
 import classes from "./ContestsTable.module.css";
 
-import type {ContestModel} from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type ContestsTableProps = {
@@ -17,7 +11,7 @@ type ContestsTableProps = {
 };
 
 export const ContestsTable = ({contests}: ContestsTableProps): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   return (
     <Box className={classes.tableContainer}>
@@ -34,7 +28,7 @@ export const ContestsTable = ({contests}: ContestsTableProps): ReactNode => {
           {contests.map((contest: ContestModel) => (
             <Table.Tr
               key={contest.id}
-              onClick={() => router.push(`/${contest.organization_login}/${contest.login}`)}
+              onClick={() => navigate(`/${contest.organization_login}/${contest.login}`)}
             >
               <Table.Td>
                 <Text className={classes.titleCell} lineClamp={1}>

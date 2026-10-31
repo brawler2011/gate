@@ -1,4 +1,4 @@
-import type {ContestModel, ProblemModel, UserModel} from "@/contracts/core/v1";
+import type {ContestModel, ProblemModel, UserModel} from "@/contracts/core/v1/schema";
 
 /**
  * Contest role types
@@ -16,7 +16,7 @@ type ContestRoleApiResponse = {
   permissions_mask?: unknown;
 };
 
-const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
+export const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
   if (!response || typeof response !== "object") {
     return null;
   }
@@ -43,7 +43,14 @@ const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
  */
 export const getMyContestRole = async (orgLogin: string, contestLogin: string): Promise<ContestRoleResponse> => {
   const {api} = await import("@/lib/api");
-  const [error, response] = await api.getMyContestRole({orgLogin, contestLogin});
+  const {data: response, error} = await api.GET(
+    "/organizations/{org_login}/contests/{contest_login}/my-role",
+    {
+      params: {
+        path: {org_login: orgLogin, contest_login: contestLogin},
+      },
+    },
+  );
   if (error || !response) {
     // User is not a participant or not authenticated
     return null;
@@ -360,7 +367,7 @@ export class PermissionChecker {
 
 export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> => {
   const {api} = await import("@/lib/api");
-  const [, me] = await api.getMe();
+  const {data: me} = await api.GET("/users/me");
   const currentUser = me?.user ?? null;
   if (!currentUser) {
     return false;
@@ -372,7 +379,12 @@ export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> =>
   let page = 1;
   const pageSize = 100;
   while (page <= 20) {
-    const [error, data] = await api.listOrganizationMembers({login: orgLogin, page, pageSize});
+    const {data, error} = await api.GET("/organizations/{login}/members", {
+      params: {
+        path: {login: orgLogin},
+        query: {page, pageSize},
+      },
+    });
     if (error || !data || !data.members) {
       return false;
     }

@@ -91,29 +91,6 @@ services:
     networks:
       - gate-local
 
-  traefik:
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    image: traefik:v3.7
-    container_name: gate-traefik-local
-    hostname: traefik
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "8082:8080"
-    volumes:
-      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
-    depends_on:
-      - go-judge
-    networks:
-      - gate-local
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
   master:
     logging:
       driver: json-file

@@ -1,10 +1,8 @@
-"use client";
-
 import {Alert, Button, Modal, TextInput, Stack} from '@mantine/core';
 import {useDisclosure} from '@mantine/hooks';
 import {IconAlertCircle, IconPlus} from '@tabler/icons-react';
-import {useRouter} from 'next/navigation';
 import {useState} from 'react';
+import {useNavigate} from "react-router-dom";
 
 import {api} from '@/lib/api';
 
@@ -49,7 +47,7 @@ export const CreateOrgButton = (): ReactNode => {
   const [nameError, setNameError] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleClose = () => {
     close();
@@ -103,19 +101,23 @@ export const CreateOrgButton = (): ReactNode => {
     }
 
     setLoading(true);
-    const [error, response] = await api.createOrganization({
-      name: trimmedName,
-      login: trimmedLogin || undefined,
+    const {data: response, error} = await api.POST("/organizations", {
+      params: {
+        query: {
+          name: trimmedName,
+          login: trimmedLogin || undefined,
+        },
+      },
     });
     setLoading(false);
 
     if (error) {
-      setFormError(translateApiError(error.message));
+      setFormError(translateApiError(error.message || "Ошибка создания организации"));
       return;
     }
 
     handleClose();
-    router.push(`/${response!.login}`);
+    navigate(`/${response!.login}`);
   };
 
   return (

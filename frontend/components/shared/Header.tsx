@@ -1,45 +1,12 @@
-"use client";
-
-import {
-  ActionIcon,
-  Anchor,
-  Avatar,
-  Badge,
-  Box,
-  Burger,
-  Button,
-  Center,
-  Divider,
-  Drawer,
-  Group,
-  Image,
-  Indicator,
-  Loader,
-  Menu,
-  ScrollArea,
-  Skeleton,
-  Stack,
-  Title,
-  useComputedColorScheme,
-  useMantineColorScheme,
-} from "@mantine/core";
+import {ActionIcon, Anchor, Avatar, Badge, Box, Burger, Button, Center, Divider, Drawer, Group, Image, Indicator, Loader, Menu, ScrollArea, Skeleton, Stack, Title, useComputedColorScheme, useMantineColorScheme} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
-import {
-  IconBell,
-  IconBuilding,
-  IconLogout,
-  IconMoon,
-  IconSettings,
-  IconSun,
-  IconUser,
-} from "@tabler/icons-react";
+import {IconBell, IconBuilding, IconLogout, IconMoon, IconSettings, IconSun, IconUser} from "@tabler/icons-react";
 import cx from "clsx";
-import NextImage from "next/image";
-import Link from "next/link";
-import {usePathname, useRouter} from "next/navigation";
 import {useState, type ReactNode} from "react";
+import {useLocation, useNavigate, Link} from "react-router-dom";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
+import NextImage from "@/components/shared/Image";
 import {useSession} from "@/contexts/SessionContext";
 import {useUnreadNotificationsCount} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
@@ -48,7 +15,7 @@ import {APP_COLORS} from "@/lib/theme/colors";
 import classes from "./Header.module.css";
 import {LogoutLink} from "./LogoutLink";
 
-import type {UserModel} from "@/contracts/core/v1";
+import type {UserModel} from "@/contracts/core/v1/schema";
 
 export type HeaderOrganization = {
   id: string;
@@ -68,8 +35,8 @@ export type HeaderProblem = {
 };
 
 const Profile = ({user: propUser}: { user?: UserModel | null }) => {
-  const pathname = usePathname();
-  const router = useRouter();
+  const {pathname} = useLocation();
+  const navigate = useNavigate();
   const {user: sessionUser, setUser, isLoading} = useSession();
   const user = propUser !== undefined ? propUser : sessionUser;
   const {unreadCount} = useUnreadNotificationsCount(Boolean(user));
@@ -89,14 +56,12 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
   const handleLogout = async () => {
     setLogoutLoading(true);
     try {
-      await api.logout();
+      await api.POST("/auth/logout");
       setUser(null);
-      router.push("/auth/login");
-      router.refresh();
+      navigate("/auth/login");
     } catch {
       setUser(null);
-      router.push("/auth/login");
-      router.refresh();
+      navigate("/auth/login");
     } finally {
       setLogoutLoading(false);
     }
@@ -133,7 +98,7 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
         >
           <ActionIcon
             component={Link}
-            href="/notifications"
+            to="/notifications"
             variant="subtle"
             color="gray"
             size={36}
@@ -163,7 +128,7 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
           <Menu.Dropdown>
             <Menu.Item
               component={Link}
-              href={`/@${user.username}`}
+              to={`/@${user.username}`}
               leftSection={<IconUser size={16} />}
             >
               Профиль
@@ -171,7 +136,7 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
 
             <Menu.Item
               component={Link}
-              href="/notifications"
+              to="/notifications"
               leftSection={<IconBell size={16} />}
               rightSection={
                 unreadCount > 0 ? (
@@ -186,7 +151,7 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
 
             <Menu.Item
               component={Link}
-              href="/orgs"
+              to="/orgs"
               leftSection={<IconBuilding size={16} />}
             >
               Организации
@@ -194,7 +159,7 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
 
             <Menu.Item
               component={Link}
-              href="/settings"
+              to="/settings"
               leftSection={<IconSettings size={16} />}
             >
               Настройки
@@ -219,7 +184,7 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
     <Group justify="flex-end">
       <Button
         component={Link}
-        href={`/auth/login${returnTo}`}
+        to={`/auth/login${returnTo}`}
         variant="filled"
         color={APP_COLORS.actions.primary}
         size="sm"
@@ -249,7 +214,7 @@ export const Header = ({
 }: HeaderProps): ReactNode => {
   const [drawerOpened, {toggle: toggleDrawer, close: closeDrawer}] =
     useDisclosure(false);
-  const pathname = usePathname();
+  const {pathname} = useLocation();
   const {user: sessionUser} = useSession();
   const user = propUser !== undefined ? propUser : sessionUser;
 
@@ -301,7 +266,7 @@ export const Header = ({
                 hiddenFrom="sm"
               />
               <Group gap={6} wrap="nowrap" className={classes.brandingGroup}>
-                <Link href="/" className={classes.logoLink}>
+                <Link to="/" className={classes.logoLink}>
                   <Image
                     component={NextImage}
                     src="/gate_logo.svg"
@@ -316,7 +281,7 @@ export const Header = ({
                 {organization ? (
                   <>
                     <Link
-                      href={`/${organization.login || organization.id}`}
+                      to={`/${organization.login || organization.id}`}
                       className={classes.brandTitleLink}
                       title={organization.name}
                     >
@@ -329,7 +294,7 @@ export const Header = ({
                       <div className={classes.organizationCrumb}>
                         <span className={classes.organizationSlash}>/</span>
                         <Link
-                          href={`/${organization.login || organization.id}/${contest.login || contest.id}`}
+                          to={`/${organization.login || organization.id}/${contest.login || contest.id}`}
                           className={classes.organizationLink}
                           title={contest.title}
                         >
@@ -341,7 +306,7 @@ export const Header = ({
                       <div className={classes.organizationCrumb}>
                         <span className={classes.organizationSlash}>/</span>
                         <Link
-                          href={`/${organization.login || organization.id}/problems/${problem.id}`}
+                          to={`/${organization.login || organization.id}/problems/${problem.id}`}
                           className={classes.organizationLink}
                           title={problem.title}
                         >
@@ -351,7 +316,7 @@ export const Header = ({
                     )}
                   </>
                 ) : (
-                  <Link href="/" className={classes.brandTitleLink}>
+                  <Link to="/" className={classes.brandTitleLink}>
                     <Title order={1} className={classes.brandTitleText}>
                       Gate
                     </Title>
@@ -370,7 +335,7 @@ export const Header = ({
               {user?.role === "admin" && (
                 <Button
                   component={Link}
-                  href="/admin"
+                  to="/admin"
                   variant="filled"
                   visibleFrom="sm"
                   color={APP_COLORS.admin}
@@ -431,7 +396,7 @@ export const Header = ({
             {user?.role === "admin" && (
               <Anchor
                 component={Link}
-                href="/admin"
+                to="/admin"
                 className={classes.link}
                 underline="never"
                 onClick={closeDrawer}
@@ -471,7 +436,7 @@ export const Header = ({
               <Stack gap="sm">
                 <Button
                   component={Link}
-                  href={`/@${user.username}`}
+                  to={`/@${user.username}`}
                   variant="light"
                   color={APP_COLORS.users}
                   leftSection={<IconUser size={20} />}
@@ -482,7 +447,7 @@ export const Header = ({
                 </Button>
                 <Button
                   component={Link}
-                  href="/notifications"
+                  to="/notifications"
                   variant="light"
                   color="blue"
                   leftSection={<IconBell size={20} />}
@@ -500,7 +465,7 @@ export const Header = ({
                 </Button>
                 <Button
                   component={Link}
-                  href="/orgs"
+                  to="/orgs"
                   variant="light"
                   color={APP_COLORS.orgs}
                   leftSection={<IconBuilding size={20} />}
@@ -511,7 +476,7 @@ export const Header = ({
                 </Button>
                 <Button
                   component={Link}
-                  href="/settings"
+                  to="/settings"
                   variant="light"
                   color="gray"
                   leftSection={<IconSettings size={20} />}
@@ -528,7 +493,7 @@ export const Header = ({
             ) : (
               <Button
                 component={Link}
-                href={`/auth/login${returnTo}`}
+                to={`/auth/login${returnTo}`}
                 variant="filled"
                 color={APP_COLORS.actions.primary}
                 fullWidth

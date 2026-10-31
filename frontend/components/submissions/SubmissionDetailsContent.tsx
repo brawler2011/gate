@@ -1,62 +1,15 @@
-"use client";
-
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Box,
-  Button,
-  Card,
-  Divider,
-  Group,
-  Paper,
-  ScrollArea,
-  SimpleGrid,
-  Stack,
-  Table,
-  TableTbody,
-  TableTd,
-  TableTh,
-  TableThead,
-  TableTr,
-  Text,
-  Title,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Alert, Badge, Box, Button, Card, Divider, Group, Paper, ScrollArea, SimpleGrid, Stack, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, Text, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {
-  IconAlertCircle,
-  IconAlertTriangle,
-  IconBan,
-  IconCheck,
-  IconCopy,
-  IconDownload,
-  IconFileCode,
-  IconInfoCircle,
-  IconLockOpen,
-  IconRefresh,
-} from "@tabler/icons-react";
-import Link from "next/link";
+import {IconAlertCircle, IconAlertTriangle, IconBan, IconCheck, IconCopy, IconDownload, IconFileCode, IconInfoCircle, IconLockOpen, IconRefresh} from "@tabler/icons-react";
 import React, {useState, type ReactNode} from "react";
+import {Link} from "react-router-dom";
 
 import {CodeBlock} from "@/components/shared/CodeBlock";
-import {
-  LangNameToString,
-  LangString,
-  numberToLetters,
-  ProblemTitle,
-  ShortVerdictString,
-  StateColor,
-  StateString,
-  TimeBeautify,
-} from "@/lib/lib";
+import {LangNameToString, LangString, numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
-import {
-  SubmissionSanctionsModal,
-  type SanctionActionType,
-} from "./SubmissionSanctionsModal";
+import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
 
-import type {SubmissionModel} from "@/contracts/core/v1";
+import type {SubmissionModel} from "@/contracts/core/v1/schema";
 
 interface SubmissionDetailsContentProps {
   submission: SubmissionModel;
@@ -205,7 +158,7 @@ export const SubmissionDetailsContent = ({
             <Text size="xs" c="dimmed">
               Отправитель
             </Text>
-            <Link href={`/@${submission.username}`} style={{color: "inherit", textDecoration: "none"}}>
+            <Link to={`/@${submission.username}`} style={{color: "inherit", textDecoration: "none"}}>
               <Text fw={600} c="blue" lineClamp={1}>
                 {submission.username}
               </Text>
@@ -215,7 +168,7 @@ export const SubmissionDetailsContent = ({
             <Text size="xs" c="dimmed">
               Задача
             </Text>
-            <Link href={problemUrl} style={{color: "inherit", textDecoration: "none"}}>
+            <Link to={problemUrl} style={{color: "inherit", textDecoration: "none"}}>
               <Text fw={600} c="blue" lineClamp={1}>
                 {ProblemTitle(submission.position, submission.problem_title)}
               </Text>

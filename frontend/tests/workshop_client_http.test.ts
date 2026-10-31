@@ -55,35 +55,84 @@ it("serializes raw nested filenames through the production clients and real back
   const source = `
 import assert from "node:assert/strict";
 
-import {api, publicApi} from "./lib/api";
+import {api} from "./lib/api";
+const browserFetch = globalThis.fetch;
+globalThis.fetch = ((url, options) => browserFetch(new URL(String(url).slice(4), ${JSON.stringify(backendUrl)}), options));
 
 const problemId = ${JSON.stringify(problemId)};
+
+const originalSource = ${JSON.stringify('#include <iostream>\n// Привет "world"\nint main() { return 0; }\n')};
+for (const folder of ["checkers", "generators", "validators", "interactors", "submissions", "lib"]) {
+  const name = "source.cpp";
+  const collection = "/problems/{problemId}/" + folder;
+  const file = collection + "/{name}";
+  const {error: createError} = await api.POST(collection, {
+    params: {path: {problemId}, query: {name}}, body: originalSource,
+  });
+  assert.equal(createError, undefined);
+  const {data: created, error: readError} = await api.GET(file, {
+    params: {path: {problemId, name}}, parseAs: "text",
+  });
+  assert.equal(readError, undefined);
+  assert.equal(created, originalSource);
+  for (const source of [originalSource + "// updated", ""]) {
+    const {error: updateError} = await api.PUT(file, {
+      params: {path: {problemId, name}}, body: source,
+    });
+    assert.equal(updateError, undefined);
+    const {data: saved, response} = await api.GET(file, {
+      params: {path: {problemId, name}}, parseAs: "text",
+    });
+    assert.equal(saved ?? await response.text(), source);
+  }
+}
+
 for (const name of ["nested/edge.in", "nested/edge.ans", "nested/space #?.in"]) {
   let expected = new Uint8Array([0, 255, 128, 10]);
-  for (const client of [api, publicApi]) {
-    const [readError, data] = await client.getProblemTestFile({problemId, name});
-    assert.equal(readError, null);
+  for (const client of [api]) {
+    const {data, error: readError} = await client.GET("/problems/{problemId}/tests/{name}", {
+      params: {path: {problemId, name}},
+      parseAs: "blob",
+    });
+    assert.equal(readError, undefined);
     assert.ok(data instanceof Blob);
     assert.deepEqual(new Uint8Array(await data.arrayBuffer()), expected);
     expected = new Uint8Array([0, 254, 129, 10, expected.length]);
-    const [writeError] = await client.updateProblemTestFile({problemId, name, requestBody: new Blob([expected])});
-    assert.equal(writeError, null);
-    const [savedError, saved] = await client.getProblemTestFile({problemId, name});
-    assert.equal(savedError, null);
+    const {error: writeError} = await client.PUT("/problems/{problemId}/tests/{name}", {
+      params: {path: {problemId, name}},
+      body: new Blob([expected]) as unknown as string,
+      bodySerializer: (b) => b as unknown as BodyInit,
+    });
+    assert.equal(writeError, undefined);
+    const {data: saved, error: savedError} = await client.GET("/problems/{problemId}/tests/{name}", {
+      params: {path: {problemId, name}},
+      parseAs: "blob",
+    });
+    assert.equal(savedError, undefined);
     assert.ok(saved instanceof Blob);
     assert.deepEqual(new Uint8Array(await saved.arrayBuffer()), expected);
   }
 }
-const [unsafeRead] = await api.getProblemTestFile({problemId, name: "../problem.yaml"});
-assert.equal(unsafeRead?.status, 400);
-const [unsafeWrite] = await api.updateProblemTestFile({
-  problemId, name: "../outside.in", requestBody: new Blob(["unsafe"]),
+const {response: unsafeRead} = await api.GET("/problems/{problemId}/tests/{name}", {
+  params: {path: {problemId, name: "../problem.yaml"}},
+  parseAs: "blob",
 });
-assert.equal(unsafeWrite?.status, 400);
-const [deleteError] = await api.deleteProblemTestFile({problemId, name: "nested/space #?.in"});
-assert.equal(deleteError, null);
-const [missing] = await api.getProblemTestFile({problemId, name: "nested/space #?.in"});
-assert.equal(missing?.status, 404);
+assert.equal(unsafeRead.status, 400);
+const {response: unsafeWrite} = await api.PUT("/problems/{problemId}/tests/{name}", {
+  params: {path: {problemId, name: "../outside.in"}},
+  body: new Blob(["unsafe"]) as unknown as string,
+  bodySerializer: (b) => b as unknown as BodyInit,
+});
+assert.equal(unsafeWrite.status, 400);
+const {error: deleteError} = await api.DELETE("/problems/{problemId}/tests/{name}", {
+  params: {path: {problemId, name: "nested/space #?.in"}},
+});
+assert.equal(deleteError, undefined);
+const {response: missing} = await api.GET("/problems/{problemId}/tests/{name}", {
+  params: {path: {problemId, name: "nested/space #?.in"}},
+  parseAs: "blob",
+});
+assert.equal(missing.status, 404);
 `;
   const client = Bun.spawn(["bun", "--eval", source], {
     cwd: frontendRoot, env: {...process.env, BACKEND_API_URL: backendUrl}, stdout: "pipe", stderr: "pipe",

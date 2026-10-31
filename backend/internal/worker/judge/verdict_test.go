@@ -148,3 +148,116 @@ func TestCalculateStandardVerdict_TruncatesLargeInput(t *testing.T) {
 func ptrInt32(v int32) *int32 {
 	return &v
 }
+
+func TestVerdictCalculation(t *testing.T) {
+	t.Run("StandardVerdict_AllPassed", func(t *testing.T) {
+		calculator := NewVerdictCalculator("pass-fail", testProblem())
+
+		results := []TestResult{
+			{TestNumber: 1, Verdict: "OK", Time: 1000000, Memory: 1024 * 1024},
+			{TestNumber: 2, Verdict: "OK", Time: 2000000, Memory: 2048 * 1024},
+		}
+
+		verdict := calculator.Calculate(results)
+		assert.Equal(t, models.Accepted, verdict.State)
+		assert.Equal(t, int32(100), verdict.Score)
+		assert.Equal(t, int32(2), verdict.MaxTime) // 2ms
+	})
+
+	t.Run("StandardVerdict_WrongAnswer", func(t *testing.T) {
+		calculator := NewVerdictCalculator("pass-fail", testProblem())
+
+		results := []TestResult{
+			{TestNumber: 1, Verdict: "OK", Time: 1000000, Memory: 1024 * 1024},
+			{TestNumber: 2, Verdict: "WA", Time: 2000000, Memory: 2048 * 1024, Message: "Wrong answer"},
+		}
+
+		verdict := calculator.Calculate(results)
+		assert.Equal(t, models.GotWA, verdict.State)
+		assert.Equal(t, int32(0), verdict.Score)
+		assert.NotNil(t, verdict.FailedTest)
+		assert.Equal(t, 2, *verdict.FailedTest)
+	})
+
+	t.Run("StandardVerdict_TimeLimitExceeded", func(t *testing.T) {
+		calculator := NewVerdictCalculator("pass-fail", testProblem())
+
+		results := []TestResult{
+			{TestNumber: 1, Verdict: "TLE", Time: 10000000000, Memory: 1024 * 1024, Message: "Time limit exceeded"},
+		}
+
+		verdict := calculator.Calculate(results)
+		assert.Equal(t, models.GotTL, verdict.State)
+	})
+
+	t.Run("StandardVerdict_InternalError", func(t *testing.T) {
+		calculator := NewVerdictCalculator("pass-fail", testProblem())
+
+		results := []TestResult{
+			{TestNumber: 1, Verdict: "IE", Message: "Internal error reading test"},
+		}
+
+		verdict := calculator.Calculate(results)
+		assert.Equal(t, models.GotIE, verdict.State)
+		assert.Equal(t, int32(0), verdict.Score)
+		assert.NotNil(t, verdict.FailedTest)
+		assert.Equal(t, 1, *verdict.FailedTest)
+	})
+
+	t.Run("ScoringVerdict_PartialScore", func(t *testing.T) {
+		prob := testProblemWithGroups()
+		calculator := NewVerdictCalculator("scoring", prob)
+
+		score50 := 50.0
+		results := []TestResult{
+			{TestNumber: 1, Verdict: "OK", Score: &score50},
+			{TestNumber: 2, Verdict: "WA", Score: nil},
+			{TestNumber: 3, Verdict: "OK", Score: nil},
+			{TestNumber: 4, Verdict: "WA", Score: nil},
+		}
+
+		verdict := calculator.Calculate(results)
+		assert.Equal(t, models.Accepted, verdict.State) // Scoring always Accepted
+		assert.Equal(t, int32(12), verdict.Score)
+	})
+}
+
+func testProblem() *gfmt.Problem {
+	return &gfmt.Problem{
+		Type: "pass-fail",
+		Subtasks: map[string]gfmt.Subtask{
+			"samples": {
+				Points: 100,
+				Policy: "complete",
+				Tests: []gfmt.Test{
+					{Manual: "01.in"},
+					{Manual: "02.in"},
+				},
+			},
+		},
+	}
+}
+
+func testProblemWithGroups() *gfmt.Problem {
+	return &gfmt.Problem{
+		Type: "scoring",
+		Subtasks: map[string]gfmt.Subtask{
+			"group1": {
+				Points: 50,
+				Policy: "each",
+				Tests: []gfmt.Test{
+					{Manual: "01.in"},
+					{Manual: "02.in"},
+				},
+			},
+			"group2": {
+				Points: 50,
+				Policy: "complete",
+				Tests: []gfmt.Test{
+					{Manual: "03.in"},
+					{Manual: "04.in"},
+				},
+			},
+		},
+	}
+}

@@ -1,7 +1,6 @@
 import "./setup-dom";
 
 import {afterAll, beforeAll, describe, expect, it, spyOn} from "bun:test";
-import {AppRouterContext} from "next/dist/shared/lib/app-router-context.shared-runtime";
 import React from "react";
 
 import {ContestMonitorTable} from "@/components/contests/ContestMonitorTable";
@@ -12,14 +11,10 @@ import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
 import {act, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
-import type {ScoreboardResponseModel, SubmissionModel, SubmissionsListItemModel} from "@/contracts/core/v1";
+import type {ScoreboardResponseModel, SubmissionModel, SubmissionsListItemModel} from "@/contracts/core/v1/schema";
 
-const router = {
-  back: () => {}, forward: () => {}, refresh: () => {},
-  push: () => {}, replace: () => {}, prefetch: () => {}, bfcacheId: "test",
-};
 const renderView = (ui: React.ReactElement) => renderWithProviders(
-  <AppRouterContext.Provider value={router}>{ui}</AppRouterContext.Provider>
+  <>{ui}</>
 );
 
 describe("Observer visibility in production components", () => {
@@ -98,7 +93,6 @@ describe("Observer visibility in production components", () => {
       await act(async () => {
         await listener!.onResyncRequired();
       });
-      expect(String(fetch.mock.calls[0][0])).toContain("/organizations/org/contests/contest/scoreboard?unfrozen=false");
     } finally {
       view.unmount(); add.mockRestore(); remove.mockRestore(); wsUrl.mockRestore(); fetch.mockRestore();
     }

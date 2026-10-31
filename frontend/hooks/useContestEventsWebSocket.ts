@@ -3,13 +3,7 @@
 import {notifications} from "@mantine/notifications";
 import {useEffect, useRef} from "react";
 
-import {
-  ContestEventType,
-  type ContestMessage,
-  type MessageContestAnnouncementCreated,
-  type MessageContestClarificationCreated,
-  type MessageContestClarificationAnswered,
-} from "@/contracts/observer/v1";
+import {ContestEventType, type ContestMessage, type MessageContestAnnouncementCreated, type MessageContestClarificationCreated, type MessageContestClarificationAnswered} from "@/contracts/observer/v1/schema";
 import {env} from "@/lib/env";
 
 export interface UseContestEventsWebSocketProps {
@@ -77,7 +71,7 @@ export const useContestEventsWebSocket = ({
             onEventRef.current?.(data);
 
             switch (data.event_type) {
-              case ContestEventType.CONTEST_ANNOUNCEMENT_CREATED: {
+              case ContestEventType.contest_announcement_created: {
                 const payload = data.payload as MessageContestAnnouncementCreated;
                 const problemInfo = payload.problem_letter
                   ? ` [Задача ${payload.problem_letter}]`
@@ -93,7 +87,7 @@ export const useContestEventsWebSocket = ({
                 break;
               }
 
-              case ContestEventType.CONTEST_CLARIFICATION_CREATED: {
+              case ContestEventType.contest_clarification_created: {
                 const payload = data.payload as MessageContestClarificationCreated;
                 if (isModeratorRef.current && payload.user_id !== currentUserIdRef.current) {
                   const author = payload.username ? ` от ${payload.username}` : "";
@@ -112,7 +106,7 @@ export const useContestEventsWebSocket = ({
                 break;
               }
 
-              case ContestEventType.CONTEST_CLARIFICATION_ANSWERED: {
+              case ContestEventType.contest_clarification_answered: {
                 const payload = data.payload as MessageContestClarificationAnswered;
                 if (payload.user_id === currentUserIdRef.current) {
                   const prob = payload.problem_letter

@@ -1,26 +1,7 @@
 "use client";
 
-import {
-  ActionIcon,
-  Badge,
-  Button,
-  Card,
-  Checkbox,
-  Group,
-  Menu,
-  Popover,
-  Select,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Tooltip,
-} from "@mantine/core";
-import {
-  IconChevronDown,
-  IconPlus,
-  IconTrash,
-} from "@tabler/icons-react";
+import {ActionIcon, Badge, Button, Card, Checkbox, Group, Menu, Popover, Select, Stack, Table, Text, TextInput, Tooltip} from "@mantine/core";
+import {IconChevronDown, IconPlus, IconTrash} from "@tabler/icons-react";
 import {useState} from "react";
 
 import {TestPreviewModal} from "./TestPreviewModal";

@@ -1,11 +1,8 @@
-"use client";
-
 import {Menu} from "@mantine/core";
 import {IconChevronDown} from "@tabler/icons-react";
 import cx from "clsx";
-import Link from "next/link";
-import {usePathname} from "next/navigation";
 import {useState, type ReactNode} from "react";
+import {useLocation, Link} from "react-router-dom";
 
 import classes from "./AdaptiveTabs.module.css";
 import {type AdaptiveTabItem, useAdaptiveTabs} from "./useAdaptiveTabs";
@@ -19,7 +16,7 @@ export const AdaptiveTabs = ({
   items,
   className,
 }: AdaptiveTabsProps): ReactNode => {
-  const pathname = usePathname();
+  const {pathname} = useLocation();
   const [opened, setOpened] = useState(false);
   const {containerRef, moreButtonRef, registerItem, visibleItems, overflowItems} =
     useAdaptiveTabs(items);
@@ -50,7 +47,7 @@ export const AdaptiveTabs = ({
             <Link
               key={item.key}
               ref={(node) => registerItem(item.key, node)}
-              href={item.href}
+              to={item.href}
               className={cx(classes.tabLink, active && classes.tabLinkActive)}
             >
               {Icon ? <Icon size={15} /> : null}
@@ -91,7 +88,7 @@ export const AdaptiveTabs = ({
                 <Menu.Item
                   key={item.key}
                   component={Link}
-                  href={item.href}
+                  to={item.href}
                   leftSection={Icon ? <Icon size={15} /> : undefined}
                   rightSection={item.badge}
                   className={cx(active && classes.menuItemActive)}

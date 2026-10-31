@@ -1,90 +1,145 @@
-version: "3"
-
-includes:
-  be:
-    taskfile: ./backend/Taskfile.yml
-    dir: ./backend
-  fe:
-    taskfile: ./frontend/Taskfile.yml
-    dir: ./frontend
-  contracts:
-    taskfile: ./contracts/Taskfile.yml
-    dir: ./contracts
-  e2e:
-    taskfile: ./tests/e2e/Taskfile.yml
-    dir: ./tests/e2e
-
+version: '3'
 tasks:
   default:
     cmds:
-      - task -a
-
+    - task -a
   precommit:
-    desc: "Run pre-commit checks across all components"
+    desc: Run pre-commit checks across all components
     cmds:
-      - task: contracts:lint
-      - task: verify-codegen
-      - task: precommit:be
-      - task: precommit:fe
-
+    - task: contracts:lint
+    - task: verify-codegen
+    - task: precommit:be
+    - task: precommit:fe
   commit:validate:
-    desc: "Validate commit message or PR title format and length"
+    desc: Validate commit message or PR title format and length
     cmds:
-      - bun run commit:validate {{.CLI_ARGS}}
-
+    - bun run commit:validate {{.CLI_ARGS}}
   pr:status:
-    desc: "Show GitHub PR status and CI checks for current branch"
+    desc: Show GitHub PR status and CI checks for current branch
     cmds:
-      - gh pr status
-      - gh pr checks || true
-
+    - gh pr status
+    - gh pr checks || true
   hooks:install:
-    desc: "Install Lefthook and setup git pre-commit hooks"
+    desc: Install Lefthook and setup git pre-commit hooks
     cmds:
-      - |
-        if ! command -v lefthook >/dev/null 2>&1; then
-          echo "Installing lefthook via go install..."
-          go install github.com/evilmartians/lefthook@latest
-        fi
-        PATH="$PATH:$(go env GOPATH)/bin" lefthook install
-
-
+    - "if ! command -v lefthook >/dev/null 2>&1; then\n  echo \"Installing lefthook via go install...\"\n  go install github.com/evilmartians/lefthook@latest\n\
+      fi\nPATH=\"$PATH:$(go env GOPATH)/bin\" lefthook install\n"
   precommit:be:
-    desc: "Run backend pre-commit verification (lint + tests)"
+    desc: Run backend pre-commit verification (lint + tests)
     cmds:
-      - task: be:lint
-      - task: be:test
-
+    - task: be:lint
+    - task: be:test
   precommit:fe:
-    desc: "Run frontend pre-commit verification (typecheck + lint)"
+    desc: Run frontend pre-commit verification (typecheck + lint)
     cmds:
-      - task: fe:typecheck
-      - task: fe:lint
-
-  test:e2e:
-    desc: "Run deployment and diagnostic contract checks"
-    cmds:
-      - task: e2e:test
-
+    - task: fe:typecheck
+    - task: fe:lint
   gen:
-    desc: "Generate all code (OpenAPI, SQLC, Mocks)"
+    desc: Generate all code (OpenAPI, SQLC, Mocks)
     cmds:
-      - task: contracts:gen-openapi
-      - task: be:gen-sqlc
-      - task: be:gen-mocks
-
+    - task: contracts:gen-openapi
+    - task: be:gen-sqlc
+    - task: be:gen-mocks
   verify-codegen:
-    desc: "Verify codegen freshness for CI"
+    desc: Verify codegen freshness for CI
     cmds:
-      - task: gen
-      - cmd: |
-          if [ -n "$(git status --porcelain backend/contracts frontend/contracts backend/internal/repository/pg/sqlc backend/tests/mocks)" ]; then
-            echo "ERROR: Generated code is out of date.";
-            exit 1;
-          fi
-
+    - task: gen
+    - cmd: "if [ -n \"$(git status --porcelain backend/contracts frontend/contracts backend/internal/repository/pg/sqlc backend/tests/mocks)\"\
+        \ ]; then\n  echo \"ERROR: Generated code is out of date.\";\n  exit 1;\nfi\n"
   clean:
-    desc: "Remove generated contract files"
+    desc: Remove generated contract files
     cmds:
-      - rm -rf backend/contracts/core/v1 backend/contracts/observer/v1
-      - rm -rf frontend/contracts/core/v1 frontend/contracts/observer/v1
+    - rm -rf backend/contracts/core/v1 backend/contracts/observer/v1
+    - rm -rf frontend/contracts/core/v1 frontend/contracts/observer/v1
+  be:dev:
+    desc: Run Go backend server with live reload
+    cmds:
+    - go run github.com/air-verse/air@v1.64.5 -c .air.toml
+  be:test:
+    desc: Run backend unit and repository tests
+    cmds:
+    - go test -v ./...
+  be:test-integration:
+    desc: Run backend integration tests
+    cmds:
+    - go test -v -p 1 -tags=integration ./backend/tests/integration/... ./backend/internal/repository/pg/... ./backend/pkg/sandbox/...
+  be:lint:
+    desc: Run golangci-lint
+    cmds:
+    - golangci-lint run ./backend/...
+  be:gen-sqlc:
+    desc: Generate SQLC queries
+    sources:
+    - backend/sqlc.yaml
+    - backend/migrations/*.sql
+    - backend/internal/repository/pg/*.sql
+    generates:
+    - backend/internal/repository/pg/sqlc/*.go
+    cmds:
+    - go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.27.0 generate -f backend/sqlc.yaml
+  be:gen-mocks:
+    desc: Generate Go mocks
+    cmds:
+    - go generate ./...
+  fe:dev:
+    desc: Run Vite dev server
+    cmds:
+    - bun dev
+  fe:build:
+    desc: Build production bundle
+    cmds:
+    - bun run build
+  fe:build:local:
+    desc: Build production bundle with local env
+    cmds:
+    - bun run build:local
+  fe:build:prod:
+    desc: Build production bundle with prod env
+    cmds:
+    - bun run build:prod
+  fe:typecheck:
+    desc: Run TypeScript type check
+    cmds:
+    - bun run typecheck
+  fe:lint:
+    desc: Run ESLint and Stylelint
+    cmds:
+    - bun run lint
+  fe:knip:
+    desc: Run Knip unused code check
+    cmds:
+    - bun run knip
+  contracts:lint:
+    desc: Validate OpenAPI contracts (correctness errors block, warnings are advisory)
+    cmds:
+    - GOTOOLCHAIN=auto go run github.com/daveshanley/vacuum@v0.33.0 lint core/v1/openapi.yaml observer/v1/openapi.yaml --ruleset vacuum.yaml --no-style
+      --no-banner --no-update-check --details --errors --all-results --fail-severity error
+    dir: contracts
+  contracts:gen-openapi:
+    desc: Generate OpenAPI Go handlers and TS clients
+    cmds:
+    - mkdir -p backend/contracts/core/v1 backend/contracts/observer/v1
+    - go run github.com/ogen-go/ogen/cmd/ogen@v1.24.0 --config contracts/ogen.yml --package corev1 --target backend/contracts/core/v1 --clean
+      contracts/core/v1/openapi.yaml
+    - go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.0 -generate std-http-server,models,strict-server,skip-prune -package
+      observerv1 -o backend/contracts/observer/v1/observer.go contracts/observer/v1/openapi.yaml
+    - bun run contracts:gen
+  test:
+    desc: Run backend unit, repository, and frontend tests
+    cmds:
+    - task: be:test
+    - bun test
+  build:
+    desc: Build backend and static SPA
+    cmds:
+    - go build ./...
+    - bun run build
+  dev:
+    desc: Run backend and frontend
+    deps:
+    - be:dev
+    - fe:dev
+  be:migrate:
+    desc: Apply database migrations
+    cmds:
+    - go run ./backend -env=deploy/local/.env -migrate

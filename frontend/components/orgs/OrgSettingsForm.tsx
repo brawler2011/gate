@@ -1,15 +1,11 @@
-"use client";
-
 import {Button, Select, Stack, TextInput, Textarea} from '@mantine/core';
 import {useForm} from '@mantine/form';
 import {notifications} from '@mantine/notifications';
-import {useRouter} from 'next/navigation';
+import {useQueryClient} from "@tanstack/react-query";
 import {useState, type ReactNode} from 'react';
+import {useRevalidator, useNavigate} from "react-router-dom";
 
-import {
-  type UpdateOrganizationRequestModel,
-  type OrganizationModel,
-} from '@/contracts/core/v1';
+import {type UpdateOrganizationRequestModel, type OrganizationModel} from '@/contracts/core/v1/schema';
 import {api} from '@/lib/api';
 
 type Props = { org: OrganizationModel };
@@ -21,7 +17,9 @@ const JOIN_POLICY_OPTIONS = [
 ];
 
 export const OrgSettingsForm = ({org}: Props): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
   const form = useForm({
@@ -58,13 +56,13 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
   const handleSave = async (values: typeof form.values) => {
     setSaving(true);
     const trimmedLogin = values.login.trim();
-    const [error] = await api.updateOrganization({
-      login: org.login,
-      requestBody: {
+    const {error} = await api.PATCH("/organizations/{login}", {
+      params: {path: {login: org.login}},
+      body: {
         name: values.name.trim(),
         login: trimmedLogin,
         description: values.description,
-        join_policy: values.join_policy as UpdateOrganizationRequestModel.join_policy,
+        join_policy: values.join_policy as UpdateOrganizationRequestModel["join_policy"],
       },
     });
     setSaving(false);
@@ -75,9 +73,14 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
     notifications.show({title: 'Готово', message: 'Настройки обновлены', color: 'green'});
     form.resetDirty(values);
     if (trimmedLogin !== org.login) {
-      router.push(`/${trimmedLogin}/settings`);
+      navigate(`/${trimmedLogin}/settings`);
     } else {
-      router.refresh();
+      void queryClient.invalidateQueries({
+        queryKey: api.queryOptions("get", "/organizations/{login}", {
+          params: {path: {login: org.login}},
+        }).queryKey,
+      });
+      void revalidator.revalidate();
     }
   };
 

@@ -1,35 +1,21 @@
 "use client";
 
-import {
-  ActionIcon,
-  Button,
-  Center,
-  Code,
-  Group,
-  Loader,
-  Modal,
-  Paper,
-  Select,
-  Stack,
-  Text,
-  Textarea,
-  Title,
-} from "@mantine/core";
+import {ActionIcon, Button, Center, Code, Group, Loader, Modal, Paper, Select, Stack, Text, Textarea, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconCode, IconPlayerPlay, IconTrash} from "@tabler/icons-react";
+import {useQuery} from "@tanstack/react-query";
 import {useEffect, useState, useTransition} from "react";
-import useSWR from "swr";
 
-import {api, type ApiError} from "@/lib/api";
+import {api} from "@/lib/api";
 
 import classes from "./WorkshopFolderTab.module.css";
 
-import type {FileEntry} from "@/contracts/core/v1";
+import type {FileEntry} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
-type ListFilesResult = Promise<[ApiError | null, { files?: FileEntry[] } | null]>;
-type GetFileResult = Promise<[ApiError | null, string | null]>;
-type SaveFileResult = Promise<[ApiError | null, unknown | null]>;
+type ListFilesResult = Promise<{data?: {files?: FileEntry[]}; error?: {message?: string}}>;
+type GetFileResult = Promise<{data?: string | Blob | unknown; error?: {message?: string}}>;
+type SaveFileResult = Promise<{data?: unknown; error?: {message?: string}}>;
 
 type Props = {
   problemId: string;
@@ -104,17 +90,23 @@ export const WorkshopSingleComponentTab = ({
   const getFileName = (path: string) => path.split("/").pop() ?? path;
 
   // Fetch languages dynamically from backend API (which reads languages.yaml)
-  const {data: languagesData} = useSWR("supported-languages", async () => {
-    const [err, res] = await api.getLanguages();
-    if (err || !res?.languages) {
-      return null;
-    }
-    return res.languages;
+  const {data: languagesData} = useQuery({
+    queryKey: ["supported-languages"],
+    queryFn: async () => {
+      const {data: res, error: err} = await api.GET("/languages");
+      if (err || !res?.languages) {
+        return null;
+      }
+      return res.languages;
+    },
   });
 
   const languageOptions = languagesData?.length
     ? languagesData.map((lang) => {
-      const isCpp = lang.name.toLowerCase() === "cpp" || lang.extension === "cc" || lang.extension === "cpp";
+      const isCpp =
+          lang.name.toLowerCase() === "cpp" ||
+          lang.extension === "cc" ||
+          lang.extension === "cpp";
       const ext = isCpp ? "cpp" : lang.extension;
       const labelName = isCpp ? "C++" : lang.name.toUpperCase();
       return {
@@ -125,39 +117,53 @@ export const WorkshopSingleComponentTab = ({
     : DEFAULT_LANGUAGE_OPTIONS;
 
   useEffect(() => {
-    if (languageOptions.length > 0 && !languageOptions.some((opt) => opt.value === selectedExt)) {
-      const cppOpt = languageOptions.find((opt) => opt.value === "cpp" || opt.value === "cc");
+    if (
+      languageOptions.length > 0 &&
+      !languageOptions.some((opt) => opt.value === selectedExt)
+    ) {
+      const cppOpt = languageOptions.find(
+        (opt) => opt.value === "cpp" || opt.value === "cc",
+      );
       setSelectedExt(cppOpt ? cppOpt.value : languageOptions[0].value);
     }
   }, [languageOptions, selectedExt]);
 
-  const {data: filesData, isLoading: isLoadingFiles, mutate: mutateFiles} = useSWR(
-    ["workshop-single-component-files", problemId, componentType],
-    async () => {
-      const [err, res] = await listFiles(problemId);
+  const {data: filesData, isLoading: isLoadingFiles, refetch: mutateFiles} = useQuery({
+    queryKey: ["workshop-single-component-files", problemId, componentType],
+    queryFn: async () => {
+      const {data: res, error: err} = await listFiles(problemId);
       if (err) {
         throw new Error(err.message || "Не удалось загрузить компонент");
       }
       return res;
-    }
-  );
+    },
+  });
 
   const leafFiles = (filesData?.files || []).filter(
-    (f) => !f.is_directory && f.path && !getFileName(f.path).startsWith(".")
+    (f) => !f.is_directory && f.path && !getFileName(f.path).startsWith("."),
   );
   const activeFile = leafFiles.length > 0 ? leafFiles[0] : null;
   const activeFileName = activeFile?.path ? getFileName(activeFile.path) : null;
 
-  const {data: fileContent, isLoading: isLoadingContent, mutate: mutateContent} = useSWR(
-    activeFileName ? ["workshop-single-component-content", problemId, componentType, activeFileName] : null,
-    async () => {
-      const [err, res] = await getFile(problemId, activeFileName!);
+  const {data: fileContent, isLoading: isLoadingContent, refetch: mutateContent} = useQuery({
+    queryKey: [
+      activeFileName
+        ? ["workshop-single-component-content", problemId, componentType, activeFileName]
+        : null,
+    ],
+    queryFn: async () => {
+      const {data: res, error: err} = await getFile(problemId, activeFileName!);
       if (err) {
         throw new Error(err.message || "Не удалось загрузить содержимое компонента");
       }
-      return res;
-    }
-  );
+      return typeof res === "string" ? res : "";
+    },
+    enabled: Boolean(
+      activeFileName
+        ? ["workshop-single-component-content", problemId, componentType, activeFileName]
+        : null,
+    ),
+  });
 
   useEffect(() => {
     if (fileContent !== undefined && activeFileName) {
@@ -171,7 +177,7 @@ export const WorkshopSingleComponentTab = ({
       return;
     }
     startSaving(async () => {
-      const [error] = await updateFile(problemId, activeFileName, content);
+      const {error} = await updateFile(problemId, activeFileName, content);
       if (error) {
         notifications.show({
           title: "Ошибка сохранения",
@@ -196,7 +202,7 @@ export const WorkshopSingleComponentTab = ({
     const initialCode = DEFAULT_TEMPLATES[componentType]?.[ext] || "// TODO: write code\n";
 
     startCreating(async () => {
-      const [error] = await createFile(problemId, name, initialCode);
+      const {error} = await createFile(problemId, name, initialCode);
       if (error) {
         notifications.show({
           title: "Ошибка создания",
@@ -219,7 +225,7 @@ export const WorkshopSingleComponentTab = ({
       return;
     }
     startDeleting(async () => {
-      const [error] = await deleteFile(problemId, activeFileName);
+      const {error} = await deleteFile(problemId, activeFileName);
       if (error) {
         notifications.show({
           title: "Ошибка удаления",
@@ -242,10 +248,12 @@ export const WorkshopSingleComponentTab = ({
 
   const handleCompile = () => {
     startCompiling(async () => {
-      const [error, res] = await api.compileProblemComponent({
-        problemId,
-        componentType,
-      });
+      const {data: res, error} = await api.POST(
+        "/problems/{problemId}/workshop/components/{componentType}/compile",
+        {
+          params: {path: {problemId, componentType}},
+        },
+      );
 
       if (error) {
         notifications.show({

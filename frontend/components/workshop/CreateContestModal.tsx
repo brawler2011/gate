@@ -1,13 +1,11 @@
-"use client";
-
 import {Button, Modal, Select, Stack, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 import {api} from "@/lib/api";
 
-import type {OrganizationModel} from "@/contracts/core/v1";
+import type {OrganizationModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -36,7 +34,7 @@ export const CreateContestModal = ({
   defaultOrgId,
   lockOrganization = false,
 }: Props): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("New Contest");
   const [login, setLogin] = useState("");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
@@ -76,17 +74,24 @@ export const CreateContestModal = ({
       if (!selectedOrg) {
         return;
       }
-      const [error, response] = await api.createContest({
-        orgLogin: selectedOrg.login,
-        title: title.trim() || "New Contest",
-        login: trimmedLogin || undefined,
-      });
-      if (error) {
-        throw new Error(error.message);
+      const {data: response, error} = await api.POST(
+        "/organizations/{org_login}/contests",
+        {
+          params: {
+            path: {org_login: selectedOrg.login},
+            query: {
+              title: title.trim() || "New Contest",
+              login: trimmedLogin || undefined,
+            },
+          },
+        },
+      );
+      if (error || !response) {
+        throw new Error(error?.message || "Не удалось создать контест");
       }
       const orgSlug = selectedOrg.login;
       onClose();
-      router.push(`/${orgSlug}/${response.login}`);
+      navigate(`/${orgSlug}/${response.login}`);
     } catch (err) {
       notifications.show({
         title: "Ошибка",

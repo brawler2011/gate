@@ -1,34 +1,20 @@
-"use client";
-
-import {
-  ActionIcon,
-  Box,
-  Center,
-  Container,
-  Group,
-  Skeleton,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
+import {ActionIcon, Box, Center, Container, Group, Skeleton, Stack, Table, Text, TextInput, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconSearch, IconTrash} from "@tabler/icons-react";
-import {useRouter, useSearchParams} from "next/navigation";
+import {useQuery} from "@tanstack/react-query";
 import {useEffect, useRef, useState} from "react";
-import useSWR from "swr";
+import {useNavigate, useSearchParams} from "react-router-dom";
 
-import {NextPagination} from '@/components/shared/Pagination';
+import {RoutePagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 import {formatDate} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 import {DeleteOrgModal} from "./DeleteOrgModal";
 import {CreateOrgButton} from "../orgs/CreateOrgButton";
 
-import type {OrganizationModel} from "@/contracts/core/v1";
+import type {OrganizationModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type AdminOrgsContentProps = {
@@ -37,12 +23,12 @@ type AdminOrgsContentProps = {
 };
 
 export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNode => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Search input state
   const [searchInput, setSearchInput] = useState(search || "");
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isFirstRender = useRef(true);
 
   // Delete modal state
@@ -74,7 +60,7 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
       } else {
         params.delete("search");
       }
-      router.push(`/admin/orgs?${params.toString()}`);
+      navigate(`/admin/orgs?${params.toString()}`);
     }, 300);
 
     return () => {
@@ -82,19 +68,20 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchInput, router, searchParams]);
+  }, [searchInput, navigate, searchParams]);
 
   // Fetch organizations
-  const {data, error, isLoading, mutate} = useSWR(
-    ["admin-orgs", page, search],
-    async () => {
-      const [err, res] = await api.listOrganizations({page, pageSize: 10, search});
-      if (err) {
-        throw new Error(err.message);
-      }
-      return res;
-    }
-  );
+  const {data, error, isLoading, refetch: mutate} = useQuery({
+    queryKey: ["admin-orgs", page, search],
+    queryFn: () =>
+      unwrap(
+        api.GET("/organizations", {
+          params: {
+            query: {page, pageSize: 10, search},
+          },
+        }),
+      ),
+  });
 
   const orgs = data?.organizations || [];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -112,7 +99,9 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
 
     setDeletingId(orgToDelete.id);
     try {
-      const [err] = await api.deleteOrganization({login: orgToDelete.login});
+      const {error: err} = await api.DELETE("/organizations/{login}", {
+        params: {path: {login: orgToDelete.login}},
+      });
       if (err) {
         notifications.show({
           title: "Ошибка",
@@ -201,7 +190,7 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
                   {orgs.map((org: OrganizationModel) => (
                     <Table.Tr
                       key={org.id}
-                      onClick={() => router.push(`/${org.login}`)}
+                      onClick={() => navigate(`/${org.login}`)}
                     >
                       <Table.Td>
                         <Text className={classes.titleCell} lineClamp={1}>
@@ -239,7 +228,7 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
 
             {totalPages > 1 && (
               <Stack align="center" gap="md">
-                <NextPagination
+                <RoutePagination
                   pagination={{
                     page: page,
                     total: totalPages,

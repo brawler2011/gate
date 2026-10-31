@@ -1,17 +1,8 @@
-"use client";
-
-import {
-  Button,
-  Checkbox,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
+import {Button, Checkbox, Group, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useRouter} from "next/navigation";
+import {useQueryClient} from "@tanstack/react-query";
 import React, {useState, type ReactNode} from "react";
+import {useRevalidator} from "react-router-dom";
 
 import {api} from "@/lib/api";
 
@@ -49,7 +40,8 @@ export const SubmissionSanctionsModal = ({
   const [reason, setReason] = useState("");
   const [rejudgeSubmissions, setRejudgeSubmissions] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
 
   if (!actionType) {
     return null;
@@ -61,41 +53,75 @@ export const SubmissionSanctionsModal = ({
     }
 
     setLoading(true);
-    let err = null;
+    let err: {message?: string} | null | undefined = null;
 
     if (actionType === "block_submission" && submissionId) {
-      [err] = await api.blockSubmission({
-        orgLogin,
-        contestLogin,
-        submissionId,
-        requestBody: {
-          reason: reason.trim() ? reason.trim() : undefined,
+      const {error} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block",
+        {
+          params: {
+            path: {
+              org_login: orgLogin,
+              contest_login: contestLogin,
+              submission_id: submissionId,
+            },
+          },
+          body: {
+            reason: reason.trim() ? reason.trim() : undefined,
+          },
         },
-      });
+      );
+      err = error;
     } else if (actionType === "unblock_submission" && submissionId) {
-      [err] = await api.unblockSubmission({
-        orgLogin,
-        contestLogin,
-        submissionId,
-      });
-    } else if (actionType === "block_problem" && userId && problemId) {
-      [err] = await api.blockProblemForUser({
-        orgLogin,
-        contestLogin,
-        userId,
-        problemId,
-        requestBody: {
-          reason: reason.trim() ? reason.trim() : undefined,
+      const {error} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock",
+        {
+          params: {
+            path: {
+              org_login: orgLogin,
+              contest_login: contestLogin,
+              submission_id: submissionId,
+            },
+          },
         },
-      });
+      );
+      err = error;
+    } else if (actionType === "block_problem" && userId && problemId) {
+      const {error} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block",
+        {
+          params: {
+            path: {
+              org_login: orgLogin,
+              contest_login: contestLogin,
+              user_id: userId,
+              problem_id: problemId,
+            },
+          },
+          body: {
+            reason: reason.trim() ? reason.trim() : undefined,
+          },
+        },
+      );
+      err = error;
     } else if (actionType === "unblock_problem" && userId && problemId) {
-      [err] = await api.unblockProblemForUser({
-        orgLogin,
-        contestLogin,
-        userId,
-        problemId,
-        rejudgeSubmissions,
-      });
+      const {error} = await api.DELETE(
+        "/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block",
+        {
+          params: {
+            path: {
+              org_login: orgLogin,
+              contest_login: contestLogin,
+              user_id: userId,
+              problem_id: problemId,
+            },
+            query: {
+              rejudge_submissions: rejudgeSubmissions,
+            },
+          },
+        },
+      );
+      err = error;
     }
 
     setLoading(false);
@@ -130,7 +156,43 @@ export const SubmissionSanctionsModal = ({
       if (onSuccess) {
         onSuccess();
       }
-      router.refresh();
+      void queryClient.invalidateQueries({
+        queryKey: api.queryOptions(
+          "get",
+          "/organizations/{org_login}/contests/{contest_login}/submissions",
+          {
+            params: {
+              path: {
+                org_login: orgLogin,
+                contest_login: contestLogin,
+              },
+            },
+          },
+        ).queryKey,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: api.queryOptions(
+          "get",
+          "/organizations/{org_login}/contests/{contest_login}/scoreboard",
+          {
+            params: {
+              path: {
+                org_login: orgLogin,
+                contest_login: contestLogin,
+              },
+            },
+          },
+        ).queryKey,
+      });
+      if (submissionId) {
+        void queryClient.invalidateQueries({
+          queryKey: api.queryOptions("get", "/submissions/{submission_id}", {
+            params: {path: {submission_id: submissionId}},
+          }).queryKey,
+        });
+        void queryClient.invalidateQueries({queryKey: [["submission-details", submissionId]]});
+      }
+      void revalidator.revalidate();
     }
   };
 

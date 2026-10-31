@@ -1,17 +1,10 @@
-"use client";
-
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react";
-import useSWR from "swr";
+import {useQueryClient} from "@tanstack/react-query";
+import {createContext, useCallback, useContext, useMemo} from "react";
 
 import {api} from "@/lib/api";
 
-import type {UserModel} from "@/contracts/core/v1";
+import type {UserModel} from "@/contracts/core/v1/schema";
+import type {ReactNode} from "react";
 
 export type SessionContextType = {
   user: UserModel | null;
@@ -21,52 +14,44 @@ export type SessionContextType = {
   setUser: (user: UserModel | null) => void;
   refetchUser: () => Promise<void>;
 };
-
-const SessionContext = createContext<SessionContextType | undefined>(undefined);
-
-const fetchSessionUser = async (): Promise<UserModel | null> => {
-  try {
-    const [, res] = await api.getMe();
-    return res?.user ?? null;
-  } catch {
-    return null;
-  }
-};
-
+export const SessionContext = createContext<SessionContextType | undefined>(
+  undefined,
+);
 export type SessionProviderProps = {
   children: ReactNode;
   initialUser?: UserModel | null;
 };
-
 export const SessionProvider = ({
   children,
   initialUser,
 }: SessionProviderProps): ReactNode => {
-  const {data, mutate, isLoading} = useSWR<UserModel | null>(
-    "current_session_user",
-    fetchSessionUser,
+  const queryClient = useQueryClient();
+  const {data, isLoading, refetch} = api.useQuery(
+    "get",
+    "/users/me",
+    undefined,
     {
-      fallbackData: initialUser ?? undefined,
-      revalidateOnFocus: true,
-      shouldRetryOnError: false,
-      dedupingInterval: 5000,
+      retry: false,
+      staleTime: 5000,
+      initialData: initialUser ? {user: initialUser} : undefined,
     },
   );
-
-  const user = data ?? null;
-
+  const user = data?.user ?? null;
   const setUser = useCallback(
     (nextUser: UserModel | null) => {
-      void mutate(nextUser, false);
+      void queryClient.cancelQueries({queryKey: api.queryOptions("get", "/users/me").queryKey});
+      queryClient.removeQueries({
+        predicate: ({queryKey}) => queryKey[0] !== "get" || queryKey[1] !== "/users/me",
+      });
+      queryClient.getMutationCache().clear();
+      queryClient.setQueryData(api.queryOptions("get", "/users/me").queryKey, {user: nextUser});
     },
-    [mutate],
+    [queryClient],
   );
-
   const refetchUser = useCallback(async () => {
-    await mutate();
-  }, [mutate]);
-
-  const value = useMemo<SessionContextType>(
+    await refetch();
+  }, [refetch]);
+  const value = useMemo(
     () => ({
       user,
       isLoading,
@@ -77,14 +62,10 @@ export const SessionProvider = ({
     }),
     [user, isLoading, setUser, refetchUser],
   );
-
   return (
-    <SessionContext.Provider value={value}>
-      {children}
-    </SessionContext.Provider>
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
   );
 };
-
 export const useSession = (): SessionContextType => {
   const context = useContext(SessionContext);
   if (!context) {

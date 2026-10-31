@@ -14,11 +14,34 @@ export const WorkshopCheckersTab = (props: WorkshopFileTabProps): ReactNode => {
       componentType="checker"
       componentTitle="Чекер"
       defaultFileName="checker"
-      listFiles={(problemId) => api.listProblemCheckers({problemId})}
-      getFile={(problemId, name) => api.getProblemChecker({problemId, name})}
-      createFile={(problemId, name, requestBody) => api.createProblemChecker({problemId, name, requestBody})}
-      updateFile={(problemId, name, requestBody) => api.updateProblemChecker({problemId, name, requestBody})}
-      deleteFile={(problemId, name) => api.deleteProblemChecker({problemId, name})}
+      listFiles={(problemId) =>
+        api.GET("/problems/{problemId}/checkers", {
+          params: {path: {problemId}},
+        })
+      }
+      getFile={(problemId, name) =>
+        api.GET("/problems/{problemId}/checkers/{name}", {
+          params: {path: {problemId, name}},
+          parseAs: "text",
+        })
+      }
+      createFile={(problemId, name, requestBody) =>
+        api.POST("/problems/{problemId}/checkers", {
+          params: {path: {problemId}, query: {name}},
+          body: requestBody,
+        })
+      }
+      updateFile={(problemId, name, requestBody) =>
+        api.PUT("/problems/{problemId}/checkers/{name}", {
+          params: {path: {problemId, name}},
+          body: requestBody,
+        })
+      }
+      deleteFile={(problemId, name) =>
+        api.DELETE("/problems/{problemId}/checkers/{name}", {
+          params: {path: {problemId, name}},
+        })
+      }
     />
   );
 };

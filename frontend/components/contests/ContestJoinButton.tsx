@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Alert,
-  Button,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
+import {Alert, Button, Group, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconInfoCircle, IconTrophy, IconX} from "@tabler/icons-react";
@@ -17,7 +9,7 @@ import {useCallback, useEffect, useState, type ReactNode} from "react";
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
 
-import type {ContestJoinRequestModel, ContestModel} from "@/contracts/core/v1";
+import type {ContestJoinRequestModel, ContestModel} from "@/contracts/core/v1/schema";
 
 type Props = {
   contest: ContestModel;
@@ -43,10 +35,12 @@ export const ContestJoinButton = ({
       return;
     }
     setLoading(true);
-    const [, data] = await api.getMyContestJoinRequest({
-      orgLogin,
-      contestLogin: contest.login,
-    });
+    const {data} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/requests/mine",
+      {
+        params: {path: {org_login: orgLogin, contest_login: contest.login}},
+      },
+    );
     setLoading(false);
     if (data?.request) {
       setPendingRequest(data.request);
@@ -69,13 +63,13 @@ export const ContestJoinButton = ({
 
   const handleRequestSubmit = async () => {
     setActionLoading(true);
-    const [error, data] = await api.createContestJoinRequest({
-      orgLogin,
-      contestLogin: contest.login,
-      requestBody: {
-        message: message.trim() || undefined,
+    const {data, error} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/requests",
+      {
+        params: {path: {org_login: orgLogin, contest_login: contest.login}},
+        body: {message: message.trim() || undefined},
       },
-    });
+    );
     setActionLoading(false);
     closeModal();
     setMessage("");
@@ -101,10 +95,12 @@ export const ContestJoinButton = ({
 
   const handleCancelRequest = async () => {
     setActionLoading(true);
-    const [error] = await api.cancelContestJoinRequest({
-      orgLogin,
-      contestLogin: contest.login,
-    });
+    const {error} = await api.DELETE(
+      "/organizations/{org_login}/contests/{contest_login}/requests/mine",
+      {
+        params: {path: {org_login: orgLogin, contest_login: contest.login}},
+      },
+    );
     setActionLoading(false);
     if (error) {
       notifications.show({

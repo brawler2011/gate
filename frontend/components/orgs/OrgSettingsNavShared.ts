@@ -1,7 +1,4 @@
-import {
-  IconAlertTriangle,
-  IconSettings,
-} from "@tabler/icons-react";
+import {IconAlertTriangle, IconSettings} from "@tabler/icons-react";
 
 import type {ButtonProps} from "@mantine/core";
 import type React from "react";

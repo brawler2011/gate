@@ -1,34 +1,10 @@
-"use client";
-
-import {
-  ActionIcon,
-  Autocomplete,
-  Badge,
-  Button,
-  Center,
-  Divider,
-  Group,
-  Loader,
-  Modal,
-  Select,
-  Stack,
-  Table,
-  Text,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Autocomplete, Badge, Button, Center, Divider, Group, Loader, Modal, Select, Stack, Table, Text, Tooltip} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {
-  IconDeviceFloppy,
-  IconEdit,
-  IconGripVertical,
-  IconPlus,
-  IconRefresh,
-  IconRotate2,
-  IconTrash,
-} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
+import {IconDeviceFloppy, IconEdit, IconGripVertical, IconPlus, IconRefresh, IconRotate2, IconTrash} from "@tabler/icons-react";
+import {useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
+import {useRevalidator} from "react-router-dom";
 
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
@@ -37,7 +13,7 @@ import {numberToLetters} from "@/lib/lib";
 
 import classes from "./ProblemsSection.module.css";
 
-import type * as corev1 from "@/contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 interface ProblemsSectionProps {
@@ -70,7 +46,11 @@ export const ProblemsSection = ({
   contestLogin,
   initialProblems,
 }: ProblemsSectionProps): ReactNode => {
-  const router = useRouter();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
+  const contestQueryKey = api.queryOptions("get", "/organizations/{org_login}/contests/{contest_login}", {
+    params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+  }).queryKey;
   const [problems, setProblems] = useState(initialProblems);
   const [savedProblems, setSavedProblems] = useState(initialProblems);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -113,7 +93,16 @@ export const ProblemsSection = ({
       }
 
       setSearching(true);
-      const [error, response] = await api.listProblems({page: 1, pageSize: 10, search: debouncedQuery, owner: true});
+      const {data: response, error} = await api.GET("/problems", {
+        params: {
+          query: {
+            page: 1,
+            pageSize: 10,
+            search: debouncedQuery,
+            owner: true,
+          },
+        },
+      });
       setSearching(false);
 
       if (error) {
@@ -133,7 +122,15 @@ export const ProblemsSection = ({
     }
 
     setAdding(true);
-    const [error] = await api.createContestProblem({orgLogin, contestLogin, problemId: selectedProblemId});
+    const {error} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/problems",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {problem_id: selectedProblemId},
+        },
+      },
+    );
     setAdding(false);
 
     if (error) {
@@ -157,12 +154,18 @@ export const ProblemsSection = ({
 
     setSearchQuery("");
     setSelectedProblemId(null);
-    router.refresh();
+    void queryClient.invalidateQueries({queryKey: contestQueryKey});
+    void revalidator.revalidate();
   };
 
   const handleDeleteProblem = async (problemId: string) => {
     setDeletingId(problemId);
-    const [error] = await api.deleteContestProblem({orgLogin, contestLogin, problemId});
+    const {error} = await api.DELETE(
+      "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}",
+      {
+        params: {path: {org_login: orgLogin, contest_login: contestLogin, problem_id: problemId}},
+      },
+    );
     setDeletingId(null);
 
     if (error) {
@@ -184,7 +187,8 @@ export const ProblemsSection = ({
       message: "Задача удалена из контеста",
     });
 
-    router.refresh();
+    void queryClient.invalidateQueries({queryKey: contestQueryKey});
+    void revalidator.revalidate();
   };
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -255,16 +259,18 @@ export const ProblemsSection = ({
 
   const handleSaveOrder = async () => {
     setSavingOrder(true);
-    const [error] = await api.reorderContestProblems({
-      orgLogin,
-      contestLogin,
-      requestBody: {
-        problems: problems.map((p) => ({
-          problem_id: p.problem_id,
-          position: p.position,
-        })),
+    const {error} = await api.PUT(
+      "/organizations/{org_login}/contests/{contest_login}/problems/reorder",
+      {
+        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+        body: {
+          problems: problems.map((p) => ({
+            problem_id: p.problem_id,
+            position: p.position,
+          })),
+        },
       },
-    });
+    );
     setSavingOrder(false);
 
     if (error) {
@@ -283,7 +289,8 @@ export const ProblemsSection = ({
       message: "Порядок задач сохранён",
       color: "green",
     });
-    router.refresh();
+    void queryClient.invalidateQueries({queryKey: contestQueryKey});
+    void revalidator.revalidate();
   };
 
   const handleResetOrder = () => {
@@ -296,7 +303,9 @@ export const ProblemsSection = ({
     setSelectedPackageId(null);
     setLoadingPackages(true);
 
-    const [error, response] = await api.listProblemPackages({id: problemId});
+    const {data: response, error} = await api.GET("/problems/{id}/packages", {
+      params: {path: {id: problemId}},
+    });
     setLoadingPackages(false);
 
     if (error || !response?.packages) {
@@ -327,12 +336,18 @@ export const ProblemsSection = ({
     }
 
     setReplacing(true);
-    const [error] = await api.createContestProblem({
-      orgLogin,
-      contestLogin,
-      problemId: replaceTarget.problemId,
-      packageId: selectedPackageId,
-    });
+    const {error} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/problems",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {
+            problem_id: replaceTarget.problemId,
+            package_id: selectedPackageId,
+          },
+        },
+      },
+    );
     setReplacing(false);
 
     if (error) {
@@ -351,7 +366,8 @@ export const ProblemsSection = ({
     });
 
     setReplaceTarget(null);
-    router.refresh();
+    void queryClient.invalidateQueries({queryKey: contestQueryKey});
+    void revalidator.revalidate();
   };
 
   const autocompleteData = searchResults.map((p) => ({

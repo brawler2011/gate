@@ -1,20 +1,15 @@
-"use client";
-
 import {ActionIcon, Group, Select, Stack, Table, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconFileCode, IconSettings} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
+import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
+import {useRevalidator, useNavigate} from "react-router-dom";
 
-import {NextPagination} from '@/components/shared/Pagination';
+import {RoutePagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
 
-import type {
-  PaginationModel as PaginationType,
-  UserModel,
-  UpdateUserRequestModel,
-} from "@/contracts/core/v1";
+import type {PaginationModel as PaginationType, UserModel, UpdateUserRequestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -27,7 +22,9 @@ type Props = {
 };
 
 export const UsersTable = ({users, pagination, page, search, role, onRefresh}: Props): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const currentPage = page;
@@ -36,10 +33,10 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
   const handleRoleChange = async (user: UserModel, newRole: string) => {
     setUpdatingId(user.id);
     try {
-      const [err] = await api.updateUser({
-        username: user.username,
-        requestBody: {
-          role: newRole as UpdateUserRequestModel.role,
+      const {error: err} = await api.PATCH("/users/{username}", {
+        params: {path: {username: user.username}},
+        body: {
+          role: newRole as UpdateUserRequestModel["role"],
         },
       });
 
@@ -61,7 +58,8 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
       if (onRefresh) {
         onRefresh();
       } else {
-        router.refresh();
+        void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users").queryKey});
+        void revalidator.revalidate();
       }
     } finally {
       setUpdatingId(null);
@@ -107,7 +105,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
                 if (target.closest('button') || target.closest('.mantine-Select-root') || target.closest('.mantine-ActionIcon-root')) {
                   return;
                 }
-                router.push(`/@${user.username}`);
+                navigate(`/@${user.username}`);
               }}
               style={{cursor: "pointer"}}
             >
@@ -141,7 +139,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
                     variant="subtle"
                     color="blue"
                     title="Редактировать пользователя"
-                    onClick={() => router.push(`/admin/users/${user.username}`)}
+                    onClick={() => navigate(`/admin/users/${user.username}`)}
                   >
                     <IconSettings size={18} />
                   </ActionIcon>
@@ -149,7 +147,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
                     variant="subtle"
                     color="gray"
                     title="Посмотреть посылки пользователя"
-                    onClick={() => router.push(`/admin/submissions?userId=${user.id}`)}
+                    onClick={() => navigate(`/admin/submissions?userId=${user.id}`)}
                   >
                     <IconFileCode size={18} />
                   </ActionIcon>
@@ -163,7 +161,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
 
       {totalPages > 1 && (
         <Stack align="center" gap="md">
-          <NextPagination
+          <RoutePagination
             pagination={{
               page: currentPage,
               total: totalPages,

@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  Alert,
-  Box,
-  Button,
-  Group,
-  LoadingOverlay,
-  Modal,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
+import {Alert, Box, Button, Group, LoadingOverlay, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useEffect, useState, useTransition} from "react";
 
@@ -70,22 +60,27 @@ export const TestPreviewModal = ({
       } else {
         setIsTooLarge(false);
         setIsLoading(true);
-        api.getProblemTestFile({problemId, name: filename}).then(async ([err, blob]) => {
-          setIsLoading(false);
-          if (err || !blob) {
-            setOriginalError(err?.message || "Файл отсутствует или пуст");
-            setContent("");
-          } else {
-            const text = await blob.text();
-            if (text.length > MAX_PREVIEW_BYTES) {
-              setContent(text.slice(0, MAX_PREVIEW_BYTES));
-              setIsTruncated(true);
+        api
+          .GET("/problems/{problemId}/tests/{name}", {
+            params: {path: {problemId, name: filename}},
+            parseAs: "blob",
+          })
+          .then(async ({data: blob, error: err}) => {
+            setIsLoading(false);
+            if (err || !blob) {
+              setOriginalError(err?.message || "Файл отсутствует или пуст");
+              setContent("");
             } else {
-              setContent(text);
-              setIsTruncated(false);
+              const text = await blob.text();
+              if (text.length > MAX_PREVIEW_BYTES) {
+                setContent(text.slice(0, MAX_PREVIEW_BYTES));
+                setIsTruncated(true);
+              } else {
+                setContent(text);
+                setIsTruncated(false);
+              }
             }
-          }
-        });
+          });
       }
     }
   }, [opened, filename, fileSize, problemId]);
@@ -95,7 +90,13 @@ export const TestPreviewModal = ({
       return;
     }
     setIsLoading(true);
-    const [err, blob] = await api.getProblemTestFile({problemId, name: filename});
+    const {data: blob, error: err} = await api.GET(
+      "/problems/{problemId}/tests/{name}",
+      {
+        params: {path: {problemId, name: filename}},
+        parseAs: "blob",
+      },
+    );
     setIsLoading(false);
     if (err || !blob) {
       setOriginalError(err?.message || "Ошибка загрузки файла");
@@ -115,7 +116,14 @@ export const TestPreviewModal = ({
 
     startSaving(async () => {
       const blob = new Blob([content], {type: "application/octet-stream"});
-      const [err] = await api.updateProblemTestFile({problemId, name: filename, requestBody: blob});
+      const {error: err} = await api.PUT(
+        "/problems/{problemId}/tests/{name}",
+        {
+          params: {path: {problemId, name: filename}},
+          body: blob as unknown as string,
+          bodySerializer: (b) => b as unknown as BodyInit,
+        },
+      );
       if (err) {
         notifications.show({
           title: "Ошибка сохранения",
@@ -140,7 +148,13 @@ export const TestPreviewModal = ({
       return;
     }
     setIsDownloading(true);
-    const [err, blob] = await api.getProblemTestFile({problemId, name: filename});
+    const {data: blob, error: err} = await api.GET(
+      "/problems/{problemId}/tests/{name}",
+      {
+        params: {path: {problemId, name: filename}},
+        parseAs: "blob",
+      },
+    );
     setIsDownloading(false);
     if (err || !blob) {
       notifications.show({

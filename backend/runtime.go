@@ -194,7 +194,7 @@ func runApp(envFile string) error {
 	defer sandboxClient.Close()
 	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudgeGRPCAddr))
 
-	sandboxCfg, err := sandbox.LoadConfig("languages.yaml")
+	sandboxCfg, err := sandbox.LoadConfig("backend/languages.yaml")
 	if err != nil {
 		return fmt.Errorf("failed to load sandbox config: %w", err)
 	}
@@ -326,7 +326,9 @@ func runApp(envFile string) error {
 		),
 	)
 
-	publicMux.Handle("/", apiHandler)
+	publicMux.Handle("/api/", http.StripPrefix("/api", apiHandler))
+	publicMux.Handle("/health", apiHandler)
+	publicMux.Handle("/", spaHandler("dist"))
 
 	publicServer := &http.Server{
 		Addr: cfg.Address,
@@ -337,7 +339,7 @@ func runApp(envFile string) error {
 			if cfg.StorageType == "local" && strings.HasPrefix(r.URL.Path, "/files/") {
 				return "/files/*"
 			}
-			if route, ok := apiServer.FindRoute(r.Method, r.URL.Path); ok {
+			if route, ok := apiServer.FindRoute(r.Method, strings.TrimPrefix(r.URL.Path, "/api")); ok {
 				return route.PathPattern()
 			}
 			return "unmatched"
