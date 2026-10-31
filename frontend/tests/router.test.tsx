@@ -6,7 +6,7 @@ import {Link, matchRoutes} from "react-router-dom";
 
 import {RoutePagination} from '@/components/shared/Pagination';
 
-import {cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor} from './test-utils';
+import {act, cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor} from './test-utils';
 import {App, appRoutes} from '../../src/App';
 
 import type {ReactNode} from 'react';
@@ -133,5 +133,39 @@ describe('SPA route tree', () => {
     const view = renderWithProviders(<Layout />, {route: '/school/round/A'});
     fireEvent.click(view.getByRole('link', {name: 'Монитор'}));
     expect(mounts).toBe(1);
+  });
+
+  it('keeps the current page mounted without a loading indicator until the next route is ready', async () => {
+    let finishLoading!: () => void;
+    const pending = new Promise<null>((resolve) => {
+      finishLoading = () => resolve(null);
+    });
+    let unmounts = 0;
+    const CurrentPage = () => {
+      useEffect(() => () => {
+        unmounts++;
+      }, []);
+      return <Link to="/next">Следующая страница</Link>;
+    };
+    const view = renderWithProviders(<App />, {routes: [{element: <App />, children: [
+      {path: '/', element: <CurrentPage />},
+      {path: '/next', loader: () => pending, element: <h1>Новая страница</h1>},
+    ]}]});
+    const link = view.getByRole('link', {name: 'Следующая страница'});
+    try {
+      fireEvent.click(link);
+      await waitFor(() => expect(view.router.state.navigation.state).toBe('loading'));
+      expect(view.getByRole('link', {name: 'Следующая страница'})).toBe(link);
+      expect(unmounts).toBe(0);
+      expect(view.queryByRole('status')).toBeNull();
+    } finally {
+      await act(async () => {
+        finishLoading();
+        await pending;
+      });
+    }
+    await waitFor(() => expect(view.queryByRole('heading', {name: 'Новая страница'})).toBeTruthy());
+    expect(view.queryByRole('status', {name: 'Загрузка страницы'})).toBeNull();
+    expect(unmounts).toBe(1);
   });
 });

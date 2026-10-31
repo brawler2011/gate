@@ -1,5 +1,5 @@
 import {lazy, Suspense} from "react";
-import {createRoutesFromElements, Route, Outlet, useParams, ScrollRestoration, useNavigation} from "react-router-dom";
+import {createRoutesFromElements, Route, Outlet, useParams, ScrollRestoration} from "react-router-dom";
 
 import NotFound from "@/app/not-found";
 import {QueryState} from "@/components/shared/QueryState";
@@ -17,12 +17,10 @@ const OrganizationOrProfile = (): ReactNode => {
   return <Outlet />;
 };
 export const App = (): ReactNode => {
-  const navigation = useNavigation();
   return (
     <>
       <ScrollRestoration />
-      {navigation.state === "loading" && <div role="status">Загрузка…</div>}
-      <Suspense fallback={<div role="status">Загрузка…</div>}>
+      <Suspense fallback={<QueryState />}>
         <Outlet />
       </Suspense>
     </>
