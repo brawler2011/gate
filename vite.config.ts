@@ -15,12 +15,10 @@ export default defineConfig(({mode}) => {
     server: {
       host: "0.0.0.0",
       port: 3000,
-      proxy: env.BACKEND_API_URL
-        ? {
-          "^/api(?:/|$)": {target: env.BACKEND_API_URL, changeOrigin: true},
-          "^/ws(?:/|$)": {target: env.BACKEND_API_URL, ws: true},
-        }
-        : undefined,
+      proxy: {
+        "^/api(?:/|$)": {target: env.BACKEND_API_URL, changeOrigin: true},
+        "^/ws(?:/|$)": {target: env.BACKEND_API_URL, ws: true},
+      },
     },
   };
 });
