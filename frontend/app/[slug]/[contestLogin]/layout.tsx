@@ -1,17 +1,20 @@
 import {Outlet, useParams} from "react-router-dom";
 
-import {ContestHeaderNav, ContestEventsListener} from "@/components/contests";
-import {DefaultLayout} from "@/components/shared";
+import {ContestEventsListener} from "@/components/contests/ContestEventsListener";
+import {ContestHeaderNav} from "@/components/contests/ContestHeaderNav";
+import {DefaultLayout} from "@/components/shared/DefaultLayout";
 import {QueryState} from "@/components/shared/QueryState";
-import {useGetOrganization} from "@/contracts/core/v1/api";
 import {useContestData} from "@/hooks/useContestData";
+import {api} from "@/lib/api";
 
 import type {ReactNode} from "react";
 
 const ContestLayout = (): ReactNode => {
   const {slug, contestLogin} = useParams() as { slug: string; contestLogin: string };
   const contest = useContestData(slug, contestLogin);
-  const organization = useGetOrganization(slug);
+  const organization = api.useQuery("get", "/organizations/{login}", {
+    params: {path: {login: slug}},
+  });
   if (!contest.data) {
     return <QueryState error={contest.error} />;
   }

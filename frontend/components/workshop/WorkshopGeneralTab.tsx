@@ -39,21 +39,34 @@ export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
   const [isPending, startTransition] = useTransition();
   const [isDirty, setIsDirty] = useState(false);
 
-  const {data: problemData, isLoading: isLoadingProblem} = useQuery({queryKey: ["problem", problemId], queryFn: async () => {
-    const [err, res] = await api.getProblem(problemId);
-    if (err) {
-      throw new Error(err.message || "Не удалось загрузить задачу");
-    }
-    return res;
-  }});
+  const {data: problemData, isLoading: isLoadingProblem} = useQuery({
+    queryKey: ["problem", problemId],
+    queryFn: async () => {
+      const {data: res, error: err} = await api.GET("/problems/{id}", {
+        params: {path: {id: problemId}},
+      });
+      if (err) {
+        throw new Error(err.message || "Не удалось загрузить задачу");
+      }
+      return res;
+    },
+  });
 
-  const {data: limitsData, isLoading: isLoadingLimits} = useQuery({queryKey: ["problem-limits", problemId], queryFn: async () => {
-    const [err, res] = await api.getProblemLimits(problemId);
-    if (err) {
-      throw new Error(err.message || "Не удалось загрузить ограничения");
-    }
-    return res;
-  }});
+  const {data: limitsData, isLoading: isLoadingLimits} = useQuery({
+    queryKey: ["problem-limits", problemId],
+    queryFn: async () => {
+      const {data: res, error: err} = await api.GET(
+        "/problems/{problemId}/limits",
+        {
+          params: {path: {problemId}},
+        },
+      );
+      if (err) {
+        throw new Error(err.message || "Не удалось загрузить ограничения");
+      }
+      return res;
+    },
+  });
 
   const isLoading = isLoadingProblem || isLoadingLimits;
 
@@ -81,12 +94,19 @@ export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
 
   const handleSave = () => {
     startTransition(async () => {
-      const [limitsError] = await api.updateProblemLimits(problemId, {
-        problem_type: limits.problem_type,
-        max_score: limits.problem_type === "scoring" ? limits.max_score : null,
-        time_limit_ms: limits.time_limit_ms,
-        memory_limit_mb: limits.memory_limit_mb
-      });
+      const {error: limitsError} = await api.PATCH(
+        "/problems/{problemId}/limits",
+        {
+          params: {path: {problemId}},
+          body: {
+            problem_type: limits.problem_type,
+            max_score:
+              limits.problem_type === "scoring" ? limits.max_score : null,
+            time_limit_ms: limits.time_limit_ms,
+            memory_limit_mb: limits.memory_limit_mb,
+          },
+        },
+      );
 
       if (limitsError) {
         notifications.show({
@@ -97,8 +117,11 @@ export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
         return;
       }
 
-      const [problemError] = await api.updateProblem(problemId, {
-        is_template: isTemplate
+      const {error: problemError} = await api.PATCH("/problems/{id}", {
+        params: {path: {id: problemId}},
+        body: {
+          is_template: isTemplate,
+        },
       });
 
       if (problemError) {

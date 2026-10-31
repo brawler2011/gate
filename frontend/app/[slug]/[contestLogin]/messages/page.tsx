@@ -5,16 +5,20 @@ import {ContestMessagesClient} from "@/components/contests/messages/ContestMessa
 import {api, unwrap} from "@/lib/api";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
-import type {ContestClarificationModel} from "@/contracts/core/v1/models";
+import type {ContestClarificationModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
 export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const {slug, contestLogin} = routeParams as {slug: string; contestLogin: string};
 
-  const [contestResponse, [, me]] = await Promise.all([
-    unwrap(api.getContest)(slug, contestLogin),
-    api.getMe(),
+  const [contestResponse, {data: me}] = await Promise.all([
+    unwrap(
+      api.GET("/organizations/{org_login}/contests/{contest_login}", {
+        params: {path: {org_login: slug, contest_login: contestLogin}},
+      }),
+    ),
+    api.GET("/users/me"),
   ]);
 
   if (!contestResponse?.contest) {
@@ -38,15 +42,27 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const isModerator =
     contestRole?.role === "moderator" || contestRole?.role === "owner" || user?.role === "admin";
 
-  const [, announcementsRes] = await api.listContestAnnouncements(slug, contestLogin, {
-    page: 1, pageSize: 100
-  });
+  const {data: announcementsRes} = await api.GET(
+    "/organizations/{org_login}/contests/{contest_login}/announcements",
+    {
+      params: {
+        path: {org_login: slug, contest_login: contestLogin},
+        query: {page: 1, pageSize: 100},
+      },
+    },
+  );
 
   let initialClarifications: ContestClarificationModel[] = [];
   if (user) {
-    const [, clarificationsRes] = await api.listContestClarifications(slug, contestLogin, {
-      page: 1, pageSize: 100
-    });
+    const {data: clarificationsRes} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/clarifications",
+      {
+        params: {
+          path: {org_login: slug, contest_login: contestLogin},
+          query: {page: 1, pageSize: 100},
+        },
+      },
+    );
     initialClarifications = clarificationsRes?.clarifications || [];
   }
   return {slug, contestLogin, contestResponse, user, isModerator, announcementsRes, initialClarifications};

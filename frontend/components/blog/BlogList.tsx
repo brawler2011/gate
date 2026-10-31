@@ -5,7 +5,7 @@ import {Stack, Text} from "@mantine/core";
 import {BlogPost} from '@/components/blog/BlogPost';
 import {RoutePagination} from '@/components/shared/Pagination';
 
-import type {PostModel, PaginationModel} from "@/contracts/core/v1/models";
+import type {PostModel, PaginationModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {

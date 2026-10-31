@@ -24,20 +24,32 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     throw redirect(`/${decoded}/problems`);
   }
 
-  const orgData = await getOrganization(decoded);
-
-  const [[problemsError, problemsData], [, me]] = await Promise.all([
-    api.listProblems({
-      page: currentPage,
-      pageSize: 20,
-      organization_id: orgData.organization.id
+  const orgData = await unwrap(
+    api.GET("/organizations/{login}", {
+      params: {path: {login: decoded}},
     }),
-    api.getMe(),
+  );
+
+  const [{data: problemsData, error: problemsErr, response: problemsResponse}, {data: me}] = await Promise.all([
+    api.GET("/problems", {
+      params: {
+        query: {
+          page: currentPage,
+          pageSize: 20,
+          organization_id: orgData.organization.id,
+        },
+      },
+    }),
+    api.GET("/users/me"),
   ]);
+  const problemsError = problemsErr
+    ? {
+      status: problemsResponse.status,
+      message: problemsErr.message || problemsResponse.statusText,
+    }
+    : null;
   return {orgData, problemsError, problemsData, me};
 }) satisfies LoaderFunction;
-
-const getOrganization = unwrap(api.getOrganization);
 
 const OrgProblemsPage = (): ReactNode => {
   const data = useLoaderData<typeof loader>();

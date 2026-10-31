@@ -1,7 +1,7 @@
 import {Suspense, type ReactNode} from "react";
 import {useParams} from "react-router-dom";
 
-import {WorkshopEditor} from "@/components/workshop";
+import {WorkshopEditor} from "@/components/workshop/WorkshopEditor";
 
 type ProblemPageProps = {
   activeTab: string;

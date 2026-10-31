@@ -12,13 +12,34 @@ export const WorkshopSolutionsTab = (props: WorkshopFileTabProps): ReactNode => 
     <WorkshopCollectionTab
       {...props}
       folderName="solutions"
-      listFiles={(problemId) => api.listProblemWorkshopSubmissions(problemId)}
-      getFile={(problemId, name) => api.getProblemWorkshopSubmission(problemId, name)}
-      createFile={(problemId, name, requestBody) => api.createProblemWorkshopSubmission(problemId, requestBody, {
-        name
-      })}
-      updateFile={(problemId, name, requestBody) => api.updateProblemWorkshopSubmission(problemId, name, requestBody)}
-      deleteFile={(problemId, name) => api.deleteProblemWorkshopSubmission(problemId, name)}
+      listFiles={(problemId) =>
+        api.GET("/problems/{problemId}/submissions", {
+          params: {path: {problemId}},
+        })
+      }
+      getFile={(problemId, name) =>
+        api.GET("/problems/{problemId}/submissions/{name}", {
+          params: {path: {problemId, name}},
+          parseAs: "text",
+        })
+      }
+      createFile={(problemId, name, requestBody) =>
+        api.POST("/problems/{problemId}/submissions", {
+          params: {path: {problemId}, query: {name}},
+          body: requestBody,
+        })
+      }
+      updateFile={(problemId, name, requestBody) =>
+        api.PUT("/problems/{problemId}/submissions/{name}", {
+          params: {path: {problemId, name}},
+          body: requestBody,
+        })
+      }
+      deleteFile={(problemId, name) =>
+        api.DELETE("/problems/{problemId}/submissions/{name}", {
+          params: {path: {problemId, name}},
+        })
+      }
     />
   );
 };

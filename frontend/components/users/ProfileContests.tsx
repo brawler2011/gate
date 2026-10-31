@@ -5,7 +5,7 @@ import {Link} from "react-router-dom";
 import {RoutePagination} from "@/components/shared/Pagination";
 import {TimeBeautify} from "@/lib/lib";
 
-import type {ContestModel} from "@/contracts/core/v1/models";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type ProfileContestsProps = {

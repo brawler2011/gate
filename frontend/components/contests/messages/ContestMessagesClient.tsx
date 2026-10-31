@@ -15,7 +15,7 @@ import {AskClarificationModal} from "./AskClarificationModal";
 import classes from "./ContestMessagesClient.module.css";
 import {CreateAnnouncementModal} from "./CreateAnnouncementModal";
 
-import type {ContestAnnouncementModel, ContestClarificationModel, ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/models";
+import type {ContestAnnouncementModel, ContestClarificationModel, ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/schema";
 
 export interface ContestMessagesClientProps {
   contest: ContestModel;
@@ -59,9 +59,15 @@ export const ContestMessagesClient = ({
 
   const refreshAnnouncements = useCallback(async () => {
     setAnnouncementsLoading(true);
-    const [err, res] = await api.listContestAnnouncements(orgLogin, contestLogin, {
-      page: 1, pageSize: 100
-    });
+    const {data: res, error: err} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/announcements",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {page: 1, pageSize: 100},
+        },
+      },
+    );
     setAnnouncementsLoading(false);
     if (!err && res) {
       setAnnouncements(res.announcements);
@@ -73,9 +79,20 @@ export const ContestMessagesClient = ({
       return;
     }
     setClarificationsLoading(true);
-    const [err, res] = await api.listContestClarifications(orgLogin, contestLogin, {
-      problem_id: problemFilter || undefined, status: statusFilter || undefined, page: 1, pageSize: 100
-    });
+    const {data: res, error: err} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/clarifications",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {
+            problem_id: problemFilter || undefined,
+            status: statusFilter || undefined,
+            page: 1,
+            pageSize: 100,
+          },
+        },
+      },
+    );
     setClarificationsLoading(false);
     if (!err && res) {
       setClarifications(res.clarifications);
@@ -100,7 +117,7 @@ export const ContestMessagesClient = ({
   });
 
   const pendingClarificationsCount = clarifications.filter(
-    (c: ContestClarificationModel) => c.status === "pending"
+    (c: ContestClarificationModel) => c.status === "pending",
   ).length;
 
   const allowClarifications = contest.allow_clarifications ?? true;
@@ -110,7 +127,18 @@ export const ContestMessagesClient = ({
       return;
     }
 
-    const [err] = await api.deleteContestAnnouncement(orgLogin, contestLogin, id);
+    const {error: err} = await api.DELETE(
+      "/organizations/{org_login}/contests/{contest_login}/announcements/{announcement_id}",
+      {
+        params: {
+          path: {
+            org_login: orgLogin,
+            contest_login: contestLogin,
+            announcement_id: id,
+          },
+        },
+      },
+    );
 
     if (err) {
       notifications.show({

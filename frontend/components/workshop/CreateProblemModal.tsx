@@ -5,7 +5,7 @@ import {useNavigate} from "react-router-dom";
 
 import {api} from "@/lib/api";
 
-import type {OrganizationModel, ProblemTemplateModel} from "@/contracts/core/v1/models";
+import type {OrganizationModel, ProblemTemplateModel} from "@/contracts/core/v1/schema";
 import type {ComboboxItem, ComboboxItemGroup} from "@mantine/core";
 import type {ReactNode} from "react";
 
@@ -47,10 +47,12 @@ export const CreateProblemModal = ({
   useEffect(() => {
     if (opened && orgId) {
       setLoadingTemplates(true);
-      api.listProblemTemplates({
-        organization_id: orgId
+      api.GET("/problem-templates", {
+        params: {
+          query: {organization_id: orgId},
+        },
       })
-        .then(([err, res]) => {
+        .then(({data: res, error: err}) => {
           if (!err && res) {
             setTemplateList(res);
 
@@ -110,9 +112,18 @@ export const CreateProblemModal = ({
 
     setLoading(true);
     try {
-      const [createError, createResponse] = await api.createProblem({
-        title: title.trim() || "New Problem", organization_id: orgId, template_id: templateId
-      });
+      const {data: createResponse, error: createError} = await api.POST(
+        "/problems",
+        {
+          params: {
+            query: {
+              title: title.trim() || "New Problem",
+              organization_id: orgId || undefined,
+              template_id: templateId,
+            },
+          },
+        },
+      );
       if (createError) {
         throw new Error(createError.message);
       }

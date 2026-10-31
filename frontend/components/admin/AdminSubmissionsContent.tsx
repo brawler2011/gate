@@ -7,12 +7,12 @@ import {useLocation, useNavigate, useSearchParams, Link} from "react-router-dom"
 
 import {RoutePagination} from '@/components/shared/Pagination';
 import {SubmissionDetailsModal} from '@/components/submissions';
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 import {LangString, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 
-import type {SubmissionModel} from "@/contracts/core/v1/models";
+import type {SubmissionModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type AdminSubmissionsContentProps = {
@@ -70,21 +70,24 @@ export const AdminSubmissionsContent = ({
   };
 
   // Fetch submissions
-  const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: ["admin-submissions", page, state, language, contestId, problemId, userId], queryFn: async () => {
-    const [err, res] = await api.listSubmissions({
-      page,
-      pageSize: 10,
-      contestId: contestId || undefined,
-      problemId: problemId || undefined,
-      state: state as NonNullable<Parameters<typeof api.listSubmissions>[0]>["state"],
-      language: language as NonNullable<Parameters<typeof api.listSubmissions>[0]>["language"]
-    });
-
-    if (err) {
-      throw new Error(err.message);
-    }
-    return res;
-  }});
+  const {data, error, isLoading, refetch: mutate} = useQuery({
+    queryKey: ["admin-submissions", page, state, language, contestId, problemId, userId],
+    queryFn: () =>
+      unwrap(
+        api.GET("/submissions", {
+          params: {
+            query: {
+              page,
+              pageSize: 10,
+              contestId: contestId || undefined,
+              problemId: problemId || undefined,
+              state: state ? Number(state) : undefined,
+              language: language ? Number(language) : undefined,
+            },
+          },
+        }),
+      ),
+  });
 
   const submissions = (data?.submissions || []) as unknown as SubmissionModel[];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -96,7 +99,18 @@ export const AdminSubmissionsContent = ({
     }
     setRejudgingId(submission.id);
     try {
-      const [err] = await api.rejudgeSubmission(submission.organization_login, submission.contest_login, submission.id);
+      const {error: err} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge",
+        {
+          params: {
+            path: {
+              org_login: submission.organization_login,
+              contest_login: submission.contest_login,
+              submission_id: submission.id,
+            },
+          },
+        },
+      );
 
       if (err) {
         notifications.show({

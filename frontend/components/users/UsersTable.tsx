@@ -7,10 +7,9 @@ import {useRevalidator, useNavigate} from "react-router-dom";
 
 import {RoutePagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
-import {getListUsersQueryKey} from "@/contracts/core/v1/api";
 import {api} from "@/lib/api";
 
-import type {PaginationModel as PaginationType, UserModel, UpdateUserRequestModel} from "@/contracts/core/v1/models";
+import type {PaginationModel as PaginationType, UserModel, UpdateUserRequestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -34,8 +33,11 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
   const handleRoleChange = async (user: UserModel, newRole: string) => {
     setUpdatingId(user.id);
     try {
-      const [err] = await api.updateUser(user.username, {
-        role: newRole as UpdateUserRequestModel["role"]
+      const {error: err} = await api.PATCH("/users/{username}", {
+        params: {path: {username: user.username}},
+        body: {
+          role: newRole as UpdateUserRequestModel["role"],
+        },
       });
 
       if (err) {
@@ -56,7 +58,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
       if (onRefresh) {
         onRefresh();
       } else {
-        void queryClient.invalidateQueries({queryKey: getListUsersQueryKey()});
+        void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users").queryKey});
         void revalidator.revalidate();
       }
     } finally {

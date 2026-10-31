@@ -8,7 +8,7 @@ import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount"
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {NotificationModel, PaginationModel} from "@/contracts/core/v1/models";
+import type {NotificationModel, PaginationModel} from "@/contracts/core/v1/schema";
 
 const formatRelativeTime = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -44,9 +44,14 @@ export const NotificationsClient = (): ReactNode => {
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
-    const [error, data] = await api.listNotifications({
-      page,
-      pageSize: 20, unread_only: tab === "unread"
+    const {data, error} = await api.GET("/notifications", {
+      params: {
+        query: {
+          page,
+          pageSize: 20,
+          unread_only: tab === "unread",
+        },
+      },
     });
     setLoading(false);
     if (!error && data) {
@@ -61,7 +66,9 @@ export const NotificationsClient = (): ReactNode => {
 
   const handleMarkAsRead = async (id: string) => {
     setActionLoadingId(id);
-    const [error] = await api.markNotificationAsRead(id);
+    const {error} = await api.POST("/notifications/{id}/read", {
+      params: {path: {id}},
+    });
     setActionLoadingId(null);
     if (!error) {
       setItems((prev) =>
@@ -73,7 +80,7 @@ export const NotificationsClient = (): ReactNode => {
 
   const handleMarkAllAsRead = async () => {
     setMarkingAll(true);
-    const [error] = await api.markAllNotificationsAsRead();
+    const {error} = await api.POST("/notifications/read-all");
     setMarkingAll(false);
     if (!error) {
       setItems((prev) => prev.map((n) => ({...n, is_read: true})));
@@ -94,7 +101,9 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.acceptOrganizationInvitation(invitationId);
+    const {error} = await api.POST("/invitations/{id}/accept", {
+      params: {path: {id: invitationId}},
+    });
     setActionLoadingId(null);
 
     if (error) {
@@ -121,7 +130,9 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.declineOrganizationInvitation(invitationId);
+    const {error} = await api.POST("/invitations/{id}/decline", {
+      params: {path: {id: invitationId}},
+    });
     setActionLoadingId(null);
 
     if (error) {
@@ -150,7 +161,13 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.approveOrganizationJoinRequest(orgLogin, requestId, {role: 'member'});
+    const {error} = await api.POST(
+      "/organizations/{login}/requests/{id}/approve",
+      {
+        params: {path: {login: orgLogin, id: requestId}},
+        body: {role: "member"},
+      },
+    );
     setActionLoadingId(null);
 
     if (error) {
@@ -178,7 +195,12 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.rejectOrganizationJoinRequest(orgLogin, requestId);
+    const {error} = await api.POST(
+      "/organizations/{login}/requests/{id}/reject",
+      {
+        params: {path: {login: orgLogin, id: requestId}},
+      },
+    );
     setActionLoadingId(null);
 
     if (error) {
@@ -208,7 +230,18 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.approveContestJoinRequest(orgLogin, contestLogin, requestId);
+    const {error} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/requests/{id}/approve",
+      {
+        params: {
+          path: {
+            org_login: orgLogin,
+            contest_login: contestLogin,
+            id: requestId,
+          },
+        },
+      },
+    );
     setActionLoadingId(null);
 
     if (error) {
@@ -237,7 +270,18 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.rejectContestJoinRequest(orgLogin, contestLogin, requestId);
+    const {error} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/requests/{id}/reject",
+      {
+        params: {
+          path: {
+            org_login: orgLogin,
+            contest_login: contestLogin,
+            id: requestId,
+          },
+        },
+      },
+    );
     setActionLoadingId(null);
 
     if (error) {

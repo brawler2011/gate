@@ -10,7 +10,7 @@ import {useSubmissionsWebSocket} from "@/lib/useSubmissionsWebSocket";
 
 import {SubmissionsList} from "./SubmissionsList";
 
-import type {SubmissionsListItemModel} from "@/contracts/core/v1/models";
+import type {SubmissionsListItemModel} from "@/contracts/core/v1/schema";
 
 interface SubmissionsListClientProps {
   initialSubmissions: SubmissionsListItemModel[];
@@ -68,15 +68,50 @@ export const SubmissionsListClient = ({
     }
 
     setLoading(true);
-    let err = null;
+    let err: {message?: string} | null | undefined = null;
 
     if (modalState.type === "submission") {
       setRejudgingId(modalState.id);
-      [err] = await api.rejudgeSubmission(filter.orgLogin, filter.contestLogin, modalState.id);
+      const {error} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge",
+        {
+          params: {
+            path: {
+              org_login: filter.orgLogin,
+              contest_login: filter.contestLogin,
+              submission_id: modalState.id,
+            },
+          },
+        },
+      );
+      err = error;
     } else if (modalState.type === "problem") {
-      [err] = await api.rejudgeContestProblem(filter.orgLogin, filter.contestLogin, modalState.problemId);
+      const {error} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge",
+        {
+          params: {
+            path: {
+              org_login: filter.orgLogin,
+              contest_login: filter.contestLogin,
+              problem_id: modalState.problemId,
+            },
+          },
+        },
+      );
+      err = error;
     } else if (modalState.type === "all") {
-      [err] = await api.rejudgeContest(filter.orgLogin, filter.contestLogin);
+      const {error} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/rejudge",
+        {
+          params: {
+            path: {
+              org_login: filter.orgLogin,
+              contest_login: filter.contestLogin,
+            },
+          },
+        },
+      );
+      err = error;
     }
 
     setLoading(false);

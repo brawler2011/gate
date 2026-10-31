@@ -52,9 +52,14 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     parsedParams.language = Number(queryParams.language);
   }
 
-  const contestData = await unwrap(api.getContest)(slug, contestLogin);
-
-  const [, me] = await api.getMe();
+  const [contestData, {data: me}] = await Promise.all([
+    unwrap(
+      api.GET("/organizations/{org_login}/contests/{contest_login}", {
+        params: {path: {org_login: slug, contest_login: contestLogin}},
+      }),
+    ),
+    api.GET("/users/me"),
+  ]);
   const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
 
@@ -75,7 +80,21 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const canRejudge =
     contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
 
-  const [error, submissionsData] = await api.listContestSubmissions(slug, contestLogin, parsedParams);
+  const {data: submissionsData, error: submissionsErr, response: submissionsResponse} = await api.GET(
+    "/organizations/{org_login}/contests/{contest_login}/submissions",
+    {
+      params: {
+        path: {org_login: slug, contest_login: contestLogin},
+        query: parsedParams,
+      },
+    },
+  );
+  const error = submissionsErr
+    ? {
+      status: submissionsResponse.status,
+      message: submissionsErr.message || submissionsResponse.statusText,
+    }
+    : null;
   return {slug, contestLogin, parsedParams, contestData, canRejudge, error, submissionsData};
 }) satisfies LoaderFunction;
 

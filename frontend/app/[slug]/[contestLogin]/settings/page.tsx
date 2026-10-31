@@ -10,7 +10,7 @@ import {api, unwrap} from "@/lib/api";
 
 import classes from "./styles.module.css";
 
-import type {ContestProblemListItemModel} from "@/contracts/core/v1/models";
+import type {ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
@@ -19,7 +19,11 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const {slug, contestLogin} = routeParams as {slug: string; contestLogin: string};
   const {section = "settings"} = searchParams;
 
-  const response = await unwrap(api.getContest)(slug, contestLogin);
+  const response = await unwrap(
+    api.GET("/organizations/{org_login}/contests/{contest_login}", {
+      params: {path: {org_login: slug, contest_login: contestLogin}},
+    }),
+  );
   return {slug, contestLogin, section, response};
 }) satisfies LoaderFunction;
 

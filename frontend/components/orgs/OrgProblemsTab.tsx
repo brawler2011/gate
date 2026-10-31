@@ -8,7 +8,7 @@ import {ProblemCard} from "@/components/problems/ProblemCard";
 import {RoutePagination} from "@/components/shared/Pagination";
 import {CreateProblemModal} from "@/components/workshop/CreateProblemModal";
 
-import type {OrganizationModel, PaginationModel, ProblemsListItemModel} from "@/contracts/core/v1/models";
+import type {OrganizationModel, PaginationModel, ProblemsListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {

@@ -12,7 +12,7 @@ import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api, type ApiError} from "@/lib/api";
 
-import type {TeamMemberModel} from "@/contracts/core/v1/models";
+import type {TeamMemberModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = { teamId: string };
@@ -50,11 +50,21 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [error, data] = await api.listTeamMembers(teamId, {
-      page: 1, pageSize: 100
+    const {data, error, response} = await api.GET("/teams/{id}/members", {
+      params: {
+        path: {id: teamId},
+        query: {page: 1, pageSize: 100},
+      },
     });
     setLoading(false);
-    setError(error);
+    setError(
+      error
+        ? {
+          message: (error as {message?: string})?.message || response.statusText || "Ошибка",
+          status: response.status,
+        }
+        : null,
+    );
     if (data) {
       setMembers(data.members);
     }
@@ -70,10 +80,11 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
       return;
     }
     setSearching(true);
-    api.listUsers({
-      page: 1, pageSize: 10,
-      search: debouncedQuery
-    }).then(([, data]) => {
+    api.GET("/users", {
+      params: {
+        query: {page: 1, pageSize: 10, search: debouncedQuery},
+      },
+    }).then(({data}) => {
       setSearching(false);
       setSearchResults((data?.users ?? []).map((u) => ({value: u.id, label: u.username})));
     });
@@ -84,14 +95,17 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
       return;
     }
     setAdding(true);
-    const [error] = await api.addTeamMember(teamId, {
-      user_id: selectedUserId,
-      role: selectedRole
+    const {error} = await api.POST("/teams/{id}/members", {
+      params: {
+        path: {id: teamId},
+        query: {user_id: selectedUserId, role: selectedRole},
+      },
     });
     setAdding(false);
     if (error) {
-      notifications.show({title: "Ошибка", message: error.message, color: "red"});
-      setStatus({type: "error", message: error.message});
+      const msg = error.message || "Не удалось добавить участника";
+      notifications.show({title: "Ошибка", message: msg, color: "red"});
+      setStatus({type: "error", message: msg});
       return;
     }
     setStatus({type: "success", message: "Участник добавлен"});
@@ -102,13 +116,17 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
 
   const handleRemove = async (userId: string) => {
     setDeletingId(userId);
-    const [error] = await api.removeTeamMember(teamId, {
-      user_id: userId
+    const {error} = await api.DELETE("/teams/{id}/members", {
+      params: {
+        path: {id: teamId},
+        query: {user_id: userId},
+      },
     });
     setDeletingId(null);
     if (error) {
-      notifications.show({title: "Ошибка", message: error.message, color: "red"});
-      setStatus({type: "error", message: error.message});
+      const msg = error.message || "Не удалось добавить участника";
+      notifications.show({title: "Ошибка", message: msg, color: "red"});
+      setStatus({type: "error", message: msg});
       return;
     }
     setStatus({type: "success", message: "Участник удалён"});
@@ -129,16 +147,19 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
       return;
     }
 
-    const [error] = await api.updateTeamMemberRole(teamId, {
-      user_id: editingMember.userId,
-      role: newRole
+    const {error} = await api.PATCH("/teams/{id}/members", {
+      params: {
+        path: {id: teamId},
+        query: {user_id: editingMember.userId, role: newRole},
+      },
     });
 
     setModalOpened(false);
 
     if (error) {
-      notifications.show({title: "Ошибка", message: error.message, color: "red"});
-      setStatus({type: "error", message: error.message});
+      const msg = error.message || "Не удалось добавить участника";
+      notifications.show({title: "Ошибка", message: msg, color: "red"});
+      setStatus({type: "error", message: msg});
       return;
     }
 

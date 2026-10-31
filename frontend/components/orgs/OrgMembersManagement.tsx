@@ -11,7 +11,7 @@ import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntityCollection, useEntityMutation} from "@/hooks/useEntityManagement";
 import {api} from "@/lib/api";
 
-import type {ApproveOrganizationJoinRequestModel, InviteOrganizationMemberRequestModel, OrganizationJoinRequestModel} from "@/contracts/core/v1/models";
+import type {ApproveOrganizationJoinRequestModel, InviteOrganizationMemberRequestModel, OrganizationJoinRequestModel} from "@/contracts/core/v1/schema";
 
 const ROLE_OPTIONS = [
   {label: "Владелец", value: "owner", color: "red"},
@@ -59,22 +59,29 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
   } | null>(null);
 
   const fetchMembers = useCallback(async () => {
-    const [, data] = await api.listOrganizationMembers(orgLogin, {
-      page: 1, pageSize: 100
+    const {data} = await api.GET("/organizations/{login}/members", {
+      params: {
+        path: {login: orgLogin},
+        query: {page: 1, pageSize: 100},
+      },
     });
     return data?.members;
   }, [orgLogin]);
   const {items: members, loading: loadingMembers, reload: loadMembers} = useEntityCollection(fetchMembers);
 
   const fetchInvitations = useCallback(async () => {
-    const [, data] = await api.listOrganizationInvitations(orgLogin);
+    const {data} = await api.GET("/organizations/{login}/invitations", {
+      params: {path: {login: orgLogin}},
+    });
     return data?.invitations;
   }, [orgLogin]);
   const {items: invitations, loading: loadingInvitations, reload: loadInvitations} =
     useEntityCollection(fetchInvitations, false);
 
   const fetchRequests = useCallback(async () => {
-    const [, data] = await api.listOrganizationJoinRequests(orgLogin);
+    const {data} = await api.GET("/organizations/{login}/requests", {
+      params: {path: {login: orgLogin}},
+    });
     return data?.requests;
   }, [orgLogin]);
   const {items: requests, loading: loadingRequests, reload: loadRequests} = useEntityCollection(fetchRequests, false);
@@ -85,10 +92,11 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
       return;
     }
     setSearching(true);
-    api.listUsers({
-      page: 1, pageSize: 10,
-      search: debouncedQuery
-    }).then(([, data]) => {
+    api.GET("/users", {
+      params: {
+        query: {page: 1, pageSize: 10, search: debouncedQuery},
+      },
+    }).then(({data}) => {
       setSearching(false);
       setSearchResults(
         (data?.users ?? []).map((u) => ({value: u.id, label: u.username})),
@@ -101,9 +109,12 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
       return;
     }
     setInviting(true);
-    const [error] = await api.inviteOrganizationMember(orgLogin, {
-      user_id: selectedUserId,
-      role: selectedRole as InviteOrganizationMemberRequestModel["role"]
+    const {error} = await api.POST("/organizations/{login}/invitations", {
+      params: {path: {login: orgLogin}},
+      body: {
+        user_id: selectedUserId,
+        role: selectedRole as InviteOrganizationMemberRequestModel["role"],
+      },
     });
     setInviting(false);
     if (error) {
@@ -126,9 +137,15 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
   };
 
   const handleCancelInvitation = async (invitationId: string) => {
-    const [error] = await mutateInvitations(invitationId, () =>
-      api.cancelOrganizationInvitation(orgLogin, invitationId)
-    );
+    const error = await mutateInvitations(invitationId, async () => {
+      const {error} = await api.DELETE(
+        "/organizations/{login}/invitations/{id}",
+        {
+          params: {path: {login: orgLogin, id: invitationId}},
+        },
+      );
+      return error;
+    });
     if (error) {
       notifications.show({
         title: "Ошибка",
@@ -145,9 +162,15 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
   };
 
   const handleRemoveMember = async (userId: string) => {
-    const [error] = await mutateMembers(userId, () => api.removeOrganizationMember(orgLogin, {
-      user_id: userId
-    }));
+    const error = await mutateMembers(userId, async () => {
+      const {error} = await api.DELETE("/organizations/{login}/members", {
+        params: {
+          path: {login: orgLogin},
+          query: {user_id: userId},
+        },
+      });
+      return error;
+    });
     if (error) {
       notifications.show({
         title: "Ошибка",
@@ -167,11 +190,18 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (!selectedRequest) {
       return;
     }
-    const [error] = await mutateRequests(selectedRequest.id, () =>
-      api.approveOrganizationJoinRequest(orgLogin, selectedRequest.id, {
-        role: approveRole as ApproveOrganizationJoinRequestModel["role"]
-      })
-    );
+    const error = await mutateRequests(selectedRequest.id, async () => {
+      const {error} = await api.POST(
+        "/organizations/{login}/requests/{id}/approve",
+        {
+          params: {path: {login: orgLogin, id: selectedRequest.id}},
+          body: {
+            role: approveRole as ApproveOrganizationJoinRequestModel["role"],
+          },
+        },
+      );
+      return error;
+    });
     closeApproveModal();
     if (error) {
       notifications.show({
@@ -190,7 +220,15 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
   };
 
   const handleRejectRequest = async (requestId: string, username: string) => {
-    const [error] = await mutateRequests(requestId, () => api.rejectOrganizationJoinRequest(orgLogin, requestId));
+    const error = await mutateRequests(requestId, async () => {
+      const {error} = await api.POST(
+        "/organizations/{login}/requests/{id}/reject",
+        {
+          params: {path: {login: orgLogin, id: requestId}},
+        },
+      );
+      return error;
+    });
     if (error) {
       notifications.show({
         title: "Ошибка",

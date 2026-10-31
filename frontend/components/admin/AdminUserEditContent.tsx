@@ -7,11 +7,10 @@ import {useState, type ReactNode} from "react";
 import {useRevalidator, Link} from "react-router-dom";
 
 import {TruncatedWithCopy} from "@/components/shared/TruncatedWithCopy";
-import {getGetUserQueryKey, getListUsersQueryKey, getGetMeQueryKey} from "@/contracts/core/v1/api";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {UpdateUserRequestModel, UserModel} from "@/contracts/core/v1/models";
+import type {UpdateUserRequestModel, UserModel} from "@/contracts/core/v1/schema";
 
 type Props = {
   user: UserModel;
@@ -60,7 +59,10 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
     }
     setRoleLoading(true);
     try {
-      const [error] = await api.updateUser(user.username, {role: role as UpdateUserRequestModel["role"]});
+      const {error} = await api.PATCH("/users/{username}", {
+        params: {path: {username: user.username}},
+        body: {role: role as UpdateUserRequestModel["role"]},
+      });
 
       if (error) {
         notifications.show({
@@ -78,9 +80,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
         color: "green",
         icon: <IconCheck size={18} />,
       });
-      void queryClient.invalidateQueries({queryKey: getGetUserQueryKey(user.username)});
-      void queryClient.invalidateQueries({queryKey: getListUsersQueryKey()});
-      void queryClient.invalidateQueries({queryKey: getGetMeQueryKey()});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users/{username}", {params: {path: {username: user.username}}}).queryKey});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users").queryKey});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users/me").queryKey});
       void revalidator.revalidate();
     } catch {
       notifications.show({
@@ -96,9 +98,12 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
   const handleChangeEmail = async (values: typeof emailForm.values) => {
     setEmailLoading(true);
     try {
-      const [error] = await api.adminChangeEmail(user.username, {
-        email: values.email.trim(),
-        with_confirmation: values.withConfirmation
+      const {error} = await api.POST("/admin/users/{username}/change-email", {
+        params: {path: {username: user.username}},
+        body: {
+          email: values.email.trim(),
+          with_confirmation: values.withConfirmation,
+        },
       });
 
       if (error) {
@@ -130,9 +135,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
           icon: <IconCheck size={18} />,
         });
       }
-      void queryClient.invalidateQueries({queryKey: getGetUserQueryKey(user.username)});
-      void queryClient.invalidateQueries({queryKey: getListUsersQueryKey()});
-      void queryClient.invalidateQueries({queryKey: getGetMeQueryKey()});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users/{username}", {params: {path: {username: user.username}}}).queryKey});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users").queryKey});
+      void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/users/me").queryKey});
       void revalidator.revalidate();
     } catch {
       notifications.show({
@@ -148,7 +153,10 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
   const handleSetPassword = async (values: typeof passwordForm.values) => {
     setSetPasswordLoading(true);
     try {
-      const [error] = await api.adminSetPassword(user.username, {password: values.password});
+      const {error} = await api.POST("/admin/users/{username}/set-password", {
+        params: {path: {username: user.username}},
+        body: {password: values.password},
+      });
 
       if (error) {
         notifications.show({
@@ -189,7 +197,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
 
     setResetEmailLoading(true);
     try {
-      const [error] = await api.adminSendPasswordReset(user.username);
+      const {error} = await api.POST("/admin/users/{username}/send-reset-password", {
+        params: {path: {username: user.username}},
+      });
 
       if (error) {
         notifications.show({
@@ -224,7 +234,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
 
     setResendVerificationLoading(true);
     try {
-      const [error] = await api.adminResendVerification(user.username);
+      const {error} = await api.POST("/admin/users/{username}/resend-verification", {
+        params: {path: {username: user.username}},
+      });
 
       if (error) {
         notifications.show({

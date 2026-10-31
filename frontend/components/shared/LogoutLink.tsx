@@ -18,7 +18,7 @@ const LogoutLink = (props: LogoutLinkProps): ReactNode => {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await api.logout();
+      await api.POST("/auth/logout");
       setUser(null);
       navigate("/auth/login");
     } catch {

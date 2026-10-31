@@ -10,11 +10,17 @@ import type {ReactNode} from "react";
 import type {LoaderFunction} from "react-router-dom";
 
 export const loader = (async () => {
-  const [, me] = await api.getMe();
+  const [{data: me}, {data, error: orgsErr, response: orgsResponse}] = await Promise.all([
+    api.GET("/users/me"),
+    api.GET("/organizations", {params: {query: {page: 1, pageSize: 50}}}),
+  ]);
   const user = me?.user ?? null;
-  const [error, data] = await api.listOrganizations({
-    page: 1, pageSize: 50
-  });
+  const error = orgsErr
+    ? {
+      status: orgsResponse.status,
+      message: orgsErr.message || orgsResponse.statusText,
+    }
+    : null;
   return {user, error, data};
 }) satisfies LoaderFunction;
 

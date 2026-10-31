@@ -1,8 +1,5 @@
 export * from './AdaptiveTabs';
-export * from './ChangeRoleModal';
-export * from './CodeBlock';
 export * from './DefaultLayout';
-export * from './EntityManagementTable';
 export * from './ErrorDisplay';
 export * from './Footer';
 export * from './Header';
@@ -12,5 +9,4 @@ export * from './LogoutLink';
 export * from './Pagination';
 export * from './RefreshButton';
 export * from './StatusMessage';
-export * from './Task';
 export * from './TruncatedWithCopy';

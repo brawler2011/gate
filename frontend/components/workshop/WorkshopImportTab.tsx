@@ -5,7 +5,6 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useState, useTransition} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
-import {getGetProblemQueryKey} from "@/contracts/core/v1/api";
 import {api} from "@/lib/api";
 
 import type {ReactNode} from "react";
@@ -25,7 +24,12 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
     }
 
     startImport(async () => {
-      const [error] = await api.importProblem(problemId, {package: packageFile});
+      const body = new FormData();
+      body.append("package", packageFile);
+      const {error} = await api.POST("/problems/{id}/import", {
+        params: {path: {id: problemId}},
+        body: body as unknown as {package?: string},
+      });
       if (error) {
         notifications.show({
           title: "Ошибка импорта",
@@ -41,7 +45,11 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
         color: "green",
       });
       setPackageFile(null);
-      void queryClient.invalidateQueries({queryKey: getGetProblemQueryKey(problemId)});
+      void queryClient.invalidateQueries({
+        queryKey: api.queryOptions("get", "/problems/{id}", {
+          params: {path: {id: problemId}},
+        }).queryKey,
+      });
       void queryClient.invalidateQueries({queryKey: ["problem", problemId]});
       void queryClient.invalidateQueries({queryKey: ["problem-limits", problemId]});
       void queryClient.invalidateQueries({queryKey: ["workshop-files", problemId]});

@@ -101,14 +101,18 @@ export const CreateOrgButton = (): ReactNode => {
     }
 
     setLoading(true);
-    const [error, response] = await api.createOrganization({
-      name: trimmedName,
-      login: trimmedLogin || undefined
+    const {data: response, error} = await api.POST("/organizations", {
+      params: {
+        query: {
+          name: trimmedName,
+          login: trimmedLogin || undefined,
+        },
+      },
     });
     setLoading(false);
 
     if (error) {
-      setFormError(translateApiError(error.message));
+      setFormError(translateApiError(error.message || "Ошибка создания организации"));
       return;
     }
 

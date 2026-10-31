@@ -7,14 +7,14 @@ import {useNavigate, useSearchParams} from "react-router-dom";
 
 import {RoutePagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 import {formatDate} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 import {DeleteOrgModal} from "./DeleteOrgModal";
 import {CreateOrgButton} from "../orgs/CreateOrgButton";
 
-import type {OrganizationModel} from "@/contracts/core/v1/models";
+import type {OrganizationModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type AdminOrgsContentProps = {
@@ -71,17 +71,17 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
   }, [searchInput, navigate, searchParams]);
 
   // Fetch organizations
-  const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: ["admin-orgs", page, search], queryFn: async () => {
-    const [err, res] = await api.listOrganizations({
-      page,
-      pageSize: 10,
-      search
-    });
-    if (err) {
-      throw new Error(err.message);
-    }
-    return res;
-  }});
+  const {data, error, isLoading, refetch: mutate} = useQuery({
+    queryKey: ["admin-orgs", page, search],
+    queryFn: () =>
+      unwrap(
+        api.GET("/organizations", {
+          params: {
+            query: {page, pageSize: 10, search},
+          },
+        }),
+      ),
+  });
 
   const orgs = data?.organizations || [];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -99,7 +99,9 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
 
     setDeletingId(orgToDelete.id);
     try {
-      const [err] = await api.deleteOrganization(orgToDelete.login);
+      const {error: err} = await api.DELETE("/organizations/{login}", {
+        params: {path: {login: orgToDelete.login}},
+      });
       if (err) {
         notifications.show({
           title: "Ошибка",

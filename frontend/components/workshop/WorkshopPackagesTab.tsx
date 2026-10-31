@@ -65,7 +65,9 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
 
   const fetchPackages = useCallback(async () => {
     setLoading(true);
-    const [error, data] = await api.listProblemPackages(problemId);
+    const {data, error} = await api.GET("/problems/{id}/packages", {
+      params: {path: {id: problemId}},
+    });
     if (!error && data?.packages) {
       setPackages(data.packages as PackageItem[]);
     }
@@ -78,7 +80,9 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
 
   const handleBuild = () => {
     startBuilding(async () => {
-      const [error, data] = await api.publishProblem(problemId);
+      const {data, error} = await api.POST("/problems/{id}/publish", {
+        params: {path: {id: problemId}},
+      });
       if (error) {
         notifications.show({
           title: "Ошибка сборки пакета",

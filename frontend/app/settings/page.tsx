@@ -7,7 +7,7 @@ import type {ReactNode} from "react";
 import type {LoaderFunction} from "react-router-dom";
 
 export const loader = (async () => {
-  const [error, data] = await api.getMe();
+  const {data, error} = await api.GET("/users/me");
   return {error, data};
 }) satisfies LoaderFunction;
 

@@ -7,7 +7,7 @@ import {OrgSettingsForm} from "@/components/orgs/OrgSettingsForm";
 import {OrgSettingsMobileNav} from "@/components/orgs/OrgSettingsMobileNav";
 import {ORG_SETTINGS_NAV_SECTIONS} from "@/components/orgs/OrgSettingsNavShared";
 import {OrgSettingsSidebarNav} from "@/components/orgs/OrgSettingsSidebarNav";
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 import {canManageOrgMembers} from "@/lib/permissions";
 
 import classes from "./styles.module.css";
@@ -26,14 +26,12 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
 
   const {section = "settings"} = searchParams;
 
-  const [error, data] = await api.getOrganization(decoded);
-  if (error) {
-    if (error.status === 404) {
-      throw new Response("Страница не найдена", {status: 404});
-    }
-    throw error;
-  }
-  const org = data!.organization;
+  const data = await unwrap(
+    api.GET("/organizations/{login}", {
+      params: {path: {login: decoded}},
+    }),
+  );
+  const org = data.organization;
 
   const canManage = await canManageOrgMembers(org.login);
   return {section, org, canManage};

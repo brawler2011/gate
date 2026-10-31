@@ -21,8 +21,16 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
     throw new Response("Страница не найдена", {status: 404});
   }
 
-  const [error, data] = await api.getTeam(team_id);
-  return {team_id, decoded, error, data};
+  const {data, error, response} = await api.GET("/teams/{id}", {
+    params: {path: {id: team_id}},
+  });
+  const err = error
+    ? {
+      status: response.status,
+      message: (error as {message?: string})?.message || response.statusText,
+    }
+    : null;
+  return {team_id, decoded, error: err, data};
 }) satisfies LoaderFunction;
 
 const TeamPage = (): ReactNode => {

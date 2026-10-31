@@ -1,11 +1,11 @@
 import {useQuery} from "@tanstack/react-query";
 import {Outlet, useParams} from "react-router-dom";
 
-import {OrgHeaderNav} from "@/components/orgs";
-import {DefaultLayout} from "@/components/shared";
+import {OrgHeaderNav} from "@/components/orgs/OrgHeaderNav";
+import {DefaultLayout} from "@/components/shared/DefaultLayout";
 import {QueryState} from "@/components/shared/QueryState";
 import {useSession} from "@/contexts/SessionContext";
-import {useGetOrganization} from "@/contracts/core/v1/api";
+import {api} from "@/lib/api";
 import {canManageOrgMembers} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
@@ -13,7 +13,9 @@ import type {ReactNode} from "react";
 const OrgLayout = (): ReactNode => {
   const {slug} = useParams() as { slug: string };
   const {user} = useSession();
-  const organization = useGetOrganization(slug);
+  const organization = api.useQuery("get", "/organizations/{login}", {
+    params: {path: {login: slug}},
+  });
   const membership = useQuery({
     queryKey: ["org-members-permission", slug, user?.id],
     queryFn: () => canManageOrgMembers(slug),

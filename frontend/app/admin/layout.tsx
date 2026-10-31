@@ -1,7 +1,7 @@
 import {Outlet, Navigate} from "react-router-dom";
 
-import {AdminHeaderNav} from "@/components/admin";
-import {DefaultLayout} from "@/components/shared";
+import {AdminHeaderNav} from "@/components/admin/AdminHeaderNav";
+import {DefaultLayout} from "@/components/shared/DefaultLayout";
 import {QueryState} from "@/components/shared/QueryState";
 import {useSession} from "@/contexts/SessionContext";
 

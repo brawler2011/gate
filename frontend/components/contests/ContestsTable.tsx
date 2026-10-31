@@ -3,7 +3,7 @@ import {useNavigate} from "react-router-dom";
 
 import classes from "./ContestsTable.module.css";
 
-import type {ContestModel} from "@/contracts/core/v1/models";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type ContestsTableProps = {

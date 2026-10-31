@@ -5,7 +5,7 @@ import {Link} from "react-router-dom";
 
 import {api} from "@/lib/api";
 
-import type * as corev1 from "@/contracts/core/v1/models";
+import type * as corev1 from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 interface TeamProblemsTabProps {
@@ -18,7 +18,9 @@ export const TeamProblemsTab = ({teamId}: TeamProblemsTabProps): ReactNode => {
 
   const loadProblems = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listTeamProblems(teamId, {});
+    const {data: response, error} = await api.GET("/teams/{id}/problems", {
+      params: {path: {id: teamId}},
+    });
     setLoading(false);
 
     if (error || !response) {

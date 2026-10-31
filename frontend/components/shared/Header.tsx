@@ -15,7 +15,7 @@ import {APP_COLORS} from "@/lib/theme/colors";
 import classes from "./Header.module.css";
 import {LogoutLink} from "./LogoutLink";
 
-import type {UserModel} from "@/contracts/core/v1/models";
+import type {UserModel} from "@/contracts/core/v1/schema";
 
 export type HeaderOrganization = {
   id: string;
@@ -56,7 +56,7 @@ const Profile = ({user: propUser}: { user?: UserModel | null }) => {
   const handleLogout = async () => {
     setLogoutLoading(true);
     try {
-      await api.logout();
+      await api.POST("/auth/logout");
       setUser(null);
       navigate("/auth/login");
     } catch {

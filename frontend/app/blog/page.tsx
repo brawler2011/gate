@@ -5,7 +5,7 @@ import {useSearchParams, Navigate} from "react-router-dom";
 import {BlogList} from "@/components/blog";
 import {DefaultLayout} from "@/components/shared";
 import {QueryState} from "@/components/shared/QueryState";
-import {useListPosts} from "@/contracts/core/v1/api";
+import {api} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
 
 import type {ReactNode} from "react";
@@ -14,7 +14,12 @@ const Page = (): ReactNode => {
   const [search] = useSearchParams();
   const searchParams = Object.fromEntries(search);
   const page = parsePage(searchParams.page);
-  const routeQuery = useListPosts({page: page ?? 1, pageSize: 5}, {query: {enabled: Boolean(page)}});
+  const routeQuery = api.useQuery(
+    "get",
+    "/posts",
+    {params: {query: {page: page ?? 1, pageSize: 5}}},
+    {enabled: Boolean(page)},
+  );
   if (!page) {
     return <Navigate to="/blog" replace />;
   }

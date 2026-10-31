@@ -6,7 +6,7 @@ import {Link} from "react-router-dom";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
 
-import type {ContestModel} from "@/contracts/core/v1/models";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 interface TeamContestsTabProps {
@@ -24,10 +24,15 @@ const getContestStatus = (contest: ContestModel, now: number): string => {
 };
 
 export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
-  const {data, isLoading} = useQuery({queryKey: ["team-contests", teamId], queryFn: async () => ({
-    result: await api.listTeamContests(teamId, {}),
-    loadedAt: Date.now(),
-  })});
+  const {data, isLoading} = useQuery({
+    queryKey: ["team-contests", teamId],
+    queryFn: async () => ({
+      result: await api.GET("/teams/{id}/contests", {
+        params: {path: {id: teamId}},
+      }),
+      loadedAt: Date.now(),
+    }),
+  });
 
   if (isLoading || !data) {
     return (
@@ -39,9 +44,19 @@ export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
     );
   }
 
-  const [error, response] = data.result;
+  const {error, data: response, response: rawResponse} = data.result;
   if (error) {
-    return <ErrorDisplay error={error} />;
+    return (
+      <ErrorDisplay
+        error={{
+          status: rawResponse.status,
+          message:
+            (error as {message?: string})?.message ||
+            rawResponse.statusText ||
+            "Ошибка",
+        }}
+      />
+    );
   }
   const contests = response.contests;
 

@@ -6,7 +6,7 @@ import React from "react";
 import {loadTestState, renumberTests} from "@/components/workshop/tests/testsConfig";
 import {TestsListTable} from "@/components/workshop/tests/TestsListTable";
 import {WorkshopTestsManager} from "@/components/workshop/tests/WorkshopTestsManager";
-import * as operations from "@/contracts/core/v1/api";
+import {api} from "@/lib/api";
 
 import {cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
@@ -26,8 +26,15 @@ describe("workshop file preview identity", () => {
   for (const [filename, outFilename, ordinal] of [["edge.in", "edge.ans", 1], ["03.in", "03.out", 3]] as const) {
     for (const selected of [filename, outFilename]) {
       it(`opens and saves ${selected} using its filename after renumbering`, async () => {
-        const read = spyOn(operations, "getProblemTestFile").mockResolvedValue(new Blob(["original"]));
-        const write = spyOn(operations, "updateProblemTestFile").mockResolvedValue({message: "saved"});
+        const read = spyOn(api, "GET").mockImplementation(async (path: string, _init?: unknown) => {
+          if (path === "/problems/{problemId}/tests/{name}") {
+            return {data: new Blob(["original"]), response: new Response()} as never;
+          }
+          return {response: new Response()} as never;
+        });
+        const write = spyOn(api, "PUT").mockImplementation(async () => {
+          return {data: {message: "saved"}, response: new Response()} as never;
+        });
         restore = () => {
           read.mockRestore(); write.mockRestore();
         };
@@ -37,13 +44,18 @@ describe("workshop file preview identity", () => {
           onChangeTests={() => {}} onChangeSubtasks={() => {}} onAddTest={() => {}} onDeleteSelectedTests={() => {}}
         />);
         fireEvent.click(view.getByText(`${selected} ✓`));
-        await waitFor(() => expect(read).toHaveBeenCalledWith("problem", selected));
+        await waitFor(() => expect(read).toHaveBeenCalledWith(
+          "/problems/{problemId}/tests/{name}",
+          expect.objectContaining({params: {path: {problemId: "problem", name: selected}}}),
+        ));
         const editor = await view.findByLabelText("Содержимое файла");
         await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe("original"));
         fireEvent.click(view.getByRole("button", {name: "Сохранить"}));
         await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
-        expect(write.mock.calls[0][1]).toBe(selected);
-        expect(await write.mock.calls[0][2].text()).toBe("original");
+        const writeCall = write.mock.calls[0];
+        expect((writeCall[1] as {params?: {path?: {name?: string}}})?.params?.path?.name).toBe(selected);
+        const body = (writeCall[1] as {body?: unknown})?.body;
+        expect(await (body instanceof Blob ? body.text() : String(body))).toBe("original");
       });
     }
   }
@@ -54,32 +66,64 @@ describe("workshop file preview identity", () => {
         groups: [{ordinal: 1, name: "samples", points: 0, points_policy: "complete", depends_on: [], tests: [1, 1]}],
         tests: [{ordinal: 1, filename: "nested/edge", method: "manual", is_sample: true}],
       };
-      const read = spyOn(operations, "getProblemTestFile").mockImplementation((_problemId, name) =>
-        Promise.resolve(new Blob([name === "tests.json" ? JSON.stringify(config) : files[name]]))
-      );
-      const write = spyOn(operations, "updateProblemTestFile").mockResolvedValue({message: "saved"});
-      const mocks = [read, write,
-        spyOn(operations, "listProblemGenerators").mockResolvedValue({files: []}),
-        spyOn(operations, "listProblemWorkshopSubmissions").mockResolvedValue({files: []}),
-        spyOn(operations, "listProblemTests").mockResolvedValue({files: Object.entries(files).map(
-          ([name, content]) => ({path: `tests/${name}`, size: content.length, is_directory: false})
-        )}),
-        spyOn(operations, "getProblemLimits").mockResolvedValue({
-          problem_type: "pass-fail", time_limit_ms: 1000, memory_limit_mb: 256,
-        }),
-      ];
+      const read = spyOn(api, "GET").mockImplementation(async (path: string, init?: unknown) => {
+        if (path === "/problems/{problemId}/limits") {
+          return {
+            data: {problem_type: "pass-fail", time_limit_ms: 1000, memory_limit_mb: 256},
+            response: new Response(),
+          } as never;
+        }
+        if (path === "/problems/{problemId}/generators") {
+          return {data: {files: []}, response: new Response()} as never;
+        }
+        if (path === "/problems/{problemId}/submissions") {
+          return {data: {files: []}, response: new Response()} as never;
+        }
+        if (path === "/problems/{problemId}/tests") {
+          return {
+            data: {
+              files: Object.entries(files).map(([name, content]) => ({
+                path: `tests/${name}`, size: content.length, is_directory: false,
+              })),
+            },
+            response: new Response(),
+          } as never;
+        }
+        if (path === "/problems/{problemId}/tests/{name}") {
+          const name = (init as {params?: {path?: {name?: string}}})?.params?.path?.name;
+          let content = "";
+          if (name === "tests.json") {
+            content = JSON.stringify(config);
+          } else if (name && files[name]) {
+            content = files[name];
+          }
+          return {data: new Blob([content]), response: new Response()} as never;
+        }
+        return {response: new Response()} as never;
+      });
+      const write = spyOn(api, "PUT").mockImplementation(async () => {
+        return {data: {message: "saved"}, response: new Response()} as never;
+      });
       restore = () => {
-        mocks.forEach((mock) => mock.mockRestore());
+        read.mockRestore(); write.mockRestore();
       };
       const view = renderWithProviders(<WorkshopTestsManager problemId={`nested-${selected.endsWith("in") ? "input" : "answer"}`} />);
       fireEvent.click(await view.findByText(`${selected} ✓`));
-      await waitFor(() => expect(read.mock.calls.some(([, name]) => name === selected)).toBe(true));
+      await waitFor(() => expect(
+        read.mock.calls.some(
+          (call: unknown[]) =>
+            call[0] === "/problems/{problemId}/tests/{name}" &&
+            (call[1] as {params?: {path?: {name?: string}}})?.params?.path?.name === selected,
+        ),
+      ).toBe(true));
       const editor = await view.findByLabelText("Содержимое файла");
       await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe(files[selected]));
       fireEvent.click(view.getByRole("button", {name: "Сохранить"}));
       await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
-      expect(write.mock.calls[0][1]).toBe(selected);
-      expect(await write.mock.calls[0][2].text()).toBe(files[selected]);
+      const writeCall = write.mock.calls[0];
+      expect((writeCall[1] as {params?: {path?: {name?: string}}})?.params?.path?.name).toBe(selected);
+      const body = (writeCall[1] as {body?: unknown})?.body;
+      expect(await (body instanceof Blob ? body.text() : String(body))).toBe(files[selected]);
     });
   }
 

@@ -7,13 +7,13 @@ import {useNavigate, useSearchParams} from "react-router-dom";
 
 import {RoutePagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 import {formatDate} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 import {DeleteProblemModal} from "./DeleteProblemModal";
 
-import type {ProblemsListItemModel} from "@/contracts/core/v1/models";
+import type {ProblemsListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type AdminProblemsContentProps = {
@@ -70,17 +70,17 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
   }, [searchInput, navigate, searchParams]);
 
   // Fetch problems
-  const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: ["admin-problems", page, search], queryFn: async () => {
-    const [err, res] = await api.listProblems({
-      page,
-      pageSize: 10,
-      search
-    });
-    if (err) {
-      throw new Error(err.message);
-    }
-    return res;
-  }});
+  const {data, error, isLoading, refetch: mutate} = useQuery({
+    queryKey: ["admin-problems", page, search],
+    queryFn: () =>
+      unwrap(
+        api.GET("/problems", {
+          params: {
+            query: {page, pageSize: 10, search},
+          },
+        }),
+      ),
+  });
 
   const problems = data?.problems || [];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -98,7 +98,9 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
 
     setDeletingId(problemToDelete.id);
     try {
-      const [err] = await api.deleteProblem(problemToDelete.id);
+      const {error: err} = await api.DELETE("/problems/{id}", {
+        params: {path: {id: problemToDelete.id}},
+      });
       if (err) {
         notifications.show({
           title: "Ошибка",

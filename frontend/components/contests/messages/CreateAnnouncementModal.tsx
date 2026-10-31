@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm";
 
 import {api} from "@/lib/api";
 
-import type {ContestProblemListItemModel} from "@/contracts/core/v1/models";
+import type {ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 
 interface CreateAnnouncementModalProps {
   opened: boolean;
@@ -63,11 +63,17 @@ export const CreateAnnouncementModal = ({
     }
 
     setLoading(true);
-    const [err] = await api.createContestAnnouncement(orgLogin, contestLogin, {
-      title: title.trim(),
-      body: body.trim(),
-      problem_id: problemId ? problemId : undefined
-    });
+    const {error: err} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/announcements",
+      {
+        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+        body: {
+          title: title.trim(),
+          body: body.trim(),
+          problem_id: problemId ? problemId : undefined,
+        },
+      },
+    );
     setLoading(false);
 
     if (err) {

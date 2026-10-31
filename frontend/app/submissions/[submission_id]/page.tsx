@@ -11,18 +11,15 @@ import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
 export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const solutionId = routeParams.submission_id!;
-  const [error, resp] = await api.getSubmission(solutionId);
-
-  if (error) {
-    throw error;
-  }
-  if (!resp) {
-    throw {status: 404, message: "Посылка не найдена"};
-  }
+  const resp = await unwrap(
+    api.GET("/submissions/{submission_id}", {
+      params: {path: {submission_id: solutionId}},
+    }),
+  );
 
   const {submission} = resp;
 
-  const [, me] = await api.getMe();
+  const {data: me} = await api.GET("/users/me");
   const user = me?.user ?? null;
   const contestRole =
     submission.organization_login && submission.contest_login
@@ -30,7 +27,16 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
       : null;
   const contestData =
     submission.organization_login && submission.contest_login
-      ? await unwrap(api.getContest)(submission.organization_login, submission.contest_login)
+      ? await unwrap(
+        api.GET("/organizations/{org_login}/contests/{contest_login}", {
+          params: {
+            path: {
+              org_login: submission.organization_login,
+              contest_login: submission.contest_login,
+            },
+          },
+        }),
+      )
       : null;
   return {submission, user, contestRole, contestData};
 }) satisfies LoaderFunction;

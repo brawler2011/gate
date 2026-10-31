@@ -8,13 +8,13 @@ import {useState} from "react";
 
 import {RoutePagination} from '@/components/shared/Pagination';
 import {StatusMessage} from '@/components/shared/StatusMessage';
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 
 import {AdminBlogsSearchInput} from "./AdminBlogsSearchInput";
 import {AdminBlogsTable} from "./AdminBlogsTable";
 import {BlogPostForm} from "./BlogPostForm";
 
-import type {PostModel} from "@/contracts/core/v1/models";
+import type {PostModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type AdminBlogsContentProps = {
@@ -34,16 +34,15 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
   const [_submitting, setSubmitting] = useState(false);
 
   // SWR for data fetching
-  const {data, error, refetch: mutate, isLoading} = useQuery({queryKey: ["admin-blogs", page, search], queryFn: async () => {
-    const [err, res] = await api.listPosts({
-      page,
-      pageSize: 10
-    });
-    if (err) {
-      throw new Error(err.message);
-    }
-    return res;
-  }});
+  const {data, error, refetch: mutate, isLoading} = useQuery({
+    queryKey: ["admin-blogs", page, search],
+    queryFn: () =>
+      unwrap(
+        api.GET("/posts", {
+          params: {query: {page, pageSize: 10}},
+        }),
+      ),
+  });
 
   const posts = data?.posts || [];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -68,7 +67,10 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
     const formData = data as unknown as Record<string, unknown>;
     try {
       if (editingPost) {
-        const [err] = await api.patchPostById(editingPost.id || "", formData);
+        const {error: err} = await api.PATCH("/posts/{id}", {
+          params: {path: {id: editingPost.id || ""}},
+          body: formData as never,
+        });
         if (err) {
           notifications.show({
             title: "Ошибка",
@@ -83,7 +85,9 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
           color: "green",
         });
       } else {
-        const [err] = await api.createPost(formData);
+        const {error: err} = await api.POST("/posts", {
+          body: formData as never,
+        });
         if (err) {
           notifications.show({
             title: "Ошибка",
@@ -113,7 +117,9 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
   };
 
   const handleDeletePost = async (postId: string) => {
-    const [err] = await api.deletePostById(postId);
+    const {error: err} = await api.DELETE("/posts/{id}", {
+      params: {path: {id: postId}},
+    });
 
     if (err) {
       console.error("Error deleting post:", err);

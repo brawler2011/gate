@@ -11,7 +11,7 @@ import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
 
-import type * as corev1 from "@/contracts/core/v1/models";
+import type * as corev1 from "@/contracts/core/v1/schema";
 
 const PROBLEM_PERMISSION_OPTIONS = [
   {label: "Чтение (read)", value: "read", color: "gray"},
@@ -48,7 +48,9 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
 
   const loadTeams = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listProblemTeams(problemId);
+    const {data: response, error} = await api.GET("/problems/{id}/teams", {
+      params: {path: {id: problemId}},
+    });
     setLoading(false);
 
     if (error || !response) {
@@ -65,22 +67,27 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
 
   const searchTeamsFn = useCallback(
     async (query: string) => {
-      const [error, response] = await api.listTeams({
-        page: 1, pageSize: 10,
-        search: query,
-        organization_id: orgId
+      const {data: response, error} = await api.GET("/teams", {
+        params: {
+          query: {
+            page: 1,
+            pageSize: 10,
+            search: query,
+            organization_id: orgId,
+          },
+        },
       });
       if (error || !response) {
         return [];
       }
       return response.teams;
     },
-    [orgId]
+    [orgId],
   );
 
   const mapTeamToItem = useCallback(
     (t: corev1.TeamModel) => ({value: t.id, label: t.name, data: t}),
-    []
+    [],
   );
 
   const {
@@ -103,8 +110,11 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     }
 
     setAdding(true);
-    const [error] = await api.createProblemTeam(problemId, {
-      team_id: selectedTeamId, permission: "read"
+    const {error} = await api.POST("/problems/{id}/teams", {
+      params: {
+        path: {id: problemId},
+        query: {team_id: selectedTeamId, permission: "read"},
+      },
     });
     setAdding(false);
 
@@ -132,8 +142,11 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
 
   const handleDeleteTeam = async (team: corev1.ProblemTeamModel) => {
     setDeletingId(team.team_id);
-    const [error] = await api.deleteProblemTeam(problemId, {
-      team_id: team.team_id
+    const {error} = await api.DELETE("/problems/{id}/teams", {
+      params: {
+        path: {id: problemId},
+        query: {team_id: team.team_id},
+      },
     });
     setDeletingId(null);
 
@@ -172,9 +185,11 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
       return;
     }
 
-    const [error] = await api.updateProblemTeam(problemId, {
-      team_id: editingTeam.teamId,
-      permission: newRole
+    const {error} = await api.PATCH("/problems/{id}/teams", {
+      params: {
+        path: {id: problemId},
+        query: {team_id: editingTeam.teamId, permission: newRole},
+      },
     });
 
     setModalOpened(false);

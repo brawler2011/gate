@@ -10,7 +10,7 @@ import {api} from "@/lib/api";
 import classes from "./AdminPage.module.css";
 import {DeleteContestModal} from "./DeleteContestModal";
 
-import type {ContestModel} from "@/contracts/core/v1/models";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type AdminContestsTableProps = {
@@ -55,7 +55,17 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
     e.stopPropagation();
     setRejudgingId(contest.id);
     try {
-      const [err] = await api.rejudgeContest(contest.organization_login, contest.login);
+      const {error: err} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/rejudge",
+        {
+          params: {
+            path: {
+              org_login: contest.organization_login,
+              contest_login: contest.login,
+            },
+          },
+        },
+      );
       if (err) {
         notifications.show({
           title: "Ошибка",

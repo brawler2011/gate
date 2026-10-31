@@ -25,11 +25,15 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     throw redirect(`/@${cleanUsername}`);
   }
 
-  const [[, me], userData] = await Promise.all([api.getMe(), getUser(cleanUsername)]);
+  const [{data: me}, userData] = await Promise.all([
+    api.GET("/users/me"),
+    getUser(cleanUsername),
+  ]);
   return {cleanUsername, userPage, me, userData};
 }) satisfies LoaderFunction;
 
-const getUser = unwrap(api.getUser);
+const getUser = (username: string) =>
+  unwrap(api.GET("/users/{username}", {params: {path: {username}}}));
 
 const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();

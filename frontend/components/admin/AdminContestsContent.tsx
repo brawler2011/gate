@@ -7,7 +7,7 @@ import {useState} from "react";
 
 import {RoutePagination} from '@/components/shared/Pagination';
 import {StatusMessage} from '@/components/shared/StatusMessage';
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 
 import {AdminContestsSearchInput} from "./AdminContestsSearchInput";
 import {AdminContestsTable} from "./AdminContestsTable";
@@ -25,23 +25,33 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
     message: string;
   } | null>(null);
 
-  const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: ["admin-contests", page, search], queryFn: async () => {
-    const [err, res] = await api.listAdminContests({
-      page,
-      pageSize: 10,
-      search
-    });
-    if (err) {
-      throw new Error(err.message);
-    }
-    return res;
-  }});
+  const {data, error, isLoading, refetch: mutate} = useQuery({
+    queryKey: ["admin-contests", page, search],
+    queryFn: () =>
+      unwrap(
+        api.GET("/admin/contests", {
+          params: {
+            query: {page, pageSize: 10, search},
+          },
+        }),
+      ),
+  });
 
   const contests = data?.contests || [];
   const pagination = data?.pagination || {total: 0, page: page};
 
   const handleDeleteContest = async (contest: {id: string; organization_login: string; login: string}) => {
-    const [err] = await api.deleteContest(contest.organization_login, contest.login);
+    const {error: err} = await api.DELETE(
+      "/organizations/{org_login}/contests/{contest_login}",
+      {
+        params: {
+          path: {
+            org_login: contest.organization_login,
+            contest_login: contest.login,
+          },
+        },
+      },
+    );
 
     if (err) {
       console.error("Error deleting contest:", err);

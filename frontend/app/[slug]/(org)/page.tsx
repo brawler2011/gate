@@ -21,18 +21,33 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     throw redirect(`/${decoded}`);
   }
 
-  const orgData = await getOrganization(decoded);
+  const orgData = await unwrap(
+    api.GET("/organizations/{login}", {
+      params: {path: {login: decoded}},
+    }),
+  );
   const org = orgData.organization;
 
-  const [[contestsError, contestsData], [, me]] = await Promise.all([
-    api.listWorkshopContests({
-      page: currentPage,
-      pageSize: 10,
-      search,
-      organization_id: org.id
+  const [{data: contestsData, error: contestsErr, response: contestsResponse}, {data: me}] = await Promise.all([
+    api.GET("/workshop/contests", {
+      params: {
+        query: {
+          page: currentPage,
+          pageSize: 10,
+          search,
+          organization_id: org.id,
+        },
+      },
     }),
-    api.getMe(),
+    api.GET("/users/me"),
   ]);
+
+  const contestsError = contestsErr
+    ? {
+      status: contestsResponse.status,
+      message: contestsErr.message || contestsResponse.statusText,
+    }
+    : null;
 
   const currentUser = me?.user ?? null;
   const contests = contestsData?.contests ?? [];
@@ -42,16 +57,19 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   let isMember = false;
   if (currentUser) {
     // The members endpoint returns the complete list, without server-side pagination.
-    const [membersError, membersData] = await api.listOrganizationMembers(org.login, {});
-    if (membersError && membersError.status !== 403) {
+    const {data: membersData, error: membersError, response: membersResponse} = await api.GET(
+      "/organizations/{login}/members",
+      {
+        params: {path: {login: org.login}},
+      },
+    );
+    if (membersError && membersResponse.status !== 403) {
       throw membersError;
     }
     isMember = membersData?.members.some((member) => member.user_id === currentUser.id) ?? false;
   }
   return {search, org, contestsError, contests, contestsPagination, isAuthenticated, isMember};
 }) satisfies LoaderFunction;
-
-const getOrganization = unwrap(api.getOrganization);
 
 const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();

@@ -40,9 +40,11 @@ export const CreateTeamModal = ({orgId}: Props): ReactNode => {
     }
 
     setLoading(true);
-    const [error] = await api.createTeam({
-      name: trimmed,
-      organization_id: orgId
+    const {error} = await api.POST("/teams", {
+      body: {
+        name: trimmed,
+        organization_id: orgId,
+      },
     });
     setLoading(false);
 

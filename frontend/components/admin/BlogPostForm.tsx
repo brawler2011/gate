@@ -4,7 +4,7 @@ import {Button, FileInput, Group, Modal, Stack, Textarea, TextInput} from "@mant
 import {IconPhoto, IconUpload} from "@tabler/icons-react";
 import {useEffect, useState} from "react";
 
-import type {PostModel} from "@/contracts/core/v1/models";
+import type {PostModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 interface BlogPostFormProps {

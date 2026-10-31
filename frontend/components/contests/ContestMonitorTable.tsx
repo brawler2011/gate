@@ -11,8 +11,8 @@ import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
 import classes from "./ContestMonitorTable.module.css";
 
-import type {ScoreboardResponseModel, ScoreboardItemModel, ScoreboardProblemResultModel, ScoreboardProblemHeaderModel} from "@/contracts/core/v1/models";
-import type {SubmissionsMessage, MessageSubmissionCompleted} from "@/contracts/observer/v1/models";
+import type {ScoreboardResponseModel, ScoreboardItemModel, ScoreboardProblemResultModel, ScoreboardProblemHeaderModel} from "@/contracts/core/v1/schema";
+import type {SubmissionsMessage, MessageSubmissionCompleted} from "@/contracts/observer/v1/schema";
 
 interface ContestMonitorTableProps {
   contestId: string;
@@ -51,9 +51,15 @@ export const ContestMonitorTable = ({
     const checked = e.currentTarget.checked;
     setShowRealMonitor(checked);
     setLoadingScoreboard(true);
-    const [err, res] = await api.getContestScoreboard(orgLogin, contestLogin, {
-      unfrozen: checked
-    });
+    const {data: res, error: err} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/scoreboard",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {unfrozen: checked},
+        },
+      },
+    );
     setLoadingScoreboard(false);
     if (err) {
       notifications.show({
@@ -76,9 +82,15 @@ export const ContestMonitorTable = ({
     let requestVersion = 0;
     const refresh = async () => {
       const version = ++requestVersion;
-      const [err, res] = await api.getContestScoreboard(orgLogin, contestLogin, {
-        unfrozen: showRealMonitor
-      });
+      const {data: res, error: err} = await api.GET(
+        "/organizations/{org_login}/contests/{contest_login}/scoreboard",
+        {
+          params: {
+            path: {org_login: orgLogin, contest_login: contestLogin},
+            query: {unfrozen: showRealMonitor},
+          },
+        },
+      );
       if (err) {
         throw err;
       }

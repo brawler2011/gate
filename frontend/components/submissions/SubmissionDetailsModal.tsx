@@ -31,7 +31,12 @@ export const SubmissionDetailsModal = ({
     if (!submissionId) {
       return null;
     }
-    const [err, res] = await api.getSubmission(submissionId);
+    const {data: res, error: err} = await api.GET(
+      "/submissions/{submission_id}",
+      {
+        params: {path: {submission_id: submissionId}},
+      },
+    );
     if (err) {
       throw new Error(err.message || "Не удалось загрузить данные посылки");
     }

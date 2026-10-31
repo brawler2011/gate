@@ -14,13 +14,34 @@ export const WorkshopGeneratorsTab = (props: WorkshopFileTabProps): ReactNode =>
       componentType="generator"
       componentTitle="Генератор"
       defaultFileName="generator"
-      listFiles={(problemId) => api.listProblemGenerators(problemId)}
-      getFile={(problemId, name) => api.getProblemGenerator(problemId, name)}
-      createFile={(problemId, name, requestBody) => api.createProblemGenerator(problemId, requestBody, {
-        name
-      })}
-      updateFile={(problemId, name, requestBody) => api.updateProblemGenerator(problemId, name, requestBody)}
-      deleteFile={(problemId, name) => api.deleteProblemGenerator(problemId, name)}
+      listFiles={(problemId) =>
+        api.GET("/problems/{problemId}/generators", {
+          params: {path: {problemId}},
+        })
+      }
+      getFile={(problemId, name) =>
+        api.GET("/problems/{problemId}/generators/{name}", {
+          params: {path: {problemId, name}},
+          parseAs: "text",
+        })
+      }
+      createFile={(problemId, name, requestBody) =>
+        api.POST("/problems/{problemId}/generators", {
+          params: {path: {problemId}, query: {name}},
+          body: requestBody,
+        })
+      }
+      updateFile={(problemId, name, requestBody) =>
+        api.PUT("/problems/{problemId}/generators/{name}", {
+          params: {path: {problemId, name}},
+          body: requestBody,
+        })
+      }
+      deleteFile={(problemId, name) =>
+        api.DELETE("/problems/{problemId}/generators/{name}", {
+          params: {path: {problemId, name}},
+        })
+      }
     />
   );
 };

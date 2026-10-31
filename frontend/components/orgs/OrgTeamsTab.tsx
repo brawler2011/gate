@@ -5,7 +5,7 @@ import {Link} from "react-router-dom";
 
 import {CreateTeamModal} from "./CreateTeamModal";
 
-import type {TeamModel} from "@/contracts/core/v1/models";
+import type {TeamModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {

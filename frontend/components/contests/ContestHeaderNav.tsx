@@ -6,7 +6,7 @@ import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTa
 import {useSession} from "@/contexts/SessionContext";
 import {PermissionChecker, type ContestRoleResponse} from "@/lib/permissions";
 
-import type {ContestModel, UserModel} from "@/contracts/core/v1/models";
+import type {ContestModel, UserModel} from "@/contracts/core/v1/schema";
 
 export type ContestHeaderNavProps = {
   contest: ContestModel;

@@ -28,18 +28,27 @@ export const WorkshopMediaTab = ({
     data: filesData,
     isLoading,
     refetch: mutate,
-  } = useQuery({queryKey: ["workshop-files", problemId, "media"], queryFn: async () => {
-    const [err, res] = await api.listProblemMediaFiles(problemId);
-    if (err) {
-      throw new Error(err.message || "Не удалось загрузить список медиафайлов");
-    }
-    return res;
-  }});
+  } = useQuery({
+    queryKey: ["workshop-files", problemId, "media"],
+    queryFn: async () => {
+      const {data: res, error: err} = await api.GET("/problems/{problemId}/media", {
+        params: {path: {problemId}},
+      });
+      if (err) {
+        throw new Error(err.message || "Не удалось загрузить список медиафайлов");
+      }
+      return res;
+    },
+  });
 
   const getFileName = (path: string) => path.split("/").pop() ?? path;
 
   const files = (filesData?.files || []).filter(
-    (file) => !file.is_directory && file.path && file.path !== "tests.json" && !getFileName(file.path).startsWith(".")
+    (file) =>
+      !file.is_directory &&
+      file.path &&
+      file.path !== "tests.json" &&
+      !getFileName(file.path).startsWith("."),
   );
 
   const currentFileName = selectedFile ? getFileName(selectedFile) : null;
@@ -55,9 +64,13 @@ export const WorkshopMediaTab = ({
 
     startUploading(async () => {
       const arrayBuffer = await file.arrayBuffer();
-      const blob = new Blob([arrayBuffer], {type: file.type || "application/octet-stream"});
-      const [err] = await api.createProblemMediaFile(problemId, blob, {
-        name: file.name
+      const blob = new Blob([arrayBuffer], {
+        type: file.type || "application/octet-stream",
+      });
+      const {error: err} = await api.POST("/problems/{problemId}/media", {
+        params: {path: {problemId}, query: {name: file.name}},
+        body: blob as unknown as string,
+        bodySerializer: (b) => b as unknown as BodyInit,
       });
       if (err) {
         notifications.show({
@@ -89,7 +102,12 @@ export const WorkshopMediaTab = ({
     }
 
     startDeleting(async () => {
-      const [err] = await api.deleteProblemMediaFile(problemId, currentFileName);
+      const {error: err} = await api.DELETE(
+        "/problems/{problemId}/media/{name}",
+        {
+          params: {path: {problemId, name: currentFileName}},
+        },
+      );
       if (err) {
         notifications.show({
           title: "Ошибка удаления",

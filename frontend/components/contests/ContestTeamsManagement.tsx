@@ -12,7 +12,7 @@ import {useEntityCollection, useEntityMutation} from "@/hooks/useEntityManagemen
 import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
 
-import type * as corev1 from "@/contracts/core/v1/models";
+import type * as corev1 from "@/contracts/core/v1/schema";
 
 const CONTEST_TEAM_ROLE_OPTIONS = [
   {label: "Участник", value: "participant", color: "gray"},
@@ -52,7 +52,12 @@ export const ContestTeamsManagement = ({
   } | null>(null);
 
   const fetchTeams = useCallback(async () => {
-    const [error, response] = await api.listContestTeams(orgLogin, contestLogin);
+    const {data: response, error} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/teams",
+      {
+        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+      },
+    );
     if (error || !response) {
       console.error("Failed to load contest teams:", error);
       return;
@@ -63,22 +68,27 @@ export const ContestTeamsManagement = ({
 
   const searchTeamsFn = useCallback(
     async (query: string) => {
-      const [error, response] = await api.listTeams({
-        page: 1, pageSize: 10,
-        search: query,
-        organization_id: orgId
+      const {data: response, error} = await api.GET("/teams", {
+        params: {
+          query: {
+            page: 1,
+            pageSize: 10,
+            search: query,
+            organization_id: orgId,
+          },
+        },
       });
       if (error || !response) {
         return [];
       }
       return response.teams;
     },
-    [orgId]
+    [orgId],
   );
 
   const mapTeamToItem = useCallback(
     (t: corev1.TeamModel) => ({value: t.id, label: t.name, data: t}),
-    []
+    [],
   );
 
   const {
@@ -100,9 +110,18 @@ export const ContestTeamsManagement = ({
       return;
     }
 
-    const [error] = await addTeam(selectedTeamId, () => api.createContestTeam(orgLogin, contestLogin, {
-      team_id: selectedTeamId, role: "participant"
-    }));
+    const error = await addTeam(selectedTeamId, async () => {
+      const {error} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/teams",
+        {
+          params: {
+            path: {org_login: orgLogin, contest_login: contestLogin},
+            query: {team_id: selectedTeamId, role: "participant"},
+          },
+        },
+      );
+      return error;
+    });
 
     if (error) {
       notifications.show({
@@ -127,11 +146,18 @@ export const ContestTeamsManagement = ({
   };
 
   const handleDeleteTeam = async (team: corev1.ContestTeamModel) => {
-    const [error] = await deleteTeam(team.team_id, () =>
-      api.deleteContestTeam(orgLogin, contestLogin, {
-        team_id: team.team_id
-      })
-    );
+    const error = await deleteTeam(team.team_id, async () => {
+      const {error} = await api.DELETE(
+        "/organizations/{org_login}/contests/{contest_login}/teams",
+        {
+          params: {
+            path: {org_login: orgLogin, contest_login: contestLogin},
+            query: {team_id: team.team_id},
+          },
+        },
+      );
+      return error;
+    });
 
     if (error) {
       notifications.show({
@@ -168,10 +194,15 @@ export const ContestTeamsManagement = ({
       return;
     }
 
-    const [error] = await api.updateContestTeam(orgLogin, contestLogin, {
-      team_id: editingTeam.teamId,
-      role: newRole
-    });
+    const {error} = await api.PATCH(
+      "/organizations/{org_login}/contests/{contest_login}/teams",
+      {
+        params: {
+          path: {org_login: orgLogin, contest_login: contestLogin},
+          query: {team_id: editingTeam.teamId, role: newRole},
+        },
+      },
+    );
 
     setModalOpened(false);
 

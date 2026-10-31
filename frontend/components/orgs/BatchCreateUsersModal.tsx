@@ -8,7 +8,7 @@ import {useState} from "react";
 
 import {api} from "@/lib/api";
 
-import type {BatchCreatedUserItem} from "@/contracts/core/v1/models";
+import type {BatchCreatedUserItem} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -66,11 +66,17 @@ export const BatchCreateUsersModal = ({
 
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
-    const [error, data] = await api.batchCreateOrganizationUsers(orgLogin, {
-      prefix: values.prefix.trim(),
-      count: values.count,
-      ttl_days: values.ttlDays && values.ttlDays > 0 ? values.ttlDays : undefined
-    });
+    const {data, error} = await api.POST(
+      "/organizations/{login}/members/batch",
+      {
+        params: {path: {login: orgLogin}},
+        body: {
+          prefix: values.prefix.trim(),
+          count: values.count,
+          ttl_days: values.ttlDays && values.ttlDays > 0 ? values.ttlDays : undefined,
+        },
+      },
+    );
     setLoading(false);
 
     if (error) {

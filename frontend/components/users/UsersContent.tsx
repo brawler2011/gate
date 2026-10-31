@@ -3,7 +3,7 @@ import {Center, Container, Group, Skeleton, Stack, Text, Title} from "@mantine/c
 import {UsersRoleFilter} from '@/components/users/UsersRoleFilter';
 import {UsersSearchInput} from '@/components/users/UsersSearchInput';
 import {UsersTable} from '@/components/users/UsersTable';
-import {useListUsers} from "@/contracts/core/v1/api";
+import {api} from "@/lib/api";
 
 import type {ReactNode} from "react";
 
@@ -14,8 +14,10 @@ type UsersContentProps = {
 };
 
 export const UsersContent = ({page, search, role}: UsersContentProps): ReactNode => {
-  const {data, error, isLoading, refetch: mutate} = useListUsers({
-    page, pageSize: 10, search, role,
+  const {data, error, isLoading, refetch: mutate} = api.useQuery("get", "/users", {
+    params: {
+      query: {page, pageSize: 10, search, role: role as ("user" | "admin" | undefined)},
+    },
   });
 
   const users = data?.users || [];

@@ -1,9 +1,9 @@
 import {describe, it, expect} from "bun:test";
 
-import {type ProblemModel, type UserModel} from "@/contracts/core/v1/models";
+import {type ProblemModel, type UserModel} from "@/contracts/core/v1/schema";
 import {PermissionChecker} from "@/lib/permissions";
 
-import type {ContestModel} from "@/contracts/core/v1/models";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 
 describe("PermissionChecker", () => {
   const globalAdmin: UserModel = {
@@ -45,6 +45,8 @@ describe("PermissionChecker", () => {
     enable_upsolving: true,
     enable_virtual_contests: false,
     participation_mode: 'open',
+    hide_statements: false,
+    allow_clarifications: true,
     ...overrides,
   });
 

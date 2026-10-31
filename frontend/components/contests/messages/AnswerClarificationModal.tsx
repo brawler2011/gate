@@ -6,7 +6,7 @@ import {useEffect, useState, type ReactNode} from "react";
 
 import {api} from "@/lib/api";
 
-import type {ContestClarificationModel} from "@/contracts/core/v1/models";
+import type {ContestClarificationModel} from "@/contracts/core/v1/schema";
 
 interface AnswerClarificationModalProps {
   opened: boolean;
@@ -64,11 +64,25 @@ export const AnswerClarificationModal = ({
     }
 
     setLoading(true);
-    const [err] = await api.answerContestClarification(orgLogin, contestLogin, clarification.id, {
-      answer: answer.trim(),
-      publish_as_announcement: publishAsAnnouncement,
-      announcement_title: publishAsAnnouncement ? announcementTitle.trim() : undefined
-    });
+    const {error: err} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/clarifications/{clarification_id}/answer",
+      {
+        params: {
+          path: {
+            org_login: orgLogin,
+            contest_login: contestLogin,
+            clarification_id: clarification.id,
+          },
+        },
+        body: {
+          answer: answer.trim(),
+          publish_as_announcement: publishAsAnnouncement,
+          announcement_title: publishAsAnnouncement
+            ? announcementTitle.trim()
+            : undefined,
+        },
+      },
+    );
     setLoading(false);
 
     if (err) {

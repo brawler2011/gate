@@ -1,11 +1,6 @@
 import {lazy, Suspense} from "react";
 import {createRoutesFromElements, Route, Outlet, useParams, ScrollRestoration, useNavigation} from "react-router-dom";
 
-import OrgLayout from "@/app/[slug]/(org)/layout";
-import ContestLayout from "@/app/[slug]/[contestLogin]/layout";
-import ProblemLayout from "@/app/[slug]/problems/[problem_id]/layout";
-import AdminLayout from "@/app/admin/layout";
-import AuthLayout from "@/app/auth/layout";
 import NotFound from "@/app/not-found";
 import {QueryState} from "@/components/shared/QueryState";
 import {RouteError} from "@/components/shared/RouteError";
@@ -66,7 +61,7 @@ export const appRoutes = createRoutesFromElements(
     }} />
     <Route path="/user/:username/*" element={<NotFound />} />
     <Route path="/user" element={<NotFound />} />
-    <Route path="/admin" element={<AdminLayout />}>
+    <Route path="/admin" lazy={async () => ({Component: (await import("@/app/admin/layout")).default})}>
       <Route path="blogs" lazy={async () => {
         const page = await import("@/app/admin/blogs/page");
         return {Component: page.default};
@@ -100,7 +95,7 @@ export const appRoutes = createRoutesFromElements(
         return {Component: page.default};
       }} />
     </Route>
-    <Route path="/auth" element={<AuthLayout />}>
+    <Route path="/auth" lazy={async () => ({Component: (await import("@/app/auth/layout")).default})}>
       <Route path="confirm-email-change" lazy={async () => {
         const page = await import("@/app/auth/confirm-email-change/page");
         return {Component: page.default};
@@ -136,7 +131,7 @@ export const appRoutes = createRoutesFromElements(
       }
       return null;
     }}>
-      <Route element={<OrgLayout />}>
+      <Route lazy={async () => ({Component: (await import("@/app/[slug]/(org)/layout")).default})}>
         <Route path="members" lazy={async () => {
           const page = await import("@/app/[slug]/(org)/members/page");
           return {Component: page.default, loader: page.loader};
@@ -162,7 +157,7 @@ export const appRoutes = createRoutesFromElements(
           return {Component: page.default, loader: page.loader};
         }} />
       </Route>
-      <Route path=":contestLogin" element={<ContestLayout />}>
+      <Route path=":contestLogin" lazy={async () => ({Component: (await import("@/app/[slug]/[contestLogin]/layout")).default})}>
         <Route path=":letter" lazy={async () => {
           const page = await import("@/app/[slug]/[contestLogin]/[letter]/page");
           return {Component: page.default};
@@ -200,7 +195,7 @@ export const appRoutes = createRoutesFromElements(
           return {Component: page.default};
         }} />
       </Route>
-      <Route path="problems/:problem_id" element={<ProblemLayout />}>
+      <Route path="problems/:problem_id" lazy={async () => ({Component: (await import("@/app/[slug]/problems/[problem_id]/layout")).default})}>
         <Route path="access" lazy={async () => {
           const page = await import("@/app/[slug]/problems/[problem_id]/access/page");
           return {Component: page.default};

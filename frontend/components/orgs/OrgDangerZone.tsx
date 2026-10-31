@@ -19,7 +19,9 @@ export const OrgDangerZone = ({orgLogin, orgName}: Props): ReactNode => {
 
   const handleDelete = async () => {
     setLoading(true);
-    const [error] = await api.deleteOrganization(orgLogin);
+    const {error} = await api.DELETE("/organizations/{login}", {
+      params: {path: {login: orgLogin}},
+    });
     setLoading(false);
     if (error) {
       notifications.show({title: 'Ошибка', message: error.message, color: 'red'});

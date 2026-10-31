@@ -6,7 +6,7 @@ import {APP_COLORS} from "@/lib/theme/colors";
 
 import classes from "./ProblemCard.module.css";
 
-import type {ProblemsListItemModel} from "@/contracts/core/v1/models";
+import type {ProblemsListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {

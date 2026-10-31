@@ -5,8 +5,7 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useState, type ReactNode} from 'react';
 import {useRevalidator, useNavigate} from "react-router-dom";
 
-import {getGetOrganizationQueryKey} from "@/contracts/core/v1/api";
-import {type UpdateOrganizationRequestModel, type OrganizationModel} from '@/contracts/core/v1/models';
+import {type UpdateOrganizationRequestModel, type OrganizationModel} from '@/contracts/core/v1/schema';
 import {api} from '@/lib/api';
 
 type Props = { org: OrganizationModel };
@@ -57,11 +56,14 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
   const handleSave = async (values: typeof form.values) => {
     setSaving(true);
     const trimmedLogin = values.login.trim();
-    const [error] = await api.updateOrganization(org.login, {
-      name: values.name.trim(),
-      login: trimmedLogin,
-      description: values.description,
-      join_policy: values.join_policy as UpdateOrganizationRequestModel["join_policy"]
+    const {error} = await api.PATCH("/organizations/{login}", {
+      params: {path: {login: org.login}},
+      body: {
+        name: values.name.trim(),
+        login: trimmedLogin,
+        description: values.description,
+        join_policy: values.join_policy as UpdateOrganizationRequestModel["join_policy"],
+      },
     });
     setSaving(false);
     if (error) {
@@ -73,7 +75,11 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
     if (trimmedLogin !== org.login) {
       navigate(`/${trimmedLogin}/settings`);
     } else {
-      void queryClient.invalidateQueries({queryKey: getGetOrganizationQueryKey(org.login)});
+      void queryClient.invalidateQueries({
+        queryKey: api.queryOptions("get", "/organizations/{login}", {
+          params: {path: {login: org.login}},
+        }).queryKey,
+      });
       void revalidator.revalidate();
     }
   };

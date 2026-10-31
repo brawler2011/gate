@@ -8,7 +8,7 @@ import {OrgJoinButton} from "@/components/orgs/OrgJoinButton";
 import {RoutePagination} from "@/components/shared/Pagination";
 import {CreateContestModal} from "@/components/workshop/CreateContestModal";
 
-import type {ContestModel, OrganizationModel, PaginationModel} from "@/contracts/core/v1/models";
+import type {ContestModel, OrganizationModel, PaginationModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {

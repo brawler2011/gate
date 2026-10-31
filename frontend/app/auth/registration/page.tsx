@@ -39,7 +39,9 @@ const RegistrationPageContent = () => {
     setLoading(true);
 
     try {
-      const [err] = await api.register({username, email, password});
+      const {error: err} = await api.POST("/auth/register", {
+        body: {username, email, password},
+      });
       if (!err) {
         setIsSuccess(true);
       } else {
@@ -55,7 +57,9 @@ const RegistrationPageContent = () => {
   const handleResend = async () => {
     setResendLoading(true);
     try {
-      const [err] = await api.resendVerification({identifier: email || username});
+      const {error: err} = await api.POST("/auth/resend-verification", {
+        body: {identifier: email || username},
+      });
       if (!err) {
         notifications.show({
           title: "Письмо отправлено",

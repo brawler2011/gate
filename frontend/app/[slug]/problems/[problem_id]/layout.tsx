@@ -1,18 +1,18 @@
 import {Outlet, useParams} from "react-router-dom";
 
-import {DefaultLayout} from "@/components/shared";
+import {DefaultLayout} from "@/components/shared/DefaultLayout";
 import {QueryState} from "@/components/shared/QueryState";
-import {ProblemHeaderNav} from "@/components/workshop";
+import {ProblemHeaderNav} from "@/components/workshop/ProblemHeaderNav";
 import {useSession} from "@/contexts/SessionContext";
-import {useGetOrganization, useGetProblem} from "@/contracts/core/v1/api";
+import {api} from "@/lib/api";
 
 import type {ReactNode} from "react";
 
 const ProblemLayout = (): ReactNode => {
   const {slug, problem_id} = useParams() as { slug: string; problem_id: string };
   const {user} = useSession();
-  const problem = useGetProblem(problem_id);
-  const organization = useGetOrganization(slug);
+  const problem = api.useQuery("get", "/problems/{id}", {params: {path: {id: problem_id}}});
+  const organization = api.useQuery("get", "/organizations/{login}", {params: {path: {login: slug}}});
   if (!problem.data) {
     return (
       <DefaultLayout headerUser={user}>

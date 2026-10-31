@@ -11,7 +11,7 @@ import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
 import {act, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
-import type {ScoreboardResponseModel, SubmissionModel, SubmissionsListItemModel} from "@/contracts/core/v1/models";
+import type {ScoreboardResponseModel, SubmissionModel, SubmissionsListItemModel} from "@/contracts/core/v1/schema";
 
 const renderView = (ui: React.ReactElement) => renderWithProviders(
   <>{ui}</>

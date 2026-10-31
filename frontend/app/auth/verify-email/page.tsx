@@ -41,7 +41,9 @@ const VerifyEmailContent = () => {
 
     const verify = async () => {
       try {
-        const [err, data] = await api.verifyEmail({token});
+        const {data, error: err} = await api.POST("/auth/verify-email", {
+          body: {token},
+        });
 
         if (!isMounted) {
           return;

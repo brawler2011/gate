@@ -9,7 +9,7 @@ import {useRevalidator} from "react-router-dom";
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
 
-import type {OrganizationJoinRequestModel, OrganizationModel} from "@/contracts/core/v1/models";
+import type {OrganizationJoinRequestModel, OrganizationModel} from "@/contracts/core/v1/schema";
 
 type Props = {
   org: OrganizationModel;
@@ -35,7 +35,9 @@ export const OrgJoinButton = ({
       return;
     }
     setLoading(true);
-    const [, data] = await api.getMyOrganizationJoinRequest(org.login);
+    const {data} = await api.GET("/organizations/{login}/requests/mine", {
+      params: {path: {login: org.login}},
+    });
     setLoading(false);
     if (data?.request) {
       setPendingRequest(data.request);
@@ -62,7 +64,9 @@ export const OrgJoinButton = ({
 
   const handleJoinOpen = async () => {
     setActionLoading(true);
-    const [error, data] = await api.createOrganizationJoinRequest(org.login);
+    const {data, error} = await api.POST("/organizations/{login}/requests", {
+      params: {path: {login: org.login}},
+    });
     setActionLoading(false);
     if (error) {
       notifications.show({
@@ -84,8 +88,9 @@ export const OrgJoinButton = ({
 
   const handleRequestSubmit = async () => {
     setActionLoading(true);
-    const [error, data] = await api.createOrganizationJoinRequest(org.login, {
-      message: message.trim() || undefined
+    const {data, error} = await api.POST("/organizations/{login}/requests", {
+      params: {path: {login: org.login}},
+      body: {message: message.trim() || undefined},
     });
     setActionLoading(false);
     closeModal();
@@ -119,7 +124,9 @@ export const OrgJoinButton = ({
 
   const handleCancelRequest = async () => {
     setActionLoading(true);
-    const [error] = await api.cancelOrganizationJoinRequest(org.login);
+    const {error} = await api.DELETE("/organizations/{login}/requests/mine", {
+      params: {path: {login: org.login}},
+    });
     setActionLoading(false);
     if (error) {
       notifications.show({

@@ -25,18 +25,31 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     throw redirect(`/${decoded}/teams`);
   }
 
-  const orgData = await getOrganization(decoded);
+  const orgData = await unwrap(
+    api.GET("/organizations/{login}", {
+      params: {path: {login: decoded}},
+    }),
+  );
   const org = orgData.organization;
 
   const showMembersTab = await canManageOrgMembers(org.login);
-  const [teamsError, teamsData] = await api.listTeams({
-    page: currentPage,
-    pageSize: 20, organization_id: org.id
+  const {data: teamsData, error: teamsErr, response: teamsResponse} = await api.GET("/teams", {
+    params: {
+      query: {
+        page: currentPage,
+        pageSize: 20,
+        organization_id: org.id,
+      },
+    },
   });
+  const teamsError = teamsErr
+    ? {
+      status: teamsResponse.status,
+      message: teamsErr.message || teamsResponse.statusText,
+    }
+    : null;
   return {org, showMembersTab, teamsError, teamsData};
 }) satisfies LoaderFunction;
-
-const getOrganization = unwrap(api.getOrganization);
 
 const OrgTeamsPage = (): ReactNode => {
   const data = useLoaderData<typeof loader>();

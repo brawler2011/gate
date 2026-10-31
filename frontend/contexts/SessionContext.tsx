@@ -1,9 +1,9 @@
 import {useQueryClient} from "@tanstack/react-query";
 import {createContext, useCallback, useContext, useMemo} from "react";
 
-import {getGetMeQueryKey, useGetMe} from "@/contracts/core/v1/api";
+import {api} from "@/lib/api";
 
-import type {UserModel} from "@/contracts/core/v1/models";
+import type {UserModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 export type SessionContextType = {
@@ -26,18 +26,21 @@ export const SessionProvider = ({
   initialUser,
 }: SessionProviderProps): ReactNode => {
   const queryClient = useQueryClient();
-  const {data, isLoading, refetch} = useGetMe({
-    query: {
+  const {data, isLoading, refetch} = api.useQuery(
+    "get",
+    "/users/me",
+    {},
+    {
       retry: false,
       staleTime: 5000,
       initialData: initialUser ? {user: initialUser} : undefined,
     },
-  });
+  );
   const user = data?.user ?? null;
   const setUser = useCallback(
     (nextUser: UserModel | null) => {
       queryClient.clear();
-      queryClient.setQueryData(getGetMeQueryKey(), {user: nextUser});
+      queryClient.setQueryData(api.queryOptions("get", "/users/me").queryKey, {user: nextUser});
     },
     [queryClient],
   );

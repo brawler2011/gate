@@ -341,14 +341,21 @@ export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
 
   const loadStatement = (lang: string) => {
     startLoading(async () => {
-      const [[limitsError, limits], [statementError, statementData], [problemError, problemData]] =
-        await Promise.all([
-          api.getProblemLimits(problemId),
-          api.getProblemStatement(problemId, {
-            lang
-          }),
-          api.getProblem(problemId),
-        ]);
+      const [
+        {data: limits, error: limitsError},
+        {data: statementData, error: statementError},
+        {data: problemData, error: problemError},
+      ] = await Promise.all([
+        api.GET("/problems/{problemId}/limits", {
+          params: {path: {problemId}},
+        }),
+        api.GET("/problems/{problemId}/statement", {
+          params: {path: {problemId}, query: {lang}},
+        }),
+        api.GET("/problems/{id}", {
+          params: {path: {id: problemId}},
+        }),
+      ]);
 
       if (limitsError || !limits) {
         notifications.show({
@@ -470,17 +477,21 @@ export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
     }
 
     setIsAddingServerLang(true);
-    const [saveError] = await api.updateProblemStatement(problemId, {
-      title: statement?.title ?? "",
-      legend: "",
-      input_format: "",
-      output_format: "",
-      notes: "",
-      interaction: "",
-      scoring: ""
-    }, {
-      lang: cleanLang
-    });
+    const {error: saveError} = await api.PATCH(
+      "/problems/{problemId}/statement",
+      {
+        params: {path: {problemId}, query: {lang: cleanLang}},
+        body: {
+          title: statement?.title ?? "",
+          legend: "",
+          input_format: "",
+          output_format: "",
+          notes: "",
+          interaction: "",
+          scoring: "",
+        },
+      },
+    );
 
     if (saveError) {
       setNewLangError(saveError.message ?? "Не удалось создать файл на сервере");
@@ -521,17 +532,21 @@ export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
         return;
       }
 
-      const [saveError] = await api.updateProblemStatement(problemId, {
-        title: statement.title,
-        legend: statement.legend,
-        input_format: statement.input_format,
-        output_format: statement.output_format,
-        notes: statement.notes,
-        interaction: statement.interaction,
-        scoring: statement.scoring
-      }, {
-        lang: activeLang
-      });
+      const {error: saveError} = await api.PATCH(
+        "/problems/{problemId}/statement",
+        {
+          params: {path: {problemId}, query: {lang: activeLang}},
+          body: {
+            title: statement.title,
+            legend: statement.legend,
+            input_format: statement.input_format,
+            output_format: statement.output_format,
+            notes: statement.notes,
+            interaction: statement.interaction,
+            scoring: statement.scoring,
+          },
+        },
+      );
 
       if (saveError) {
         notifications.show({

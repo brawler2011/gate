@@ -39,7 +39,9 @@ const ConfirmEmailChangeContent = () => {
 
     const confirm = async () => {
       try {
-        const [err] = await api.confirmEmailChange({token});
+        const {error: err} = await api.POST("/auth/confirm-email-change", {
+          body: {token},
+        });
 
         if (!isMounted) {
           return;

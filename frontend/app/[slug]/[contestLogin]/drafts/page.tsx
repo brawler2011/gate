@@ -12,9 +12,13 @@ import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const {slug, contestLogin} = routeParams as {slug: string; contestLogin: string};
 
-  const [contestResponse, [, me]] = await Promise.all([
-    unwrap(api.getContest)(slug, contestLogin),
-    api.getMe(),
+  const [contestResponse, {data: me}] = await Promise.all([
+    unwrap(
+      api.GET("/organizations/{org_login}/contests/{contest_login}", {
+        params: {path: {org_login: slug, contest_login: contestLogin}},
+      }),
+    ),
+    api.GET("/users/me"),
   ]);
 
   if (!contestResponse?.contest) {
@@ -48,9 +52,15 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
     ? new Date(contestResponse.contest.end_time) <= new Date()
     : false;
 
-  const [, draftsResponse] = await api.listContestDrafts(slug, contestLogin, {
-    page: 1, pageSize: 50
-  });
+  const {data: draftsResponse} = await api.GET(
+    "/organizations/{org_login}/contests/{contest_login}/drafts",
+    {
+      params: {
+        path: {org_login: slug, contest_login: contestLogin},
+        query: {page: 1, pageSize: 50},
+      },
+    },
+  );
   return {contestResponse, isManager, isContestEnded, draftsResponse};
 }) satisfies LoaderFunction;
 

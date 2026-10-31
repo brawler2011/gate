@@ -8,7 +8,7 @@ import Page, {loader} from "@/app/[slug]/(org)/teams/[team_id]/page";
 
 import {cleanup, fireEvent, renderRoute, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
-import type {ContestModel, TeamModel} from "@/contracts/core/v1/models";
+import type {ContestModel, TeamModel} from "@/contracts/core/v1/schema";
 
 const team: TeamModel = {
   id: "team", organization_id: "org", name: "Gate Team", description: "Our team",
@@ -18,6 +18,12 @@ const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel
   id, login: id, organization_id: "org", organization_login: "school", title: id,
   description: "", visibility: "public", monitor_scope: "public", submissions_list_scope: "public",
   submissions_review_scope: "public", submission_details_scope: "public", freeze_status: "auto" as ContestModel["freeze_status"],
+  hide_statements: false,
+  enable_drafts: true,
+  allow_clarifications: true,
+  enable_upsolving: true,
+  enable_virtual_contests: false,
+  participation_mode: "open",
   created_by: "user", created_at: "2026-10-01", updated_at: "2026-10-01", ...schedule,
 });
 

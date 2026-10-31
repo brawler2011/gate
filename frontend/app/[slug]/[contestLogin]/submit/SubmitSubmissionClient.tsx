@@ -9,7 +9,7 @@ import {numberToLetters} from "@/lib/lib";
 
 import classes from "./SubmitSubmissionClient.module.css";
 
-import type {ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/models";
+import type {ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -50,11 +50,18 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
       submissionContent = submissionData;
     }
 
-    const [error, response] = await api.createSubmission({
-      submission: submissionContent
-    }, {
-      problem_id: selectedProblemId, organization_login: contest.organization_login, contest_login: contest.login,
-      language: languageCode
+    const {data: response, error} = await api.POST("/submissions", {
+      params: {
+        query: {
+          problem_id: selectedProblemId,
+          organization_login: contest.organization_login,
+          contest_login: contest.login,
+          language: languageCode,
+        },
+      },
+      body: {
+        submission: submissionContent,
+      },
     });
 
     if (error) {

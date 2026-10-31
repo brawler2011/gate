@@ -1,7 +1,7 @@
 import {Pagination} from "@mantine/core";
 import {Link} from "react-router-dom";
 
-import type * as corev1 from "@/contracts/core/v1/models";
+import type * as corev1 from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 interface RoutePaginationProps {

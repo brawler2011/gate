@@ -9,7 +9,7 @@ import {api} from "@/lib/api";
 
 import classes from "./DraftsClient.module.css";
 
-import type {ContestDraftModel, ContestModel} from "@/contracts/core/v1/models";
+import type {ContestDraftModel, ContestModel} from "@/contracts/core/v1/schema";
 
 type Props = {
   contest: ContestModel;
@@ -35,9 +35,18 @@ export const DraftsClient = ({
 
   const fetchDrafts = useCallback(async () => {
     setLoading(true);
-    const [error, data] = await api.listContestDrafts(contest.organization_login, contest.login, {
-      page: 1, pageSize: 50
-    });
+    const {data, error} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/drafts",
+      {
+        params: {
+          path: {
+            org_login: contest.organization_login,
+            contest_login: contest.login,
+          },
+          query: {page: 1, pageSize: 50},
+        },
+      },
+    );
     setLoading(false);
     if (!error && data?.drafts) {
       setDrafts(data.drafts);
@@ -63,9 +72,18 @@ export const DraftsClient = ({
     }
 
     startTransition(async () => {
-      const [error, response] = await api.createContestDraft(contest.organization_login, contest.login, {
-        code
-      });
+      const {data: response, error} = await api.POST(
+        "/organizations/{org_login}/contests/{contest_login}/drafts",
+        {
+          params: {
+            path: {
+              org_login: contest.organization_login,
+              contest_login: contest.login,
+            },
+          },
+          body: {code},
+        },
+      );
 
       if (error) {
         notifications.show({
@@ -86,7 +104,18 @@ export const DraftsClient = ({
 
   const handleDeleteDraft = async (draftId: string) => {
     setDeletingId(draftId);
-    const [error] = await api.deleteContestDraft(contest.organization_login, contest.login, draftId);
+    const {error} = await api.DELETE(
+      "/organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}",
+      {
+        params: {
+          path: {
+            org_login: contest.organization_login,
+            contest_login: contest.login,
+            draft_id: draftId,
+          },
+        },
+      },
+    );
     setDeletingId(null);
     if (!error) {
       setDrafts((prev) => prev.filter((d) => d.id !== draftId));

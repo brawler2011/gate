@@ -9,7 +9,7 @@ import {useSubmissionsWebSocket, type SubmissionWithProgress} from "@/lib/useSub
 import styles from "./RecentSubmissionsTable.module.css";
 import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 
-import type {SubmissionsListItemModel} from "@/contracts/core/v1/models";
+import type {SubmissionsListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 const RECENT_SUBMISSIONS_LIMIT = 5;

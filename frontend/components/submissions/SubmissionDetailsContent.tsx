@@ -9,7 +9,7 @@ import {LangNameToString, LangString, numberToLetters, ProblemTitle, ShortVerdic
 
 import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
 
-import type {SubmissionModel} from "@/contracts/core/v1/models";
+import type {SubmissionModel} from "@/contracts/core/v1/schema";
 
 interface SubmissionDetailsContentProps {
   submission: SubmissionModel;

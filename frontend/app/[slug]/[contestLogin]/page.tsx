@@ -9,7 +9,7 @@ import {PermissionChecker} from "@/lib/permissions";
 
 import {ContestProblemsTable} from "./ContestProblemsTable";
 
-import type {ContestModel, ContestProblemListItemModel} from "@/contracts/core/v1/models";
+import type {ContestModel, ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type ContestProps = {

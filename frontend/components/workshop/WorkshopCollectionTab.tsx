@@ -10,15 +10,12 @@ import {api} from "@/lib/api";
 
 import classes from "./WorkshopFolderTab.module.css";
 
-import type {FileEntry} from "@/contracts/core/v1/models";
-import type {ApiError} from "@/lib/api";
+import type {FileEntry} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
-type ListFilesResult = Promise<
-  [ApiError | null, { files?: FileEntry[] } | null]
->;
-type GetFileResult = Promise<[ApiError | null, string | null]>;
-type SaveFileResult = Promise<[ApiError | null, unknown | null]>;
+type ListFilesResult = Promise<{data?: {files?: FileEntry[]}; error?: {message?: string}}>;
+type GetFileResult = Promise<{data?: string | Blob | unknown; error?: {message?: string}}>;
+type SaveFileResult = Promise<{data?: unknown; error?: {message?: string}}>;
 
 type Props = {
   problemId: string;
@@ -78,7 +75,7 @@ export const WorkshopCollectionTab = ({
 
   // Fetch languages dynamically from backend API
   const {data: languagesData} = useQuery({queryKey: ["supported-languages"], queryFn: async () => {
-    const [err, res] = await api.getLanguages();
+    const {data: res, error: err} = await api.GET("/languages");
     if (err || !res?.languages) {
       return null;
     }
@@ -119,7 +116,7 @@ export const WorkshopCollectionTab = ({
   const allowedExtensions = uniqueExtensionOptions.map((o) => o.value);
 
   const {data: filesData, isLoading: isLoadingFiles, refetch: mutateFiles} = useQuery({queryKey: ["workshop-files", problemId, folderName], queryFn: async () => {
-    const [err, res] = await listFiles(problemId);
+    const {data: res, error: err} = await listFiles(problemId);
     if (err) {
       throw new Error(err.message || "Не удалось загрузить список файлов");
     }
@@ -130,11 +127,11 @@ export const WorkshopCollectionTab = ({
 
   const fileName = selectedFile ? getFileName(selectedFile) : null;
   const {data: fileContent, isLoading: isLoadingFile, refetch: mutateContent} = useQuery({queryKey: [fileName ? ["workshop-file-content", problemId, folderName, fileName] : null], queryFn: async () => {
-    const [err, res] = await getFile(problemId, fileName!);
+    const {data: res, error: err} = await getFile(problemId, fileName!);
     if (err) {
       throw new Error(err.message || "Не удалось загрузить файл");
     }
-    return res;
+    return typeof res === "string" ? res : "";
   }, enabled: Boolean(fileName ? ["workshop-file-content", problemId, folderName, fileName] : null)});
 
   const leafFiles = files.filter(
@@ -195,7 +192,7 @@ export const WorkshopCollectionTab = ({
         (file) => file.path === selectedFile,
       );
       const saveFile = isExistingFile ? updateFile : createFile;
-      const [error] = await saveFile(problemId, fileName, content);
+      const {error} = await saveFile(problemId, fileName, content);
 
       if (error) {
         notifications.show({
@@ -260,7 +257,7 @@ export const WorkshopCollectionTab = ({
     const fullPath = `${folderName}/${finalFileName}`;
 
     startCreatingFile(async () => {
-      const [error] = await createFile(problemId, finalFileName, "");
+      const {error} = await createFile(problemId, finalFileName, "");
       if (error) {
         notifications.show({
           title: "Ошибка создания файла",
@@ -284,7 +281,7 @@ export const WorkshopCollectionTab = ({
 
     startDeleting(async () => {
       const targetFileName = getFileName(selectedFile);
-      const [error] = await deleteFile(problemId, targetFileName);
+      const {error} = await deleteFile(problemId, targetFileName);
 
       if (error) {
         notifications.show({
@@ -490,7 +487,7 @@ export const WorkshopCollectionTab = ({
                     disabled={isMain || isSaving || isLoadingFile}
                     onClick={async () => {
                       const fileName = getFileName(selectedFile);
-                      const [error] = await setMain(problemId, fileName);
+                      const {error} = await setMain(problemId, fileName);
                       if (error) {
                         notifications.show({
                           title: "Ошибка",

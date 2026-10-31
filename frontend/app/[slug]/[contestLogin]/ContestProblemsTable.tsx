@@ -8,7 +8,7 @@ import {numberToLetters} from "@/lib/lib";
 
 import classes from "./ContestProblemsTable.module.css";
 
-import type {ContestProblemListItemModel} from "@/contracts/core/v1/models";
+import type {ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type ContestProblemsTableProps = {

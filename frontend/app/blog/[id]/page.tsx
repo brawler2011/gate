@@ -18,11 +18,9 @@ import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
 export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const {id} = routeParams as {id: string};
-  const post = await getPost(id);
+  const post = await unwrap(api.GET("/posts/{id}", {params: {path: {id}}}));
   return {post};
 }) satisfies LoaderFunction;
-
-const getPost = unwrap(api.getPostById);
 
 const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();

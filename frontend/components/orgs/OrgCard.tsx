@@ -2,7 +2,7 @@ import {Card, Text, Title, Group} from '@mantine/core';
 import {IconBuilding} from '@tabler/icons-react';
 import {Link} from "react-router-dom";
 
-import type {OrganizationModel} from '@/contracts/core/v1/models';
+import type {OrganizationModel} from '@/contracts/core/v1/schema';
 import type {ReactNode} from "react";
 
 type Props = { org: OrganizationModel };

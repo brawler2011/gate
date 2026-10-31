@@ -6,7 +6,7 @@ import {useState, type ReactNode} from "react";
 
 import {api} from "@/lib/api";
 
-import type {ContestProblemListItemModel} from "@/contracts/core/v1/models";
+import type {ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 
 interface AskClarificationModalProps {
   opened: boolean;
@@ -51,10 +51,16 @@ export const AskClarificationModal = ({
     }
 
     setLoading(true);
-    const [err] = await api.createContestClarification(orgLogin, contestLogin, {
-      question: question.trim(),
-      problem_id: problemId ? problemId : undefined
-    });
+    const {error: err} = await api.POST(
+      "/organizations/{org_login}/contests/{contest_login}/clarifications",
+      {
+        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+        body: {
+          question: question.trim(),
+          problem_id: problemId ? problemId : undefined,
+        },
+      },
+    );
     setLoading(false);
 
     if (err) {

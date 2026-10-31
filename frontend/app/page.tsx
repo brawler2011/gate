@@ -7,14 +7,14 @@ import {DashboardContestsList} from "@/components/contests/DashboardContestsList
 import {DashboardProblemsList} from "@/components/problems/DashboardProblemsList";
 import {DefaultLayout} from "@/components/shared";
 import {useSession} from "@/contexts/SessionContext";
-import {useGetMyDashboard, useListPosts} from "@/contracts/core/v1/api";
+import {api} from "@/lib/api";
 
 import type {ReactNode} from "react";
 
 const Page = (): ReactNode => {
   const {user, isAuthenticated: authenticated} = useSession();
-  const dashboard = useGetMyDashboard({query: {enabled: authenticated}});
-  const blog = useListPosts({page: 1, pageSize: 5});
+  const dashboard = api.useQuery("get", "/users/me/dashboard", {}, {enabled: authenticated});
+  const blog = api.useQuery("get", "/posts", {params: {query: {page: 1, pageSize: 5}}});
   const dashboardData = dashboard.data;
   const dashboardError = dashboard.error;
   const blogData = blog.data;

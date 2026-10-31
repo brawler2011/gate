@@ -52,7 +52,9 @@ const ResetPasswordContent = () => {
     setLoading(true);
 
     try {
-      const [err] = await api.resetPassword({token, password});
+      const {error: err} = await api.POST("/auth/reset-password", {
+        body: {token, password},
+      });
       if (!err) {
         setSuccess(true);
       } else {

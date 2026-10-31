@@ -9,7 +9,7 @@ import {formatDate} from "@/lib/lib";
 import classes from "./AdminPage.module.css";
 import {DeleteBlogPostModal} from "./DeleteBlogPostModal";
 
-import type {PostModel} from "@/contracts/core/v1/models";
+import type {PostModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type AdminBlogsTableProps = {

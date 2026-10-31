@@ -18,7 +18,9 @@ const ForgotPasswordPage = (): ReactNode => {
     setLoading(true);
 
     try {
-      const [err] = await api.forgotPassword({identifier});
+      const {error: err} = await api.POST("/auth/forgot-password", {
+        body: {identifier},
+      });
       if (!err) {
         setSubmitted(true);
       } else {

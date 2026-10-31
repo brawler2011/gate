@@ -7,7 +7,7 @@ import Page, {loader} from "@/app/[slug]/(org)/page";
 
 import {cleanup, renderRoute, setupDOMEnvironment, waitFor} from "./test-utils";
 
-import type {OrganizationJoinRequestModel, OrganizationModel, UserModel} from "@/contracts/core/v1/models";
+import type {OrganizationJoinRequestModel, OrganizationModel, UserModel} from "@/contracts/core/v1/schema";
 
 const org: OrganizationModel = {
   id: "org", login: "school", name: "School", join_policy: "by_request" as OrganizationModel["join_policy"],

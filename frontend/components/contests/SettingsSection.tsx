@@ -7,11 +7,10 @@ import {useRevalidator, useNavigate} from "react-router-dom";
 
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
-import {getGetContestQueryKey} from "@/contracts/core/v1/api";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type * as corev1 from "@/contracts/core/v1/models";
+import type * as corev1 from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 interface SettingsSectionProps {
@@ -207,7 +206,18 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       enable_virtual_contests: values.enable_virtual_contests,
       hide_statements: values.hide_statements,
     };
-    const [error] = await api.updateContest(contest.organization_login, contest.login, payload);
+    const {error} = await api.PATCH(
+      "/organizations/{org_login}/contests/{contest_login}",
+      {
+        params: {
+          path: {
+            org_login: contest.organization_login,
+            contest_login: contest.login,
+          },
+        },
+        body: payload,
+      },
+    );
     setSaving(false);
 
     if (error) {
@@ -232,7 +242,20 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     if (newLogin && newLogin !== contest.login) {
       navigate(`/${contest.organization_login}/${newLogin}/settings`);
     } else {
-      void queryClient.invalidateQueries({queryKey: getGetContestQueryKey(contest.organization_login, contest.login)});
+      void queryClient.invalidateQueries({
+        queryKey: api.queryOptions(
+          "get",
+          "/organizations/{org_login}/contests/{contest_login}",
+          {
+            params: {
+              path: {
+                org_login: contest.organization_login,
+                contest_login: contest.login,
+              },
+            },
+          },
+        ).queryKey,
+      });
       void revalidator.revalidate();
     }
   };

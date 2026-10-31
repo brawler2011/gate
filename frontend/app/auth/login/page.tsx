@@ -42,7 +42,9 @@ const LoginPageContent = () => {
     setLoading(true);
 
     try {
-      const [err, data] = await api.login({identifier, password});
+      const {data, error: err} = await api.POST("/auth/login", {
+        body: {identifier, password},
+      });
       if (!err && data) {
         setUser(data.user);
         navigate(returnTo);
@@ -71,7 +73,9 @@ const LoginPageContent = () => {
     }
     setResendLoading(true);
     try {
-      const [err] = await api.resendVerification({identifier});
+      const {error: err} = await api.POST("/auth/resend-verification", {
+        body: {identifier},
+      });
       if (!err) {
         notifications.show({
           title: "Письмо отправлено",

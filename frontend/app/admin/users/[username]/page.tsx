@@ -14,13 +14,21 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const decoded = username;
 
   // Check admin rights
-  const [meError, meData] = await api.getMe();
+  const {data: meData, error: meError} = await api.GET("/users/me");
   if (meError || !meData?.user || meData.user.role !== "admin") {
     throw redirect("/auth/login?return_to=/admin/users/" + encodeURIComponent(decoded));
   }
 
-  const [error, data] = await api.getUser(decoded);
-  return {error, data};
+  const {data, error, response} = await api.GET("/users/{username}", {
+    params: {path: {username: decoded}},
+  });
+  const err = error
+    ? {
+      status: response.status,
+      message: (error as {message?: string})?.message || response.statusText,
+    }
+    : null;
+  return {error: err, data};
 }) satisfies LoaderFunction;
 
 const AdminUserEditPage = (): ReactNode => {

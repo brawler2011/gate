@@ -51,7 +51,15 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     parsedParams.language = Number(queryParams.language);
   }
 
-  const [error, submissionsData] = await api.listContestSubmissions(slug, contestLogin, parsedParams);
+  const {data: submissionsData, error} = await api.GET(
+    "/organizations/{org_login}/contests/{contest_login}/submissions",
+    {
+      params: {
+        path: {org_login: slug, contest_login: contestLogin},
+        query: parsedParams,
+      },
+    },
+  );
 
   if (error) {
     throw error;
@@ -73,9 +81,14 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
 
   const wsBaseUrl = env.getWebSocketUrl();
 
-  const contestData = await unwrap(api.getContest)(slug, contestLogin);
-
-  const [, me] = await api.getMe();
+  const [contestData, {data: me}] = await Promise.all([
+    unwrap(
+      api.GET("/organizations/{org_login}/contests/{contest_login}", {
+        params: {path: {org_login: slug, contest_login: contestLogin}},
+      }),
+    ),
+    api.GET("/users/me"),
+  ]);
   const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
   return {

@@ -12,9 +12,19 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const {slug, contestLogin} = routeParams as {slug: string; contestLogin: string};
 
   // Fetch contest data and scoreboard
-  const contestResponse = await unwrap(api.getContest)(slug, contestLogin);
-  const scoreboard = await unwrap(api.getContestScoreboard)(slug, contestLogin, {});
-  const [, me] = await api.getMe();
+  const [contestResponse, scoreboard, {data: me}] = await Promise.all([
+    unwrap(
+      api.GET("/organizations/{org_login}/contests/{contest_login}", {
+        params: {path: {org_login: slug, contest_login: contestLogin}},
+      }),
+    ),
+    unwrap(
+      api.GET("/organizations/{org_login}/contests/{contest_login}/scoreboard", {
+        params: {path: {org_login: slug, contest_login: contestLogin}},
+      }),
+    ),
+    api.GET("/users/me"),
+  ]);
   const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
   return {slug, contestLogin, contestResponse, scoreboard, user, contestRole};

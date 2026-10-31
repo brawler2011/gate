@@ -11,7 +11,7 @@ import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
 
-import type * as corev1 from "@/contracts/core/v1/models";
+import type * as corev1 from "@/contracts/core/v1/schema";
 
 const PROBLEM_ROLE_OPTIONS = [
   {label: "Просмотр", value: "viewer", color: "gray"},
@@ -47,8 +47,11 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listProblemMembers(problemId, {
-      page: 1, pageSize: 100
+    const {data: response, error} = await api.GET("/problems/{id}/members", {
+      params: {
+        path: {id: problemId},
+        query: {page: 1, pageSize: 100},
+      },
     });
     setLoading(false);
 
@@ -65,9 +68,10 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
   }, [loadMembers]);
 
   const searchUsersFn = useCallback(async (query: string) => {
-    const [error, response] = await api.listUsers({
-      page: 1, pageSize: 10,
-      search: query
+    const {data: response, error} = await api.GET("/users", {
+      params: {
+        query: {page: 1, pageSize: 10, search: query},
+      },
     });
     if (error || !response) {
       return [];
@@ -77,7 +81,7 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
 
   const mapUserToItem = useCallback(
     (u: corev1.UserModel) => ({value: u.id, label: u.username, data: u}),
-    []
+    [],
   );
 
   const {
@@ -100,8 +104,11 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     }
 
     setAdding(true);
-    const [error] = await api.createProblemMember(problemId, {
-      user_id: selectedUserId, role: "viewer"
+    const {error} = await api.POST("/problems/{id}/members", {
+      params: {
+        path: {id: problemId},
+        query: {user_id: selectedUserId, role: "viewer"},
+      },
     });
     setAdding(false);
 
@@ -129,8 +136,11 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
 
   const handleDeleteMember = async (member: corev1.ProblemMemberModel) => {
     setDeletingId(member.user_id);
-    const [error] = await api.deleteProblemMember(problemId, {
-      user_id: member.user_id
+    const {error} = await api.DELETE("/problems/{id}/members", {
+      params: {
+        path: {id: problemId},
+        query: {user_id: member.user_id},
+      },
     });
     setDeletingId(null);
 
@@ -169,9 +179,11 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
       return;
     }
 
-    const [error] = await api.updateProblemMember(problemId, {
-      user_id: editingMember.userId,
-      role: newRole
+    const {error} = await api.PATCH("/problems/{id}/members", {
+      params: {
+        path: {id: problemId},
+        query: {user_id: editingMember.userId, role: newRole},
+      },
     });
 
     setModalOpened(false);

@@ -2,7 +2,7 @@ import {Group, Stack, Text, Title, Badge, Card, ThemeIcon} from "@mantine/core";
 import {IconTrophy, IconChevronRight} from "@tabler/icons-react";
 import {useNavigate} from "react-router-dom";
 
-import type {DashboardContestModel} from "@/contracts/core/v1/models";
+import type {DashboardContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type DashboardContestsListProps = {

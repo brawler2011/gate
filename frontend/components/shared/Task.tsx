@@ -9,7 +9,7 @@ import {api} from "@/lib/api";
 import {CONTEST_SIDEBAR_LEFT_WIDTH, CONTEST_SIDEBAR_RIGHT_WIDTH, LANGUAGE_MAP} from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
 
-import type {ContestModel, ContestProblemListItemModel, ContestProblemModel, SubmissionsListItemModel, UserModel} from "@/contracts/core/v1/models";
+import type {ContestModel, ContestProblemListItemModel, ContestProblemModel, SubmissionsListItemModel, UserModel} from "@/contracts/core/v1/schema";
 
 type PageProps = {
   tasks: ContestProblemListItemModel[];
@@ -54,11 +54,18 @@ const Task = ({
       submissionContent = submissionData;
     }
 
-    const [error, response] = await api.createSubmission({
-      submission: submissionContent
-    }, {
-      problem_id: problemId, organization_login: contest.organization_login, contest_login: contest.login,
-      language: languageCode
+    const {data: response, error} = await api.POST("/submissions", {
+      params: {
+        query: {
+          problem_id: problemId,
+          organization_login: contest.organization_login,
+          contest_login: contest.login,
+          language: languageCode,
+        },
+      },
+      body: {
+        submission: submissionContent,
+      },
     });
 
     if (error) {
