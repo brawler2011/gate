@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -36,6 +35,6 @@ func main() {
 		return
 	}
 
-	slog.Error("application startup failed", "error_type", fmt.Sprintf("%T", err))
+	slog.Error("application startup failed", "error", err)
 	os.Exit(1)
 }
