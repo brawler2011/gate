@@ -2,10 +2,10 @@ import './setup-dom';
 
 import {afterEach, expect, it, spyOn} from 'bun:test';
 
-import Page from '@/app/[slug]/[contestLogin]/[letter]/page';
 import {SessionProvider} from '@/contexts/SessionContext';
 import {env} from '@/lib/env';
 import {submissionsWsManager} from '@/lib/submissionsWsManager';
+import Page from '@/pages/contests/task/TaskPage';
 
 import {act, cleanup, renderWithProviders, setupDOMEnvironment, waitFor} from './test-utils';
 

@@ -30,7 +30,6 @@
   "include": [
     "frontend/**/*.ts",
     "frontend/**/*.tsx",
-    "src/**/*.tsx",
     "vite.config.ts"
   ],
   "exclude": [

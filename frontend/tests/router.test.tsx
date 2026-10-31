@@ -7,7 +7,7 @@ import {Link, matchRoutes} from "react-router-dom";
 import {RoutePagination} from '@/components/shared/Pagination';
 
 import {act, cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor} from './test-utils';
-import {App, appRoutes} from '../../src/App';
+import {App, appRoutes} from '../app/App';
 
 describe('SPA route tree', () => {
   let closeDOM: () => void;

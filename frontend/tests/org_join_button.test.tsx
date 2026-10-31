@@ -3,7 +3,7 @@ import "./setup-dom";
 import {afterAll, afterEach, beforeAll, describe, expect, it, spyOn} from "bun:test";
 import React from "react";
 
-import Page, {loader} from "@/app/[slug]/(org)/page";
+import Page, {loader} from "@/pages/orgs/OrganizationPage";
 
 import {cleanup, renderRoute, setupDOMEnvironment, waitFor} from "./test-utils";
 

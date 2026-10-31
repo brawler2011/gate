@@ -3,7 +3,6 @@ WORKDIR /workspace
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY index.html vite.config.ts tsconfig.json postcss.config.cjs ./
-COPY src/ ./src/
 COPY frontend/ ./frontend/
 RUN bun run build
 

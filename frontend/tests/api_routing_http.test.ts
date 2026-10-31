@@ -67,7 +67,7 @@ describe('Vite routing over HTTP', () => {
     for (const path of ['/@alice', '/school/contest/A', '/submissions/id', '/admin/users', '/apiary']) {
       const response = await fetch(url + path);
       expect(response.status).toBe(200);
-      expect(await response.text()).toContain('/src/main.tsx');
+      expect(await response.text()).toContain('/frontend/main.tsx');
     }
   });
 });

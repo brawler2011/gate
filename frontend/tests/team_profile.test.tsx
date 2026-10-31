@@ -3,8 +3,8 @@ import "./setup-dom";
 import {afterAll, afterEach, beforeAll, describe, expect, it, spyOn} from "bun:test";
 import React from "react";
 
-import Loading from "@/app/[slug]/(org)/teams/[team_id]/loading";
-import Page, {loader} from "@/app/[slug]/(org)/teams/[team_id]/page";
+import Loading from "@/pages/orgs/teams/detail/TeamLoading";
+import Page, {loader} from "@/pages/orgs/teams/detail/TeamPage";
 
 import {cleanup, fireEvent, renderRoute, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
