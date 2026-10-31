@@ -1,4 +1,5 @@
 .*
+!.air.toml
 !*.env.example
 !.env.example
 !**/.env.example

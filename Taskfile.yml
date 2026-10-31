@@ -52,9 +52,9 @@ tasks:
     - rm -rf backend/contracts/core/v1 backend/contracts/observer/v1
     - rm -rf frontend/contracts/core/v1 frontend/contracts/observer/v1
   be:dev:
-    desc: Run Go backend server
+    desc: Run Go backend server with live reload
     cmds:
-    - go run ./backend -env=deploy/local/.env
+    - go run github.com/air-verse/air@v1.64.5 -c .air.toml
   be:test:
     desc: Run backend unit and repository tests
     cmds:
