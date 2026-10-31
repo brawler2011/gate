@@ -7,7 +7,6 @@ import (
 
 	"github.com/brawler2011/gate/tests/e2e/helpers"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 // These are repository contract checks. Live business/DB/NATS tests belong to backend integration.
@@ -37,6 +36,7 @@ func TestDeploymentServicesAndRotation(t *testing.T) {
 				}
 			}
 			if env == "local" {
+				require.NotContains(t, cfg.Services, "traefik")
 				helpers.AssertPortAllocation(t, cfg, "filer", 8888, 8888)
 				helpers.AssertPortAllocation(t, cfg, "s3", 8333, 8333)
 			}
@@ -44,15 +44,8 @@ func TestDeploymentServicesAndRotation(t *testing.T) {
 	}
 }
 
-func TestTraefikBusinessRoutesRemain(t *testing.T) {
-	data, err := os.ReadFile(helpers.GetDeployPath("local", "traefik", "dynamic.yml"))
-	require.NoError(t, err)
-	var cfg map[string]map[string]map[string]interface{}
-	require.NoError(t, yaml.Unmarshal(data, &cfg))
-	require.Contains(t, cfg["http"]["routers"], "backend-api")
-	require.Contains(t, cfg["http"]["routers"], "backend-ws")
-	require.Contains(t, cfg["http"]["routers"], "frontend")
-	for _, path := range []string{helpers.GetDeployPath("local", "traefik", "dynamic.yml"), helpers.GetDeployPath("traefik", "dynamic", "middlewares.yml"), helpers.GetDeployPath("prod", "docker-compose.yml")} {
+func TestTraefikHasNoObservabilityRoutes(t *testing.T) {
+	for _, path := range []string{helpers.GetDeployPath("traefik", "dynamic", "middlewares.yml"), helpers.GetDeployPath("prod", "docker-compose.yml")} {
 		data, err := os.ReadFile(path)
 		require.NoError(t, err)
 		require.NotContains(t, string(data), "/otlp")
