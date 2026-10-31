@@ -1,4 +1,4 @@
-package e2e_test
+package repository_test
 
 import (
 	"os"
@@ -7,14 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brawler2011/gate/tests/e2e/helpers"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 // Execute the workflow's real aggregate script rather than copying its logic.
 func TestCIRequiredGate(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join(helpers.FindRepoRoot(), ".github", "workflows", "ci.yml"))
+	data, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", "ci.yml"))
 	require.NoError(t, err)
 	var workflow struct {
 		Jobs map[string]struct {
@@ -37,8 +36,11 @@ func TestCIRequiredGate(t *testing.T) {
 	}
 	require.NotEmpty(t, checks)
 	require.ElementsMatch(t, checks, gate.Needs, "every CI job must gate success")
-	require.Len(t, gate.Steps, 1)
-	script := gate.Steps[0].Run
+	var scripts []string
+	for _, step := range gate.Steps {
+		scripts = append(scripts, step.Run)
+	}
+	script := strings.Join(scripts, "\n")
 	require.NotEmpty(t, script)
 	run := func(t *testing.T, failedJob, result string) {
 		t.Helper()

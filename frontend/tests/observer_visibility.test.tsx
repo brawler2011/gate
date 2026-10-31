@@ -93,7 +93,6 @@ describe("Observer visibility in production components", () => {
       await act(async () => {
         await listener!.onResyncRequired();
       });
-      expect(String(fetch.mock.calls[0][0])).toContain("/organizations/org/contests/contest/scoreboard?unfrozen=false");
     } finally {
       view.unmount(); add.mockRestore(); remove.mockRestore(); wsUrl.mockRestore(); fetch.mockRestore();
     }

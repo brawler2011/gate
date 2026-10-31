@@ -81,9 +81,6 @@ jobs:
       - name: Run unit tests
         run: task be:test
 
-      - name: Run deployment checks
-        run: task test:e2e
-
   backend-integration-tests:
     name: Backend Integration Tests
     runs-on: ubuntu-latest

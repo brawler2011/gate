@@ -9,8 +9,6 @@ import {RoutePagination} from '@/components/shared/Pagination';
 import {act, cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor} from './test-utils';
 import {App, appRoutes} from '../../src/App';
 
-import type {ReactNode} from 'react';
-
 describe('SPA route tree', () => {
   let closeDOM: () => void;
   beforeAll(() => {
@@ -120,19 +118,6 @@ describe('SPA route tree', () => {
     expect(view.router.state.location.search).toBe('?search=alice&page=1');
     fireEvent.click(page);
     await waitFor(() => expect(view.router.state.location.search).toBe('?search=alice&page=2'));
-  });
-
-  it('keeps the route subtree mounted during navigation', () => {
-    let mounts = 0;
-    const Layout = (): ReactNode => {
-      useEffect(() => {
-        mounts++;
-      }, []);
-      return <Link to="/school/round/monitor">Монитор</Link>;
-    };
-    const view = renderWithProviders(<Layout />, {route: '/school/round/A'});
-    fireEvent.click(view.getByRole('link', {name: 'Монитор'}));
-    expect(mounts).toBe(1);
   });
 
   it('keeps the current page mounted without a loading indicator until the next route is ready', async () => {

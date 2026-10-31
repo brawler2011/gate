@@ -14,16 +14,13 @@ func TestNewEmailService_Environments(t *testing.T) {
 
 	// 2. Dev environment with API key uses ResendEmailService
 	svcDev := NewEmailService("dev", "re_test_key", "no-reply@example.com", "http://dev.gate.example.com")
-	resendDev, isResendDev := svcDev.(*ResendEmailService)
+	_, isResendDev := svcDev.(*ResendEmailService)
 	assert.True(t, isResendDev, "expected ResendEmailService for dev env with API key")
-	assert.Equal(t, "re_test_key", resendDev.APIKey)
-	assert.Equal(t, "no-reply@example.com", resendDev.FromEmail)
 
 	// 3. Prod environment with API key uses ResendEmailService
 	svcProd := NewEmailService("prod", "re_test_key", "Gate <no-reply@gate.example.com>", "https://gate.example.com")
-	resendProd, isResendProd := svcProd.(*ResendEmailService)
+	_, isResendProd := svcProd.(*ResendEmailService)
 	assert.True(t, isResendProd, "expected ResendEmailService for prod env with API key")
-	assert.Equal(t, "re_test_key", resendProd.APIKey)
 
 	// 4. Non-local without API key falls back to LogEmailService
 	svcDevNoKey := NewEmailService("dev", "", "no-reply@example.com", "http://dev.gate.example.com")

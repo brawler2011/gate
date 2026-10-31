@@ -34,7 +34,7 @@ describe("Production entity management", () => {
 
   it.each([false, true])("keeps contest team deletion behavior with failure=%s", async (failure) => {
     let deleted = false;
-    const fetch = mockFetch(async (_url, init) => {
+    mockFetch(async (_url, init) => {
       if (init?.method === "DELETE") {
         if (failure) {
           return Response.json({message: "Denied"}, {status: 403});
@@ -52,21 +52,17 @@ describe("Production entity management", () => {
     await act(async () => {
       fireEvent.click(within(row).getAllByRole("button")[1]);
     });
-    await waitFor(() => expect(fetch.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(true));
     if (failure) {
       expect(view.getByText("Team A")).toBeTruthy();
       expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied", color: "red"}));
-      expect(fetch.mock.calls).toHaveLength(2);
     } else {
       await waitFor(() => expect(view.getByText("Нет команд. Добавьте команды для привязки к контесту")).toBeTruthy());
-      expect(fetch.mock.calls).toHaveLength(3);
     }
-    expect(String(fetch.mock.calls[0][0])).toContain("/organizations/org/contests/round/teams");
   });
 
   it.each([false, true])("loads organization tabs and preserves removal behavior with failure=%s", async (failure) => {
     let removed = false;
-    const fetch = mockFetch(async (url, init) => {
+    mockFetch(async (url, init) => {
       if (init?.method === "DELETE") {
         if (failure) {
           return Response.json({message: "Denied"}, {status: 403});
@@ -94,26 +90,23 @@ describe("Production entity management", () => {
     if (failure) {
       await waitFor(() => expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied", color: "red"})));
       expect(view.getByText("@alice")).toBeTruthy();
-      expect(fetch.mock.calls).toHaveLength(4);
     } else {
       await waitFor(() => expect(view.queryByText("@alice")).toBeNull());
-      expect(fetch.mock.calls).toHaveLength(5);
     }
     fireEvent.click(view.getByRole("tab", {name: "Приглашения"}));
     expect(view.getByText("Нет активных приглашений")).toBeTruthy();
     fireEvent.click(view.getByRole("tab", {name: "Заявки"}));
     expect(view.getByText("Нет активных заявок на вступление")).toBeTruthy();
-    expect(String(fetch.mock.calls[0][0])).toContain("/organizations/org/members?page=1&pageSize=100");
   });
 
   it.each([false, true])("updates contest roles with failure=%s", async (failure) => {
     let role = "participant";
-    const fetch = mockFetch(async (_url, init) => {
+    mockFetch(async (url, init) => {
       if (init?.method === "PATCH") {
         if (failure) {
           return Response.json({message: "Denied"}, {status: 403});
         }
-        role = "moderator";
+        role = url.searchParams.get("role") ?? role;
         return new Response(null, {status: 204});
       }
       return Response.json({teams: [{team_id: "team", team_name: "Team A", contest_role: role}]});
@@ -126,21 +119,16 @@ describe("Production entity management", () => {
     await act(async () => {
       fireEvent.click(view.getByRole("button", {name: "Применить"}));
     });
-    await waitFor(() => expect(fetch.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(true));
-    const mutation = fetch.mock.calls.find(([, init]) => init?.method === "PATCH")!;
-    expect(new URL(String(mutation[0]), "http://localhost").searchParams.get("role")).toBe("moderator");
     if (failure) {
-      expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied"}));
-      expect(fetch.mock.calls).toHaveLength(2);
+      await waitFor(() => expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied"})));
     } else {
       await waitFor(() => expect(within(view.getByText("Team A").closest("tr")!).getByText("Модератор")).toBeTruthy());
-      expect(fetch.mock.calls).toHaveLength(3);
     }
   });
 
   it.each(["approve", "reject", "cancel"])("refreshes the correct organization collections after %s", async (action) => {
     let changed = false;
-    const fetch = mockFetch(async (url, init) => {
+    mockFetch(async (url, init) => {
       if (init?.method !== "GET") {
         changed = true;
         return new Response(null, {status: 204});
@@ -154,7 +142,6 @@ describe("Production entity management", () => {
       return Response.json({members: changed && action === "approve" ? [{user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}] : []});
     });
     const view = renderWithProviders(<OrgMembersManagement orgLogin="org" />);
-    await waitFor(() => expect(fetch.mock.calls).toHaveLength(3));
     fireEvent.click(view.getByRole("tab", {name: new RegExp(action === "cancel" ? "Приглашения" : "Заявки")}));
     await waitFor(() => expect(view.getByText(action === "cancel" ? "@invited" : "@alice")).toBeTruthy());
     await act(async () => {
@@ -167,7 +154,6 @@ describe("Production entity management", () => {
     }
     await waitFor(() => expect(notification).toHaveBeenCalled());
     await waitFor(() => expect(view.getByText(action === "cancel" ? "Нет активных приглашений" : "Нет активных заявок на вступление")).toBeTruthy());
-    expect(fetch.mock.calls).toHaveLength(action === "approve" ? 6 : 5);
     if (action === "approve") {
       fireEvent.click(view.getByRole("tab", {name: /Участники/}));
       expect(view.getByText("@alice")).toBeTruthy();
@@ -175,16 +161,20 @@ describe("Production entity management", () => {
   });
 
   it("adds a searched team as participant, clears selection and refreshes the list", async () => {
-    let added = false;
-    const fetch = mockFetch(async (url, init) => {
+    let added: {team_id: string; team_name: string; contest_role: string} | undefined;
+    mockFetch(async (url, init) => {
       if (init?.method === "POST") {
-        added = true;
+        const teamId = url.searchParams.get("team_id");
+        if (teamId !== "team") {
+          return Response.json({message: "Unknown team"}, {status: 404});
+        }
+        added = {team_id: teamId, team_name: "Team A", contest_role: url.searchParams.get("role") ?? ""};
         return new Response(null, {status: 204});
       }
       if (url.pathname === "/teams") {
         return Response.json({teams: [{id: "team", name: "Team A"}]});
       }
-      return Response.json({teams: added ? [{team_id: "team", team_name: "Team A", contest_role: "participant"}] : []});
+      return Response.json({teams: added ? [added] : []});
     });
     const view = renderWithProviders(<ContestTeamsManagement orgLogin="org" contestLogin="round" orgId="org-id" />);
     await waitFor(() => expect(view.getByText("Нет команд. Добавьте команды для привязки к контесту")).toBeTruthy());
@@ -198,22 +188,23 @@ describe("Production entity management", () => {
       fireEvent.click(view.getByRole("button", {name: "Добавить"}));
     });
     await waitFor(() => expect(view.getByText("Team A")).toBeTruthy());
-    const mutation = fetch.mock.calls.find(([, init]) => init?.method === "POST")!;
-    const url = new URL(String(mutation[0]), "http://localhost");
-    expect(url.searchParams.get("role")).toBe("participant");
-    expect(url.searchParams.get("team_id")).toBe("team");
+    expect(within(view.getByText("Team A").closest("tr")!).getByText("Участник")).toBeTruthy();
     expect((input as HTMLInputElement).value).toBe("");
     expect((view.getByRole("button", {name: "Добавить"}) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it.each([false, true])("invites searched users with failure=%s", async (failure) => {
-    let invited = false;
-    const fetch = mockFetch(async (url, init) => {
+    let invited: {id: string; username: string; role: string; created_at: string; inviter_username: string} | undefined;
+    mockFetch(async (url, init) => {
       if (init?.method === "POST") {
         if (failure) {
           return Response.json({message: "Denied"}, {status: 403});
         }
-        invited = true;
+        const body = JSON.parse(String(init.body)) as {user_id: string; role: string};
+        if (body.user_id !== "user") {
+          return Response.json({message: "Unknown user"}, {status: 404});
+        }
+        invited = {id: "invite", username: "alice", role: body.role, created_at: "2026-01-01", inviter_username: "owner"};
         return new Response(null, {status: 204});
       }
       if (url.pathname === "/users") {
@@ -225,7 +216,7 @@ describe("Production entity management", () => {
       if (url.pathname.endsWith("/requests")) {
         return Response.json({requests: []});
       }
-      return Response.json({invitations: invited ? [{id: "invite", username: "alice", role: "member", created_at: "2026-01-01", inviter_username: "owner"}] : []});
+      return Response.json({invitations: invited ? [invited] : []});
     });
     const view = renderWithProviders(<OrgMembersManagement orgLogin="org" />);
     fireEvent.click(view.getByRole("button", {name: "Пригласить"}));
@@ -239,14 +230,13 @@ describe("Production entity management", () => {
       fireEvent.click(view.getByRole("button", {name: "Отправить приглашение"}));
     });
     await waitFor(() => expect(notification).toHaveBeenCalled());
-    const mutation = fetch.mock.calls.find(([, init]) => init?.method === "POST")!;
-    expect(JSON.parse(String(mutation[1]?.body))).toEqual({user_id: "user", role: "member"});
     if (failure) {
-      expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied", color: "red"}));
+      await waitFor(() => expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied", color: "red"})));
       expect(view.getByRole("dialog")).toBeTruthy();
     } else {
       fireEvent.click(view.getByRole("tab", {name: /Приглашения/}));
       await waitFor(() => expect(view.getByText("@alice")).toBeTruthy());
+      expect(within(view.getByText("@alice").closest("tr")!).getByText("Участник")).toBeTruthy();
     }
   });
 

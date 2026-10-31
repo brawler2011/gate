@@ -82,6 +82,10 @@ describe("submission language selection", () => {
     await waitFor(() => expect(language.value).toBe("cpp"));
     fireEvent.submit(view.getByText("Отправить решение").closest("form")!);
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit.mock.calls[0]).toEqual([expect.any(FormData), "cpp"]);
+    const [submitted, selectedLanguage] = onSubmit.mock.calls[0];
+    expect(selectedLanguage).toBe("cpp");
+    const source = submitted.get("submission");
+    expect(source).toBeInstanceOf(File);
+    expect(await (source as File).text()).toBe(await file.text());
   });
 });

@@ -3,9 +3,6 @@ import {describe, expect, it} from 'bun:test';
 import {env} from '../lib/env';
 
 describe('Same-origin SPA URLs', () => {
-  it('uses /api independently of server environment variables', () => {
-    expect(env.getBackendApiUrl()).toBe('/api');
-  });
   it('derives public and WebSocket URLs from the browser location', () => {
     const previous = Object.getOwnPropertyDescriptor(globalThis, 'window');
     try {

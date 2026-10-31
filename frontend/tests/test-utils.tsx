@@ -1,6 +1,8 @@
+import "./setup-dom";
+
 import {MantineProvider} from "@mantine/core";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
-import {render, type RenderOptions, type RenderResult} from "@testing-library/react";
+import {cleanup, render, type RenderOptions, type RenderResult} from "@testing-library/react";
 import React, {type ReactElement, type ReactNode} from "react";
 import {createMemoryRouter, RouterProvider} from "react-router-dom";
 
@@ -8,11 +10,12 @@ import {QueryState} from "@/components/shared/QueryState";
 import {RouteError} from "@/components/shared/RouteError";
 import {SessionContext} from "@/contexts/SessionContext";
 
-import {setupDOMEnvironment} from "./setup-dom";
-
 import type {RouteObject} from "react-router-dom";
 
-export {setupDOMEnvironment};
+export const setupDOMEnvironment = (): (() => void) => () => {
+  cleanup();
+  document.body.innerHTML = "";
+};
 
 const AllTheProviders = ({children}: { children: ReactNode }) => {
   const [client] = React.useState(
@@ -33,7 +36,7 @@ const AllTheProviders = ({children}: { children: ReactNode }) => {
           refetchUser: async () => {},
         }}
       >
-        <MantineProvider>
+        <MantineProvider env="test">
           {children}
         </MantineProvider>
       </SessionContext.Provider>

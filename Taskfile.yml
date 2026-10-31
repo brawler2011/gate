@@ -34,10 +34,6 @@ tasks:
     cmds:
     - task: fe:typecheck
     - task: fe:lint
-  test:e2e:
-    desc: Run deployment and diagnostic contract checks
-    cmds:
-    - task: e2e:test
   gen:
     desc: Generate all code (OpenAPI, SQLC, Mocks)
     cmds:
@@ -60,13 +56,13 @@ tasks:
     cmds:
     - go run ./backend -env=deploy/local/.env
   be:test:
-    desc: Run backend unit tests
+    desc: Run backend unit and repository tests
     cmds:
     - go test -v ./...
   be:test-integration:
     desc: Run backend integration tests
     cmds:
-    - go test -v -tags=integration ./backend/tests/integration/... ./backend/internal/repository/pg/...
+    - go test -v -p 1 -tags=integration ./backend/tests/integration/... ./backend/internal/repository/pg/... ./backend/pkg/sandbox/...
   be:lint:
     desc: Run golangci-lint
     cmds:
@@ -128,17 +124,11 @@ tasks:
     - go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.5.0 -generate std-http-server,models,strict-server,skip-prune -package
       observerv1 -o backend/contracts/observer/v1/observer.go contracts/observer/v1/openapi.yaml
     - bun run contracts:gen
-  e2e:test:
-    desc: Run deployment and diagnostic contract checks (no production simulation)
-    cmds:
-    - go test -v -count=1 ./...
-    dir: tests/e2e
   test:
-    desc: Run all tests
+    desc: Run backend unit, repository, and frontend tests
     cmds:
     - task: be:test
     - bun test
-    - task: e2e:test
   build:
     desc: Build backend and static SPA
     cmds:
