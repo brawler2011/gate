@@ -150,7 +150,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
       - name: Build Go application with static SPA
-        run: docker build --progress=plain --file backend/Dockerfile --tag gate:ci .
+        run: docker build --progress=plain --file Dockerfile --tag gate:ci .
 
   ci-status:
     name: All CI Checks Passed
