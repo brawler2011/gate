@@ -52,6 +52,34 @@ describe('SPA API transport', () => {
       fetch.mockRestore();
     }
   });
+  it('decodes the test validation report as JSON', async () => {
+    const report = {total_tests: 2, valid_tests: 2, invalid_tests: 0, results: []};
+    globalThis.fetch = (async () => Response.json(report)) as unknown as typeof fetch;
+    const [error, data] = await api.validateAllTests('problem');
+    expect(error).toBeNull();
+    expect(data).toEqual(report);
+  });
+  it.each([
+    ['generation', () => api.generateTests('problem', {generator_name: 'gen', test_numbers: [1]})],
+    ['configuration', () => api.updateProblemTestsConfig('problem', {})],
+    ['file update', () => api.updateProblemTestFile('problem', 'nested/edge.in', new Blob(['input']))],
+  ] as const)('decodes the test %s response as JSON', async (_name, request) => {
+    const response = {message: 'Updated'};
+    globalThis.fetch = (async () => Response.json(response)) as unknown as typeof fetch;
+    const [error, data] = await request();
+    expect(error).toBeNull();
+    expect(data).toEqual(response);
+  });
+  it.each(['text/plain', 'application/json'])('preserves test-file bytes for %s responses', async (contentType) => {
+    const bytes = new Uint8Array([0, 255, 128, 10]);
+    globalThis.fetch = (async () => new Response(bytes, {
+      headers: {'Content-Type': contentType},
+    })) as unknown as typeof fetch;
+    const [error, data] = await api.getProblemTestFile('problem', 'nested/space #?.in');
+    expect(error).toBeNull();
+    expect(data).toBeInstanceOf(Blob);
+    expect(new Uint8Array(await data!.arrayBuffer())).toEqual(bytes);
+  });
   it('preserves status and request id on HTTP errors', async () => {
     globalThis.fetch = (async () => Response.json({message: 'Denied', request_id: 'req-1'}, {status: 403})) as unknown as typeof fetch;
     try {

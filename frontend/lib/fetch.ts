@@ -25,7 +25,7 @@ export const apiFetch = async <T>(
     return undefined as T;
   }
   const contentType = response.headers.get("content-type") ?? "";
-  if (/\/tests\/[^?]+/.test(url)) {
+  if ((options.method ?? "GET").toUpperCase() === "GET" && /^\/problems\/[^/]+\/tests\/[^/?]+(?:\?.*)?$/.test(url)) {
     return response.blob() as Promise<T>;
   }
   if (contentType.startsWith("text/")) {
